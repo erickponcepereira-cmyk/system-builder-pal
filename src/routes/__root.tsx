@@ -31,11 +31,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FitChain — Plataforma MLM Fitness" },
+      { title: "FitMind" },
       { name: "description", content: "Desafios fitness de 30 dias com comissões em cadeia." },
-      { property: "og:title", content: "FitChain — Plataforma MLM Fitness" },
+      { property: "og:title", content: "FitMind" },
       { property: "og:description", content: "Desafios fitness de 30 dias com comissões em cadeia." },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "FitMind" },
+      { name: "twitter:description", content: "Desafios fitness de 30 dias com comissões em cadeia." },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [
       {
