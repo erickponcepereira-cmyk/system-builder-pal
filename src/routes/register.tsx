@@ -298,7 +298,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         }
 
         toast.success("Cadastro enviado com sucesso!");
-        navigate({ to: "/register/pending" as string });
+        navigate({ to: "/pending-approval" });
       }
     } catch {
       toast.error("Erro ao criar conta. Tente novamente.");
