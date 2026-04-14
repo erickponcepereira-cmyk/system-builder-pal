@@ -11,11 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudentRouteImport } from './routes/student'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RegisterPendingRouteImport } from './routes/register.pending'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -25,6 +25,11 @@ const StudentRoute = StudentRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PendingApprovalRoute = PendingApprovalRouteImport.update({
+  id: '/pending-approval',
+  path: '/pending-approval',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -47,29 +52,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RegisterPendingRoute = RegisterPendingRouteImport.update({
-  id: '/pending',
-  path: '/pending',
-  getParentRoute: () => RegisterRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRouteWithChildren
+  '/pending-approval': typeof PendingApprovalRoute
+  '/register': typeof RegisterRoute
   '/student': typeof StudentRoute
-  '/register/pending': typeof RegisterPendingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRouteWithChildren
+  '/pending-approval': typeof PendingApprovalRoute
+  '/register': typeof RegisterRoute
   '/student': typeof StudentRoute
-  '/register/pending': typeof RegisterPendingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,9 +77,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRouteWithChildren
+  '/pending-approval': typeof PendingApprovalRoute
+  '/register': typeof RegisterRoute
   '/student': typeof StudentRoute
-  '/register/pending': typeof RegisterPendingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,27 +88,27 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coach'
     | '/login'
+    | '/pending-approval'
     | '/register'
     | '/student'
-    | '/register/pending'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
     | '/coach'
     | '/login'
+    | '/pending-approval'
     | '/register'
     | '/student'
-    | '/register/pending'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/coach'
     | '/login'
+    | '/pending-approval'
     | '/register'
     | '/student'
-    | '/register/pending'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -116,7 +116,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRouteWithChildren
+  PendingApprovalRoute: typeof PendingApprovalRoute
+  RegisterRoute: typeof RegisterRoute
   StudentRoute: typeof StudentRoute
 }
 
@@ -134,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pending-approval': {
+      id: '/pending-approval'
+      path: '/pending-approval'
+      fullPath: '/pending-approval'
+      preLoaderRoute: typeof PendingApprovalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -164,34 +172,16 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register/pending': {
-      id: '/register/pending'
-      path: '/pending'
-      fullPath: '/register/pending'
-      preLoaderRoute: typeof RegisterPendingRouteImport
-      parentRoute: typeof RegisterRoute
-    }
   }
 }
-
-interface RegisterRouteChildren {
-  RegisterPendingRoute: typeof RegisterPendingRoute
-}
-
-const RegisterRouteChildren: RegisterRouteChildren = {
-  RegisterPendingRoute: RegisterPendingRoute,
-}
-
-const RegisterRouteWithChildren = RegisterRoute._addFileChildren(
-  RegisterRouteChildren,
-)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRouteWithChildren,
+  PendingApprovalRoute: PendingApprovalRoute,
+  RegisterRoute: RegisterRoute,
   StudentRoute: StudentRoute,
 }
 export const routeTree = rootRouteImport
