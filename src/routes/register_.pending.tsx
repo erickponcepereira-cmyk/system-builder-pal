@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame, Clock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/register/pending")({
+export const Route = createFileRoute("/register_/pending")({
   head: () => ({
     meta: [
       { title: "Cadastro Enviado — FitChain" },
