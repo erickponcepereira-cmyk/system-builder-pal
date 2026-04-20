@@ -16,6 +16,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudentIndexRouteImport } from './routes/student.index'
+import { Route as StudentStoreRouteImport } from './routes/student.store'
+import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentGroupRouteImport } from './routes/student.group'
+import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -52,6 +57,31 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentIndexRoute = StudentIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentStoreRoute = StudentStoreRouteImport.update({
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentProfileRoute = StudentProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentGroupRoute = StudentGroupRouteImport.update({
+  id: '/group',
+  path: '/group',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentChallengeRoute = StudentChallengeRouteImport.update({
+  id: '/challenge',
+  path: '/challenge',
+  getParentRoute: () => StudentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -60,7 +90,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
-  '/student': typeof StudentRoute
+  '/student': typeof StudentRouteWithChildren
+  '/student/challenge': typeof StudentChallengeRoute
+  '/student/group': typeof StudentGroupRoute
+  '/student/profile': typeof StudentProfileRoute
+  '/student/store': typeof StudentStoreRoute
+  '/student/': typeof StudentIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,7 +104,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
-  '/student': typeof StudentRoute
+  '/student/challenge': typeof StudentChallengeRoute
+  '/student/group': typeof StudentGroupRoute
+  '/student/profile': typeof StudentProfileRoute
+  '/student/store': typeof StudentStoreRoute
+  '/student': typeof StudentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,7 +118,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
-  '/student': typeof StudentRoute
+  '/student': typeof StudentRouteWithChildren
+  '/student/challenge': typeof StudentChallengeRoute
+  '/student/group': typeof StudentGroupRoute
+  '/student/profile': typeof StudentProfileRoute
+  '/student/store': typeof StudentStoreRoute
+  '/student/': typeof StudentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +135,11 @@ export interface FileRouteTypes {
     | '/pending-approval'
     | '/register'
     | '/student'
+    | '/student/challenge'
+    | '/student/group'
+    | '/student/profile'
+    | '/student/store'
+    | '/student/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -99,6 +148,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/pending-approval'
     | '/register'
+    | '/student/challenge'
+    | '/student/group'
+    | '/student/profile'
+    | '/student/store'
     | '/student'
   id:
     | '__root__'
@@ -109,6 +162,11 @@ export interface FileRouteTypes {
     | '/pending-approval'
     | '/register'
     | '/student'
+    | '/student/challenge'
+    | '/student/group'
+    | '/student/profile'
+    | '/student/store'
+    | '/student/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -118,7 +176,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
   RegisterRoute: typeof RegisterRoute
-  StudentRoute: typeof StudentRoute
+  StudentRoute: typeof StudentRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -172,8 +230,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/student/': {
+      id: '/student/'
+      path: '/'
+      fullPath: '/student/'
+      preLoaderRoute: typeof StudentIndexRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/store': {
+      id: '/student/store'
+      path: '/store'
+      fullPath: '/student/store'
+      preLoaderRoute: typeof StudentStoreRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/profile': {
+      id: '/student/profile'
+      path: '/profile'
+      fullPath: '/student/profile'
+      preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/group': {
+      id: '/student/group'
+      path: '/group'
+      fullPath: '/student/group'
+      preLoaderRoute: typeof StudentGroupRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/challenge': {
+      id: '/student/challenge'
+      path: '/challenge'
+      fullPath: '/student/challenge'
+      preLoaderRoute: typeof StudentChallengeRouteImport
+      parentRoute: typeof StudentRoute
+    }
   }
 }
+
+interface StudentRouteChildren {
+  StudentChallengeRoute: typeof StudentChallengeRoute
+  StudentGroupRoute: typeof StudentGroupRoute
+  StudentProfileRoute: typeof StudentProfileRoute
+  StudentStoreRoute: typeof StudentStoreRoute
+  StudentIndexRoute: typeof StudentIndexRoute
+}
+
+const StudentRouteChildren: StudentRouteChildren = {
+  StudentChallengeRoute: StudentChallengeRoute,
+  StudentGroupRoute: StudentGroupRoute,
+  StudentProfileRoute: StudentProfileRoute,
+  StudentStoreRoute: StudentStoreRoute,
+  StudentIndexRoute: StudentIndexRoute,
+}
+
+const StudentRouteWithChildren =
+  StudentRoute._addFileChildren(StudentRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -182,7 +294,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PendingApprovalRoute: PendingApprovalRoute,
   RegisterRoute: RegisterRoute,
-  StudentRoute: StudentRoute,
+  StudentRoute: StudentRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
