@@ -35,7 +35,7 @@ function AdminPayments() {
   useEffect(() => { load(); }, []);
 
   const updateStatus = async (id: string, status: "approved" | "paid" | "rejected") => {
-    const updates: Record<string, unknown> = { status };
+    const updates: { status: typeof status; approved_at?: string; paid_at?: string } = { status };
     if (status === "approved") updates.approved_at = new Date().toISOString();
     if (status === "paid") updates.paid_at = new Date().toISOString();
     const { error } = await supabase.from("withdrawal_requests").update(updates).eq("id", id);

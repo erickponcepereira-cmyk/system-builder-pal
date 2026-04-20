@@ -8,6 +8,8 @@ export const Route = createFileRoute("/admin/products")({
   component: AdminProducts,
 });
 
+type ProductType = "challenge" | "herbalife" | "physical";
+
 interface Product {
   id: string;
   name: string;
@@ -15,7 +17,7 @@ interface Product {
   price: number;
   original_price: number | null;
   duration_days: number | null;
-  type: string | null;
+  type: ProductType | null;
   status: string | null;
   commission_coach: number | null;
   commission_level1: number | null;
@@ -138,7 +140,7 @@ function AdminProducts() {
               <Field label="Status">
                 <select
                   value={editing.status || "active"}
-                  onChange={(e) => setEditing({ ...editing, status: e.target.value })}
+                  onChange={(e) => setEditing({ ...editing!, status: e.target.value })}
                   className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
                   style={{ backgroundColor: "#0F0F0F" }}
                 >

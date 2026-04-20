@@ -17,10 +17,18 @@ import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentIndexRouteImport } from './routes/student.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as StudentStoreRouteImport } from './routes/student.store'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as StudentGroupRouteImport } from './routes/student.group'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
+import { Route as AdminStudentsRouteImport } from './routes/admin.students'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
+import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
+import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -62,6 +70,11 @@ const StudentIndexRoute = StudentIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StudentRoute,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const StudentStoreRoute = StudentStoreRouteImport.update({
   id: '/store',
   path: '/store',
@@ -82,47 +95,105 @@ const StudentChallengeRoute = StudentChallengeRouteImport.update({
   path: '/challenge',
   getParentRoute: () => StudentRoute,
 } as any)
+const AdminStudentsRoute = AdminStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProductsRoute = AdminProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPatentsRoute = AdminPatentsRouteImport.update({
+  id: '/patents',
+  path: '/patents',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCoachesRoute = AdminCoachesRouteImport.update({
+  id: '/coaches',
+  path: '/coaches',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/coaches': typeof AdminCoachesRoute
+  '/admin/patents': typeof AdminPatentsRoute
+  '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/products': typeof AdminProductsRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/students': typeof AdminStudentsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/store': typeof StudentStoreRoute
+  '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
+  '/admin/coaches': typeof AdminCoachesRoute
+  '/admin/patents': typeof AdminPatentsRoute
+  '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/products': typeof AdminProductsRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/students': typeof AdminStudentsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/store': typeof StudentStoreRoute
+  '/admin': typeof AdminIndexRoute
   '/student': typeof StudentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/coaches': typeof AdminCoachesRoute
+  '/admin/patents': typeof AdminPatentsRoute
+  '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/products': typeof AdminProductsRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/students': typeof AdminStudentsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/store': typeof StudentStoreRoute
+  '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
 }
 export interface FileRouteTypes {
@@ -135,23 +206,38 @@ export interface FileRouteTypes {
     | '/pending-approval'
     | '/register'
     | '/student'
+    | '/admin/coaches'
+    | '/admin/patents'
+    | '/admin/payments'
+    | '/admin/products'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/students'
     | '/student/challenge'
     | '/student/group'
     | '/student/profile'
     | '/student/store'
+    | '/admin/'
     | '/student/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/coach'
     | '/login'
     | '/pending-approval'
     | '/register'
+    | '/admin/coaches'
+    | '/admin/patents'
+    | '/admin/payments'
+    | '/admin/products'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/students'
     | '/student/challenge'
     | '/student/group'
     | '/student/profile'
     | '/student/store'
+    | '/admin'
     | '/student'
   id:
     | '__root__'
@@ -162,16 +248,24 @@ export interface FileRouteTypes {
     | '/pending-approval'
     | '/register'
     | '/student'
+    | '/admin/coaches'
+    | '/admin/patents'
+    | '/admin/payments'
+    | '/admin/products'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/students'
     | '/student/challenge'
     | '/student/group'
     | '/student/profile'
     | '/student/store'
+    | '/admin/'
     | '/student/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
@@ -237,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentIndexRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/student/store': {
       id: '/student/store'
       path: '/store'
@@ -265,8 +366,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentChallengeRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/admin/students': {
+      id: '/admin/students'
+      path: '/students'
+      fullPath: '/admin/students'
+      preLoaderRoute: typeof AdminStudentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/products': {
+      id: '/admin/products'
+      path: '/products'
+      fullPath: '/admin/products'
+      preLoaderRoute: typeof AdminProductsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/payments': {
+      id: '/admin/payments'
+      path: '/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AdminPaymentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/patents': {
+      id: '/admin/patents'
+      path: '/patents'
+      fullPath: '/admin/patents'
+      preLoaderRoute: typeof AdminPatentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/coaches': {
+      id: '/admin/coaches'
+      path: '/coaches'
+      fullPath: '/admin/coaches'
+      preLoaderRoute: typeof AdminCoachesRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
+
+interface AdminRouteChildren {
+  AdminCoachesRoute: typeof AdminCoachesRoute
+  AdminPatentsRoute: typeof AdminPatentsRoute
+  AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminProductsRoute: typeof AdminProductsRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminCoachesRoute: AdminCoachesRoute,
+  AdminPatentsRoute: AdminPatentsRoute,
+  AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminProductsRoute: AdminProductsRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminStudentsRoute: AdminStudentsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface StudentRouteChildren {
   StudentChallengeRoute: typeof StudentChallengeRoute
@@ -289,7 +463,7 @@ const StudentRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
   PendingApprovalRoute: PendingApprovalRoute,
