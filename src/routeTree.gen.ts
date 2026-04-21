@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudentRouteImport } from './routes/student'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -43,6 +44,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const PendingApprovalRoute = PendingApprovalRouteImport.update({
   id: '/pending-approval',
   path: '/pending-approval',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/student': typeof StudentRouteWithChildren
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/admin/coaches': typeof AdminCoachesRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/student': typeof StudentRouteWithChildren
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coach'
     | '/login'
+    | '/onboarding'
     | '/pending-approval'
     | '/register'
     | '/student'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/'
     | '/coach'
     | '/login'
+    | '/onboarding'
     | '/pending-approval'
     | '/register'
     | '/admin/coaches'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coach'
     | '/login'
+    | '/onboarding'
     | '/pending-approval'
     | '/register'
     | '/student'
@@ -268,6 +280,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
   RegisterRoute: typeof RegisterRoute
   StudentRoute: typeof StudentRouteWithChildren
@@ -294,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/pending-approval'
       fullPath: '/pending-approval'
       preLoaderRoute: typeof PendingApprovalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -466,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
   PendingApprovalRoute: PendingApprovalRoute,
   RegisterRoute: RegisterRoute,
   StudentRoute: StudentRouteWithChildren,

@@ -120,7 +120,12 @@ function OnboardingPage() {
     if (step === 3 && studentId) {
       // bioimpedância é opcional
       setLoading(true);
-      const updates: Record<string, number | string> = {};
+      const updates: {
+        body_fat_percentage?: number;
+        muscle_mass?: number;
+        visceral_fat?: number;
+        bioimpedance_date?: string;
+      } = {};
       if (data.body_fat_percentage) updates.body_fat_percentage = Number(data.body_fat_percentage);
       if (data.muscle_mass) updates.muscle_mass = Number(data.muscle_mass);
       if (data.visceral_fat) updates.visceral_fat = Number(data.visceral_fat);
