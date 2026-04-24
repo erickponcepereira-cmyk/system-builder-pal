@@ -365,10 +365,12 @@ function AbaProduto({
 
 // ─── ABA REDE ───────────────────────────────────────────────────────
 function AbaRede({
-  nodes, setNodes,
+  nodes, setNodes, vendasCoach, setVendasCoach,
 }: {
   nodes: NodesMap;
   setNodes: React.Dispatch<React.SetStateAction<NodesMap>>;
+  vendasCoach: number;
+  setVendasCoach: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const todos = Object.values(nodes);
   const n1Nodes = getN1(nodes);
