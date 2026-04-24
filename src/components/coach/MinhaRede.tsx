@@ -423,15 +423,35 @@ function AbaRede({
             </div>
             <div>
               <p className="text-sm font-semibold text-emerald-400">Você — Coach Principal</p>
-              <p className="text-xs text-zinc-500">Clique no <b className="text-zinc-400">+</b> ao lado de cada membro para adicionar quem está abaixo</p>
+              <p className="text-xs text-zinc-500">Ajuste suas vendas diretas e adicione membros abaixo</p>
             </div>
           </div>
-          <button
-            onClick={adicionarN1}
-            className="flex items-center gap-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ml-3"
-          >
-            <Plus size={12} /> Add N1
-          </button>
+          <div className="flex items-center gap-2 ml-3">
+            <div className="flex items-center gap-0.5 bg-black/25 rounded-lg px-1.5 py-1 flex-shrink-0">
+              <button
+                onClick={() => setVendasCoach((v) => Math.max(0, v - 1))}
+                className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none"
+              >−</button>
+              <input
+                type="number"
+                min={0}
+                value={vendasCoach}
+                onChange={(e) => setVendasCoach(Math.max(0, +e.target.value || 0))}
+                className="w-10 bg-transparent text-center text-xs font-bold text-emerald-300 outline-none"
+              />
+              <button
+                onClick={() => setVendasCoach((v) => v + 1)}
+                className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none"
+              >+</button>
+              <span className="text-xs text-zinc-500 ml-0.5">vnd</span>
+            </div>
+            <button
+              onClick={adicionarN1}
+              className="flex items-center gap-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
+            >
+              <Plus size={12} /> Add N1
+            </button>
+          </div>
         </div>
 
         {n1Nodes.length === 0 ? (
