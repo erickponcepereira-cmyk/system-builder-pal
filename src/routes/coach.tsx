@@ -10,8 +10,8 @@ import { toast } from "sonner";
 import { PatentBadge } from "@/components/coach/PatentBadge";
 import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
-import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import { RankingTable } from "@/components/coach/RankingTable";
+import { MinhaRede } from "@/components/coach/MinhaRede";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
@@ -276,7 +276,9 @@ function NetworkTab({ referralLink, onCopy }: { referralLink: string; onCopy: ()
         </div>
       </div>
 
-      <MLMSimulator />
+      <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <MinhaRede />
+      </div>
 
       <div className="mt-4">
         <RankingTable />
