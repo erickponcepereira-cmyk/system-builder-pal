@@ -659,8 +659,8 @@ export function MinhaRede() {
           produtos={produtos} setProdutos={setProdutos}
         />
       )}
-      {abaAtiva === "rede" && <AbaRede nodes={nodes} setNodes={setNodes} />}
-      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} />}
+      {abaAtiva === "rede" && <AbaRede nodes={nodes} setNodes={setNodes} vendasCoach={vendasCoach} setVendasCoach={setVendasCoach} />}
+      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} vendasCoach={vendasCoach} />}
     </div>
   );
 }
