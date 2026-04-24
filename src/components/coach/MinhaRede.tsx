@@ -479,10 +479,16 @@ function AbaRede({
 }
 
 // ─── ABA GANHOS ─────────────────────────────────────────────────────
-function AbaGanhos({ nodes, preco }: { nodes: NodesMap; preco: number }) {
+function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: number; vendasCoach: number }) {
   const { liquido: liqVenda } = calcVenda(preco);
   const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda), [nodes, liqVenda]);
-  const ganhoPropr = useMemo(() => calcVendaPropria(nodes, liqVenda), [nodes, liqVenda]);
+  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda), [nodes, liqVenda]);
+  const ganhoPropr = {
+    ...ganhoUnit,
+    bruto: +(ganhoUnit.bruto * vendasCoach).toFixed(2),
+    imp: +(ganhoUnit.imp * vendasCoach).toFixed(2),
+    liquido: +(ganhoUnit.liquido * vendasCoach).toFixed(2),
+  };
   const totalLiq = +(ganhoRede.liquido + ganhoPropr.liquido).toFixed(2);
   const vendasRede = Object.values(nodes).reduce((a, n) => a + n.vendas, 0);
   const porNivel = [0, 1, 2].map((n) => ganhoRede.detalhes.filter((d) => d.nivel === n));
