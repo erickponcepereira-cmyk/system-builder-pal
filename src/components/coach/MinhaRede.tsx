@@ -611,6 +611,7 @@ export function MinhaRede() {
   const [produtoId, setProdutoId] = useState("p2");
   const [preco, setPreco] = useState(100);
   const [nodes, setNodes] = useState<NodesMap>({});
+  const [vendasCoach, setVendasCoach] = useState(1);
 
   const abas = [
     { id: "produto" as const, label: "Produto", icon: Package },
