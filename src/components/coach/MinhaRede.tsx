@@ -365,10 +365,12 @@ function AbaProduto({
 
 // ─── ABA REDE ───────────────────────────────────────────────────────
 function AbaRede({
-  nodes, setNodes,
+  nodes, setNodes, vendasCoach, setVendasCoach,
 }: {
   nodes: NodesMap;
   setNodes: React.Dispatch<React.SetStateAction<NodesMap>>;
+  vendasCoach: number;
+  setVendasCoach: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const todos = Object.values(nodes);
   const n1Nodes = getN1(nodes);
@@ -421,15 +423,35 @@ function AbaRede({
             </div>
             <div>
               <p className="text-sm font-semibold text-emerald-400">Você — Coach Principal</p>
-              <p className="text-xs text-zinc-500">Clique no <b className="text-zinc-400">+</b> ao lado de cada membro para adicionar quem está abaixo</p>
+              <p className="text-xs text-zinc-500">Ajuste suas vendas diretas e adicione membros abaixo</p>
             </div>
           </div>
-          <button
-            onClick={adicionarN1}
-            className="flex items-center gap-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ml-3"
-          >
-            <Plus size={12} /> Add N1
-          </button>
+          <div className="flex items-center gap-2 ml-3">
+            <div className="flex items-center gap-0.5 bg-black/25 rounded-lg px-1.5 py-1 flex-shrink-0">
+              <button
+                onClick={() => setVendasCoach((v) => Math.max(0, v - 1))}
+                className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none"
+              >−</button>
+              <input
+                type="number"
+                min={0}
+                value={vendasCoach}
+                onChange={(e) => setVendasCoach(Math.max(0, +e.target.value || 0))}
+                className="w-10 bg-transparent text-center text-xs font-bold text-emerald-300 outline-none"
+              />
+              <button
+                onClick={() => setVendasCoach((v) => v + 1)}
+                className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none"
+              >+</button>
+              <span className="text-xs text-zinc-500 ml-0.5">vnd</span>
+            </div>
+            <button
+              onClick={adicionarN1}
+              className="flex items-center gap-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
+            >
+              <Plus size={12} /> Add N1
+            </button>
+          </div>
         </div>
 
         {n1Nodes.length === 0 ? (
@@ -457,10 +479,16 @@ function AbaRede({
 }
 
 // ─── ABA GANHOS ─────────────────────────────────────────────────────
-function AbaGanhos({ nodes, preco }: { nodes: NodesMap; preco: number }) {
+function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: number; vendasCoach: number }) {
   const { liquido: liqVenda } = calcVenda(preco);
   const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda), [nodes, liqVenda]);
-  const ganhoPropr = useMemo(() => calcVendaPropria(nodes, liqVenda), [nodes, liqVenda]);
+  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda), [nodes, liqVenda]);
+  const ganhoPropr = {
+    ...ganhoUnit,
+    bruto: +(ganhoUnit.bruto * vendasCoach).toFixed(2),
+    imp: +(ganhoUnit.imp * vendasCoach).toFixed(2),
+    liquido: +(ganhoUnit.liquido * vendasCoach).toFixed(2),
+  };
   const totalLiq = +(ganhoRede.liquido + ganhoPropr.liquido).toFixed(2);
   const vendasRede = Object.values(nodes).reduce((a, n) => a + n.vendas, 0);
   const porNivel = [0, 1, 2].map((n) => ganhoRede.detalhes.filter((d) => d.nivel === n));
@@ -470,12 +498,12 @@ function AbaGanhos({ nodes, preco }: { nodes: NodesMap; preco: number }) {
       <div className="bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30 rounded-2xl p-5">
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-1">Ganho líquido total estimado</p>
         <p className="text-4xl font-bold text-emerald-400 tracking-tight">{fmt(totalLiq)}</p>
-        <p className="text-sm text-zinc-500 mt-1">produto: {fmt(preco)} · {vendasRede} venda{vendasRede !== 1 ? "s" : ""} na rede</p>
+        <p className="text-sm text-zinc-500 mt-1">produto: {fmt(preco)} · {vendasCoach} venda{vendasCoach !== 1 ? "s" : ""} sua{vendasCoach !== 1 ? "s" : ""} · {vendasRede} na rede</p>
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="bg-black/20 rounded-xl p-3">
-            <p className="text-xs text-zinc-500 mb-1">Sua venda (líquido)</p>
+            <p className="text-xs text-zinc-500 mb-1">Suas vendas (líquido)</p>
             <p className="text-xl font-bold text-violet-400">{fmt(ganhoPropr.liquido)}</p>
-            <p className="text-xs text-zinc-600 mt-0.5">{ganhoPropr.perc}% do líquido distrib.</p>
+            <p className="text-xs text-zinc-600 mt-0.5">{vendasCoach} × {fmt(ganhoUnit.liquido)}</p>
           </div>
           <div className="bg-black/20 rounded-xl p-3">
             <p className="text-xs text-zinc-500 mb-1">Comissão rede (líquido)</p>
@@ -486,10 +514,10 @@ function AbaGanhos({ nodes, preco }: { nodes: NodesMap; preco: number }) {
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Sua venda direta (por unidade)</p>
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Sua venda direta ({vendasCoach} venda{vendasCoach !== 1 ? "s" : ""})</p>
         {([
-          { label: `Bruto (${ganhoPropr.perc}% do líquido distrib.)`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
-          ganhoPropr.retorno > 0 ? { label: `(+) Níveis vazios devolvidos +${ganhoPropr.retorno}%`, val: fmt(+(liqVenda * ganhoPropr.retorno / 100).toFixed(2)), style: "text-emerald-400 font-medium" } : null,
+          { label: `Bruto (${ganhoUnit.perc}% × ${vendasCoach})`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
+          ganhoUnit.retorno > 0 ? { label: `(+) Níveis vazios devolvidos +${ganhoUnit.retorno}%`, val: fmt(+(liqVenda * ganhoUnit.retorno / 100 * vendasCoach).toFixed(2)), style: "text-emerald-400 font-medium" } : null,
           { label: `(-) Imposto pessoal ${fmtp(TAXA_IMP_PESSOA)}`, val: `- ${fmt(ganhoPropr.imp)}`, style: "text-red-400" },
         ].filter(Boolean) as { label: string; val: string; style: string }[]).map((r, i) => (
           <div key={i} className="flex justify-between py-1.5 border-b border-white/5 text-sm">
@@ -498,9 +526,10 @@ function AbaGanhos({ nodes, preco }: { nodes: NodesMap; preco: number }) {
           </div>
         ))}
         <div className="flex justify-between pt-3 mt-1 text-sm font-bold">
-          <span className="text-zinc-300">Líquido real por venda</span>
+          <span className="text-zinc-300">Líquido total das suas vendas</span>
           <span className="text-violet-400">{fmt(ganhoPropr.liquido)}</span>
         </div>
+        <p className="text-xs text-zinc-600 mt-2">Líquido por unidade: <b className="text-zinc-400">{fmt(ganhoUnit.liquido)}</b></p>
       </div>
 
       {ganhoRede.detalhes.length > 0 && (
@@ -582,6 +611,7 @@ export function MinhaRede() {
   const [produtoId, setProdutoId] = useState("p2");
   const [preco, setPreco] = useState(100);
   const [nodes, setNodes] = useState<NodesMap>({});
+  const [vendasCoach, setVendasCoach] = useState(1);
 
   const abas = [
     { id: "produto" as const, label: "Produto", icon: Package },
@@ -629,8 +659,8 @@ export function MinhaRede() {
           produtos={produtos} setProdutos={setProdutos}
         />
       )}
-      {abaAtiva === "rede" && <AbaRede nodes={nodes} setNodes={setNodes} />}
-      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} />}
+      {abaAtiva === "rede" && <AbaRede nodes={nodes} setNodes={setNodes} vendasCoach={vendasCoach} setVendasCoach={setVendasCoach} />}
+      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} vendasCoach={vendasCoach} />}
     </div>
   );
 }
