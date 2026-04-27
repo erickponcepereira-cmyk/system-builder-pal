@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Trophy, MessageCircle, ShoppingBag, User, Gift } from "lucide-react";
+import { ClipboardList, Home, Trophy, MessageCircle, ShoppingBag, User, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileShellProps {
@@ -10,6 +10,7 @@ interface MobileShellProps {
 const navItems = [
   { to: "/student", label: "Início", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
+  { to: "/student/health", label: "Saúde", icon: ClipboardList },
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
   { to: "/student/benefits", label: "Benefícios", icon: Gift },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
@@ -34,7 +35,7 @@ export function MobileShell({ children }: MobileShellProps) {
           className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 border-t border-white/5"
           style={{ backgroundColor: "rgba(15,15,15,0.95)", backdropFilter: "blur(20px)" }}
         >
-          <div className="grid grid-cols-6 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="grid grid-cols-7 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {navItems.map((item) => {
               const isActive =
                 item.to === "/student"

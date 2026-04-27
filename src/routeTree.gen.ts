@@ -21,6 +21,7 @@ import { Route as StudentIndexRouteImport } from './routes/student.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as StudentStoreRouteImport } from './routes/student.store'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentHealthRouteImport } from './routes/student.health'
 import { Route as StudentGroupRouteImport } from './routes/student.group'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
@@ -91,6 +92,11 @@ const StudentStoreRoute = StudentStoreRouteImport.update({
 const StudentProfileRoute = StudentProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentHealthRoute = StudentHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentGroupRoute = StudentGroupRouteImport.update({
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
+  '/student/health': typeof StudentHealthRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/store': typeof StudentStoreRoute
   '/admin/': typeof AdminIndexRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
+  '/student/health': typeof StudentHealthRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/store': typeof StudentStoreRoute
   '/admin': typeof AdminIndexRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
+  '/student/health': typeof StudentHealthRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/store': typeof StudentStoreRoute
   '/admin/': typeof AdminIndexRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/student/benefits'
     | '/student/challenge'
     | '/student/group'
+    | '/student/health'
     | '/student/profile'
     | '/student/store'
     | '/admin/'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/student/benefits'
     | '/student/challenge'
     | '/student/group'
+    | '/student/health'
     | '/student/profile'
     | '/student/store'
     | '/admin'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/student/benefits'
     | '/student/challenge'
     | '/student/group'
+    | '/student/health'
     | '/student/profile'
     | '/student/store'
     | '/admin/'
@@ -394,6 +406,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/student/profile'
       preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/health': {
+      id: '/student/health'
+      path: '/health'
+      fullPath: '/student/health'
+      preLoaderRoute: typeof StudentHealthRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/group': {
@@ -516,6 +535,7 @@ interface StudentRouteChildren {
   StudentBenefitsRoute: typeof StudentBenefitsRoute
   StudentChallengeRoute: typeof StudentChallengeRoute
   StudentGroupRoute: typeof StudentGroupRoute
+  StudentHealthRoute: typeof StudentHealthRoute
   StudentProfileRoute: typeof StudentProfileRoute
   StudentStoreRoute: typeof StudentStoreRoute
   StudentIndexRoute: typeof StudentIndexRoute
@@ -525,6 +545,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentBenefitsRoute: StudentBenefitsRoute,
   StudentChallengeRoute: StudentChallengeRoute,
   StudentGroupRoute: StudentGroupRoute,
+  StudentHealthRoute: StudentHealthRoute,
   StudentProfileRoute: StudentProfileRoute,
   StudentStoreRoute: StudentStoreRoute,
   StudentIndexRoute: StudentIndexRoute,
