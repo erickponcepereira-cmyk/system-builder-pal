@@ -39,7 +39,7 @@ function StudentHome() {
           <div>
             <div className="flex items-center gap-1.5 mb-3">
               <Flame className="h-4 w-4 text-white" />
-              <span className="text-xs font-bold tracking-wider text-white">FITCHAIN</span>
+              <span className="text-xs font-bold tracking-wider text-white">FITMIND CLUB</span>
             </div>
             <p className="text-[11px] text-white/70 uppercase tracking-wider">Carteirinha Digital</p>
             <p className="text-lg font-bold text-white mt-0.5">Desafio 30 Dias</p>

@@ -8,9 +8,9 @@ import { Footer } from "@/components/layout/Footer";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FitChain — Plataforma MLM de Desafios Fitness" },
+      { title: "FitMind Club — Plataforma MLM de Desafios Fitness" },
       { name: "description", content: "Conecte coaches e alunos em desafios fitness de 30 dias com comissões automáticas em cadeia." },
-      { property: "og:title", content: "FitChain — Plataforma MLM de Desafios Fitness" },
+      { property: "og:title", content: "FitMind Club — Plataforma MLM de Desafios Fitness" },
       { property: "og:description", content: "Transforme vidas, construa sua rede e ganhe comissões automatizadas." },
     ],
   }),

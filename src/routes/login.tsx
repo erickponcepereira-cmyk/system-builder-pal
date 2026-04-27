@@ -10,8 +10,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Entrar — FitChain" },
-      { name: "description", content: "Acesse sua conta FitChain." },
+      { title: "Entrar — FitMind Club" },
+      { name: "description", content: "Acesse sua conta FitMind Club." },
     ],
   }),
   component: LoginPage,
@@ -76,7 +76,7 @@ function LoginPage() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
             <Flame className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-white">FitChain</h1>
+          <h1 className="text-3xl font-bold text-white">FitMind Club</h1>
           <p className="text-sm text-white/50 tracking-wider">Transforme. Conecte. Cresça.</p>
         </div>
         <p className="absolute bottom-6 left-6 text-xs text-white/20">v1.0.0</p>
@@ -90,7 +90,7 @@ function LoginPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
               <Flame className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-white">FitChain</h1>
+            <h1 className="text-2xl font-bold text-white">FitMind Club</h1>
           </div>
 
           <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
@@ -179,7 +179,7 @@ function LoginPage() {
           </div>
 
           <p className="mt-8 text-center text-[10px] text-white/15">
-            v1.0.0 — Para suporte: suporte@fitchain.com
+            v1.0.0 — Para suporte: suporte@fitmindclub.com
           </p>
         </div>
       </div>

@@ -11,7 +11,7 @@ const products = [
   { id: 1, name: "Whey Protein 900g", price: 189.9, oldPrice: 229.9, tag: "Mais vendido" },
   { id: 2, name: "Shake Herbalife Fórmula 1", price: 245.0, tag: "Herbalife" },
   { id: 3, name: "Garrafa Térmica 1L", price: 89.9 },
-  { id: 4, name: "Camiseta Dry-Fit FitChain", price: 79.9, oldPrice: 99.9 },
+  { id: 4, name: "Camiseta Dry-Fit FitMind Club", price: 79.9, oldPrice: 99.9 },
 ];
 
 function StorePage() {
@@ -20,7 +20,7 @@ function StorePage() {
       <header className="pt-2 flex items-center justify-between">
         <div>
           <p className="text-xs text-white/40 uppercase tracking-wider">Loja</p>
-          <h1 className="text-2xl font-bold text-white">FitChain Store</h1>
+          <h1 className="text-2xl font-bold text-white">FitMind Club Store</h1>
         </div>
         <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
           <ShoppingBag className="h-5 w-5 text-white/70" />

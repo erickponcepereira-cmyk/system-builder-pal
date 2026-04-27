@@ -38,7 +38,7 @@ export function AdminShell() {
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
             <Flame className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-bold text-white">FitChain Admin</span>
+          <span className="font-bold text-white">FitMind Club Admin</span>
         </div>
         <button onClick={() => setOpen(!open)} className="text-white">
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -56,7 +56,7 @@ export function AdminShell() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Flame className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold text-white">FitChain</span>
+          <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             Admin
           </span>

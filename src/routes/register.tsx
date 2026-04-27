@@ -12,8 +12,8 @@ type SearchParams = { role?: string };
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Cadastro — FitChain" },
-      { name: "description", content: "Cadastre-se como coach ou aluno na plataforma FitChain." },
+      { title: "Cadastro — FitMind Club" },
+      { name: "description", content: "Cadastre-se como coach ou aluno na plataforma FitMind Club." },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
@@ -83,7 +83,7 @@ function RegisterPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <Flame className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-white">FitChain</span>
+            <span className="text-2xl font-bold text-white">FitMind Club</span>
           </Link>
           <h1 className="text-2xl font-bold text-white">Criar conta</h1>
           <p className="mt-1 text-sm text-white/50">Escolha seu perfil para começar</p>
@@ -316,7 +316,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Flame className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-white">FitChain</span>
+            <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Coach</h1>
         </div>
@@ -519,7 +519,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
                 </div>
                 <span className="text-xs text-white/50">
                   Li e aceito os <button type="button" className="text-primary hover:underline">Termos de Uso</button> e a{" "}
-                  <button type="button" className="text-primary hover:underline">Política de Privacidade</button> da FitChain.
+                  <button type="button" className="text-primary hover:underline">Política de Privacidade</button> da FitMind Club.
                 </span>
               </label>
 
@@ -618,7 +618,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Flame className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-white">FitChain</span>
+            <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Aluno</h1>
         </div>

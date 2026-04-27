@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/pending-approval")({
   head: () => ({
     meta: [
-      { title: "Cadastro Enviado — FitChain" },
+      { title: "Cadastro Enviado — FitMind Club" },
       { name: "description", content: "Seu cadastro foi enviado e está aguardando aprovação." },
     ],
   }),
@@ -20,7 +20,7 @@ function PendingPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
             <Flame className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold text-white">FitChain</span>
+          <span className="text-2xl font-bold text-white">FitMind Club</span>
         </div>
 
         <div className="rounded-2xl p-8" style={{ backgroundColor: "#1A1A1A" }}>

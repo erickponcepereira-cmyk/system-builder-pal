@@ -23,7 +23,7 @@ export function HeroSection() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-          O FitChain conecta coaches e alunos em desafios fitness de 30 dias com
+          O FitMind Club conecta coaches e alunos em desafios fitness de 30 dias com
           comissões automatizadas em cadeia. Cresça sua equipe e seus ganhos.
         </p>
 

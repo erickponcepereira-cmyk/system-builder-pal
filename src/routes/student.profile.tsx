@@ -57,7 +57,7 @@ function ProfilePage() {
           </button>
         </div>
         <div className="flex-1">
-          <p className="text-base font-bold text-white">Aluno FitChain</p>
+          <p className="text-base font-bold text-white">Aluno FitMind Club</p>
           <p className="text-xs text-white/50">aluno@email.com</p>
           <span className="mt-1.5 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
             🔥 Plano Premium
@@ -116,7 +116,7 @@ function ProfilePage() {
         Sair da conta
       </button>
 
-      <p className="text-center text-[10px] text-white/20 mt-2">FitChain v1.0.0</p>
+      <p className="text-center text-[10px] text-white/20 mt-2">FitMind Club v1.0.0</p>
     </div>
   );
 }
