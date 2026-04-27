@@ -1,7 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 
-import appCss from "../styles.css?url";
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -39,12 +37,6 @@ export const Route = createRootRoute({
       { name: "twitter:title", content: "FitMind" },
       { name: "twitter:description", content: "Desafios fitness de 30 dias com comissões em cadeia." },
       { name: "twitter:card", content: "summary" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
     ],
   }),
   shellComponent: RootShell,
