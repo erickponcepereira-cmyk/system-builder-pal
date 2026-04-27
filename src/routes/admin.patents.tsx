@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { RefreshCw, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PatentBadge, type PatentLevel, PATENT_LEVELS } from "@/components/coach/PatentBadge";
@@ -53,6 +53,15 @@ function AdminPatents() {
     setRules(next);
   };
 
+  const runAutomation = async () => {
+    const [rankings, patents] = await Promise.all([
+      supabase.rpc("refresh_monthly_rankings" as never, {} as never),
+      supabase.rpc("refresh_coach_patents" as never),
+    ]);
+    if (rankings.error || patents.error) toast.error(rankings.error?.message || patents.error?.message || "Erro ao recalcular");
+    else toast.success(`${patents.data || 0} patente(s) atualizada(s)`);
+  };
+
   const saveAll = async () => {
     for (const r of rules) {
       if (r.id) {
@@ -88,11 +97,16 @@ function AdminPatents() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Patentes</h1>
-          <p className="text-sm text-white/50">Configurar requisitos de cada patente</p>
+          <p className="text-sm text-white/50">Configurar requisitos e recalcular progressão automática</p>
         </div>
-        <button onClick={saveAll} className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
-          <Save className="h-4 w-4" /> Salvar todas
-        </button>
+        <div className="flex gap-2">
+          <button onClick={runAutomation} className="flex items-center gap-1.5 rounded-lg bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15">
+            <RefreshCw className="h-4 w-4" /> Recalcular
+          </button>
+          <button onClick={saveAll} className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
+            <Save className="h-4 w-4" /> Salvar todas
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
