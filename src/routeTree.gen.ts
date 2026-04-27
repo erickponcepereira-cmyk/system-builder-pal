@@ -23,6 +23,7 @@ import { Route as StudentStoreRouteImport } from './routes/student.store'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as StudentGroupRouteImport } from './routes/student.group'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
+import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
@@ -101,6 +102,11 @@ const StudentChallengeRoute = StudentChallengeRouteImport.update({
   path: '/challenge',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentBenefitsRoute = StudentBenefitsRouteImport.update({
+  id: '/benefits',
+  path: '/benefits',
+  getParentRoute: () => StudentRoute,
+} as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/students',
   path: '/students',
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
   '/student/profile': typeof StudentProfileRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
   '/student/profile': typeof StudentProfileRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/group': typeof StudentGroupRoute
   '/student/profile': typeof StudentProfileRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/students'
+    | '/student/benefits'
     | '/student/challenge'
     | '/student/group'
     | '/student/profile'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/students'
+    | '/student/benefits'
     | '/student/challenge'
     | '/student/group'
     | '/student/profile'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/students'
+    | '/student/benefits'
     | '/student/challenge'
     | '/student/group'
     | '/student/profile'
@@ -386,6 +398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentChallengeRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/student/benefits': {
+      id: '/student/benefits'
+      path: '/benefits'
+      fullPath: '/student/benefits'
+      preLoaderRoute: typeof StudentBenefitsRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/admin/students': {
       id: '/admin/students'
       path: '/students'
@@ -463,6 +482,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface StudentRouteChildren {
+  StudentBenefitsRoute: typeof StudentBenefitsRoute
   StudentChallengeRoute: typeof StudentChallengeRoute
   StudentGroupRoute: typeof StudentGroupRoute
   StudentProfileRoute: typeof StudentProfileRoute
@@ -471,6 +491,7 @@ interface StudentRouteChildren {
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
+  StudentBenefitsRoute: StudentBenefitsRoute,
   StudentChallengeRoute: StudentChallengeRoute,
   StudentGroupRoute: StudentGroupRoute,
   StudentProfileRoute: StudentProfileRoute,

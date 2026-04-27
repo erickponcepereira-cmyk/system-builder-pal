@@ -16,7 +16,7 @@ import { MinhaRede } from "@/components/coach/MinhaRede";
 export const Route = createFileRoute("/coach")({
   head: () => ({
     meta: [
-      { title: "Painel Coach — FitChain" },
+      { title: "Painel Coach — FitMind Club" },
       { name: "description", content: "Gerencie sua rede, vendas e comissões." },
     ],
   }),
@@ -31,7 +31,7 @@ function CoachDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [coachName, setCoachName] = useState("Coach");
   const referralCode = "MARINA2026";
-  const referralLink = `https://fitchain.app/r/${referralCode}`;
+  const referralLink = `https://fitmindclub.app/r/${referralCode}`;
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -73,7 +73,7 @@ function CoachDashboard() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Flame className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-bold text-white">FitChain</span>
+          <span className="font-bold text-white">FitMind Club</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -91,7 +91,7 @@ function CoachDashboard() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Flame className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold text-white">FitChain</span>
+          <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             Coach
           </span>
@@ -364,7 +364,7 @@ function CareerTab() {
     <>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Plano de Carreira</h1>
-        <p className="text-sm text-white/50">Sua jornada na FitChain</p>
+        <p className="text-sm text-white/50">Sua jornada na FitMind Club</p>
       </div>
 
       <CareerProgress currentMonths={3} currentStudents={24} isTopSeller={false} />

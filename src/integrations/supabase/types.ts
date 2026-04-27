@@ -14,6 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
+      anamnesis_forms: {
+        Row: {
+          additional_observations: string | null
+          alcohol_consumption: boolean | null
+          alcohol_frequency: string | null
+          confirmed_at: string | null
+          current_medications: string | null
+          dietary_goals: Json | null
+          dietary_goals_other: string | null
+          disliked_foods: string | null
+          exercise_duration: string | null
+          exercise_level: string | null
+          exercise_since: string | null
+          exercise_time: string | null
+          exercise_type: string | null
+          exercises_regularly: boolean | null
+          fast_food_frequency: string | null
+          filled_at: string | null
+          food_allergies: string | null
+          food_diary: Json | null
+          id: string
+          marital_status: string | null
+          objective: string | null
+          preexisting_conditions: string | null
+          profession: string | null
+          protocol_reason: string | null
+          sleep_hours: string | null
+          special_dietary_habits: string | null
+          stress_level: string | null
+          stress_strategies: string | null
+          student_id: string
+          student_signature_confirmed: boolean | null
+          subscription_id: string | null
+          supplements_used: string | null
+          surgical_history: string | null
+          tobacco_consumption: boolean | null
+          tobacco_quantity: string | null
+          water_intake_daily: string | null
+        }
+        Insert: {
+          additional_observations?: string | null
+          alcohol_consumption?: boolean | null
+          alcohol_frequency?: string | null
+          confirmed_at?: string | null
+          current_medications?: string | null
+          dietary_goals?: Json | null
+          dietary_goals_other?: string | null
+          disliked_foods?: string | null
+          exercise_duration?: string | null
+          exercise_level?: string | null
+          exercise_since?: string | null
+          exercise_time?: string | null
+          exercise_type?: string | null
+          exercises_regularly?: boolean | null
+          fast_food_frequency?: string | null
+          filled_at?: string | null
+          food_allergies?: string | null
+          food_diary?: Json | null
+          id?: string
+          marital_status?: string | null
+          objective?: string | null
+          preexisting_conditions?: string | null
+          profession?: string | null
+          protocol_reason?: string | null
+          sleep_hours?: string | null
+          special_dietary_habits?: string | null
+          stress_level?: string | null
+          stress_strategies?: string | null
+          student_id: string
+          student_signature_confirmed?: boolean | null
+          subscription_id?: string | null
+          supplements_used?: string | null
+          surgical_history?: string | null
+          tobacco_consumption?: boolean | null
+          tobacco_quantity?: string | null
+          water_intake_daily?: string | null
+        }
+        Update: {
+          additional_observations?: string | null
+          alcohol_consumption?: boolean | null
+          alcohol_frequency?: string | null
+          confirmed_at?: string | null
+          current_medications?: string | null
+          dietary_goals?: Json | null
+          dietary_goals_other?: string | null
+          disliked_foods?: string | null
+          exercise_duration?: string | null
+          exercise_level?: string | null
+          exercise_since?: string | null
+          exercise_time?: string | null
+          exercise_type?: string | null
+          exercises_regularly?: boolean | null
+          fast_food_frequency?: string | null
+          filled_at?: string | null
+          food_allergies?: string | null
+          food_diary?: Json | null
+          id?: string
+          marital_status?: string | null
+          objective?: string | null
+          preexisting_conditions?: string | null
+          profession?: string | null
+          protocol_reason?: string | null
+          sleep_hours?: string | null
+          special_dietary_habits?: string | null
+          stress_level?: string | null
+          stress_strategies?: string | null
+          student_id?: string
+          student_signature_confirmed?: boolean | null
+          subscription_id?: string | null
+          supplements_used?: string | null
+          surgical_history?: string | null
+          tobacco_consumption?: boolean | null
+          tobacco_quantity?: string | null
+          water_intake_daily?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnesis_forms_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnesis_forms_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           description: string | null
@@ -45,6 +177,160 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_logs: {
+        Row: {
+          activity_type: string | null
+          attended: boolean | null
+          created_at: string | null
+          id: string
+          log_date: string
+          notes: string | null
+          student_id: string
+          subscription_id: string | null
+        }
+        Insert: {
+          activity_type?: string | null
+          attended?: boolean | null
+          created_at?: string | null
+          id?: string
+          log_date: string
+          notes?: string | null
+          student_id: string
+          subscription_id?: string | null
+        }
+        Update: {
+          activity_type?: string | null
+          attended?: boolean | null
+          created_at?: string | null
+          id?: string
+          log_date?: string
+          notes?: string | null
+          student_id?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_logs_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bioimpedance_evaluations: {
+        Row: {
+          bmi: number | null
+          bmi_classification: string | null
+          bmi_health_risk: string | null
+          body_age: number | null
+          created_at: string | null
+          evaluated_by_coach_id: string
+          evaluation_date: string
+          evaluation_type: string
+          fat_classification: string | null
+          fat_delta: number | null
+          fat_percentage: number | null
+          id: string
+          muscle_classification: string | null
+          muscle_delta: number | null
+          muscle_percentage: number | null
+          notes: string | null
+          resting_metabolism: number | null
+          scale_number: string | null
+          student_id: string
+          subscription_id: string | null
+          visceral_fat: number | null
+          visceral_fat_classification: string | null
+          weighing_class: string | null
+          weight: number | null
+          weight_delta: number | null
+        }
+        Insert: {
+          bmi?: number | null
+          bmi_classification?: string | null
+          bmi_health_risk?: string | null
+          body_age?: number | null
+          created_at?: string | null
+          evaluated_by_coach_id: string
+          evaluation_date?: string
+          evaluation_type: string
+          fat_classification?: string | null
+          fat_delta?: number | null
+          fat_percentage?: number | null
+          id?: string
+          muscle_classification?: string | null
+          muscle_delta?: number | null
+          muscle_percentage?: number | null
+          notes?: string | null
+          resting_metabolism?: number | null
+          scale_number?: string | null
+          student_id: string
+          subscription_id?: string | null
+          visceral_fat?: number | null
+          visceral_fat_classification?: string | null
+          weighing_class?: string | null
+          weight?: number | null
+          weight_delta?: number | null
+        }
+        Update: {
+          bmi?: number | null
+          bmi_classification?: string | null
+          bmi_health_risk?: string | null
+          body_age?: number | null
+          created_at?: string | null
+          evaluated_by_coach_id?: string
+          evaluation_date?: string
+          evaluation_type?: string
+          fat_classification?: string | null
+          fat_delta?: number | null
+          fat_percentage?: number | null
+          id?: string
+          muscle_classification?: string | null
+          muscle_delta?: number | null
+          muscle_percentage?: number | null
+          notes?: string | null
+          resting_metabolism?: number | null
+          scale_number?: string | null
+          student_id?: string
+          subscription_id?: string | null
+          visceral_fat?: number | null
+          visceral_fat_classification?: string | null
+          weighing_class?: string | null
+          weight?: number | null
+          weight_delta?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bioimpedance_evaluations_evaluated_by_coach_id_fkey"
+            columns: ["evaluated_by_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bioimpedance_evaluations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bioimpedance_evaluations_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["id"]
           },
         ]
@@ -141,6 +427,53 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_awards_config: {
+        Row: {
+          award_description: string | null
+          award_value: number | null
+          badge_color: string | null
+          badge_icon: string | null
+          category: string
+          created_at: string | null
+          gender: string
+          id: string
+          placement: number
+          product_id: string
+        }
+        Insert: {
+          award_description?: string | null
+          award_value?: number | null
+          badge_color?: string | null
+          badge_icon?: string | null
+          category: string
+          created_at?: string | null
+          gender: string
+          id?: string
+          placement: number
+          product_id: string
+        }
+        Update: {
+          award_description?: string | null
+          award_value?: number | null
+          badge_color?: string | null
+          badge_icon?: string | null
+          category?: string
+          created_at?: string | null
+          gender?: string
+          id?: string
+          placement?: number
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_awards_config_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -359,6 +692,61 @@ export type Database = {
           },
         ]
       }
+      coach_transfers: {
+        Row: {
+          coaches_transferred: number | null
+          from_coach_id: string
+          id: string
+          performed_by: string | null
+          reason: string | null
+          students_transferred: number | null
+          to_coach_id: string
+          transferred_at: string | null
+        }
+        Insert: {
+          coaches_transferred?: number | null
+          from_coach_id: string
+          id?: string
+          performed_by?: string | null
+          reason?: string | null
+          students_transferred?: number | null
+          to_coach_id: string
+          transferred_at?: string | null
+        }
+        Update: {
+          coaches_transferred?: number | null
+          from_coach_id?: string
+          id?: string
+          performed_by?: string | null
+          reason?: string | null
+          students_transferred?: number | null
+          to_coach_id?: string
+          transferred_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_transfers_from_coach_id_fkey"
+            columns: ["from_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_transfers_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_transfers_to_coach_id_fkey"
+            columns: ["to_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaches: {
         Row: {
           approved_at: string | null
@@ -372,6 +760,9 @@ export type Database = {
           created_at: string | null
           herbalife_portal_url: string | null
           id: string
+          inactive_since: string | null
+          inactivity_warning_sent: boolean | null
+          last_activity_at: string | null
           pix_key: string | null
           pix_key_type: string | null
           profile_id: string
@@ -379,6 +770,8 @@ export type Database = {
           referral_link: string | null
           total_active_students: number | null
           total_sales: number | null
+          transferred_at: string | null
+          transferred_to_coach_id: string | null
           upline_coach_id: string | null
         }
         Insert: {
@@ -393,6 +786,9 @@ export type Database = {
           created_at?: string | null
           herbalife_portal_url?: string | null
           id?: string
+          inactive_since?: string | null
+          inactivity_warning_sent?: boolean | null
+          last_activity_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           profile_id: string
@@ -400,6 +796,8 @@ export type Database = {
           referral_link?: string | null
           total_active_students?: number | null
           total_sales?: number | null
+          transferred_at?: string | null
+          transferred_to_coach_id?: string | null
           upline_coach_id?: string | null
         }
         Update: {
@@ -414,6 +812,9 @@ export type Database = {
           created_at?: string | null
           herbalife_portal_url?: string | null
           id?: string
+          inactive_since?: string | null
+          inactivity_warning_sent?: boolean | null
+          last_activity_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           profile_id?: string
@@ -421,6 +822,8 @@ export type Database = {
           referral_link?: string | null
           total_active_students?: number | null
           total_sales?: number | null
+          transferred_at?: string | null
+          transferred_to_coach_id?: string | null
           upline_coach_id?: string | null
         }
         Relationships: [
@@ -436,6 +839,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaches_transferred_to_coach_id_fkey"
+            columns: ["transferred_to_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
           {
@@ -455,8 +865,10 @@ export type Database = {
           beneficiary_profile_id: string
           created_at: string | null
           id: string
+          is_referral: boolean | null
           level: number
           percentage: number
+          referred_by_student_id: string | null
           status: Database["public"]["Enums"]["commission_status"] | null
           transaction_id: string
         }
@@ -467,8 +879,10 @@ export type Database = {
           beneficiary_profile_id: string
           created_at?: string | null
           id?: string
+          is_referral?: boolean | null
           level: number
           percentage: number
+          referred_by_student_id?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
           transaction_id: string
         }
@@ -479,8 +893,10 @@ export type Database = {
           beneficiary_profile_id?: string
           created_at?: string | null
           id?: string
+          is_referral?: boolean | null
           level?: number
           percentage?: number
+          referred_by_student_id?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
           transaction_id?: string
         }
@@ -500,10 +916,152 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commissions_referred_by_student_id_fkey"
+            columns: ["referred_by_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commissions_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_quote_delivery: {
+        Row: {
+          delivered_date: string
+          id: string
+          quote_id: string
+          student_id: string
+        }
+        Insert: {
+          delivered_date?: string
+          id?: string
+          quote_id: string
+          student_id: string
+        }
+        Update: {
+          delivered_date?: string
+          id?: string
+          quote_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_quote_delivery_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "motivational_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_quote_delivery_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_products: {
+        Row: {
+          access_days: number | null
+          content_url: string | null
+          cover_url: string | null
+          created_at: string | null
+          description: string | null
+          duration_hours: number | null
+          id: string
+          instructor: string | null
+          is_featured: boolean | null
+          original_price: number | null
+          price: number
+          sort_order: number | null
+          status: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          access_days?: number | null
+          content_url?: string | null
+          cover_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_hours?: number | null
+          id?: string
+          instructor?: string | null
+          is_featured?: boolean | null
+          original_price?: number | null
+          price: number
+          sort_order?: number | null
+          status?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          access_days?: number | null
+          content_url?: string | null
+          cover_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_hours?: number | null
+          id?: string
+          instructor?: string | null
+          is_featured?: boolean | null
+          original_price?: number | null
+          price?: number
+          sort_order?: number | null
+          status?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      digital_purchases: {
+        Row: {
+          access_url: string | null
+          amount_paid: number | null
+          digital_product_id: string
+          expires_at: string | null
+          id: string
+          purchased_at: string | null
+          student_id: string
+        }
+        Insert: {
+          access_url?: string | null
+          amount_paid?: number | null
+          digital_product_id: string
+          expires_at?: string | null
+          id?: string
+          purchased_at?: string | null
+          student_id: string
+        }
+        Update: {
+          access_url?: string | null
+          amount_paid?: number | null
+          digital_product_id?: string
+          expires_at?: string | null
+          id?: string
+          purchased_at?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_purchases_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_purchases_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -833,6 +1391,33 @@ export type Database = {
           },
         ]
       }
+      motivational_quotes: {
+        Row: {
+          author: string | null
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          quote: string
+        }
+        Insert: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          quote: string
+        }
+        Update: {
+          author?: string | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          quote?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_url: string | null
@@ -1003,6 +1588,7 @@ export type Database = {
           original_price: number | null
           pix_fee_percentage: number | null
           price: number
+          referral_commission_percentage: number | null
           slug: string | null
           sort_order: number | null
           status: string | null
@@ -1045,6 +1631,7 @@ export type Database = {
           original_price?: number | null
           pix_fee_percentage?: number | null
           price: number
+          referral_commission_percentage?: number | null
           slug?: string | null
           sort_order?: number | null
           status?: string | null
@@ -1087,6 +1674,7 @@ export type Database = {
           original_price?: number | null
           pix_fee_percentage?: number | null
           price?: number
+          referral_commission_percentage?: number | null
           slug?: string | null
           sort_order?: number | null
           status?: string | null
@@ -1168,6 +1756,50 @@ export type Database = {
         }
         Relationships: []
       }
+      push_notifications_queue: {
+        Row: {
+          body: string
+          data: Json | null
+          id: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string | null
+          student_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          body: string
+          data?: Json | null
+          id?: string
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string | null
+          student_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          body?: string
+          data?: Json | null
+          id?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string | null
+          student_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_notifications_queue_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_products: {
         Row: {
           category: string | null
@@ -1216,6 +1848,119 @@ export type Database = {
         }
         Relationships: []
       }
+      student_wallets: {
+        Row: {
+          available_balance: number | null
+          id: string
+          pending_balance: number | null
+          student_id: string
+          total_earned: number | null
+          total_withdrawn: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_balance?: number | null
+          id?: string
+          pending_balance?: number | null
+          student_id: string
+          total_earned?: number | null
+          total_withdrawn?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_balance?: number | null
+          id?: string
+          pending_balance?: number | null
+          student_id?: string
+          total_earned?: number | null
+          total_withdrawn?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_wallets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_withdrawal_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          bank_account: string | null
+          bank_account_type: string | null
+          bank_agency: string | null
+          bank_name: string | null
+          holder_cpf: string | null
+          holder_name: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          requested_at: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"] | null
+          student_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          holder_cpf?: string | null
+          holder_name?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          requested_at?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"] | null
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_account?: string | null
+          bank_account_type?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          holder_cpf?: string | null
+          holder_name?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          requested_at?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"] | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_withdrawal_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_withdrawal_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           bioimpedance_date: string | null
@@ -1223,7 +1968,10 @@ export type Database = {
           body_fat_percentage: number | null
           body_water_percentage: number | null
           bone_mass: number | null
+          coach_account_created_at: string | null
+          coach_course_completed_at: string | null
           coach_id: string
+          completed_coach_course: boolean | null
           created_at: string | null
           current_weight: number | null
           goal_description: string | null
@@ -1234,6 +1982,8 @@ export type Database = {
           muscle_mass: number | null
           notes: string | null
           profile_id: string
+          referral_code: string | null
+          referral_link: string | null
           referred_by_student_id: string | null
           target_fat_percentage: number | null
           target_muscle_mass: number | null
@@ -1246,7 +1996,10 @@ export type Database = {
           body_fat_percentage?: number | null
           body_water_percentage?: number | null
           bone_mass?: number | null
+          coach_account_created_at?: string | null
+          coach_course_completed_at?: string | null
           coach_id: string
+          completed_coach_course?: boolean | null
           created_at?: string | null
           current_weight?: number | null
           goal_description?: string | null
@@ -1257,6 +2010,8 @@ export type Database = {
           muscle_mass?: number | null
           notes?: string | null
           profile_id: string
+          referral_code?: string | null
+          referral_link?: string | null
           referred_by_student_id?: string | null
           target_fat_percentage?: number | null
           target_muscle_mass?: number | null
@@ -1269,7 +2024,10 @@ export type Database = {
           body_fat_percentage?: number | null
           body_water_percentage?: number | null
           bone_mass?: number | null
+          coach_account_created_at?: string | null
+          coach_course_completed_at?: string | null
           coach_id?: string
+          completed_coach_course?: boolean | null
           created_at?: string | null
           current_weight?: number | null
           goal_description?: string | null
@@ -1280,6 +2038,8 @@ export type Database = {
           muscle_mass?: number | null
           notes?: string | null
           profile_id?: string
+          referral_code?: string | null
+          referral_link?: string | null
           referred_by_student_id?: string | null
           target_fat_percentage?: number | null
           target_muscle_mass?: number | null

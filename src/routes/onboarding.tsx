@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [
-      { title: "Bem-vindo — FitChain" },
+      { title: "Bem-vindo — FitMind Club" },
       { name: "description", content: "Configure seu perfil para começar o desafio." },
     ],
   }),

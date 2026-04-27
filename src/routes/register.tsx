@@ -6,14 +6,15 @@ import { Flame, ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Che
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 
 type SearchParams = { role?: string };
 
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Cadastro — FitChain" },
-      { name: "description", content: "Cadastre-se como coach ou aluno na plataforma FitChain." },
+      { title: "Cadastro — FitMind Club" },
+      { name: "description", content: "Cadastre-se como coach ou aluno na plataforma FitMind Club." },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
@@ -83,7 +84,7 @@ function RegisterPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <Flame className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-white">FitChain</span>
+            <span className="text-2xl font-bold text-white">FitMind Club</span>
           </Link>
           <h1 className="text-2xl font-bold text-white">Criar conta</h1>
           <p className="mt-1 text-sm text-white/50">Escolha seu perfil para começar</p>
@@ -176,6 +177,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [bankAccount, setBankAccount] = useState("");
   const [bankAccountType, setBankAccountType] = useState("corrente");
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
 
   const fetchCep = useCallback(async (cepValue: string) => {
     const clean = cepValue.replace(/\D/g, "");
@@ -236,6 +238,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       toast.error("Informe sua chave PIX");
       return;
     }
+    if (!selectedCoach) {
+      toast.error("Selecione o coach que te indicou");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -294,6 +300,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             bank_agency: bankAgency || null,
             bank_account: bankAccount || null,
             bank_account_type: bankAccountType,
+            upline_coach_id: selectedCoach.id,
           });
         }
 
@@ -316,7 +323,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Flame className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-white">FitChain</span>
+            <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Coach</h1>
         </div>
@@ -465,6 +472,8 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
           {/* Step 3 */}
           {step === 3 && (
             <div className="space-y-4">
+              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+
               <div className="space-y-2">
                 <Label className="text-white/70">Tipo da chave PIX *</Label>
                 <select
@@ -519,7 +528,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
                 </div>
                 <span className="text-xs text-white/50">
                   Li e aceito os <button type="button" className="text-primary hover:underline">Termos de Uso</button> e a{" "}
-                  <button type="button" className="text-primary hover:underline">Política de Privacidade</button> da FitChain.
+                  <button type="button" className="text-primary hover:underline">Política de Privacidade</button> da FitMind Club.
                 </span>
               </label>
 
@@ -561,11 +570,16 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
       toast.error("A senha deve ter no mínimo 8 caracteres");
+      return;
+    }
+    if (!selectedCoach) {
+      toast.error("Selecione seu coach");
       return;
     }
 
@@ -598,6 +612,11 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
             .from("profiles")
             .update({ phone: phone.replace(/\D/g, "") })
             .eq("id", profileData.id);
+
+          await supabase.from("students").insert({
+            profile_id: profileData.id,
+            coach_id: selectedCoach.id,
+          });
         }
 
         toast.success("Conta criada com sucesso! Verifique seu e-mail.");
@@ -618,7 +637,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Flame className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-white">FitChain</span>
+            <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Aluno</h1>
         </div>
@@ -637,6 +656,8 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
+            <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+
             <div className="space-y-2">
               <Label className="text-white/70">Senha</Label>
               <div className="relative">

@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Trophy, MessageCircle, ShoppingBag, User } from "lucide-react";
+import { Home, Trophy, MessageCircle, ShoppingBag, User, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileShellProps {
@@ -11,6 +11,7 @@ const navItems = [
   { to: "/student", label: "Início", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
+  { to: "/student/benefits", label: "Benefícios", icon: Gift },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/profile", label: "Perfil", icon: User },
 ] as const;
@@ -33,7 +34,7 @@ export function MobileShell({ children }: MobileShellProps) {
           className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 border-t border-white/5"
           style={{ backgroundColor: "rgba(15,15,15,0.95)", backdropFilter: "blur(20px)" }}
         >
-          <div className="flex items-center justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="grid grid-cols-6 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {navItems.map((item) => {
               const isActive =
                 item.to === "/student"
@@ -45,7 +46,7 @@ export function MobileShell({ children }: MobileShellProps) {
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 min-w-[56px] transition-all",
+                    "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 min-w-0 transition-all",
                     isActive ? "text-primary" : "text-white/40 hover:text-white/70"
                   )}
                 >
@@ -57,7 +58,7 @@ export function MobileShell({ children }: MobileShellProps) {
                   >
                     <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
                   </div>
-                  <span className="text-[10px] font-medium leading-none">{item.label}</span>
+                  <span className="max-w-full truncate text-[9px] font-medium leading-none">{item.label}</span>
                 </Link>
               );
             })}

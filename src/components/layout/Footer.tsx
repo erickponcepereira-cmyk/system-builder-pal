@@ -8,10 +8,10 @@ export function Footer() {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
             <Flame className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground">FitChain</span>
+          <span className="font-semibold text-foreground">FitMind Club</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} FitChain. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} FitMind Club. Todos os direitos reservados.
         </p>
       </div>
     </footer>

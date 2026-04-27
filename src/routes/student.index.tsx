@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles } from "lucide-react";
+import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles, Quote } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/student/")({
@@ -26,6 +26,16 @@ function StudentHome() {
         </button>
       </header>
 
+      <div className="rounded-2xl border-l-4 border-primary p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex gap-3">
+          <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-sm leading-relaxed text-white/80">“Seu único competidor é a versão de ontem de você mesmo.”</p>
+            <p className="mt-1 text-[11px] text-white/40">— FitMind Club</p>
+          </div>
+        </div>
+      </div>
+
       {/* Carteirinha Digital */}
       <div
         className="rounded-3xl p-5 relative overflow-hidden"
@@ -39,7 +49,7 @@ function StudentHome() {
           <div>
             <div className="flex items-center gap-1.5 mb-3">
               <Flame className="h-4 w-4 text-white" />
-              <span className="text-xs font-bold tracking-wider text-white">FITCHAIN</span>
+              <span className="text-xs font-bold tracking-wider text-white">FITMIND CLUB</span>
             </div>
             <p className="text-[11px] text-white/70 uppercase tracking-wider">Carteirinha Digital</p>
             <p className="text-lg font-bold text-white mt-0.5">Desafio 30 Dias</p>
