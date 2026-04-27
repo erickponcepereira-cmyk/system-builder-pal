@@ -19,6 +19,7 @@ interface StudentRow {
 function AdminStudents() {
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "withCoach" | "withProgress">("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,9 +39,11 @@ function AdminStudents() {
   }, []);
 
   const filtered = rows.filter((r) => {
+    if (statusFilter === "withCoach" && !r.coaches?.profiles?.name) return false;
+    if (statusFilter === "withProgress" && !r.current_weight) return false;
     if (!search) return true;
     const q = search.toLowerCase();
-    return r.profiles?.name.toLowerCase().includes(q) || r.profiles?.email.toLowerCase().includes(q);
+    return r.profiles?.name.toLowerCase().includes(q) || r.profiles?.email.toLowerCase().includes(q) || r.coaches?.profiles?.name?.toLowerCase().includes(q);
   });
 
   return (
@@ -50,16 +53,29 @@ function AdminStudents() {
         <p className="text-sm text-white/50">Todos os alunos cadastrados na plataforma</p>
       </div>
 
-      <div className="mb-4 relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-        <input
-          type="text"
-          placeholder="Buscar aluno..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl pl-10 pr-3 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
-          style={{ backgroundColor: "#1A1A1A" }}
-        />
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+          <input
+            type="text"
+            placeholder="Buscar aluno, e-mail ou coach..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-xl pl-10 pr-3 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+            style={{ backgroundColor: "#1A1A1A" }}
+          />
+        </div>
+        <div className="flex gap-1 rounded-xl p-1" style={{ backgroundColor: "#1A1A1A" }}>
+          {(["all", "withCoach", "withProgress"] as const).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setStatusFilter(filter)}
+              className={`rounded-lg px-3 py-2 text-xs font-bold ${statusFilter === filter ? "bg-primary text-primary-foreground" : "text-white/60"}`}
+            >
+              {filter === "all" ? "Todos" : filter === "withCoach" ? "Com coach" : "Com evolução"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-2xl overflow-hidden border border-white/5" style={{ backgroundColor: "#1A1A1A" }}>
