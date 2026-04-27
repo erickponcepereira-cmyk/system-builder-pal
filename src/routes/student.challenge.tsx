@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Trophy, Calendar, Scale, Camera, TrendingDown, Award } from "lucide-react";
+import { Trophy, Calendar, Scale, Camera, TrendingDown, Award, CheckCircle2, Circle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/student/challenge")({
@@ -7,7 +7,8 @@ export const Route = createFileRoute("/student/challenge")({
 });
 
 function ChallengePage() {
-  const tabs = ["Visão Geral", "Aulas", "Evolução", "Premiação"];
+  const tabs = ["Visão Geral", "Aulas", "Evolução", "Frequência", "Premiação"];
+  const attendanceDays = Array.from({ length: 30 }, (_, index) => index + 1);
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
@@ -72,6 +73,32 @@ function ChallengePage() {
           </div>
           <p className="text-xl font-bold text-white">14º</p>
           <p className="text-[10px] text-white/40 mt-0.5">no ranking semanal</p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-white">Frequência</h2>
+            <p className="text-[11px] text-white/40">18/25 dias úteis (72%)</p>
+          </div>
+          <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary">72%</span>
+        </div>
+        <div className="grid grid-cols-10 gap-1.5">
+          {attendanceDays.map((day) => {
+            const attended = day <= 18;
+            const future = day > 25;
+            return (
+              <div
+                key={day}
+                className={`flex aspect-square items-center justify-center rounded-full text-[9px] ${
+                  attended ? "bg-primary text-primary-foreground" : future ? "bg-white/5 text-white/20" : "border border-white/10 text-white/40"
+                }`}
+              >
+                {attended ? <CheckCircle2 className="h-3 w-3" /> : future ? day : <Circle className="h-3 w-3" />}
+              </div>
+            );
+          })}
         </div>
       </div>
 
