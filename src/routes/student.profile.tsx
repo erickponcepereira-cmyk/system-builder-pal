@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera } from "lucide-react";
+import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -78,6 +78,21 @@ function ProfilePage() {
         <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-base font-bold text-primary">A+</p>
           <p className="text-[10px] text-white/40">Nota</p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Rocket className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-sm font-bold text-white">Quer fazer parte da equipe de coaches?</h2>
+            <p className="mt-1 text-xs leading-relaxed text-white/60">Torne-se um Coach FitMind Club e ganhe ajudando outras pessoas a se transformarem.</p>
+            <button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">
+              <GraduationCap className="h-4 w-4" /> Fazer Curso de Coach
+            </button>
+          </div>
         </div>
       </div>
 
