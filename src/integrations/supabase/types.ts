@@ -2134,16 +2134,20 @@ export type Database = {
         Row: {
           app_fee: number | null
           created_at: string | null
+          digital_product_id: string | null
           gateway_transaction_id: string | null
           gross_amount: number
           id: string
           installments: number | null
+          metadata: Json | null
           net_amount: number
           paid_at: string | null
           payment_fee: number | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
+          purchase_type: string | null
           status: Database["public"]["Enums"]["transaction_status"] | null
+          store_product_id: string | null
           student_id: string
           subscription_id: string | null
           tax_amount: number | null
@@ -2151,16 +2155,20 @@ export type Database = {
         Insert: {
           app_fee?: number | null
           created_at?: string | null
+          digital_product_id?: string | null
           gateway_transaction_id?: string | null
           gross_amount: number
           id?: string
           installments?: number | null
+          metadata?: Json | null
           net_amount: number
           paid_at?: string | null
           payment_fee?: number | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
+          purchase_type?: string | null
           status?: Database["public"]["Enums"]["transaction_status"] | null
+          store_product_id?: string | null
           student_id: string
           subscription_id?: string | null
           tax_amount?: number | null
@@ -2168,16 +2176,20 @@ export type Database = {
         Update: {
           app_fee?: number | null
           created_at?: string | null
+          digital_product_id?: string | null
           gateway_transaction_id?: string | null
           gross_amount?: number
           id?: string
           installments?: number | null
+          metadata?: Json | null
           net_amount?: number
           paid_at?: string | null
           payment_fee?: number | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           product_id?: string
+          purchase_type?: string | null
           status?: Database["public"]["Enums"]["transaction_status"] | null
+          store_product_id?: string | null
           student_id?: string
           subscription_id?: string | null
           tax_amount?: number | null
@@ -2373,6 +2385,16 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      process_paid_transaction: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
+      refresh_coach_patents: { Args: never; Returns: number }
+      refresh_monthly_rankings: {
+        Args: { _reference_month?: string }
+        Returns: undefined
+      }
+      release_available_commissions: { Args: never; Returns: number }
     }
     Enums: {
       chat_permission:
