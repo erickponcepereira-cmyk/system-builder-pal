@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   Flame, LayoutDashboard, Users, UserCheck, Package, CreditCard,
-  Settings, BarChart3, LogOut, Menu, X, Award,
+  Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/coaches", label: "Coaches", icon: UserCheck },
+  { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle },
   { to: "/admin/students", label: "Alunos", icon: Users },
   { to: "/admin/products", label: "Produtos", icon: Package },
   { to: "/admin/payments", label: "Pagamentos", icon: CreditCard },
