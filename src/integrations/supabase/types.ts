@@ -2395,6 +2395,22 @@ export type Database = {
         Returns: undefined
       }
       release_available_commissions: { Args: never; Returns: number }
+      update_coach_withdrawal_status: {
+        Args: {
+          _notes?: string
+          _status: Database["public"]["Enums"]["withdrawal_status"]
+          _withdrawal_id: string
+        }
+        Returns: undefined
+      }
+      update_student_withdrawal_status: {
+        Args: {
+          _notes?: string
+          _status: Database["public"]["Enums"]["withdrawal_status"]
+          _withdrawal_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       chat_permission:
