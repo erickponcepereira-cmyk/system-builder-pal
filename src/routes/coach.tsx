@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Flame, Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
-  Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight,
+  Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
+import { StudentEvaluationPanel } from "@/components/coach/StudentEvaluationPanel";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "wallet" | "career";
+type Tab = "overview" | "network" | "evaluate" | "wallet" | "career";
 
 function CoachDashboard() {
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ function CoachDashboard() {
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
+    { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
   ];
@@ -158,6 +160,7 @@ function CoachDashboard() {
             <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
+          {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "career" && <CareerTab />}
         </div>
@@ -283,6 +286,18 @@ function NetworkTab({ referralLink, onCopy }: { referralLink: string; onCopy: ()
       <div className="mt-4">
         <RankingTable />
       </div>
+    </>
+  );
+}
+
+function EvaluateTab() {
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+        <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
+      </div>
+      <StudentEvaluationPanel />
     </>
   );
 }

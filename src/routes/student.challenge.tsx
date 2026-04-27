@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Trophy, Calendar, Scale, Camera, TrendingDown, Award, CheckCircle2, Circle } from "lucide-react";
+import { Trophy, Calendar, Scale, Camera, TrendingDown, Award, CheckCircle2, Circle, Medal } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/student/challenge")({
@@ -99,6 +99,45 @@ function ChallengePage() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-white">Ranking por categoria</h2>
+            <p className="text-[11px] text-white/40">Feminino • Maior perda de gordura %</p>
+          </div>
+          <Medal className="h-5 w-5 text-primary" />
+        </div>
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {["Feminino", "Masculino"].map((gender, index) => (
+            <button key={gender} className={`rounded-xl px-3 py-2 text-xs font-bold ${index === 0 ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60"}`}>
+              {gender}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {["Gordura", "Músculo", "Peso"].map((category, index) => (
+            <span key={category} className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-bold ${index === 0 ? "bg-primary/20 text-primary" : "bg-white/5 text-white/50"}`}>
+              {category}
+            </span>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2">
+          {[
+            { pos: "🥇", name: "Ana P.", value: "-8.4%" },
+            { pos: "🥈", name: "Bianca S.", value: "-6.9%" },
+            { pos: "🥉", name: "Carla M.", value: "-5.8%" },
+          ].map((row) => (
+            <div key={row.name} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span>{row.pos}</span>
+                <span className="text-sm font-medium text-white">{row.name}</span>
+              </div>
+              <span className="text-sm font-bold text-primary">{row.value}</span>
+            </div>
+          ))}
         </div>
       </div>
 
