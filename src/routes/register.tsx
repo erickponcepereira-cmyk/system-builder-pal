@@ -6,6 +6,7 @@ import { Flame, ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Che
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 
 type SearchParams = { role?: string };
 
@@ -176,6 +177,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [bankAccount, setBankAccount] = useState("");
   const [bankAccountType, setBankAccountType] = useState("corrente");
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
 
   const fetchCep = useCallback(async (cepValue: string) => {
     const clean = cepValue.replace(/\D/g, "");
@@ -236,6 +238,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       toast.error("Informe sua chave PIX");
       return;
     }
+    if (!selectedCoach) {
+      toast.error("Selecione o coach que te indicou");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -294,6 +300,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             bank_agency: bankAgency || null,
             bank_account: bankAccount || null,
             bank_account_type: bankAccountType,
+            upline_coach_id: selectedCoach.id,
           });
         }
 
@@ -465,6 +472,8 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
           {/* Step 3 */}
           {step === 3 && (
             <div className="space-y-4">
+              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+
               <div className="space-y-2">
                 <Label className="text-white/70">Tipo da chave PIX *</Label>
                 <select
@@ -561,11 +570,16 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
       toast.error("A senha deve ter no mínimo 8 caracteres");
+      return;
+    }
+    if (!selectedCoach) {
+      toast.error("Selecione seu coach");
       return;
     }
 
@@ -598,6 +612,11 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
             .from("profiles")
             .update({ phone: phone.replace(/\D/g, "") })
             .eq("id", profileData.id);
+
+          await supabase.from("students").insert({
+            profile_id: profileData.id,
+            coach_id: selectedCoach.id,
+          });
         }
 
         toast.success("Conta criada com sucesso! Verifique seu e-mail.");
@@ -637,6 +656,8 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
+            <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+
             <div className="space-y-2">
               <Label className="text-white/70">Senha</Label>
               <div className="relative">
