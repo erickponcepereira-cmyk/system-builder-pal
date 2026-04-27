@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -34,6 +35,63 @@ const sections = [
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState({ name: "Aluno FitMind Club", email: "aluno@email.com" });
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
+  const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("50");
+  const [pixKey, setPixKey] = useState("");
+  const [pixKeyType, setPixKeyType] = useState("cpf");
+  const [holderName, setHolderName] = useState("");
+  const [holderCpf, setHolderCpf] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data: profileData } = await supabase.from("profiles").select("id,name,email").eq("user_id", userData.user.id).maybeSingle();
+      if (profileData) setProfile({ name: profileData.name, email: profileData.email });
+      if (!profileData?.id) return;
+      const { data: student } = await supabase.from("students").select("id,referral_link,referral_code").eq("profile_id", profileData.id).maybeSingle();
+      if (!student?.id) return;
+      setStudentId(student.id);
+      setReferralLink(student.referral_link || `/r/${student.referral_code || "ALUNO2026"}`);
+      const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned").eq("student_id", student.id).maybeSingle();
+      setWallet({
+        available_balance: Number(walletData?.available_balance || 0),
+        pending_balance: Number(walletData?.pending_balance || 0),
+        total_earned: Number(walletData?.total_earned || 0),
+      });
+    })();
+  }, []);
+
+  const requestWithdrawal = async () => {
+    if (!studentId) return toast.error("Aluno não encontrado");
+    const amount = Number(withdrawAmount.replace(",", "."));
+    if (amount < 50) return toast.error("Saque mínimo: R$ 50,00");
+    if (amount > wallet.available_balance) return toast.error("Saldo disponível insuficiente");
+    if (!pixKey || !holderName || !holderCpf) return toast.error("Preencha os dados do PIX");
+    const { error } = await supabase.from("student_withdrawal_requests").insert({
+      student_id: studentId,
+      amount,
+      pix_key: pixKey,
+      pix_key_type: pixKeyType,
+      holder_name: holderName,
+      holder_cpf: holderCpf,
+      status: "requested",
+    } as never);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Saque solicitado!");
+      setWithdrawOpen(false);
+    }
+  };
+
+  const copyReferral = async () => {
+    await navigator.clipboard.writeText(referralLink);
+    toast.success("Link copiado!");
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -51,15 +109,15 @@ function ProfilePage() {
       <div className="rounded-2xl p-5 flex items-center gap-4" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="relative">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/40">
-            <span className="text-xl font-bold text-primary">A</span>
+            <span className="text-xl font-bold text-primary">{profile.name.charAt(0)}</span>
           </div>
           <button className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary border-2" style={{ borderColor: "#1A1A1A" }}>
             <Camera className="h-3 w-3 text-primary-foreground" />
           </button>
         </div>
         <div className="flex-1">
-          <p className="text-base font-bold text-white">Aluno FitMind Club</p>
-          <p className="text-xs text-white/50">aluno@email.com</p>
+          <p className="text-base font-bold text-white">{profile.name}</p>
+          <p className="text-xs text-white/50">{profile.email}</p>
           <span className="mt-1.5 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
             🔥 Plano Premium
           </span>
@@ -101,16 +159,16 @@ function ProfilePage() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
-            <p className="mt-1 text-2xl font-bold text-white">R$ 120,00</p>
-            <p className="text-[11px] text-white/40">+ R$ 80,00 pendente por 15 dias</p>
+            <p className="mt-1 text-2xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
+            <p className="text-[11px] text-white/40">+ R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente · total R$ {wallet.total_earned.toFixed(2).replace(".", ",")}</p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
-            <Gift className="h-5 w-5 text-primary" />
-          </div>
+          <button onClick={() => setWithdrawOpen(true)} className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
+            <Wallet className="h-5 w-5 text-primary" />
+          </button>
         </div>
         <div className="mt-3 flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-          <span className="truncate font-mono text-xs text-white/60">/r/ALUNO2026</span>
-          <button className="text-xs font-bold text-primary">Copiar</button>
+          <span className="truncate font-mono text-xs text-white/60">{referralLink}</span>
+          <button onClick={copyReferral} className="text-xs font-bold text-primary">Copiar</button>
         </div>
       </div>
 
@@ -151,6 +209,52 @@ function ProfilePage() {
       </button>
 
       <p className="text-center text-[10px] text-white/20 mt-2">FitMind Club v1.0.0</p>
+
+      {withdrawOpen && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5">
+            <h2 className="text-lg font-bold text-white">Solicitar saque</h2>
+            <p className="mt-1 text-xs text-white/50">Disponível: R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
+            <div className="mt-4 space-y-3">
+              <Field label="Valor a sacar">
+                <input value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} className="field-control" />
+              </Field>
+              <Field label="Nome do titular">
+                <input value={holderName} onChange={(event) => setHolderName(event.target.value)} className="field-control" />
+              </Field>
+              <Field label="CPF do titular">
+                <input value={holderCpf} onChange={(event) => setHolderCpf(event.target.value)} className="field-control" />
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Tipo da chave">
+                  <select value={pixKeyType} onChange={(event) => setPixKeyType(event.target.value)} className="field-control">
+                    <option value="cpf">CPF</option>
+                    <option value="email">E-mail</option>
+                    <option value="phone">Telefone</option>
+                    <option value="random">Aleatória</option>
+                  </select>
+                </Field>
+                <Field label="Chave PIX">
+                  <input value={pixKey} onChange={(event) => setPixKey(event.target.value)} className="field-control" />
+                </Field>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button onClick={() => setWithdrawOpen(false)} className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white">Cancelar</button>
+              <button onClick={requestWithdrawal} className="rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-white/50">{label}</span>
+      {children}
+    </label>
   );
 }
