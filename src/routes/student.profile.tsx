@@ -96,6 +96,23 @@ function ProfilePage() {
         </div>
       </div>
 
+      <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
+            <p className="mt-1 text-2xl font-bold text-white">R$ 120,00</p>
+            <p className="text-[11px] text-white/40">+ R$ 80,00 pendente por 15 dias</p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
+            <Gift className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+          <span className="truncate font-mono text-xs text-white/60">/r/ALUNO2026</span>
+          <button className="text-xs font-bold text-primary">Copiar</button>
+        </div>
+      </div>
+
       {/* Sections */}
       {sections.map((section) => (
         <div key={section.title}>
