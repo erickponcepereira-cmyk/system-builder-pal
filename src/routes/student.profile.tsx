@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ const sections = [
       { icon: Settings, label: "Editar perfil" },
       { icon: CreditCard, label: "Meus planos" },
       { icon: Award, label: "Minha evolução" },
+      { icon: ClipboardList, label: "Anamnese", to: "/student/health" },
     ],
   },
   {
@@ -121,8 +122,9 @@ function ProfilePage() {
           </h2>
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
             {section.items.map((it, i) => (
-              <button
+              <Link
                 key={it.label}
+                to={"to" in it ? it.to : "/student/profile"}
                 className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] ${
                   i !== section.items.length - 1 ? "border-b border-white/5" : ""
                 }`}
@@ -132,7 +134,7 @@ function ProfilePage() {
                 </div>
                 <span className="flex-1 text-sm text-white">{it.label}</span>
                 <ChevronRight className="h-4 w-4 text-white/30" />
-              </button>
+              </Link>
             ))}
           </div>
         </div>
