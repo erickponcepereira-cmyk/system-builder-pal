@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles } from "lucide-react";
+import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles, Quote } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/student/")({
@@ -25,6 +25,16 @@ function StudentHome() {
           <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />
         </button>
       </header>
+
+      <div className="rounded-2xl border-l-4 border-primary p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex gap-3">
+          <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-sm leading-relaxed text-white/80">“Seu único competidor é a versão de ontem de você mesmo.”</p>
+            <p className="mt-1 text-[11px] text-white/40">— FitMind Club</p>
+          </div>
+        </div>
+      </div>
 
       {/* Carteirinha Digital */}
       <div
