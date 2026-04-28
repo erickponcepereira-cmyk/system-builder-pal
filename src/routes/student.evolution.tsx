@@ -8,7 +8,8 @@ export const Route = createFileRoute("/student/evolution")({ component: StudentE
 
 type Student = { id: string; current_weight: number | null; goal_weight: number | null };
 type EvolutionPhoto = { id: string; photo_url: string; photo_date: string; week_number: number | null; caption: string | null };
-type FoodLog = { id: string; log_date: string; meal_type: string | null; photo_url: string | null; description: string | null; ai_analysis: any };
+type MealAnalysis = { calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number; summary?: string; coach_tip?: string };
+type FoodLog = { id: string; log_date: string; meal_type: string | null; photo_url: string | null; description: string | null; ai_analysis: MealAnalysis | null };
 type SignedPhoto = EvolutionPhoto & { signedUrl?: string | null };
 type SignedFood = FoodLog & { signedUrl?: string | null };
 
