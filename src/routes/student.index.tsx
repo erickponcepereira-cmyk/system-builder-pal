@@ -165,17 +165,17 @@ function StudentHome() {
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">Ações Rápidas</h2>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { icon: Camera, label: "Foto" },
-            { icon: Apple, label: "Refeição" },
-            { icon: Scale, label: "Pesagem" },
-            { icon: Sparkles, label: "IA" },
+            { icon: Camera, label: "Foto", to: "/student/evolution" },
+            { icon: Apple, label: "Refeição", to: "/student/evolution" },
+            { icon: Scale, label: "Pesagem", to: "/student/challenge" },
+            { icon: Sparkles, label: "IA", to: "/student/evolution" },
           ].map((a) => (
-            <button key={a.label} className="flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
+            <Link key={a.label} to={a.to} className="flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
                 <a.icon className="h-5 w-5 text-primary" />
               </div>
               <span className="text-[10px] font-medium text-white/70">{a.label}</span>
-            </button>
+            </Link>
           ))}
         </div>
       </div>
