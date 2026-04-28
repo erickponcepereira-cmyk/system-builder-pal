@@ -2385,6 +2385,10 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      join_student_challenge_group: {
+        Args: { _group_id: string }
+        Returns: undefined
+      }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
