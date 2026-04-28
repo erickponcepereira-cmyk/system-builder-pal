@@ -755,12 +755,15 @@ export type Database = {
           bank_account_type: string | null
           bank_agency: string | null
           bank_name: string | null
+          blocked_at: string | null
+          blocked_reason: string | null
           career_goal_progress: Json | null
           consecutive_months_as_top: number | null
           created_at: string | null
           herbalife_portal_url: string | null
           id: string
           inactive_since: string | null
+          inactivity_grace_until: string | null
           inactivity_warning_sent: boolean | null
           last_activity_at: string | null
           pix_key: string | null
@@ -781,12 +784,15 @@ export type Database = {
           bank_account_type?: string | null
           bank_agency?: string | null
           bank_name?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
           career_goal_progress?: Json | null
           consecutive_months_as_top?: number | null
           created_at?: string | null
           herbalife_portal_url?: string | null
           id?: string
           inactive_since?: string | null
+          inactivity_grace_until?: string | null
           inactivity_warning_sent?: boolean | null
           last_activity_at?: string | null
           pix_key?: string | null
@@ -807,12 +813,15 @@ export type Database = {
           bank_account_type?: string | null
           bank_agency?: string | null
           bank_name?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
           career_goal_progress?: Json | null
           consecutive_months_as_top?: number | null
           created_at?: string | null
           herbalife_portal_url?: string | null
           id?: string
           inactive_since?: string | null
+          inactivity_grace_until?: string | null
           inactivity_warning_sent?: boolean | null
           last_activity_at?: string | null
           pix_key?: string | null
@@ -2384,6 +2393,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      block_inactive_coach: {
+        Args: { _coach_id: string; _reason?: string }
+        Returns: undefined
+      }
+      extend_coach_inactivity_grace: {
+        Args: { _coach_id: string; _days?: number; _reason?: string }
+        Returns: undefined
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       join_student_challenge_group: {
         Args: { _group_id: string }
@@ -2393,12 +2410,17 @@ export type Database = {
         Args: { _transaction_id: string }
         Returns: undefined
       }
+      refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
       refresh_monthly_rankings: {
         Args: { _reference_month?: string }
         Returns: undefined
       }
       release_available_commissions: { Args: never; Returns: number }
+      transfer_inactive_coach_network: {
+        Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }
+        Returns: Json
+      }
       update_coach_withdrawal_status: {
         Args: {
           _notes?: string
