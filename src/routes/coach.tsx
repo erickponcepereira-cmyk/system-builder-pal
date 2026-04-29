@@ -92,8 +92,9 @@ function CoachDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [coachName, setCoachName] = useState("Coach");
   const [checkingAccess, setCheckingAccess] = useState(true);
-  const referralCode = "MARINA2026";
-  const referralLink = `https://fitmindclub.app/r/${referralCode}`;
+  const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
+  const referralCode = coachContext?.referralCode || "FITMIND";
+  const referralLink = coachContext?.referralLink || `https://fitmindclub.app/r/${referralCode}`;
 
   useEffect(() => {
     let active = true;
@@ -147,10 +148,17 @@ function CoachDashboard() {
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
+    { id: "products", label: "Esteira de Produtos", icon: Package },
+    { id: "students", label: "Base de Alunos", icon: UserRound },
+    { id: "tree", label: "Árvore da Rede", icon: Network },
+    { id: "physicalStore", label: "Loja Física", icon: ShoppingBag },
+    { id: "digitalStore", label: "Loja Digital", icon: BookOpen },
+    { id: "benefits", label: "Benefícios", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
+    { id: "profile", label: "Meu Perfil", icon: User },
   ];
 
   if (checkingAccess) {
