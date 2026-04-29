@@ -28,7 +28,8 @@ function LoginPage() {
 
   const enterArea = (area: "coach" | "student" | "admin") => {
     if (area !== "admin") sessionStorage.setItem("fitmind_selected_area", area);
-    navigate({ to: area === "admin" ? "/admin" : area === "coach" ? "/coach" : "/student" });
+    const target = area === "admin" ? "/admin" : area === "coach" ? "/coach" : "/student";
+    window.location.assign(target);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
