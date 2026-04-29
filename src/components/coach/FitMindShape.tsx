@@ -1169,7 +1169,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {[
                 { icon: <Droplets size={18} color="#60a5fa" />, label: "Água Corporal", tooltip: "bodyWater", value: `${a.bodyWater}%`, bg: "#eff6ff" },
-                { icon: <Bone size={18} color="#a78bfa" />, label: "Massa Óssea", tooltip: "boneMass", value: `${a.boneMass} kg`, bg: "#f5f3ff" },
+                { icon: <Bone size={18} color="#a78bfa" />, label: "Massa Óssea", tooltip: "boneMass", value: `${a.boneMass}%`, bg: "#f5f3ff" },
               ].map(item => (
                 <div key={item.label} style={{ background: item.bg, borderRadius: 12, padding: "14px", textAlign: "center" }}>
                   {item.icon}
@@ -1245,7 +1245,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     <span style={{ width: 12, height: 12, borderRadius: 3, background: d.fill, display: "inline-block" }} />
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b" }}>{d.name}</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{d.value} kg</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{d.value}%</div>
                     </div>
                   </div>
                 ))}
@@ -1263,7 +1263,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 <RechartsTooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="gordura" name="% Gordura" fill="#fca5a5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="musculo" name="Músculo (kg)" fill={themeColor} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="musculo" name="% Músculo" fill={themeColor} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
