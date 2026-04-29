@@ -1051,16 +1051,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const avatarIndex = bmiCat.avatar;
     const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
     const viscCat = getVisceralCategory(a.visceralFat);
-    const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
+    const ageBodyDiff = a.bodyAge ? a.bodyAge - 100 : 0;
 
     const evalColor = (ev: string) => ({ excellent: "#22c55e", good: "#86efac", normal: "#60a5fa", warning: "#fb923c", danger: "#ef4444" }[ev] || "#94a3b8");
     const evalLabel = (ev: string) => ({ excellent: "Excelente", good: "Bom", normal: "Normal", warning: "Atenção", danger: "Risco" }[ev] || ev);
 
-    const leanMass = a.weight - (a.weight * a.bodyFat / 100);
-    const fatMass = a.weight * a.bodyFat / 100;
+    const leanPct = +(100 - (a.bodyFat || 0)).toFixed(1);
+    const fatPct = +(a.bodyFat || 0).toFixed(1);
     const pieData = [
-      { name: "Massa Magra", value: +leanMass.toFixed(1), fill: "var(--fm-primary)" },
-      { name: "Gordura", value: +fatMass.toFixed(1), fill: "#fca5a5" },
+      { name: "Massa Magra", value: leanPct, fill: "var(--fm-primary)" },
+      { name: "Gordura", value: fatPct, fill: "#fca5a5" },
     ];
 
     const histWeight = historicalData.length > 0 ? historicalData : [
@@ -1119,14 +1119,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div className="fm-section-title">Composição Corporal</div>
             {[
               { label: "Peso", tooltip: null, value: `${a.weight} kg`, eval: "normal", evalLabel: "Peso atual" },
-              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: `${a.skeletalMuscle} kg`, eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
-              { label: "Massa Muscular", tooltip: "muscleMass", value: `${a.muscleMass} kg`, eval: "normal", evalLabel: "Total" },
+              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: `${a.skeletalMuscle}%`, eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
+              { label: "Massa Muscular", tooltip: "muscleMass", value: `${a.muscleMass}%`, eval: "normal", evalLabel: "Total" },
               {
                 label: "Idade Corporal",
                 tooltip: "bodyAge",
-                value: `${a.bodyAge} anos`,
+                value: `${a.bodyAge}%`,
                 eval: ageBodyDiff > 5 ? "danger" : ageBodyDiff > 0 ? "warning" : "excellent",
-                evalLabel: ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff} anos` : `${ageBodyDiff} anos`,
+                evalLabel: ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${ageBodyDiff}%`,
               },
             ].map(row => (
               <div key={row.label} className="fm-result-row">
@@ -1150,8 +1150,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             {[
               { label: "IMC", tooltip: "bmi", value: `${a.bmi || computedBMI} kg/m²`, color: bmiCat.color, evalText: bmiCat.label },
               { label: "Gordura Corporal", tooltip: "bodyFat", value: `${a.bodyFat}%`, color: evalColor(fatCat.eval), evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})` },
-              { label: "Gordura Visceral", tooltip: "visceralFat", value: `Nível ${a.visceralFat}`, color: viscCat.color, evalText: viscCat.label },
-              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: `${a.basalMetabolism} kcal`, color: "#60a5fa", evalText: "Referência diária" },
+              { label: "Gordura Visceral", tooltip: "visceralFat", value: `${a.visceralFat}%`, color: viscCat.color, evalText: viscCat.label },
+              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: `${a.basalMetabolism}%`, color: "#60a5fa", evalText: "Harris-Benedict" },
             ].map(row => (
               <div key={row.label} className="fm-result-row">
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: 4 }}>
