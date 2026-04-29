@@ -254,7 +254,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             name,
             role: "coach",
           },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
@@ -265,14 +265,18 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
 
       if (authData.user) {
         // Update profile with additional data
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("id")
           .eq("user_id", authData.user.id)
-          .single();
+          .maybeSingle();
 
-        if (profileData) {
-          await supabase
+        if (profileError || !profileData) {
+          toast.error("Não foi possível criar seu perfil. Tente novamente.");
+          return;
+        }
+
+        const { error: updateError } = await supabase
             .from("profiles")
             .update({
               cpf: cpf.replace(/\D/g, ""),
@@ -288,8 +292,12 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             })
             .eq("id", profileData.id);
 
-          // Create coach record (pending approval)
-          await supabase.from("coaches").insert({
+          if (updateError) {
+            toast.error("Não foi possível salvar seus dados pessoais.");
+            return;
+          }
+
+          const { error: coachError } = await supabase.from("coaches").insert({
             profile_id: profileData.id,
             referral_code: referralCode,
             referral_link: `${window.location.origin}/r/${referralCode}`,
@@ -301,7 +309,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             bank_account_type: bankAccountType,
             upline_coach_id: selectedCoach.id,
           });
-        }
+
+          if (coachError) {
+            toast.error(`Não foi possível criar o cadastro de coach: ${coachError.message}`);
+            return;
+          }
 
         toast.success("Cadastro enviado com sucesso!");
         navigate({ to: "/pending-approval" });
@@ -587,7 +599,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
         password,
         options: {
           data: { name, role: "student" },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
@@ -598,23 +610,36 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
 
       if (data.user) {
         // Update phone
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("id")
           .eq("user_id", data.user.id)
-          .single();
+          .maybeSingle();
 
-        if (profileData) {
-          await supabase
+        if (profileError || !profileData) {
+          toast.error("Não foi possível criar seu perfil. Tente novamente.");
+          return;
+        }
+
+        const { error: updateError } = await supabase
             .from("profiles")
             .update({ phone: phone.replace(/\D/g, "") })
             .eq("id", profileData.id);
 
-          await supabase.from("students").insert({
+          if (updateError) {
+            toast.error("Não foi possível salvar seu telefone.");
+            return;
+          }
+
+          const { error: studentError } = await supabase.from("students").insert({
             profile_id: profileData.id,
             coach_id: selectedCoach.id,
           });
-        }
+
+          if (studentError) {
+            toast.error(`Não foi possível criar o cadastro de aluno: ${studentError.message}`);
+            return;
+          }
 
         toast.success("Conta criada com sucesso! Verifique seu e-mail.");
         navigate({ to: "/login" });

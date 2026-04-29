@@ -29,13 +29,20 @@ function StudentLayout() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id, role")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!active) return;
+      const selectedArea = sessionStorage.getItem("fitmind_selected_area");
+      const { data: student } = profile
+        ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
+        : { data: null };
+
+      if (!active) return;
       if (profile?.role === "admin") navigate({ to: "/admin", replace: true });
-      else if (["coach", "manager", "director"].includes(profile?.role || "")) navigate({ to: "/coach", replace: true });
+      else if (["coach", "manager", "director"].includes(profile?.role || "") && selectedArea !== "student") navigate({ to: "/coach", replace: true });
+      else if (!student && profile?.role !== "student") navigate({ to: "/coach", replace: true });
       else setCheckingRole(false);
     });
 

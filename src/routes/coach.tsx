@@ -32,20 +32,48 @@ function CoachDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [coachName, setCoachName] = useState("Coach");
+  const [checkingAccess, setCheckingAccess] = useState(true);
   const referralCode = "MARINA2026";
   const referralLink = `https://fitmindclub.app/r/${referralCode}`;
 
   useEffect(() => {
+    let active = true;
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      const { data } = await supabase
+      if (!active) return;
+      if (!user) {
+        navigate({ to: "/login", replace: true });
+        return;
+      }
+
+      const { data: profile } = await supabase
         .from("profiles")
-        .select("name")
+        .select("id, name, role")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (data?.name) setCoachName(data.name.split(" ")[0]);
+
+      const { data: coach } = profile
+        ? await supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+        : { data: null };
+
+      if (!active) return;
+      if (profile?.role === "admin") {
+        navigate({ to: "/admin", replace: true });
+        return;
+      }
+      if (!["coach", "manager", "director"].includes(profile?.role || "") && !coach) {
+        navigate({ to: "/student", replace: true });
+        return;
+      }
+
+      if (profile?.name) setCoachName(profile.name.split(" ")[0]);
+      setCheckingAccess(false);
     });
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -65,6 +93,10 @@ function CoachDashboard() {
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
   ];
+
+  if (checkingAccess) {
+    return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Carregando...</div>;
+  }
 
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Dumbbell, Eye, EyeOff, Loader2, User } from "lucide-react";
 import fitmindLogo from "@/assets/fitmind-logo.png";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,12 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accessOptions, setAccessOptions] = useState<{ coach: boolean; student: boolean } | null>(null);
+
+  const enterArea = (area: "coach" | "student" | "admin") => {
+    if (area !== "admin") sessionStorage.setItem("fitmind_selected_area", area);
+    navigate({ to: area === "admin" ? "/admin" : area === "coach" ? "/coach" : "/student" });
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,19 +53,34 @@ function LoginPage() {
       if (data.user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("id, role")
           .eq("user_id", data.user.id)
-          .single();
+          .maybeSingle();
+
+        if (!profile) {
+          toast.error("Perfil não encontrado. Verifique seu e-mail ou tente novamente.");
+          return;
+        }
+
+        const [{ data: coach }, { data: student }] = await Promise.all([
+          supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+          supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+        ]);
 
         const role = profile?.role;
+        const canCoach = role === "coach" || role === "manager" || role === "director" || !!coach;
+        const canStudent = role === "student" || !!student;
         toast.success("Login realizado com sucesso!");
 
         if (role === "admin") {
-          navigate({ to: "/admin" });
-        } else if (role === "coach" || role === "manager" || role === "director") {
-          navigate({ to: "/coach" });
+          enterArea("admin");
+        } else if (canCoach && canStudent) {
+          setAccessOptions({ coach: true, student: true });
+          setLoading(false);
+        } else if (canCoach) {
+          enterArea("coach");
         } else {
-          navigate({ to: "/student" });
+          enterArea("student");
         }
       }
     } catch {
@@ -91,7 +112,28 @@ function LoginPage() {
           </div>
 
           <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
-            <h2 className="text-xl font-bold text-white mb-6">Acessar conta</h2>
+            <h2 className="text-xl font-bold text-white mb-6">{accessOptions ? "Entrar como" : "Acessar conta"}</h2>
+
+            {accessOptions ? (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => enterArea("coach")}
+                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                >
+                  <Dumbbell className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Painel de Coach</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => enterArea("student")}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                >
+                  <User className="h-5 w-5 text-white/70" />
+                  <span className="font-semibold">Painel de Aluno</span>
+                </button>
+              </div>
+            ) : (
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
@@ -150,14 +192,15 @@ function LoginPage() {
                 )}
               </Button>
             </form>
+            )}
 
-            <div className="my-6 flex items-center gap-3">
+            {!accessOptions && <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-white/10" />
               <span className="text-xs text-white/30">ou</span>
               <div className="h-px flex-1 bg-white/10" />
-            </div>
+            </div>}
 
-            <div className="space-y-3 text-center">
+            {!accessOptions && <div className="space-y-3 text-center">
               <Link
                 to="/register"
                 search={{ role: "coach" }}
@@ -172,7 +215,7 @@ function LoginPage() {
               >
                 Quero me inscrever em um desafio → Cadastrar como Aluno
               </Link>
-            </div>
+            </div>}
           </div>
 
           <p className="mt-8 text-center text-[10px] text-white/15">
