@@ -161,7 +161,7 @@ function CoachInactivityPage() {
       ) : (
         <div className="space-y-4">
           {enriched.map((coach) => {
-            const statusClass = coach.status === "blocked" ? "bg-red-500/15 text-red-300" : coach.status === "critical" ? "bg-red-500/15 text-red-300" : coach.status === "extended" ? "bg-blue-500/15 text-blue-300" : "bg-yellow-500/15 text-yellow-300";
+            const statusClass = coach.status === "blocked" ? "bg-red-500/15 text-red-300" : coach.status === "critical" ? "bg-red-500/15 text-red-300" : coach.status === "extended" ? "bg-white/10 text-white/70" : "bg-red-500/10 text-red-200";
             return (
               <article key={coach.id} className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
