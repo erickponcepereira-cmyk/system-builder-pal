@@ -167,9 +167,9 @@ function ProfilePage() {
           <div className="flex-1">
             <h2 className="text-sm font-bold text-white">Quer fazer parte da equipe de coaches?</h2>
             <p className="mt-1 text-xs leading-relaxed text-white/60">Torne-se um Coach FitMind Club e ganhe ajudando outras pessoas a se transformarem.</p>
-            <button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">
+            <Link to="/student/coach-course" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">
               <GraduationCap className="h-4 w-4" /> Fazer Curso de Coach
-            </button>
+            </Link>
           </div>
         </div>
       </div>

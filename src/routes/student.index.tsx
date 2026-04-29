@@ -14,6 +14,8 @@ function StudentHome() {
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
   const [availableBalance, setAvailableBalance] = useState(0);
   const [showReferral, setShowReferral] = useState(false);
+  const [dailyQuote, setDailyQuote] = useState({ quote: "Seu único competidor é a versão de ontem de você mesmo.", author: "FitMind Club" });
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -26,6 +28,14 @@ function StudentHome() {
         .maybeSingle();
       if (profile?.name) setStudentName(profile.name.split(" ")[0]);
       if (!profile?.id) return;
+
+      const [{ data: quoteData }, { data: notificationData }] = await Promise.all([
+        supabase.rpc("get_or_create_daily_quote" as never),
+        supabase.from("notifications").select("id").eq("profile_id", profile.id).eq("is_read", false),
+      ]);
+      const quote = quoteData as unknown as { quote?: string; author?: string } | null;
+      if (quote?.quote) setDailyQuote({ quote: quote.quote, author: quote.author || "FitMind Club" });
+      setUnreadNotifications(notificationData?.length || 0);
 
       const { data: student } = await supabase
         .from("students")
@@ -76,10 +86,10 @@ function StudentHome() {
           <button onClick={() => setShowReferral(true)} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
             <LinkIcon className="h-5 w-5 text-primary" />
           </button>
-          <button className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+          <Link to="/student/notifications" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
             <Bell className="h-5 w-5 text-white/70" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
-          </button>
+            {unreadNotifications > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">{unreadNotifications}</span>}
+          </Link>
         </div>
       </header>
 
@@ -87,8 +97,8 @@ function StudentHome() {
         <div className="flex gap-3">
           <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <div>
-            <p className="text-sm leading-relaxed text-white/80">“Seu único competidor é a versão de ontem de você mesmo.”</p>
-            <p className="mt-1 text-[11px] text-white/40">— FitMind Club</p>
+            <p className="text-sm leading-relaxed text-white/80">“{dailyQuote.quote}”</p>
+            <p className="mt-1 text-[11px] text-white/40">— {dailyQuote.author}</p>
           </div>
         </div>
       </div>

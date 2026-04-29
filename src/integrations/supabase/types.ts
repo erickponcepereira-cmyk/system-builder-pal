@@ -692,6 +692,166 @@ export type Database = {
           },
         ]
       }
+      coach_applications: {
+        Row: {
+          admin_notes: string | null
+          city: string | null
+          completed_modules: number | null
+          created_at: string | null
+          experience: string | null
+          id: string
+          motivation: string
+          phone: string | null
+          profile_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+          total_modules: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          city?: string | null
+          completed_modules?: number | null
+          created_at?: string | null
+          experience?: string | null
+          id?: string
+          motivation: string
+          phone?: string | null
+          profile_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+          total_modules?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          city?: string | null
+          completed_modules?: number | null
+          created_at?: string | null
+          experience?: string | null
+          id?: string
+          motivation?: string
+          phone?: string | null
+          profile_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+          total_modules?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_applications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_applications_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_applications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_course_modules: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          is_required: boolean | null
+          material_url: string | null
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          material_url?: string | null
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_required?: boolean | null
+          material_url?: string | null
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      coach_course_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          module_id: string
+          notes: string | null
+          quiz_score: number | null
+          student_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          module_id: string
+          notes?: string | null
+          quiz_score?: number | null
+          student_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          module_id?: string
+          notes?: string | null
+          quiz_score?: number | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_course_progress_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "coach_course_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_course_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_transfers: {
         Row: {
           coaches_transferred: number | null
@@ -2533,10 +2693,12 @@ export type Database = {
         }
         Returns: string
       }
+      enqueue_daily_student_reminders: { Args: never; Returns: number }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
         Returns: undefined
       }
+      get_or_create_daily_quote: { Args: never; Returns: Json }
       get_student_attendance_summary: {
         Args: { _student_id?: string }
         Returns: Json
@@ -2544,6 +2706,15 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       join_student_challenge_group: {
         Args: { _group_id: string }
+        Returns: undefined
+      }
+      mark_all_notifications_read: { Args: never; Returns: number }
+      mark_coach_course_module_complete: {
+        Args: { _module_id: string }
+        Returns: Json
+      }
+      mark_notification_read: {
+        Args: { _notification_id: string }
         Returns: undefined
       }
       process_paid_transaction: {
@@ -2557,8 +2728,25 @@ export type Database = {
         Returns: undefined
       }
       release_available_commissions: { Args: never; Returns: number }
+      review_coach_application: {
+        Args: {
+          _admin_notes?: string
+          _application_id: string
+          _status: string
+        }
+        Returns: undefined
+      }
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
+        Returns: string
+      }
+      submit_coach_application: {
+        Args: {
+          _city?: string
+          _experience?: string
+          _motivation: string
+          _phone?: string
+        }
         Returns: string
       }
       transfer_inactive_coach_network: {

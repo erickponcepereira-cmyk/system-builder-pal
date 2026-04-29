@@ -34,6 +34,9 @@ interface Transaction {
   products: { name: string } | null;
 }
 
+type CoachWithdrawalRow = Omit<Withdrawal, "kind" | "owner"> & { profiles: { name: string; email: string } | null };
+type StudentWithdrawalRow = Omit<Withdrawal, "kind" | "owner"> & { students: { profiles: { name: string; email: string } | null } | null };
+
 function AdminPayments() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -57,8 +60,8 @@ function AdminPayments() {
         .order("created_at", { ascending: false })
         .limit(100),
     ]);
-    const coachWithdrawals = ((coachWithdrawalRes.data as Array<any>) || []).map((w) => ({ ...w, kind: "coach", owner: w.profiles })) as Withdrawal[];
-    const studentWithdrawals = ((studentWithdrawalRes.data as Array<any>) || []).map((w) => ({ ...w, kind: "student", owner: w.students?.profiles })) as Withdrawal[];
+    const coachWithdrawals = ((coachWithdrawalRes.data as unknown as CoachWithdrawalRow[]) || []).map((w) => ({ ...w, kind: "coach", owner: w.profiles })) as Withdrawal[];
+    const studentWithdrawals = ((studentWithdrawalRes.data as unknown as StudentWithdrawalRow[]) || []).map((w) => ({ ...w, kind: "student", owner: w.students?.profiles || null })) as Withdrawal[];
     setWithdrawals([...coachWithdrawals, ...studentWithdrawals].sort((a, b) => new Date(b.requested_at || 0).getTime() - new Date(a.requested_at || 0).getTime()));
     setTransactions((transactionRes.data as unknown as Transaction[]) || []);
     setLoading(false);
