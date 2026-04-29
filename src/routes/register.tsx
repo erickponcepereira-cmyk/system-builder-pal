@@ -583,58 +583,26 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name, role: "student" },
-          emailRedirectTo: `${window.location.origin}/login`,
+      const user = await createOrRecoverAuthUser(email, password, name, "student");
+
+      await finalizeRegistrationFn({
+        data: {
+          userId: user.id,
+          role: "student",
+          name,
+          email,
+          phone,
+          student: { coachId: selectedCoach.id },
         },
       });
 
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      if (data.user) {
-        // Update phone
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-
-        if (profileError || !profileData) {
-          toast.error("Não foi possível criar seu perfil. Tente novamente.");
-          return;
-        }
-
-        const { error: updateError } = await supabase
-            .from("profiles")
-            .update({ phone: phone.replace(/\D/g, "") })
-            .eq("id", profileData.id);
-
-          if (updateError) {
-            toast.error("Não foi possível salvar seu telefone.");
-            return;
-          }
-
-          const { error: studentError } = await supabase.from("students").insert({
-            profile_id: profileData.id,
-            coach_id: selectedCoach.id,
-          });
-
-          if (studentError) {
-            toast.error(`Não foi possível criar o cadastro de aluno: ${studentError.message}`);
-            return;
-          }
-
-        toast.success("Conta criada com sucesso! Verifique seu e-mail.");
-        navigate({ to: "/login" });
-      }
-    } catch {
-      toast.error("Erro ao criar conta.");
+      sessionStorage.setItem("fitmind_selected_area", "student");
+      toast.success("Conta de aluno criada com sucesso!");
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) window.location.assign("/student");
+      else navigate({ to: "/login" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar conta.");
     } finally {
       setLoading(false);
     }
