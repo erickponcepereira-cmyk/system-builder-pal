@@ -185,7 +185,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onCreateClient,
   onSearchClients,
   onCreateGoogleCalendarEvent,
-  themeColor = "#15803d",
+  themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
 }) => {
   const [screen, setScreen] = useState<"home" | "select-client" | "new-client" | "assessment" | "result">("home");
@@ -259,7 +259,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       --fm-primary-dark: ${themeColor}dd;
       --fm-font: ${themeFontFamily};
     }
+    .fm-app { background: #050505; color: #f8fafc; }
     .fm-app * { font-family: var(--fm-font); box-sizing: border-box; }
+    .fm-app > div { background: #050505 !important; }
     .fm-btn-primary {
       background: var(--fm-primary);
       color: #fff;
@@ -283,25 +285,29 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     }
     .fm-btn-outline:hover { background: var(--fm-primary-light); }
     .fm-card {
-      background: #fff;
+      background: #111111;
+      color: #f8fafc;
+      border: 1px solid #2a2a2a;
       border-radius: 16px;
       box-shadow: 0 2px 16px rgba(0,0,0,.07);
       padding: 20px;
     }
     .fm-input {
       width: 100%;
-      border: 1.5px solid #e2e8f0;
+      border: 1.5px solid #2a2a2a;
       border-radius: 10px;
       padding: 10px 14px;
       font-size: 14px;
       transition: border .2s;
       outline: none;
+      background: #050505;
+      color: #f8fafc;
     }
     .fm-input:focus { border-color: var(--fm-primary); }
     .fm-label {
       font-size: 12px;
       font-weight: 600;
-      color: #64748b;
+      color: #a3a3a3;
       margin-bottom: 4px;
       display: flex;
       align-items: center;
@@ -405,11 +411,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-photo-box:hover { border-color: var(--fm-primary); background: var(--fm-primary-light); }
     .fm-select {
       width: 100%;
-      border: 1.5px solid #e2e8f0;
+      border: 1.5px solid #2a2a2a;
       border-radius: 10px;
       padding: 10px 14px;
       font-size: 14px;
-      background: #fff;
+      background: #050505;
+      color: #f8fafc;
       outline: none;
       cursor: pointer;
     }
