@@ -242,6 +242,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         bmi: computedBMI,
       };
       await onSaveAssessment(full, selectedClient);
+      setAssessment(full);
       setScreen("result");
     } finally {
       setIsSaving(false);
