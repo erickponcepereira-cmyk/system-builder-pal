@@ -657,14 +657,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: NOVO ALUNO
   // ────────────────────────────────────────────────────────
   const NewClientScreen = () => {
-    const update = (k: keyof FitMindClient, v: any) => setNewClientData(d => ({ ...d, [k]: v }));
-    const handleCreate = async () => {
-      if (!onCreateClient) return;
-      const created = await onCreateClient(newClientData as Omit<FitMindClient, "id">);
-      setSelectedClient(created);
-      setScreen("assessment");
-      setStep(0);
-    };
     return (
       <div className="fm-animate" style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -678,12 +670,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-section-title">Dados Pessoais</div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">Nome Completo *</label>
-            <input className="fm-input" placeholder="Nome do aluno" onChange={e => update("name", e.target.value)} />
+            <input className="fm-input" placeholder="Nome do aluno" value={newClientData.name || ""} onChange={e => updateNewClient("name", e.target.value)} />
           </div>
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
               <label className="fm-label">Gênero</label>
-              <select className="fm-select" onChange={e => update("gender", e.target.value)} defaultValue="female">
+              <select className="fm-select" value={newClientData.gender || "female"} onChange={e => updateNewClient("gender", e.target.value)}>
                 <option value="female">Feminino</option>
                 <option value="male">Masculino</option>
                 <option value="other">Outro</option>
@@ -691,7 +683,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div>
               <label className="fm-label">Etnia</label>
-              <select className="fm-select" onChange={e => update("ethnicity", e.target.value)} defaultValue="white">
+              <select className="fm-select" value={newClientData.ethnicity || "white"} onChange={e => updateNewClient("ethnicity", e.target.value)}>
                 <option value="white">Branca</option>
                 <option value="black">Preta</option>
                 <option value="asian">Asiática</option>
@@ -704,11 +696,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
               <label className="fm-label">Data de Nascimento</label>
-              <input type="date" className="fm-input" onChange={e => update("birthDate", e.target.value)} />
+              <input type="date" className="fm-input" value={newClientData.birthDate || ""} onChange={e => updateNewClient("birthDate", e.target.value)} />
             </div>
             <div>
               <label className="fm-label">Idioma</label>
-              <select className="fm-select" onChange={e => update("language", e.target.value)} defaultValue="pt">
+              <select className="fm-select" value={newClientData.language || "pt"} onChange={e => updateNewClient("language", e.target.value)}>
                 <option value="pt">Português</option>
                 <option value="en">English</option>
                 <option value="es">Español</option>
@@ -719,8 +711,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div>
               <label className="fm-label">Altura</label>
               <div style={{ display: "flex", gap: 6 }}>
-                <input type="number" className="fm-input" placeholder="170" onChange={e => update("height", +e.target.value)} style={{ flex: 1 }} />
-                <select className="fm-select" style={{ width: 64 }} onChange={e => update("heightUnit", e.target.value)} defaultValue="cm">
+                <input type="number" className="fm-input" placeholder="170" value={newClientData.height || ""} onChange={e => updateNewClient("height", +e.target.value)} style={{ flex: 1 }} />
+                <select className="fm-select" style={{ width: 64 }} value={newClientData.heightUnit || "cm"} onChange={e => updateNewClient("heightUnit", e.target.value)}>
                   <option value="cm">cm</option>
                   <option value="ft">ft</option>
                 </select>
@@ -728,16 +720,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div>
               <label className="fm-label">WhatsApp</label>
-              <input className="fm-input" placeholder="+55 00 00000-0000" onChange={e => update("whatsapp", e.target.value)} />
+              <input className="fm-input" placeholder="+55 00 00000-0000" value={newClientData.whatsapp || ""} onChange={e => updateNewClient("whatsapp", e.target.value)} />
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">E-mail</label>
-            <input type="email" className="fm-input" placeholder="email@exemplo.com" onChange={e => update("email", e.target.value)} />
+            <input type="email" className="fm-input" placeholder="email@exemplo.com" value={newClientData.email || ""} onChange={e => updateNewClient("email", e.target.value)} />
           </div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">Grupo(s)</label>
-            <select className="fm-select" onChange={e => update("groups", [e.target.value])}>
+            <select className="fm-select" value={newClientData.groups?.[0] || ""} onChange={e => updateNewClient("groups", e.target.value ? [e.target.value] : [])}>
               <option value="">Sem grupo</option>
               {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               <option value="__new__">+ Criar novo grupo...</option>
@@ -746,11 +738,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div>
             <label className="fm-label">Anotações</label>
             <textarea className="fm-input" rows={3} placeholder="Observações iniciais..." style={{ resize: "none" }}
-              onChange={e => update("notes", e.target.value)} />
+              value={newClientData.notes || ""} onChange={e => updateNewClient("notes", e.target.value)} />
           </div>
         </div>
 
-        <button className="fm-btn-primary" style={{ width: "100%" }} onClick={handleCreate}>
+        <button className="fm-btn-primary" style={{ width: "100%" }} onClick={createNewClient}>
           Criar Aluno e Iniciar Avaliação <ChevronRight size={16} style={{ display: "inline", marginLeft: 4 }} />
         </button>
       </div>
