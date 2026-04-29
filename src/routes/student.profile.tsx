@@ -21,14 +21,15 @@ const sections = [
   {
     title: "Programa",
     items: [
-      { icon: Gift, label: "Clube de benefícios" },
+      { icon: Gift, label: "Clube de benefícios", to: "/student/benefits" },
       { icon: Users, label: "Indicar amigos" },
+      { icon: GraduationCap, label: "Meus cursos", to: "/student/library" },
     ],
   },
   {
     title: "Suporte",
     items: [
-      { icon: HelpCircle, label: "Central de ajuda" },
+      { icon: HelpCircle, label: "Central de ajuda", to: "/student/support" },
     ],
   },
 ];

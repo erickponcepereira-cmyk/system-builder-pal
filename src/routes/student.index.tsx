@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles, Quote, Link as LinkIcon, Copy, Share2, X } from "lucide-react";
+import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles, Quote, Link as LinkIcon, Copy, Share2, X, ShoppingBag, BookOpen, Gift, HelpCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -176,9 +176,13 @@ function StudentHome() {
         <div className="grid grid-cols-4 gap-2">
           {[
             { icon: Camera, label: "Foto", to: "/student/evolution" },
+            { icon: ShoppingBag, label: "Loja", to: "/student/store" },
+            { icon: BookOpen, label: "Cursos", to: "/student/library" },
+            { icon: Gift, label: "Clube", to: "/student/benefits" },
             { icon: Apple, label: "Refeição", to: "/student/evolution" },
             { icon: Scale, label: "Pesagem", to: "/student/challenge" },
             { icon: Sparkles, label: "IA", to: "/student/evolution" },
+            { icon: HelpCircle, label: "Ajuda", to: "/student/support" },
           ].map((a) => (
             <Link key={a.label} to={a.to} className="flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">

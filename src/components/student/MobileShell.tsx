@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Trophy, MessageCircle, User, Gift } from "lucide-react";
+import { Home, Trophy, MessageCircle, User, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileShellProps {
@@ -11,7 +11,7 @@ const navItems = [
   { to: "/student", label: "Início", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
-  { to: "/student/benefits", label: "Benefícios", icon: Gift },
+  { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/profile", label: "Perfil", icon: User },
 ] as const;
 
