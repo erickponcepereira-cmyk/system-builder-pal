@@ -201,6 +201,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     language: "pt",
     heightUnit: "cm",
     groups: [],
+    name: "",
+    birthDate: "",
+    whatsapp: "",
+    email: "",
+    notes: "",
   });
 
   // ── Cálculo automático do IMC ────────────────────────────
@@ -497,6 +502,19 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     "Fotos",
     "Agendamento",
   ];
+
+  const updateNewClient = (key: keyof FitMindClient, value: any) => {
+    setNewClientData((current) => ({ ...current, [key]: value }));
+  };
+
+  const createNewClient = async () => {
+    if (!onCreateClient) return;
+    if (!newClientData.name?.trim()) return alert("Informe o nome do aluno");
+    const created = await onCreateClient(newClientData as Omit<FitMindClient, "id">);
+    setSelectedClient(created);
+    setScreen("assessment");
+    setStep(0);
+  };
 
   // ────────────────────────────────────────────────────────
   // TELA: HOME
