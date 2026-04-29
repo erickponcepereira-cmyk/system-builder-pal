@@ -652,6 +652,129 @@ function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
   );
 }
 
+function PhysicalStoreTab() {
+  const [items, setItems] = useState<StoreProductRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("store_products").select("id,name,description,price,original_price,category,stock,is_herbalife,status").eq("status", "active").order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar loja física");
+      setItems((data as StoreProductRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  return <StoreGrid title="Loja de Produtos Físicos" subtitle="Produtos para demonstrar a clientes e opções com condição de coach" items={items} loading={loading} kind="physical" />;
+}
+
+function DigitalStoreTab() {
+  const [items, setItems] = useState<DigitalProductRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("digital_products").select("id,title,description,price,original_price,type,duration_hours,access_days,is_featured,instructor,status").eq("status", "active").order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar loja digital");
+      setItems((data as DigitalProductRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  return <StoreGrid title="Loja de Produtos Digitais" subtitle="Cursos, mentorias e materiais para venda e uso do coach" items={items} loading={loading} kind="digital" />;
+}
+
+function StoreGrid({ title, subtitle, items, loading, kind }: { title: string; subtitle: string; items: (StoreProductRow | DigitalProductRow)[]; loading: boolean; kind: "physical" | "digital" }) {
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">{title}</h1>
+        <p className="text-sm text-white/50">{subtitle}</p>
+      </div>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando produtos...</p> : items.length === 0 ? <p className="text-sm text-white/50">Nenhum produto ativo encontrado.</p> : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {items.map((item) => {
+              const isDigital = kind === "digital";
+              const titleText = isDigital ? (item as DigitalProductRow).title : (item as StoreProductRow).name;
+              const original = item.original_price;
+              const discount = original && original > item.price ? Math.round(((original - item.price) / original) * 100) : 0;
+              return (
+                <div key={item.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold text-white/60">{isDigital ? (item as DigitalProductRow).type : (item as StoreProductRow).category || "Produto"}</span>
+                    {discount > 0 && <span className="rounded-full bg-success/20 px-2 py-1 text-[10px] font-bold text-success">-{discount}% coach</span>}
+                  </div>
+                  <h3 className="text-sm font-bold text-white">{titleText}</h3>
+                  <p className="mt-1 line-clamp-3 min-h-12 text-xs text-white/45">{item.description || "Produto disponível para apresentação e venda."}</p>
+                  <div className="mt-4 flex items-end justify-between gap-3">
+                    <div>
+                      {original && original > item.price && <p className="text-xs text-white/35 line-through">{money(original)}</p>}
+                      <p className="text-lg font-bold text-white">{money(item.price)}</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20">Compartilhar</Button>
+                  </div>
+                  <p className="mt-3 text-[10px] text-white/35">{isDigital ? `${(item as DigitalProductRow).duration_hours || 0}h · acesso ${((item as DigitalProductRow).access_days || 365)} dias` : `${(item as StoreProductRow).stock ?? 0} em estoque`}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function CoachBenefitsTab() {
+  const [benefits, setBenefits] = useState<BenefitRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("partner_benefits").select("id,name,description,discount_info,coupon_code,category,website_url").eq("is_active", true).order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar benefícios");
+      setBenefits((data as BenefitRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  const fallback = benefits.length ? benefits : [
+    { id: "showcase", name: "Benefícios para apresentar a clientes", description: "Use esta aba para demonstrar vantagens, bônus e condições comerciais durante a venda.", discount_info: "Material de apoio", coupon_code: "FITMIND", category: "Clientes", website_url: null },
+    { id: "coach", name: "Desconto exclusivo Coach", description: "Área reservada para vantagens de compra e parceiros liberados para coaches ativos.", discount_info: "Condição especial", coupon_code: "COACH", category: "Coach", website_url: null },
+  ];
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Benefícios</h1>
+        <p className="text-sm text-white/50">Vantagens para mostrar aos clientes e descontos exclusivos do coach</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-primary/30 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <Gift className="mb-3 h-6 w-6 text-primary" />
+          <h2 className="text-lg font-bold text-white">Para demonstrar ao cliente</h2>
+          <p className="mt-1 text-sm text-white/55">Organize os benefícios como argumento de venda, bônus de desafio e vantagens do clube.</p>
+        </div>
+        <div className="rounded-2xl border border-success/30 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <Percent className="mb-3 h-6 w-6 text-success" />
+          <h2 className="text-lg font-bold text-white">Exclusivo para coaches</h2>
+          <p className="mt-1 text-sm text-white/55">Cupons, descontos e condições de parceiros para coaches ativos da rede.</p>
+        </div>
+      </div>
+      <div className="mt-4 rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando benefícios...</p> : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {fallback.map((benefit) => (
+              <div key={benefit.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold text-white/60">{benefit.category || "Benefício"}</span>
+                  {benefit.coupon_code && <span className="rounded-full bg-primary/20 px-2 py-1 font-mono text-[10px] font-bold text-primary">{benefit.coupon_code}</span>}
+                </div>
+                <h3 className="text-sm font-bold text-white">{benefit.name}</h3>
+                <p className="mt-1 text-xs text-white/45">{benefit.description}</p>
+                <p className="mt-3 text-sm font-bold text-success">{benefit.discount_info || "Condição especial"}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
