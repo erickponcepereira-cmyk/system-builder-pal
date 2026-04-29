@@ -822,7 +822,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div>
             <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>IMC Calculado <Tooltip id="bmi" /></div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "var(--fm-primary)" }}>
-              {computedBMI > 0 ? `${computedBMI} kg/m²` : "—"}
+              {computedBMI > 0 ? `${bmiPercent}%` : "—"}
               {computedBMI > 0 && (
                 <span className="fm-badge" style={{ marginLeft: 8, fontSize: 11, background: getBMICategory(computedBMI).color, color: "#fff" }}>
                   {getBMICategory(computedBMI).label}
@@ -1115,7 +1115,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div style={{ textAlign: "center", marginTop: 8 }}>
               <span className="fm-badge" style={{ background: bmiCat.color, color: "#fff", fontSize: 12 }}>
-                {bmiCat.label} · IMC {a.bmi || computedBMI}
+                {bmiCat.label} · IMC {formatPercent(bmiPercent)}
               </span>
             </div>
           </div>
@@ -1124,13 +1124,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Composição Corporal</div>
             {[
-              { label: "Peso", tooltip: null, value: `${a.weight} kg`, eval: "normal", evalLabel: "Peso atual" },
-              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: `${a.skeletalMuscle}%`, eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
-              { label: "Massa Muscular", tooltip: "muscleMass", value: `${a.muscleMass}%`, eval: "normal", evalLabel: "Total" },
+              { label: "Peso", tooltip: null, value: formatPercent(a.weight), eval: "normal", evalLabel: "Percentual informado" },
+              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: formatPercent(a.skeletalMuscle), eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
+              { label: "Massa Muscular", tooltip: "muscleMass", value: formatPercent(a.muscleMass), eval: "normal", evalLabel: "Total" },
               {
                 label: "Idade Corporal",
                 tooltip: "bodyAge",
-                value: `${a.bodyAge}%`,
+                value: formatPercent(a.bodyAge),
                 eval: ageBodyDiff > 5 ? "danger" : ageBodyDiff > 0 ? "warning" : "excellent",
                 evalLabel: ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${ageBodyDiff}%`,
               },
@@ -1154,10 +1154,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Diagnóstico de Obesidade</div>
             {[
-              { label: "IMC", tooltip: "bmi", value: `${a.bmi || computedBMI} kg/m²`, color: bmiCat.color, evalText: bmiCat.label },
-              { label: "Gordura Corporal", tooltip: "bodyFat", value: `${a.bodyFat}%`, color: evalColor(fatCat.eval), evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})` },
-              { label: "Gordura Visceral", tooltip: "visceralFat", value: `${a.visceralFat}%`, color: viscCat.color, evalText: viscCat.label },
-              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: `${a.basalMetabolism}%`, color: "#60a5fa", evalText: "Harris-Benedict" },
+              { label: "IMC", tooltip: "bmi", value: formatPercent(bmiPercent), color: bmiCat.color, evalText: bmiCat.label },
+              { label: "Gordura Corporal", tooltip: "bodyFat", value: formatPercent(a.bodyFat), color: evalColor(fatCat.eval), evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})` },
+              { label: "Gordura Visceral", tooltip: "visceralFat", value: formatPercent(a.visceralFat), color: viscCat.color, evalText: viscCat.label },
+              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: formatPercent(a.basalMetabolism), color: "#60a5fa", evalText: "Harris-Benedict" },
             ].map(row => (
               <div key={row.label} className="fm-result-row">
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: 4 }}>
