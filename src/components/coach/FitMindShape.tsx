@@ -21,7 +21,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import {
   LineChart, Line, PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
+  Tooltip as RechartsTooltip, Legend, ResponsiveContainer
 } from "recharts";
 import {
   User, Users, Plus, ChevronRight, ChevronLeft, Check,
@@ -235,11 +235,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setIsSaving(true);
     try {
       const full: FitMindAssessment = {
+        ...(assessment as FitMindAssessment),
         id: Date.now().toString(),
         clientId: selectedClient.id,
         date: new Date().toISOString(),
         bmi: computedBMI,
-        ...(assessment as FitMindAssessment),
       };
       await onSaveAssessment(full, selectedClient);
       setScreen("result");
@@ -1280,10 +1280,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       </div>
     );
   };
-
-  // Alias para recharts Tooltip (evitar conflito de nome)
-  const RechartsTooltip = Tooltip as any;
-
   // ────────────────────────────────────────────────────────
   // RENDER PRINCIPAL
   // ────────────────────────────────────────────────────────
