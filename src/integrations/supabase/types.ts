@@ -2786,7 +2786,18 @@ export type Database = {
         | "senior_director"
         | "master_director"
       payment_method: "credit_card" | "debit_card" | "pix"
-      product_type: "challenge" | "physical" | "herbalife"
+      product_type:
+        | "challenge"
+        | "physical"
+        | "herbalife"
+        | "enrollment"
+        | "plan_30"
+        | "protocol_90"
+        | "digital_course"
+        | "coach_training"
+        | "health_pro_course"
+        | "room_rental"
+        | "live_class"
       subscription_status:
         | "active"
         | "expired"
@@ -2949,7 +2960,19 @@ export const Constants = {
         "master_director",
       ],
       payment_method: ["credit_card", "debit_card", "pix"],
-      product_type: ["challenge", "physical", "herbalife"],
+      product_type: [
+        "challenge",
+        "physical",
+        "herbalife",
+        "enrollment",
+        "plan_30",
+        "protocol_90",
+        "digital_course",
+        "coach_training",
+        "health_pro_course",
+        "room_rental",
+        "live_class",
+      ],
       subscription_status: [
         "active",
         "expired",
