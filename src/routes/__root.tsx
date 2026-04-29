@@ -30,6 +30,11 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "theme-color", content: "#0b0707" },
+        { name: "mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+        { name: "apple-mobile-web-app-title", content: "FitMind" },
       { title: "FitMind" },
       { name: "description", content: "Desafios fitness de 30 dias com comissões em cadeia." },
       { property: "og:title", content: "FitMind" },
@@ -50,6 +55,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/fitmind-logo.png" />
       </head>
       <body>
         {children}
