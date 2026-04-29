@@ -100,7 +100,7 @@ function calcVendaPropria(nodes: NodesMap, liquidoVenda: number) {
 const COR = [
   { bg: "bg-violet-500/10", text: "text-violet-400", border: "border-violet-500/30", dot: "bg-violet-500" },
   { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", dot: "bg-emerald-500" },
-  { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", dot: "bg-amber-500" },
+  { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30", dot: "bg-red-500" },
 ];
 
 function NivelBadge({ nivel }: { nivel: number }) {
@@ -393,7 +393,7 @@ function AbaRede({
           { label: "Total", val: todos.length, cor: "text-zinc-200" },
           { label: "N1", val: n1count, cor: "text-violet-400" },
           { label: "N2", val: n2count, cor: "text-emerald-400" },
-          { label: "N3", val: n3count, cor: "text-amber-400" },
+          { label: "N3", val: n3count, cor: "text-red-400" },
         ].map((s) => (
           <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
             <div className={`text-2xl font-bold ${s.cor}`}>{s.val}</div>
@@ -507,7 +507,7 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
           </div>
           <div className="bg-black/20 rounded-xl p-3">
             <p className="text-xs text-zinc-500 mb-1">Comissão rede (líquido)</p>
-            <p className="text-xl font-bold text-amber-400">{fmt(ganhoRede.liquido)}</p>
+            <p className="text-xl font-bold text-red-400">{fmt(ganhoRede.liquido)}</p>
             <p className="text-xs text-zinc-600 mt-0.5">{vendasRede} venda{vendasRede !== 1 ? "s" : ""} na rede</p>
           </div>
         </div>
@@ -566,7 +566,7 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
             {[
               { label: "Total bruto da rede", val: fmt(ganhoRede.totalBruto), style: "text-zinc-200" },
               { label: `(-) Imposto pessoal ${fmtp(TAXA_IMP_PESSOA)}`, val: `- ${fmt(ganhoRede.imp)}`, style: "text-red-400" },
-              { label: "Líquido real da rede", val: fmt(ganhoRede.liquido), style: "text-amber-400 font-bold" },
+              { label: "Líquido real da rede", val: fmt(ganhoRede.liquido), style: "text-red-400 font-bold" },
             ].map((r, i) => (
               <div key={i} className={`flex justify-between py-1 text-sm ${i === 2 ? "pt-2 border-t border-white/10 font-bold" : ""}`}>
                 <span className="text-zinc-400">{r.label}</span>

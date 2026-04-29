@@ -104,7 +104,7 @@ function AdminPayments() {
     if (s === "paid") return "bg-success/20 text-success";
     if (s === "approved") return "bg-blue-500/20 text-blue-400";
     if (s === "rejected") return "bg-destructive/20 text-destructive";
-    return "bg-orange-500/20 text-orange-400";
+    return "bg-red-500/20 text-red-400";
   };
 
   return (
