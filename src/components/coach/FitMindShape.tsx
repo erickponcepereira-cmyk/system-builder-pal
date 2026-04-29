@@ -837,32 +837,32 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <input type="number" step="0.1" className="fm-input" placeholder="Ex: 28.5" onChange={e => upd("bodyFat", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Músculo Esquelético (kg) <Tooltip id="skeletalMuscle" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 24.3" onChange={e => upd("skeletalMuscle", +e.target.value)} />
+            <label className="fm-label">Músculo Esquelético (%) <Tooltip id="skeletalMuscle" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 32.4" onChange={e => upd("skeletalMuscle", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Massa Muscular (kg) <Tooltip id="muscleMass" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 42.1" onChange={e => upd("muscleMass", +e.target.value)} />
+            <label className="fm-label">Massa Muscular (%) <Tooltip id="muscleMass" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 41.8" onChange={e => upd("muscleMass", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Gordura Visceral (nível) <Tooltip id="visceralFat" /></label>
-            <input type="number" min="1" max="30" className="fm-input" placeholder="Ex: 7" onChange={e => upd("visceralFat", +e.target.value)} />
+            <label className="fm-label">Gordura Visceral (%) <Tooltip id="visceralFat" /></label>
+            <input type="number" step="0.1" min="0" max="100" className="fm-input" placeholder="Ex: 7.0" onChange={e => upd("visceralFat", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Metabolismo Basal (kcal) <Tooltip id="basalMetabolism" /></label>
-            <input type="number" className="fm-input" placeholder="Ex: 1420" onChange={e => upd("basalMetabolism", +e.target.value)} />
+            <label className="fm-label">Metabolismo Basal (%) <Tooltip id="basalMetabolism" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 100" onChange={e => upd("basalMetabolism", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Idade Corporal (anos) <Tooltip id="bodyAge" /></label>
-            <input type="number" className="fm-input" placeholder="Ex: 32" onChange={e => upd("bodyAge", +e.target.value)} />
+            <label className="fm-label">Idade Corporal (%) <Tooltip id="bodyAge" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 106" onChange={e => upd("bodyAge", +e.target.value)} />
           </div>
           <div>
             <label className="fm-label">Água Corporal (%) <Tooltip id="bodyWater" /></label>
             <input type="number" step="0.1" className="fm-input" placeholder="Ex: 52.3" onChange={e => upd("bodyWater", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Massa Óssea (kg) <Tooltip id="boneMass" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 2.4" onChange={e => upd("boneMass", +e.target.value)} />
+            <label className="fm-label">Massa Óssea (%) <Tooltip id="boneMass" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 4.2" onChange={e => upd("boneMass", +e.target.value)} />
           </div>
         </div>
         <div className="fm-section-title" style={{ marginTop: 16 }}>Análise por Segmento</div>
