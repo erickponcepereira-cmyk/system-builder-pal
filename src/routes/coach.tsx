@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
+  Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +27,64 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "evaluate" | "attendance" | "wallet" | "career";
+type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career";
+
+const money = (value: number | null | undefined) =>
+  `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+interface CoachContext {
+  profileId: string;
+  coachId: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  bio: string;
+  patent: string | null;
+  referralCode: string;
+  referralLink: string;
+  uplineCoachId: string | null;
+  totalActiveStudents: number;
+  totalSales: number;
+}
+
+function useCoachContext() {
+  const [coach, setCoach] = useState<CoachContext | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: profile } = userData.user
+      ? await supabase.from("profiles").select("id,name,email,phone,city,state,bio,patent").eq("user_id", userData.user.id).maybeSingle()
+      : { data: null };
+    const { data: coachRow } = profile?.id
+      ? await supabase.from("coaches").select("id,referral_code,referral_link,upline_coach_id,total_active_students,total_sales").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+
+    setCoach(profile && coachRow ? {
+      profileId: profile.id,
+      coachId: coachRow.id,
+      name: profile.name || "Coach",
+      email: profile.email || "",
+      phone: profile.phone || "",
+      city: profile.city || "",
+      state: profile.state || "",
+      bio: profile.bio || "",
+      patent: profile.patent || null,
+      referralCode: coachRow.referral_code || "",
+      referralLink: coachRow.referral_link || "",
+      uplineCoachId: coachRow.upline_coach_id || null,
+      totalActiveStudents: Number(coachRow.total_active_students || 0),
+      totalSales: Number(coachRow.total_sales || 0),
+    } : null);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+  return { coach, loading, reload: load, setCoach };
+}
 
 function CoachDashboard() {
   const navigate = useNavigate();
@@ -33,8 +92,9 @@ function CoachDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [coachName, setCoachName] = useState("Coach");
   const [checkingAccess, setCheckingAccess] = useState(true);
-  const referralCode = "MARINA2026";
-  const referralLink = `https://fitmindclub.app/r/${referralCode}`;
+  const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
+  const referralCode = coachContext?.referralCode || "FITMIND";
+  const referralLink = coachContext?.referralLink || `https://fitmindclub.app/r/${referralCode}`;
 
   useEffect(() => {
     let active = true;
@@ -88,13 +148,20 @@ function CoachDashboard() {
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
+    { id: "products", label: "Esteira de Produtos", icon: Package },
+    { id: "students", label: "Base de Alunos", icon: UserRound },
+    { id: "tree", label: "Árvore da Rede", icon: Network },
+    { id: "physicalStore", label: "Loja Física", icon: ShoppingBag },
+    { id: "digitalStore", label: "Loja Digital", icon: BookOpen },
+    { id: "benefits", label: "Benefícios", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
+    { id: "profile", label: "Meu Perfil", icon: User },
   ];
 
-  if (checkingAccess) {
+  if (checkingAccess || coachContextLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Carregando...</div>;
   }
 
@@ -190,6 +257,13 @@ function CoachDashboard() {
             <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
+          {activeTab === "products" && <ProductsTrackTab />}
+          {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
+          {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
+          {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
+          {activeTab === "physicalStore" && <PhysicalStoreTab />}
+          {activeTab === "digitalStore" && <DigitalStoreTab />}
+          {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "wallet" && <WalletTab />}
@@ -316,6 +390,395 @@ function NetworkTab({ referralLink, onCopy }: { referralLink: string; onCopy: ()
 
       <div className="mt-4">
         <RankingTable />
+      </div>
+    </>
+  );
+}
+
+type ProductRow = { id: string; name: string; subtitle: string | null; description: string | null; price: number | null; original_price: number | null; is_featured: boolean | null; commission_coach: number | null; commission_level1: number | null; commission_level2: number | null; commission_level3: number | null; badge_label: string | null; status: string | null };
+type StoreProductRow = { id: string; name: string; description: string | null; price: number; original_price: number | null; category: string | null; stock: number | null; is_herbalife: boolean | null; status: string | null };
+type DigitalProductRow = { id: string; title: string; description: string | null; price: number; original_price: number | null; type: string; duration_hours: number | null; access_days: number | null; is_featured: boolean | null; instructor: string | null; status: string | null };
+type BenefitRow = { id: string; name: string; description: string | null; discount_info: string | null; coupon_code: string | null; category: string | null; website_url: string | null };
+
+function ProductsTrackTab() {
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,name,subtitle,description,price,original_price,is_featured,commission_coach,commission_level1,commission_level2,commission_level3,badge_label,status")
+        .eq("status", "active")
+        .order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar produtos disponíveis");
+      setProducts((data as ProductRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+
+  const featured = products.find((product) => product.is_featured) || products[0];
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Esteira de Produtos</h1>
+        <p className="text-sm text-white/50">Produtos disponíveis e ganhos estimados por venda</p>
+      </div>
+
+      {featured && (
+        <div className="mb-6 rounded-2xl border border-primary/40 p-5" style={{ background: "linear-gradient(135deg, rgba(220,38,38,0.22), #1A1A1A 58%)" }}>
+          <div className="mb-3 flex items-center gap-2">
+            <Star className="h-4 w-4 text-primary" />
+            <span className="text-xs font-bold uppercase text-primary">Produto em destaque</span>
+          </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-white">{featured.name}</h2>
+              <p className="mt-1 max-w-2xl text-sm text-white/60">{featured.subtitle || featured.description || "Condição especial para foco de venda neste ciclo."}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ["Venda", money(featured.price)],
+                ["Você", `${featured.commission_coach || 0}%`],
+                ["N1", `${featured.commission_level1 || 0}%`],
+                ["N2/N3", `${featured.commission_level2 || 0}% / ${featured.commission_level3 || 0}%`],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl bg-black/25 p-3">
+                  <p className="text-[10px] uppercase text-white/40">{label}</p>
+                  <p className="text-sm font-bold text-white">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando produtos...</p> : products.length === 0 ? <p className="text-sm text-white/50">Nenhum produto ativo encontrado.</p> : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {products.map((product, index) => {
+              const coachGain = Number(product.price || 0) * Number(product.commission_coach || 0) / 100;
+              return (
+                <div key={product.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-white/35">Etapa {index + 1}</p>
+                      <h3 className="text-sm font-bold text-white">{product.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-xs text-white/45">{product.subtitle || product.description || "Produto disponível para venda."}</p>
+                    </div>
+                    <span className="rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary">{product.badge_label || "Ativo"}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Preço</span><p className="font-bold text-white">{money(product.price)}</p></div>
+                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Ganho direto</span><p className="font-bold text-success">{money(coachGain)}</p></div>
+                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Rede N1</span><p className="font-bold text-white">{product.commission_level1 || 0}%</p></div>
+                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Rede N2/N3</span><p className="font-bold text-white">{product.commission_level2 || 0}% / {product.commission_level3 || 0}%</p></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContext | null; onSaved: () => void; onLocalChange: (value: CoachContext | null) => void }) {
+  const [form, setForm] = useState({ name: "", phone: "", city: "", state: "", bio: "", pix_key: "", pix_key_type: "cpf" });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!coach) return;
+    setForm((current) => ({ ...current, name: coach.name, phone: coach.phone, city: coach.city, state: coach.state, bio: coach.bio }));
+  }, [coach]);
+
+  const save = async () => {
+    if (!coach) return;
+    if (!form.name.trim()) return toast.error("Informe seu nome para salvar o perfil");
+    setSaving(true);
+    const { error: profileError } = await supabase.from("profiles").update({ name: form.name.trim(), phone: form.phone.trim() || null, city: form.city.trim() || null, state: form.state.trim() || null, bio: form.bio.trim() || null }).eq("id", coach.profileId);
+    const { error: coachError } = await supabase.from("coaches").update({ pix_key: form.pix_key.trim() || null, pix_key_type: form.pix_key_type || null }).eq("id", coach.coachId);
+    setSaving(false);
+    if (profileError || coachError) return toast.error("Não foi possível salvar. Verifique os dados e tente novamente.");
+    onLocalChange({ ...coach, name: form.name.trim(), phone: form.phone.trim(), city: form.city.trim(), state: form.state.trim(), bio: form.bio.trim() });
+    toast.success("Perfil atualizado");
+    onSaved();
+  };
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Meu Perfil</h1>
+        <p className="text-sm text-white/50">Informações do coach e dados para contato</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.7fr]">
+        <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[{ key: "name", label: "Nome", icon: User }, { key: "phone", label: "Telefone", icon: Phone }, { key: "city", label: "Cidade", icon: MapPin }, { key: "state", label: "Estado", icon: MapPin }].map((field) => {
+              const Icon = field.icon;
+              return <label key={field.key} className="text-xs text-white/50"><span className="mb-1 flex items-center gap-1.5"><Icon className="h-3 w-3" />{field.label}</span><input className="field-control" value={form[field.key as keyof typeof form]} onChange={(e) => setForm({ ...form, [field.key]: e.target.value })} /></label>;
+            })}
+            <label className="sm:col-span-2 text-xs text-white/50"><span className="mb-1 block">Bio / apresentação</span><textarea className="field-control min-h-28" value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} placeholder="Conte sua especialidade, cidade de atendimento e foco de transformação." /></label>
+            <label className="text-xs text-white/50"><span className="mb-1 block">Tipo de chave PIX</span><select className="field-control" value={form.pix_key_type} onChange={(e) => setForm({ ...form, pix_key_type: e.target.value })}><option value="cpf">CPF</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Aleatória</option></select></label>
+            <label className="text-xs text-white/50"><span className="mb-1 block">Chave PIX</span><input className="field-control" value={form.pix_key} onChange={(e) => setForm({ ...form, pix_key: e.target.value })} /></label>
+          </div>
+          <Button onClick={save} disabled={saving} className="mt-4"><Save className="mr-2 h-4 w-4" /> {saving ? "Salvando..." : "Salvar perfil"}</Button>
+        </div>
+        <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 text-2xl font-bold text-primary">{(coach?.name || "C").charAt(0)}</div>
+          <h2 className="text-lg font-bold text-white">{coach?.name || "Coach"}</h2>
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-white/50"><Mail className="h-3 w-3" />{coach?.email || "E-mail não informado"}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-white/5 p-3"><p className="text-[10px] text-white/40">Alunos ativos</p><p className="text-lg font-bold text-white">{coach?.totalActiveStudents || 0}</p></div>
+            <div className="rounded-xl bg-white/5 p-3"><p className="text-[10px] text-white/40">Vendas</p><p className="text-lg font-bold text-white">{money(coach?.totalSales)}</p></div>
+          </div>
+          <div className="mt-3 rounded-xl bg-black/20 p-3"><p className="text-[10px] uppercase text-white/35">Código</p><p className="font-mono text-sm font-bold text-primary">{coach?.referralCode || "—"}</p></div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CoachStudentsTab({ coachId }: { coachId: string }) {
+  const [students, setStudents] = useState<{ id: string; current_weight: number | null; goal_weight: number | null; completed_coach_course: boolean | null; created_at: string | null; profiles: { name: string; email: string; phone: string | null; city: string | null; state: string | null } | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!coachId) { setLoading(false); return; }
+    (async () => {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id,current_weight,goal_weight,completed_coach_course,created_at,profiles!students_profile_id_fkey(name,email,phone,city,state)")
+        .eq("coach_id", coachId)
+        .order("created_at", { ascending: false });
+      if (error) toast.error("Erro ao carregar alunos da base");
+      setStudents((data as unknown as typeof students) || []);
+      setLoading(false);
+    })();
+  }, [coachId]);
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Base de Alunos</h1>
+        <p className="text-sm text-white/50">Todos os alunos ligados diretamente ao seu perfil</p>
+      </div>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando alunos...</p> : students.length === 0 ? <p className="text-sm text-white/50">Nenhum aluno ligado a você ainda.</p> : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {students.map((student) => (
+              <div key={student.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-bold text-white">{student.profiles?.name || "Aluno"}</h3>
+                    <p className="truncate text-xs text-white/45">{student.profiles?.email || "Sem e-mail"}</p>
+                    <p className="mt-1 text-[10px] text-white/35">{student.profiles?.phone || "Sem telefone"} {student.profiles?.city ? `· ${student.profiles.city}/${student.profiles.state || ""}` : ""}</p>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${student.completed_coach_course ? "bg-success/20 text-success" : "bg-white/10 text-white/60"}`}>{student.completed_coach_course ? "Curso coach" : "Aluno"}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded-lg bg-white/5 p-2"><p className="text-white/35">Peso atual</p><p className="font-bold text-white">{student.current_weight ? `${student.current_weight} kg` : "—"}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><p className="text-white/35">Meta</p><p className="font-bold text-white">{student.goal_weight ? `${student.goal_weight} kg` : "—"}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><p className="text-white/35">Entrada</p><p className="font-bold text-white">{student.created_at ? new Date(student.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+type TreeCoach = { id: string; profile_id: string; upline_coach_id: string | null; total_active_students: number | null; profiles: { name: string; email: string; patent: string | null } | null };
+
+function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
+  const [upline, setUpline] = useState<TreeCoach | null>(null);
+  const [downline, setDownline] = useState<TreeCoach[]>([]);
+  const [students, setStudents] = useState<{ id: string; profiles: { name: string; email: string } | null }[]>([]);
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (!coach?.coachId) return;
+    (async () => {
+      if (coach.uplineCoachId) {
+        const { data } = await supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)").eq("id", coach.uplineCoachId).maybeSingle();
+        setUpline(data as unknown as TreeCoach | null);
+      }
+      const [{ data: allCoaches }, { data: studentRows }] = await Promise.all([
+        supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)"),
+        supabase.from("students").select("id,profiles!students_profile_id_fkey(name,email)").eq("coach_id", coach.coachId),
+      ]);
+      const coachRows = ((allCoaches as unknown as TreeCoach[]) || []);
+      const descendants: TreeCoach[] = [];
+      const collect = (parentId: string) => {
+        coachRows.filter((item) => item.upline_coach_id === parentId).forEach((item) => {
+          descendants.push(item);
+          collect(item.id);
+        });
+      };
+      collect(coach.coachId);
+      setDownline(descendants);
+      setStudents((studentRows as unknown as typeof students) || []);
+    })();
+  }, [coach?.coachId, coach?.uplineCoachId]);
+
+  const PersonNode = ({ title, subtitle, tone = "white" }: { title: string; subtitle: string; tone?: "primary" | "success" | "white" }) => (
+    <div className={`rounded-xl border p-4 ${tone === "primary" ? "border-primary/40 bg-primary/10" : tone === "success" ? "border-success/30 bg-success/10" : "border-white/10 bg-white/5"}`}>
+      <p className="text-sm font-bold text-white">{title}</p>
+      <p className="text-xs text-white/45">{subtitle}</p>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Árvore da Rede</h1>
+        <p className="text-sm text-white/50">Quem está acima, você no centro e quem está abaixo</p>
+      </div>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase text-white/35">Acima de você</p>
+            {upline ? <PersonNode title={upline.profiles?.name || "Coach acima"} subtitle={upline.profiles?.email || "Upline"} /> : <PersonNode title="Sem coach acima" subtitle="Você está no topo desta ramificação" />}
+          </div>
+          <div className="pl-5 border-l border-primary/40">
+            <PersonNode title={coach?.name || "Você"} subtitle={`${coach?.referralCode || "—"} · ${coach?.totalActiveStudents || 0} alunos diretos`} tone="primary" />
+          </div>
+          <div className="pl-10 border-l border-white/10">
+            <button onClick={() => setOpen(!open)} className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-white/45">{open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} Abaixo de você</button>
+            {open && <div className="grid gap-3 md:grid-cols-2">
+              {downline.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Coach"} subtitle={`Coach ligado · ${item.total_active_students || 0} alunos`} tone="success" />)}
+              {students.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Aluno"} subtitle={item.profiles?.email || "Aluno direto"} />)}
+              {downline.length + students.length === 0 && <p className="text-sm text-white/50">Nenhum aluno ou coach abaixo ainda.</p>}
+            </div>}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PhysicalStoreTab() {
+  const [items, setItems] = useState<StoreProductRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("store_products").select("id,name,description,price,original_price,category,stock,is_herbalife,status").eq("status", "active").order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar loja física");
+      setItems((data as StoreProductRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  return <StoreGrid title="Loja de Produtos Físicos" subtitle="Produtos para demonstrar a clientes e opções com condição de coach" items={items} loading={loading} kind="physical" />;
+}
+
+function DigitalStoreTab() {
+  const [items, setItems] = useState<DigitalProductRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("digital_products").select("id,title,description,price,original_price,type,duration_hours,access_days,is_featured,instructor,status").eq("status", "active").order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar loja digital");
+      setItems((data as DigitalProductRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  return <StoreGrid title="Loja de Produtos Digitais" subtitle="Cursos, mentorias e materiais para venda e uso do coach" items={items} loading={loading} kind="digital" />;
+}
+
+function StoreGrid({ title, subtitle, items, loading, kind }: { title: string; subtitle: string; items: (StoreProductRow | DigitalProductRow)[]; loading: boolean; kind: "physical" | "digital" }) {
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">{title}</h1>
+        <p className="text-sm text-white/50">{subtitle}</p>
+      </div>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando produtos...</p> : items.length === 0 ? <p className="text-sm text-white/50">Nenhum produto ativo encontrado.</p> : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {items.map((item) => {
+              const isDigital = kind === "digital";
+              const titleText = isDigital ? (item as DigitalProductRow).title : (item as StoreProductRow).name;
+              const original = item.original_price;
+              const discount = original && original > item.price ? Math.round(((original - item.price) / original) * 100) : 0;
+              return (
+                <div key={item.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold text-white/60">{isDigital ? (item as DigitalProductRow).type : (item as StoreProductRow).category || "Produto"}</span>
+                    {discount > 0 && <span className="rounded-full bg-success/20 px-2 py-1 text-[10px] font-bold text-success">-{discount}% coach</span>}
+                  </div>
+                  <h3 className="text-sm font-bold text-white">{titleText}</h3>
+                  <p className="mt-1 line-clamp-3 min-h-12 text-xs text-white/45">{item.description || "Produto disponível para apresentação e venda."}</p>
+                  <div className="mt-4 flex items-end justify-between gap-3">
+                    <div>
+                      {original && original > item.price && <p className="text-xs text-white/35 line-through">{money(original)}</p>}
+                      <p className="text-lg font-bold text-white">{money(item.price)}</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20">Compartilhar</Button>
+                  </div>
+                  <p className="mt-3 text-[10px] text-white/35">{isDigital ? `${(item as DigitalProductRow).duration_hours || 0}h · acesso ${((item as DigitalProductRow).access_days || 365)} dias` : `${(item as StoreProductRow).stock ?? 0} em estoque`}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function CoachBenefitsTab() {
+  const [benefits, setBenefits] = useState<BenefitRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("partner_benefits").select("id,name,description,discount_info,coupon_code,category,website_url").eq("is_active", true).order("sort_order", { ascending: true });
+      if (error) toast.error("Erro ao carregar benefícios");
+      setBenefits((data as BenefitRow[]) || []);
+      setLoading(false);
+    })();
+  }, []);
+  const fallback = benefits.length ? benefits : [
+    { id: "showcase", name: "Benefícios para apresentar a clientes", description: "Use esta aba para demonstrar vantagens, bônus e condições comerciais durante a venda.", discount_info: "Material de apoio", coupon_code: "FITMIND", category: "Clientes", website_url: null },
+    { id: "coach", name: "Desconto exclusivo Coach", description: "Área reservada para vantagens de compra e parceiros liberados para coaches ativos.", discount_info: "Condição especial", coupon_code: "COACH", category: "Coach", website_url: null },
+  ];
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Benefícios</h1>
+        <p className="text-sm text-white/50">Vantagens para mostrar aos clientes e descontos exclusivos do coach</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-primary/30 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <Gift className="mb-3 h-6 w-6 text-primary" />
+          <h2 className="text-lg font-bold text-white">Para demonstrar ao cliente</h2>
+          <p className="mt-1 text-sm text-white/55">Organize os benefícios como argumento de venda, bônus de desafio e vantagens do clube.</p>
+        </div>
+        <div className="rounded-2xl border border-success/30 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <Percent className="mb-3 h-6 w-6 text-success" />
+          <h2 className="text-lg font-bold text-white">Exclusivo para coaches</h2>
+          <p className="mt-1 text-sm text-white/55">Cupons, descontos e condições de parceiros para coaches ativos da rede.</p>
+        </div>
+      </div>
+      <div className="mt-4 rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando benefícios...</p> : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {fallback.map((benefit) => (
+              <div key={benefit.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold text-white/60">{benefit.category || "Benefício"}</span>
+                  {benefit.coupon_code && <span className="rounded-full bg-primary/20 px-2 py-1 font-mono text-[10px] font-bold text-primary">{benefit.coupon_code}</span>}
+                </div>
+                <h3 className="text-sm font-bold text-white">{benefit.name}</h3>
+                <p className="mt-1 text-xs text-white/45">{benefit.description}</p>
+                <p className="mt-3 text-sm font-bold text-success">{benefit.discount_info || "Condição especial"}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
