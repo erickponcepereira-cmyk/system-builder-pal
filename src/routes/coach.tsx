@@ -607,11 +607,20 @@ function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
         const { data } = await supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)").eq("id", coach.uplineCoachId).maybeSingle();
         setUpline(data as unknown as TreeCoach | null);
       }
-      const [{ data: coaches }, { data: studentRows }] = await Promise.all([
-        supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)").eq("upline_coach_id", coach.coachId),
+      const [{ data: allCoaches }, { data: studentRows }] = await Promise.all([
+        supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)"),
         supabase.from("students").select("id,profiles!students_profile_id_fkey(name,email)").eq("coach_id", coach.coachId),
       ]);
-      setDownline((coaches as unknown as TreeCoach[]) || []);
+      const coachRows = ((allCoaches as unknown as TreeCoach[]) || []);
+      const descendants: TreeCoach[] = [];
+      const collect = (parentId: string) => {
+        coachRows.filter((item) => item.upline_coach_id === parentId).forEach((item) => {
+          descendants.push(item);
+          collect(item.id);
+        });
+      };
+      collect(coach.coachId);
+      setDownline(descendants);
       setStudents((studentRows as unknown as typeof students) || []);
     })();
   }, [coach?.coachId, coach?.uplineCoachId]);
@@ -641,7 +650,7 @@ function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
           <div className="pl-10 border-l border-white/10">
             <button onClick={() => setOpen(!open)} className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-white/45">{open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} Abaixo de você</button>
             {open && <div className="grid gap-3 md:grid-cols-2">
-              {downline.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Coach"} subtitle={`Coach · ${item.total_active_students || 0} alunos`} tone="success" />)}
+              {downline.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Coach"} subtitle={`Coach ligado · ${item.total_active_students || 0} alunos`} tone="success" />)}
               {students.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Aluno"} subtitle={item.profiles?.email || "Aluno direto"} />)}
               {downline.length + students.length === 0 && <p className="text-sm text-white/50">Nenhum aluno ou coach abaixo ainda.</p>}
             </div>}
