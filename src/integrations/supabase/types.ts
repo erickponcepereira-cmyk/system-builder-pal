@@ -1809,6 +1809,133 @@ export type Database = {
           },
         ]
       }
+      store_order_items: {
+        Row: {
+          created_at: string
+          digital_product_id: string | null
+          id: string
+          metadata: Json
+          order_id: string
+          product_id: string | null
+          product_kind: string
+          quantity: number
+          store_product_id: string | null
+          title: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          digital_product_id?: string | null
+          id?: string
+          metadata?: Json
+          order_id: string
+          product_id?: string | null
+          product_kind: string
+          quantity?: number
+          store_product_id?: string | null
+          title: string
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          digital_product_id?: string | null
+          id?: string
+          metadata?: Json
+          order_id?: string
+          product_id?: string | null
+          product_kind?: string
+          quantity?: number
+          store_product_id?: string | null
+          title?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_orders: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          notes: string | null
+          order_number: string
+          payment_fee: number
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_name: string | null
+          shipping_phone: string | null
+          shipping_state: string | null
+          shipping_zip: string | null
+          status: string
+          student_id: string
+          subtotal: number
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          order_number?: string
+          payment_fee?: number
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_name?: string | null
+          shipping_phone?: string | null
+          shipping_state?: string | null
+          shipping_zip?: string | null
+          status?: string
+          student_id: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          notes?: string | null
+          order_number?: string
+          payment_fee?: number
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_name?: string | null
+          shipping_phone?: string | null
+          shipping_state?: string | null
+          shipping_zip?: string | null
+          status?: string
+          student_id?: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_orders_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_products: {
         Row: {
           category: string | null
@@ -2397,9 +2524,22 @@ export type Database = {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
       }
+      create_store_order: {
+        Args: {
+          _items: Json
+          _notes?: string
+          _payment_method?: Database["public"]["Enums"]["payment_method"]
+          _shipping?: Json
+        }
+        Returns: string
+      }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
         Returns: undefined
+      }
+      get_student_attendance_summary: {
+        Args: { _student_id?: string }
+        Returns: Json
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       join_student_challenge_group: {
@@ -2417,6 +2557,10 @@ export type Database = {
         Returns: undefined
       }
       release_available_commissions: { Args: never; Returns: number }
+      student_check_in: {
+        Args: { _activity_type?: string; _notes?: string }
+        Returns: string
+      }
       transfer_inactive_coach_network: {
         Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }
         Returns: Json
