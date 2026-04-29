@@ -64,13 +64,13 @@ export interface FitMindAssessment {
   bmi: number;
   // Bioimpedância
   bodyFat: number;          // % gordura corporal
-  skeletalMuscle: number;   // kg músculo esquelético
-  muscleMass: number;       // kg massa muscular
-  visceralFat: number;      // nível 1-20
-  basalMetabolism: number;  // kcal
-  bodyAge: number;          // anos
+  skeletalMuscle: number;   // % músculo esquelético
+  muscleMass: number;       // % massa muscular
+  visceralFat: number;      // % gordura visceral
+  basalMetabolism: number;  // % referência Harris-Benedict
+  bodyAge: number;          // % idade corporal sobre idade real
   bodyWater: number;        // % água corporal
-  boneMass: number;         // kg massa óssea
+  boneMass: number;         // % massa óssea
   // Segmentos
   segmentAnalysis?: {
     leftArm: number; rightArm: number;
@@ -162,16 +162,18 @@ const VISCERAL_FAT_RANGES = [
 ];
 
 const TOOLTIPS: Record<string, string> = {
-  bmi: "IMC = Peso ÷ Altura². Indica relação entre peso e altura. Valores entre 18,5–24,9 kg/m² são considerados saudáveis.",
-  bodyFat: "Percentual de gordura corporal em relação ao peso total. Monitorar ajuda a avaliar riscos cardiovasculares e metabólicos.",
-  skeletalMuscle: "Massa dos músculos ligados ao esqueleto, responsáveis pelo movimento. Manter ou aumentar preserva a taxa metabólica e a funcionalidade.",
-  visceralFat: "Gordura acumulada ao redor dos órgãos internos. Nível acima de 9 está associado a riscos cardíacos e diabéticos.",
-  basalMetabolism: "Calorias que o corpo queima em repouso para manter funções vitais. Auxilia no planejamento nutricional.",
-  bodyAge: "Idade metabólica estimada pela composição corporal. Menor que a idade real indica boa saúde metabólica.",
-  bodyWater: "Percentual de água no corpo. Hidratação adequada é fundamental para metabolismo, desempenho e recuperação.",
-  boneMass: "Estimativa da massa óssea. Manter a saúde óssea previne osteoporose ao longo da vida.",
-  muscleMass: "Total de tecido muscular no corpo incluindo músculo esquelético, cardíaco e liso.",
+  bmi: "IMC = Peso ÷ Altura². Classificação baseada nas diretrizes NIH/OMS para IMC. Fonte: (8).",
+  bodyFat: "Percentual de gordura corporal em relação ao peso total. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  skeletalMuscle: "Percentual de músculo esquelético em relação ao corpo. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  visceralFat: "Percentual estimado de gordura visceral. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  basalMetabolism: "Percentual em relação ao metabolismo basal estimado pelo método Harris-Benedict. Fonte: (10).",
+  bodyAge: "Percentual da idade corporal em relação à idade real. Fonte: (2) Omron Healthcare.",
+  bodyWater: "Percentual de água corporal. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  boneMass: "Percentual estimado de massa óssea. Fonte: (9) Omron Healthcare/Tanita.",
+  muscleMass: "Percentual total de tecido muscular no corpo. Fonte: (9) Omron Healthcare/Tanita.",
 };
+
+const CLINICAL_SOURCES = "Fontes: (1) OMS - Organização Mundial da Saúde; (2) Omron Healthcare; (8) diretrizes NIH/OMS para IMC; (9) Omron Healthcare e Tanita; (10) Método Harris-Benedict.";
 
 // ============================================================
 // COMPONENTE PRINCIPAL
@@ -215,12 +217,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return +(assessment.weight / (hm * hm)).toFixed(1);
   }, [assessment.weight, assessment.height]);
 
+  const bmiPercent = useMemo(() => {
+    if (!computedBMI) return 0;
+    return +((computedBMI / 24.9) * 100).toFixed(1);
+  }, [computedBMI]);
+
   const getBMICategory = (bmi: number) => BMI_RANGES.find(r => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
   const getBodyFatCategory = (pct: number, gender: string) => {
     const ranges = gender === "male" ? BODY_FAT_RANGES.male : BODY_FAT_RANGES.female;
     return ranges.find(r => pct <= r.max) ?? ranges[ranges.length - 1];
   };
   const getVisceralCategory = (v: number) => VISCERAL_FAT_RANGES.find(r => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
+  const formatPercent = (value?: number) => Number.isFinite(value) ? `${value}%` : "—";
 
   // ── Histórico mock (substitua pelos dados reais da API) ──
   const historicalData = useMemo(() => {
@@ -814,7 +822,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div>
             <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>IMC Calculado <Tooltip id="bmi" /></div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "var(--fm-primary)" }}>
-              {computedBMI > 0 ? `${computedBMI} kg/m²` : "—"}
+              {computedBMI > 0 ? `${bmiPercent}%` : "—"}
               {computedBMI > 0 && (
                 <span className="fm-badge" style={{ marginLeft: 8, fontSize: 11, background: getBMICategory(computedBMI).color, color: "#fff" }}>
                   {getBMICategory(computedBMI).label}
@@ -835,32 +843,32 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <input type="number" step="0.1" className="fm-input" placeholder="Ex: 28.5" onChange={e => upd("bodyFat", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Músculo Esquelético (kg) <Tooltip id="skeletalMuscle" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 24.3" onChange={e => upd("skeletalMuscle", +e.target.value)} />
+            <label className="fm-label">Músculo Esquelético (%) <Tooltip id="skeletalMuscle" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 32.4" onChange={e => upd("skeletalMuscle", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Massa Muscular (kg) <Tooltip id="muscleMass" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 42.1" onChange={e => upd("muscleMass", +e.target.value)} />
+            <label className="fm-label">Massa Muscular (%) <Tooltip id="muscleMass" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 41.8" onChange={e => upd("muscleMass", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Gordura Visceral (nível) <Tooltip id="visceralFat" /></label>
-            <input type="number" min="1" max="30" className="fm-input" placeholder="Ex: 7" onChange={e => upd("visceralFat", +e.target.value)} />
+            <label className="fm-label">Gordura Visceral (%) <Tooltip id="visceralFat" /></label>
+            <input type="number" step="0.1" min="0" max="100" className="fm-input" placeholder="Ex: 7.0" onChange={e => upd("visceralFat", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Metabolismo Basal (kcal) <Tooltip id="basalMetabolism" /></label>
-            <input type="number" className="fm-input" placeholder="Ex: 1420" onChange={e => upd("basalMetabolism", +e.target.value)} />
+            <label className="fm-label">Metabolismo Basal (%) <Tooltip id="basalMetabolism" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 100" onChange={e => upd("basalMetabolism", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Idade Corporal (anos) <Tooltip id="bodyAge" /></label>
-            <input type="number" className="fm-input" placeholder="Ex: 32" onChange={e => upd("bodyAge", +e.target.value)} />
+            <label className="fm-label">Idade Corporal (%) <Tooltip id="bodyAge" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 106" onChange={e => upd("bodyAge", +e.target.value)} />
           </div>
           <div>
             <label className="fm-label">Água Corporal (%) <Tooltip id="bodyWater" /></label>
             <input type="number" step="0.1" className="fm-input" placeholder="Ex: 52.3" onChange={e => upd("bodyWater", +e.target.value)} />
           </div>
           <div>
-            <label className="fm-label">Massa Óssea (kg) <Tooltip id="boneMass" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 2.4" onChange={e => upd("boneMass", +e.target.value)} />
+            <label className="fm-label">Massa Óssea (%) <Tooltip id="boneMass" /></label>
+            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 4.2" onChange={e => upd("boneMass", +e.target.value)} />
           </div>
         </div>
         <div className="fm-section-title" style={{ marginTop: 16 }}>Análise por Segmento</div>
@@ -1049,16 +1057,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const avatarIndex = bmiCat.avatar;
     const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
     const viscCat = getVisceralCategory(a.visceralFat);
-    const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
+    const ageBodyDiff = a.bodyAge ? a.bodyAge - 100 : 0;
 
     const evalColor = (ev: string) => ({ excellent: "#22c55e", good: "#86efac", normal: "#60a5fa", warning: "#fb923c", danger: "#ef4444" }[ev] || "#94a3b8");
     const evalLabel = (ev: string) => ({ excellent: "Excelente", good: "Bom", normal: "Normal", warning: "Atenção", danger: "Risco" }[ev] || ev);
 
-    const leanMass = a.weight - (a.weight * a.bodyFat / 100);
-    const fatMass = a.weight * a.bodyFat / 100;
+    const leanPct = +(100 - (a.bodyFat || 0)).toFixed(1);
+    const fatPct = +(a.bodyFat || 0).toFixed(1);
     const pieData = [
-      { name: "Massa Magra", value: +leanMass.toFixed(1), fill: "var(--fm-primary)" },
-      { name: "Gordura", value: +fatMass.toFixed(1), fill: "#fca5a5" },
+      { name: "Massa Magra", value: leanPct, fill: "var(--fm-primary)" },
+      { name: "Gordura", value: fatPct, fill: "#fca5a5" },
     ];
 
     const histWeight = historicalData.length > 0 ? historicalData : [
@@ -1107,7 +1115,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div style={{ textAlign: "center", marginTop: 8 }}>
               <span className="fm-badge" style={{ background: bmiCat.color, color: "#fff", fontSize: 12 }}>
-                {bmiCat.label} · IMC {a.bmi || computedBMI}
+                {bmiCat.label} · IMC {formatPercent(bmiPercent)}
               </span>
             </div>
           </div>
@@ -1116,15 +1124,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Composição Corporal</div>
             {[
-              { label: "Peso", tooltip: null, value: `${a.weight} kg`, eval: "normal", evalLabel: "Peso atual" },
-              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: `${a.skeletalMuscle} kg`, eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
-              { label: "Massa Muscular", tooltip: "muscleMass", value: `${a.muscleMass} kg`, eval: "normal", evalLabel: "Total" },
+              { label: "Peso", tooltip: null, value: formatPercent(a.weight), eval: "normal", evalLabel: "Percentual informado" },
+              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: formatPercent(a.skeletalMuscle), eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
+              { label: "Massa Muscular", tooltip: "muscleMass", value: formatPercent(a.muscleMass), eval: "normal", evalLabel: "Total" },
               {
                 label: "Idade Corporal",
                 tooltip: "bodyAge",
-                value: `${a.bodyAge} anos`,
+                value: formatPercent(a.bodyAge),
                 eval: ageBodyDiff > 5 ? "danger" : ageBodyDiff > 0 ? "warning" : "excellent",
-                evalLabel: ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff} anos` : `${ageBodyDiff} anos`,
+                evalLabel: ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${ageBodyDiff}%`,
               },
             ].map(row => (
               <div key={row.label} className="fm-result-row">
@@ -1146,10 +1154,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Diagnóstico de Obesidade</div>
             {[
-              { label: "IMC", tooltip: "bmi", value: `${a.bmi || computedBMI} kg/m²`, color: bmiCat.color, evalText: bmiCat.label },
-              { label: "Gordura Corporal", tooltip: "bodyFat", value: `${a.bodyFat}%`, color: evalColor(fatCat.eval), evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})` },
-              { label: "Gordura Visceral", tooltip: "visceralFat", value: `Nível ${a.visceralFat}`, color: viscCat.color, evalText: viscCat.label },
-              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: `${a.basalMetabolism} kcal`, color: "#60a5fa", evalText: "Referência diária" },
+              { label: "IMC", tooltip: "bmi", value: formatPercent(bmiPercent), color: bmiCat.color, evalText: bmiCat.label },
+              { label: "Gordura Corporal", tooltip: "bodyFat", value: formatPercent(a.bodyFat), color: evalColor(fatCat.eval), evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})` },
+              { label: "Gordura Visceral", tooltip: "visceralFat", value: formatPercent(a.visceralFat), color: viscCat.color, evalText: viscCat.label },
+              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: formatPercent(a.basalMetabolism), color: "#60a5fa", evalText: "Harris-Benedict" },
             ].map(row => (
               <div key={row.label} className="fm-result-row">
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: 4 }}>
@@ -1167,7 +1175,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {[
                 { icon: <Droplets size={18} color="#60a5fa" />, label: "Água Corporal", tooltip: "bodyWater", value: `${a.bodyWater}%`, bg: "#eff6ff" },
-                { icon: <Bone size={18} color="#a78bfa" />, label: "Massa Óssea", tooltip: "boneMass", value: `${a.boneMass} kg`, bg: "#f5f3ff" },
+                { icon: <Bone size={18} color="#a78bfa" />, label: "Massa Óssea", tooltip: "boneMass", value: `${a.boneMass}%`, bg: "#f5f3ff" },
               ].map(item => (
                 <div key={item.label} style={{ background: item.bg, borderRadius: 12, padding: "14px", textAlign: "center" }}>
                   {item.icon}
@@ -1243,7 +1251,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     <span style={{ width: 12, height: 12, borderRadius: 3, background: d.fill, display: "inline-block" }} />
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b" }}>{d.name}</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{d.value} kg</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{d.value}%</div>
                     </div>
                   </div>
                 ))}
@@ -1261,28 +1269,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 <RechartsTooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="gordura" name="% Gordura" fill="#fca5a5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="musculo" name="Músculo (kg)" fill={themeColor} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="musculo" name="% Músculo" fill={themeColor} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
-            <div className="fm-section-title">Idade Real vs Idade Corporal</div>
+            <div className="fm-section-title">Idade Corporal (%)</div>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "8px 0" }}>
               <div style={{ textAlign: "center", flex: 1, background: "#f0fdf4", borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Idade Real</div>
+                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Referência</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: "#1e293b" }}>{a.age}</div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>anos</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", color: "#94a3b8", fontSize: 20 }}>→</div>
               <div style={{ textAlign: "center", flex: 1, background: ageBodyDiff <= 0 ? "#f0fdf4" : "#fef2f2", borderRadius: 12, padding: 16 }}>
                 <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Idade Corporal</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444" }}>{a.bodyAge}</div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444" }}>{formatPercent(a.bodyAge)}</div>
                 <div style={{ fontSize: 12, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444", fontWeight: 700 }}>
-                  {ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff} anos` : `${Math.abs(ageBodyDiff)} anos mais jovem 🎉`}
+                  {ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${Math.abs(ageBodyDiff)}% abaixo 🎉`}
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="fm-card" style={{ marginBottom: 12 }}>
+            <div className="fm-section-title">Fontes de Referência</div>
+            <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>{CLINICAL_SOURCES}</div>
           </div>
 
           {/* Anotações para o cliente */}
