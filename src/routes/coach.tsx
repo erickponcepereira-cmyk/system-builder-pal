@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
+  Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +27,64 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "evaluate" | "attendance" | "wallet" | "career";
+type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career";
+
+const money = (value: number | null | undefined) =>
+  `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+interface CoachContext {
+  profileId: string;
+  coachId: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  bio: string;
+  patent: string | null;
+  referralCode: string;
+  referralLink: string;
+  uplineCoachId: string | null;
+  totalActiveStudents: number;
+  totalSales: number;
+}
+
+function useCoachContext() {
+  const [coach, setCoach] = useState<CoachContext | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: profile } = userData.user
+      ? await supabase.from("profiles").select("id,name,email,phone,city,state,bio,patent").eq("user_id", userData.user.id).maybeSingle()
+      : { data: null };
+    const { data: coachRow } = profile?.id
+      ? await supabase.from("coaches").select("id,referral_code,referral_link,upline_coach_id,total_active_students,total_sales").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+
+    setCoach(profile && coachRow ? {
+      profileId: profile.id,
+      coachId: coachRow.id,
+      name: profile.name || "Coach",
+      email: profile.email || "",
+      phone: profile.phone || "",
+      city: profile.city || "",
+      state: profile.state || "",
+      bio: profile.bio || "",
+      patent: profile.patent || null,
+      referralCode: coachRow.referral_code || "",
+      referralLink: coachRow.referral_link || "",
+      uplineCoachId: coachRow.upline_coach_id || null,
+      totalActiveStudents: Number(coachRow.total_active_students || 0),
+      totalSales: Number(coachRow.total_sales || 0),
+    } : null);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+  return { coach, loading, reload: load, setCoach };
+}
 
 function CoachDashboard() {
   const navigate = useNavigate();
