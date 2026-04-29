@@ -105,7 +105,7 @@ function AdminSettings() {
   const saveAll = async () => {
     if (!plan) return;
     setSaving(true);
-    let error = null;
+    let error: { message: string } | null = null;
     if (plan.id) {
       ({ error } = await supabase.from("career_plan_config").update({
         name: plan.name,
