@@ -42,7 +42,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
       try {
         let request = supabase
           .from("coaches")
-          .select("id, profile_id, profiles!inner(name, city, state)")
+          .select("id, profile_id, profiles!coaches_profile_id_fkey(name, city, state)")
           .not("approved_at", "is", null)
           .limit(8);
 
