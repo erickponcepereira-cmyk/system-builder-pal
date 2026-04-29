@@ -8,6 +8,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
+import { finalizeRegistrationFn } from "@/server/registration.functions";
 
 type SearchParams = { role?: string };
 
@@ -58,6 +59,30 @@ function generateReferralCode(): string {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
+}
+
+async function createOrRecoverAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
+  const normalizedEmail = email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signUp({
+    email: normalizedEmail,
+    password,
+    options: {
+      data: { name: name.trim(), role },
+      emailRedirectTo: `${window.location.origin}/login`,
+    },
+  });
+
+  if (!error && data.user) return data.user;
+
+  if (error?.message.toLowerCase().includes("already")) {
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+    if (!loginError && loginData.user) return loginData.user;
+  }
+
+  throw new Error(error?.message || "Não foi possível criar a conta de acesso.");
 }
 
 function RegisterPage() {
