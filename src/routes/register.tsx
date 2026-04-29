@@ -270,81 +270,45 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
     setLoading(true);
     try {
       const referralCode = generateReferralCode();
+      const user = await createOrRecoverAuthUser(email, password, name, "coach");
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role: "coach",
+      await finalizeRegistrationFn({
+        data: {
+          userId: user.id,
+          role: "coach",
+          name,
+          email,
+          phone,
+          cpf,
+          birthdate,
+          bio,
+          street,
+          number,
+          neighborhood,
+          city,
+          state,
+          zipCode: cep,
+          coach: {
+            uplineCoachId: selectedCoach.id,
+            referralCode,
+            referralLink: `${window.location.origin}/r/${referralCode}`,
+            pixKey,
+            pixKeyType,
+            bankName,
+            bankAgency,
+            bankAccount,
+            bankAccountType,
           },
-          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
-      if (authError) {
-        toast.error(authError.message);
-        return;
-      }
-
-      if (authData.user) {
-        // Update profile with additional data
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
-
-        if (profileError || !profileData) {
-          toast.error("Não foi possível criar seu perfil. Tente novamente.");
-          return;
-        }
-
-        const { error: updateError } = await supabase
-            .from("profiles")
-            .update({
-              cpf: cpf.replace(/\D/g, ""),
-              phone: phone.replace(/\D/g, ""),
-              birthdate,
-              bio,
-              street,
-              number,
-              neighborhood,
-              city,
-              state,
-              zip_code: cep.replace(/\D/g, ""),
-            })
-            .eq("id", profileData.id);
-
-          if (updateError) {
-            toast.error("Não foi possível salvar seus dados pessoais.");
-            return;
-          }
-
-          const { error: coachError } = await supabase.from("coaches").insert({
-            profile_id: profileData.id,
-            referral_code: referralCode,
-            referral_link: `${window.location.origin}/r/${referralCode}`,
-            pix_key: pixKey,
-            pix_key_type: pixKeyType,
-            bank_name: bankName || null,
-            bank_agency: bankAgency || null,
-            bank_account: bankAccount || null,
-            bank_account_type: bankAccountType,
-            upline_coach_id: selectedCoach.id,
-          });
-
-          if (coachError) {
-            toast.error(`Não foi possível criar o cadastro de coach: ${coachError.message}`);
-            return;
-          }
-
-        toast.success("Cadastro enviado com sucesso!");
-        navigate({ to: "/pending-approval" });
-      }
-    } catch {
-      toast.error("Erro ao criar conta. Tente novamente.");
+      sessionStorage.setItem("fitmind_selected_area", "coach");
+      toast.success("Conta de coach criada com sucesso!");
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) window.location.assign("/coach");
+      else navigate({ to: "/login" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao criar conta. Tente novamente.");
     } finally {
       setLoading(false);
     }
