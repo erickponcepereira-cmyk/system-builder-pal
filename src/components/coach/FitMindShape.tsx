@@ -203,7 +203,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     groups: [],
     name: "",
     birthDate: "",
-    whatsapp: "",
+    whatsapp: "+55 ",
     email: "",
     notes: "",
   });
@@ -507,13 +507,36 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setNewClientData((current) => ({ ...current, [key]: value }));
   };
 
+  const formatBrazilWhatsapp = (value: string) => {
+    const digits = value.replace(/\D/g, "").replace(/^55/, "").slice(0, 11);
+    const ddd = digits.slice(0, 2);
+    const firstPart = digits.length > 10 ? digits.slice(2, 7) : digits.slice(2, 6);
+    const secondPart = digits.length > 10 ? digits.slice(7, 11) : digits.slice(6, 10);
+    if (!ddd) return "+55 ";
+    if (ddd.length < 2) return `+55 (${ddd}`;
+    if (!firstPart) return `+55 (${ddd}) `;
+    return `+55 (${ddd}) ${firstPart}${secondPart ? `-${secondPart}` : ""}`;
+  };
+
   const createNewClient = async () => {
     if (!onCreateClient) return;
     if (!newClientData.name?.trim()) return alert("Informe o nome do aluno");
-    const created = await onCreateClient(newClientData as Omit<FitMindClient, "id">);
-    setSelectedClient(created);
-    setScreen("assessment");
-    setStep(0);
+    setIsSaving(true);
+    try {
+      const created = await onCreateClient({
+        ...newClientData,
+        name: newClientData.name.trim(),
+        whatsapp: formatBrazilWhatsapp(newClientData.whatsapp || ""),
+      } as Omit<FitMindClient, "id">);
+      setSelectedClient(created);
+      setAssessment({ height: created.height || undefined });
+      setScreen("assessment");
+      setStep(0);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Não foi possível criar o aluno");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ────────────────────────────────────────────────────────
