@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Flame } from "lucide-react";
+import fitmindLogo from "@/assets/fitmind-logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,7 +24,7 @@ function Index() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0A0A0A",
+        background: "#050505",
         color: "#FFFFFF",
         padding: "40px 20px",
         fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -40,21 +40,17 @@ function Index() {
           textAlign: "center",
         }}
       >
-        <div
+        <img
+          src={fitmindLogo}
+          alt="Logo FitMind Club"
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: 24,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#FFB238",
-            boxShadow: "0 24px 70px rgba(255, 178, 56, 0.24)",
-            marginBottom: 28,
+            width: 156,
+            height: 156,
+            objectFit: "contain",
+            filter: "drop-shadow(0 24px 70px rgba(255, 66, 48, 0.28))",
+            marginBottom: 18,
           }}
-        >
-          <Flame size={40} color="#111111" strokeWidth={2.4} />
-        </div>
+        />
 
         <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.05, fontWeight: 900, letterSpacing: 0 }}>
           FitMind Club
@@ -62,7 +58,7 @@ function Index() {
         <p style={{ margin: "18px 0 0", maxWidth: 360, fontSize: 17, lineHeight: 1.55, color: "rgba(255,255,255,0.72)" }}>
           Conectando corpo e mente para a sua melhor versão.
         </p>
-        <p style={{ margin: "14px 0 0", fontSize: 12, fontWeight: 800, letterSpacing: 2.2, textTransform: "uppercase", color: "#FFB238" }}>
+        <p style={{ margin: "14px 0 0", fontSize: 12, fontWeight: 800, letterSpacing: 2.2, textTransform: "uppercase", color: "#FF4230" }}>
           A maior rede de saúde do Brasil
         </p>
 
@@ -75,8 +71,8 @@ function Index() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#FFB238",
-              color: "#111111",
+              background: "#FF4230",
+              color: "#FFFFFF",
               textDecoration: "none",
               fontSize: 14,
               fontWeight: 800,
@@ -92,8 +88,8 @@ function Index() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#1A1A1A",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "#141414",
+              border: "1px solid rgba(255, 66, 48, 0.35)",
               color: "#FFFFFF",
               textDecoration: "none",
               fontSize: 14,
