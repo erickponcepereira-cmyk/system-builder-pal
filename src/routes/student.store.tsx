@@ -21,6 +21,10 @@ interface StoreProduct {
   category: string;
   kind: ProductKind;
   tag?: string;
+  subtitle?: string | null;
+  isPriceRange?: boolean | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
   stock?: number | null;
 }
 
@@ -29,8 +33,22 @@ type OrderRow = { id: string; order_number: string; status: string; total_amount
 
 type ShippingForm = { name: string; phone: string; zip: string; address: string; city: string; state: string };
 
-const categories = ["Todos", "Desafios", "Cursos", "Suplementos", "Acessórios", "Herbalife"];
+const categories = ["Todos", "Inscrições", "Planos 30d", "Protocolos 90d", "Cursos", "Aulões", "Salas", "Herbalife"];
 const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "" };
+
+const productCategory = (type?: string | null) => ({
+  enrollment: "Inscrições",
+  plan_30: "Planos 30d",
+  protocol_90: "Protocolos 90d",
+  digital_course: "Cursos",
+  coach_training: "Cursos",
+  health_pro_course: "Cursos",
+  live_class: "Aulões",
+  room_rental: "Salas",
+  herbalife: "Herbalife",
+  physical: "Herbalife",
+  challenge: "Planos 30d",
+}[type || ""] || "Planos 30d");
 
 function StorePage() {
   const [items, setItems] = useState<StoreProduct[]>([]);
@@ -46,7 +64,7 @@ function StorePage() {
   const load = async () => {
     const [{ data: userData }, plans, digital, physical] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,description,price,original_price,type,status").eq("status", "active").order("sort_order"),
+      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock").eq("status", "active").order("sort_order"),
     ]);
@@ -66,8 +84,8 @@ function StorePage() {
     }
 
     setItems([
-      ...((plans.data || []).map((p) => ({ id: `plan-${p.id}`, sourceId: p.id, title: p.name, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: "Desafios", kind: "challenge" as const, tag: "Desafio" }))),
-      ...((digital.data || []).map((p) => ({ id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: "Cursos", kind: "digital" as const, tag: p.is_featured ? "Destaque" : "Digital" }))),
+      ...((plans.data || []).map((p) => ({ id: `plan-${p.id}`, sourceId: p.id, title: p.name, subtitle: p.subtitle, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: productCategory(String(p.product_type || p.type)), kind: "challenge" as const, tag: p.badge_label || "FitMind", isPriceRange: p.is_price_range, minPrice: p.min_price ? Number(p.min_price) : null, maxPrice: p.max_price ? Number(p.max_price) : null }))),
+      ...((digital.data || []).map((p) => ({ id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: "Cursos", kind: "digital" as const, tag: p.is_featured ? "Destaque" : "Curso" }))),
       ...((physical.data || []).map((p) => ({ id: `store-${p.id}`, sourceId: p.id, title: p.name, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: p.is_herbalife ? "Herbalife" : p.category || "Suplementos", kind: "store" as const, tag: p.is_herbalife ? "Herbalife" : undefined, stock: p.stock }))),
     ]);
   };
