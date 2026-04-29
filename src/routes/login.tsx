@@ -226,6 +226,11 @@ function LoginPage() {
             ) : (
 
             <form onSubmit={handleLogin} className="space-y-4">
+              {formError && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                  {formError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white/70">E-mail</Label>
                 <Input
@@ -233,7 +238,10 @@ function LoginPage() {
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (formError) setFormError(null);
+                  }}
                   required
                   disabled={loading}
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
@@ -248,7 +256,10 @@ function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (formError) setFormError(null);
+                    }}
                     required
                     disabled={loading}
                     className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
