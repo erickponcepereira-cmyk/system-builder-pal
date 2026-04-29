@@ -19,14 +19,14 @@ export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen w-full overflow-x-clip flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
+    <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
       {/* Mobile container 430px max */}
       <div
-          className="relative flex w-full max-w-[430px] flex-col min-h-screen overflow-x-clip shadow-2xl"
+          className="relative flex w-full max-w-[430px] flex-col min-h-screen overflow-x-hidden shadow-2xl"
         style={{ backgroundColor: "#0F0F0F" }}
       >
         {/* Content */}
-        <main className="flex-1 overflow-x-clip overflow-y-auto pb-24">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24">{children}</main>
 
         {/* Bottom Navigation */}
         <nav
