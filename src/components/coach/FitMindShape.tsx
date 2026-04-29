@@ -1275,22 +1275,27 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
-            <div className="fm-section-title">Idade Real vs Idade Corporal</div>
+            <div className="fm-section-title">Idade Corporal (%)</div>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "8px 0" }}>
               <div style={{ textAlign: "center", flex: 1, background: "#f0fdf4", borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Idade Real</div>
+                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Referência</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: "#1e293b" }}>{a.age}</div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>anos</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", color: "#94a3b8", fontSize: 20 }}>→</div>
               <div style={{ textAlign: "center", flex: 1, background: ageBodyDiff <= 0 ? "#f0fdf4" : "#fef2f2", borderRadius: 12, padding: 16 }}>
                 <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Idade Corporal</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444" }}>{a.bodyAge}</div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444" }}>{formatPercent(a.bodyAge)}</div>
                 <div style={{ fontSize: 12, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444", fontWeight: 700 }}>
-                  {ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff} anos` : `${Math.abs(ageBodyDiff)} anos mais jovem 🎉`}
+                  {ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${Math.abs(ageBodyDiff)}% abaixo 🎉`}
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="fm-card" style={{ marginBottom: 12 }}>
+            <div className="fm-section-title">Fontes de Referência</div>
+            <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>{CLINICAL_SOURCES}</div>
           </div>
 
           {/* Anotações para o cliente */}
