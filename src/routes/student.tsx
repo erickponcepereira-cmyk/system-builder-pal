@@ -29,7 +29,7 @@ function StudentLayout() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id, role")
         .eq("user_id", user.id)
         .maybeSingle();
 
