@@ -12,7 +12,7 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
-import FitMindShape from "@/components/coach/FitMindShape";
+import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import fitmindLogo from "@/assets/fitmind-logo.png";
 
 export const Route = createFileRoute("/coach")({
@@ -290,6 +290,137 @@ function NetworkTab({ referralLink, onCopy }: { referralLink: string; onCopy: ()
 }
 
 function EvaluateTab() {
+  const [clients, setClients] = useState<FitMindClient[]>([]);
+  const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
+
+  const mapAssessment = (row: any): FitMindAssessment => ({
+    id: row.id,
+    clientId: row.client_id,
+    date: row.assessment_date,
+    method: row.method,
+    age: row.age || 0,
+    height: Number(row.height || 0),
+    weight: Number(row.weight || 0),
+    bmi: Number(row.bmi || 0),
+    bodyFat: Number(row.body_fat || 0),
+    skeletalMuscle: Number(row.skeletal_muscle || 0),
+    muscleMass: Number(row.muscle_mass || 0),
+    visceralFat: Number(row.visceral_fat || 0),
+    basalMetabolism: Number(row.basal_metabolism || 0),
+    bodyAge: row.body_age || 0,
+    bodyWater: Number(row.body_water || 0),
+    boneMass: Number(row.bone_mass || 0),
+    segmentAnalysis: row.segment_analysis || undefined,
+    systolicBP: row.systolic_bp || undefined,
+    diastolicBP: row.diastolic_bp || undefined,
+    heartRate: row.heart_rate || undefined,
+    bloodGlucose: row.blood_glucose ? Number(row.blood_glucose) : undefined,
+    clientNotes: row.client_notes || undefined,
+    professionalNotes: row.professional_notes || undefined,
+    photos: row.photos || undefined,
+    nextAssessmentDate: row.next_assessment_date || undefined,
+    nextAssessmentTime: row.next_assessment_time || undefined,
+    groupId: row.group_id || undefined,
+  });
+
+  const loadClients = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+    const { data: coach } = await supabase
+      .from("coaches")
+      .select("id, profiles!coaches_profile_id_fkey(name,email)")
+      .eq("profiles.user_id", userData.user.id)
+      .maybeSingle();
+    if (!coach?.id) return;
+    const profile = (coach as any).profiles;
+    setCoachInfo({ id: coach.id, name: profile?.name || "Coach FitMind", email: profile?.email || "", specialty: "Avaliação corporal" });
+    const { data, error } = await supabase
+      .from("coach_evaluation_clients" as never)
+      .select("*, coach_body_assessments(*)" as never)
+      .eq("coach_id" as never, coach.id as never)
+      .order("created_at" as never, { ascending: false });
+    if (error) return toast.error("Erro ao carregar alunos da avaliação");
+    setClients(((data as any[]) || []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      gender: row.gender,
+      ethnicity: row.ethnicity,
+      height: Number(row.height || 0),
+      heightUnit: row.height_unit,
+      birthDate: row.birth_date || "",
+      language: row.language,
+      whatsapp: row.whatsapp || "",
+      email: row.email || "",
+      notes: row.notes || "",
+      groups: row.groups || [],
+      avatar: row.avatar_url || undefined,
+      assessments: (row.coach_body_assessments || []).map(mapAssessment),
+    })));
+  };
+
+  useEffect(() => { loadClients(); }, []);
+
+  const createClient = async (client: Omit<FitMindClient, "id">) => {
+    if (!coachInfo.id) throw new Error("Coach não encontrado");
+    const { data, error } = await supabase.from("coach_evaluation_clients" as never).insert({
+      coach_id: coachInfo.id,
+      name: client.name,
+      gender: client.gender,
+      ethnicity: client.ethnicity,
+      height: client.height || null,
+      height_unit: client.heightUnit || "cm",
+      birth_date: client.birthDate || null,
+      language: client.language || "pt",
+      whatsapp: client.whatsapp || null,
+      email: client.email || null,
+      notes: client.notes || null,
+      groups: client.groups || [],
+      avatar_url: client.avatar || null,
+    } as never).select("*" as never).single();
+    if (error) { toast.error("Erro ao criar aluno"); throw error; }
+    toast.success("Aluno criado");
+    const created = data as any;
+    const mapped: FitMindClient = { id: created.id, name: created.name, gender: created.gender, ethnicity: created.ethnicity, height: Number(created.height || 0), heightUnit: created.height_unit, birthDate: created.birth_date || "", language: created.language, whatsapp: created.whatsapp || "", email: created.email || "", notes: created.notes || "", groups: created.groups || [], assessments: [] };
+    setClients((current) => [mapped, ...current]);
+    return mapped;
+  };
+
+  const saveAssessment = async (assessment: FitMindAssessment, client: FitMindClient) => {
+    if (!coachInfo.id) throw new Error("Coach não encontrado");
+    const { error } = await supabase.from("coach_body_assessments" as never).insert({
+      client_id: client.id,
+      coach_id: coachInfo.id,
+      assessment_date: assessment.date || new Date().toISOString(),
+      method: assessment.method || "bioimpedance",
+      age: assessment.age || null,
+      height: assessment.height || null,
+      weight: assessment.weight || null,
+      bmi: assessment.bmi || null,
+      body_fat: assessment.bodyFat || null,
+      skeletal_muscle: assessment.skeletalMuscle || null,
+      muscle_mass: assessment.muscleMass || null,
+      visceral_fat: assessment.visceralFat || null,
+      basal_metabolism: assessment.basalMetabolism || null,
+      body_age: assessment.bodyAge || null,
+      body_water: assessment.bodyWater || null,
+      bone_mass: assessment.boneMass || null,
+      segment_analysis: assessment.segmentAnalysis || {},
+      systolic_bp: assessment.systolicBP || null,
+      diastolic_bp: assessment.diastolicBP || null,
+      heart_rate: assessment.heartRate || null,
+      blood_glucose: assessment.bloodGlucose || null,
+      client_notes: assessment.clientNotes || null,
+      professional_notes: assessment.professionalNotes || null,
+      photos: assessment.photos || {},
+      next_assessment_date: assessment.nextAssessmentDate || null,
+      next_assessment_time: assessment.nextAssessmentTime || null,
+      group_id: assessment.groupId || null,
+    } as never);
+    if (error) { toast.error("Erro ao salvar avaliação"); throw error; }
+    toast.success("Avaliação salva");
+    await loadClients();
+  };
+
   return (
     <>
       <div className="mb-6">
@@ -297,12 +428,11 @@ function EvaluateTab() {
         <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
       </div>
       <FitMindShape
-        coach={{
-          id: "coach-dashboard",
-          name: "Coach FitMind",
-          email: "coach@fitmindclub.app",
-          specialty: "Avaliação corporal",
-        }}
+        coach={coachInfo}
+        clients={clients}
+        onCreateClient={createClient}
+        onSaveAssessment={saveAssessment}
+        onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         groups={[
           { id: "challenge", name: "Desafio 30 Dias", color: "#f97316" },
           { id: "premium", name: "Alunos Premium", color: "#22c55e" },
