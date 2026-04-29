@@ -13,8 +13,8 @@ const navItems = [
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/coach-course", label: "Cursos", icon: BookOpen },
-  { to: "/student/profile", label: "Perfil", icon: User },
   { to: "/student/benefits", label: "Benefícios", icon: Gift },
+  { to: "/student/profile", label: "Perfil", icon: User },
 ] as const;
 
 export function MobileShell({ children }: MobileShellProps) {
