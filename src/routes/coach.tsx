@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  Flame, Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
+  Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { CareerProgress } from "@/components/coach/CareerProgress";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
 import { StudentEvaluationPanel } from "@/components/coach/StudentEvaluationPanel";
+import fitmindLogo from "@/assets/fitmind-logo.png";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
@@ -73,9 +74,7 @@ function CoachDashboard() {
         style={{ backgroundColor: "rgba(10,10,10,0.9)" }}
       >
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-4 w-4 text-primary-foreground" />
-          </div>
+<img src={fitmindLogo} alt="FitMind Club" className="h-9 w-9 object-contain" />
           <span className="font-bold text-white">FitMind Club</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
@@ -91,9 +90,7 @@ function CoachDashboard() {
         style={{ backgroundColor: "#0F0F0F" }}
       >
         <div className="mb-8 flex items-center gap-2 px-2 pt-14 lg:pt-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-4 w-4 text-primary-foreground" />
-          </div>
+<img src={fitmindLogo} alt="FitMind Club" className="h-9 w-9 object-contain" />
           <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             Coach

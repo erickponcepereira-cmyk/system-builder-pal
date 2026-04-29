@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Flame, ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload } from "lucide-react";
+import fitmindLogo from "@/assets/fitmind-logo.png";
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -81,9 +82,7 @@ function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <Flame className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-12 w-12 object-contain" />
             <span className="text-2xl font-bold text-white">FitMind Club</span>
           </Link>
           <h1 className="text-2xl font-bold text-white">Criar conta</h1>
@@ -320,9 +319,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         {/* Header */}
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Flame className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-10 w-10 object-contain" />
             <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Coach</h1>
@@ -634,9 +631,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Flame className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-10 w-10 object-contain" />
             <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Aluno</h1>
