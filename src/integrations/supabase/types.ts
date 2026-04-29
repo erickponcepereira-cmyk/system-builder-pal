@@ -733,6 +733,7 @@ export type Database = {
           profile_id: string
           reviewed_at: string | null
           reviewed_by: string | null
+          selected_upline_coach_id: string | null
           status: string
           student_id: string
           total_modules: number | null
@@ -750,6 +751,7 @@ export type Database = {
           profile_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          selected_upline_coach_id?: string | null
           status?: string
           student_id: string
           total_modules?: number | null
@@ -767,6 +769,7 @@ export type Database = {
           profile_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          selected_upline_coach_id?: string | null
           status?: string
           student_id?: string
           total_modules?: number | null
@@ -3383,15 +3386,26 @@ export type Database = {
         Args: { _activity_type?: string; _notes?: string }
         Returns: string
       }
-      submit_coach_application: {
-        Args: {
-          _city?: string
-          _experience?: string
-          _motivation: string
-          _phone?: string
-        }
-        Returns: string
-      }
+      submit_coach_application:
+        | {
+            Args: {
+              _city?: string
+              _experience?: string
+              _motivation: string
+              _phone?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _city?: string
+              _experience?: string
+              _motivation: string
+              _phone?: string
+              _selected_upline_coach_id?: string
+            }
+            Returns: string
+          }
       transfer_inactive_coach_network: {
         Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }
         Returns: Json
