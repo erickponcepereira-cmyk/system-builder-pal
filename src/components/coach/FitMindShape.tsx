@@ -1124,7 +1124,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               ))}
             </div>
             <div style={{ textAlign: "center", marginTop: 8 }}>
-              <span className="fm-badge" style={{ background: bmiCat.color, color: "#fff", fontSize: 12 }}>
+              <span className="fm-badge" style={{ background: evalColor(bmiCat.avatar <= 1 ? "normal" : bmiCat.avatar <= 3 ? "warning" : "danger"), color: "#fff", fontSize: 12 }}>
                 {bmiCat.label} · IMC {formatPercent(bmiPercent)}
               </span>
             </div>
@@ -1152,7 +1152,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   </div>
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{row.value}</div>
-                <span className="fm-badge" style={{ background: evalColor(row.eval) + "22", color: evalColor(row.eval), minWidth: 70, textAlign: "center" }}>
+                <span className="fm-badge" style={{ background: evalColor(row.eval), color: "#fff", minWidth: 70, textAlign: "center" }}>
                   <span className="fm-eval-dot" style={{ background: evalColor(row.eval), marginRight: 4 }} />
                   {row.evalLabel}
                 </span>
@@ -1174,7 +1174,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   {row.label} <Tooltip id={row.tooltip} />
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}>{row.value}</div>
-                <span className="fm-badge" style={{ background: row.color + "22", color: row.color, fontSize: 11 }}>{row.evalText}</span>
+                <span className="fm-badge" style={{ background: row.color, color: "#fff", fontSize: 11 }}>{row.evalText}</span>
               </div>
             ))}
           </div>
