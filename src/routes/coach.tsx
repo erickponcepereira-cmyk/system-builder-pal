@@ -161,7 +161,7 @@ function CoachDashboard() {
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
 
-  if (checkingAccess) {
+  if (checkingAccess || coachContextLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Carregando...</div>;
   }
 
@@ -257,6 +257,13 @@ function CoachDashboard() {
             <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
+          {activeTab === "products" && <ProductsTrackTab />}
+          {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
+          {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
+          {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
+          {activeTab === "physicalStore" && <PhysicalStoreTab />}
+          {activeTab === "digitalStore" && <DigitalStoreTab />}
+          {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "wallet" && <WalletTab />}
