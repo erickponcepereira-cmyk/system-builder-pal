@@ -541,6 +541,117 @@ function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContex
   );
 }
 
+function CoachStudentsTab({ coachId }: { coachId: string }) {
+  const [students, setStudents] = useState<{ id: string; current_weight: number | null; goal_weight: number | null; completed_coach_course: boolean | null; created_at: string | null; profiles: { name: string; email: string; phone: string | null; city: string | null; state: string | null } | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!coachId) { setLoading(false); return; }
+    (async () => {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id,current_weight,goal_weight,completed_coach_course,created_at,profiles!students_profile_id_fkey(name,email,phone,city,state)")
+        .eq("coach_id", coachId)
+        .order("created_at", { ascending: false });
+      if (error) toast.error("Erro ao carregar alunos da base");
+      setStudents((data as unknown as typeof students) || []);
+      setLoading(false);
+    })();
+  }, [coachId]);
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Base de Alunos</h1>
+        <p className="text-sm text-white/50">Todos os alunos ligados diretamente ao seu perfil</p>
+      </div>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {loading ? <p className="text-sm text-white/50">Carregando alunos...</p> : students.length === 0 ? <p className="text-sm text-white/50">Nenhum aluno ligado a você ainda.</p> : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {students.map((student) => (
+              <div key={student.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-bold text-white">{student.profiles?.name || "Aluno"}</h3>
+                    <p className="truncate text-xs text-white/45">{student.profiles?.email || "Sem e-mail"}</p>
+                    <p className="mt-1 text-[10px] text-white/35">{student.profiles?.phone || "Sem telefone"} {student.profiles?.city ? `· ${student.profiles.city}/${student.profiles.state || ""}` : ""}</p>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${student.completed_coach_course ? "bg-success/20 text-success" : "bg-white/10 text-white/60"}`}>{student.completed_coach_course ? "Curso coach" : "Aluno"}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded-lg bg-white/5 p-2"><p className="text-white/35">Peso atual</p><p className="font-bold text-white">{student.current_weight ? `${student.current_weight} kg` : "—"}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><p className="text-white/35">Meta</p><p className="font-bold text-white">{student.goal_weight ? `${student.goal_weight} kg` : "—"}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><p className="text-white/35">Entrada</p><p className="font-bold text-white">{student.created_at ? new Date(student.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+type TreeCoach = { id: string; profile_id: string; upline_coach_id: string | null; total_active_students: number | null; profiles: { name: string; email: string; patent: string | null } | null };
+
+function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
+  const [upline, setUpline] = useState<TreeCoach | null>(null);
+  const [downline, setDownline] = useState<TreeCoach[]>([]);
+  const [students, setStudents] = useState<{ id: string; profiles: { name: string; email: string } | null }[]>([]);
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (!coach?.coachId) return;
+    (async () => {
+      if (coach.uplineCoachId) {
+        const { data } = await supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)").eq("id", coach.uplineCoachId).maybeSingle();
+        setUpline(data as unknown as TreeCoach | null);
+      }
+      const [{ data: coaches }, { data: studentRows }] = await Promise.all([
+        supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)").eq("upline_coach_id", coach.coachId),
+        supabase.from("students").select("id,profiles!students_profile_id_fkey(name,email)").eq("coach_id", coach.coachId),
+      ]);
+      setDownline((coaches as unknown as TreeCoach[]) || []);
+      setStudents((studentRows as unknown as typeof students) || []);
+    })();
+  }, [coach?.coachId, coach?.uplineCoachId]);
+
+  const PersonNode = ({ title, subtitle, tone = "white" }: { title: string; subtitle: string; tone?: "primary" | "success" | "white" }) => (
+    <div className={`rounded-xl border p-4 ${tone === "primary" ? "border-primary/40 bg-primary/10" : tone === "success" ? "border-success/30 bg-success/10" : "border-white/10 bg-white/5"}`}>
+      <p className="text-sm font-bold text-white">{title}</p>
+      <p className="text-xs text-white/45">{subtitle}</p>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Árvore da Rede</h1>
+        <p className="text-sm text-white/50">Quem está acima, você no centro e quem está abaixo</p>
+      </div>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-bold uppercase text-white/35">Acima de você</p>
+            {upline ? <PersonNode title={upline.profiles?.name || "Coach acima"} subtitle={upline.profiles?.email || "Upline"} /> : <PersonNode title="Sem coach acima" subtitle="Você está no topo desta ramificação" />}
+          </div>
+          <div className="pl-5 border-l border-primary/40">
+            <PersonNode title={coach?.name || "Você"} subtitle={`${coach?.referralCode || "—"} · ${coach?.totalActiveStudents || 0} alunos diretos`} tone="primary" />
+          </div>
+          <div className="pl-10 border-l border-white/10">
+            <button onClick={() => setOpen(!open)} className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-white/45">{open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} Abaixo de você</button>
+            {open && <div className="grid gap-3 md:grid-cols-2">
+              {downline.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Coach"} subtitle={`Coach · ${item.total_active_students || 0} alunos`} tone="success" />)}
+              {students.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Aluno"} subtitle={item.profiles?.email || "Aluno direto"} />)}
+              {downline.length + students.length === 0 && <p className="text-sm text-white/50">Nenhum aluno ou coach abaixo ainda.</p>}
+            </div>}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
