@@ -434,10 +434,10 @@ function EvaluateTab() {
         onSaveAssessment={saveAssessment}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         groups={[
-          { id: "challenge", name: "Desafio 30 Dias", color: "#f97316" },
-          { id: "premium", name: "Alunos Premium", color: "#22c55e" },
+          { id: "challenge", name: "Desafio 30 Dias", color: "#dc2626" },
+          { id: "premium", name: "Alunos Premium", color: "#991b1b" },
         ]}
-        themeColor="#f97316"
+        themeColor="#dc2626"
         themeFontFamily="inherit"
       />
     </>
