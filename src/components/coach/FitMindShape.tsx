@@ -1069,7 +1069,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const viscCat = getVisceralCategory(a.visceralFat);
     const ageBodyDiff = a.bodyAge ? a.bodyAge - 100 : 0;
 
-    const evalColor = (ev: string) => ({ excellent: "#22c55e", good: "#86efac", normal: "#60a5fa", warning: "#fb923c", danger: "#ef4444" }[ev] || "#94a3b8");
+    const evalColor = (ev: string) => ({ excellent: "#16a34a", good: "#16a34a", normal: "#16a34a", warning: "#eab308", danger: "#dc2626" }[ev] || "#eab308");
     const evalLabel = (ev: string) => ({ excellent: "Excelente", good: "Bom", normal: "Normal", warning: "Atenção", danger: "Risco" }[ev] || ev);
 
     const leanPct = +(100 - (a.bodyFat || 0)).toFixed(1);
@@ -1092,7 +1092,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     ];
 
     return (
-      <div className="fm-animate" style={{ background: "#f8fafc", minHeight: "100vh" }}>
+      <div className="fm-animate fm-result-screen" style={{ background: "#050505", minHeight: "100vh" }}>
         {/* Header */}
         <div style={{ background: "var(--fm-primary)", padding: "24px 24px 32px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
@@ -1114,7 +1114,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
 
-        <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
+          <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
           {/* Avatar Row */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8, textAlign: "center" }}>Perfil Corporal</div>
