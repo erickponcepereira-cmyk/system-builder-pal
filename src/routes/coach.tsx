@@ -326,13 +326,11 @@ function EvaluateTab() {
   const loadClients = async () => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
-    const { data: coach } = await supabase
-      .from("coaches")
-      .select("id, profiles!coaches_profile_id_fkey(name,email)")
-      .eq("profiles.user_id", userData.user.id)
-      .maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("id,name,email").eq("user_id", userData.user.id).maybeSingle();
+    const { data: coach } = profile?.id
+      ? await supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
     if (!coach?.id) return;
-    const profile = (coach as any).profiles;
     setCoachInfo({ id: coach.id, name: profile?.name || "Coach FitMind", email: profile?.email || "", specialty: "Avaliação corporal" });
     const { data, error } = await supabase
       .from("coach_evaluation_clients" as never)
@@ -362,18 +360,19 @@ function EvaluateTab() {
 
   const createClient = async (client: Omit<FitMindClient, "id">) => {
     if (!coachInfo.id) throw new Error("Coach não encontrado");
+    if (!client.name?.trim()) throw new Error("Informe o nome do aluno");
     const { data, error } = await supabase.from("coach_evaluation_clients" as never).insert({
       coach_id: coachInfo.id,
-      name: client.name,
+      name: client.name.trim().slice(0, 120),
       gender: client.gender,
       ethnicity: client.ethnicity,
       height: client.height || null,
       height_unit: client.heightUnit || "cm",
       birth_date: client.birthDate || null,
       language: client.language || "pt",
-      whatsapp: client.whatsapp || null,
-      email: client.email || null,
-      notes: client.notes || null,
+      whatsapp: client.whatsapp?.slice(0, 24) || null,
+      email: client.email?.trim().slice(0, 255) || null,
+      notes: client.notes?.slice(0, 1000) || null,
       groups: client.groups || [],
       avatar_url: client.avatar || null,
     } as never).select("*" as never).single();
