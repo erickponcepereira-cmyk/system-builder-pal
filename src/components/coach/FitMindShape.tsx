@@ -217,12 +217,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return +(assessment.weight / (hm * hm)).toFixed(1);
   }, [assessment.weight, assessment.height]);
 
+  const bmiPercent = useMemo(() => {
+    if (!computedBMI) return 0;
+    return +((computedBMI / 24.9) * 100).toFixed(1);
+  }, [computedBMI]);
+
   const getBMICategory = (bmi: number) => BMI_RANGES.find(r => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
   const getBodyFatCategory = (pct: number, gender: string) => {
     const ranges = gender === "male" ? BODY_FAT_RANGES.male : BODY_FAT_RANGES.female;
     return ranges.find(r => pct <= r.max) ?? ranges[ranges.length - 1];
   };
   const getVisceralCategory = (v: number) => VISCERAL_FAT_RANGES.find(r => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
+  const formatPercent = (value?: number) => Number.isFinite(value) ? `${value}%` : "—";
 
   // ── Histórico mock (substitua pelos dados reais da API) ──
   const historicalData = useMemo(() => {
