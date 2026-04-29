@@ -3518,6 +3518,8 @@ export type Database = {
         }
         Returns: string
       }
+      current_coach_id: { Args: never; Returns: string }
+      current_profile_id: { Args: never; Returns: string }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }

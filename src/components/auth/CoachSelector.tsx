@@ -19,9 +19,17 @@ interface CoachSelectorProps {
   label?: string;
 }
 
+const MASTER_COACH: CoachOption = {
+  id: "75e5ab7a-2088-43fe-9510-a025ada25a30",
+  profileId: "9d2c0d78-f523-494e-847b-ead8631e2a9e",
+  name: "Master",
+  city: "Brasil",
+  state: "BR",
+};
+
 export function CoachSelector({ value, onChange, label = "Coach indicador *" }: CoachSelectorProps) {
   const [query, setQuery] = useState("");
-  const [coaches, setCoaches] = useState<CoachOption[]>([]);
+  const [coaches, setCoaches] = useState<CoachOption[]>([MASTER_COACH]);
   const [loading, setLoading] = useState(false);
 
   const normalizedQuery = useMemo(() => query.trim(), [query]);
@@ -32,7 +40,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
       try {
         let request = supabase
           .from("coaches")
-          .select("id, profile_id, profiles!inner(name, city, state)")
+          .select("id, profile_id, profiles!coaches_profile_id_fkey(name, city, state)")
           .not("approved_at", "is", null)
           .limit(8);
 
@@ -52,7 +60,11 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
           city: row.profiles?.city,
           state: row.profiles?.state,
         }));
-        setCoaches(rows);
+        const shouldShowMaster = !normalizedQuery || "master".includes(normalizedQuery.toLowerCase());
+        const mergedRows = shouldShowMaster && !rows.some((coach) => coach.id === MASTER_COACH.id)
+          ? [MASTER_COACH, ...rows]
+          : rows;
+        setCoaches(mergedRows);
       } finally {
         setLoading(false);
       }
