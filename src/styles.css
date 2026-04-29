@@ -108,7 +108,7 @@
   body {
     width: 100%;
     max-width: 100%;
-    overflow-x: clip;
+    overflow-x: hidden !important;
     overscroll-behavior-x: none;
   }
 
@@ -122,13 +122,15 @@
 
   #root,
   #__next {
+    width: 100%;
     max-width: 100%;
-    overflow-x: clip;
+    overflow-x: hidden !important;
   }
 
   *::-webkit-scrollbar:horizontal {
-    height: 0;
-    display: none;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
   }
 
   img,
