@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell, Eye, EyeOff, Loader2, User } from "lucide-react";
 import fitmindLogo from "@/assets/fitmind-logo.png";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -32,6 +32,47 @@ function LoginPage() {
     window.location.assign(target);
   };
 
+  const routeSignedInUser = async (userId: string, showSuccess = false) => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, role")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!profile) {
+      toast.error("Perfil não encontrado. Verifique seu e-mail ou tente novamente.");
+      return;
+    }
+
+    const [{ data: coach }, { data: student }] = await Promise.all([
+      supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+    ]);
+
+    const role = profile.role;
+    const canCoach = role === "coach" || role === "manager" || role === "director" || !!coach;
+    const canStudent = role === "student" || !!student;
+    const selectedArea = sessionStorage.getItem("fitmind_selected_area");
+
+    if (showSuccess) toast.success("Login realizado com sucesso!");
+    if (role === "admin") enterArea("admin");
+    else if (canCoach && canStudent && selectedArea === "coach") enterArea("coach");
+    else if (canCoach && canStudent && selectedArea === "student") enterArea("student");
+    else if (canCoach && canStudent) setAccessOptions({ coach: true, student: true });
+    else if (canCoach) enterArea("coach");
+    else enterArea("student");
+  };
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (active && user) routeSignedInUser(user.id);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -52,37 +93,7 @@ function LoginPage() {
       }
 
       if (data.user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, role")
-          .eq("user_id", data.user.id)
-          .maybeSingle();
-
-        if (!profile) {
-          toast.error("Perfil não encontrado. Verifique seu e-mail ou tente novamente.");
-          return;
-        }
-
-        const [{ data: coach }, { data: student }] = await Promise.all([
-          supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
-          supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-        ]);
-
-        const role = profile?.role;
-        const canCoach = role === "coach" || role === "manager" || role === "director" || !!coach;
-        const canStudent = role === "student" || !!student;
-        toast.success("Login realizado com sucesso!");
-
-        if (role === "admin") {
-          enterArea("admin");
-        } else if (canCoach && canStudent) {
-          setAccessOptions({ coach: true, student: true });
-          setLoading(false);
-        } else if (canCoach) {
-          enterArea("coach");
-        } else {
-          enterArea("student");
-        }
+        await routeSignedInUser(data.user.id, true);
       }
     } catch {
       toast.error("Erro ao fazer login. Tente novamente.");
