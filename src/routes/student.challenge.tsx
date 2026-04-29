@@ -10,6 +10,7 @@ export const Route = createFileRoute("/student/challenge")({ component: Challeng
 type AttendanceRow = { id: string; log_date: string; activity_type: string | null; attended: boolean | null };
 type BioRow = { weight: number | null; body_fat_percentage: number | null; muscle_mass: number | null; evaluation_date: string };
 type RankRow = { ranking_position: number | null; total_revenue: number | null; total_students: number | null };
+const attendanceDays = Array.from({ length: 30 }, (_, index) => index + 1);
 
 function ChallengePage() {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
@@ -17,8 +18,6 @@ function ChallengePage() {
   const [ranking, setRanking] = useState<RankRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
-  const attendanceDays = Array.from({ length: 30 }, (_, index) => index + 1);
-
   const load = async () => {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
