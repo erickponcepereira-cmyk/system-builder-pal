@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/student/challenge")({ component: ChallengePage });
 
 type AttendanceRow = { id: string; log_date: string; activity_type: string | null; attended: boolean | null };
-type BioRow = { weight: number | null; body_fat_percentage: number | null; muscle_mass: number | null; evaluation_date: string };
+type BioRow = { weight: number | null; fat_percentage: number | null; muscle_percentage: number | null; evaluation_date: string };
 type RankRow = { ranking_position: number | null; total_revenue: number | null; total_students: number | null };
 const attendanceDays = Array.from({ length: 30 }, (_, index) => index + 1);
 
@@ -26,11 +26,11 @@ function ChallengePage() {
     if (student?.id) {
       const [logs, evals, rank] = await Promise.all([
         supabase.from("attendance_logs").select("id,log_date,activity_type,attended").eq("student_id", student.id).gte("log_date", new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10)).order("log_date"),
-        supabase.from("bioimpedance_evaluations").select("weight,body_fat_percentage,muscle_mass,evaluation_date").eq("student_id", student.id).order("evaluation_date", { ascending: true }),
+        supabase.from("bioimpedance_evaluations").select("weight,fat_percentage,muscle_percentage,evaluation_date").eq("student_id", student.id).order("evaluation_date", { ascending: true }),
         student.coach_id ? supabase.from("monthly_rankings").select("ranking_position,total_revenue,total_students").eq("coach_id", student.coach_id).order("reference_month", { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null }),
       ]);
       setAttendance((logs.data as AttendanceRow[]) || []);
-      setBio((evals.data as BioRow[]) || []);
+      setBio((evals.data as unknown as BioRow[]) || []);
       setRanking((rank.data as RankRow) || null);
     }
     setLoading(false);
@@ -72,7 +72,7 @@ function ChallengePage() {
       <button onClick={checkIn} disabled={checking || checkedToday} className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">{checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}{checkedToday ? "Check-in de hoje feito" : "Registrar presença de hoje"}</button>
       <div className="grid grid-cols-2 gap-3"><div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}><div className="flex items-center justify-between mb-2"><Scale className="h-4 w-4 text-primary" /><TrendingDown className="h-4 w-4 text-emerald-400" /></div><p className="text-xl font-bold text-white">{latest?.weight ? `${latest.weight} kg` : "—"}</p><p className="text-[10px] text-white/40 mt-0.5">{weightDiff === null ? "sem comparativo" : `${weightDiff > 0 ? "+" : ""}${weightDiff.toFixed(1)} kg desde o início`}</p></div><div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}><div className="flex items-center justify-between mb-2"><Trophy className="h-4 w-4 text-primary" /><Award className="h-4 w-4 text-amber-400" /></div><p className="text-xl font-bold text-white">{ranking?.ranking_position ? `${ranking.ranking_position}º` : "—"}</p><p className="text-[10px] text-white/40 mt-0.5">ranking do coach</p></div></div>
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}><div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-bold text-white">Frequência</h2><p className="text-[11px] text-white/40">{attendedDays}/30 check-ins ({percentage}%)</p></div><span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary">{percentage}%</span></div><div className="grid grid-cols-10 gap-1.5">{attendanceDays.map((day) => { const attended = dateMap.get(day); return <div key={day} className={`flex aspect-square items-center justify-center rounded-full text-[9px] ${attended ? "bg-primary text-primary-foreground" : "border border-white/10 text-white/40"}`}>{attended ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}</div>; })}</div></div>
-      <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}><div className="mb-4 flex items-center justify-between"><div><h2 className="text-sm font-bold text-white">Ranking por categoria</h2><p className="text-[11px] text-white/40">Baseado nas avaliações e presença reais</p></div><Medal className="h-5 w-5 text-primary" /></div><div className="grid grid-cols-3 gap-2 text-center"><Metric label="Gordura" value={latest?.body_fat_percentage ? `${latest.body_fat_percentage}%` : "—"} /><Metric label="Músculo" value={latest?.muscle_mass ? `${latest.muscle_mass} kg` : "—"} /><Metric label="Presença" value={`${percentage}%`} /></div></div>
+      <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}><div className="mb-4 flex items-center justify-between"><div><h2 className="text-sm font-bold text-white">Ranking por categoria</h2><p className="text-[11px] text-white/40">Baseado nas avaliações e presença reais</p></div><Medal className="h-5 w-5 text-primary" /></div><div className="grid grid-cols-3 gap-2 text-center"><Metric label="Gordura" value={latest?.fat_percentage ? `${latest.fat_percentage}%` : "—"} /><Metric label="Músculo" value={latest?.muscle_percentage ? `${latest.muscle_percentage}%` : "—"} /><Metric label="Presença" value={`${percentage}%`} /></div></div>
     </>}
     <div><h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">Próximas atividades</h2><div className="space-y-2">{[{ icon: Calendar, title: "Aula do desafio", to: "/student/group" }, { icon: Scale, title: "Pesagem semanal", to: "/student/health" }, { icon: Camera, title: "Foto de evolução", to: "/student/evolution" }].map((it) => <a key={it.title} href={it.to} className="flex items-center gap-3 rounded-2xl p-3" style={{ backgroundColor: "#1A1A1A" }}><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15"><it.icon className="h-4 w-4 text-primary" /></div><div className="flex-1"><p className="text-sm font-medium text-white">{it.title}</p><p className="text-[11px] text-white/40">Acessar agora</p></div></a>)}</div></div>
   </div>;
