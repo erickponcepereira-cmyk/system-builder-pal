@@ -1,11 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
-  Flame, LayoutDashboard, Users, UserCheck, Package, CreditCard,
+  LayoutDashboard, Users, UserCheck, Package, CreditCard,
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
   Library, ShoppingCart, GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import fitmindLogo from "@/assets/fitmind-logo.png";
 
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -40,9 +41,7 @@ export function AdminShell() {
       {/* Mobile top bar */}
       <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b border-white/5 bg-[#0F0F0F] px-4 lg:hidden">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-4 w-4 text-primary-foreground" />
-          </div>
+<img src={fitmindLogo} alt="FitMind Club" className="h-8 w-8 object-contain" />
           <span className="font-bold text-white">FitMind Club Admin</span>
         </div>
         <button onClick={() => setOpen(!open)} className="text-white">
@@ -58,9 +57,7 @@ export function AdminShell() {
         style={{ backgroundColor: "#0F0F0F" }}
       >
         <div className="mb-8 hidden items-center gap-2 px-2 lg:flex">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-4 w-4 text-primary-foreground" />
-          </div>
+<img src={fitmindLogo} alt="FitMind Club" className="h-9 w-9 object-contain" />
           <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             Admin
