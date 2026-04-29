@@ -19,11 +19,12 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const navigate = useNavigate();
+  useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [accessOptions, setAccessOptions] = useState<{ coach: boolean; student: boolean } | null>(null);
 
   const enterArea = (area: "coach" | "student" | "admin") => {
@@ -34,26 +35,77 @@ function LoginPage() {
 
   const routeSignedInUser = async (userId: string, showSuccess = false) => {
     setLoading(true);
-    const { data: profile } = await supabase
+    setFormError(null);
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, role")
+      .select("id, role, status")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!profile) {
+    if (profileError) {
       setLoading(false);
-      toast.error("Perfil não encontrado. Verifique seu e-mail ou tente novamente.");
+      const message = "Não foi possível verificar seu cadastro. Tente novamente em instantes.";
+      setFormError(message);
+      toast.error(message);
       return;
     }
 
-    const [{ data: coach }, { data: student }] = await Promise.all([
+    if (!profile) {
+      setLoading(false);
+      const message = "Login criado, mas o cadastro está incompleto: perfil não encontrado.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (profile.status === "blocked" || profile.status === "inactive") {
+      setLoading(false);
+      const message = profile.status === "blocked" ? "Login indisponível: conta bloqueada." : "Login indisponível: conta inativa.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
       supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
 
+    if (coachError || studentError) {
+      setLoading(false);
+      const message = "Não foi possível validar seu acesso. Tente novamente.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
     const role = profile.role;
-    const canCoach = role === "coach" || role === "manager" || role === "director" || !!coach;
+    const canCoach = role === "manager" || role === "director" || !!coach;
     const canStudent = role === "student" || !!student;
+
+    if (role === "coach" && !coach) {
+      setLoading(false);
+      const message = "Cadastro de coach incompleto: registro de coach não encontrado.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (role === "student" && !student) {
+      setLoading(false);
+      const message = "Cadastro de aluno incompleto: registro de aluno não encontrado.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (role !== "admin" && !canCoach && !canStudent) {
+      setLoading(false);
+      const message = "Login indisponível: nenhum painel liberado para este cadastro.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
 
     if (showSuccess) toast.success("Login realizado com sucesso!");
     if (role === "admin") enterArea("admin");
