@@ -17,8 +17,10 @@ function Index() {
   return (
     <main
       style={{
-        minHeight: "100vh",
-        width: "100%",
+        position: "fixed",
+        inset: 0,
+        overflow: "auto",
+        boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
