@@ -473,6 +473,13 @@ export type Database = {
             foreignKeyName: "challenge_awards_config_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_awards_config_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -513,6 +520,13 @@ export type Database = {
           start_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "challenge_editions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "challenge_editions_product_id_fkey"
             columns: ["product_id"]
@@ -558,6 +572,13 @@ export type Database = {
             | null
         }
         Relationships: [
+          {
+            foreignKeyName: "challenge_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "challenge_groups_product_id_fkey"
             columns: ["product_id"]
@@ -683,6 +704,13 @@ export type Database = {
           week_number?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "class_schedule_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "class_schedule_product_id_fkey"
             columns: ["product_id"]
@@ -848,6 +876,60 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_created_courses: {
+        Row: {
+          approved_at: string | null
+          approved_by_admin: boolean | null
+          created_at: string | null
+          creator_coach_id: string
+          creator_commission_percentage: number
+          digital_product_id: string
+          id: string
+          platform_percentage: number | null
+          status: string | null
+          upline_commission_percentage: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_admin?: boolean | null
+          created_at?: string | null
+          creator_coach_id: string
+          creator_commission_percentage: number
+          digital_product_id: string
+          id?: string
+          platform_percentage?: number | null
+          status?: string | null
+          upline_commission_percentage?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_admin?: boolean | null
+          created_at?: string | null
+          creator_coach_id?: string
+          creator_commission_percentage?: number
+          digital_product_id?: string
+          id?: string
+          platform_percentage?: number | null
+          status?: string | null
+          upline_commission_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_created_courses_creator_coach_id_fkey"
+            columns: ["creator_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_created_courses_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
             referencedColumns: ["id"]
           },
         ]
@@ -1034,8 +1116,10 @@ export type Database = {
           beneficiary_profile_id: string
           created_at: string | null
           id: string
+          is_master_coach_commission: boolean | null
           is_referral: boolean | null
           level: number
+          master_coach_id: string | null
           percentage: number
           referred_by_student_id: string | null
           status: Database["public"]["Enums"]["commission_status"] | null
@@ -1048,8 +1132,10 @@ export type Database = {
           beneficiary_profile_id: string
           created_at?: string | null
           id?: string
+          is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
           level: number
+          master_coach_id?: string | null
           percentage: number
           referred_by_student_id?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
@@ -1062,8 +1148,10 @@ export type Database = {
           beneficiary_profile_id?: string
           created_at?: string | null
           id?: string
+          is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
           level?: number
+          master_coach_id?: string | null
           percentage?: number
           referred_by_student_id?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
@@ -1085,6 +1173,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commissions_master_coach_id_fkey"
+            columns: ["master_coach_id"]
+            isOneToOne: false
+            referencedRelation: "master_coaches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commissions_referred_by_student_id_fkey"
             columns: ["referred_by_student_id"]
             isOneToOne: false
@@ -1096,6 +1191,48 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_teacher_commissions: {
+        Row: {
+          commission_percentage: number
+          created_at: string | null
+          digital_product_id: string
+          id: string
+          is_active: boolean | null
+          teacher_profile_id: string
+        }
+        Insert: {
+          commission_percentage: number
+          created_at?: string | null
+          digital_product_id: string
+          id?: string
+          is_active?: boolean | null
+          teacher_profile_id: string
+        }
+        Update: {
+          commission_percentage?: number
+          created_at?: string | null
+          digital_product_id?: string
+          id?: string
+          is_active?: boolean | null
+          teacher_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_teacher_commissions_digital_product_id_fkey"
+            columns: ["digital_product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_teacher_commissions_teacher_profile_id_fkey"
+            columns: ["teacher_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1228,6 +1365,80 @@ export type Database = {
           },
           {
             foreignKeyName: "digital_purchases_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_tickets: {
+        Row: {
+          amount_paid: number | null
+          checked_in_at: string | null
+          event_id: string
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          profile_id: string
+          purchased_at: string | null
+          qr_code_url: string | null
+          referring_coach_id: string | null
+          status: string | null
+          student_id: string | null
+          ticket_code: string | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          checked_in_at?: string | null
+          event_id: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          profile_id: string
+          purchased_at?: string | null
+          qr_code_url?: string | null
+          referring_coach_id?: string | null
+          status?: string | null
+          student_id?: string | null
+          ticket_code?: string | null
+        }
+        Update: {
+          amount_paid?: number | null
+          checked_in_at?: string | null
+          event_id?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          profile_id?: string
+          purchased_at?: string | null
+          qr_code_url?: string | null
+          referring_coach_id?: string | null
+          status?: string | null
+          student_id?: string | null
+          ticket_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "live_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_tickets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_tickets_referring_coach_id_fkey"
+            columns: ["referring_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_tickets_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -1510,6 +1721,222 @@ export type Database = {
           },
         ]
       }
+      live_events: {
+        Row: {
+          cover_url: string | null
+          created_at: string | null
+          description: string | null
+          event_date: string
+          id: string
+          is_online: boolean | null
+          location: string | null
+          max_participants: number | null
+          mlm_pool_percentage: number | null
+          online_link: string | null
+          organizer_coach_id: string
+          organizer_commission_percentage: number | null
+          platform_fee_percentage: number | null
+          product_id: string
+          status: string | null
+          ticket_price: number
+          title: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          event_date: string
+          id?: string
+          is_online?: boolean | null
+          location?: string | null
+          max_participants?: number | null
+          mlm_pool_percentage?: number | null
+          online_link?: string | null
+          organizer_coach_id: string
+          organizer_commission_percentage?: number | null
+          platform_fee_percentage?: number | null
+          product_id: string
+          status?: string | null
+          ticket_price: number
+          title: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          event_date?: string
+          id?: string
+          is_online?: boolean | null
+          location?: string | null
+          max_participants?: number | null
+          mlm_pool_percentage?: number | null
+          online_link?: string | null
+          organizer_coach_id?: string
+          organizer_commission_percentage?: number | null
+          platform_fee_percentage?: number | null
+          product_id?: string
+          status?: string | null
+          ticket_price?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_events_organizer_coach_id_fkey"
+            columns: ["organizer_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      master_coach_attendances: {
+        Row: {
+          attendance_date: string
+          commission_amount: number | null
+          commission_status:
+            | Database["public"]["Enums"]["commission_status"]
+            | null
+          created_at: string | null
+          id: string
+          master_coach_id: string
+          notes: string | null
+          original_coach_id: string
+          resulted_in_sale: boolean | null
+          student_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          attendance_date?: string
+          commission_amount?: number | null
+          commission_status?:
+            | Database["public"]["Enums"]["commission_status"]
+            | null
+          created_at?: string | null
+          id?: string
+          master_coach_id: string
+          notes?: string | null
+          original_coach_id: string
+          resulted_in_sale?: boolean | null
+          student_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          attendance_date?: string
+          commission_amount?: number | null
+          commission_status?:
+            | Database["public"]["Enums"]["commission_status"]
+            | null
+          created_at?: string | null
+          id?: string
+          master_coach_id?: string
+          notes?: string | null
+          original_coach_id?: string
+          resulted_in_sale?: boolean | null
+          student_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "master_coach_attendances_master_coach_id_fkey"
+            columns: ["master_coach_id"]
+            isOneToOne: false
+            referencedRelation: "master_coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_coach_attendances_original_coach_id_fkey"
+            columns: ["original_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_coach_attendances_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_coach_attendances_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      master_coaches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          available_for_clients: boolean | null
+          bio: string | null
+          coach_id: string
+          created_at: string | null
+          crm_cref: string | null
+          id: string
+          master_commission_percentage: number | null
+          specialty: string | null
+          status: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          available_for_clients?: boolean | null
+          bio?: string | null
+          coach_id: string
+          created_at?: string | null
+          crm_cref?: string | null
+          id?: string
+          master_commission_percentage?: number | null
+          specialty?: string | null
+          status?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          available_for_clients?: boolean | null
+          bio?: string | null
+          coach_id?: string
+          created_at?: string | null
+          crm_cref?: string | null
+          id?: string
+          master_commission_percentage?: number | null
+          specialty?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "master_coaches_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_coaches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: true
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_rankings: {
         Row: {
           coach_id: string
@@ -1725,13 +2152,19 @@ export type Database = {
         Row: {
           app_fee: number | null
           app_fee_percentage: number | null
+          badge_color: string | null
+          badge_label: string | null
           commission_coach: number | null
           commission_level1: number | null
           commission_level2: number | null
           commission_level3: number | null
           commission_level4: number | null
           commission_level5: number | null
+          course_level: number | null
+          course_target: string | null
           created_at: string | null
+          creator_coach_id: string | null
+          creator_commission_percentage: number | null
           credit_fee_percentage: number | null
           debit_fee_percentage: number | null
           description: string | null
@@ -1750,17 +2183,29 @@ export type Database = {
           feature_store: boolean | null
           feature_weight_tracking: boolean | null
           feature_winners_forum: boolean | null
+          highlights: Json | null
           id: string
           image_url: string | null
+          is_featured: boolean | null
+          is_price_range: boolean | null
+          master_coach_commission: number | null
           max_installments: number | null
+          max_price: number | null
+          min_price: number | null
           name: string
+          nutritionist_fee: number | null
           original_price: number | null
           pix_fee_percentage: number | null
-          price: number
+          price: number | null
+          product_type: Database["public"]["Enums"]["product_type"] | null
+          profit_percentage_max: number | null
+          profit_percentage_min: number | null
           referral_commission_percentage: number | null
+          room_rental_commission: number | null
           slug: string | null
           sort_order: number | null
           status: string | null
+          subtitle: string | null
           tax_percentage: number | null
           type: Database["public"]["Enums"]["product_type"] | null
           updated_at: string | null
@@ -1768,13 +2213,19 @@ export type Database = {
         Insert: {
           app_fee?: number | null
           app_fee_percentage?: number | null
+          badge_color?: string | null
+          badge_label?: string | null
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
           commission_level3?: number | null
           commission_level4?: number | null
           commission_level5?: number | null
+          course_level?: number | null
+          course_target?: string | null
           created_at?: string | null
+          creator_coach_id?: string | null
+          creator_commission_percentage?: number | null
           credit_fee_percentage?: number | null
           debit_fee_percentage?: number | null
           description?: string | null
@@ -1793,17 +2244,29 @@ export type Database = {
           feature_store?: boolean | null
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
+          highlights?: Json | null
           id?: string
           image_url?: string | null
+          is_featured?: boolean | null
+          is_price_range?: boolean | null
+          master_coach_commission?: number | null
           max_installments?: number | null
+          max_price?: number | null
+          min_price?: number | null
           name: string
+          nutritionist_fee?: number | null
           original_price?: number | null
           pix_fee_percentage?: number | null
-          price: number
+          price?: number | null
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          profit_percentage_max?: number | null
+          profit_percentage_min?: number | null
           referral_commission_percentage?: number | null
+          room_rental_commission?: number | null
           slug?: string | null
           sort_order?: number | null
           status?: string | null
+          subtitle?: string | null
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
           updated_at?: string | null
@@ -1811,13 +2274,19 @@ export type Database = {
         Update: {
           app_fee?: number | null
           app_fee_percentage?: number | null
+          badge_color?: string | null
+          badge_label?: string | null
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
           commission_level3?: number | null
           commission_level4?: number | null
           commission_level5?: number | null
+          course_level?: number | null
+          course_target?: string | null
           created_at?: string | null
+          creator_coach_id?: string | null
+          creator_commission_percentage?: number | null
           credit_fee_percentage?: number | null
           debit_fee_percentage?: number | null
           description?: string | null
@@ -1836,22 +2305,42 @@ export type Database = {
           feature_store?: boolean | null
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
+          highlights?: Json | null
           id?: string
           image_url?: string | null
+          is_featured?: boolean | null
+          is_price_range?: boolean | null
+          master_coach_commission?: number | null
           max_installments?: number | null
+          max_price?: number | null
+          min_price?: number | null
           name?: string
+          nutritionist_fee?: number | null
           original_price?: number | null
           pix_fee_percentage?: number | null
-          price?: number
+          price?: number | null
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          profit_percentage_max?: number | null
+          profit_percentage_min?: number | null
           referral_commission_percentage?: number | null
+          room_rental_commission?: number | null
           slug?: string | null
           sort_order?: number | null
           status?: string | null
+          subtitle?: string | null
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_creator_coach_id_fkey"
+            columns: ["creator_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1965,6 +2454,75 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_rentals: {
+        Row: {
+          created_at: string | null
+          duration_hours: number | null
+          end_time: string | null
+          id: string
+          is_first_rental: boolean | null
+          price_per_hour: number | null
+          referral_commission_amount: number | null
+          referral_commission_paid: boolean | null
+          referring_coach_id: string | null
+          rental_date: string
+          renter_profile_id: string
+          room_name: string | null
+          start_time: string | null
+          status: string | null
+          total_amount: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_hours?: number | null
+          end_time?: string | null
+          id?: string
+          is_first_rental?: boolean | null
+          price_per_hour?: number | null
+          referral_commission_amount?: number | null
+          referral_commission_paid?: boolean | null
+          referring_coach_id?: string | null
+          rental_date: string
+          renter_profile_id: string
+          room_name?: string | null
+          start_time?: string | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_hours?: number | null
+          end_time?: string | null
+          id?: string
+          is_first_rental?: boolean | null
+          price_per_hour?: number | null
+          referral_commission_amount?: number | null
+          referral_commission_paid?: boolean | null
+          referring_coach_id?: string | null
+          rental_date?: string
+          renter_profile_id?: string
+          room_name?: string | null
+          start_time?: string | null
+          status?: string | null
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_rentals_referring_coach_id_fkey"
+            columns: ["referring_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_rentals_renter_profile_id_fkey"
+            columns: ["renter_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2414,6 +2972,13 @@ export type Database = {
             foreignKeyName: "subscriptions_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -2491,6 +3056,13 @@ export type Database = {
           tax_amount?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_product_id_fkey"
             columns: ["product_id"]
@@ -2677,7 +3249,78 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      product_commission_preview: {
+        Row: {
+          app_fee: number | null
+          commission_coach: number | null
+          commission_level1: number | null
+          commission_level2: number | null
+          commission_level3: number | null
+          credit_coach_commission: number | null
+          credit_fee_percentage: number | null
+          credit_gateway_fee: number | null
+          credit_tax: number | null
+          debit_fee_percentage: number | null
+          id: string | null
+          name: string | null
+          nutritionist_fee: number | null
+          pix_coach_commission: number | null
+          pix_commission_base: number | null
+          pix_fee_percentage: number | null
+          pix_gateway_fee: number | null
+          pix_tax: number | null
+          price: number | null
+          product_type: Database["public"]["Enums"]["product_type"] | null
+          tax_percentage: number | null
+        }
+        Insert: {
+          app_fee?: number | null
+          commission_coach?: number | null
+          commission_level1?: number | null
+          commission_level2?: number | null
+          commission_level3?: number | null
+          credit_coach_commission?: never
+          credit_fee_percentage?: number | null
+          credit_gateway_fee?: never
+          credit_tax?: never
+          debit_fee_percentage?: number | null
+          id?: string | null
+          name?: string | null
+          nutritionist_fee?: number | null
+          pix_coach_commission?: never
+          pix_commission_base?: never
+          pix_fee_percentage?: number | null
+          pix_gateway_fee?: never
+          pix_tax?: never
+          price?: number | null
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          tax_percentage?: number | null
+        }
+        Update: {
+          app_fee?: number | null
+          commission_coach?: number | null
+          commission_level1?: number | null
+          commission_level2?: number | null
+          commission_level3?: number | null
+          credit_coach_commission?: never
+          credit_fee_percentage?: number | null
+          credit_gateway_fee?: never
+          credit_tax?: never
+          debit_fee_percentage?: number | null
+          id?: string | null
+          name?: string | null
+          nutritionist_fee?: number | null
+          pix_coach_commission?: never
+          pix_commission_base?: never
+          pix_fee_percentage?: number | null
+          pix_gateway_fee?: never
+          pix_tax?: never
+          price?: number | null
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          tax_percentage?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       block_inactive_coach: {
@@ -2786,7 +3429,18 @@ export type Database = {
         | "senior_director"
         | "master_director"
       payment_method: "credit_card" | "debit_card" | "pix"
-      product_type: "challenge" | "physical" | "herbalife"
+      product_type:
+        | "challenge"
+        | "physical"
+        | "herbalife"
+        | "enrollment"
+        | "plan_30"
+        | "protocol_90"
+        | "digital_course"
+        | "coach_training"
+        | "health_pro_course"
+        | "room_rental"
+        | "live_class"
       subscription_status:
         | "active"
         | "expired"
@@ -2949,7 +3603,19 @@ export const Constants = {
         "master_director",
       ],
       payment_method: ["credit_card", "debit_card", "pix"],
-      product_type: ["challenge", "physical", "herbalife"],
+      product_type: [
+        "challenge",
+        "physical",
+        "herbalife",
+        "enrollment",
+        "plan_30",
+        "protocol_90",
+        "digital_course",
+        "coach_training",
+        "health_pro_course",
+        "room_rental",
+        "live_class",
+      ],
       subscription_status: [
         "active",
         "expired",

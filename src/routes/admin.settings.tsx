@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BookOpenCheck, MessageCircle, Plane, Plus, Quote, Save, Settings2, type LucideIcon } from "lucide-react";
+import { Bell, BookOpenCheck, LayoutDashboard, MessageCircle, Plane, Plus, Quote, Save, Settings2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,6 +31,10 @@ type AppSettings = {
   daily_motivation_enabled: string;
   push_reminder_time: string;
   coach_course_enabled: string;
+  student_nav_order: string;
+  student_home_layout: string;
+  student_store_layout: string;
+  student_benefits_layout: string;
 };
 
 type QuoteRow = { id: string; quote: string; author: string | null; category: string | null; is_active: boolean | null };
@@ -45,6 +49,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   daily_motivation_enabled: "true",
   push_reminder_time: "08:00",
   coach_course_enabled: "true",
+  student_nav_order: "home,challenge,group,store,courses,benefits,profile",
+  student_home_layout: "default",
+  student_store_layout: "catalog",
+  student_benefits_layout: "tabs",
 };
 
 function AdminSettings() {
@@ -194,6 +202,15 @@ function AdminSettings() {
             </div>
           </Section>
 
+          <Section icon={LayoutDashboard} title="Layout padrão do app">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label="Ordem do menu do aluno"><Input value={settings.student_nav_order} onChange={(v) => setSettings({ ...settings, student_nav_order: v })} placeholder="home,challenge,group,store,courses,benefits,profile" /></Field>
+              <Field label="Layout da Home"><Select value={settings.student_home_layout} onChange={(v) => setSettings({ ...settings, student_home_layout: v })} options={["default", "compact", "performance"]} /></Field>
+              <Field label="Layout da Loja"><Select value={settings.student_store_layout} onChange={(v) => setSettings({ ...settings, student_store_layout: v })} options={["catalog", "featured", "minimal"]} /></Field>
+              <Field label="Layout dos Benefícios"><Select value={settings.student_benefits_layout} onChange={(v) => setSettings({ ...settings, student_benefits_layout: v })} options={["tabs", "cards", "wallet-first"]} /></Field>
+            </div>
+          </Section>
+
           <Section icon={Plane} title="Plano de carreira">
             <div className="space-y-3">
               <Field label="Nome"><Input value={plan.name} onChange={(v) => setPlan({ ...plan, name: v })} /></Field>
@@ -260,6 +277,10 @@ const settingDescriptions: Record<keyof AppSettings, string> = {
   daily_motivation_enabled: "Controla exibição de frases motivacionais diárias",
   push_reminder_time: "Horário preferencial para lembretes de check-in",
   coach_course_enabled: "Controla disponibilidade da formação Quero ser Coach",
+  student_nav_order: "Ordem dos itens exibidos no menu inferior do aluno",
+  student_home_layout: "Modelo visual padrão usado na home do aluno",
+  student_store_layout: "Modelo visual padrão usado na loja do aluno",
+  student_benefits_layout: "Modelo visual padrão usado na área de benefícios",
 };
 
 function Section({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
@@ -269,6 +290,7 @@ function Section({ icon: Icon, title, children }: { icon: LucideIcon; title: str
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}><p className="text-2xl font-bold text-white">{value}</p><p className="text-xs text-white/40">{label}</p></div>; }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div><label className="mb-1.5 block text-[11px] text-white/60">{label}</label>{children}</div>; }
 function Input(props: { value: string | number; onChange: (value: string) => void; type?: string; placeholder?: string }) { return <input type={props.type || "text"} value={props.value} placeholder={props.placeholder} onChange={(e) => props.onChange(e.target.value)} className="field-control" />; }
+function Select(props: { value: string; onChange: (value: string) => void; options: string[] }) { return <select value={props.value} onChange={(e) => props.onChange(e.target.value)} className="field-control">{props.options.map((option) => <option key={option} value={option}>{option}</option>)}</select>; }
 function Textarea(props: { value: string; onChange: (value: string) => void; rows?: number; placeholder?: string }) { return <textarea value={props.value} rows={props.rows || 3} placeholder={props.placeholder} onChange={(e) => props.onChange(e.target.value)} className="field-control" />; }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) { return <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-white/5 p-3"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 accent-primary" /><span className="text-sm text-white">{label}</span></label>; }
 function ListItem({ title, subtitle, active, onToggle }: { title: string; subtitle: string; active: boolean; onToggle: () => void }) { return <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2"><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-white">{title}</p><p className="truncate text-[10px] text-white/40">{subtitle}</p></div><button onClick={onToggle} className={`rounded-lg px-2 py-1 text-[10px] font-bold ${active ? "bg-success/20 text-success" : "bg-white/10 text-white/40"}`}>{active ? "Ativo" : "Inativo"}</button></div>; }
