@@ -3520,6 +3520,7 @@ export type Database = {
       }
       current_coach_id: { Args: never; Returns: string }
       current_profile_id: { Args: never; Returns: string }
+      current_student_id: { Args: never; Returns: string }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
@@ -3547,6 +3548,18 @@ export type Database = {
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
+      }
+      profile_has_approved_coach: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
+      profile_is_referred_by_current_student: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
+      profile_shares_group_with_current_user: {
+        Args: { _profile_id: string }
+        Returns: boolean
       }
       refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }

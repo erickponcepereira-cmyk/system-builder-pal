@@ -19,11 +19,12 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const navigate = useNavigate();
+  useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [accessOptions, setAccessOptions] = useState<{ coach: boolean; student: boolean } | null>(null);
 
   const enterArea = (area: "coach" | "student" | "admin") => {
@@ -34,26 +35,77 @@ function LoginPage() {
 
   const routeSignedInUser = async (userId: string, showSuccess = false) => {
     setLoading(true);
-    const { data: profile } = await supabase
+    setFormError(null);
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, role")
+      .select("id, role, status")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!profile) {
+    if (profileError) {
       setLoading(false);
-      toast.error("Perfil não encontrado. Verifique seu e-mail ou tente novamente.");
+      const message = "Não foi possível verificar seu cadastro. Tente novamente em instantes.";
+      setFormError(message);
+      toast.error(message);
       return;
     }
 
-    const [{ data: coach }, { data: student }] = await Promise.all([
+    if (!profile) {
+      setLoading(false);
+      const message = "Login criado, mas o cadastro está incompleto: perfil não encontrado.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (profile.status === "blocked" || profile.status === "inactive") {
+      setLoading(false);
+      const message = profile.status === "blocked" ? "Login indisponível: conta bloqueada." : "Login indisponível: conta inativa.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
       supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
 
+    if (coachError || studentError) {
+      setLoading(false);
+      const message = "Não foi possível validar seu acesso. Tente novamente.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
     const role = profile.role;
-    const canCoach = role === "coach" || role === "manager" || role === "director" || !!coach;
+    const canCoach = role === "manager" || role === "director" || !!coach;
     const canStudent = role === "student" || !!student;
+
+    if (role === "coach" && !coach) {
+      setLoading(false);
+      const message = "Cadastro de coach incompleto: registro de coach não encontrado.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (role === "student" && !student) {
+      setLoading(false);
+      const message = "Cadastro de aluno incompleto: registro de aluno não encontrado.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (role !== "admin" && !canCoach && !canStudent) {
+      setLoading(false);
+      const message = "Login indisponível: nenhum painel liberado para este cadastro.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
 
     if (showSuccess) toast.success("Login realizado com sucesso!");
     if (role === "admin") enterArea("admin");
@@ -77,29 +129,52 @@ function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password.trim()) {
+      const message = "Preencha e-mail e senha para entrar.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (!normalizedEmail.includes("@")) {
+      const message = "Confira o e-mail digitado. Ele precisa ter @ e domínio.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
     setLoading(true);
+    setFormError(null);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
       if (error) {
-        toast.error(
-          error.message === "Invalid login credentials"
-            ? "E-mail ou senha incorretos"
-            : error.message
-        );
+        const message = error.message === "Invalid login credentials"
+          ? "E-mail ou senha incorretos. Confira se não há espaço, letra trocada ou senha errada."
+          : error.message;
+        setFormError(message);
+        toast.error(message);
         return;
       }
 
       if (data.user) {
         sessionStorage.removeItem("fitmind_selected_area");
         await routeSignedInUser(data.user.id, true);
+      } else {
+        const message = "Login indisponível: a autenticação não retornou usuário.";
+        setFormError(message);
+        toast.error(message);
       }
     } catch {
-      toast.error("Erro ao fazer login. Tente novamente.");
+      const message = "Erro ao fazer login. Tente novamente.";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -151,6 +226,11 @@ function LoginPage() {
             ) : (
 
             <form onSubmit={handleLogin} className="space-y-4">
+              {formError && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                  {formError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white/70">E-mail</Label>
                 <Input
@@ -158,7 +238,10 @@ function LoginPage() {
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (formError) setFormError(null);
+                  }}
                   required
                   disabled={loading}
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
@@ -173,7 +256,10 @@ function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (formError) setFormError(null);
+                    }}
                     required
                     disabled={loading}
                     className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
