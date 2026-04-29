@@ -12,7 +12,7 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
-import { StudentEvaluationPanel } from "@/components/coach/StudentEvaluationPanel";
+import FitMindShape from "@/components/coach/FitMindShape";
 import fitmindLogo from "@/assets/fitmind-logo.png";
 
 export const Route = createFileRoute("/coach")({
@@ -296,7 +296,20 @@ function EvaluateTab() {
         <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
         <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
       </div>
-      <StudentEvaluationPanel />
+      <FitMindShape
+        coach={{
+          id: "coach-dashboard",
+          name: "Coach FitMind",
+          email: "coach@fitmindclub.app",
+          specialty: "Avaliação corporal",
+        }}
+        groups={[
+          { id: "challenge", name: "Desafio 30 Dias", color: "#f97316" },
+          { id: "premium", name: "Alunos Premium", color: "#22c55e" },
+        ]}
+        themeColor="#f97316"
+        themeFontFamily="inherit"
+      />
     </>
   );
 }
