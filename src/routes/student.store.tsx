@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Minus, Plus, Search, ShoppingBag, Sparkles, Tag, Trash2 } from "lucide-react";
+import { CheckCircle2, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -123,11 +123,24 @@ function StorePage() {
     setCheckingOut(false);
   };
 
+  const inviteFriend = async () => {
+    const text = "Entre no FitMind Club pelo meu convite.";
+    if (navigator.share) {
+      await navigator.share({ title: "FitMind Club", text, url: window.location.origin });
+      return;
+    }
+    await navigator.clipboard.writeText(window.location.origin);
+    toast.success("Link de indicação copiado.");
+  };
+
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
       <header className="flex items-center justify-between pt-2">
         <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p><h1 className="text-2xl font-bold text-foreground">FitMind Club Store</h1></div>
-        <button onClick={() => setCartOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card"><ShoppingBag className="h-5 w-5 text-muted-foreground" /><span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{cart.reduce((s, i) => s + i.quantity, 0)}</span></button>
+        <div className="flex items-center gap-2">
+          <button onClick={inviteFriend} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-3 text-[10px] font-bold text-primary-foreground"><Share2 className="h-3.5 w-3.5" /> Indique</button>
+          <button onClick={() => setCartOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card"><ShoppingBag className="h-5 w-5 text-muted-foreground" /><span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{cart.reduce((s, i) => s + i.quantity, 0)}</span></button>
+        </div>
       </header>
 
       <div className="flex items-center gap-2 rounded-full bg-card px-4 py-3"><Search className="h-4 w-4 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar produtos..." className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" /></div>
