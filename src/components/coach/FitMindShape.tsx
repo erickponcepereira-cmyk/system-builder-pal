@@ -408,6 +408,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       gap: 12px;
     }
     .fm-result-row:last-child { border-bottom: none; }
+    .fm-result-screen { background: #050505 !important; color: #ffffff; }
+    .fm-result-screen .fm-card { background: #111111 !important; border-color: #2a2a2a; box-shadow: 0 18px 36px rgba(0,0,0,.35); }
+    .fm-result-screen .fm-result-row { border-bottom-color: #2a2a2a; }
+    .fm-result-screen .fm-result-row div,
+    .fm-result-screen .fm-card div { color: #ffffff !important; }
+    .fm-result-screen .fm-card [style*="#64748b"],
+    .fm-result-screen .fm-card [style*="#475569"],
+    .fm-result-screen .fm-card [style*="#94a3b8"] { color: rgba(255,255,255,.68) !important; }
+    .fm-result-screen .fm-section-title { color: #ffffff; border-bottom-color: rgba(255,255,255,.16); }
+    .fm-result-screen .fm-badge { color: #ffffff !important; border: 1px solid rgba(255,255,255,.18); }
     .fm-photo-box {
       border: 2px dashed #cbd5e1;
       border-radius: 12px;
