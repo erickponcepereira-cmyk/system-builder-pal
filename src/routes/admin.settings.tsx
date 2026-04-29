@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BookOpenCheck, MessageCircle, Plane, Plus, Quote, Save, Settings2, Trash2 } from "lucide-react";
+import { Bell, BookOpenCheck, MessageCircle, Plane, Plus, Quote, Save, Settings2, Trash2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -262,7 +262,7 @@ const settingDescriptions: Record<keyof AppSettings, string> = {
   coach_course_enabled: "Controla disponibilidade da formação Quero ser Coach",
 };
 
-function Section({ icon: Icon, title, children }: { icon: typeof Settings2; title: string; children: React.ReactNode }) {
+function Section({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return <section className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}><div className="mb-4 flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15"><Icon className="h-4 w-4 text-primary" /></div><h2 className="text-sm font-bold uppercase tracking-wider text-white">{title}</h2></div>{children}</section>;
 }
 
@@ -272,4 +272,4 @@ function Input(props: { value: string | number; onChange: (value: string) => voi
 function Textarea(props: { value: string; onChange: (value: string) => void; rows?: number; placeholder?: string }) { return <textarea value={props.value} rows={props.rows || 3} placeholder={props.placeholder} onChange={(e) => props.onChange(e.target.value)} className="field-control" />; }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) { return <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-white/5 p-3"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 accent-primary" /><span className="text-sm text-white">{label}</span></label>; }
 function ListItem({ title, subtitle, active, onToggle }: { title: string; subtitle: string; active: boolean; onToggle: () => void }) { return <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2"><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-white">{title}</p><p className="truncate text-[10px] text-white/40">{subtitle}</p></div><button onClick={onToggle} className={`rounded-lg px-2 py-1 text-[10px] font-bold ${active ? "bg-success/20 text-success" : "bg-white/10 text-white/40"}`}>{active ? "Ativo" : "Inativo"}</button></div>; }
-function Channel({ icon: Icon, title, value }: { icon: typeof Trash2; title: string; value: string }) { return <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3"><Icon className="h-4 w-4 text-primary" /><div className="min-w-0"><p className="text-xs font-bold text-white">{title}</p><p className="truncate text-[11px] text-white/45">{value}</p></div></div>; }
+function Channel({ icon: Icon, title, value }: { icon: LucideIcon; title: string; value: string }) { return <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3"><Icon className="h-4 w-4 text-primary" /><div className="min-w-0"><p className="text-xs font-bold text-white">{title}</p><p className="truncate text-[11px] text-white/45">{value}</p></div></div>; }
