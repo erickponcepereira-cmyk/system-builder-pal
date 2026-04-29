@@ -57,32 +57,32 @@
   --font-display: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
-  /* Dark fitness theme - orange energy */
-  --background: oklch(0.145 0.005 285);
-  --foreground: oklch(0.95 0.01 90);
-  --card: oklch(0.19 0.005 285);
-  --card-foreground: oklch(0.95 0.01 90);
-  --popover: oklch(0.19 0.005 285);
-  --popover-foreground: oklch(0.95 0.01 90);
-  --primary: oklch(0.7 0.18 55);
-  --primary-foreground: oklch(0.13 0.005 285);
-  --secondary: oklch(0.22 0.008 285);
-  --secondary-foreground: oklch(0.85 0.02 90);
-  --muted: oklch(0.22 0.008 285);
-  --muted-foreground: oklch(0.6 0.02 90);
-  --accent: oklch(0.25 0.015 55);
-  --accent-foreground: oklch(0.7 0.18 55);
+  /* Dark fitness theme - red/black FitMind identity */
+  --background: oklch(0.08 0.003 25);
+  --foreground: oklch(0.97 0.004 25);
+  --card: oklch(0.13 0.006 25);
+  --card-foreground: oklch(0.97 0.004 25);
+  --popover: oklch(0.13 0.006 25);
+  --popover-foreground: oklch(0.97 0.004 25);
+  --primary: oklch(0.63 0.25 29);
+  --primary-foreground: oklch(0.99 0.004 25);
+  --secondary: oklch(0.18 0.01 25);
+  --secondary-foreground: oklch(0.9 0.01 25);
+  --muted: oklch(0.18 0.01 25);
+  --muted-foreground: oklch(0.67 0.012 25);
+  --accent: oklch(0.23 0.08 29);
+  --accent-foreground: oklch(0.72 0.23 29);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.95 0.01 90);
   --border: oklch(0.28 0.01 285);
   --input: oklch(0.25 0.008 285);
-  --ring: oklch(0.7 0.18 55);
+  --ring: oklch(0.63 0.25 29);
   --success: oklch(0.6 0.18 145);
   --success-foreground: oklch(0.13 0.005 285);
   --warning: oklch(0.75 0.15 85);
   --warning-foreground: oklch(0.13 0.005 285);
 
-  --chart-1: oklch(0.7 0.18 55);
+  --chart-1: oklch(0.63 0.25 29);
   --chart-2: oklch(0.6 0.18 145);
   --chart-3: oklch(0.55 0.2 280);
   --chart-4: oklch(0.75 0.15 85);
@@ -90,12 +90,12 @@
 
   --sidebar: oklch(0.16 0.005 285);
   --sidebar-foreground: oklch(0.85 0.02 90);
-  --sidebar-primary: oklch(0.7 0.18 55);
+  --sidebar-primary: oklch(0.63 0.25 29);
   --sidebar-primary-foreground: oklch(0.13 0.005 285);
   --sidebar-accent: oklch(0.22 0.008 285);
   --sidebar-accent-foreground: oklch(0.85 0.02 90);
   --sidebar-border: oklch(0.28 0.01 285);
-  --sidebar-ring: oklch(0.7 0.18 55);
+  --sidebar-ring: oklch(0.63 0.25 29);
 }
 
 @layer base {
@@ -118,22 +118,22 @@
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, oklch(0.7 0.18 55), oklch(0.65 0.2 40));
+    background: linear-gradient(135deg, oklch(0.63 0.25 29), oklch(0.52 0.22 24));
   }
   .gradient-card {
     background: linear-gradient(145deg, oklch(0.2 0.008 285), oklch(0.17 0.005 285));
   }
   .gradient-hero {
-    background: linear-gradient(180deg, oklch(0.16 0.01 55 / 0.3), oklch(0.145 0.005 285) 60%);
+    background: linear-gradient(180deg, oklch(0.18 0.08 29 / 0.34), oklch(0.08 0.003 25) 60%);
   }
   .text-gradient-primary {
-    background: linear-gradient(135deg, oklch(0.7 0.18 55), oklch(0.8 0.15 70));
+    background: linear-gradient(135deg, oklch(0.63 0.25 29), oklch(0.72 0.23 29));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .glow-primary {
-    box-shadow: 0 0 20px oklch(0.7 0.18 55 / 0.3), 0 0 60px oklch(0.7 0.18 55 / 0.1);
+    box-shadow: 0 0 20px oklch(0.63 0.25 29 / 0.3), 0 0 60px oklch(0.63 0.25 29 / 0.12);
   }
 }
 

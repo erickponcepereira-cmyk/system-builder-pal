@@ -42,12 +42,12 @@ export function RankingTable() {
           <div
             key={r.position}
             className={`flex items-center gap-3 rounded-xl p-3 ${r.isYou ? "ring-1 ring-primary/40" : ""}`}
-            style={{ backgroundColor: r.isYou ? "rgba(var(--primary-rgb,255,107,0),0.08)" : "#0F0F0F" }}
+            style={{ backgroundColor: r.isYou ? "rgba(255,66,48,0.08)" : "#0F0F0F" }}
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${
-              r.position === 1 ? "bg-yellow-500/20 text-yellow-500" :
+              r.position === 1 ? "bg-red-500/20 text-red-400" :
               r.position === 2 ? "bg-gray-300/20 text-gray-300" :
-              r.position === 3 ? "bg-orange-600/20 text-orange-500" :
+              r.position === 3 ? "bg-red-600/20 text-red-500" :
               "bg-white/5 text-white/50"
             }`}>
               #{r.position}

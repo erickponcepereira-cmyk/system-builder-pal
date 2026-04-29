@@ -451,7 +451,7 @@ function CareerTab() {
               className={`flex items-center gap-3 rounded-xl p-3 ${
                 item.current ? "ring-1 ring-primary/40" : ""
               }`}
-              style={{ backgroundColor: item.current ? "rgba(255,107,0,0.05)" : "#0F0F0F" }}
+              style={{ backgroundColor: item.current ? "rgba(255,66,48,0.06)" : "#0F0F0F" }}
             >
               <PatentBadge patent={item.p} size="md" showName={false} />
               <div className="flex-1 min-w-0">

@@ -77,7 +77,7 @@ function AdminPatents() {
         await supabase.from("patent_rules").insert({
           patent: r.patent,
           display_name: r.display_name,
-          badge_color: "#FF6B00",
+          badge_color: "#FF4230",
           badge_icon: "award",
           min_direct_students: r.min_direct_students,
           min_network_students: r.min_network_students,

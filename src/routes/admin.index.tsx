@@ -151,8 +151,8 @@ function AdminDashboard() {
   const cards = [
     { label: "Faturamento do mês", value: fmt(stats.monthRevenue), icon: DollarSign, color: "text-success" },
     { label: "Comissões a pagar", value: fmt(stats.paidCommissions), icon: Wallet, color: "text-primary" },
-    { label: "Comissões pendentes", value: fmt(stats.pendingCommissions), icon: Clock, color: "text-yellow-400" },
-    { label: "Saques solicitados", value: fmt(stats.pendingWithdrawals), icon: ArrowUpRight, color: "text-orange-400" },
+    { label: "Comissões pendentes", value: fmt(stats.pendingCommissions), icon: Clock, color: "text-red-400" },
+    { label: "Saques solicitados", value: fmt(stats.pendingWithdrawals), icon: ArrowUpRight, color: "text-red-400" },
     { label: "Coaches ativos", value: stats.totalCoaches.toString(), icon: UserCheck, color: "text-blue-400" },
     { label: "Alunos cadastrados", value: stats.totalStudents.toString(), icon: Users, color: "text-violet-400" },
     { label: "Assinaturas ativas", value: stats.activeSubscriptions.toString(), icon: Activity, color: "text-emerald-400" },
@@ -183,9 +183,9 @@ function AdminDashboard() {
 
       {/* Pending coaches alert */}
       {stats.pendingCoaches > 0 && (
-        <Link to="/admin/coaches" className="block mb-6 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-5 hover:bg-orange-500/15 transition-colors">
+        <Link to="/admin/coaches" className="block mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 hover:bg-red-500/15 transition-colors">
           <div className="flex items-center gap-3">
-            <Clock className="h-5 w-5 text-orange-400" />
+            <Clock className="h-5 w-5 text-red-400" />
             <div className="flex-1">
               <p className="text-sm font-bold text-white">
                 {stats.pendingCoaches} coach{stats.pendingCoaches > 1 ? "es" : ""} aguardando aprovação
@@ -223,7 +223,7 @@ function AdminDashboard() {
         {/* Top coaches */}
         <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <h2 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-yellow-400" /> Top 5 coaches
+            <Trophy className="h-4 w-4 text-red-400" /> Top 5 coaches
           </h2>
           <p className="text-xs text-white/40 mb-5">Receita gerada nos últimos 6 meses</p>
           {topCoaches.length === 0 ? (
@@ -233,7 +233,7 @@ function AdminDashboard() {
               {topCoaches.map((c, i) => (
                 <div key={c.id} className="flex items-center gap-3">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                    i === 0 ? "bg-yellow-400/20 text-yellow-400" : i === 1 ? "bg-white/10 text-white/70" : i === 2 ? "bg-orange-500/20 text-orange-400" : "bg-white/5 text-white/50"
+                    i === 0 ? "bg-red-500/20 text-red-400" : i === 1 ? "bg-white/10 text-white/70" : i === 2 ? "bg-red-500/20 text-red-400" : "bg-white/5 text-white/50"
                   }`}>
                     {i + 1}
                   </div>
