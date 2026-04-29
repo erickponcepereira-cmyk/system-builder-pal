@@ -108,7 +108,7 @@
   body {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
     overscroll-behavior-x: none;
   }
 
@@ -123,7 +123,12 @@
   #root,
   #__next {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  *::-webkit-scrollbar:horizontal {
+    height: 0;
+    display: none;
   }
 
   img,
@@ -139,6 +144,15 @@
 }
 
 @layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   .gradient-primary {
     background: linear-gradient(135deg, oklch(0.63 0.25 29), oklch(0.52 0.22 24));
   }
