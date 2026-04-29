@@ -15,30 +15,90 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-5 py-10">
-      <section className="flex w-full max-w-[430px] flex-col items-center text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary shadow-[0_20px_60px_-20px_var(--color-primary)]">
-          <Flame className="h-10 w-10 text-primary-foreground" />
+    <main
+      style={{
+        position: "fixed",
+        inset: 0,
+        overflow: "auto",
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0A0A0A",
+        color: "#FFFFFF",
+        padding: "40px 20px",
+        fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <section
+        style={{
+          width: "100%",
+          maxWidth: 430,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 24,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#FFB238",
+            boxShadow: "0 24px 70px rgba(255, 178, 56, 0.24)",
+            marginBottom: 28,
+          }}
+        >
+          <Flame size={40} color="#111111" strokeWidth={2.4} />
         </div>
 
-        <h1 className="text-4xl font-black tracking-normal text-foreground">FitMind Club</h1>
-        <p className="mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">
+        <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.05, fontWeight: 900, letterSpacing: 0 }}>
+          FitMind Club
+        </h1>
+        <p style={{ margin: "18px 0 0", maxWidth: 360, fontSize: 17, lineHeight: 1.55, color: "rgba(255,255,255,0.72)" }}>
           Conectando corpo e mente para a sua melhor versão.
         </p>
-        <p className="mt-3 text-sm font-bold uppercase tracking-[0.18em] text-primary">
+        <p style={{ margin: "14px 0 0", fontSize: 12, fontWeight: 800, letterSpacing: 2.2, textTransform: "uppercase", color: "#FFB238" }}>
           A maior rede de saúde do Brasil
         </p>
 
-        <div className="mt-10 grid w-full gap-3">
+        <div style={{ width: "100%", display: "grid", gap: 12, marginTop: 42 }}>
           <Link
             to="/login"
-            className="flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90"
+            style={{
+              height: 52,
+              borderRadius: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#FFB238",
+              color: "#111111",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 800,
+            }}
           >
             Entrar
           </Link>
           <Link
             to="/register"
-            className="flex h-12 items-center justify-center rounded-2xl border border-border bg-card px-5 text-sm font-bold text-foreground transition-colors hover:bg-muted"
+            style={{
+              height: 52,
+              borderRadius: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#1A1A1A",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "#FFFFFF",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 800,
+            }}
           >
             Criar conta
           </Link>
