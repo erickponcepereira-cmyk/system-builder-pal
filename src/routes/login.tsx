@@ -129,29 +129,52 @@ function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password.trim()) {
+      const message = "Preencha e-mail e senha para entrar.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (!normalizedEmail.includes("@")) {
+      const message = "Confira o e-mail digitado. Ele precisa ter @ e domínio.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
     setLoading(true);
+    setFormError(null);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
       if (error) {
-        toast.error(
-          error.message === "Invalid login credentials"
-            ? "E-mail ou senha incorretos"
-            : error.message
-        );
+        const message = error.message === "Invalid login credentials"
+          ? "E-mail ou senha incorretos. Confira se não há espaço, letra trocada ou senha errada."
+          : error.message;
+        setFormError(message);
+        toast.error(message);
         return;
       }
 
       if (data.user) {
         sessionStorage.removeItem("fitmind_selected_area");
         await routeSignedInUser(data.user.id, true);
+      } else {
+        const message = "Login indisponível: a autenticação não retornou usuário.";
+        setFormError(message);
+        toast.error(message);
       }
     } catch {
-      toast.error("Erro ao fazer login. Tente novamente.");
+      const message = "Erro ao fazer login. Tente novamente.";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
