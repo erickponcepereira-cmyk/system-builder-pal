@@ -799,6 +799,120 @@ export type Database = {
           },
         ]
       }
+      coach_body_assessments: {
+        Row: {
+          age: number | null
+          assessment_date: string
+          basal_metabolism: number | null
+          blood_glucose: number | null
+          bmi: number | null
+          body_age: number | null
+          body_fat: number | null
+          body_water: number | null
+          bone_mass: number | null
+          client_id: string
+          client_notes: string | null
+          coach_id: string
+          created_at: string
+          diastolic_bp: number | null
+          group_id: string | null
+          heart_rate: number | null
+          height: number | null
+          id: string
+          method: string
+          muscle_mass: number | null
+          next_assessment_date: string | null
+          next_assessment_time: string | null
+          photos: Json
+          professional_notes: string | null
+          segment_analysis: Json
+          skeletal_muscle: number | null
+          systolic_bp: number | null
+          updated_at: string
+          visceral_fat: number | null
+          weight: number | null
+        }
+        Insert: {
+          age?: number | null
+          assessment_date?: string
+          basal_metabolism?: number | null
+          blood_glucose?: number | null
+          bmi?: number | null
+          body_age?: number | null
+          body_fat?: number | null
+          body_water?: number | null
+          bone_mass?: number | null
+          client_id: string
+          client_notes?: string | null
+          coach_id: string
+          created_at?: string
+          diastolic_bp?: number | null
+          group_id?: string | null
+          heart_rate?: number | null
+          height?: number | null
+          id?: string
+          method?: string
+          muscle_mass?: number | null
+          next_assessment_date?: string | null
+          next_assessment_time?: string | null
+          photos?: Json
+          professional_notes?: string | null
+          segment_analysis?: Json
+          skeletal_muscle?: number | null
+          systolic_bp?: number | null
+          updated_at?: string
+          visceral_fat?: number | null
+          weight?: number | null
+        }
+        Update: {
+          age?: number | null
+          assessment_date?: string
+          basal_metabolism?: number | null
+          blood_glucose?: number | null
+          bmi?: number | null
+          body_age?: number | null
+          body_fat?: number | null
+          body_water?: number | null
+          bone_mass?: number | null
+          client_id?: string
+          client_notes?: string | null
+          coach_id?: string
+          created_at?: string
+          diastolic_bp?: number | null
+          group_id?: string | null
+          heart_rate?: number | null
+          height?: number | null
+          id?: string
+          method?: string
+          muscle_mass?: number | null
+          next_assessment_date?: string | null
+          next_assessment_time?: string | null
+          photos?: Json
+          professional_notes?: string | null
+          segment_analysis?: Json
+          skeletal_muscle?: number | null
+          systolic_bp?: number | null
+          updated_at?: string
+          visceral_fat?: number | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_body_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "coach_evaluation_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_body_assessments_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_course_modules: {
         Row: {
           created_at: string | null
@@ -933,6 +1047,71 @@ export type Database = {
             columns: ["digital_product_id"]
             isOneToOne: false
             referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_evaluation_clients: {
+        Row: {
+          avatar_url: string | null
+          birth_date: string | null
+          coach_id: string
+          created_at: string
+          email: string | null
+          ethnicity: string
+          gender: string
+          groups: string[]
+          height: number | null
+          height_unit: string
+          id: string
+          language: string
+          name: string
+          notes: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          coach_id: string
+          created_at?: string
+          email?: string | null
+          ethnicity?: string
+          gender?: string
+          groups?: string[]
+          height?: number | null
+          height_unit?: string
+          id?: string
+          language?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          birth_date?: string | null
+          coach_id?: string
+          created_at?: string
+          email?: string | null
+          ethnicity?: string
+          gender?: string
+          groups?: string[]
+          height?: number | null
+          height_unit?: string
+          id?: string
+          language?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_evaluation_clients_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
         ]
