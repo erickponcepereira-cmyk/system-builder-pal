@@ -33,6 +33,7 @@ function LoginPage() {
   };
 
   const routeSignedInUser = async (userId: string, showSuccess = false) => {
+    setLoading(true);
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, role")
@@ -40,6 +41,7 @@ function LoginPage() {
       .maybeSingle();
 
     if (!profile) {
+      setLoading(false);
       toast.error("Perfil não encontrado. Verifique seu e-mail ou tente novamente.");
       return;
     }
@@ -52,13 +54,13 @@ function LoginPage() {
     const role = profile.role;
     const canCoach = role === "coach" || role === "manager" || role === "director" || !!coach;
     const canStudent = role === "student" || !!student;
-    const selectedArea = sessionStorage.getItem("fitmind_selected_area");
 
     if (showSuccess) toast.success("Login realizado com sucesso!");
     if (role === "admin") enterArea("admin");
-    else if (canCoach && canStudent && selectedArea === "coach") enterArea("coach");
-    else if (canCoach && canStudent && selectedArea === "student") enterArea("student");
-    else if (canCoach && canStudent) setAccessOptions({ coach: true, student: true });
+    else if (canCoach && canStudent) {
+      setAccessOptions({ coach: true, student: true });
+      setLoading(false);
+    }
     else if (canCoach) enterArea("coach");
     else enterArea("student");
   };
@@ -93,6 +95,7 @@ function LoginPage() {
       }
 
       if (data.user) {
+        sessionStorage.removeItem("fitmind_selected_area");
         await routeSignedInUser(data.user.id, true);
       }
     } catch {
