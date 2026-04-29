@@ -743,7 +743,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div>
               <label className="fm-label">WhatsApp</label>
-              <input className="fm-input" placeholder="+55 00 00000-0000" value={newClientData.whatsapp || ""} onChange={e => updateNewClient("whatsapp", e.target.value)} />
+              <input className="fm-input" inputMode="numeric" placeholder="+55 (00) 00000-0000" value={newClientData.whatsapp || "+55 "} onChange={e => updateNewClient("whatsapp", formatBrazilWhatsapp(e.target.value))} />
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
@@ -765,8 +765,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
 
-        <button className="fm-btn-primary" style={{ width: "100%" }} onClick={createNewClient}>
-          Criar Aluno e Iniciar Avaliação <ChevronRight size={16} style={{ display: "inline", marginLeft: 4 }} />
+        <button className="fm-btn-primary" style={{ width: "100%" }} onClick={createNewClient} disabled={isSaving}>
+          {isSaving ? "Criando aluno..." : "Criar Aluno e Iniciar Avaliação"} <ChevronRight size={16} style={{ display: "inline", marginLeft: 4 }} />
         </button>
       </div>
     );
