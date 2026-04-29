@@ -64,13 +64,13 @@ export interface FitMindAssessment {
   bmi: number;
   // Bioimpedância
   bodyFat: number;          // % gordura corporal
-  skeletalMuscle: number;   // kg músculo esquelético
-  muscleMass: number;       // kg massa muscular
-  visceralFat: number;      // nível 1-20
-  basalMetabolism: number;  // kcal
-  bodyAge: number;          // anos
+  skeletalMuscle: number;   // % músculo esquelético
+  muscleMass: number;       // % massa muscular
+  visceralFat: number;      // % gordura visceral
+  basalMetabolism: number;  // % referência Harris-Benedict
+  bodyAge: number;          // % idade corporal sobre idade real
   bodyWater: number;        // % água corporal
-  boneMass: number;         // kg massa óssea
+  boneMass: number;         // % massa óssea
   // Segmentos
   segmentAnalysis?: {
     leftArm: number; rightArm: number;
@@ -162,16 +162,18 @@ const VISCERAL_FAT_RANGES = [
 ];
 
 const TOOLTIPS: Record<string, string> = {
-  bmi: "IMC = Peso ÷ Altura². Indica relação entre peso e altura. Valores entre 18,5–24,9 kg/m² são considerados saudáveis.",
-  bodyFat: "Percentual de gordura corporal em relação ao peso total. Monitorar ajuda a avaliar riscos cardiovasculares e metabólicos.",
-  skeletalMuscle: "Massa dos músculos ligados ao esqueleto, responsáveis pelo movimento. Manter ou aumentar preserva a taxa metabólica e a funcionalidade.",
-  visceralFat: "Gordura acumulada ao redor dos órgãos internos. Nível acima de 9 está associado a riscos cardíacos e diabéticos.",
-  basalMetabolism: "Calorias que o corpo queima em repouso para manter funções vitais. Auxilia no planejamento nutricional.",
-  bodyAge: "Idade metabólica estimada pela composição corporal. Menor que a idade real indica boa saúde metabólica.",
-  bodyWater: "Percentual de água no corpo. Hidratação adequada é fundamental para metabolismo, desempenho e recuperação.",
-  boneMass: "Estimativa da massa óssea. Manter a saúde óssea previne osteoporose ao longo da vida.",
-  muscleMass: "Total de tecido muscular no corpo incluindo músculo esquelético, cardíaco e liso.",
+  bmi: "IMC = Peso ÷ Altura². Classificação baseada nas diretrizes NIH/OMS para IMC. Fonte: (8).",
+  bodyFat: "Percentual de gordura corporal em relação ao peso total. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  skeletalMuscle: "Percentual de músculo esquelético em relação ao corpo. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  visceralFat: "Percentual estimado de gordura visceral. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  basalMetabolism: "Percentual em relação ao metabolismo basal estimado pelo método Harris-Benedict. Fonte: (10).",
+  bodyAge: "Percentual da idade corporal em relação à idade real. Fonte: (2) Omron Healthcare.",
+  bodyWater: "Percentual de água corporal. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  boneMass: "Percentual estimado de massa óssea. Fonte: (9) Omron Healthcare/Tanita.",
+  muscleMass: "Percentual total de tecido muscular no corpo. Fonte: (9) Omron Healthcare/Tanita.",
 };
+
+const CLINICAL_SOURCES = "Fontes: (1) OMS - Organização Mundial da Saúde; (2) Omron Healthcare; (8) diretrizes NIH/OMS para IMC; (9) Omron Healthcare e Tanita; (10) Método Harris-Benedict.";
 
 // ============================================================
 // COMPONENTE PRINCIPAL
