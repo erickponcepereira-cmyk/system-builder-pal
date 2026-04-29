@@ -1304,11 +1304,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   return (
     <div className="fm-app" style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily }}>
       <style>{css}</style>
-      {screen === "home" && <HomeScreen />}
-      {screen === "select-client" && <SelectClientScreen />}
-      {screen === "new-client" && <NewClientScreen />}
-      {screen === "assessment" && <AssessmentScreen />}
-      {screen === "result" && selectedClient && <ResultScreen />}
+      {screen === "home" && HomeScreen()}
+      {screen === "select-client" && SelectClientScreen()}
+      {screen === "new-client" && NewClientScreen()}
+      {screen === "assessment" && AssessmentScreen()}
+      {screen === "result" && selectedClient && ResultScreen()}
     </div>
   );
 };
