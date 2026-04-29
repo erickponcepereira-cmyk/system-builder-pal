@@ -19,16 +19,49 @@
 
 import React, { useState, useCallback, useMemo } from "react";
 import {
-  LineChart, Line, PieChart, Pie, Cell,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, Legend, ResponsiveContainer
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
 } from "recharts";
 import {
-  User, Users, Plus, ChevronRight, ChevronLeft, Check,
-  HelpCircle, Camera, Calendar, Scale, Activity,
-  Heart, Droplets, Bone, Brain, Zap, TrendingUp,
-  Phone, Mail, Globe, FileText, Tag, Clock,
-  AlertCircle, X, Search, Filter, Upload
+  User,
+  Users,
+  Plus,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  HelpCircle,
+  Camera,
+  Calendar,
+  Scale,
+  Activity,
+  Heart,
+  Droplets,
+  Bone,
+  Brain,
+  Zap,
+  TrendingUp,
+  Phone,
+  Mail,
+  Globe,
+  FileText,
+  Tag,
+  Clock,
+  AlertCircle,
+  X,
+  Search,
+  Filter,
+  Upload,
 } from "lucide-react";
 
 // ============================================================
@@ -63,19 +96,21 @@ export interface FitMindAssessment {
   weight: number;
   bmi: number;
   // Bioimpedância
-  bodyFat: number;          // % gordura corporal
-  skeletalMuscle: number;   // % músculo esquelético
-  muscleMass: number;       // % massa muscular
-  visceralFat: number;      // % gordura visceral
-  basalMetabolism: number;  // % referência Harris-Benedict
-  bodyAge: number;          // % idade corporal sobre idade real
-  bodyWater: number;        // % água corporal
-  boneMass: number;         // % massa óssea
+  bodyFat: number; // % gordura corporal
+  skeletalMuscle: number; // % músculo esquelético
+  muscleMass: number; // % massa muscular
+  visceralFat: number; // % gordura visceral
+  basalMetabolism: number; // % referência Harris-Benedict
+  bodyAge: number; // % idade corporal sobre idade real
+  bodyWater: number; // % água corporal
+  boneMass: number; // % massa óssea
   // Segmentos
   segmentAnalysis?: {
-    leftArm: number; rightArm: number;
+    leftArm: number;
+    rightArm: number;
     trunk: number;
-    leftLeg: number; rightLeg: number;
+    leftLeg: number;
+    rightLeg: number;
   };
   // Outros dados
   systolicBP?: number;
@@ -86,7 +121,12 @@ export interface FitMindAssessment {
   clientNotes?: string;
   professionalNotes?: string;
   // Fotos
-  photos?: { front?: string; rightSide?: string; back?: string; leftSide?: string };
+  photos?: {
+    front?: string;
+    rightSide?: string;
+    back?: string;
+    leftSide?: string;
+  };
   // Próxima avaliação
   nextAssessmentDate?: string;
   nextAssessmentTime?: string;
@@ -115,10 +155,19 @@ export interface FitMindShapeProps {
   // Grupos disponíveis
   groups?: { id: string; name: string; color?: string }[];
   // Callbacks para integração bidirecional
-  onSaveAssessment?: (assessment: FitMindAssessment, client: FitMindClient) => Promise<void>;
-  onCreateClient?: (client: Omit<FitMindClient, "id">) => Promise<FitMindClient>;
+  onSaveAssessment?: (
+    assessment: FitMindAssessment,
+    client: FitMindClient,
+  ) => Promise<void>;
+  onCreateClient?: (
+    client: Omit<FitMindClient, "id">,
+  ) => Promise<FitMindClient>;
   onSearchClients?: (query: string) => Promise<FitMindClient[]>;
-  onCreateGoogleCalendarEvent?: (date: string, time: string, clientName: string) => Promise<string>;
+  onCreateGoogleCalendarEvent?: (
+    date: string,
+    time: string,
+    clientName: string,
+  ) => Promise<string>;
   // Identidade visual herdada do sistema pai
   themeColor?: string; // hex, ex: "#1a7a4a"
   themeFontFamily?: string;
@@ -135,12 +184,12 @@ const BMI_RANGES = [
   { max: 29.9, label: "Acima do peso II", color: "#fb923c", avatar: 3 },
   { max: 34.9, label: "Obesidade I", color: "#f87171", avatar: 4 },
   { max: 39.9, label: "Obesidade II", color: "#ef4444", avatar: 5 },
-  { max: 100,  label: "Obesidade III", color: "#b91c1c", avatar: 6 },
+  { max: 100, label: "Obesidade III", color: "#b91c1c", avatar: 6 },
 ];
 
 const BODY_FAT_RANGES = {
   male: [
-    { max: 6,  label: "Atleta", eval: "excellent" },
+    { max: 6, label: "Atleta", eval: "excellent" },
     { max: 13, label: "Fitness", eval: "good" },
     { max: 17, label: "Aceitável", eval: "normal" },
     { max: 25, label: "Acima", eval: "warning" },
@@ -156,24 +205,33 @@ const BODY_FAT_RANGES = {
 };
 
 const VISCERAL_FAT_RANGES = [
-  { max: 9,  label: "Normal", eval: "normal", color: "#22c55e" },
+  { max: 9, label: "Normal", eval: "normal", color: "#22c55e" },
   { max: 14, label: "Alto", eval: "warning", color: "#fb923c" },
   { max: 30, label: "Muito Alto", eval: "danger", color: "#ef4444" },
 ];
 
 const TOOLTIPS: Record<string, string> = {
   bmi: "IMC = Peso ÷ Altura². Classificação baseada nas diretrizes NIH/OMS para IMC. Fonte: (8).",
-  bodyFat: "Percentual de gordura corporal em relação ao peso total. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
-  skeletalMuscle: "Percentual de músculo esquelético em relação ao corpo. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
-  visceralFat: "Percentual estimado de gordura visceral. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
-  basalMetabolism: "Percentual em relação ao metabolismo basal estimado pelo método Harris-Benedict. Fonte: (10).",
-  bodyAge: "Percentual da idade corporal em relação à idade real. Fonte: (2) Omron Healthcare.",
-  bodyWater: "Percentual de água corporal. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
-  boneMass: "Percentual estimado de massa óssea. Fonte: (9) Omron Healthcare/Tanita.",
-  muscleMass: "Percentual total de tecido muscular no corpo. Fonte: (9) Omron Healthcare/Tanita.",
+  bodyFat:
+    "Percentual de gordura corporal em relação ao peso total. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  skeletalMuscle:
+    "Percentual de músculo esquelético em relação ao corpo. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  visceralFat:
+    "Percentual estimado de gordura visceral. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  basalMetabolism:
+    "Percentual em relação ao metabolismo basal estimado pelo método Harris-Benedict. Fonte: (10).",
+  bodyAge:
+    "Percentual da idade corporal em relação à idade real. Fonte: (2) Omron Healthcare.",
+  bodyWater:
+    "Percentual de água corporal. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
+  boneMass:
+    "Percentual estimado de massa óssea. Fonte: (9) Omron Healthcare/Tanita.",
+  muscleMass:
+    "Percentual total de tecido muscular no corpo. Fonte: (9) Omron Healthcare/Tanita.",
 };
 
-const CLINICAL_SOURCES = "Fontes: (1) OMS - Organização Mundial da Saúde; (2) Omron Healthcare; (8) diretrizes NIH/OMS para IMC; (9) Omron Healthcare e Tanita; (10) Método Harris-Benedict.";
+const CLINICAL_SOURCES =
+  "Fontes: (1) OMS - Organização Mundial da Saúde; (2) Omron Healthcare; (8) diretrizes NIH/OMS para IMC; (9) Omron Healthcare e Tanita; (10) Método Harris-Benedict.";
 
 // ============================================================
 // COMPONENTE PRINCIPAL
@@ -190,8 +248,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
 }) => {
-  const [screen, setScreen] = useState<"home" | "select-client" | "new-client" | "assessment" | "result">("home");
-  const [selectedClient, setSelectedClient] = useState<FitMindClient | null>(null);
+  const [screen, setScreen] = useState<
+    "home" | "select-client" | "new-client" | "assessment" | "result"
+  >("home");
+  const [selectedClient, setSelectedClient] = useState<FitMindClient | null>(
+    null,
+  );
   const [assessment, setAssessment] = useState<Partial<FitMindAssessment>>({});
   const [step, setStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -222,19 +284,26 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return +((computedBMI / 24.9) * 100).toFixed(1);
   }, [computedBMI]);
 
-  const getBMICategory = (bmi: number) => BMI_RANGES.find(r => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
+  const getBMICategory = (bmi: number) =>
+    BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
   const getBodyFatCategory = (pct: number, gender: string) => {
-    const ranges = gender === "male" ? BODY_FAT_RANGES.male : BODY_FAT_RANGES.female;
-    return ranges.find(r => pct <= r.max) ?? ranges[ranges.length - 1];
+    const ranges =
+      gender === "male" ? BODY_FAT_RANGES.male : BODY_FAT_RANGES.female;
+    return ranges.find((r) => pct <= r.max) ?? ranges[ranges.length - 1];
   };
-  const getVisceralCategory = (v: number) => VISCERAL_FAT_RANGES.find(r => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
-  const formatPercent = (value?: number) => Number.isFinite(value) ? `${value}%` : "—";
+  const getVisceralCategory = (v: number) =>
+    VISCERAL_FAT_RANGES.find((r) => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
+  const formatPercent = (value?: number) =>
+    Number.isFinite(value) ? `${value}%` : "—";
 
   // ── Histórico mock (substitua pelos dados reais da API) ──
   const historicalData = useMemo(() => {
     const past = selectedClient?.assessments ?? [];
-    return past.map(a => ({
-      date: new Date(a.date).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+    return past.map((a) => ({
+      date: new Date(a.date).toLocaleDateString("pt-BR", {
+        month: "short",
+        year: "2-digit",
+      }),
       peso: a.weight,
       gordura: a.bodyFat,
       musculo: a.skeletalMuscle,
@@ -484,30 +553,95 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   // AVATAR SYSTEM (SVG bodies com gordura crescente)
   // ────────────────────────────────────────────────────────
-  const AvatarFigure: React.FC<{ level: number; active?: boolean; label: string; gender?: string }> = ({ level, active, label, gender }) => {
+  const AvatarFigure: React.FC<{
+    level: number;
+    active?: boolean;
+    label: string;
+    gender?: string;
+  }> = ({ level, active, label, gender }) => {
     const baseH = 48 + level * 3;
     const bodyW = 18 + level * 4;
-    const bodyColor = level === 0 ? "#60a5fa" : level <= 1 ? "#22c55e" : level <= 3 ? "#facc15" : "#ef4444";
+    const bodyColor =
+      level === 0
+        ? "#60a5fa"
+        : level <= 1
+          ? "#22c55e"
+          : level <= 3
+            ? "#facc15"
+            : "#ef4444";
     const skinColor = gender === "male" ? "#f5c5a3" : "#f9c9b0";
     return (
-      <div className={`fm-avatar-item ${active ? "fm-avatar-active" : ""}`} style={{ opacity: active ? 1 : 0.4 }}>
-        <svg width={bodyW + 12} height={baseH + 18} viewBox={`0 0 ${bodyW + 12} ${baseH + 18}`}>
+      <div
+        className={`fm-avatar-item ${active ? "fm-avatar-active" : ""}`}
+        style={{ opacity: active ? 1 : 0.4 }}
+      >
+        <svg
+          width={bodyW + 12}
+          height={baseH + 18}
+          viewBox={`0 0 ${bodyW + 12} ${baseH + 18}`}
+        >
           {/* Cabeça */}
-          <ellipse cx={(bodyW + 12) / 2} cy="9" rx="8" ry="9" fill={skinColor} />
+          <ellipse
+            cx={(bodyW + 12) / 2}
+            cy="9"
+            rx="8"
+            ry="9"
+            fill={skinColor}
+          />
           {/* Corpo */}
-          <rect x={(bodyW + 12) / 2 - bodyW / 2} y="19" width={bodyW} height={baseH * 0.55} rx={bodyW * 0.18} fill={bodyColor} opacity={0.9} />
+          <rect
+            x={(bodyW + 12) / 2 - bodyW / 2}
+            y="19"
+            width={bodyW}
+            height={baseH * 0.55}
+            rx={bodyW * 0.18}
+            fill={bodyColor}
+            opacity={0.9}
+          />
           {/* Pernas */}
-          <rect x={(bodyW + 12) / 2 - bodyW / 2 + 2} y={19 + baseH * 0.52} width={bodyW / 2 - 3} height={baseH * 0.45} rx="4" fill={bodyColor} opacity={0.75} />
-          <rect x={(bodyW + 12) / 2 + 2} y={19 + baseH * 0.52} width={bodyW / 2 - 3} height={baseH * 0.45} rx="4" fill={bodyColor} opacity={0.75} />
+          <rect
+            x={(bodyW + 12) / 2 - bodyW / 2 + 2}
+            y={19 + baseH * 0.52}
+            width={bodyW / 2 - 3}
+            height={baseH * 0.45}
+            rx="4"
+            fill={bodyColor}
+            opacity={0.75}
+          />
+          <rect
+            x={(bodyW + 12) / 2 + 2}
+            y={19 + baseH * 0.52}
+            width={bodyW / 2 - 3}
+            height={baseH * 0.45}
+            rx="4"
+            fill={bodyColor}
+            opacity={0.75}
+          />
         </svg>
-        <span style={{ fontSize: 9, color: active ? "var(--fm-primary)" : "#94a3b8", fontWeight: active ? 700 : 400, textAlign: "center", maxWidth: 48 }}>
+        <span
+          style={{
+            fontSize: 9,
+            color: active ? "var(--fm-primary)" : "#94a3b8",
+            fontWeight: active ? 700 : 400,
+            textAlign: "center",
+            maxWidth: 48,
+          }}
+        >
           {label}
         </span>
       </div>
     );
   };
 
-  const AvatarLabels = ["Abaixo", "Normal", "Acima I", "Acima II", "Acima III", "Alto I", "Alto II"];
+  const AvatarLabels = [
+    "Abaixo",
+    "Normal",
+    "Acima I",
+    "Acima II",
+    "Acima III",
+    "Alto I",
+    "Alto II",
+  ];
 
   // ────────────────────────────────────────────────────────
   // AVALIAÇÃO — STEPS LABELS
@@ -528,8 +662,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const formatBrazilWhatsapp = (value: string) => {
     const digits = value.replace(/\D/g, "").replace(/^55/, "").slice(0, 11);
     const ddd = digits.slice(0, 2);
-    const firstPart = digits.length > 10 ? digits.slice(2, 7) : digits.slice(2, 6);
-    const secondPart = digits.length > 10 ? digits.slice(7, 11) : digits.slice(6, 10);
+    const firstPart =
+      digits.length > 10 ? digits.slice(2, 7) : digits.slice(2, 6);
+    const secondPart =
+      digits.length > 10 ? digits.slice(7, 11) : digits.slice(6, 10);
     if (!ddd) return "+55 ";
     if (ddd.length < 2) return `+55 (${ddd}`;
     if (!firstPart) return `+55 (${ddd}) `;
@@ -551,7 +687,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       setScreen("assessment");
       setStep(0);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Não foi possível criar o aluno");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível criar o aluno",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -561,64 +701,178 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: HOME
   // ────────────────────────────────────────────────────────
   const HomeScreen = () => (
-    <div className="fm-animate" style={{ padding: 24, minHeight: "100vh", background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+    <div
+      className="fm-animate"
+      style={{
+        padding: 24,
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 32,
+        }}
+      >
         {coach.logo ? (
-          <img src={coach.logo} alt="Logo" style={{ width: 44, height: 44, borderRadius: 12, objectFit: "cover" }} />
+          <img
+            src={coach.logo}
+            alt="Logo"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              objectFit: "cover",
+            }}
+          />
         ) : (
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--fm-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: "var(--fm-primary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Zap size={22} color="#fff" />
           </div>
         )}
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b", letterSpacing: "-0.02em" }}>FitMind Shape</div>
-          <div style={{ fontSize: 12, color: "#64748b" }}>Olá, {coach.name} 👋</div>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: "#1e293b",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            FitMind Shape
+          </div>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
+            Olá, {coach.name} 👋
+          </div>
         </div>
       </div>
 
-      <div className="fm-card" style={{ marginBottom: 16, cursor: "pointer", background: "var(--fm-primary)", border: "none" }}
-        onClick={() => setScreen("select-client")}>
+      <div
+        className="fm-card"
+        style={{
+          marginBottom: 16,
+          cursor: "pointer",
+          background: "var(--fm-primary)",
+          border: "none",
+        }}
+        onClick={() => setScreen("select-client")}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 48, height: 48, background: "#ffffff22", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              background: "#ffffff22",
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Activity size={24} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>Nova Avaliação</div>
-            <div style={{ color: "#ffffff99", fontSize: 13 }}>Iniciar avaliação por bioimpedância</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
+              Nova Avaliação
+            </div>
+            <div style={{ color: "#ffffff99", fontSize: 13 }}>
+              Iniciar avaliação por bioimpedância
+            </div>
           </div>
           <ChevronRight color="#ffffff88" />
         </div>
       </div>
 
-      <div className="fm-card" style={{ cursor: "pointer" }}
-        onClick={() => setScreen("select-client")}>
+      <div
+        className="fm-card"
+        style={{ cursor: "pointer" }}
+        onClick={() => setScreen("select-client")}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 48, height: 48, background: "var(--fm-primary-light)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              background: "var(--fm-primary-light)",
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Users size={24} color="var(--fm-primary)" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#1e293b", fontWeight: 700, fontSize: 16 }}>Meus Alunos</div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>{clients.length} alunos cadastrados</div>
+            <div style={{ color: "#1e293b", fontWeight: 700, fontSize: 16 }}>
+              Meus Alunos
+            </div>
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              {clients.length} alunos cadastrados
+            </div>
           </div>
           <ChevronRight color="#94a3b8" />
         </div>
       </div>
 
       <div style={{ marginTop: 24, padding: "12px 0" }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 12, textTransform: "uppercase", letterSpacing: ".06em" }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: "#94a3b8",
+            marginBottom: 12,
+            textTransform: "uppercase",
+            letterSpacing: ".06em",
+          }}
+        >
           Avaliações Recentes
         </div>
-        {clients.slice(0, 3).map(c => (
-          <div key={c.id} className="fm-card" style={{ marginBottom: 8, padding: "12px 16px", cursor: "pointer" }}
-            onClick={() => { setSelectedClient(c); setScreen("result"); }}>
+        {clients.slice(0, 3).map((c) => (
+          <div
+            key={c.id}
+            className="fm-card"
+            style={{ marginBottom: 8, padding: "12px 16px", cursor: "pointer" }}
+            onClick={() => {
+              setSelectedClient(c);
+              setScreen("result");
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 50, background: "var(--fm-primary-light)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 50,
+                  background: "var(--fm-primary-light)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <User size={18} color="var(--fm-primary)" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}>{c.name}</div>
+                <div
+                  style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}
+                >
+                  {c.name}
+                </div>
                 <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                  {c.assessments?.length ?? 0} avaliação(ões) · {c.gender === "male" ? "Masc." : "Fem."}
+                  {c.assessments?.length ?? 0} avaliação(ões) ·{" "}
+                  {c.gender === "male" ? "Masc." : "Fem."}
                 </div>
               </div>
               <ChevronRight size={16} color="#cbd5e1" />
@@ -633,51 +887,126 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: SELEÇÃO DE ALUNO
   // ────────────────────────────────────────────────────────
   const SelectClientScreen = () => {
-    const filtered = clients.filter(c =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = clients.filter(
+      (c) =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.email.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     return (
-      <div className="fm-animate" style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", cursor: "pointer" }}>
+      <div
+        className="fm-animate"
+        style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          <button
+            onClick={() => setScreen("home")}
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
             <ChevronLeft size={22} color="#64748b" />
           </button>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b" }}>Selecionar Aluno</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b" }}>
+            Selecionar Aluno
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <div style={{ flex: 1, position: "relative" }}>
-            <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+            <Search
+              size={16}
+              color="#94a3b8"
+              style={{
+                position: "absolute",
+                left: 12,
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
+            />
             <input
               className="fm-input"
               style={{ paddingLeft: 36 }}
               placeholder="Buscar aluno..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
 
-        <button className="fm-btn-primary" style={{ width: "100%", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-          onClick={() => setScreen("new-client")}>
+        <button
+          className="fm-btn-primary"
+          style={{
+            width: "100%",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+          onClick={() => setScreen("new-client")}
+        >
           <Plus size={18} /> Adicionar Novo Aluno
         </button>
 
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 10, textTransform: "uppercase" }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: "#94a3b8",
+            marginBottom: 10,
+            textTransform: "uppercase",
+          }}
+        >
           Base de Alunos ({filtered.length})
         </div>
 
-        {filtered.map(c => (
-          <div key={c.id} className="fm-card" style={{ marginBottom: 8, padding: "12px 16px", cursor: "pointer", border: selectedClient?.id === c.id ? "2px solid var(--fm-primary)" : "2px solid transparent" }}
-            onClick={() => { setSelectedClient(c); setScreen("assessment"); setStep(0); }}>
+        {filtered.map((c) => (
+          <div
+            key={c.id}
+            className="fm-card"
+            style={{
+              marginBottom: 8,
+              padding: "12px 16px",
+              cursor: "pointer",
+              border:
+                selectedClient?.id === c.id
+                  ? "2px solid var(--fm-primary)"
+                  : "2px solid transparent",
+            }}
+            onClick={() => {
+              setSelectedClient(c);
+              setScreen("assessment");
+              setStep(0);
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 50, background: "var(--fm-primary-light)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 50,
+                  background: "var(--fm-primary-light)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <User size={20} color="var(--fm-primary)" />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}>{c.name}</div>
-                <div style={{ fontSize: 12, color: "#94a3b8" }}>{c.email} · {c.groups?.join(", ")}</div>
+                <div
+                  style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}
+                >
+                  {c.name}
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                  {c.email} · {c.groups?.join(", ")}
+                </div>
               </div>
               <ChevronRight size={16} color="#cbd5e1" />
             </div>
@@ -685,9 +1014,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         ))}
 
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
+          <div
+            style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}
+          >
             <User size={40} color="#e2e8f0" />
-            <div style={{ marginTop: 8, fontSize: 14 }}>Nenhum aluno encontrado</div>
+            <div style={{ marginTop: 8, fontSize: 14 }}>
+              Nenhum aluno encontrado
+            </div>
           </div>
         )}
       </div>
@@ -699,24 +1032,48 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   const NewClientScreen = () => {
     return (
-      <div className="fm-animate" style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setScreen("select-client")} style={{ background: "none", border: "none", cursor: "pointer" }}>
+      <div
+        className="fm-animate"
+        style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          <button
+            onClick={() => setScreen("select-client")}
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
             <ChevronLeft size={22} color="#64748b" />
           </button>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b" }}>Novo Aluno</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b" }}>
+            Novo Aluno
+          </div>
         </div>
 
         <div className="fm-card" style={{ marginBottom: 16 }}>
           <div className="fm-section-title">Dados Pessoais</div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">Nome Completo *</label>
-            <input className="fm-input" placeholder="Nome do aluno" value={newClientData.name || ""} onChange={e => updateNewClient("name", e.target.value)} />
+            <input
+              className="fm-input"
+              placeholder="Nome do aluno"
+              value={newClientData.name || ""}
+              onChange={(e) => updateNewClient("name", e.target.value)}
+            />
           </div>
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
               <label className="fm-label">Gênero</label>
-              <select className="fm-select" value={newClientData.gender || "female"} onChange={e => updateNewClient("gender", e.target.value)}>
+              <select
+                className="fm-select"
+                value={newClientData.gender || "female"}
+                onChange={(e) => updateNewClient("gender", e.target.value)}
+              >
                 <option value="female">Feminino</option>
                 <option value="male">Masculino</option>
                 <option value="other">Outro</option>
@@ -724,7 +1081,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div>
               <label className="fm-label">Etnia</label>
-              <select className="fm-select" value={newClientData.ethnicity || "white"} onChange={e => updateNewClient("ethnicity", e.target.value)}>
+              <select
+                className="fm-select"
+                value={newClientData.ethnicity || "white"}
+                onChange={(e) => updateNewClient("ethnicity", e.target.value)}
+              >
                 <option value="white">Branca</option>
                 <option value="black">Preta</option>
                 <option value="asian">Asiática</option>
@@ -737,11 +1098,20 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
               <label className="fm-label">Data de Nascimento</label>
-              <input type="date" className="fm-input" value={newClientData.birthDate || ""} onChange={e => updateNewClient("birthDate", e.target.value)} />
+              <input
+                type="date"
+                className="fm-input"
+                value={newClientData.birthDate || ""}
+                onChange={(e) => updateNewClient("birthDate", e.target.value)}
+              />
             </div>
             <div>
               <label className="fm-label">Idioma</label>
-              <select className="fm-select" value={newClientData.language || "pt"} onChange={e => updateNewClient("language", e.target.value)}>
+              <select
+                className="fm-select"
+                value={newClientData.language || "pt"}
+                onChange={(e) => updateNewClient("language", e.target.value)}
+              >
                 <option value="pt">Português</option>
                 <option value="en">English</option>
                 <option value="es">Español</option>
@@ -752,8 +1122,22 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div>
               <label className="fm-label">Altura</label>
               <div style={{ display: "flex", gap: 6 }}>
-                <input type="number" className="fm-input" placeholder="170" value={newClientData.height || ""} onChange={e => updateNewClient("height", +e.target.value)} style={{ flex: 1 }} />
-                <select className="fm-select" style={{ width: 64 }} value={newClientData.heightUnit || "cm"} onChange={e => updateNewClient("heightUnit", e.target.value)}>
+                <input
+                  type="number"
+                  className="fm-input"
+                  placeholder="170"
+                  value={newClientData.height || ""}
+                  onChange={(e) => updateNewClient("height", +e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <select
+                  className="fm-select"
+                  style={{ width: 64 }}
+                  value={newClientData.heightUnit || "cm"}
+                  onChange={(e) =>
+                    updateNewClient("heightUnit", e.target.value)
+                  }
+                >
                   <option value="cm">cm</option>
                   <option value="ft">ft</option>
                 </select>
@@ -761,30 +1145,75 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div>
               <label className="fm-label">WhatsApp</label>
-              <input className="fm-input" inputMode="numeric" placeholder="+55 (00) 00000-0000" value={newClientData.whatsapp || "+55 "} onChange={e => updateNewClient("whatsapp", formatBrazilWhatsapp(e.target.value))} />
+              <input
+                className="fm-input"
+                inputMode="numeric"
+                placeholder="+55 (00) 00000-0000"
+                value={newClientData.whatsapp || "+55 "}
+                onChange={(e) =>
+                  updateNewClient(
+                    "whatsapp",
+                    formatBrazilWhatsapp(e.target.value),
+                  )
+                }
+              />
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">E-mail</label>
-            <input type="email" className="fm-input" placeholder="email@exemplo.com" value={newClientData.email || ""} onChange={e => updateNewClient("email", e.target.value)} />
+            <input
+              type="email"
+              className="fm-input"
+              placeholder="email@exemplo.com"
+              value={newClientData.email || ""}
+              onChange={(e) => updateNewClient("email", e.target.value)}
+            />
           </div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">Grupo(s)</label>
-            <select className="fm-select" value={newClientData.groups?.[0] || ""} onChange={e => updateNewClient("groups", e.target.value ? [e.target.value] : [])}>
+            <select
+              className="fm-select"
+              value={newClientData.groups?.[0] || ""}
+              onChange={(e) =>
+                updateNewClient(
+                  "groups",
+                  e.target.value ? [e.target.value] : [],
+                )
+              }
+            >
               <option value="">Sem grupo</option>
-              {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
               <option value="__new__">+ Criar novo grupo...</option>
             </select>
           </div>
           <div>
             <label className="fm-label">Anotações</label>
-            <textarea className="fm-input" rows={3} placeholder="Observações iniciais..." style={{ resize: "none" }}
-              value={newClientData.notes || ""} onChange={e => updateNewClient("notes", e.target.value)} />
+            <textarea
+              className="fm-input"
+              rows={3}
+              placeholder="Observações iniciais..."
+              style={{ resize: "none" }}
+              value={newClientData.notes || ""}
+              onChange={(e) => updateNewClient("notes", e.target.value)}
+            />
           </div>
         </div>
 
-        <button className="fm-btn-primary" style={{ width: "100%" }} onClick={createNewClient} disabled={isSaving}>
-          {isSaving ? "Criando aluno..." : "Criar Aluno e Iniciar Avaliação"} <ChevronRight size={16} style={{ display: "inline", marginLeft: 4 }} />
+        <button
+          className="fm-btn-primary"
+          style={{ width: "100%" }}
+          onClick={createNewClient}
+          disabled={isSaving}
+        >
+          {isSaving ? "Criando aluno..." : "Criar Aluno e Iniciar Avaliação"}{" "}
+          <ChevronRight
+            size={16}
+            style={{ display: "inline", marginLeft: 4 }}
+          />
         </button>
       </div>
     );
@@ -794,7 +1223,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: AVALIAÇÃO — FORMULÁRIO MULTI-STEP
   // ────────────────────────────────────────────────────────
   const AssessmentScreen = () => {
-    const upd = (k: keyof FitMindAssessment, v: unknown) => setAssessment(a => ({ ...a, [k]: v }));
+    const upd = (k: keyof FitMindAssessment, v: unknown) =>
+      setAssessment((a) => ({ ...a, [k]: v }));
 
     const StepDados = () => (
       <div>
@@ -802,12 +1232,20 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
           <div>
             <label className="fm-label">Data da Avaliação</label>
-            <input type="date" className="fm-input" defaultValue={new Date().toISOString().split("T")[0]}
-              onChange={e => upd("date", e.target.value)} />
+            <input
+              type="date"
+              className="fm-input"
+              defaultValue={new Date().toISOString().split("T")[0]}
+              onChange={(e) => upd("date", e.target.value)}
+            />
           </div>
           <div>
             <label className="fm-label">Método</label>
-            <select className="fm-select" onChange={e => upd("method", e.target.value)} defaultValue="bioimpedance">
+            <select
+              className="fm-select"
+              onChange={(e) => upd("method", e.target.value)}
+              defaultValue="bioimpedance"
+            >
               <option value="bioimpedance">Bioimpedância</option>
               <option value="measurements">Medidas (Virtual)</option>
             </select>
@@ -816,25 +1254,67 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div className="fm-grid-3" style={{ marginBottom: 12 }}>
           <div>
             <label className="fm-label">Idade (anos)</label>
-            <input type="number" className="fm-input" placeholder="Ex: 30" onChange={e => upd("age", +e.target.value)} />
+            <input
+              type="number"
+              className="fm-input"
+              placeholder="Ex: 30"
+              onChange={(e) => upd("age", +e.target.value)}
+            />
           </div>
           <div>
             <label className="fm-label">Altura (cm)</label>
-            <input type="number" className="fm-input" placeholder="Ex: 165" onChange={e => upd("height", +e.target.value)} />
+            <input
+              type="number"
+              className="fm-input"
+              placeholder="Ex: 165"
+              onChange={(e) => upd("height", +e.target.value)}
+            />
           </div>
           <div>
             <label className="fm-label">Peso (kg)</label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 68.5" onChange={e => upd("weight", +e.target.value)} />
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 68.5"
+              onChange={(e) => upd("weight", +e.target.value)}
+            />
           </div>
         </div>
-        <div className="fm-card" style={{ background: "var(--fm-primary-light)", border: "none", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          className="fm-card"
+          style={{
+            background: "var(--fm-primary-light)",
+            border: "none",
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
           <Scale size={20} color="var(--fm-primary)" />
           <div>
-            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>IMC Calculado <Tooltip id="bmi" /></div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--fm-primary)" }}>
+            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+              IMC Calculado <Tooltip id="bmi" />
+            </div>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: "var(--fm-primary)",
+              }}
+            >
               {computedBMI > 0 ? `${bmiPercent}%` : "—"}
               {computedBMI > 0 && (
-                <span className="fm-badge" style={{ marginLeft: 8, fontSize: 11, background: getBMICategory(computedBMI).color, color: "#fff" }}>
+                <span
+                  className="fm-badge"
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 11,
+                    background: getBMICategory(computedBMI).color,
+                    color: "#fff",
+                  }}
+                >
                   {getBMICategory(computedBMI).label}
                 </span>
               )}
@@ -849,39 +1329,107 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div className="fm-section-title">Bioimpedância</div>
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
           <div>
-            <label className="fm-label">Gordura Corporal (%) <Tooltip id="bodyFat" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 28.5" onChange={e => upd("bodyFat", +e.target.value)} />
+            <label className="fm-label">
+              Gordura Corporal (%) <Tooltip id="bodyFat" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 28.5"
+              onChange={(e) => upd("bodyFat", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Músculo Esquelético (%) <Tooltip id="skeletalMuscle" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 32.4" onChange={e => upd("skeletalMuscle", +e.target.value)} />
+            <label className="fm-label">
+              Músculo Esquelético (%) <Tooltip id="skeletalMuscle" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 32.4"
+              onChange={(e) => upd("skeletalMuscle", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Massa Muscular (%) <Tooltip id="muscleMass" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 41.8" onChange={e => upd("muscleMass", +e.target.value)} />
+            <label className="fm-label">
+              Massa Muscular (%) <Tooltip id="muscleMass" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 41.8"
+              onChange={(e) => upd("muscleMass", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Gordura Visceral (%) <Tooltip id="visceralFat" /></label>
-            <input type="number" step="0.1" min="0" max="100" className="fm-input" placeholder="Ex: 7.0" onChange={e => upd("visceralFat", +e.target.value)} />
+            <label className="fm-label">
+              Gordura Visceral (%) <Tooltip id="visceralFat" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              className="fm-input"
+              placeholder="Ex: 7.0"
+              onChange={(e) => upd("visceralFat", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Metabolismo Basal (%) <Tooltip id="basalMetabolism" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 100" onChange={e => upd("basalMetabolism", +e.target.value)} />
+            <label className="fm-label">
+              Metabolismo Basal (%) <Tooltip id="basalMetabolism" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 100"
+              onChange={(e) => upd("basalMetabolism", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Idade Corporal (%) <Tooltip id="bodyAge" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 106" onChange={e => upd("bodyAge", +e.target.value)} />
+            <label className="fm-label">
+              Idade Corporal (%) <Tooltip id="bodyAge" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 106"
+              onChange={(e) => upd("bodyAge", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Água Corporal (%) <Tooltip id="bodyWater" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 52.3" onChange={e => upd("bodyWater", +e.target.value)} />
+            <label className="fm-label">
+              Água Corporal (%) <Tooltip id="bodyWater" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 52.3"
+              onChange={(e) => upd("bodyWater", +e.target.value)}
+            />
           </div>
           <div>
-            <label className="fm-label">Massa Óssea (%) <Tooltip id="boneMass" /></label>
-            <input type="number" step="0.1" className="fm-input" placeholder="Ex: 4.2" onChange={e => upd("boneMass", +e.target.value)} />
+            <label className="fm-label">
+              Massa Óssea (%) <Tooltip id="boneMass" />
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              className="fm-input"
+              placeholder="Ex: 4.2"
+              onChange={(e) => upd("boneMass", +e.target.value)}
+            />
           </div>
         </div>
-        <div className="fm-section-title" style={{ marginTop: 16 }}>Análise por Segmento</div>
+        <div className="fm-section-title" style={{ marginTop: 16 }}>
+          Análise por Segmento
+        </div>
         <div className="fm-grid-2">
           {[
             ["Braço Esquerdo (%)", "leftArm"],
@@ -892,8 +1440,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           ].map(([label, key]) => (
             <div key={key}>
               <label className="fm-label">{label}</label>
-              <input type="number" step="0.1" className="fm-input" placeholder="Ex: 30.5"
-                onChange={e => upd("segmentAnalysis", { ...assessment.segmentAnalysis, [key]: +e.target.value })} />
+              <input
+                type="number"
+                step="0.1"
+                className="fm-input"
+                placeholder="Ex: 30.5"
+                onChange={(e) =>
+                  upd("segmentAnalysis", {
+                    ...assessment.segmentAnalysis,
+                    [key]: +e.target.value,
+                  })
+                }
+              />
             </div>
           ))}
         </div>
@@ -906,25 +1464,51 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
           <div>
             <label className="fm-label">PA Sistólica (mmHg)</label>
-            <input type="number" className="fm-input" placeholder="Ex: 120" onChange={e => upd("systolicBP", +e.target.value)} />
+            <input
+              type="number"
+              className="fm-input"
+              placeholder="Ex: 120"
+              onChange={(e) => upd("systolicBP", +e.target.value)}
+            />
           </div>
           <div>
             <label className="fm-label">PA Diastólica (mmHg)</label>
-            <input type="number" className="fm-input" placeholder="Ex: 80" onChange={e => upd("diastolicBP", +e.target.value)} />
+            <input
+              type="number"
+              className="fm-input"
+              placeholder="Ex: 80"
+              onChange={(e) => upd("diastolicBP", +e.target.value)}
+            />
           </div>
           <div>
             <label className="fm-label">Frequência Cardíaca (bpm)</label>
-            <input type="number" className="fm-input" placeholder="Ex: 72" onChange={e => upd("heartRate", +e.target.value)} />
+            <input
+              type="number"
+              className="fm-input"
+              placeholder="Ex: 72"
+              onChange={(e) => upd("heartRate", +e.target.value)}
+            />
           </div>
           <div>
             <label className="fm-label">Glicemia (mg/dL)</label>
-            <input type="number" className="fm-input" placeholder="Ex: 95" onChange={e => upd("bloodGlucose", +e.target.value)} />
+            <input
+              type="number"
+              className="fm-input"
+              placeholder="Ex: 95"
+              onChange={(e) => upd("bloodGlucose", +e.target.value)}
+            />
           </div>
         </div>
-        <div className="fm-section-title" style={{ marginTop: 16 }}>Grupo do Aluno</div>
+        <div className="fm-section-title" style={{ marginTop: 16 }}>
+          Grupo do Aluno
+        </div>
         <select className="fm-select">
           <option value="">Sem grupo (opcional)</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
         </select>
       </div>
     );
@@ -933,21 +1517,46 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       <div>
         <div className="fm-section-title">Anotações</div>
         <div style={{ marginBottom: 16 }}>
-          <label className="fm-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <label
+            className="fm-label"
+            style={{ display: "flex", alignItems: "center", gap: 4 }}
+          >
             <FileText size={13} color="var(--fm-primary)" /> Para o Aluno
           </label>
-          <textarea className="fm-input" rows={5} placeholder="Observações que serão visíveis para o aluno no relatório..."
-            style={{ resize: "none" }} onChange={e => upd("clientNotes", e.target.value)} />
+          <textarea
+            className="fm-input"
+            rows={5}
+            placeholder="Observações que serão visíveis para o aluno no relatório..."
+            style={{ resize: "none" }}
+            onChange={(e) => upd("clientNotes", e.target.value)}
+          />
         </div>
         <div>
-          <label className="fm-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <label
+            className="fm-label"
+            style={{ display: "flex", alignItems: "center", gap: 4 }}
+          >
             <FileText size={13} color="#ef4444" /> Para o Profissional
-            <span style={{ fontSize: 10, background: "#fef2f2", color: "#ef4444", padding: "2px 6px", borderRadius: 4, marginLeft: 4 }}>
+            <span
+              style={{
+                fontSize: 10,
+                background: "#fef2f2",
+                color: "#ef4444",
+                padding: "2px 6px",
+                borderRadius: 4,
+                marginLeft: 4,
+              }}
+            >
               🔒 Não aparece no relatório
             </span>
           </label>
-          <textarea className="fm-input" rows={5} placeholder="Anotações internas — apenas você verá..."
-            style={{ resize: "none" }} onChange={e => upd("professionalNotes", e.target.value)} />
+          <textarea
+            className="fm-input"
+            rows={5}
+            placeholder="Anotações internas — apenas você verá..."
+            style={{ resize: "none" }}
+            onChange={(e) => upd("professionalNotes", e.target.value)}
+          />
         </div>
       </div>
     );
@@ -962,16 +1571,38 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return (
         <div>
           <div className="fm-section-title">Fotos</div>
-          <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#166534" }}>
-            💡 Posicione o aluno em roupa íntima, em pé, braços levemente afastados do corpo, olhando para frente.
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "1.5px solid #bbf7d0",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 16,
+              fontSize: 12,
+              color: "#166534",
+            }}
+          >
+            💡 Posicione o aluno em roupa íntima, em pé, braços levemente
+            afastados do corpo, olhando para frente.
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {VIEWS.map(v => (
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
+            {VIEWS.map((v) => (
               <div key={v.key}>
-                <label className="fm-label" style={{ marginBottom: 6 }}>{v.icon} {v.label}</label>
-                <div className="fm-photo-box" onClick={() => alert(`Selecionar foto: ${v.label}`)}>
+                <label className="fm-label" style={{ marginBottom: 6 }}>
+                  {v.icon} {v.label}
+                </label>
+                <div
+                  className="fm-photo-box"
+                  onClick={() => alert(`Selecionar foto: ${v.label}`)}
+                >
                   <Camera size={24} color="#94a3b8" />
-                  <span style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>Toque para adicionar</span>
+                  <span
+                    style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}
+                  >
+                    Toque para adicionar
+                  </span>
                 </div>
               </div>
             ))}
@@ -983,74 +1614,162 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const StepAgendamento = () => (
       <div>
         <div className="fm-section-title">Próxima Avaliação</div>
-        <div className="fm-card" style={{ marginBottom: 16, border: "2px solid var(--fm-primary-light)", padding: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div
+          className="fm-card"
+          style={{
+            marginBottom: 16,
+            border: "2px solid var(--fm-primary-light)",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
             <Calendar size={20} color="var(--fm-primary)" />
-            <span style={{ fontWeight: 600, color: "#1e293b" }}>Agendar no Google Agenda</span>
+            <span style={{ fontWeight: 600, color: "#1e293b" }}>
+              Agendar no Google Agenda
+            </span>
           </div>
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
               <label className="fm-label">Data</label>
-              <input type="date" className="fm-input" onChange={e => upd("nextAssessmentDate", e.target.value)} />
+              <input
+                type="date"
+                className="fm-input"
+                onChange={(e) => upd("nextAssessmentDate", e.target.value)}
+              />
             </div>
             <div>
               <label className="fm-label">Horário</label>
-              <input type="time" className="fm-input" onChange={e => upd("nextAssessmentTime", e.target.value)} />
+              <input
+                type="time"
+                className="fm-input"
+                onChange={(e) => upd("nextAssessmentTime", e.target.value)}
+              />
             </div>
           </div>
           <button
             className="fm-btn-outline"
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
             onClick={async () => {
-              if (onCreateGoogleCalendarEvent && assessment.nextAssessmentDate && assessment.nextAssessmentTime && selectedClient) {
-                const link = await onCreateGoogleCalendarEvent(assessment.nextAssessmentDate, assessment.nextAssessmentTime, selectedClient.name);
+              if (
+                onCreateGoogleCalendarEvent &&
+                assessment.nextAssessmentDate &&
+                assessment.nextAssessmentTime &&
+                selectedClient
+              ) {
+                const link = await onCreateGoogleCalendarEvent(
+                  assessment.nextAssessmentDate,
+                  assessment.nextAssessmentTime,
+                  selectedClient.name,
+                );
                 window.open(link, "_blank");
               }
-            }}>
+            }}
+          >
             <Calendar size={16} /> Criar Evento no Google Agenda
           </button>
         </div>
       </div>
     );
 
-    const stepComponents = [StepDados, StepBioimpedancia, StepOutros, StepAnotacoes, StepFotos, StepAgendamento];
+    const stepComponents = [
+      StepDados,
+      StepBioimpedancia,
+      StepOutros,
+      StepAnotacoes,
+      StepFotos,
+      StepAgendamento,
+    ];
     const StepComponent = stepComponents[step];
 
     return (
-      <div className="fm-animate" style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <button onClick={() => step > 0 ? setStep(s => s - 1) : setScreen("select-client")}
-            style={{ background: "none", border: "none", cursor: "pointer" }}>
+      <div
+        className="fm-animate"
+        style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 8,
+          }}
+        >
+          <button
+            onClick={() =>
+              step > 0 ? setStep((s) => s - 1) : setScreen("select-client")
+            }
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
             <ChevronLeft size={22} color="#64748b" />
           </button>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>Nova Avaliação</div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>{selectedClient?.name} · {STEPS[step]}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>
+              Nova Avaliação
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              {selectedClient?.name} · {STEPS[step]}
+            </div>
           </div>
         </div>
 
         <div className="fm-step-bar">
           {STEPS.map((_, i) => (
-            <div key={i} className={`fm-step-dot ${i <= step ? "active" : ""}`} />
+            <div
+              key={i}
+              className={`fm-step-dot ${i <= step ? "active" : ""}`}
+            />
           ))}
         </div>
 
-        <div className="fm-card fm-animate" key={step} style={{ marginBottom: 16 }}>
+        <div
+          className="fm-card fm-animate"
+          key={step}
+          style={{ marginBottom: 16 }}
+        >
           {StepComponent()}
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
           {step < STEPS.length - 1 ? (
-            <button className="fm-btn-primary" style={{ flex: 1 }} onClick={() => setStep(s => s + 1)}>
+            <button
+              className="fm-btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => setStep((s) => s + 1)}
+            >
               Próximo <ChevronRight size={16} style={{ display: "inline" }} />
             </button>
           ) : (
-            <button className="fm-btn-primary" style={{ flex: 1, background: "#16a34a" }} onClick={handleSave} disabled={isSaving}>
+            <button
+              className="fm-btn-primary"
+              style={{ flex: 1, background: "#16a34a" }}
+              onClick={handleSave}
+              disabled={isSaving}
+            >
               {isSaving ? "Salvando..." : "✓ Finalizar Avaliação"}
             </button>
           )}
         </div>
-        <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", marginTop: 8 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#94a3b8",
+            textAlign: "center",
+            marginTop: 8,
+          }}
+        >
           Passo {step + 1} de {STEPS.length}
         </div>
       </div>
@@ -1069,8 +1788,22 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const viscCat = getVisceralCategory(a.visceralFat);
     const ageBodyDiff = a.bodyAge ? a.bodyAge - 100 : 0;
 
-    const evalColor = (ev: string) => ({ excellent: "#16a34a", good: "#16a34a", normal: "#16a34a", warning: "#eab308", danger: "#dc2626" }[ev] || "#eab308");
-    const evalLabel = (ev: string) => ({ excellent: "Excelente", good: "Bom", normal: "Normal", warning: "Atenção", danger: "Risco" }[ev] || ev);
+    const evalColor = (ev: string) =>
+      ({
+        excellent: "#16a34a",
+        good: "#16a34a",
+        normal: "#16a34a",
+        warning: "#eab308",
+        danger: "#dc2626",
+      })[ev] || "#eab308";
+    const evalLabel = (ev: string) =>
+      ({
+        excellent: "Excelente",
+        good: "Bom",
+        normal: "Normal",
+        warning: "Atenção",
+        danger: "Risco",
+      })[ev] || ev;
 
     const leanPct = +(100 - (a.bodyFat || 0)).toFixed(1);
     const fatPct = +(a.bodyFat || 0).toFixed(1);
@@ -1079,52 +1812,126 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       { name: "Gordura", value: fatPct, fill: "#fca5a5" },
     ];
 
-    const histWeight = historicalData.length > 0 ? historicalData : [
-      { date: "Jan", peso: +(a.weight * 1.03).toFixed(1) },
-      { date: "Fev", peso: +(a.weight * 1.01).toFixed(1) },
-      { date: "Hoje", peso: a.weight },
-    ];
+    const histWeight =
+      historicalData.length > 0
+        ? historicalData
+        : [
+            { date: "Jan", peso: +(a.weight * 1.03).toFixed(1) },
+            { date: "Fev", peso: +(a.weight * 1.01).toFixed(1) },
+            { date: "Hoje", peso: a.weight },
+          ];
 
-    const histGordura = historicalData.length > 0 ? historicalData : [
-      { date: "Jan", gordura: +(a.bodyFat + 2).toFixed(1), musculo: +(a.skeletalMuscle - 1).toFixed(1) },
-      { date: "Fev", gordura: +(a.bodyFat + 1).toFixed(1), musculo: +(a.skeletalMuscle - 0.5).toFixed(1) },
-      { date: "Hoje", gordura: a.bodyFat, musculo: a.skeletalMuscle },
-    ];
+    const histGordura =
+      historicalData.length > 0
+        ? historicalData
+        : [
+            {
+              date: "Jan",
+              gordura: +(a.bodyFat + 2).toFixed(1),
+              musculo: +(a.skeletalMuscle - 1).toFixed(1),
+            },
+            {
+              date: "Fev",
+              gordura: +(a.bodyFat + 1).toFixed(1),
+              musculo: +(a.skeletalMuscle - 0.5).toFixed(1),
+            },
+            { date: "Hoje", gordura: a.bodyFat, musculo: a.skeletalMuscle },
+          ];
 
     return (
-      <div className="fm-animate fm-result-screen" style={{ background: "#050505", minHeight: "100vh" }}>
+      <div
+        className="fm-animate fm-result-screen"
+        style={{ background: "#050505", minHeight: "100vh" }}
+      >
         {/* Header */}
-        <div style={{ background: "var(--fm-primary)", padding: "24px 24px 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", cursor: "pointer" }}>
+        <div
+          style={{ background: "var(--fm-primary)", padding: "24px 24px 32px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 20,
+            }}
+          >
+            <button
+              onClick={() => setScreen("home")}
+              style={{ background: "none", border: "none", cursor: "pointer" }}
+            >
               <ChevronLeft size={22} color="#ffffffaa" />
             </button>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>Resultado da Avaliação</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>
+              Resultado da Avaliação
+            </div>
           </div>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-            <div style={{ width: 52, height: 52, borderRadius: 50, background: "#ffffff22", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 50,
+                background: "#ffffff22",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <User size={26} color="#fff" />
             </div>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{client.name}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>
+                {client.name}
+              </div>
               <div style={{ fontSize: 13, color: "#ffffff99" }}>
-                {client.gender === "male" ? "Masculino" : "Feminino"} · {a.age} anos · {a.height}cm · {new Date(a.date || Date.now()).toLocaleDateString("pt-BR")}
+                {client.gender === "male" ? "Masculino" : "Feminino"} · {a.age}{" "}
+                anos · {a.height}cm ·{" "}
+                {new Date(a.date || Date.now()).toLocaleDateString("pt-BR")}
               </div>
             </div>
           </div>
         </div>
 
-          <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
+        <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
           {/* Avatar Row */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8, textAlign: "center" }}>Perfil Corporal</div>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#64748b",
+                marginBottom: 8,
+                textAlign: "center",
+              }}
+            >
+              Perfil Corporal
+            </div>
             <div className="fm-avatar-row">
               {AvatarLabels.map((label, i) => (
-                <AvatarFigure key={i} level={i} active={i === avatarIndex} label={label} gender={client.gender} />
+                <AvatarFigure
+                  key={i}
+                  level={i}
+                  active={i === avatarIndex}
+                  label={label}
+                  gender={client.gender}
+                />
               ))}
             </div>
             <div style={{ textAlign: "center", marginTop: 8 }}>
-              <span className="fm-badge" style={{ background: evalColor(bmiCat.avatar <= 1 ? "normal" : bmiCat.avatar <= 3 ? "warning" : "danger"), color: "#fff", fontSize: 12 }}>
+              <span
+                className="fm-badge"
+                style={{
+                  background: evalColor(
+                    bmiCat.avatar <= 1
+                      ? "normal"
+                      : bmiCat.avatar <= 3
+                        ? "warning"
+                        : "danger",
+                  ),
+                  color: "#fff",
+                  fontSize: 12,
+                }}
+              >
                 {bmiCat.label} · IMC {formatPercent(bmiPercent)}
               </span>
             </div>
@@ -1134,26 +1941,78 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Composição Corporal</div>
             {[
-              { label: "Peso", tooltip: null, value: formatPercent(a.weight), eval: "normal", evalLabel: "Percentual informado" },
-              { label: "Músculo Esquelético", tooltip: "skeletalMuscle", value: formatPercent(a.skeletalMuscle), eval: fatCat.eval, evalLabel: evalLabel(fatCat.eval) },
-              { label: "Massa Muscular", tooltip: "muscleMass", value: formatPercent(a.muscleMass), eval: "normal", evalLabel: "Total" },
+              {
+                label: "Peso",
+                tooltip: null,
+                value: formatPercent(a.weight),
+                eval: "normal",
+                evalLabel: "Percentual informado",
+              },
+              {
+                label: "Músculo Esquelético",
+                tooltip: "skeletalMuscle",
+                value: formatPercent(a.skeletalMuscle),
+                eval: fatCat.eval,
+                evalLabel: evalLabel(fatCat.eval),
+              },
+              {
+                label: "Massa Muscular",
+                tooltip: "muscleMass",
+                value: formatPercent(a.muscleMass),
+                eval: "normal",
+                evalLabel: "Total",
+              },
               {
                 label: "Idade Corporal",
                 tooltip: "bodyAge",
                 value: formatPercent(a.bodyAge),
-                eval: ageBodyDiff > 5 ? "danger" : ageBodyDiff > 0 ? "warning" : "excellent",
-                evalLabel: ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${ageBodyDiff}%`,
+                eval:
+                  ageBodyDiff > 5
+                    ? "danger"
+                    : ageBodyDiff > 0
+                      ? "warning"
+                      : "excellent",
+                evalLabel:
+                  ageBodyDiff === 0
+                    ? "Igual"
+                    : ageBodyDiff > 0
+                      ? `+${ageBodyDiff}%`
+                      : `${ageBodyDiff}%`,
               },
-            ].map(row => (
+            ].map((row) => (
               <div key={row.label} className="fm-result-row">
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "#1e293b",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
                     {row.label} {row.tooltip && <Tooltip id={row.tooltip} />}
                   </div>
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{row.value}</div>
-                <span className="fm-badge" style={{ background: evalColor(row.eval), color: "#fff", minWidth: 70, textAlign: "center" }}>
-                  <span className="fm-eval-dot" style={{ background: evalColor(row.eval), marginRight: 4 }} />
+                <div
+                  style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}
+                >
+                  {row.value}
+                </div>
+                <span
+                  className="fm-badge"
+                  style={{
+                    background: evalColor(row.eval),
+                    color: "#fff",
+                    minWidth: 70,
+                    textAlign: "center",
+                  }}
+                >
+                  <span
+                    className="fm-eval-dot"
+                    style={{ background: evalColor(row.eval), marginRight: 4 }}
+                  />
                   {row.evalLabel}
                 </span>
               </div>
@@ -1164,17 +2023,59 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Diagnóstico de Obesidade</div>
             {[
-              { label: "IMC", tooltip: "bmi", value: formatPercent(bmiPercent), color: bmiCat.color, evalText: bmiCat.label },
-              { label: "Gordura Corporal", tooltip: "bodyFat", value: formatPercent(a.bodyFat), color: evalColor(fatCat.eval), evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})` },
-              { label: "Gordura Visceral", tooltip: "visceralFat", value: formatPercent(a.visceralFat), color: viscCat.color, evalText: viscCat.label },
-              { label: "Metabolismo Basal", tooltip: "basalMetabolism", value: formatPercent(a.basalMetabolism), color: "#60a5fa", evalText: "Harris-Benedict" },
-            ].map(row => (
+              {
+                label: "IMC",
+                tooltip: "bmi",
+                value: formatPercent(bmiPercent),
+                color: bmiCat.color,
+                evalText: bmiCat.label,
+              },
+              {
+                label: "Gordura Corporal",
+                tooltip: "bodyFat",
+                value: formatPercent(a.bodyFat),
+                color: evalColor(fatCat.eval),
+                evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})`,
+              },
+              {
+                label: "Gordura Visceral",
+                tooltip: "visceralFat",
+                value: formatPercent(a.visceralFat),
+                color: viscCat.color,
+                evalText: viscCat.label,
+              },
+              {
+                label: "Metabolismo Basal",
+                tooltip: "basalMetabolism",
+                value: formatPercent(a.basalMetabolism),
+                color: "#60a5fa",
+                evalText: "Harris-Benedict",
+              },
+            ].map((row) => (
               <div key={row.label} className="fm-result-row">
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: 4 }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
                   {row.label} <Tooltip id={row.tooltip} />
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}>{row.value}</div>
-                <span className="fm-badge" style={{ background: row.color, color: "#fff", fontSize: 11 }}>{row.evalText}</span>
+                <div
+                  style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}
+                >
+                  {row.value}
+                </div>
+                <span
+                  className="fm-badge"
+                  style={{ background: row.color, color: "#fff", fontSize: 11 }}
+                >
+                  {row.evalText}
+                </span>
               </div>
             ))}
           </div>
@@ -1182,17 +2083,54 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           {/* Água & Óssea */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Outros Indicadores</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
               {[
-                { icon: <Droplets size={18} color="#60a5fa" />, label: "Água Corporal", tooltip: "bodyWater", value: `${a.bodyWater}%`, bg: "#eff6ff" },
-                { icon: <Bone size={18} color="#a78bfa" />, label: "Massa Óssea", tooltip: "boneMass", value: `${a.boneMass}%`, bg: "#f5f3ff" },
-              ].map(item => (
-                <div key={item.label} style={{ background: item.bg, borderRadius: 12, padding: "14px", textAlign: "center" }}>
+                {
+                  icon: <Droplets size={18} color="#60a5fa" />,
+                  label: "Água Corporal",
+                  tooltip: "bodyWater",
+                  value: `${a.bodyWater}%`,
+                  bg: "#eff6ff",
+                },
+                {
+                  icon: <Bone size={18} color="#a78bfa" />,
+                  label: "Massa Óssea",
+                  tooltip: "boneMass",
+                  value: `${a.boneMass}%`,
+                  bg: "#f5f3ff",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    background: item.bg,
+                    borderRadius: 12,
+                    padding: "14px",
+                    textAlign: "center",
+                  }}
+                >
                   {item.icon}
-                  <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginTop: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#64748b",
+                      fontWeight: 600,
+                      marginTop: 4,
+                    }}
+                  >
                     {item.label} <Tooltip id={item.tooltip} />
                   </div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#1e293b" }}>{item.value}</div>
+                  <div
+                    style={{ fontSize: 20, fontWeight: 800, color: "#1e293b" }}
+                  >
+                    {item.value}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1202,28 +2140,73 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           {(a.systolicBP || a.heartRate) && (
             <div className="fm-card" style={{ marginBottom: 12 }}>
               <div className="fm-section-title">Dados Cardiovasculares</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 10,
+                }}
+              >
                 {a.systolicBP && (
-                  <div style={{ textAlign: "center", background: "#fef2f2", borderRadius: 10, padding: 12 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      background: "#fef2f2",
+                      borderRadius: 10,
+                      padding: 12,
+                    }}
+                  >
                     <Heart size={16} color="#ef4444" />
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>PA Sistólica</div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{a.systolicBP}</div>
+                    <div
+                      style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}
+                    >
+                      PA Sistólica
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>
+                      {a.systolicBP}
+                    </div>
                     <div style={{ fontSize: 10, color: "#94a3b8" }}>mmHg</div>
                   </div>
                 )}
                 {a.diastolicBP && (
-                  <div style={{ textAlign: "center", background: "#fef2f2", borderRadius: 10, padding: 12 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      background: "#fef2f2",
+                      borderRadius: 10,
+                      padding: 12,
+                    }}
+                  >
                     <Heart size={16} color="#f87171" />
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>PA Diastólica</div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{a.diastolicBP}</div>
+                    <div
+                      style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}
+                    >
+                      PA Diastólica
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>
+                      {a.diastolicBP}
+                    </div>
                     <div style={{ fontSize: 10, color: "#94a3b8" }}>mmHg</div>
                   </div>
                 )}
                 {a.heartRate && (
-                  <div style={{ textAlign: "center", background: "#fff7ed", borderRadius: 10, padding: 12 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      background: "#fff7ed",
+                      borderRadius: 10,
+                      padding: 12,
+                    }}
+                  >
                     <Activity size={16} color="#fb923c" />
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Freq. Cardíaca</div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{a.heartRate}</div>
+                    <div
+                      style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}
+                    >
+                      Freq. Cardíaca
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>
+                      {a.heartRate}
+                    </div>
                     <div style={{ fontSize: 10, color: "#94a3b8" }}>bpm</div>
                   </div>
                 )}
@@ -1240,7 +2223,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} domain={["auto", "auto"]} />
                 <RechartsTooltip />
-                <Line type="monotone" dataKey="peso" stroke={themeColor} strokeWidth={2.5} dot={{ fill: themeColor, r: 4 }} />
+                <Line
+                  type="monotone"
+                  dataKey="peso"
+                  stroke={themeColor}
+                  strokeWidth={2.5}
+                  dot={{ fill: themeColor, r: 4 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1250,18 +2239,59 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ display: "flex", alignItems: "center" }}>
               <ResponsiveContainer width="50%" height={150}>
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} dataKey="value">
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={65}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
               <div style={{ flex: 1 }}>
                 {pieData.map((d, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <span style={{ width: 12, height: 12, borderRadius: 3, background: d.fill, display: "inline-block" }} />
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 3,
+                        background: d.fill,
+                        display: "inline-block",
+                      }}
+                    />
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#1e293b" }}>{d.name}</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>{d.value}%</div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#1e293b",
+                        }}
+                      >
+                        {d.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 800,
+                          color: "#1e293b",
+                        }}
+                      >
+                        {d.value}%
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1270,7 +2300,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
-            <div className="fm-section-title">% Gordura vs Músculo — Evolução</div>
+            <div className="fm-section-title">
+              % Gordura vs Músculo — Evolução
+            </div>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={histGordura}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -1278,26 +2310,98 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 <YAxis tick={{ fontSize: 11 }} />
                 <RechartsTooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="gordura" name="% Gordura" fill="#fca5a5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="musculo" name="% Músculo" fill={themeColor} radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="gordura"
+                  name="% Gordura"
+                  fill="#fca5a5"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="musculo"
+                  name="% Músculo"
+                  fill={themeColor}
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Idade Corporal (%)</div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "8px 0" }}>
-              <div style={{ textAlign: "center", flex: 1, background: "#f0fdf4", borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Referência</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: "#1e293b" }}>{a.age}</div>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "center",
+                padding: "8px 0",
+              }}
+            >
+              <div
+                style={{
+                  textAlign: "center",
+                  flex: 1,
+                  background: "#f0fdf4",
+                  borderRadius: 12,
+                  padding: 16,
+                }}
+              >
+                <div
+                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
+                >
+                  Referência
+                </div>
+                <div
+                  style={{ fontSize: 36, fontWeight: 900, color: "#1e293b" }}
+                >
+                  {a.age}
+                </div>
                 <div style={{ fontSize: 12, color: "#64748b" }}>anos</div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", color: "#94a3b8", fontSize: 20 }}>→</div>
-              <div style={{ textAlign: "center", flex: 1, background: ageBodyDiff <= 0 ? "#f0fdf4" : "#fef2f2", borderRadius: 12, padding: 16 }}>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Idade Corporal</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444" }}>{formatPercent(a.bodyAge)}</div>
-                <div style={{ fontSize: 12, color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444", fontWeight: 700 }}>
-                  {ageBodyDiff === 0 ? "Igual" : ageBodyDiff > 0 ? `+${ageBodyDiff}%` : `${Math.abs(ageBodyDiff)}% abaixo 🎉`}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  color: "#94a3b8",
+                  fontSize: 20,
+                }}
+              >
+                →
+              </div>
+              <div
+                style={{
+                  textAlign: "center",
+                  flex: 1,
+                  background: ageBodyDiff <= 0 ? "#f0fdf4" : "#fef2f2",
+                  borderRadius: 12,
+                  padding: 16,
+                }}
+              >
+                <div
+                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
+                >
+                  Idade Corporal
+                </div>
+                <div
+                  style={{
+                    fontSize: 36,
+                    fontWeight: 900,
+                    color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444",
+                  }}
+                >
+                  {formatPercent(a.bodyAge)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444",
+                    fontWeight: 700,
+                  }}
+                >
+                  {ageBodyDiff === 0
+                    ? "Igual"
+                    : ageBodyDiff > 0
+                      ? `+${ageBodyDiff}%`
+                      : `${Math.abs(ageBodyDiff)}% abaixo 🎉`}
                 </div>
               </div>
             </div>
@@ -1305,38 +2409,92 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Fontes de Referência</div>
-            <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>{CLINICAL_SOURCES}</div>
+            <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+              {CLINICAL_SOURCES}
+            </div>
           </div>
 
           {/* Anotações para o cliente */}
           {a.clientNotes && (
-            <div className="fm-card" style={{ marginBottom: 12, borderLeft: "4px solid var(--fm-primary)" }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--fm-primary)", marginBottom: 6 }}>📋 Anotações do Profissional</div>
-              <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.6 }}>{a.clientNotes}</div>
+            <div
+              className="fm-card"
+              style={{
+                marginBottom: 12,
+                borderLeft: "4px solid var(--fm-primary)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--fm-primary)",
+                  marginBottom: 6,
+                }}
+              >
+                📋 Anotações do Profissional
+              </div>
+              <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.6 }}>
+                {a.clientNotes}
+              </div>
             </div>
           )}
 
           {/* Rodapé do Coach */}
           <div className="fm-coach-footer">
             {coach.logo && (
-              <img src={coach.logo} alt="Logo" style={{ width: 48, height: 48, borderRadius: 10, objectFit: "cover" }} />
+              <img
+                src={coach.logo}
+                alt="Logo"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 10,
+                  objectFit: "cover",
+                }}
+              />
             )}
             <div>
               <div style={{ fontWeight: 800, fontSize: 16 }}>{coach.name}</div>
-              {coach.specialty && <div style={{ fontSize: 12, opacity: 0.8 }}>{coach.specialty}</div>}
-              {coach.email && <div style={{ fontSize: 12, opacity: 0.7 }}>{coach.email}</div>}
+              {coach.specialty && (
+                <div style={{ fontSize: 12, opacity: 0.8 }}>
+                  {coach.specialty}
+                </div>
+              )}
+              {coach.email && (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>{coach.email}</div>
+              )}
             </div>
-            <div style={{ marginLeft: "auto", background: "#ffffff22", borderRadius: 10, padding: "8px 14px", fontSize: 12, textAlign: "center" }}>
+            <div
+              style={{
+                marginLeft: "auto",
+                background: "#ffffff22",
+                borderRadius: 10,
+                padding: "8px 14px",
+                fontSize: 12,
+                textAlign: "center",
+              }}
+            >
               <div style={{ fontWeight: 700 }}>FitMind Shape</div>
               <div style={{ opacity: 0.7 }}>Avaliação corporal</div>
             </div>
           </div>
 
           <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-            <button className="fm-btn-outline" style={{ flex: 1 }} onClick={() => { setStep(0); setScreen("assessment"); }}>
+            <button
+              className="fm-btn-outline"
+              style={{ flex: 1 }}
+              onClick={() => {
+                setStep(0);
+                setScreen("assessment");
+              }}
+            >
               Editar Dados
             </button>
-            <button className="fm-btn-primary" style={{ flex: 1 }} onClick={() => window.print()}>
+            <button
+              className="fm-btn-primary"
+              style={{ flex: 1 }}
+              onClick={() => window.print()}
+            >
               Gerar Relatório
             </button>
           </div>
@@ -1348,7 +2506,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // RENDER PRINCIPAL
   // ────────────────────────────────────────────────────────
   return (
-    <div className="fm-app" style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily }}>
+    <div
+      className="fm-app"
+      style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily }}
+    >
       <style>{css}</style>
       {screen === "home" && HomeScreen()}
       {screen === "select-client" && SelectClientScreen()}
