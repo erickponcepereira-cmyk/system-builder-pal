@@ -503,7 +503,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     "Agendamento",
   ];
 
-  const updateNewClient = (key: keyof FitMindClient, value: any) => {
+  const updateNewClient = (key: keyof FitMindClient, value: unknown) => {
     setNewClientData((current) => ({ ...current, [key]: value }));
   };
 
@@ -776,7 +776,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: AVALIAÇÃO — FORMULÁRIO MULTI-STEP
   // ────────────────────────────────────────────────────────
   const AssessmentScreen = () => {
-    const upd = (k: keyof FitMindAssessment, v: any) => setAssessment(a => ({ ...a, [k]: v }));
+    const upd = (k: keyof FitMindAssessment, v: unknown) => setAssessment(a => ({ ...a, [k]: v }));
 
     const StepDados = () => (
       <div>
