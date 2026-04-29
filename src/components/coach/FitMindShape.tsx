@@ -1018,7 +1018,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         </div>
 
         <div className="fm-card fm-animate" key={step} style={{ marginBottom: 16 }}>
-          <StepComponent />
+          {StepComponent()}
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
