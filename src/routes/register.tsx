@@ -495,7 +495,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
               </label>
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
+                <Button variant="outline" onClick={() => { setFormError(null); setStep(2); }} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
                   <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
                 </Button>
                 <Button onClick={handleSubmit} className="flex-1" disabled={loading}>
