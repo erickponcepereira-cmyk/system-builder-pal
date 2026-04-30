@@ -645,6 +645,11 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               </p>
             </div>
           )}
+          {formError && (
+            <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+              {formError}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label className="text-white/70">Nome completo</Label>
