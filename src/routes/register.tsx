@@ -637,7 +637,25 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
-            {!referral && <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />}
+            {referral ? (
+              <div className="space-y-2">
+                <Label className="text-white/70">Coach indicador</Label>
+                <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-white">
+                      {referralCoachName || "Carregando coach..."}
+                    </span>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider text-primary/80 font-bold">Vinculado</span>
+                </div>
+                <p className="text-[11px] text-white/40">
+                  Coach definido automaticamente pela sua indicação e não pode ser alterado.
+                </p>
+              </div>
+            ) : (
+              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+            )}
 
             <div className="space-y-2">
               <Label className="text-white/70">Senha</Label>
