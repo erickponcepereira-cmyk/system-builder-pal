@@ -523,6 +523,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [referral, setReferral] = useState<ReferralContext | null>(null);
+  const [referralCoachName, setReferralCoachName] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -533,6 +534,21 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       setReferral(parsed);
       if (parsed.coachId) {
         setSelectedCoach({ id: parsed.coachId, profileId: "", name: parsed.sponsorName, referralCode: parsed.code } as unknown as CoachOption);
+        // Se o sponsor for coach, o nome dele já é o nome do coach
+        if (parsed.kind === "coach") {
+          setReferralCoachName(parsed.sponsorName);
+        } else {
+          // Se o sponsor for um aluno (padrinho), buscamos o nome do coach vinculado
+          (async () => {
+            const { data } = await supabase
+              .from("coaches")
+              .select("profiles!coaches_profile_id_fkey(name)")
+              .eq("id", parsed.coachId!)
+              .maybeSingle();
+              const coachName = (data as unknown as { profiles?: { name?: string | null } } | null)?.profiles?.name || "Coach vinculado";
+            setReferralCoachName(coachName);
+          })();
+        }
       }
     } catch {
       /* ignore */
