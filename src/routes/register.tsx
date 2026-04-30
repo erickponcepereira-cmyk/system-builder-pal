@@ -221,35 +221,38 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
     }
   }, []);
 
+  const fail = (msg: string) => {
+    setFormError(msg);
+    toast.error(msg);
+    return false;
+  };
+
   const validateStep1 = () => {
-    if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return false;
-    }
-    if (password.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres");
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      toast.error("A senha deve ter pelo menos 1 letra maiúscula");
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      toast.error("A senha deve ter pelo menos 1 número");
-      return false;
-    }
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem");
-      return false;
-    }
+    if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
+      return fail("Preencha todos os campos obrigatórios desta etapa.");
+    if (!email.includes("@") || !email.includes("."))
+      return fail("E-mail inválido. Use o formato nome@dominio.com.");
+    if (cpf.replace(/\D/g, "").length !== 11)
+      return fail("CPF incompleto. Digite os 11 dígitos.");
+    if (phone.replace(/\D/g, "").length < 10)
+      return fail("WhatsApp incompleto. Inclua DDD + número.");
+    if (password.length < 8)
+      return fail("A senha deve ter no mínimo 8 caracteres.");
+    if (!/[A-Z]/.test(password))
+      return fail("A senha deve ter pelo menos 1 letra maiúscula.");
+    if (!/[0-9]/.test(password))
+      return fail("A senha deve ter pelo menos 1 número.");
+    if (password !== confirmPassword)
+      return fail("As senhas não coincidem. Confira a confirmação.");
+    setFormError(null);
     return true;
   };
 
   const validateStep2 = () => {
-    if (!cep || !number) {
-      toast.error("Preencha CEP e número");
-      return false;
-    }
+    if (!cep || cep.replace(/\D/g, "").length !== 8)
+      return fail("Informe um CEP válido (8 dígitos).");
+    if (!number) return fail("Informe o número do endereço.");
+    setFormError(null);
     return true;
   };
 
