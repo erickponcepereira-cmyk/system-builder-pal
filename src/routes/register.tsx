@@ -252,10 +252,6 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       toast.error("Aceite os termos de uso para continuar");
       return;
     }
-    if (!pixKey) {
-      toast.error("Informe sua chave PIX");
-      return;
-    }
     if (!selectedCoach) {
       toast.error("Selecione o coach que te indicou");
       return;
@@ -286,12 +282,6 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             uplineCoachId: selectedCoach.id,
             referralCode,
             referralLink: `${window.location.origin}/r/${referralCode}`,
-            pixKey,
-            pixKeyType,
-            bankName,
-            bankAgency,
-            bankAccount,
-            bankAccountType,
           },
         },
       });
