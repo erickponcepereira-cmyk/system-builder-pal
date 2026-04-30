@@ -505,6 +505,14 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
 // ============================================================
 // STUDENT REGISTRATION (simpler)
 // ============================================================
+type ReferralContext = {
+  code: string;
+  kind: "coach" | "student";
+  sponsorName: string;
+  coachId: string | null;
+  referredByStudentId: string | null;
+};
+
 function StudentRegistration({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -514,6 +522,22 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
+  const [referral, setReferral] = useState<ReferralContext | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("fitmind_referral");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as ReferralContext;
+      if (!parsed?.code) return;
+      setReferral(parsed);
+      if (parsed.coachId) {
+        setSelectedCoach({ id: parsed.coachId, name: parsed.sponsorName, referralCode: parsed.code } as CoachOption);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -521,7 +545,8 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       toast.error("A senha deve ter no mínimo 8 caracteres");
       return;
     }
-    if (!selectedCoach) {
+    const coachIdToUse = referral?.coachId || selectedCoach?.id;
+    if (!coachIdToUse) {
       toast.error("Selecione seu coach");
       return;
     }
@@ -537,12 +562,21 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
           name,
           email,
           phone,
-          student: { coachId: selectedCoach.id },
+          student: {
+            coachId: coachIdToUse,
+            referredByStudentId: referral?.referredByStudentId || null,
+            referralCode: referral?.code || null,
+          },
         },
       });
 
+      sessionStorage.removeItem("fitmind_referral");
       sessionStorage.setItem("fitmind_selected_area", "student");
-      toast.success("Conta de aluno criada com sucesso!");
+      toast.success(
+        referral
+          ? `Conta criada! Você foi vinculado(a) a ${referral.sponsorName}.`
+          : "Conta de aluno criada com sucesso!"
+      );
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) window.location.assign("/student");
       else navigate({ to: "/login" });
