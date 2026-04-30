@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload, UserCheck } from "lucide-react";
 import fitmindLogo from "@/assets/fitmind-logo.png";
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -523,6 +523,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [referral, setReferral] = useState<ReferralContext | null>(null);
+  const [referralCoachName, setReferralCoachName] = useState<string>("");
 
   useEffect(() => {
     try {
@@ -533,6 +534,21 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       setReferral(parsed);
       if (parsed.coachId) {
         setSelectedCoach({ id: parsed.coachId, profileId: "", name: parsed.sponsorName, referralCode: parsed.code } as unknown as CoachOption);
+        // Se o sponsor for coach, o nome dele já é o nome do coach
+        if (parsed.kind === "coach") {
+          setReferralCoachName(parsed.sponsorName);
+        } else {
+          // Se o sponsor for um aluno (padrinho), buscamos o nome do coach vinculado
+          (async () => {
+            const { data } = await supabase
+              .from("coaches")
+              .select("profiles!coaches_profile_id_fkey(name)")
+              .eq("id", parsed.coachId!)
+              .maybeSingle();
+              const coachName = (data as unknown as { profiles?: { name?: string | null } } | null)?.profiles?.name || "Coach vinculado";
+            setReferralCoachName(coachName);
+          })();
+        }
       }
     } catch {
       /* ignore */
@@ -621,7 +637,25 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
-            {!referral && <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />}
+            {referral ? (
+              <div className="space-y-2">
+                <Label className="text-white/70">Coach indicador</Label>
+                <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-white">
+                      {referralCoachName || "Carregando coach..."}
+                    </span>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider text-primary/80 font-bold">Vinculado</span>
+                </div>
+                <p className="text-[11px] text-white/40">
+                  Coach definido automaticamente pela sua indicação e não pode ser alterado.
+                </p>
+              </div>
+            ) : (
+              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+            )}
 
             <div className="space-y-2">
               <Label className="text-white/70">Senha</Label>
