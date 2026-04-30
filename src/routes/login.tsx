@@ -156,9 +156,7 @@ function LoginPage() {
       });
 
       if (error) {
-        const message = error.message === "Invalid login credentials"
-          ? "E-mail ou senha incorretos. Confira se não há espaço, letra trocada ou senha errada."
-          : error.message;
+        const message = translateAuthError(error);
         setFormError(message);
         toast.error(message);
         return;
