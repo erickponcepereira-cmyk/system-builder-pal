@@ -456,47 +456,8 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             <div className="space-y-4">
               <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
 
-              <div className="space-y-2">
-                <Label className="text-white/70">Tipo da chave PIX *</Label>
-                <select
-                  value={pixKeyType}
-                  onChange={(e) => setPixKeyType(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="cpf">CPF</option>
-                  <option value="email">E-mail</option>
-                  <option value="phone">Telefone</option>
-                  <option value="random">Aleatória</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">Chave PIX *</Label>
-                <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="Sua chave PIX" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">Banco</Label>
-                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Nome do banco" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-white/70">Agência</Label>
-                  <Input value={bankAgency} onChange={(e) => setBankAgency(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white/70">Conta</Label>
-                  <Input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">Tipo de conta</Label>
-                <select
-                  value={bankAccountType}
-                  onChange={(e) => setBankAccountType(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-white/10 bg-white/5 px-3 py-1 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="corrente">Corrente</option>
-                  <option value="poupanca">Poupança</option>
-                </select>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/60">
+                Os dados bancários (chave PIX e conta) serão solicitados apenas no momento do seu primeiro saque, na aba <span className="text-white">Carteira</span>. Eles ficam salvos para futuros pagamentos.
               </div>
 
               <label className="flex items-start gap-3 pt-2 cursor-pointer">
