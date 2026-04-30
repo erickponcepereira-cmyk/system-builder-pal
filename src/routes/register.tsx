@@ -577,17 +577,16 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres");
-      return;
-    }
+    const setErr = (m: string) => { setFormError(m); toast.error(m); };
+    if (!name.trim()) return setErr("Informe seu nome completo.");
+    if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido. Use o formato nome@dominio.com.");
+    if (phone.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto. Inclua DDD + número.");
+    if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
-    if (!coachIdToUse) {
-      toast.error("Selecione seu coach");
-      return;
-    }
+    if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
 
     setLoading(true);
+    setFormError(null);
     try {
       const user = await createOrRecoverAuthUser(email, password, name, "student");
 
@@ -617,7 +616,9 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       if (sessionData.session) window.location.assign("/student");
       else navigate({ to: "/login" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar conta.");
+      const friendly = translateAuthError(error);
+      setFormError(friendly);
+      toast.error(friendly);
     } finally {
       setLoading(false);
     }
