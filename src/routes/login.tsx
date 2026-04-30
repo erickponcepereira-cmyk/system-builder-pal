@@ -170,8 +170,8 @@ function LoginPage() {
         setFormError(message);
         toast.error(message);
       }
-    } catch {
-      const message = "Erro ao fazer login. Tente novamente.";
+    } catch (err) {
+      const message = translateAuthError(err);
       setFormError(message);
       toast.error(message);
     } finally {
