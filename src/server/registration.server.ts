@@ -127,7 +127,20 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
         { onConflict: "profile_id" }
       );
 
-      if (!coachError) return { ok: true, profileId: profile.id, role: input.role };
+      if (!coachError) {
+        // Cria também um registro de aluno para o coach, vinculado ao próprio
+        // coach indicador (upline). Assim o coach pode acessar a área do aluno
+        // e participar dos desafios normalmente.
+        const { error: selfStudentError } = await supabaseAdmin.from("students").upsert(
+          {
+            profile_id: profile.id,
+            coach_id: input.coach.uplineCoachId,
+          },
+          { onConflict: "profile_id" }
+        );
+        if (selfStudentError) throw new Error(selfStudentError.message);
+        return { ok: true, profileId: profile.id, role: input.role };
+      }
       if (coachError.code !== "23505") throw new Error(coachError.message);
       referralCode = makeReferralCode();
     }
