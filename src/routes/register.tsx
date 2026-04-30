@@ -341,6 +341,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
+          {formError && (
+            <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+              {formError}
+            </div>
+          )}
           {/* Step 1 */}
           {step === 1 && (
             <div className="space-y-4">
