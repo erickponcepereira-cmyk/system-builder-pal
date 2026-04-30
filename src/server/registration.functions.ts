@@ -20,8 +20,8 @@ const registrationSchema = z.object({
   coach: z
     .object({
       uplineCoachId: z.string().uuid(),
-      pixKey: z.string().min(1),
-      pixKeyType: z.string().min(1),
+      pixKey: z.string().optional().nullable(),
+      pixKeyType: z.string().optional().nullable(),
       bankName: z.string().optional().nullable(),
       bankAgency: z.string().optional().nullable(),
       bankAccount: z.string().optional().nullable(),
