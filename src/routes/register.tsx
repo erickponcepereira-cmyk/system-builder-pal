@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload, UserCheck } from "lucide-react";
 import fitmindLogo from "@/assets/fitmind-logo.png";
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
