@@ -17,8 +17,8 @@ export type FinalizeRegistrationInput = {
   zipCode?: string | null;
   coach?: {
     uplineCoachId: string;
-    pixKey: string;
-    pixKeyType: string;
+    pixKey?: string | null;
+    pixKeyType?: string | null;
     bankName?: string | null;
     bankAgency?: string | null;
     bankAccount?: string | null;
