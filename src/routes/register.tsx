@@ -320,7 +320,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
                 }`}
               />
               <p className="mt-1 text-[10px] text-white/40 text-center">
-                {s === 1 ? "Dados Pessoais" : s === 2 ? "Endereço" : "Bancário"}
+                {s === 1 ? "Dados Pessoais" : s === 2 ? "Endereço" : "Indicação"}
               </p>
             </div>
           ))}
