@@ -28,6 +28,8 @@ export type FinalizeRegistrationInput = {
   };
   student?: {
     coachId: string;
+    referredByStudentId?: string | null;
+    referralCode?: string | null;
   };
 };
 
