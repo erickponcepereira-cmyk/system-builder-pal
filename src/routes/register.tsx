@@ -599,6 +599,15 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
+          {referral && (
+            <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-white/80">
+              <p className="font-semibold text-primary">Convite válido</p>
+              <p className="mt-1">
+                Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>
+                {referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.
+              </p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label className="text-white/70">Nome completo</Label>
