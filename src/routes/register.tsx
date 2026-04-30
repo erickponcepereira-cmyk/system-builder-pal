@@ -621,7 +621,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
-            <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+            {!referral && <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />}
 
             <div className="space-y-2">
               <Label className="text-white/70">Senha</Label>
