@@ -93,8 +93,8 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
   }
 
   if (input.role === "coach") {
-    if (!input.coach?.uplineCoachId || !input.coach.pixKey) {
-      throw new Error("Dados de coach incompletos.");
+    if (!input.coach?.uplineCoachId) {
+      throw new Error("Selecione um coach indicador para concluir o cadastro.");
     }
 
     let referralCode = clean(input.coach.referralCode) || makeReferralCode();
@@ -105,12 +105,12 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
           referral_code: referralCode,
           referral_link: clean(input.coach.referralLink) || `/r/${referralCode}`,
           upline_coach_id: input.coach.uplineCoachId,
-          pix_key: input.coach.pixKey.trim(),
-          pix_key_type: input.coach.pixKeyType,
+          pix_key: clean(input.coach.pixKey),
+          pix_key_type: clean(input.coach.pixKeyType),
           bank_name: clean(input.coach.bankName),
           bank_agency: clean(input.coach.bankAgency),
           bank_account: clean(input.coach.bankAccount),
-          bank_account_type: clean(input.coach.bankAccountType) || "corrente",
+          bank_account_type: clean(input.coach.bankAccountType),
           approved_at: new Date().toISOString(),
         },
         { onConflict: "profile_id" }
