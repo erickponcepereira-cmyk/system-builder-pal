@@ -81,6 +81,8 @@ async function createOrRecoverAuthUser(email: string, password: string, name: st
       password,
     });
     if (!loginError && loginData.user) return loginData.user;
+    // Se a senha não bate, deixa claro que o e-mail já existe
+    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
   }
 
   throw new Error(error?.message || "Não foi possível criar a conta de acesso.");
