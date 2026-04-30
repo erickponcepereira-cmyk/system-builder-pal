@@ -194,12 +194,6 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [state, setState] = useState("");
 
   // Step 3
-  const [pixKey, setPixKey] = useState("");
-  const [pixKeyType, setPixKeyType] = useState("cpf");
-  const [bankName, setBankName] = useState("");
-  const [bankAgency, setBankAgency] = useState("");
-  const [bankAccount, setBankAccount] = useState("");
-  const [bankAccountType, setBankAccountType] = useState("corrente");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
 
