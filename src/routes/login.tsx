@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dumbbell, Eye, EyeOff, Loader2, User } from "lucide-react";
 import fitmindLogo from "@/assets/fitmind-logo.png";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
@@ -118,15 +118,8 @@ function LoginPage() {
     else enterArea("student");
   };
 
-  useEffect(() => {
-    let active = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (active && user) routeSignedInUser(user.id);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Auto-login desativado durante a fase de testes.
+  // O usuário precisa preencher e-mail/senha manualmente toda vez.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
