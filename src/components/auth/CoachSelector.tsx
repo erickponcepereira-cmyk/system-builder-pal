@@ -31,10 +31,17 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
   const [query, setQuery] = useState("");
   const [coaches, setCoaches] = useState<CoachOption[]>([MASTER_COACH]);
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const normalizedQuery = useMemo(() => query.trim(), [query]);
 
+  // Quando seleciona um coach, recolhe a lista
   useEffect(() => {
+    if (value) setExpanded(false);
+  }, [value]);
+
+  useEffect(() => {
+    if (!expanded) return;
     const handle = window.setTimeout(async () => {
       setLoading(true);
       try {
@@ -71,7 +78,29 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
     }, 300);
 
     return () => window.clearTimeout(handle);
-  }, [normalizedQuery]);
+  }, [normalizedQuery, expanded]);
+
+  // Estado recolhido: mostra o coach selecionado com botão para alterar
+  if (value && !expanded) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-white/70">{label}</Label>
+        <div className="flex items-center justify-between rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-white">{value.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
+          >
+            <Pencil className="h-3 w-3" /> Alterar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -86,13 +115,6 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
         />
       </div>
 
-      {value && (
-        <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
-          <UserCheck className="h-4 w-4" />
-          <span className="font-semibold">Selecionado: {value.name}</span>
-        </div>
-      )}
-
       <div className="max-h-44 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
         {loading ? (
           <p className="px-2 py-3 text-xs text-white/40">Buscando coaches...</p>
@@ -103,7 +125,10 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
             <button
               key={coach.id}
               type="button"
-              onClick={() => onChange(coach)}
+              onClick={() => {
+                onChange(coach);
+                setExpanded(false);
+              }}
               className={cn(
                 "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors",
                 value?.id === coach.id ? "bg-primary text-primary-foreground" : "hover:bg-white/5"
