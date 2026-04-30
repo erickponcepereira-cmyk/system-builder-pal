@@ -176,6 +176,9 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const clearError = () => { if (formError) setFormError(null); };
 
   // Step 1
   const [name, setName] = useState("");
