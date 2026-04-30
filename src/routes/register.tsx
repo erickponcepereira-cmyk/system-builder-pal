@@ -258,15 +258,18 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async () => {
     if (!acceptTerms) {
-      toast.error("Aceite os termos de uso para continuar");
+      const m = "Aceite os Termos de Uso para continuar.";
+      setFormError(m); toast.error(m);
       return;
     }
     if (!selectedCoach) {
-      toast.error("Selecione o coach que te indicou");
+      const m = "Selecione o coach que te indicou.";
+      setFormError(m); toast.error(m);
       return;
     }
 
     setLoading(true);
+    setFormError(null);
     try {
       const referralCode = generateReferralCode();
       const user = await createOrRecoverAuthUser(email, password, name, "coach");
@@ -301,7 +304,9 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       if (sessionData.session) window.location.assign("/coach");
       else navigate({ to: "/login" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar conta. Tente novamente.");
+      const friendly = translateAuthError(error);
+      setFormError(friendly);
+      toast.error(friendly);
     } finally {
       setLoading(false);
     }
