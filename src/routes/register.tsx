@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload } from "lucide-react";
 import fitmindLogo from "@/assets/fitmind-logo.png";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
@@ -505,6 +505,14 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
 // ============================================================
 // STUDENT REGISTRATION (simpler)
 // ============================================================
+type ReferralContext = {
+  code: string;
+  kind: "coach" | "student";
+  sponsorName: string;
+  coachId: string | null;
+  referredByStudentId: string | null;
+};
+
 function StudentRegistration({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -514,6 +522,22 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
+  const [referral, setReferral] = useState<ReferralContext | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("fitmind_referral");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as ReferralContext;
+      if (!parsed?.code) return;
+      setReferral(parsed);
+      if (parsed.coachId) {
+        setSelectedCoach({ id: parsed.coachId, profileId: "", name: parsed.sponsorName, referralCode: parsed.code } as unknown as CoachOption);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -521,7 +545,8 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       toast.error("A senha deve ter no mínimo 8 caracteres");
       return;
     }
-    if (!selectedCoach) {
+    const coachIdToUse = referral?.coachId || selectedCoach?.id;
+    if (!coachIdToUse) {
       toast.error("Selecione seu coach");
       return;
     }
@@ -537,12 +562,21 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
           name,
           email,
           phone,
-          student: { coachId: selectedCoach.id },
+          student: {
+            coachId: coachIdToUse,
+            referredByStudentId: referral?.referredByStudentId || null,
+            referralCode: referral?.code || null,
+          },
         },
       });
 
+      sessionStorage.removeItem("fitmind_referral");
       sessionStorage.setItem("fitmind_selected_area", "student");
-      toast.success("Conta de aluno criada com sucesso!");
+      toast.success(
+        referral
+          ? `Conta criada! Você foi vinculado(a) a ${referral.sponsorName}.`
+          : "Conta de aluno criada com sucesso!"
+      );
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session) window.location.assign("/student");
       else navigate({ to: "/login" });
@@ -565,6 +599,15 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
+          {referral && (
+            <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-white/80">
+              <p className="font-semibold text-primary">Convite válido</p>
+              <p className="mt-1">
+                Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>
+                {referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.
+              </p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label className="text-white/70">Nome completo</Label>
@@ -578,7 +621,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
-            <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+            {!referral && <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />}
 
             <div className="space-y-2">
               <Label className="text-white/70">Senha</Label>
