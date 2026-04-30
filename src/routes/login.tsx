@@ -118,15 +118,8 @@ function LoginPage() {
     else enterArea("student");
   };
 
-  useEffect(() => {
-    let active = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (active && user) routeSignedInUser(user.id);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Auto-login desativado durante a fase de testes.
+  // O usuário precisa preencher e-mail/senha manualmente toda vez.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
