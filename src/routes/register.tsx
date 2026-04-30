@@ -532,7 +532,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       if (!parsed?.code) return;
       setReferral(parsed);
       if (parsed.coachId) {
-        setSelectedCoach({ id: parsed.coachId, name: parsed.sponsorName, referralCode: parsed.code } as CoachOption);
+        setSelectedCoach({ id: parsed.coachId, profileId: "", name: parsed.sponsorName, referralCode: parsed.code } as unknown as CoachOption);
       }
     } catch {
       /* ignore */
