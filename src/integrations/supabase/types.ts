@@ -3620,6 +3620,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_referral_code: {
+        Args: { _code: string }
+        Returns: {
+          coach_id: string
+          kind: string
+          referred_by_student_id: string
+          sponsor_name: string
+          valid: boolean
+        }[]
+      }
     }
     Enums: {
       chat_permission:
