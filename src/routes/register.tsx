@@ -64,6 +64,16 @@ function generateReferralCode(): string {
 
 async function createOrRecoverAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
   const normalizedEmail = email.trim().toLowerCase();
+  const signInExistingUser = async () => {
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (!loginError && loginData.user) return loginData.user;
+    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
+  };
+
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
     password,
@@ -73,16 +83,17 @@ async function createOrRecoverAuthUser(email: string, password: string, name: st
     },
   });
 
-  if (!error && data.user) return data.user;
+  if (!error && data.user) {
+    // Quando o e-mail já existe, o backend de auth pode devolver um usuário mascarado.
+    // Nesse caso, entramos com a senha informada para recuperar o usuário real antes de finalizar o cadastro.
+    if (data.user.identities && data.user.identities.length === 0) {
+      return signInExistingUser();
+    }
+    return data.user;
+  }
 
   if (error?.message.toLowerCase().includes("already")) {
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-    if (!loginError && loginData.user) return loginData.user;
-    // Se a senha não bate, deixa claro que o e-mail já existe
-    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
+    return signInExistingUser();
   }
 
   throw new Error(error?.message || "Não foi possível criar a conta de acesso.");

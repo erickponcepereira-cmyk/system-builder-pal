@@ -46,19 +46,28 @@ const makeReferralCode = () =>
 export async function finalizeRegistration(input: FinalizeRegistrationInput) {
   const email = input.email.trim().toLowerCase();
   const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(input.userId);
+  let userId = userData.user?.id || input.userId;
 
   if (userError || !userData.user) {
-    throw new Error("Conta de acesso não encontrada. Tente criar a conta novamente.");
+    const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    const matchedUser = usersData?.users.find((user) => (user.email || "").toLowerCase() === email);
+
+    if (listError || !matchedUser) {
+      throw new Error("Conta de acesso não encontrada. Tente criar a conta novamente.");
+    }
+
+    userId = matchedUser.id;
   }
 
-  if ((userData.user.email || "").toLowerCase() !== email) {
+  const accountEmail = userData.user?.email || email;
+  if (accountEmail.toLowerCase() !== email) {
     throw new Error("O e-mail da conta não confere com o cadastro informado.");
   }
 
   const { data: existingProfile } = await supabaseAdmin
     .from("profiles")
     .select("id, role")
-    .eq("user_id", input.userId)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (existingProfile?.role === "admin") {
@@ -69,7 +78,7 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
     .from("profiles")
     .upsert(
       {
-        user_id: input.userId,
+        user_id: userId,
         name: input.name.trim(),
         email,
         role: input.role,
