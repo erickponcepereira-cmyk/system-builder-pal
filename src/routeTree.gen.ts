@@ -30,6 +30,7 @@ import { Route as StudentEvolutionRouteImport } from './routes/student.evolution
 import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-course'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
@@ -147,6 +148,11 @@ const StudentBenefitsRoute = StudentBenefitsRouteImport.update({
   path: '/benefits',
   getParentRoute: () => StudentRoute,
 } as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/students',
   path: '/students',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/students'
+    | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
     | '/student/coach-course'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/students'
+    | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
     | '/student/coach-course'
@@ -391,6 +402,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/students'
+    | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
     | '/student/coach-course'
@@ -416,6 +428,7 @@ export interface RootRouteChildren {
   PendingApprovalRoute: typeof PendingApprovalRoute
   RegisterRoute: typeof RegisterRoute
   StudentRoute: typeof StudentRouteWithChildren
+  RCodeRoute: typeof RCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -566,6 +579,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/student/benefits'
       preLoaderRoute: typeof StudentBenefitsRouteImport
       parentRoute: typeof StudentRoute
+    }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/students': {
       id: '/admin/students'
@@ -731,6 +751,7 @@ const rootRouteChildren: RootRouteChildren = {
   PendingApprovalRoute: PendingApprovalRoute,
   RegisterRoute: RegisterRoute,
   StudentRoute: StudentRouteWithChildren,
+  RCodeRoute: RCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -25,12 +25,18 @@ function ReferralLandingPage() {
     (async () => {
       const { data, error } = await supabase.rpc("validate_referral_code" as never, { _code: code } as never);
       if (cancelled) return;
-      const row = Array.isArray(data) ? data[0] : null;
+      type Row = {
+        valid: boolean;
+        kind: "coach" | "student" | null;
+        sponsor_name: string | null;
+        coach_id: string | null;
+        referred_by_student_id: string | null;
+      };
+      const row = (Array.isArray(data) ? (data[0] as Row | undefined) : null) ?? null;
       if (error || !row || !row.valid) {
         setStatus("invalid");
         return;
       }
-      // Persist referral context for the registration step
       sessionStorage.setItem(
         "fitmind_referral",
         JSON.stringify({
@@ -43,7 +49,6 @@ function ReferralLandingPage() {
       );
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
-      // small delay so user sees the confirmation card
       setTimeout(() => {
         navigate({ to: "/register", search: { role: "student" } });
       }, 1400);
