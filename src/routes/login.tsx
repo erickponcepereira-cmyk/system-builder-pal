@@ -7,6 +7,7 @@ import fitmindLogo from "@/assets/fitmind-logo.png";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { translateAuthError } from "@/lib/auth-errors";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -155,9 +156,7 @@ function LoginPage() {
       });
 
       if (error) {
-        const message = error.message === "Invalid login credentials"
-          ? "E-mail ou senha incorretos. Confira se não há espaço, letra trocada ou senha errada."
-          : error.message;
+        const message = translateAuthError(error);
         setFormError(message);
         toast.error(message);
         return;
@@ -171,8 +170,8 @@ function LoginPage() {
         setFormError(message);
         toast.error(message);
       }
-    } catch {
-      const message = "Erro ao fazer login. Tente novamente.";
+    } catch (err) {
+      const message = translateAuthError(err);
       setFormError(message);
       toast.error(message);
     } finally {

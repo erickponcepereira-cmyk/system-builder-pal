@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn } from "@/server/registration.functions";
+import { translateAuthError } from "@/lib/auth-errors";
 
 type SearchParams = { role?: string };
 
@@ -80,6 +81,8 @@ async function createOrRecoverAuthUser(email: string, password: string, name: st
       password,
     });
     if (!loginError && loginData.user) return loginData.user;
+    // Se a senha não bate, deixa claro que o e-mail já existe
+    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
   }
 
   throw new Error(error?.message || "Não foi possível criar a conta de acesso.");
@@ -173,6 +176,9 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const clearError = () => { if (formError) setFormError(null); };
 
   // Step 1
   const [name, setName] = useState("");
@@ -215,49 +221,55 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
     }
   }, []);
 
+  const fail = (msg: string) => {
+    setFormError(msg);
+    toast.error(msg);
+    return false;
+  };
+
   const validateStep1 = () => {
-    if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return false;
-    }
-    if (password.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres");
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      toast.error("A senha deve ter pelo menos 1 letra maiúscula");
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      toast.error("A senha deve ter pelo menos 1 número");
-      return false;
-    }
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem");
-      return false;
-    }
+    if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
+      return fail("Preencha todos os campos obrigatórios desta etapa.");
+    if (!email.includes("@") || !email.includes("."))
+      return fail("E-mail inválido. Use o formato nome@dominio.com.");
+    if (cpf.replace(/\D/g, "").length !== 11)
+      return fail("CPF incompleto. Digite os 11 dígitos.");
+    if (phone.replace(/\D/g, "").length < 10)
+      return fail("WhatsApp incompleto. Inclua DDD + número.");
+    if (password.length < 8)
+      return fail("A senha deve ter no mínimo 8 caracteres.");
+    if (!/[A-Z]/.test(password))
+      return fail("A senha deve ter pelo menos 1 letra maiúscula.");
+    if (!/[0-9]/.test(password))
+      return fail("A senha deve ter pelo menos 1 número.");
+    if (password !== confirmPassword)
+      return fail("As senhas não coincidem. Confira a confirmação.");
+    setFormError(null);
     return true;
   };
 
   const validateStep2 = () => {
-    if (!cep || !number) {
-      toast.error("Preencha CEP e número");
-      return false;
-    }
+    if (!cep || cep.replace(/\D/g, "").length !== 8)
+      return fail("Informe um CEP válido (8 dígitos).");
+    if (!number) return fail("Informe o número do endereço.");
+    setFormError(null);
     return true;
   };
 
   const handleSubmit = async () => {
     if (!acceptTerms) {
-      toast.error("Aceite os termos de uso para continuar");
+      const m = "Aceite os Termos de Uso para continuar.";
+      setFormError(m); toast.error(m);
       return;
     }
     if (!selectedCoach) {
-      toast.error("Selecione o coach que te indicou");
+      const m = "Selecione o coach que te indicou.";
+      setFormError(m); toast.error(m);
       return;
     }
 
     setLoading(true);
+    setFormError(null);
     try {
       const referralCode = generateReferralCode();
       const user = await createOrRecoverAuthUser(email, password, name, "coach");
@@ -292,7 +304,9 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       if (sessionData.session) window.location.assign("/coach");
       else navigate({ to: "/login" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar conta. Tente novamente.");
+      const friendly = translateAuthError(error);
+      setFormError(friendly);
+      toast.error(friendly);
     } finally {
       setLoading(false);
     }
@@ -327,6 +341,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
+          {formError && (
+            <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+              {formError}
+            </div>
+          )}
           {/* Step 1 */}
           {step === 1 && (
             <div className="space-y-4">
@@ -375,7 +394,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
                 <Button variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
                   <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
                 </Button>
-                <Button onClick={() => validateStep1() && setStep(2)} className="flex-1">
+                <Button onClick={() => { if (validateStep1()) { setFormError(null); setStep(2); } }} className="flex-1">
                   Próximo <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
@@ -441,10 +460,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
+                <Button variant="outline" onClick={() => { setFormError(null); setStep(1); }} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
                   <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
                 </Button>
-                <Button onClick={() => validateStep2() && setStep(3)} className="flex-1">
+                <Button onClick={() => { if (validateStep2()) { setFormError(null); setStep(3); } }} className="flex-1">
                   Próximo <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
@@ -476,7 +495,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
               </label>
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
+                <Button variant="outline" onClick={() => { setFormError(null); setStep(2); }} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
                   <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
                 </Button>
                 <Button onClick={handleSubmit} className="flex-1" disabled={loading}>
@@ -524,6 +543,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [referral, setReferral] = useState<ReferralContext | null>(null);
   const [referralCoachName, setReferralCoachName] = useState<string>("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -557,17 +577,16 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) {
-      toast.error("A senha deve ter no mínimo 8 caracteres");
-      return;
-    }
+    const setErr = (m: string) => { setFormError(m); toast.error(m); };
+    if (!name.trim()) return setErr("Informe seu nome completo.");
+    if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido. Use o formato nome@dominio.com.");
+    if (phone.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto. Inclua DDD + número.");
+    if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
-    if (!coachIdToUse) {
-      toast.error("Selecione seu coach");
-      return;
-    }
+    if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
 
     setLoading(true);
+    setFormError(null);
     try {
       const user = await createOrRecoverAuthUser(email, password, name, "student");
 
@@ -597,7 +616,9 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       if (sessionData.session) window.location.assign("/student");
       else navigate({ to: "/login" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao criar conta.");
+      const friendly = translateAuthError(error);
+      setFormError(friendly);
+      toast.error(friendly);
     } finally {
       setLoading(false);
     }
@@ -622,6 +643,11 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
                 Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>
                 {referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.
               </p>
+            </div>
+          )}
+          {formError && (
+            <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+              {formError}
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
