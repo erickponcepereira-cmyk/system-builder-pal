@@ -543,6 +543,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [referral, setReferral] = useState<ReferralContext | null>(null);
   const [referralCoachName, setReferralCoachName] = useState<string>("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
