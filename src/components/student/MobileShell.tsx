@@ -36,11 +36,11 @@ export function MobileShell({ children }: MobileShellProps) {
       if (!profile?.id || !active) return;
       const { data: coach } = await supabase
         .from("coaches")
-        .select("id,status")
+        .select("id")
         .eq("profile_id", profile.id)
         .maybeSingle();
       if (!active) return;
-      setIsCoach(!!coach && coach.status !== "inactive");
+      setIsCoach(!!coach);
     })();
     return () => { active = false; };
   }, []);
