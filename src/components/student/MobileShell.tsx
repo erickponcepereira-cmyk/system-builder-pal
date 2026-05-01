@@ -1,7 +1,8 @@
-import { ReactNode } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
-import { BookOpen, Gift, Home, MessageCircle, ShoppingBag, Trophy, User } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MobileShellProps {
   children: ReactNode;
@@ -19,6 +20,35 @@ const navItems = [
 
 export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isCoach, setIsCoach] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !active) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!profile?.id || !active) return;
+      const { data: coach } = await supabase
+        .from("coaches")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      if (!active) return;
+      setIsCoach(!!coach);
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const goToCoach = () => {
+    sessionStorage.removeItem("fitmind_selected_area");
+    navigate({ to: "/coach" });
+  };
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
@@ -29,6 +59,18 @@ export function MobileShell({ children }: MobileShellProps) {
       >
         {/* Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24">{children}</main>
+
+        {/* Switch to Coach panel — only visible for users with active coach record */}
+        {isCoach && (
+          <button
+            onClick={goToCoach}
+            className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors"
+            style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+          >
+            <Repeat className="h-3.5 w-3.5" />
+            Ir para painel do coach
+          </button>
+        )}
 
         {/* Bottom Navigation */}
         <nav

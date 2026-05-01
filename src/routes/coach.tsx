@@ -4,7 +4,7 @@ import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
   Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
-  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -233,8 +233,19 @@ function CoachDashboard() {
         </nav>
 
         <button
+          onClick={() => {
+            sessionStorage.setItem("fitmind_selected_area", "student");
+            navigate({ to: "/student" });
+          }}
+          className="mt-auto flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+        >
+          <Repeat className="h-4 w-4" />
+          Ir para painel do aluno
+        </button>
+
+        <button
           onClick={handleLogout}
-          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/40 hover:text-white transition-colors"
+          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/40 hover:text-white transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Sair
