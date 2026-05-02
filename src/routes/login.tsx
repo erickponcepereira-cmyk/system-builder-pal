@@ -224,9 +224,53 @@ function LoginPage() {
           </div>
 
           <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
-            <h2 className="text-xl font-bold text-white mb-6">{accessOptions ? "Entrar como" : "Acessar conta"}</h2>
+            <h2 className="text-xl font-bold text-white mb-6">
+              {accessOptions ? "Entrar como" : resetMode ? "Redefinir senha" : "Acessar conta"}
+            </h2>
 
-            {accessOptions ? (
+            {resetMode && !accessOptions && (
+              <div className="mb-4">
+                {resetSent ? (
+                  <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-3 text-xs text-white/80">
+                    Link enviado para <span className="font-semibold text-white">{email.trim().toLowerCase()}</span>.
+                    Confira sua caixa de entrada (e o spam) e clique no link para definir uma nova senha.
+                  </div>
+                ) : (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    {formError && (
+                      <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                        {formError}
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email" className="text-white/70">E-mail cadastrado</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); if (formError) setFormError(null); }}
+                        required
+                        disabled={resetLoading}
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" size="lg" disabled={resetLoading}>
+                      {resetLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Enviar link de redefinição"}
+                    </Button>
+                  </form>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setResetMode(false); setResetSent(false); setFormError(null); }}
+                  className="mt-4 block w-full text-center text-xs text-white/50 hover:text-white/80"
+                >
+                  ← Voltar para o login
+                </button>
+              </div>
+            )}
+
+            {!resetMode && accessOptions ? (
               <div className="space-y-3">
                 <button
                   type="button"
