@@ -62,17 +62,8 @@ function generateReferralCode(): string {
   return code;
 }
 
-async function createOrRecoverAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
+async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
   const normalizedEmail = email.trim().toLowerCase();
-  const signInExistingUser = async () => {
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-
-    if (!loginError && loginData.user) return loginData.user;
-    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
-  };
 
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -83,24 +74,29 @@ async function createOrRecoverAuthUser(email: string, password: string, name: st
     },
   });
 
-  if (!error && data.user) {
-    // Quando o e-mail já existe, o backend de auth pode devolver um usuário mascarado.
-    // Nesse caso, entramos com a senha informada para recuperar o usuário real antes de finalizar o cadastro.
-    if (data.user.identities && data.user.identities.length === 0) {
-      return signInExistingUser();
+  if (error) {
+    if (error.message.toLowerCase().includes("already")) {
+      throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
     }
-    return data.user;
+    throw new Error(error.message || "Não foi possível criar a conta de acesso.");
   }
 
-  if (error?.message.toLowerCase().includes("already")) {
-    return signInExistingUser();
+  if (!data.user) {
+    throw new Error("Não foi possível criar a conta. Tente novamente em instantes.");
   }
 
-  throw new Error(error?.message || "Não foi possível criar a conta de acesso.");
+  // Quando o e-mail já existe e a confirmação está ativa, o Supabase devolve
+  // um usuário "mascarado" (identities vazio) por segurança. Não logamos —
+  // avisamos para o usuário usar a opção de login/recuperação.
+  if (data.user.identities && data.user.identities.length === 0) {
+    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
+  }
+
+  return data.user;
 }
 
 function RegisterPage() {
-  const navigate = useNavigate();
+  useNavigate();
   const search = Route.useSearch();
   const [role, setRole] = useState<"student" | "coach" | null>(
     search.role === "coach" ? "coach" : search.role === "student" ? "student" : null
@@ -183,11 +179,11 @@ function RegisterPage() {
 // COACH MULTI-STEP REGISTRATION
 // ============================================================
 function CoachRegistration({ onBack }: { onBack: () => void }) {
-  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const clearError = () => { if (formError) setFormError(null); };
 
@@ -283,7 +279,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
     setFormError(null);
     try {
       const referralCode = generateReferralCode();
-      const user = await createOrRecoverAuthUser(email, password, name, "coach");
+      const user = await createAuthUser(email, password, name, "coach");
 
       await finalizeRegistrationFn({
         data: {
@@ -309,11 +305,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         },
       });
 
-      sessionStorage.setItem("fitmind_selected_area", "coach");
-      toast.success("Conta de coach criada com sucesso!");
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) window.location.assign("/coach");
-      else navigate({ to: "/login" });
+      // Sai da sessão local (caso exista) — usuário precisa confirmar e-mail antes de entrar.
+      await supabase.auth.signOut().catch(() => {});
+      sessionStorage.removeItem("fitmind_selected_area");
+      setRegisteredEmail(email.trim().toLowerCase());
+      toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
@@ -322,6 +318,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       setLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return <CheckEmailNotice email={registeredEmail} />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8" style={{ backgroundColor: "#0A0A0A" }}>
@@ -544,7 +544,6 @@ type ReferralContext = {
 };
 
 function StudentRegistration({ onBack }: { onBack: () => void }) {
-  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -555,6 +554,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [referral, setReferral] = useState<ReferralContext | null>(null);
   const [referralCoachName, setReferralCoachName] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -599,7 +599,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
     setLoading(true);
     setFormError(null);
     try {
-      const user = await createOrRecoverAuthUser(email, password, name, "student");
+      const user = await createAuthUser(email, password, name, "student");
 
       await finalizeRegistrationFn({
         data: {
@@ -617,15 +617,14 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       });
 
       sessionStorage.removeItem("fitmind_referral");
-      sessionStorage.setItem("fitmind_selected_area", "student");
+      sessionStorage.removeItem("fitmind_selected_area");
+      await supabase.auth.signOut().catch(() => {});
+      setRegisteredEmail(email.trim().toLowerCase());
       toast.success(
         referral
-          ? `Conta criada! Você foi vinculado(a) a ${referral.sponsorName}.`
-          : "Conta de aluno criada com sucesso!"
+          ? `Cadastro criado! Confira seu e-mail para confirmar a conta. Você foi vinculado(a) a ${referral.sponsorName}.`
+          : "Cadastro criado! Confira seu e-mail para confirmar a conta."
       );
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) window.location.assign("/student");
-      else navigate({ to: "/login" });
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
@@ -634,6 +633,10 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       setLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return <CheckEmailNotice email={registeredEmail} />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
@@ -726,6 +729,43 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
           <Link to="/login" className="font-medium text-primary hover:underline">
             Entrar
           </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// CHECK EMAIL NOTICE — exibido após cadastro, antes da confirmação
+// ============================================================
+function CheckEmailNotice({ email }: { email: string }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
+      <div className="w-full max-w-md text-center">
+        <div className="inline-flex items-center gap-2 mb-6">
+          <img src={fitmindLogo} alt="Logo FitMind Club" className="h-12 w-12 object-contain" />
+          <span className="text-xl font-bold text-white">FitMind Club</span>
+        </div>
+        <div className="rounded-2xl p-8" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Check className="h-7 w-7" />
+          </div>
+          <h1 className="text-xl font-bold text-white">Confirme seu e-mail</h1>
+          <p className="mt-3 text-sm text-white/60">
+            Enviamos um link de confirmação para <span className="font-semibold text-white">{email}</span>.
+            Clique no link recebido para ativar sua conta.
+          </p>
+          <p className="mt-3 text-xs text-white/40">
+            Não encontrou o e-mail? Verifique a caixa de spam ou lixo eletrônico.
+          </p>
+          <div className="mt-6 space-y-3">
+            <Link to="/login" className="block w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+              Ir para o login
+            </Link>
+            <Link to="/" className="block text-xs text-white/40 hover:text-white/60">
+              Voltar ao início
+            </Link>
+          </div>
         </div>
       </div>
     </div>
