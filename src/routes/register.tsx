@@ -279,7 +279,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
     setFormError(null);
     try {
       const referralCode = generateReferralCode();
-      const user = await createOrRecoverAuthUser(email, password, name, "coach");
+      const user = await createAuthUser(email, password, name, "coach");
 
       await finalizeRegistrationFn({
         data: {
@@ -305,11 +305,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         },
       });
 
-      sessionStorage.setItem("fitmind_selected_area", "coach");
-      toast.success("Conta de coach criada com sucesso!");
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) window.location.assign("/coach");
-      else navigate({ to: "/login" });
+      // Sai da sessão local (caso exista) — usuário precisa confirmar e-mail antes de entrar.
+      await supabase.auth.signOut().catch(() => {});
+      sessionStorage.removeItem("fitmind_selected_area");
+      setRegisteredEmail(email.trim().toLowerCase());
+      toast.success("Cadastro criado! Confira seu e-mail para confirmar a conta.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
