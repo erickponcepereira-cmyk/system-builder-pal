@@ -544,7 +544,6 @@ type ReferralContext = {
 };
 
 function StudentRegistration({ onBack }: { onBack: () => void }) {
-  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -555,6 +554,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [referral, setReferral] = useState<ReferralContext | null>(null);
   const [referralCoachName, setReferralCoachName] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   useEffect(() => {
     try {
