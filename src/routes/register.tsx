@@ -96,7 +96,7 @@ async function createAuthUser(email: string, password: string, name: string, rol
 }
 
 function RegisterPage() {
-  const navigate = useNavigate();
+  useNavigate();
   const search = Route.useSearch();
   const [role, setRole] = useState<"student" | "coach" | null>(
     search.role === "coach" ? "coach" : search.role === "student" ? "student" : null
