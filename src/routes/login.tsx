@@ -289,7 +289,7 @@ function LoginPage() {
                   <span className="font-semibold">Painel de Aluno</span>
                 </button>
               </div>
-            ) : (
+            ) : !resetMode ? (
 
             <form onSubmit={handleLogin} className="space-y-4">
               {formError && (
@@ -341,7 +341,11 @@ function LoginPage() {
               </div>
 
               <div className="text-right">
-                <button type="button" className="text-xs text-primary hover:underline">
+                <button
+                  type="button"
+                  onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }}
+                  className="text-xs text-primary hover:underline"
+                >
                   Esqueci minha senha
                 </button>
               </div>
@@ -359,15 +363,15 @@ function LoginPage() {
                 )}
               </Button>
             </form>
-            )}
+            ) : null}
 
-            {!accessOptions && <div className="my-6 flex items-center gap-3">
+            {!accessOptions && !resetMode && <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-white/10" />
               <span className="text-xs text-white/30">ou</span>
               <div className="h-px flex-1 bg-white/10" />
             </div>}
 
-            {!accessOptions && <div className="space-y-3 text-center">
+            {!accessOptions && !resetMode && <div className="space-y-3 text-center">
               <Link
                 to="/register"
                 search={{ role: "coach" }}
