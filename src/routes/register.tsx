@@ -319,6 +319,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
     }
   };
 
+  if (registeredEmail) {
+    return <CheckEmailNotice email={registeredEmail} />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="w-full max-w-lg">
