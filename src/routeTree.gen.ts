@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudentRouteImport } from './routes/student'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -46,6 +47,11 @@ import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coach
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
   path: '/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pending-approval'
     | '/register'
+    | '/reset-password'
     | '/student'
     | '/admin/coach-applications'
     | '/admin/coaches'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pending-approval'
     | '/register'
+    | '/reset-password'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -391,6 +402,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pending-approval'
     | '/register'
+    | '/reset-password'
     | '/student'
     | '/admin/coach-applications'
     | '/admin/coaches'
@@ -427,6 +439,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
   RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
   RCodeRoute: typeof RCodeRoute
 }
@@ -438,6 +451,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -750,6 +770,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PendingApprovalRoute: PendingApprovalRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
   RCodeRoute: RCodeRoute,
 }

@@ -27,6 +27,9 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [accessOptions, setAccessOptions] = useState<{ coach: boolean; student: boolean } | null>(null);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const enterArea = (area: "coach" | "student" | "admin") => {
     if (area !== "admin") sessionStorage.setItem("fitmind_selected_area", area);
