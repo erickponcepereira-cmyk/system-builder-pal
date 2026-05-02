@@ -62,17 +62,8 @@ function generateReferralCode(): string {
   return code;
 }
 
-async function createOrRecoverAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
+async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
   const normalizedEmail = email.trim().toLowerCase();
-  const signInExistingUser = async () => {
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-
-    if (!loginError && loginData.user) return loginData.user;
-    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
-  };
 
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -83,20 +74,25 @@ async function createOrRecoverAuthUser(email: string, password: string, name: st
     },
   });
 
-  if (!error && data.user) {
-    // Quando o e-mail já existe, o backend de auth pode devolver um usuário mascarado.
-    // Nesse caso, entramos com a senha informada para recuperar o usuário real antes de finalizar o cadastro.
-    if (data.user.identities && data.user.identities.length === 0) {
-      return signInExistingUser();
+  if (error) {
+    if (error.message.toLowerCase().includes("already")) {
+      throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
     }
-    return data.user;
+    throw new Error(error.message || "Não foi possível criar a conta de acesso.");
   }
 
-  if (error?.message.toLowerCase().includes("already")) {
-    return signInExistingUser();
+  if (!data.user) {
+    throw new Error("Não foi possível criar a conta. Tente novamente em instantes.");
   }
 
-  throw new Error(error?.message || "Não foi possível criar a conta de acesso.");
+  // Quando o e-mail já existe e a confirmação está ativa, o Supabase devolve
+  // um usuário "mascarado" (identities vazio) por segurança. Não logamos —
+  // avisamos para o usuário usar a opção de login/recuperação.
+  if (data.user.identities && data.user.identities.length === 0) {
+    throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
+  }
+
+  return data.user;
 }
 
 function RegisterPage() {
