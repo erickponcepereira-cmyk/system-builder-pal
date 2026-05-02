@@ -175,6 +175,33 @@ function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    setFormError(null);
+
+    if (!normalizedEmail.includes("@") || !normalizedEmail.includes(".")) {
+      const m = "Informe um e-mail válido para receber o link.";
+      setFormError(m); toast.error(m); return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast.success("Enviamos um link de redefinição para seu e-mail.");
+    } catch (err) {
+      const friendly = translateAuthError(err);
+      setFormError(friendly);
+      toast.error(friendly);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen">
       {/* Left panel - Brand */}
