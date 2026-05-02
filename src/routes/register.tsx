@@ -599,7 +599,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
     setLoading(true);
     setFormError(null);
     try {
-      const user = await createOrRecoverAuthUser(email, password, name, "student");
+      const user = await createAuthUser(email, password, name, "student");
 
       await finalizeRegistrationFn({
         data: {
@@ -617,15 +617,14 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       });
 
       sessionStorage.removeItem("fitmind_referral");
-      sessionStorage.setItem("fitmind_selected_area", "student");
+      sessionStorage.removeItem("fitmind_selected_area");
+      await supabase.auth.signOut().catch(() => {});
+      setRegisteredEmail(email.trim().toLowerCase());
       toast.success(
         referral
-          ? `Conta criada! Você foi vinculado(a) a ${referral.sponsorName}.`
-          : "Conta de aluno criada com sucesso!"
+          ? `Cadastro criado! Confira seu e-mail para confirmar a conta. Você foi vinculado(a) a ${referral.sponsorName}.`
+          : "Cadastro criado! Confira seu e-mail para confirmar a conta."
       );
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) window.location.assign("/student");
-      else navigate({ to: "/login" });
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly);
@@ -634,6 +633,10 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       setLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return <CheckEmailNotice email={registeredEmail} />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
