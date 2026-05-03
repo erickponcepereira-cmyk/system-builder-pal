@@ -25,6 +25,8 @@ export type FinalizeRegistrationInput = {
     bankAccountType?: string | null;
     referralCode?: string | null;
     referralLink?: string | null;
+    completedCoachCourse?: boolean;
+    coachCourseNotes?: string | null;
   };
   student?: {
     coachId: string;
@@ -122,15 +124,22 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
           bank_agency: clean(input.coach.bankAgency),
           bank_account: clean(input.coach.bankAccount),
           bank_account_type: clean(input.coach.bankAccountType),
-          approved_at: new Date().toISOString(),
+          completed_coach_course: input.coach.completedCoachCourse ?? false,
+          coach_course_notes: clean(input.coach.coachCourseNotes),
+          // Coach NÃO é aprovado automaticamente — admin precisa liberar
+          approved_at: null,
         },
         { onConflict: "profile_id" }
       );
 
       if (!coachError) {
-        // Cria também um registro de aluno para o coach, vinculado ao próprio
-        // coach indicador (upline). Assim o coach pode acessar a área do aluno
-        // e participar dos desafios normalmente.
+        // Marca o profile como pendente até o admin aprovar
+        await supabaseAdmin
+          .from("profiles")
+          .update({ status: "pending" })
+          .eq("id", profile.id);
+
+        // Cria registro de aluno para o coach (acesso ao app do aluno mesmo pendente)
         const { error: selfStudentError } = await supabaseAdmin.from("students").upsert(
           {
             profile_id: profile.id,
