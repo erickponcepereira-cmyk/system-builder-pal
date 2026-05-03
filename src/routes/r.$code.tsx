@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import fitmindLogo from "@/assets/fitmind-logo.png";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/r/$code")({
   head: () => ({
@@ -61,7 +61,7 @@ function ReferralLandingPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="w-full max-w-sm rounded-2xl p-8 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-        <img src={fitmindLogo} alt="FitMind Club" className="mx-auto mb-4 h-12 w-12 object-contain" />
+        <Logo className="mx-auto mb-4 h-12 w-12 object-contain" />
         {status === "loading" && (
           <>
             <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />

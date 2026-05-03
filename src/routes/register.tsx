@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, User, Dumbbell, Loader2, Eye, EyeOff, Check, Upload, UserCheck } from "lucide-react";
-import fitmindLogo from "@/assets/fitmind-logo.png";
+import { Logo } from "@/components/Logo";
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -118,7 +118,7 @@ function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-12 w-12 object-contain" />
+            <Logo className="h-12 w-12 object-contain" />
             <span className="text-2xl font-bold text-white">FitMind Club</span>
           </Link>
           <h1 className="text-2xl font-bold text-white">Criar conta</h1>
@@ -359,7 +359,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
         {/* Header */}
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
-            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-10 w-10 object-contain" />
+            <Logo className="h-10 w-10 object-contain" />
             <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Coach</h1>
@@ -724,7 +724,7 @@ function StudentRegistration({ onBack }: { onBack: () => void }) {
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
-            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-10 w-10 object-contain" />
+            <Logo className="h-10 w-10 object-contain" />
             <span className="text-lg font-bold text-white">FitMind Club</span>
           </div>
           <h1 className="text-xl font-bold text-white">Cadastro de Aluno</h1>
@@ -824,7 +824,7 @@ function CheckEmailNotice({ email }: { email: string }) {
     <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="w-full max-w-md text-center">
         <div className="inline-flex items-center gap-2 mb-6">
-          <img src={fitmindLogo} alt="Logo FitMind Club" className="h-12 w-12 object-contain" />
+          <Logo className="h-12 w-12 object-contain" />
           <span className="text-xl font-bold text-white">FitMind Club</span>
         </div>
         <div className="rounded-2xl p-8" style={{ backgroundColor: "#1A1A1A" }}>

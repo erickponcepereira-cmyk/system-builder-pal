@@ -16,7 +16,7 @@ import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
-import fitmindLogo from "@/assets/fitmind-logo.png";
+import { Logo } from "@/components/Logo";
 import { useTheme } from "@/components/theme-provider";
 
 export const Route = createFileRoute("/coach")({
@@ -188,7 +188,7 @@ function CoachDashboard() {
         style={{ backgroundColor: "rgba(10,10,10,0.9)" }}
       >
         <div className="flex items-center gap-2">
-<img src={fitmindLogo} alt="FitMind Club" className="h-9 w-9 object-contain" />
+<Logo className="h-9 w-auto object-contain" />
           <span className="font-bold text-white">FitMind Club</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
@@ -204,7 +204,7 @@ function CoachDashboard() {
         style={{ backgroundColor: "#0F0F0F" }}
       >
         <div className="mb-8 flex items-center gap-2 px-2 pt-14 lg:pt-0">
-<img src={fitmindLogo} alt="FitMind Club" className="h-9 w-9 object-contain" />
+<Logo className="h-9 w-auto object-contain" />
           <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
             Coach

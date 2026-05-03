@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import fitmindLogo from "@/assets/fitmind-logo.png";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,16 +40,9 @@ function Index() {
           textAlign: "center",
         }}
       >
-        <img
-          src={fitmindLogo}
+        <Logo
+          className="mb-4 h-40 w-auto object-contain"
           alt="Logo FitMind Club"
-          style={{
-            width: 156,
-            height: 156,
-            objectFit: "contain",
-            filter: "drop-shadow(0 24px 70px rgba(255, 66, 48, 0.28))",
-            marginBottom: 18,
-          }}
         />
 
         <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.05, fontWeight: 900, letterSpacing: 0 }}>
