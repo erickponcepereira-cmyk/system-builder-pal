@@ -43,6 +43,7 @@ interface CoachContext {
   city: string;
   state: string;
   bio: string;
+  avatarUrl: string | null;
   patent: string | null;
   referralCode: string;
   referralLink: string;
@@ -59,7 +60,7 @@ function useCoachContext() {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     const { data: profile } = userData.user
-      ? await supabase.from("profiles").select("id,name,email,phone,city,state,bio,patent").eq("user_id", userData.user.id).maybeSingle()
+      ? await supabase.from("profiles").select("id,name,email,phone,city,state,bio,patent,avatar_url").eq("user_id", userData.user.id).maybeSingle()
       : { data: null };
     const { data: coachRow } = profile?.id
       ? await supabase.from("coaches").select("id,referral_code,referral_link,upline_coach_id,total_active_students,total_sales").eq("profile_id", profile.id).maybeSingle()
@@ -74,6 +75,7 @@ function useCoachContext() {
       city: profile.city || "",
       state: profile.state || "",
       bio: profile.bio || "",
+      avatarUrl: (profile as any).avatar_url || null,
       patent: profile.patent || null,
       referralCode: coachRow.referral_code || "",
       referralLink: coachRow.referral_link || "",
