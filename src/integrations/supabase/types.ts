@@ -2532,6 +2532,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           bio: string | null
           birthdate: string | null
           city: string | null
@@ -2550,11 +2551,13 @@ export type Database = {
           state: string | null
           status: string | null
           street: string | null
+          theme_preference: string | null
           updated_at: string | null
           user_id: string
           zip_code: string | null
         }
         Insert: {
+          avatar_url?: string | null
           bio?: string | null
           birthdate?: string | null
           city?: string | null
@@ -2573,11 +2576,13 @@ export type Database = {
           state?: string | null
           status?: string | null
           street?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
           user_id: string
           zip_code?: string | null
         }
         Update: {
+          avatar_url?: string | null
           bio?: string | null
           birthdate?: string | null
           city?: string | null
@@ -2596,6 +2601,7 @@ export type Database = {
           state?: string | null
           status?: string | null
           street?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
           user_id?: string
           zip_code?: string | null

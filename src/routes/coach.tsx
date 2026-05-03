@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
   Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
-  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat, Sun, Moon, Camera, History, Award, GraduationCap, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +14,10 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
+import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import fitmindLogo from "@/assets/fitmind-logo.png";
+import { useTheme } from "@/components/theme-provider";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
@@ -41,6 +43,7 @@ interface CoachContext {
   city: string;
   state: string;
   bio: string;
+  avatarUrl: string | null;
   patent: string | null;
   referralCode: string;
   referralLink: string;
@@ -57,7 +60,7 @@ function useCoachContext() {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     const { data: profile } = userData.user
-      ? await supabase.from("profiles").select("id,name,email,phone,city,state,bio,patent").eq("user_id", userData.user.id).maybeSingle()
+      ? await supabase.from("profiles").select("id,name,email,phone,city,state,bio,patent,avatar_url").eq("user_id", userData.user.id).maybeSingle()
       : { data: null };
     const { data: coachRow } = profile?.id
       ? await supabase.from("coaches").select("id,referral_code,referral_link,upline_coach_id,total_active_students,total_sales").eq("profile_id", profile.id).maybeSingle()
@@ -72,6 +75,7 @@ function useCoachContext() {
       city: profile.city || "",
       state: profile.state || "",
       bio: profile.bio || "",
+      avatarUrl: (profile as any).avatar_url || null,
       patent: profile.patent || null,
       referralCode: coachRow.referral_code || "",
       referralLink: coachRow.referral_link || "",
@@ -159,16 +163,16 @@ function CoachDashboard() {
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
-    { id: "products", label: "Esteira de Produtos", icon: Package },
-    { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "tree", label: "Árvore da Rede", icon: Network },
+    { id: "students", label: "Base de Alunos", icon: UserRound },
+    { id: "products", label: "Esteira de Produtos", icon: Package },
     { id: "physicalStore", label: "Loja Física", icon: ShoppingBag },
     { id: "digitalStore", label: "Loja Digital", icon: BookOpen },
     { id: "benefits", label: "Benefícios", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
-    { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
+    { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
 
@@ -502,6 +506,14 @@ function ProductsTrackTab() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="mt-6 rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="mb-4 flex items-center gap-2">
+          <Calculator className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-white">Simulador de ganhos</h2>
+        </div>
+        <MLMSimulator />
       </div>
     </>
   );
