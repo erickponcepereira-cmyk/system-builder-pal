@@ -71,7 +71,7 @@ function LoginPage() {
     }
 
     const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
-      supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
 
@@ -84,7 +84,8 @@ function LoginPage() {
     }
 
     const role = profile.role;
-    const canCoach = role === "manager" || role === "director" || !!coach;
+    const coachApproved = !!coach && !!coach.approved_at;
+    const canCoach = (role === "manager" || role === "director" || !!coach) && (role === "admin" || role === "manager" || role === "director" || coachApproved);
     const canStudent = role === "student" || !!student;
 
     if (role === "coach" && !coach) {
