@@ -86,7 +86,7 @@ function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-12 w-12 object-contain" />
+            <Logo className="h-12 w-12 object-contain" />
             <span className="text-xl font-bold text-white">FitMind Club</span>
           </Link>
         </div>

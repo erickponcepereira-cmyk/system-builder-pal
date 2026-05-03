@@ -220,7 +220,7 @@ function LoginPage() {
       {/* Left panel - Brand */}
       <div className="hidden md:flex md:w-[40%] flex-col items-center justify-center relative" style={{ backgroundColor: "#0A0A0A" }}>
         <div className="flex flex-col items-center gap-4">
-          <img src={fitmindLogo} alt="Logo FitMind Club" className="h-24 w-24 object-contain" />
+          <Logo className="h-24 w-24 object-contain" />
           <h1 className="text-3xl font-bold text-white">FitMind Club</h1>
           <p className="text-sm text-white/50 tracking-wider">Transforme. Conecte. Cresça.</p>
         </div>
@@ -232,7 +232,7 @@ function LoginPage() {
         {/* Mobile logo */}
         <div className="w-full max-w-sm">
           <div className="md:hidden flex flex-col items-center gap-3 mb-10">
-            <img src={fitmindLogo} alt="Logo FitMind Club" className="h-20 w-20 object-contain" />
+            <Logo className="h-20 w-20 object-contain" />
             <h1 className="text-2xl font-bold text-white">FitMind Club</h1>
           </div>
 
