@@ -52,11 +52,54 @@
   --font-body: var(--font-body);
 }
 
-:root {
+:root,
+:root.light {
   --radius: 0.75rem;
   --font-display: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
+  /* Light fitness theme - clean white with red FitMind accents */
+  --background: oklch(0.99 0.002 25);
+  --foreground: oklch(0.15 0.01 25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 25);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 25);
+  --primary: oklch(0.6 0.24 29);
+  --primary-foreground: oklch(0.99 0.004 25);
+  --secondary: oklch(0.96 0.005 25);
+  --secondary-foreground: oklch(0.2 0.01 25);
+  --muted: oklch(0.96 0.005 25);
+  --muted-foreground: oklch(0.5 0.012 25);
+  --accent: oklch(0.95 0.04 29);
+  --accent-foreground: oklch(0.4 0.2 29);
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.99 0.004 25);
+  --border: oklch(0.9 0.005 285);
+  --input: oklch(0.94 0.005 285);
+  --ring: oklch(0.6 0.24 29);
+  --success: oklch(0.55 0.18 145);
+  --success-foreground: oklch(0.99 0.004 25);
+  --warning: oklch(0.7 0.15 85);
+  --warning-foreground: oklch(0.15 0.01 25);
+
+  --chart-1: oklch(0.6 0.24 29);
+  --chart-2: oklch(0.55 0.18 145);
+  --chart-3: oklch(0.5 0.2 280);
+  --chart-4: oklch(0.7 0.15 85);
+  --chart-5: oklch(0.55 0.15 340);
+
+  --sidebar: oklch(0.98 0.003 285);
+  --sidebar-foreground: oklch(0.2 0.01 25);
+  --sidebar-primary: oklch(0.6 0.24 29);
+  --sidebar-primary-foreground: oklch(0.99 0.004 25);
+  --sidebar-accent: oklch(0.95 0.005 285);
+  --sidebar-accent-foreground: oklch(0.2 0.01 25);
+  --sidebar-border: oklch(0.9 0.005 285);
+  --sidebar-ring: oklch(0.6 0.24 29);
+}
+
+.dark {
   /* Dark fitness theme - red/black FitMind identity */
   --background: oklch(0.08 0.003 25);
   --foreground: oklch(0.97 0.004 25);
