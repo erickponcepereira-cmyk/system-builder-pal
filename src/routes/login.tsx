@@ -105,6 +105,13 @@ function LoginPage() {
     }
 
     if (role !== "admin" && !canCoach && !canStudent) {
+      // Caso típico: coach novo aguardando aprovação e sem registro de aluno
+      if (coach && !coachApproved) {
+        setLoading(false);
+        await supabase.auth.signOut();
+        window.location.assign("/pending-approval");
+        return;
+      }
       setLoading(false);
       const message = "Login indisponível: nenhum painel liberado para este cadastro.";
       setFormError(message);
@@ -119,7 +126,12 @@ function LoginPage() {
       setLoading(false);
     }
     else if (canCoach) enterArea("coach");
-    else enterArea("student");
+    else {
+      if (coach && !coachApproved) {
+        toast.message("Seu cadastro de coach está em análise. Acesso liberado como aluno.");
+      }
+      enterArea("student");
+    }
   };
 
   // Auto-login desativado durante a fase de testes.
