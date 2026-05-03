@@ -507,6 +507,14 @@ function ProductsTrackTab() {
           </div>
         )}
       </div>
+
+      <div className="mt-6 rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="mb-4 flex items-center gap-2">
+          <Calculator className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-white">Simulador de ganhos</h2>
+        </div>
+        <MLMSimulator />
+      </div>
     </>
   );
 }
