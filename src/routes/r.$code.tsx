@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import fitmindLogo from "@/assets/fitmind-logo.png";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/r/$code")({
   head: () => ({
