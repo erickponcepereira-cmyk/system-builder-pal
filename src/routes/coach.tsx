@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
   Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
-  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat, Sun, Moon, Camera, History, Award, GraduationCap, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +14,10 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
+import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import fitmindLogo from "@/assets/fitmind-logo.png";
+import { useTheme } from "@/components/theme-provider";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
