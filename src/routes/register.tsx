@@ -259,6 +259,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       return fail("Preencha todos os campos obrigatórios desta etapa.");
     if (!email.includes("@") || !email.includes("."))
       return fail("E-mail inválido. Use o formato nome@dominio.com.");
+    if (emailStatus === "taken")
+      return fail("Este e-mail já está cadastrado. Use outro ou faça login.");
+    if (emailStatus === "checking")
+      return fail("Aguarde a verificação do e-mail.");
     if (cpf.replace(/\D/g, "").length !== 11)
       return fail("CPF incompleto. Digite os 11 dígitos.");
     if (phone.replace(/\D/g, "").length < 10)
@@ -294,6 +298,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       setFormError(m); toast.error(m);
       return;
     }
+    if (!completedCoachCourse) {
+      const m = "Informe se você já fez o curso de coach.";
+      setFormError(m); toast.error(m);
+      return;
+    }
 
     setLoading(true);
     setFormError(null);
@@ -321,11 +330,12 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             uplineCoachId: selectedCoach.id,
             referralCode,
             referralLink: `${window.location.origin}/r/${referralCode}`,
+            completedCoachCourse: completedCoachCourse === "yes",
+            coachCourseNotes: coachCourseNotes || null,
           },
         },
       });
 
-      // Sai da sessão local (caso exista) — usuário precisa confirmar e-mail antes de entrar.
       await supabase.auth.signOut().catch(() => {});
       sessionStorage.removeItem("fitmind_selected_area");
       setRegisteredEmail(email.trim().toLowerCase());
