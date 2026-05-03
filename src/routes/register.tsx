@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn } from "@/server/registration.functions";
+import { checkEmailAvailable } from "@/server/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
 
 type SearchParams = { role?: string };
@@ -191,6 +192,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [phone, setPhone] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [password, setPassword] = useState("");
@@ -209,6 +211,24 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   // Step 3
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
+  const [completedCoachCourse, setCompletedCoachCourse] = useState<"yes" | "no" | "">("");
+  const [coachCourseNotes, setCoachCourseNotes] = useState("");
+
+  // Validação email em tempo real (debounced)
+  useEffect(() => {
+    if (!email) { setEmailStatus("idle"); return; }
+    if (!email.includes("@") || !email.includes(".")) { setEmailStatus("invalid"); return; }
+    setEmailStatus("checking");
+    const handle = window.setTimeout(async () => {
+      try {
+        const res = await checkEmailAvailable({ data: { email } });
+        setEmailStatus(res.available ? "available" : "taken");
+      } catch {
+        setEmailStatus("idle");
+      }
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [email]);
 
   const fetchCep = useCallback(async (cepValue: string) => {
     const clean = cepValue.replace(/\D/g, "");
@@ -239,6 +259,10 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       return fail("Preencha todos os campos obrigatórios desta etapa.");
     if (!email.includes("@") || !email.includes("."))
       return fail("E-mail inválido. Use o formato nome@dominio.com.");
+    if (emailStatus === "taken")
+      return fail("Este e-mail já está cadastrado. Use outro ou faça login.");
+    if (emailStatus === "checking")
+      return fail("Aguarde a verificação do e-mail.");
     if (cpf.replace(/\D/g, "").length !== 11)
       return fail("CPF incompleto. Digite os 11 dígitos.");
     if (phone.replace(/\D/g, "").length < 10)
@@ -274,6 +298,11 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
       setFormError(m); toast.error(m);
       return;
     }
+    if (!completedCoachCourse) {
+      const m = "Informe se você já fez o curso de coach.";
+      setFormError(m); toast.error(m);
+      return;
+    }
 
     setLoading(true);
     setFormError(null);
@@ -301,11 +330,12 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             uplineCoachId: selectedCoach.id,
             referralCode,
             referralLink: `${window.location.origin}/r/${referralCode}`,
+            completedCoachCourse: completedCoachCourse === "yes",
+            coachCourseNotes: coachCourseNotes || null,
           },
         },
       });
 
-      // Sai da sessão local (caso exista) — usuário precisa confirmar e-mail antes de entrar.
       await supabase.auth.signOut().catch(() => {});
       sessionStorage.removeItem("fitmind_selected_area");
       setRegisteredEmail(email.trim().toLowerCase());
@@ -370,7 +400,23 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">E-mail *</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
+                  placeholder="seu@email.com"
+                  className={`bg-white/5 text-white placeholder:text-white/30 ${
+                    emailStatus === "taken" ? "border-destructive" : emailStatus === "available" ? "border-success" : "border-white/10"
+                  }`}
+                  required
+                />
+                {emailStatus === "checking" && <p className="text-[11px] text-white/40">Verificando disponibilidade...</p>}
+                {emailStatus === "available" && <p className="text-[11px] text-success">✓ E-mail disponível</p>}
+                {emailStatus === "taken" && (
+                  <p className="text-[11px] text-destructive">
+                    Este e-mail já está cadastrado. <Link to="/login" className="underline">Fazer login</Link>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">WhatsApp *</Label>
@@ -485,6 +531,41 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
           {step === 3 && (
             <div className="space-y-4">
               <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <Label className="text-white/80 text-sm">Você já fez o curso de coach? *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCompletedCoachCourse("yes")}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      completedCoachCourse === "yes"
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                    }`}
+                  >Sim, já fiz</button>
+                  <button
+                    type="button"
+                    onClick={() => setCompletedCoachCourse("no")}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      completedCoachCourse === "no"
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                    }`}
+                  >Ainda não</button>
+                </div>
+                {completedCoachCourse === "yes" && (
+                  <Input
+                    value={coachCourseNotes}
+                    onChange={(e) => setCoachCourseNotes(e.target.value)}
+                    placeholder="Ex: Curso FitMind 2024, certificado nº 1234"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  />
+                )}
+                <p className="text-[11px] text-white/40">
+                  Esta informação será usada pelo administrador na liberação do seu acesso.
+                </p>
+              </div>
 
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/60">
                 Os dados bancários (chave PIX e conta) serão solicitados apenas no momento do seu primeiro saque, na aba <span className="text-white">Carteira</span>. Eles ficam salvos para futuros pagamentos.

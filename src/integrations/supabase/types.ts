@@ -1182,6 +1182,8 @@ export type Database = {
           blocked_at: string | null
           blocked_reason: string | null
           career_goal_progress: Json | null
+          coach_course_notes: string | null
+          completed_coach_course: boolean
           consecutive_months_as_top: number | null
           created_at: string | null
           herbalife_portal_url: string | null
@@ -1211,6 +1213,8 @@ export type Database = {
           blocked_at?: string | null
           blocked_reason?: string | null
           career_goal_progress?: Json | null
+          coach_course_notes?: string | null
+          completed_coach_course?: boolean
           consecutive_months_as_top?: number | null
           created_at?: string | null
           herbalife_portal_url?: string | null
@@ -1240,6 +1244,8 @@ export type Database = {
           blocked_at?: string | null
           blocked_reason?: string | null
           career_goal_progress?: Json | null
+          coach_course_notes?: string | null
+          completed_coach_course?: boolean
           consecutive_months_as_top?: number | null
           created_at?: string | null
           herbalife_portal_url?: string | null

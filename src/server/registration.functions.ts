@@ -28,6 +28,8 @@ const registrationSchema = z.object({
       bankAccountType: z.string().optional().nullable(),
       referralCode: z.string().optional().nullable(),
       referralLink: z.string().optional().nullable(),
+      completedCoachCourse: z.boolean().optional(),
+      coachCourseNotes: z.string().optional().nullable(),
     })
     .optional(),
   student: z
