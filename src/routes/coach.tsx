@@ -857,6 +857,7 @@ function StoreGrid({ title, subtitle, items, loading, kind }: { title: string; s
 function CoachBenefitsTab() {
   const [benefits, setBenefits] = useState<BenefitRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subTab, setSubTab] = useState<"client" | "coach">("client");
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.from("partner_benefits").select("id,name,description,discount_info,coupon_code,category,website_url").eq("is_active", true).order("sort_order", { ascending: true });
@@ -869,28 +870,36 @@ function CoachBenefitsTab() {
     { id: "showcase", name: "Benefícios para apresentar a clientes", description: "Use esta aba para demonstrar vantagens, bônus e condições comerciais durante a venda.", discount_info: "Material de apoio", coupon_code: "FITMIND", category: "Clientes", website_url: null },
     { id: "coach", name: "Desconto exclusivo Coach", description: "Área reservada para vantagens de compra e parceiros liberados para coaches ativos.", discount_info: "Condição especial", coupon_code: "COACH", category: "Coach", website_url: null },
   ];
+  const filtered = fallback.filter((b) => {
+    const cat = (b.category || "").toLowerCase();
+    if (subTab === "coach") return cat.includes("coach");
+    return !cat.includes("coach");
+  });
+  const visible = filtered.length ? filtered : fallback;
   return (
     <>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Benefícios</h1>
         <p className="text-sm text-white/50">Vantagens para mostrar aos clientes e descontos exclusivos do coach</p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-primary/30 p-5" style={{ backgroundColor: "#1A1A1A" }}>
-          <Gift className="mb-3 h-6 w-6 text-primary" />
-          <h2 className="text-lg font-bold text-white">Para demonstrar ao cliente</h2>
-          <p className="mt-1 text-sm text-white/55">Organize os benefícios como argumento de venda, bônus de desafio e vantagens do clube.</p>
-        </div>
-        <div className="rounded-2xl border border-success/30 p-5" style={{ backgroundColor: "#1A1A1A" }}>
-          <Percent className="mb-3 h-6 w-6 text-success" />
-          <h2 className="text-lg font-bold text-white">Exclusivo para coaches</h2>
-          <p className="mt-1 text-sm text-white/55">Cupons, descontos e condições de parceiros para coaches ativos da rede.</p>
-        </div>
+      <div className="mb-4 inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+        <button
+          onClick={() => setSubTab("client")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${subTab === "client" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}
+        >
+          <Gift className="h-3.5 w-3.5" /> Para o cliente
+        </button>
+        <button
+          onClick={() => setSubTab("coach")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${subTab === "coach" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}
+        >
+          <Percent className="h-3.5 w-3.5" /> Exclusivo coach
+        </button>
       </div>
-      <div className="mt-4 rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
         {loading ? <p className="text-sm text-white/50">Carregando benefícios...</p> : (
           <div className="grid gap-3 md:grid-cols-2">
-            {fallback.map((benefit) => (
+            {visible.map((benefit) => (
               <div key={benefit.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold text-white/60">{benefit.category || "Benefício"}</span>
