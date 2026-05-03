@@ -532,6 +532,41 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
             <div className="space-y-4">
               <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
 
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <Label className="text-white/80 text-sm">Você já fez o curso de coach? *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCompletedCoachCourse("yes")}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      completedCoachCourse === "yes"
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                    }`}
+                  >Sim, já fiz</button>
+                  <button
+                    type="button"
+                    onClick={() => setCompletedCoachCourse("no")}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      completedCoachCourse === "no"
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                    }`}
+                  >Ainda não</button>
+                </div>
+                {completedCoachCourse === "yes" && (
+                  <Input
+                    value={coachCourseNotes}
+                    onChange={(e) => setCoachCourseNotes(e.target.value)}
+                    placeholder="Ex: Curso FitMind 2024, certificado nº 1234"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  />
+                )}
+                <p className="text-[11px] text-white/40">
+                  Esta informação será usada pelo administrador na liberação do seu acesso.
+                </p>
+              </div>
+
               <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/60">
                 Os dados bancários (chave PIX e conta) serão solicitados apenas no momento do seu primeiro saque, na aba <span className="text-white">Carteira</span>. Eles ficam salvos para futuros pagamentos.
               </div>
