@@ -71,7 +71,7 @@ function LoginPage() {
     }
 
     const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
-      supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
 
@@ -84,7 +84,8 @@ function LoginPage() {
     }
 
     const role = profile.role;
-    const canCoach = role === "manager" || role === "director" || !!coach;
+    const coachApproved = !!coach && !!coach.approved_at;
+    const canCoach = (role === "manager" || role === "director" || !!coach) && (role === "admin" || role === "manager" || role === "director" || coachApproved);
     const canStudent = role === "student" || !!student;
 
     if (role === "coach" && !coach) {
@@ -104,6 +105,13 @@ function LoginPage() {
     }
 
     if (role !== "admin" && !canCoach && !canStudent) {
+      // Caso típico: coach novo aguardando aprovação e sem registro de aluno
+      if (coach && !coachApproved) {
+        setLoading(false);
+        await supabase.auth.signOut();
+        window.location.assign("/pending-approval");
+        return;
+      }
       setLoading(false);
       const message = "Login indisponível: nenhum painel liberado para este cadastro.";
       setFormError(message);
@@ -118,7 +126,12 @@ function LoginPage() {
       setLoading(false);
     }
     else if (canCoach) enterArea("coach");
-    else enterArea("student");
+    else {
+      if (coach && !coachApproved) {
+        toast.message("Seu cadastro de coach está em análise. Acesso liberado como aluno.");
+      }
+      enterArea("student");
+    }
   };
 
   // Auto-login desativado durante a fase de testes.

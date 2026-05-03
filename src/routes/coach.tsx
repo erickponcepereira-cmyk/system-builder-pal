@@ -113,7 +113,7 @@ function CoachDashboard() {
         .maybeSingle();
 
       const { data: coach } = profile
-        ? await supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+        ? await supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
 
       if (!active) return;
@@ -121,8 +121,19 @@ function CoachDashboard() {
         navigate({ to: "/admin", replace: true });
         return;
       }
-      if (!["coach", "manager", "director"].includes(profile?.role || "") && !coach) {
-        navigate({ to: "/student", replace: true });
+      const coachApproved = !!coach && !!coach.approved_at;
+      const isPrivilegedRole = ["manager", "director"].includes(profile?.role || "");
+      if (!isPrivilegedRole && !coachApproved) {
+        // Coach pendente vai para painel do aluno (ou tela de pendência se não tiver student)
+        const { data: studentRow } = profile
+          ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
+          : { data: null };
+        if (studentRow) {
+          sessionStorage.setItem("fitmind_selected_area", "student");
+          navigate({ to: "/student", replace: true });
+        } else {
+          navigate({ to: "/pending-approval", replace: true });
+        }
         return;
       }
 
