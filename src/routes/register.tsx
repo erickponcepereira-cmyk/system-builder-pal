@@ -192,6 +192,7 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [phone, setPhone] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [password, setPassword] = useState("");
@@ -210,6 +211,24 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
   // Step 3
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
+  const [completedCoachCourse, setCompletedCoachCourse] = useState<"yes" | "no" | "">("");
+  const [coachCourseNotes, setCoachCourseNotes] = useState("");
+
+  // Validação email em tempo real (debounced)
+  useEffect(() => {
+    if (!email) { setEmailStatus("idle"); return; }
+    if (!email.includes("@") || !email.includes(".")) { setEmailStatus("invalid"); return; }
+    setEmailStatus("checking");
+    const handle = window.setTimeout(async () => {
+      try {
+        const res = await checkEmailAvailable({ data: { email } });
+        setEmailStatus(res.available ? "available" : "taken");
+      } catch {
+        setEmailStatus("idle");
+      }
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [email]);
 
   const fetchCep = useCallback(async (cepValue: string) => {
     const clean = cepValue.replace(/\D/g, "");
