@@ -400,7 +400,23 @@ function CoachRegistration({ onBack }: { onBack: () => void }) {
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">E-mail *</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value.trim().toLowerCase())}
+                  placeholder="seu@email.com"
+                  className={`bg-white/5 text-white placeholder:text-white/30 ${
+                    emailStatus === "taken" ? "border-destructive" : emailStatus === "available" ? "border-success" : "border-white/10"
+                  }`}
+                  required
+                />
+                {emailStatus === "checking" && <p className="text-[11px] text-white/40">Verificando disponibilidade...</p>}
+                {emailStatus === "available" && <p className="text-[11px] text-success">✓ E-mail disponível</p>}
+                {emailStatus === "taken" && (
+                  <p className="text-[11px] text-destructive">
+                    Este e-mail já está cadastrado. <Link to="/login" className="underline">Fazer login</Link>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">WhatsApp *</Label>
