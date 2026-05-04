@@ -51,12 +51,25 @@ function AdminCoaches() {
     if (!user) return;
     const { data: adminProfile } = await supabase
       .from("profiles").select("id").eq("user_id", user.id).maybeSingle();
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("coaches")
       .update({ approved_at: new Date().toISOString(), approved_by: adminProfile?.id })
-      .eq("id", coachId);
-    if (error) toast.error("Erro ao aprovar");
-    else { toast.success("Coach aprovado!"); load(); }
+      .eq("id", coachId)
+      .select("profile_id")
+      .maybeSingle();
+    if (error) { toast.error("Erro ao aprovar"); return; }
+    // Cria notificação para o coach
+    if (updated?.profile_id) {
+      await supabase.from("notifications").insert({
+        profile_id: updated.profile_id,
+        type: "coach_approved",
+        title: "Cadastro de coach aprovado! 🎉",
+        message: "Você já pode acessar todos os recursos do painel de coach.",
+        action_url: "/coach",
+      });
+    }
+    toast.success("Coach aprovado!");
+    load();
   };
 
   const reject = async (coachId: string) => {
