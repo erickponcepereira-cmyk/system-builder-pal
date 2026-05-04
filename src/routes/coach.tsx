@@ -306,10 +306,12 @@ function OverviewTab({
   coachName,
   referralLink,
   onCopy,
+  coachId,
 }: {
   coachName: string;
   referralLink: string;
   onCopy: () => void;
+  coachId: string;
 }) {
   const stats = [
     { label: "Alunos ativos", value: "24", change: "+3", icon: Users },
