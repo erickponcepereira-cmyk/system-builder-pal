@@ -324,6 +324,34 @@ function CoachDashboard() {
       {/* Main */}
       <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
         <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+          {isPending && (
+            <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+                  <Award className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-white">Aguardando autorização do admin</h3>
+                  <p className="mt-1 text-xs text-white/70">
+                    Seu cadastro de coach está em análise. Explore o seu perfil de aluno enquanto aguarda — você será notificado assim que for autorizado.
+                  </p>
+                  {hasStudentProfile && (
+                    <button
+                      onClick={() => {
+                        sessionStorage.setItem("fitmind_selected_area", "student");
+                        navigate({ to: "/student" });
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Repeat className="h-3.5 w-3.5" />
+                      Mudar para painel de aluno
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <div className={isPending ? "pointer-events-none select-none opacity-50" : ""} aria-disabled={isPending}>
           {activeTab === "overview" && (
             <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} coachId={coachContext?.coachId || ""} />
           )}
