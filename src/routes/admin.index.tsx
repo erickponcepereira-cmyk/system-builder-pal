@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Users, UserCheck, DollarSign, TrendingUp, Activity, Clock, Wallet, Trophy, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { BirthdaysCard } from "@/components/BirthdaysCard";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
