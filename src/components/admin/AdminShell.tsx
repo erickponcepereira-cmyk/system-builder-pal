@@ -145,13 +145,33 @@ export function AdminShell() {
           })}
         </nav>
 
-        <button
-          onClick={handleLogout}
-          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/50 hover:text-white transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          Sair
-        </button>
+        <div className="mt-auto space-y-1 border-t border-white/5 pt-3">
+          {hasCoach && (
+            <button
+              onClick={() => { sessionStorage.removeItem("fitmind_selected_area"); navigate({ to: "/coach" }); }}
+              className="flex w-full items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Repeat className="h-4 w-4" />
+              Painel do coach
+            </button>
+          )}
+          {hasStudent && (
+            <button
+              onClick={() => { sessionStorage.setItem("fitmind_selected_area", "student"); navigate({ to: "/student" }); }}
+              className="flex w-full items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 transition-colors"
+            >
+              <Dumbbell className="h-4 w-4" />
+              Painel do aluno
+            </button>
+          )}
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/50 hover:text-white transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </button>
+        </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
