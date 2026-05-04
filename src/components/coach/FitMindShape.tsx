@@ -1095,22 +1095,23 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label className="fm-label">Grupo(s)</label>
+            <label className="fm-label">Grupo(s) *</label>
             <select
               className="fm-select"
               value={newClientData.groups?.[0] || ""}
-              onChange={(e) =>
-                updateNewClient(
-                  "groups",
-                  e.target.value ? [e.target.value] : [],
-                )
-              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__new__") {
+                  const name = window.prompt("Nome do novo grupo:");
+                  if (name?.trim()) updateNewClient("groups", [name.trim()]);
+                } else {
+                  updateNewClient("groups", v ? [v] : []);
+                }
+              }}
             >
-              <option value="">Sem grupo</option>
+              <option value="">Selecione um grupo *</option>
               {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
+                <option key={g.id} value={g.id}>{g.name}</option>
               ))}
               <option value="__new__">+ Criar novo grupo...</option>
             </select>
