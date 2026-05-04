@@ -85,7 +85,8 @@ function LoginPage() {
 
     const role = profile.role;
     const coachApproved = !!coach && !!coach.approved_at;
-    const canCoach = (role === "manager" || role === "director" || !!coach) && (role === "admin" || role === "manager" || role === "director" || coachApproved);
+    // Coach pendente também pode entrar no painel de coach (em modo travado)
+    const canCoach = role === "admin" || role === "manager" || role === "director" || !!coach;
     const canStudent = role === "student" || !!student;
 
     if (role === "coach" && !coach) {
