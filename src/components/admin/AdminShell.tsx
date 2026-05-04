@@ -2,9 +2,9 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, UserCheck, Package, CreditCard,
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
-  Library, ShoppingCart, GraduationCap,
+  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: "/admin/coaches", label: "Coaches", icon: UserCheck },
   { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle },
   { to: "/admin/students", label: "Alunos", icon: Users },
+  { to: "/admin/users", label: "Admins", icon: ShieldCheck },
   { to: "/admin/products", label: "Produtos", icon: Package },
   { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
   { to: "/admin/digital-products", label: "Cursos", icon: Library },
@@ -27,11 +28,58 @@ export function AdminShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        if (active) navigate({ to: "/login" });
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (!active) return;
+      if (profile?.role === "admin") setAuthState("ok");
+      else setAuthState("denied");
+    })();
+    return () => { active = false; };
+  }, [navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/login" });
   };
+
+  if (authState === "checking") {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (authState === "denied") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center" style={{ backgroundColor: "#0A0A0A" }}>
+        <ShieldCheck className="h-12 w-12 text-primary" />
+        <h1 className="text-2xl font-bold text-white">Acesso restrito</h1>
+        <p className="max-w-md text-sm text-white/60">
+          Esta área é exclusiva para administradores. Solicite a um admin existente que promova sua conta.
+        </p>
+        <button
+          onClick={handleLogout}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Sair e voltar ao login
+        </button>
+      </div>
+    );
+  }
 
   const isActive = (to: string, exact?: boolean) =>
     exact ? location.pathname === to : location.pathname.startsWith(to);
