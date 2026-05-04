@@ -99,6 +99,7 @@ function CoachDashboard() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [isPending, setIsPending] = useState(false);
   const [hasStudentProfile, setHasStudentProfile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [coachRowId, setCoachRowId] = useState<string | null>(null);
   const [profileIdState, setProfileIdState] = useState<string | null>(null);
   const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
