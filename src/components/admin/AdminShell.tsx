@@ -7,22 +7,23 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+import { canAccess, type AdminPermKey, type AdminPerms } from "@/lib/admin-permissions";
 
-const navItems = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/admin/coaches", label: "Coaches", icon: UserCheck },
-  { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle },
-  { to: "/admin/students", label: "Alunos", icon: Users },
-  { to: "/admin/users", label: "Admins", icon: ShieldCheck },
-  { to: "/admin/products", label: "Produtos", icon: Package },
-  { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
-  { to: "/admin/digital-products", label: "Cursos", icon: Library },
-  { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap },
-  { to: "/admin/payments", label: "Pagamentos", icon: CreditCard },
-  { to: "/admin/reports", label: "Relatórios", icon: BarChart3 },
-  { to: "/admin/patents", label: "Patentes", icon: Award },
-  { to: "/admin/settings", label: "Configurações", icon: Settings },
-] as const;
+const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; perm: AdminPermKey }[] = [
+  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, perm: "dashboard" },
+  { to: "/admin/coaches", label: "Coaches", icon: UserCheck, perm: "coaches" },
+  { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle, perm: "inactivity" },
+  { to: "/admin/students", label: "Alunos", icon: Users, perm: "students" },
+  { to: "/admin/users", label: "Admins", icon: ShieldCheck, perm: "users" },
+  { to: "/admin/products", label: "Produtos", icon: Package, perm: "products" },
+  { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart, perm: "orders" },
+  { to: "/admin/digital-products", label: "Cursos", icon: Library, perm: "digital_products" },
+  { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap, perm: "coach_applications" },
+  { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
+  { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
+  { to: "/admin/patents", label: "Patentes", icon: Award, perm: "patents" },
+  { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
+];
 
 export function AdminShell() {
   const location = useLocation();
@@ -31,6 +32,8 @@ export function AdminShell() {
   const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
   const [hasCoach, setHasCoach] = useState(false);
   const [hasStudent, setHasStudent] = useState(false);
+  const [isMaster, setIsMaster] = useState(false);
+  const [perms, setPerms] = useState<AdminPerms | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -42,12 +45,14 @@ export function AdminShell() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, role")
+        .select("id, role, is_master_admin, admin_permissions")
         .eq("user_id", session.user.id)
         .maybeSingle();
       if (!active) return;
       if (profile?.role === "admin") {
         setAuthState("ok");
+        setIsMaster(!!(profile as any).is_master_admin);
+        setPerms(((profile as any).admin_permissions as AdminPerms) || {});
         if (profile?.id) {
           const [{ data: coach }, { data: student }] = await Promise.all([
             supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
@@ -120,13 +125,14 @@ export function AdminShell() {
 <Logo className="h-9 w-auto object-contain" />
           <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-            Admin
+            {isMaster ? "Master" : "Admin"}
           </span>
         </div>
 
+
         <nav className="mt-14 flex flex-1 flex-col gap-1 lg:mt-0">
-          {navItems.map((item) => {
-            const active = isActive(item.to, "exact" in item ? item.exact : false);
+          {navItems.filter((it) => canAccess(perms, isMaster, it.perm)).map((item) => {
+            const active = isActive(item.to, item.exact);
             return (
               <Link
                 key={item.label}

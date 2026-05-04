@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_profile_id: string | null
+          after_permissions: Json | null
+          after_role: string | null
+          before_permissions: Json | null
+          before_role: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          target_profile_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_profile_id?: string | null
+          after_permissions?: Json | null
+          after_role?: string | null
+          before_permissions?: Json | null
+          before_role?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          target_profile_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_profile_id?: string | null
+          after_permissions?: Json | null
+          after_role?: string | null
+          before_permissions?: Json | null
+          before_role?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          target_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_audit_log_target_profile_id_fkey"
+            columns: ["target_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnesis_forms: {
         Row: {
           additional_observations: string | null
@@ -2532,6 +2586,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_permissions: Json
           avatar_url: string | null
           bio: string | null
           birthdate: string | null
@@ -2540,6 +2595,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_master_admin: boolean
           name: string
           neighborhood: string | null
           number: string | null
@@ -2557,6 +2613,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          admin_permissions?: Json
           avatar_url?: string | null
           bio?: string | null
           birthdate?: string | null
@@ -2565,6 +2622,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          is_master_admin?: boolean
           name: string
           neighborhood?: string | null
           number?: string | null
@@ -2582,6 +2640,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          admin_permissions?: Json
           avatar_url?: string | null
           bio?: string | null
           birthdate?: string | null
@@ -2590,6 +2649,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_master_admin?: boolean
           name?: string
           neighborhood?: string | null
           number?: string | null
@@ -3521,6 +3581,7 @@ export type Database = {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
       }
+      count_active_admins: { Args: never; Returns: number }
       create_store_order: {
         Args: {
           _items: Json
@@ -3544,6 +3605,7 @@ export type Database = {
         Returns: Json
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_master_admin: { Args: { _user_id: string }; Returns: boolean }
       join_student_challenge_group: {
         Args: { _group_id: string }
         Returns: undefined
