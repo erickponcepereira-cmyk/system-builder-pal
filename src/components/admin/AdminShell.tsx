@@ -29,6 +29,8 @@ export function AdminShell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
+  const [hasCoach, setHasCoach] = useState(false);
+  const [hasStudent, setHasStudent] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -40,12 +42,22 @@ export function AdminShell() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id, role")
         .eq("user_id", session.user.id)
         .maybeSingle();
       if (!active) return;
-      if (profile?.role === "admin") setAuthState("ok");
-      else setAuthState("denied");
+      if (profile?.role === "admin") {
+        setAuthState("ok");
+        if (profile?.id) {
+          const [{ data: coach }, { data: student }] = await Promise.all([
+            supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+            supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+          ]);
+          if (!active) return;
+          setHasCoach(!!coach);
+          setHasStudent(!!student);
+        }
+      } else setAuthState("denied");
     })();
     return () => { active = false; };
   }, [navigate]);
