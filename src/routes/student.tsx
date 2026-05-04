@@ -40,9 +40,9 @@ function StudentLayout() {
         : { data: null };
 
       if (!active) return;
-      if (profile?.role === "admin") navigate({ to: "/admin", replace: true });
+      if (profile?.role === "admin" && selectedArea !== "student") navigate({ to: "/admin", replace: true });
       else if (["coach", "manager", "director"].includes(profile?.role || "") && selectedArea !== "student") navigate({ to: "/coach", replace: true });
-      else if (!student && profile?.role !== "student") navigate({ to: "/coach", replace: true });
+      else if (!student && profile?.role !== "student" && profile?.role !== "admin") navigate({ to: "/coach", replace: true });
       else setCheckingRole(false);
     });
 
