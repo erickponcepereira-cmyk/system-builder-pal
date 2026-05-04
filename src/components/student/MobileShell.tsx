@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User } from "lucide-react";
+import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
