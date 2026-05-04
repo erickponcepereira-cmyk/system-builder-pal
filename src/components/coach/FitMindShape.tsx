@@ -95,6 +95,8 @@ export interface FitMindAssessment {
   height: number;
   weight: number;
   bmi: number;
+  // Fórmula de bioimpedância usada
+  bioFormula?: "harris_benedict" | "cunningham" | "tem_haaf" | "mifflin_st_jeor";
   // Bioimpedância
   bodyFat: number; // % gordura corporal
   skeletalMuscle: number; // % músculo esquelético
