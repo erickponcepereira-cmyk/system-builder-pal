@@ -17,6 +17,7 @@ import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import { Logo } from "@/components/Logo";
+import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { useTheme } from "@/components/theme-provider";
 
 export const Route = createFileRoute("/coach")({
