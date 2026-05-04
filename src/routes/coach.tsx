@@ -17,6 +17,7 @@ import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import { Logo } from "@/components/Logo";
+import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { useTheme } from "@/components/theme-provider";
 
 export const Route = createFileRoute("/coach")({
@@ -280,7 +281,7 @@ function CoachDashboard() {
       <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
         <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
           {activeTab === "overview" && (
-            <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} />
+            <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} coachId={coachContext?.coachId || ""} />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
           {activeTab === "products" && <ProductsTrackTab />}
@@ -306,10 +307,12 @@ function OverviewTab({
   coachName,
   referralLink,
   onCopy,
+  coachId,
 }: {
   coachName: string;
   referralLink: string;
   onCopy: () => void;
+  coachId: string;
 }) {
   const stats = [
     { label: "Alunos ativos", value: "24", change: "+3", icon: Users },
@@ -380,6 +383,12 @@ function OverviewTab({
           currentStudents={24}
           isTopSeller={false}
         />
+      </div>
+
+      {/* Aniversariantes */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <BirthdaysCard scope="week" title="Aniversariantes da semana" />
+        {coachId && <BirthdaysCard scope="coach-month" coachId={coachId} title="Aniversariantes do mês (meus alunos)" />}
       </div>
     </>
   );
