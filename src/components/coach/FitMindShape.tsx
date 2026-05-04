@@ -1284,7 +1284,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
       </div>
-    );
+      );
+    };
 
     const StepBioimpedancia = () => (
       <div>
