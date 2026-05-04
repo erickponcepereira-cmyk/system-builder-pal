@@ -97,6 +97,10 @@ function CoachDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [coachName, setCoachName] = useState("Coach");
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [isPending, setIsPending] = useState(false);
+  const [hasStudentProfile, setHasStudentProfile] = useState(false);
+  const [coachRowId, setCoachRowId] = useState<string | null>(null);
+  const [profileIdState, setProfileIdState] = useState<string | null>(null);
   const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
   const referralCode = coachContext?.referralCode || "FITMIND";
   const referralLink = coachContext?.referralLink || `https://fitmindclub.app/r/${referralCode}`;
@@ -121,6 +125,10 @@ function CoachDashboard() {
         ? await supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
 
+      const { data: studentRow } = profile
+        ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
+        : { data: null };
+
       if (!active) return;
       if (profile?.role === "admin") {
         navigate({ to: "/admin", replace: true });
@@ -128,20 +136,16 @@ function CoachDashboard() {
       }
       const coachApproved = !!coach && !!coach.approved_at;
       const isPrivilegedRole = ["manager", "director"].includes(profile?.role || "");
-      if (!isPrivilegedRole && !coachApproved) {
-        // Coach pendente vai para painel do aluno (ou tela de pendência se não tiver student)
-        const { data: studentRow } = profile
-          ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
-          : { data: null };
-        if (studentRow) {
-          sessionStorage.setItem("fitmind_selected_area", "student");
-          navigate({ to: "/student", replace: true });
-        } else {
-          navigate({ to: "/pending-approval", replace: true });
-        }
+
+      if (!coach && !isPrivilegedRole) {
+        navigate({ to: "/student", replace: true });
         return;
       }
 
+      setIsPending(!coachApproved && !isPrivilegedRole);
+      setHasStudentProfile(!!studentRow);
+      setCoachRowId(coach?.id || null);
+      setProfileIdState(profile?.id || null);
       if (profile?.name) setCoachName(profile.name.split(" ")[0]);
       setCheckingAccess(false);
     });
@@ -150,6 +154,44 @@ function CoachDashboard() {
       active = false;
     };
   }, [navigate]);
+
+  // Realtime: detecta aprovação do coach
+  useEffect(() => {
+    if (!coachRowId || !isPending) return;
+    const channel = supabase
+      .channel(`coach-approval-${coachRowId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "coaches", filter: `id=eq.${coachRowId}` },
+        (payload) => {
+          const newRow: any = payload.new;
+          if (newRow?.approved_at) {
+            setIsPending(false);
+            toast.success("🎉 Cadastro de coach aprovado! Acesso liberado.");
+            reloadCoach();
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [coachRowId, isPending, reloadCoach]);
+
+  // Realtime: notificações
+  useEffect(() => {
+    if (!profileIdState) return;
+    const channel = supabase
+      .channel(`notif-${profileIdState}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `profile_id=eq.${profileIdState}` },
+        (payload) => {
+          const n: any = payload.new;
+          toast.success(n?.title || "Nova notificação", { description: n?.message || undefined });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profileIdState]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
