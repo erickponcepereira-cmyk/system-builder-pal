@@ -7,22 +7,23 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+import { canAccess, type AdminPermKey, type AdminPerms } from "@/lib/admin-permissions";
 
-const navItems = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/admin/coaches", label: "Coaches", icon: UserCheck },
-  { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle },
-  { to: "/admin/students", label: "Alunos", icon: Users },
-  { to: "/admin/users", label: "Admins", icon: ShieldCheck },
-  { to: "/admin/products", label: "Produtos", icon: Package },
-  { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
-  { to: "/admin/digital-products", label: "Cursos", icon: Library },
-  { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap },
-  { to: "/admin/payments", label: "Pagamentos", icon: CreditCard },
-  { to: "/admin/reports", label: "Relatórios", icon: BarChart3 },
-  { to: "/admin/patents", label: "Patentes", icon: Award },
-  { to: "/admin/settings", label: "Configurações", icon: Settings },
-] as const;
+const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; perm: AdminPermKey }[] = [
+  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, perm: "dashboard" },
+  { to: "/admin/coaches", label: "Coaches", icon: UserCheck, perm: "coaches" },
+  { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle, perm: "inactivity" },
+  { to: "/admin/students", label: "Alunos", icon: Users, perm: "students" },
+  { to: "/admin/users", label: "Admins", icon: ShieldCheck, perm: "users" },
+  { to: "/admin/products", label: "Produtos", icon: Package, perm: "products" },
+  { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart, perm: "orders" },
+  { to: "/admin/digital-products", label: "Cursos", icon: Library, perm: "digital_products" },
+  { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap, perm: "coach_applications" },
+  { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
+  { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
+  { to: "/admin/patents", label: "Patentes", icon: Award, perm: "patents" },
+  { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
+];
 
 export function AdminShell() {
   const location = useLocation();
