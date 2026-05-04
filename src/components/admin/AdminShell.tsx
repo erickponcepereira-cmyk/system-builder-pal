@@ -131,8 +131,8 @@ export function AdminShell() {
 
 
         <nav className="mt-14 flex flex-1 flex-col gap-1 lg:mt-0">
-          {navItems.map((item) => {
-            const active = isActive(item.to, "exact" in item ? item.exact : false);
+          {navItems.filter((it) => canAccess(perms, isMaster, it.perm)).map((item) => {
+            const active = isActive(item.to, item.exact);
             return (
               <Link
                 key={item.label}
