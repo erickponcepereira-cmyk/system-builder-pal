@@ -95,6 +95,8 @@ export interface FitMindAssessment {
   height: number;
   weight: number;
   bmi: number;
+  // Fórmula de bioimpedância usada
+  bioFormula?: "harris_benedict" | "cunningham" | "tem_haaf" | "mifflin_st_jeor";
   // Bioimpedância
   bodyFat: number; // % gordura corporal
   skeletalMuscle: number; // % músculo esquelético
@@ -341,9 +343,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       --fm-primary-dark: ${themeColor}dd;
       --fm-font: ${themeFontFamily};
     }
-    .fm-app { background: #050505; color: #f8fafc; }
+    .fm-app { background: hsl(var(--background) / 0); color: hsl(var(--foreground)); }
     .fm-app * { font-family: var(--fm-font); box-sizing: border-box; }
-    .fm-app > div { background: #050505 !important; }
     .fm-btn-primary {
       background: var(--fm-primary);
       color: #fff;
@@ -367,29 +368,29 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     }
     .fm-btn-outline:hover { background: var(--fm-primary-light); }
     .fm-card {
-      background: #111111;
-      color: #f8fafc;
-      border: 1px solid #2a2a2a;
+      background: var(--card);
+      color: var(--card-foreground);
+      border: 1px solid var(--border);
       border-radius: 16px;
       box-shadow: 0 2px 16px rgba(0,0,0,.07);
       padding: 20px;
     }
     .fm-input {
       width: 100%;
-      border: 1.5px solid #2a2a2a;
+      border: 1.5px solid var(--border);
       border-radius: 10px;
       padding: 10px 14px;
       font-size: 14px;
       transition: border .2s;
       outline: none;
-      background: #050505;
-      color: #f8fafc;
+      background: var(--background);
+      color: var(--foreground);
     }
     .fm-input:focus { border-color: var(--fm-primary); }
     .fm-label {
       font-size: 12px;
       font-weight: 600;
-      color: #a3a3a3;
+      color: var(--muted-foreground);
       margin-bottom: 4px;
       display: flex;
       align-items: center;
@@ -412,123 +413,47 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       padding-bottom: 6px;
       border-bottom: 2px solid var(--fm-primary-light);
     }
-    .fm-tooltip {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-    }
+    .fm-tooltip { position: relative; display: inline-flex; align-items: center; }
     .fm-tooltip-box {
-      position: absolute;
-      bottom: 130%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #1e293b;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      width: 220px;
-      text-align: center;
-      z-index: 999;
-      pointer-events: none;
-      line-height: 1.4;
+      position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+      background: var(--popover, #1e293b); color: var(--popover-foreground, #fff);
+      padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 220px;
+      text-align: center; z-index: 999; pointer-events: none; line-height: 1.4;
     }
-    .fm-avatar-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 12px 0;
-    }
-    .fm-avatar-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-    .fm-avatar-active {
-      filter: drop-shadow(0 0 8px var(--fm-primary));
-      transform: scale(1.12);
-    }
-    .fm-step-bar {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 20px;
-    }
-    .fm-step-dot {
-      flex: 1;
-      height: 4px;
-      border-radius: 999px;
-      background: #e2e8f0;
-      transition: background .3s;
-    }
+    .fm-avatar-row { display: flex; gap: 8px; align-items: flex-end; justify-content: center; padding: 12px 0; }
+    .fm-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .fm-avatar-active { filter: drop-shadow(0 0 8px var(--fm-primary)); transform: scale(1.12); }
+    .fm-step-bar { display: flex; gap: 6px; margin-bottom: 20px; }
+    .fm-step-dot { flex: 1; height: 4px; border-radius: 999px; background: var(--muted); transition: background .3s; }
     .fm-step-dot.active { background: var(--fm-primary); }
-    @keyframes fm-fade-in {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
     .fm-result-row {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid #f1f5f9;
-      gap: 12px;
+      display: grid; grid-template-columns: 1fr auto auto;
+      align-items: center; padding: 12px 0;
+      border-bottom: 1px solid var(--border); gap: 12px;
     }
     .fm-result-row:last-child { border-bottom: none; }
-    .fm-result-screen { background: #050505 !important; color: #ffffff; }
-    .fm-result-screen .fm-card { background: #111111 !important; border-color: #2a2a2a; box-shadow: 0 18px 36px rgba(0,0,0,.35); }
-    .fm-result-screen .fm-result-row { border-bottom-color: #2a2a2a; }
-    .fm-result-screen .fm-result-row div,
-    .fm-result-screen .fm-card div { color: #ffffff !important; }
-    .fm-result-screen .fm-card [style*="#64748b"],
-    .fm-result-screen .fm-card [style*="#475569"],
-    .fm-result-screen .fm-card [style*="#94a3b8"] { color: rgba(255,255,255,.68) !important; }
-    .fm-result-screen .fm-section-title { color: #ffffff; border-bottom-color: rgba(255,255,255,.16); }
-    .fm-result-screen .fm-badge { color: #ffffff !important; border: 1px solid rgba(255,255,255,.18); }
     .fm-photo-box {
-      border: 2px dashed #cbd5e1;
-      border-radius: 12px;
-      width: 100%;
-      aspect-ratio: 3/4;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all .2s;
-      background: #f8fafc;
+      border: 2px dashed var(--border); border-radius: 12px;
+      width: 100%; aspect-ratio: 3/4;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .2s; background: var(--muted);
     }
     .fm-photo-box:hover { border-color: var(--fm-primary); background: var(--fm-primary-light); }
     .fm-select {
-      width: 100%;
-      border: 1.5px solid #2a2a2a;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 14px;
-      background: #050505;
-      color: #f8fafc;
-      outline: none;
-      cursor: pointer;
+      width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; font-size: 14px;
+      background: var(--background); color: var(--foreground);
+      outline: none; cursor: pointer;
     }
     .fm-select:focus { border-color: var(--fm-primary); }
     .fm-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .fm-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    .fm-eval-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .fm-eval-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .fm-coach-footer {
-      background: var(--fm-primary);
-      color: #fff;
-      border-radius: 16px;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-top: 24px;
+      background: var(--fm-primary); color: #fff; border-radius: 16px;
+      padding: 20px; display: flex; align-items: center; gap: 16px; margin-top: 24px;
     }
   `;
 
@@ -675,6 +600,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const createNewClient = async () => {
     if (!onCreateClient) return;
     if (!newClientData.name?.trim()) return alert("Informe o nome do aluno");
+    if (!newClientData.groups || newClientData.groups.length === 0) return alert("Selecione ou crie um grupo para o aluno");
     setIsSaving(true);
     try {
       const created = await onCreateClient({
@@ -1170,22 +1096,23 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             />
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label className="fm-label">Grupo(s)</label>
+            <label className="fm-label">Grupo(s) *</label>
             <select
               className="fm-select"
               value={newClientData.groups?.[0] || ""}
-              onChange={(e) =>
-                updateNewClient(
-                  "groups",
-                  e.target.value ? [e.target.value] : [],
-                )
-              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__new__") {
+                  const name = window.prompt("Nome do novo grupo:");
+                  if (name?.trim()) updateNewClient("groups", [name.trim()]);
+                } else {
+                  updateNewClient("groups", v ? [v] : []);
+                }
+              }}
             >
-              <option value="">Sem grupo</option>
+              <option value="">Selecione um grupo *</option>
               {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
+                <option key={g.id} value={g.id}>{g.name}</option>
               ))}
               <option value="__new__">+ Criar novo grupo...</option>
             </select>
@@ -1226,7 +1153,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const upd = (k: keyof FitMindAssessment, v: unknown) =>
       setAssessment((a) => ({ ...a, [k]: v }));
 
-    const StepDados = () => (
+    const StepDados = () => {
+      const autoAge = (() => {
+        if (!selectedClient?.birthDate) return null;
+        const b = new Date(selectedClient.birthDate);
+        if (isNaN(b.getTime())) return null;
+        const now = new Date();
+        let a = now.getFullYear() - b.getFullYear();
+        const m = now.getMonth() - b.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < b.getDate())) a--;
+        return a;
+      })();
+      const ageLocked = autoAge !== null;
+      // Auto-set quando aluno cadastrado
+      if (ageLocked && assessment.age !== autoAge) {
+        // setAssessment via upd em microtask
+        setTimeout(() => upd("age", autoAge!), 0);
+      }
+      return (
       <div>
         <div className="fm-section-title">Dados Básicos</div>
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
@@ -1251,13 +1195,30 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </select>
           </div>
         </div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="fm-label">Tipo de Bioimpedância (fórmula)</label>
+          <select
+            className="fm-select"
+            value={assessment.bioFormula || "harris_benedict"}
+            onChange={(e) => upd("bioFormula", e.target.value)}
+          >
+            <option value="harris_benedict">Harris Benedict (mais comum)</option>
+            <option value="cunningham">Cunningham</option>
+            <option value="tem_haaf">Tem Haaf</option>
+            <option value="mifflin_st_jeor">Mifflin St Jeor</option>
+          </select>
+        </div>
         <div className="fm-grid-3" style={{ marginBottom: 12 }}>
           <div>
-            <label className="fm-label">Idade (anos)</label>
+            <label className="fm-label">
+              Idade (anos) {ageLocked && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>· auto</span>}
+            </label>
             <input
               type="number"
               className="fm-input"
               placeholder="Ex: 30"
+              value={ageLocked ? autoAge! : (assessment.age ?? "")}
+              readOnly={ageLocked}
               onChange={(e) => upd("age", +e.target.value)}
             />
           </div>
@@ -1267,6 +1228,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               type="number"
               className="fm-input"
               placeholder="Ex: 165"
+              defaultValue={assessment.height || ""}
               onChange={(e) => upd("height", +e.target.value)}
             />
           </div>
@@ -1322,7 +1284,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
       </div>
-    );
+      );
+    };
 
     const StepBioimpedancia = () => (
       <div>
