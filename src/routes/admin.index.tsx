@@ -270,6 +270,11 @@ function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Aniversariantes globais — prioriza semana */}
+      <div className="mt-6">
+        <BirthdaysCard scope="admin-global" />
+      </div>
     </>
   );
 }
