@@ -280,7 +280,7 @@ function CoachDashboard() {
       <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
         <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
           {activeTab === "overview" && (
-            <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} />
+            <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} coachId={coachContext?.coachId || ""} />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
           {activeTab === "products" && <ProductsTrackTab />}
