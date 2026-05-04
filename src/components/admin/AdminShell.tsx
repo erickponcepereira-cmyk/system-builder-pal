@@ -125,9 +125,10 @@ export function AdminShell() {
 <Logo className="h-9 w-auto object-contain" />
           <span className="text-lg font-bold text-white">FitMind Club</span>
           <span className="ml-auto rounded bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-            Admin
+            {isMaster ? "Master" : "Admin"}
           </span>
         </div>
+
 
         <nav className="mt-14 flex flex-1 flex-col gap-1 lg:mt-0">
           {navItems.map((item) => {
