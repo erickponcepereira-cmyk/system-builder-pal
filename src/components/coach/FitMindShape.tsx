@@ -600,6 +600,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const createNewClient = async () => {
     if (!onCreateClient) return;
     if (!newClientData.name?.trim()) return alert("Informe o nome do aluno");
+    if (!newClientData.groups || newClientData.groups.length === 0) return alert("Selecione ou crie um grupo para o aluno");
     setIsSaving(true);
     try {
       const created = await onCreateClient({
