@@ -131,12 +131,9 @@ function CoachDashboard() {
         : { data: null };
 
       if (!active) return;
-      if (profile?.role === "admin") {
-        navigate({ to: "/admin", replace: true });
-        return;
-      }
+      setIsAdmin(profile?.role === "admin");
       const coachApproved = !!coach && !!coach.approved_at;
-      const isPrivilegedRole = ["manager", "director"].includes(profile?.role || "");
+      const isPrivilegedRole = ["admin", "manager", "director"].includes(profile?.role || "");
 
       if (!coach && !isPrivilegedRole) {
         navigate({ to: "/student", replace: true });
