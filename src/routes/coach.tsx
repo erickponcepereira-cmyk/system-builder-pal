@@ -99,6 +99,7 @@ function CoachDashboard() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [isPending, setIsPending] = useState(false);
   const [hasStudentProfile, setHasStudentProfile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [coachRowId, setCoachRowId] = useState<string | null>(null);
   const [profileIdState, setProfileIdState] = useState<string | null>(null);
   const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
@@ -130,12 +131,9 @@ function CoachDashboard() {
         : { data: null };
 
       if (!active) return;
-      if (profile?.role === "admin") {
-        navigate({ to: "/admin", replace: true });
-        return;
-      }
+      setIsAdmin(profile?.role === "admin");
       const coachApproved = !!coach && !!coach.approved_at;
-      const isPrivilegedRole = ["manager", "director"].includes(profile?.role || "");
+      const isPrivilegedRole = ["admin", "manager", "director"].includes(profile?.role || "");
 
       if (!coach && !isPrivilegedRole) {
         navigate({ to: "/student", replace: true });
@@ -290,13 +288,22 @@ function CoachDashboard() {
           })}
         </nav>
 
+        {isAdmin && (
+          <button
+            onClick={() => navigate({ to: "/admin" })}
+            className="mt-auto flex items-center gap-3 rounded-lg bg-amber-500/10 px-3 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors"
+          >
+            <Repeat className="h-4 w-4" />
+            Modo admin
+          </button>
+        )}
         {hasStudentProfile && (
           <button
             onClick={() => {
               sessionStorage.setItem("fitmind_selected_area", "student");
               navigate({ to: "/student" });
             }}
-            className="mt-auto flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+            className={`${isAdmin ? "mt-2" : "mt-auto"} flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors`}
           >
             <Repeat className="h-4 w-4" />
             Ir para painel do aluno

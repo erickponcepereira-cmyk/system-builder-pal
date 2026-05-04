@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User } from "lucide-react";
+import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +22,7 @@ export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isCoach, setIsCoach] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -30,10 +31,11 @@ export function MobileShell({ children }: MobileShellProps) {
       if (!user || !active) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, role")
         .eq("user_id", user.id)
         .maybeSingle();
       if (!profile?.id || !active) return;
+      setIsAdmin(profile.role === "admin");
       const { data: coach } = await supabase
         .from("coaches")
         .select("id")
@@ -50,6 +52,8 @@ export function MobileShell({ children }: MobileShellProps) {
     navigate({ to: "/coach" });
   };
 
+  const goToAdmin = () => navigate({ to: "/admin" });
+
   return (
     <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
       {/* Mobile container 430px max */}
@@ -60,17 +64,30 @@ export function MobileShell({ children }: MobileShellProps) {
         {/* Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24">{children}</main>
 
-        {/* Switch to Coach panel — only visible for users with active coach record */}
-        {isCoach && (
-          <button
-            onClick={goToCoach}
-            className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors"
-            style={{ marginBottom: "env(safe-area-inset-bottom)" }}
-          >
-            <Repeat className="h-3.5 w-3.5" />
-            Ir para painel do coach
-          </button>
-        )}
+        {/* Floating switches */}
+        <div
+          className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2"
+          style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {isAdmin && (
+            <button
+              onClick={goToAdmin}
+              className="flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-amber-500/30 hover:bg-amber-400 transition-colors"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Modo admin
+            </button>
+          )}
+          {isCoach && (
+            <button
+              onClick={goToCoach}
+              className="flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary/90 transition-colors"
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              Painel do coach
+            </button>
+          )}
+        </div>
 
         {/* Bottom Navigation */}
         <nav
