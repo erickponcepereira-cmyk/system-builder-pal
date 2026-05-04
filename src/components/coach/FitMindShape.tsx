@@ -1153,7 +1153,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const upd = (k: keyof FitMindAssessment, v: unknown) =>
       setAssessment((a) => ({ ...a, [k]: v }));
 
-    const StepDados = () => (
+    const StepDados = () => {
+      const autoAge = (() => {
+        if (!selectedClient?.birthDate) return null;
+        const b = new Date(selectedClient.birthDate);
+        if (isNaN(b.getTime())) return null;
+        const now = new Date();
+        let a = now.getFullYear() - b.getFullYear();
+        const m = now.getMonth() - b.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < b.getDate())) a--;
+        return a;
+      })();
+      const ageLocked = autoAge !== null;
+      // Auto-set quando aluno cadastrado
+      if (ageLocked && assessment.age !== autoAge) {
+        // setAssessment via upd em microtask
+        setTimeout(() => upd("age", autoAge!), 0);
+      }
+      return (
       <div>
         <div className="fm-section-title">Dados Básicos</div>
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
@@ -1178,13 +1195,30 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </select>
           </div>
         </div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="fm-label">Tipo de Bioimpedância (fórmula)</label>
+          <select
+            className="fm-select"
+            value={assessment.bioFormula || "harris_benedict"}
+            onChange={(e) => upd("bioFormula", e.target.value)}
+          >
+            <option value="harris_benedict">Harris Benedict (mais comum)</option>
+            <option value="cunningham">Cunningham</option>
+            <option value="tem_haaf">Tem Haaf</option>
+            <option value="mifflin_st_jeor">Mifflin St Jeor</option>
+          </select>
+        </div>
         <div className="fm-grid-3" style={{ marginBottom: 12 }}>
           <div>
-            <label className="fm-label">Idade (anos)</label>
+            <label className="fm-label">
+              Idade (anos) {ageLocked && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>· auto</span>}
+            </label>
             <input
               type="number"
               className="fm-input"
               placeholder="Ex: 30"
+              value={ageLocked ? autoAge! : (assessment.age ?? "")}
+              readOnly={ageLocked}
               onChange={(e) => upd("age", +e.target.value)}
             />
           </div>
@@ -1194,6 +1228,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               type="number"
               className="fm-input"
               placeholder="Ex: 165"
+              defaultValue={assessment.height || ""}
               onChange={(e) => upd("height", +e.target.value)}
             />
           </div>
