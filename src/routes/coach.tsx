@@ -383,6 +383,12 @@ function OverviewTab({
           isTopSeller={false}
         />
       </div>
+
+      {/* Aniversariantes */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <BirthdaysCard scope="week" title="Aniversariantes da semana" />
+        {coachId && <BirthdaysCard scope="coach-month" coachId={coachId} title="Aniversariantes do mês (meus alunos)" />}
+      </div>
     </>
   );
 }
