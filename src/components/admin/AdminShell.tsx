@@ -32,6 +32,8 @@ export function AdminShell() {
   const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
   const [hasCoach, setHasCoach] = useState(false);
   const [hasStudent, setHasStudent] = useState(false);
+  const [isMaster, setIsMaster] = useState(false);
+  const [perms, setPerms] = useState<AdminPerms | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -43,12 +45,14 @@ export function AdminShell() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id, role")
+        .select("id, role, is_master_admin, admin_permissions")
         .eq("user_id", session.user.id)
         .maybeSingle();
       if (!active) return;
       if (profile?.role === "admin") {
         setAuthState("ok");
+        setIsMaster(!!(profile as any).is_master_admin);
+        setPerms(((profile as any).admin_permissions as AdminPerms) || {});
         if (profile?.id) {
           const [{ data: coach }, { data: student }] = await Promise.all([
             supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
