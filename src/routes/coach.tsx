@@ -367,6 +367,7 @@ function CoachDashboard() {
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "career" && <CareerTab />}
+          </div>
         </div>
       </main>
     </div>
