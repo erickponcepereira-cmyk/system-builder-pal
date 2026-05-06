@@ -2484,8 +2484,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   {ageBodyDiff === 0
                     ? "Igual"
                     : ageBodyDiff > 0
-                      ? `+${ageBodyDiff}%`
-                      : `${Math.abs(ageBodyDiff)}% abaixo 🎉`}
+                      ? `+${ageBodyDiff} anos`
+                      : `${Math.abs(ageBodyDiff)} anos abaixo 🎉`}
                 </div>
               </div>
             </div>
