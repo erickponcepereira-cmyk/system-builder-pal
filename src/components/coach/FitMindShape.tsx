@@ -192,7 +192,8 @@ export interface FitMindShapeProps {
     date: string,
     time: string,
     clientName: string,
-  ) => Promise<string>;
+    eventName?: string,
+  ) => Promise<string | { ok: boolean; htmlLink?: string | null } | void>;
   // Identidade visual herdada do sistema pai
   themeColor?: string; // hex, ex: "#1a7a4a"
   themeFontFamily?: string;
