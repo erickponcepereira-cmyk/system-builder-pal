@@ -443,9 +443,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 220px;
       text-align: center; z-index: 999; pointer-events: none; line-height: 1.4;
     }
-    .fm-avatar-row { display: flex; gap: 8px; align-items: flex-end; justify-content: center; padding: 12px 0; }
-    .fm-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .fm-avatar-active { filter: drop-shadow(0 0 8px var(--fm-primary)); transform: scale(1.12); }
+    .fm-avatar-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; align-items: end; justify-items: center; padding: 12px 0; width: 100%; }
+    .fm-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-width: 0; }
+    .fm-avatar-img { width: 100%; height: auto; max-height: 138px; object-fit: contain; display: block; }
+    .fm-avatar-active { filter: drop-shadow(0 0 8px var(--fm-primary)); }
+    .fm-avatar-active .fm-avatar-img { transform: scale(1.08); transform-origin: bottom center; }
+    @media (max-width: 480px) { .fm-avatar-row { gap: 2px; } .fm-avatar-img { max-height: 96px; } }
     .fm-step-bar { display: flex; gap: 6px; margin-bottom: 20px; }
     .fm-step-dot { flex: 1; height: 4px; border-radius: 999px; background: var(--muted); transition: background .3s; }
     .fm-step-dot.active { background: var(--fm-primary); }
@@ -513,12 +516,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         style={{ opacity: active ? 1 : 0.35 }}
       >
         <img
+          className="fm-avatar-img"
           src={BODY_AVATAR_IMAGES[level] ?? BODY_AVATAR_IMAGES[1]}
           alt={label}
           style={{
-            height: 96,
-            width: "auto",
-            objectFit: "contain",
             filter: active ? "none" : "grayscale(0.4)",
           }}
         />
@@ -528,7 +529,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             color: active ? "var(--fm-primary)" : "#94a3b8",
             fontWeight: active ? 700 : 400,
             textAlign: "center",
-            maxWidth: 64,
+            maxWidth: "100%",
+            whiteSpace: "nowrap",
           }}
         >
           {label}
@@ -1334,13 +1336,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
           <div>
             <label className="fm-label">
-              Idade Corporal (%) <Tooltip id="bodyAge" />
+              Idade Corporal (anos) <Tooltip id="bodyAge" />
             </label>
             <input
               type="number"
-              step="0.1"
+              step="1"
               className="fm-input"
-              placeholder="Ex: 106"
+              placeholder="Ex: 32"
               onChange={(e) => upd("bodyAge", +e.target.value)}
             />
           </div>
@@ -1744,7 +1746,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const avatarIndex = bmiCat.avatar;
     const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
     const viscCat = getVisceralCategory(a.visceralFat);
-    const ageBodyDiff = a.bodyAge ? a.bodyAge - 100 : 0;
+    const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
 
     const evalColor = (ev: string) =>
       ({
@@ -1770,14 +1772,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       { name: "Gordura", value: fatPct, fill: "#fca5a5" },
     ];
 
-    const histWeight =
-      historicalData.length > 0
-        ? historicalData
-        : [
-            { date: "Jan", peso: +(a.weight * 1.03).toFixed(1) },
-            { date: "Fev", peso: +(a.weight * 1.01).toFixed(1) },
-            { date: "Hoje", peso: a.weight },
-          ];
+    const todayLabel = "Hoje";
+    const hasTodayInHistory = historicalData.some((h) => h.peso === a.weight);
+    const histWeight = hasTodayInHistory
+      ? historicalData
+      : [...historicalData, { date: todayLabel, peso: a.weight, gordura: a.bodyFat, musculo: a.skeletalMuscle, idadeCorp: a.bodyAge }];
 
     // ── Resumo / referências clínicas ─────────────────────
     const pastList = (selectedClient?.assessments ?? []).filter((x) => x.id !== a.id);
@@ -1842,7 +1841,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     })();
     const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
     // Idade corporal: comparar com idade real
-    const bodyAgeYears = a.bodyAge && a.age ? Math.round((a.bodyAge / 100) * a.age) : 0;
+    const bodyAgeYears = a.bodyAge ? Math.round(a.bodyAge) : 0;
     const bodyAgeDelta = bodyAgeYears - (a.age || 0);
     const bodyAgeEval = (() => {
       if (!bodyAgeYears) return { c: "#94a3b8", t: "—" };
@@ -1863,22 +1862,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return { c: "#facc15", t: "Acima" };
     })();
 
-    const histGordura =
-      historicalData.length > 0
-        ? historicalData
-        : [
-            {
-              date: "Jan",
-              gordura: +(a.bodyFat + 2).toFixed(1),
-              musculo: +(a.skeletalMuscle - 1).toFixed(1),
-            },
-            {
-              date: "Fev",
-              gordura: +(a.bodyFat + 1).toFixed(1),
-              musculo: +(a.skeletalMuscle - 0.5).toFixed(1),
-            },
-            { date: "Hoje", gordura: a.bodyFat, musculo: a.skeletalMuscle },
-          ];
+    const histGordura = histWeight;
 
     return (
       <div
@@ -1954,7 +1938,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     { l: "Gordura", last: diff(a.bodyFat, prevA.bodyFat, " %"), overall: diff(a.bodyFat, firstA.bodyFat, " %") },
                     { l: "Músculo Esquelético", last: diff(a.skeletalMuscle, prevA.skeletalMuscle, " %"), overall: diff(a.skeletalMuscle, firstA.skeletalMuscle, " %") },
                     { l: "Gordura Visceral", last: diff(a.visceralFat, prevA.visceralFat, ""), overall: diff(a.visceralFat, firstA.visceralFat, "") },
-                    { l: "Idade Corporal", last: diff(bodyAgeYears, prevA.bodyAge && prevA.age ? Math.round((prevA.bodyAge / 100) * prevA.age) : bodyAgeYears, " anos"), overall: diff(bodyAgeYears, firstA.bodyAge && firstA.age ? Math.round((firstA.bodyAge / 100) * firstA.age) : bodyAgeYears, " anos") },
+                    { l: "Idade Corporal", last: diff(bodyAgeYears, prevA.bodyAge ? Math.round(prevA.bodyAge) : bodyAgeYears, " anos"), overall: diff(bodyAgeYears, firstA.bodyAge ? Math.round(firstA.bodyAge) : bodyAgeYears, " anos") },
                   ].map((r) => (
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "8px 4px", fontWeight: 600 }}>{r.l}</td>
@@ -2409,7 +2393,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
-            <div className="fm-section-title">Idade Corporal (%)</div>
+            <div className="fm-section-title">Idade Corporal</div>
             <div
               style={{
                 display: "flex",
@@ -2467,10 +2451,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   style={{
                     fontSize: 36,
                     fontWeight: 900,
-                    color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444",
+                    color: ageBodyDiff <= 0 ? "#16a34a" : ageBodyDiff <= 3 ? "#facc15" : "#ef4444",
                   }}
                 >
-                  {formatPercent(a.bodyAge)}
+                  {bodyAgeYears || "—"}
                 </div>
                 <div
                   style={{
@@ -2482,8 +2466,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   {ageBodyDiff === 0
                     ? "Igual"
                     : ageBodyDiff > 0
-                      ? `+${ageBodyDiff}%`
-                      : `${Math.abs(ageBodyDiff)}% abaixo 🎉`}
+                      ? `+${ageBodyDiff} anos`
+                      : `${Math.abs(ageBodyDiff)} anos abaixo 🎉`}
                 </div>
               </div>
             </div>
