@@ -1956,7 +1956,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     { l: "Gordura", last: diff(a.bodyFat, prevA.bodyFat, " %"), overall: diff(a.bodyFat, firstA.bodyFat, " %") },
                     { l: "Músculo Esquelético", last: diff(a.skeletalMuscle, prevA.skeletalMuscle, " %"), overall: diff(a.skeletalMuscle, firstA.skeletalMuscle, " %") },
                     { l: "Gordura Visceral", last: diff(a.visceralFat, prevA.visceralFat, ""), overall: diff(a.visceralFat, firstA.visceralFat, "") },
-                    { l: "Idade Corporal", last: diff(bodyAgeYears, prevA.bodyAge && prevA.age ? Math.round((prevA.bodyAge / 100) * prevA.age) : bodyAgeYears, " anos"), overall: diff(bodyAgeYears, firstA.bodyAge && firstA.age ? Math.round((firstA.bodyAge / 100) * firstA.age) : bodyAgeYears, " anos") },
+                    { l: "Idade Corporal", last: diff(bodyAgeYears, prevA.bodyAge ? Math.round(prevA.bodyAge) : bodyAgeYears, " anos"), overall: diff(bodyAgeYears, firstA.bodyAge ? Math.round(firstA.bodyAge) : bodyAgeYears, " anos") },
                   ].map((r) => (
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "8px 4px", fontWeight: 600 }}>{r.l}</td>
