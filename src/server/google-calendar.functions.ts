@@ -318,3 +318,109 @@ export const adminListCoachConnections = createServerFn({ method: "GET" })
         .sort((a, b) => a.name.localeCompare(b.name)),
     };
   });
+
+async function resolveCurrentCoachId(userId: string): Promise<string | null> {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+  if (!profile) return null;
+  const { data: coach } = await supabaseAdmin
+    .from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
+  return coach?.id ?? null;
+}
+
+/** Mark an appointment as completed (or undo). */
+export const setAppointmentCompleted = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { appointmentId: string; completed: boolean }) => d)
+  .handler(async ({ context, data }) => {
+    const coachId = await resolveCurrentCoachId(context.userId);
+    if (!coachId) throw new Error("Coach não encontrado");
+    const { error } = await supabaseAdmin
+      .from("internal_appointments")
+      .update({ completed_at: data.completed ? new Date().toISOString() : null })
+      .eq("id", data.appointmentId)
+      .eq("coach_id", coachId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export type AttendanceHistoryItem = {
+  id: string;
+  summary: string;
+  start: string;
+  attendee?: string | null;
+  completedAt: string;
+};
+
+export type AttendanceHistory = {
+  daily: { date: string; total: number; items: AttendanceHistoryItem[] };
+  monthly: {
+    month: string;
+    total: number;
+    perDay: Array<{ date: string; total: number }>;
+  };
+};
+
+/** Get coach's attendance history (daily + monthly). */
+export const getCoachAttendanceHistory = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { day?: string; month?: string }) => d)
+  .handler(async ({ context, data }): Promise<AttendanceHistory> => {
+    const coachId = await resolveCurrentCoachId(context.userId);
+    if (!coachId) throw new Error("Coach não encontrado");
+
+    const today = new Date();
+    const dayStr = data.day || today.toISOString().slice(0, 10);
+    const monthStr = data.month || today.toISOString().slice(0, 7);
+
+    const dayStart = new Date(`${dayStr}T00:00:00`);
+    const dayEnd = new Date(dayStart.getTime() + 86400_000);
+
+    const monthStart = new Date(`${monthStr}-01T00:00:00`);
+    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+
+    const { data: dayRows } = await supabaseAdmin
+      .from("internal_appointments")
+      .select("id,summary,start_at,attendee_name,attendee_email,completed_at")
+      .eq("coach_id", coachId)
+      .not("completed_at", "is", null)
+      .gte("completed_at", dayStart.toISOString())
+      .lt("completed_at", dayEnd.toISOString())
+      .order("completed_at", { ascending: false });
+
+    const { data: monthRows } = await supabaseAdmin
+      .from("internal_appointments")
+      .select("completed_at")
+      .eq("coach_id", coachId)
+      .not("completed_at", "is", null)
+      .gte("completed_at", monthStart.toISOString())
+      .lt("completed_at", monthEnd.toISOString());
+
+    const perDayMap = new Map<string, number>();
+    (monthRows ?? []).forEach((r: any) => {
+      const d = new Date(r.completed_at).toISOString().slice(0, 10);
+      perDayMap.set(d, (perDayMap.get(d) || 0) + 1);
+    });
+    const perDay = Array.from(perDayMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, total]) => ({ date, total }));
+
+    return {
+      daily: {
+        date: dayStr,
+        total: (dayRows ?? []).length,
+        items: (dayRows ?? []).map((r: any) => ({
+          id: r.id,
+          summary: r.summary,
+          start: r.start_at,
+          attendee: r.attendee_name ?? r.attendee_email ?? null,
+          completedAt: r.completed_at,
+        })),
+      },
+      monthly: {
+        month: monthStr,
+        total: (monthRows ?? []).length,
+        perDay,
+      },
+    };
+  });
