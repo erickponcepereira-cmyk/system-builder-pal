@@ -193,7 +193,7 @@ export interface FitMindShapeProps {
     time: string,
     clientName: string,
     eventName?: string,
-  ) => Promise<string | { ok: boolean; htmlLink?: string | null } | void>;
+  ) => Promise<{ ok: boolean; htmlLink?: string | null } | void>;
   // Identidade visual herdada do sistema pai
   themeColor?: string; // hex, ex: "#1a7a4a"
   themeFontFamily?: string;
@@ -1664,20 +1664,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 selectedClient
               ) {
                 const customTitle = ((assessment as any).nextAssessmentTitle as string | undefined)?.trim();
-                const result = await onCreateGoogleCalendarEvent(
+                await onCreateGoogleCalendarEvent(
                   assessment.nextAssessmentDate,
                   assessment.nextAssessmentTime,
                   selectedClient.name,
                   customTitle || undefined,
                 );
-                // Backwards compat: if a string URL is returned, open it.
-                // If an object with htmlLink is returned, do nothing (already shown via toast).
-                if (typeof result === "string" && result) {
-                  window.open(result, "_blank");
-                } else if (result && typeof result === "object" && "htmlLink" in result && result.htmlLink) {
-                  // optional: open the created event
-                  window.open(result.htmlLink, "_blank");
-                }
               }
             }}
           >
@@ -2668,9 +2660,8 @@ import FitMindShape from "./FitMindShape";
     return res.data;
   }}
   onCreateGoogleCalendarEvent={async (date, time, clientName) => {
-    // Retorna o link do Google Calendar
-    const dateTime = `${date}T${time}:00`;
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Avaliação+${encodeURIComponent(clientName)}&dates=${dateTime.replace(/[-:]/g, "")}/${dateTime.replace(/[-:]/g, "")}&details=Avaliação+FitMind+Shape`;
+    await api.post("/calendar/events", { date, time, clientName });
+    return { ok: true };
   }}
 />
 */
