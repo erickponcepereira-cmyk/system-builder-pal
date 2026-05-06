@@ -204,6 +204,12 @@ export function UpcomingAppointments() {
                       )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => toggleComplete(ev)} title={ev.completedAt ? "Desfazer conclusão" : "Marcar como concluído"}
+                        className="p-1.5 rounded hover:bg-white/10">
+                        {ev.completedAt
+                          ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                          : <Circle className="h-3.5 w-3.5 text-white/60" />}
+                      </button>
                       {ev.publicToken && (
                         <button onClick={() => copyInvite(ev)} title="Copiar link de convite"
                           className="p-1.5 rounded hover:bg-white/10 text-white/70">
