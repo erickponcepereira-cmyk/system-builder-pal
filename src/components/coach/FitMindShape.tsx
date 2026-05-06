@@ -506,18 +506,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     active?: boolean;
     label: string;
     gender?: string;
-  }> = ({ level, active, label, gender }) => {
-    const baseH = 48 + level * 3;
-    const bodyW = 18 + level * 4;
-    const bodyColor =
-      level === 0
-        ? "#60a5fa"
-        : level <= 1
-          ? "#22c55e"
-          : level <= 3
-            ? "#facc15"
-            : "#ef4444";
-    const skinColor = gender === "male" ? "#f5c5a3" : "#f9c9b0";
+  }> = ({ level, active, label }) => {
     return (
       <div
         className={`fm-avatar-item ${active ? "fm-avatar-active" : ""}`}
