@@ -162,7 +162,57 @@ export const createCoachCalendarEvent = createServerFn({ method: "POST" })
     return { connected: true, ...result };
   });
 
-/** Disconnect Google for current user. */
+/** Update an event on the coach's connected Google Calendar. */
+export const updateCoachCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: {
+    googleEventId: string;
+    summary?: string;
+    description?: string | null;
+    startISO?: string;
+    endISO?: string;
+    location?: string | null;
+  }) => d)
+  .handler(async ({ context, data }) => {
+    const userId = context.userId;
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    const { data: coach } = profile
+      ? await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+    if (!coach) throw new Error("Coach não encontrado");
+    const result = await updateGoogleCalendarEvent({
+      userId,
+      coachId: coach.id,
+      googleEventId: data.googleEventId,
+      summary: data.summary,
+      description: data.description ?? undefined,
+      startISO: data.startISO,
+      endISO: data.endISO,
+      location: data.location ?? undefined,
+    });
+    return { ok: true, ...result };
+  });
+
+/** Delete an event from the coach's connected Google Calendar. */
+export const deleteCoachCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { googleEventId: string }) => d)
+  .handler(async ({ context, data }) => {
+    const userId = context.userId;
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    const { data: coach } = profile
+      ? await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+    if (!coach) throw new Error("Coach não encontrado");
+    await deleteGoogleCalendarEvent({
+      userId,
+      coachId: coach.id,
+      googleEventId: data.googleEventId,
+    });
+    return { ok: true };
+  });
 export const disconnectGoogle = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
