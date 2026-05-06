@@ -1158,14 +1158,15 @@ function EvaluateTab() {
         onCreateClient={createClient}
         onSaveAssessment={saveAssessment}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
-        onCreateGoogleCalendarEvent={async (date, time, clientName) => {
+        onCreateGoogleCalendarEvent={async (date, time, clientName, eventName) => {
           try {
             const startISO = new Date(`${date}T${time}:00`).toISOString();
             const endISO = new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString();
             const client = clients.find((c) => c.name === clientName);
+            const summary = (eventName && eventName.trim()) || `Avaliação — ${clientName}`;
             const res = await createCoachCalendarEvent({
               data: {
-                summary: `Avaliação — ${clientName}`,
+                summary,
                 description: "Avaliação física agendada via FitMind",
                 startISO,
                 endISO,
@@ -1175,15 +1176,14 @@ function EvaluateTab() {
             });
             if (!res.connected) {
               toast.error("Conecte sua conta Google na aba Agenda primeiro.");
-              const dt = `${date.replace(/-/g, "")}T${time.replace(":", "")}00`;
-              return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Avaliação ${clientName}`)}&dates=${dt}/${dt}`;
+              return;
             }
             toast.success("Evento criado no Google Agenda");
-            return res.htmlLink ?? "https://calendar.google.com/calendar/u/0/r";
+            return { ok: true, htmlLink: res.htmlLink ?? null };
           } catch (e: any) {
             console.error("createCoachCalendarEvent error:", e);
             toast.error(e?.message || "Erro ao criar evento no Google Agenda");
-            return "https://calendar.google.com/calendar/u/0/r";
+            return;
           }
         }}
         groups={[
