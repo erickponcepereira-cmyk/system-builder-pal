@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { syncCoachAppointments } from "@/server/google-oauth.server";
 
@@ -23,7 +24,7 @@ export type GoogleConnectionStatus = {
 
 /** Returns connection status of the current user's Google account. */
 export const getGoogleConnectionStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<GoogleConnectionStatus> => {
     const userId = context.userId;
     const { data } = await supabaseAdmin
@@ -40,7 +41,7 @@ export const getGoogleConnectionStatus = createServerFn({ method: "GET" })
 
 /** Returns upcoming appointments for the current coach (from internal table). */
 export const getUpcomingEvents = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ events: UpcomingEvent[]; error?: string }> => {
     const userId = context.userId;
 
@@ -93,7 +94,7 @@ export const getUpcomingEvents = createServerFn({ method: "GET" })
 
 /** Manually trigger a sync for the current coach. */
 export const syncMyCalendar = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const userId = context.userId;
     const { data: profile } = await supabaseAdmin
@@ -107,7 +108,7 @@ export const syncMyCalendar = createServerFn({ method: "POST" })
 
 /** Disconnect Google for current user. */
 export const disconnectGoogle = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const userId = context.userId;
     await supabaseAdmin.from("coach_google_tokens").delete().eq("user_id", userId);
@@ -116,7 +117,7 @@ export const disconnectGoogle = createServerFn({ method: "POST" })
 
 /** Admin only: list all upcoming appointments across coaches, optionally filtered. */
 export const adminListAppointments = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: { coachId?: string | null; daysAhead?: number }) => d)
   .handler(async ({ context, data }) => {
     const userId = context.userId;
@@ -176,7 +177,7 @@ export const adminListAppointments = createServerFn({ method: "POST" })
 
 /** Admin: list coaches with Google connection info. */
 export const adminListCoachConnections = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const userId = context.userId;
     const { data: profile } = await supabaseAdmin
