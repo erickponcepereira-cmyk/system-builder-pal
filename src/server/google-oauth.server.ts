@@ -250,6 +250,7 @@ export async function createGoogleCalendarEvent(params: {
   const tok = await getValidAccessTokenForUser(params.userId);
   if (!tok) throw new Error("Google não conectado");
   const calendarId = await ensureFitMindCalendarId(params.userId);
+  console.log("[google-calendar] create event on calendar", calendarId, "for user", params.userId);
 
   const timeZone = "America/Sao_Paulo";
   const body: Record<string, any> = {
