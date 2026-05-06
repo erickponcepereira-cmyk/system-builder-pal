@@ -2660,9 +2660,8 @@ import FitMindShape from "./FitMindShape";
     return res.data;
   }}
   onCreateGoogleCalendarEvent={async (date, time, clientName) => {
-    // Retorna o link do Google Calendar
-    const dateTime = `${date}T${time}:00`;
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Avaliação+${encodeURIComponent(clientName)}&dates=${dateTime.replace(/[-:]/g, "")}/${dateTime.replace(/[-:]/g, "")}&details=Avaliação+FitMind+Shape`;
+    await api.post("/calendar/events", { date, time, clientName });
+    return { ok: true };
   }}
 />
 */
