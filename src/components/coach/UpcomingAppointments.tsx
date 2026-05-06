@@ -183,11 +183,14 @@ export function UpcomingAppointments() {
           ) : (
             <ul className="space-y-3">
               {events.map((ev) => (
-                <li key={ev.id} className="rounded-xl p-3 bg-black/30 border border-white/5">
+                <li key={ev.id} className={`rounded-xl p-3 border ${ev.completedAt ? "bg-emerald-500/10 border-emerald-500/30" : "bg-black/30 border-white/5"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{ev.summary}</p>
-                      <p className="text-[11px] text-white/60 mt-0.5">{fmt(ev.start)}</p>
+                      <p className={`text-sm font-semibold truncate ${ev.completedAt ? "text-emerald-300 line-through" : "text-white"}`}>{ev.summary}</p>
+                      <p className="text-[11px] text-white/60 mt-0.5">
+                        {fmt(ev.start)}
+                        {ev.completedAt && <span className="ml-2 text-emerald-400">• concluído</span>}
+                      </p>
                       {ev.attendee && (
                         <p className="text-[11px] text-white/50 mt-1 flex items-center gap-1">
                           <UserIcon className="h-3 w-3" /> {ev.attendee}
