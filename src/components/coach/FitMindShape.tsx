@@ -1336,13 +1336,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
           <div>
             <label className="fm-label">
-              Idade Corporal (%) <Tooltip id="bodyAge" />
+              Idade Corporal (anos) <Tooltip id="bodyAge" />
             </label>
             <input
               type="number"
-              step="0.1"
+              step="1"
               className="fm-input"
-              placeholder="Ex: 106"
+              placeholder="Ex: 32"
               onChange={(e) => upd("bodyAge", +e.target.value)}
             />
           </div>
