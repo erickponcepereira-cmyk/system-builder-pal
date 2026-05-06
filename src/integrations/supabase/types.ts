@@ -1170,6 +1170,59 @@ export type Database = {
           },
         ]
       }
+      coach_google_tokens: {
+        Row: {
+          access_token: string
+          coach_id: string | null
+          created_at: string
+          expires_at: string
+          google_email: string | null
+          id: string
+          last_synced_at: string | null
+          refresh_token: string
+          scope: string | null
+          token_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          coach_id?: string | null
+          created_at?: string
+          expires_at: string
+          google_email?: string | null
+          id?: string
+          last_synced_at?: string | null
+          refresh_token: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          coach_id?: string | null
+          created_at?: string
+          expires_at?: string
+          google_email?: string | null
+          id?: string
+          last_synced_at?: string | null
+          refresh_token?: string
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_google_tokens_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_transfers: {
         Row: {
           coaches_transferred: number | null
@@ -1919,6 +1972,81 @@ export type Database = {
           },
         ]
       }
+      internal_appointments: {
+        Row: {
+          attendee_email: string | null
+          attendee_name: string | null
+          coach_id: string
+          created_at: string
+          description: string | null
+          end_at: string | null
+          google_event_id: string | null
+          html_link: string | null
+          id: string
+          last_synced_at: string
+          location: string | null
+          source: string
+          start_at: string
+          status: string
+          student_id: string | null
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          attendee_email?: string | null
+          attendee_name?: string | null
+          coach_id: string
+          created_at?: string
+          description?: string | null
+          end_at?: string | null
+          google_event_id?: string | null
+          html_link?: string | null
+          id?: string
+          last_synced_at?: string
+          location?: string | null
+          source?: string
+          start_at: string
+          status?: string
+          student_id?: string | null
+          summary?: string
+          updated_at?: string
+        }
+        Update: {
+          attendee_email?: string | null
+          attendee_name?: string | null
+          coach_id?: string
+          created_at?: string
+          description?: string | null
+          end_at?: string | null
+          google_event_id?: string | null
+          html_link?: string | null
+          id?: string
+          last_synced_at?: string
+          location?: string | null
+          source?: string
+          start_at?: string
+          status?: string
+          student_id?: string | null
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_appointments_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internal_appointments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           coach_id: string | null
@@ -2296,6 +2424,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          provider: string
+          redirect_to: string | null
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          provider?: string
+          redirect_to?: string | null
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          provider?: string
+          redirect_to?: string | null
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       partner_benefits: {
         Row: {
