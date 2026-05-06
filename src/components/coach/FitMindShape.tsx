@@ -67,6 +67,25 @@ import poseFrente from "@/assets/photo-pose-frente.png";
 import poseCostas from "@/assets/photo-pose-costas.png";
 import poseLateralDir from "@/assets/photo-pose-lateral-direita.png";
 import poseLateralEsq from "@/assets/photo-pose-lateral-esquerda.png";
+import bodyAbaixo from "@/assets/body-abaixo.png";
+import bodyNormal from "@/assets/body-normal.png";
+import bodyAcima1 from "@/assets/body-acima-1.png";
+import bodyAcima2 from "@/assets/body-acima-2.png";
+import bodyAcima3 from "@/assets/body-acima-3.png";
+import bodyAlto1 from "@/assets/body-alto-1.png";
+import bodyAlto2 from "@/assets/body-alto-2.png";
+import bodyAlto3 from "@/assets/body-alto-3.png";
+
+const BODY_AVATAR_IMAGES = [
+  bodyAbaixo,
+  bodyNormal,
+  bodyAcima1,
+  bodyAcima2,
+  bodyAcima3,
+  bodyAlto1,
+  bodyAlto2,
+  bodyAlto3,
+];
 
 // ============================================================
 // TIPOS E INTERFACES
@@ -487,73 +506,29 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     active?: boolean;
     label: string;
     gender?: string;
-  }> = ({ level, active, label, gender }) => {
-    const baseH = 48 + level * 3;
-    const bodyW = 18 + level * 4;
-    const bodyColor =
-      level === 0
-        ? "#60a5fa"
-        : level <= 1
-          ? "#22c55e"
-          : level <= 3
-            ? "#facc15"
-            : "#ef4444";
-    const skinColor = gender === "male" ? "#f5c5a3" : "#f9c9b0";
+  }> = ({ level, active, label }) => {
     return (
       <div
         className={`fm-avatar-item ${active ? "fm-avatar-active" : ""}`}
-        style={{ opacity: active ? 1 : 0.4 }}
+        style={{ opacity: active ? 1 : 0.35 }}
       >
-        <svg
-          width={bodyW + 12}
-          height={baseH + 18}
-          viewBox={`0 0 ${bodyW + 12} ${baseH + 18}`}
-        >
-          {/* Cabeça */}
-          <ellipse
-            cx={(bodyW + 12) / 2}
-            cy="9"
-            rx="8"
-            ry="9"
-            fill={skinColor}
-          />
-          {/* Corpo */}
-          <rect
-            x={(bodyW + 12) / 2 - bodyW / 2}
-            y="19"
-            width={bodyW}
-            height={baseH * 0.55}
-            rx={bodyW * 0.18}
-            fill={bodyColor}
-            opacity={0.9}
-          />
-          {/* Pernas */}
-          <rect
-            x={(bodyW + 12) / 2 - bodyW / 2 + 2}
-            y={19 + baseH * 0.52}
-            width={bodyW / 2 - 3}
-            height={baseH * 0.45}
-            rx="4"
-            fill={bodyColor}
-            opacity={0.75}
-          />
-          <rect
-            x={(bodyW + 12) / 2 + 2}
-            y={19 + baseH * 0.52}
-            width={bodyW / 2 - 3}
-            height={baseH * 0.45}
-            rx="4"
-            fill={bodyColor}
-            opacity={0.75}
-          />
-        </svg>
+        <img
+          src={BODY_AVATAR_IMAGES[level] ?? BODY_AVATAR_IMAGES[1]}
+          alt={label}
+          style={{
+            height: 96,
+            width: "auto",
+            objectFit: "contain",
+            filter: active ? "none" : "grayscale(0.4)",
+          }}
+        />
         <span
           style={{
             fontSize: 9,
             color: active ? "var(--fm-primary)" : "#94a3b8",
             fontWeight: active ? 700 : 400,
             textAlign: "center",
-            maxWidth: 48,
+            maxWidth: 64,
           }}
         >
           {label}
@@ -565,11 +540,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const AvatarLabels = [
     "Abaixo",
     "Normal",
-    "Acima I",
-    "Acima II",
-    "Acima III",
-    "Alto I",
-    "Alto II",
+    "Acima 1",
+    "Acima 2",
+    "Acima 3",
+    "Alto 1",
+    "Alto 2",
   ];
 
   // ────────────────────────────────────────────────────────
