@@ -229,6 +229,7 @@ export async function createGoogleCalendarEvent(params: {
 }) {
   const tok = await getValidAccessTokenForUser(params.userId);
   if (!tok) throw new Error("Google não conectado");
+  const calendarId = await ensureFitMindCalendarId(params.userId);
 
   const timeZone = "America/Sao_Paulo";
   const body: Record<string, any> = {
@@ -248,7 +249,7 @@ export async function createGoogleCalendarEvent(params: {
   }
 
   const res = await fetch(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none&conferenceDataVersion=0",
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none&conferenceDataVersion=0`,
     {
       method: "POST",
       headers: {
