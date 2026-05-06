@@ -22,6 +22,7 @@ export type UpcomingEvent = {
   googleEventId?: string;
   coachId?: string;
   coachName?: string;
+  completedAt?: string | null;
 };
 
 export type GoogleConnectionStatus = {
