@@ -63,6 +63,10 @@ import {
   Filter,
   Upload,
 } from "lucide-react";
+import poseFrente from "@/assets/photo-pose-frente.png";
+import poseCostas from "@/assets/photo-pose-costas.png";
+import poseLateralDir from "@/assets/photo-pose-lateral-direita.png";
+import poseLateralEsq from "@/assets/photo-pose-lateral-esquerda.png";
 
 // ============================================================
 // TIPOS E INTERFACES
@@ -1526,27 +1530,27 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
     const StepFotos = () => {
       const VIEWS = [
-        { key: "front", label: "Frontal", icon: "🧍" },
-        { key: "rightSide", label: "Lateral Dir.", icon: "🧍" },
-        { key: "back", label: "Posterior", icon: "🧍" },
-        { key: "leftSide", label: "Lateral Esq.", icon: "🧍" },
+        { key: "front", label: "1. De Frente", guide: poseFrente },
+        { key: "back", label: "2. De Costas", guide: poseCostas },
+        { key: "rightSide", label: "3. Lateral Direita", guide: poseLateralDir },
+        { key: "leftSide", label: "4. Lateral Esquerda", guide: poseLateralEsq },
       ];
       return (
         <div>
           <div className="fm-section-title">Fotos</div>
           <div
             style={{
-              background: "#f0fdf4",
-              border: "1.5px solid #bbf7d0",
+              background: "hsl(var(--accent) / 0.4)",
+              border: "1.5px solid hsl(var(--border))",
               borderRadius: 10,
               padding: "10px 14px",
               marginBottom: 16,
               fontSize: 12,
-              color: "#166534",
+              color: "hsl(var(--foreground))",
             }}
           >
             💡 Posicione o aluno em roupa íntima, em pé, braços levemente
-            afastados do corpo, olhando para frente.
+            afastados do corpo, olhando para frente. Siga o guia de cada ângulo abaixo.
           </div>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
@@ -1554,18 +1558,34 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             {VIEWS.map((v) => (
               <div key={v.key}>
                 <label className="fm-label" style={{ marginBottom: 6 }}>
-                  {v.icon} {v.label}
+                  {v.label}
                 </label>
                 <div
                   className="fm-photo-box"
                   onClick={() => alert(`Selecionar foto: ${v.label}`)}
+                  style={{ position: "relative", overflow: "hidden", padding: 0 }}
                 >
-                  <Camera size={24} color="#94a3b8" />
-                  <span
-                    style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}
+                  <img
+                    src={v.guide}
+                    alt={`Guia de pose: ${v.label}`}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      padding: 10,
+                      background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
+                    }}
                   >
-                    Toque para adicionar
-                  </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 11, fontWeight: 600 }}>
+                      <Camera size={14} /> Toque para adicionar
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
