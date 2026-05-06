@@ -1779,6 +1779,90 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             { date: "Hoje", peso: a.weight },
           ];
 
+    // ── Resumo / referências clínicas ─────────────────────
+    const pastList = (selectedClient?.assessments ?? []).filter((x) => x.id !== a.id);
+    const firstA = pastList[0] ?? a;
+    const prevA = pastList[pastList.length - 1] ?? a;
+    const daysFollow = (() => {
+      if (!firstA?.date) return 0;
+      const d = (new Date(a.date || Date.now()).getTime() - new Date(firstA.date).getTime()) / 86400000;
+      return Math.max(0, Math.round(d));
+    })();
+    const followLabel = daysFollow >= 30
+      ? `${Math.round(daysFollow / 30)} meses`
+      : `${daysFollow} dias`;
+    const diff = (curr?: number, base?: number, unit = "") => {
+      if (curr == null || base == null || !Number.isFinite(curr) || !Number.isFinite(base)) return "—";
+      const d = +(curr - base).toFixed(1);
+      if (d === 0) return `0${unit}`;
+      return `${d > 0 ? "+" : ""}${d}${unit}`;
+    };
+
+    // Referências clínicas
+    const heightM = (a.height || 0) / 100;
+    const idealWeightMin = heightM ? +(18.5 * heightM * heightM).toFixed(1) : 0;
+    const idealWeightMax = heightM ? +(24.9 * heightM * heightM).toFixed(1) : 0;
+    const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
+    const refSkeletal = client.gender === "male" ? "33–39%" : "24–30%";
+    const refBMI = "18,5–24,9 kg/m²";
+    const refBodyFat = client.gender === "male" ? "10–17%" : "18–24%";
+    const refVisceral = "1–9";
+    const harrisBenedict = (() => {
+      if (!a.weight || !a.height || !a.age) return 0;
+      return Math.round(
+        client.gender === "male"
+          ? 88.36 + 13.4 * a.weight + 4.8 * a.height - 5.7 * a.age
+          : 447.6 + 9.2 * a.weight + 3.1 * a.height - 4.3 * a.age,
+      );
+    })();
+    const basalKcal = a.basalMetabolism && harrisBenedict
+      ? Math.round((a.basalMetabolism / 100) * harrisBenedict)
+      : harrisBenedict;
+    const refBasal = harrisBenedict ? `${Math.round(harrisBenedict * 0.95)}–${Math.round(harrisBenedict * 1.05)} kcal` : "—";
+
+    // Peso ideal eval
+    const weightEval = (() => {
+      if (!a.weight || !idealWeightMax) return { c: "#94a3b8", t: "—" };
+      if (a.weight < idealWeightMin) return { c: "#facc15", t: "Abaixo" };
+      if (a.weight <= idealWeightMax) return { c: "#22c55e", t: "Normal" };
+      const over = a.weight - idealWeightMax;
+      if (over < 5) return { c: "#facc15", t: "Acima" };
+      if (over < 12) return { c: "#fb923c", t: "Muito acima" };
+      return { c: "#dc2626", t: "Risco alto" };
+    })();
+    // Músculo esquelético eval
+    const skMin = client.gender === "male" ? 33 : 24;
+    const skMax = client.gender === "male" ? 39 : 30;
+    const skEval = (() => {
+      if (!a.skeletalMuscle) return { c: "#94a3b8", t: "—" };
+      if (a.skeletalMuscle < skMin - 3) return { c: "#dc2626", t: "Muito baixo" };
+      if (a.skeletalMuscle < skMin) return { c: "#facc15", t: "Abaixo" };
+      if (a.skeletalMuscle <= skMax) return { c: "#22c55e", t: "Normal" };
+      return { c: "#22c55e", t: "Acima (atleta)" };
+    })();
+    const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
+    // Idade corporal: comparar com idade real
+    const bodyAgeYears = a.bodyAge && a.age ? Math.round((a.bodyAge / 100) * a.age) : 0;
+    const bodyAgeDelta = bodyAgeYears - (a.age || 0);
+    const bodyAgeEval = (() => {
+      if (!bodyAgeYears) return { c: "#94a3b8", t: "—" };
+      if (bodyAgeDelta <= 0) return { c: "#22c55e", t: bodyAgeDelta === 0 ? "Igual à idade real" : `${bodyAgeDelta} anos (excelente)` };
+      if (bodyAgeDelta <= 3) return { c: "#facc15", t: `+${bodyAgeDelta} anos` };
+      if (bodyAgeDelta <= 7) return { c: "#fb923c", t: `+${bodyAgeDelta} anos` };
+      return { c: "#dc2626", t: `+${bodyAgeDelta} anos` };
+    })();
+    // Gordura corporal kg
+    const fatKg = a.bodyFat && a.weight ? +((a.bodyFat / 100) * a.weight).toFixed(1) : 0;
+    // Visceral eval reuse viscCat
+    // Metabolismo eval
+    const basalEval = (() => {
+      if (!basalKcal || !harrisBenedict) return { c: "#94a3b8", t: "—" };
+      const ratio = basalKcal / harrisBenedict;
+      if (ratio < 0.9) return { c: "#fb923c", t: "Baixo" };
+      if (ratio <= 1.1) return { c: "#22c55e", t: "Normal" };
+      return { c: "#facc15", t: "Acima" };
+    })();
+
     const histGordura =
       historicalData.length > 0
         ? historicalData
@@ -1851,6 +1935,38 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         </div>
 
         <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
+          {/* Resumo Indicador */}
+          <div className="fm-card" style={{ marginBottom: 12 }}>
+            <div className="fm-section-title">Resumo</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left" }}>
+                    <th style={{ padding: "6px 4px", fontWeight: 700 }}>Indicador</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Última</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Geral</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "#1e293b" }}>
+                  {[
+                    { l: "Tempo de acompanhamento", last: "—", overall: followLabel, unit: "" },
+                    { l: "Peso", last: diff(a.weight, prevA.weight, " kg"), overall: diff(a.weight, firstA.weight, " kg") },
+                    { l: "Gordura", last: diff(a.bodyFat, prevA.bodyFat, " %"), overall: diff(a.bodyFat, firstA.bodyFat, " %") },
+                    { l: "Músculo Esquelético", last: diff(a.skeletalMuscle, prevA.skeletalMuscle, " %"), overall: diff(a.skeletalMuscle, firstA.skeletalMuscle, " %") },
+                    { l: "Gordura Visceral", last: diff(a.visceralFat, prevA.visceralFat, ""), overall: diff(a.visceralFat, firstA.visceralFat, "") },
+                    { l: "Idade Corporal", last: diff(bodyAgeYears, prevA.bodyAge && prevA.age ? Math.round((prevA.bodyAge / 100) * prevA.age) : bodyAgeYears, " anos"), overall: diff(bodyAgeYears, firstA.bodyAge && firstA.age ? Math.round((firstA.bodyAge / 100) * firstA.age) : bodyAgeYears, " anos") },
+                  ].map((r) => (
+                    <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "8px 4px", fontWeight: 600 }}>{r.l}</td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}>{r.last}</td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}>{r.overall}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Avatar Row */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div
@@ -1893,152 +2009,160 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 {bmiCat.label} · IMC {formatPercent(bmiPercent)}
               </span>
             </div>
+            {(() => {
+              const photos = a.photos || {};
+              const count = [photos.front, photos.back, photos.leftSide, photos.rightSide].filter(Boolean).length;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (count === 0) {
+                      alert("Nenhuma foto anexada nesta avaliação.");
+                      return;
+                    }
+                    const list = [
+                      photos.front && "Frente",
+                      photos.back && "Costas",
+                      photos.rightSide && "Lateral Direita",
+                      photos.leftSide && "Lateral Esquerda",
+                    ].filter(Boolean).join(", ");
+                    alert(`Fotos disponíveis: ${list}`);
+                  }}
+                  style={{
+                    marginTop: 12,
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    background: count > 0 ? "var(--fm-primary)" : "#f1f5f9",
+                    color: count > 0 ? "#fff" : "#94a3b8",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: count > 0 ? "pointer" : "not-allowed",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Camera size={14} />
+                  {count > 0 ? `Visualizar fotos (${count})` : "Sem fotos anexadas"}
+                </button>
+              );
+            })()}
           </div>
 
           {/* Composição Corporal */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Composição Corporal</div>
-            {[
-              {
-                label: "Peso",
-                tooltip: null,
-                value: formatPercent(a.weight),
-                eval: "normal",
-                evalLabel: "Percentual informado",
-              },
-              {
-                label: "Músculo Esquelético",
-                tooltip: "skeletalMuscle",
-                value: formatPercent(a.skeletalMuscle),
-                eval: fatCat.eval,
-                evalLabel: evalLabel(fatCat.eval),
-              },
-              {
-                label: "Massa Muscular",
-                tooltip: "muscleMass",
-                value: formatPercent(a.muscleMass),
-                eval: "normal",
-                evalLabel: "Total",
-              },
-              {
-                label: "Idade Corporal",
-                tooltip: "bodyAge",
-                value: formatPercent(a.bodyAge),
-                eval:
-                  ageBodyDiff > 5
-                    ? "danger"
-                    : ageBodyDiff > 0
-                      ? "warning"
-                      : "excellent",
-                evalLabel:
-                  ageBodyDiff === 0
-                    ? "Igual"
-                    : ageBodyDiff > 0
-                      ? `+${ageBodyDiff}%`
-                      : `${ageBodyDiff}%`,
-              },
-            ].map((row) => (
-              <div key={row.label} className="fm-result-row">
-                <div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: "#1e293b",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    {row.label} {row.tooltip && <Tooltip id={row.tooltip} />}
-                  </div>
-                </div>
-                <div
-                  style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}
-                >
-                  {row.value}
-                </div>
-                <span
-                  className="fm-badge"
-                  style={{
-                    background: evalColor(row.eval),
-                    color: "#fff",
-                    minWidth: 70,
-                    textAlign: "center",
-                  }}
-                >
-                  <span
-                    className="fm-eval-dot"
-                    style={{ background: evalColor(row.eval), marginRight: 4 }}
-                  />
-                  {row.evalLabel}
-                </span>
-              </div>
-            ))}
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left", fontSize: 11 }}>
+                    <th style={{ padding: "6px 4px", fontWeight: 700 }}>Descrição</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Resultado</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Avaliação</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "#1e293b" }}>
+                  {[
+                    {
+                      l: "Peso",
+                      ref: `Referência: ${refWeight}`,
+                      result: a.weight ? `${a.weight} kg` : "—",
+                      color: weightEval.c,
+                      tag: weightEval.t,
+                    },
+                    {
+                      l: "Músculo Esquelético",
+                      ref: `Referência: ${refSkeletal}`,
+                      result: a.skeletalMuscle ? `${a.skeletalMuscle}% (${skKg} kg)` : "—",
+                      color: skEval.c,
+                      tag: skEval.t,
+                    },
+                    {
+                      l: "Idade Corporal",
+                      ref: `Idade real: ${a.age || "—"} anos`,
+                      result: bodyAgeYears ? `${bodyAgeYears} anos` : "—",
+                      color: bodyAgeEval.c,
+                      tag: bodyAgeEval.t,
+                    },
+                  ].map((r) => (
+                    <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
+                      <td style={{ padding: "10px 4px" }}>
+                        <div style={{ fontWeight: 600 }}>{r.l}</div>
+                        <div style={{ fontSize: 10.5, color: "#94a3b8", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
+                      </td>
+                      <td style={{ padding: "10px 4px", textAlign: "right", fontWeight: 800 }}>{r.result}</td>
+                      <td style={{ padding: "10px 4px", textAlign: "right" }}>
+                        <span className="fm-badge" style={{ background: r.color, color: "#fff", fontSize: 10.5 }}>{r.tag}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Diagnóstico de Obesidade */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Diagnóstico de Obesidade</div>
-            {[
-              {
-                label: "IMC",
-                tooltip: "bmi",
-                value: formatPercent(bmiPercent),
-                color: bmiCat.color,
-                evalText: bmiCat.label,
-              },
-              {
-                label: "Gordura Corporal",
-                tooltip: "bodyFat",
-                value: formatPercent(a.bodyFat),
-                color: evalColor(fatCat.eval),
-                evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})`,
-              },
-              {
-                label: "Gordura Visceral",
-                tooltip: "visceralFat",
-                value: formatPercent(a.visceralFat),
-                color: viscCat.color,
-                evalText: viscCat.label,
-              },
-              {
-                label: "Metabolismo Basal",
-                tooltip: "basalMetabolism",
-                value: formatPercent(a.basalMetabolism),
-                color: "#60a5fa",
-                evalText: "Harris-Benedict",
-              },
-            ].map((row) => (
-              <div key={row.label} className="fm-result-row">
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "#1e293b",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {row.label} <Tooltip id={row.tooltip} />
-                </div>
-                <div
-                  style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}
-                >
-                  {row.value}
-                </div>
-                <span
-                  className="fm-badge"
-                  style={{ background: row.color, color: "#fff", fontSize: 11 }}
-                >
-                  {row.evalText}
-                </span>
-              </div>
-            ))}
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left", fontSize: 11 }}>
+                    <th style={{ padding: "6px 4px", fontWeight: 700 }}>Descrição</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Resultado</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Avaliação</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "#1e293b" }}>
+                  {[
+                    {
+                      l: "IMC",
+                      ref: `Ideal: ${refBMI}`,
+                      result: computedBMI ? `${computedBMI} kg/m²` : "—",
+                      color: bmiCat.color,
+                      tag: bmiCat.label,
+                    },
+                    {
+                      l: "Gordura Corporal",
+                      ref: `Ideal: ${refBodyFat}`,
+                      result: a.bodyFat ? `${a.bodyFat}% (${fatKg} kg)` : "—",
+                      color: evalColor(fatCat.eval),
+                      tag: `${evalLabel(fatCat.eval)} (${fatCat.label})`,
+                    },
+                    {
+                      l: "Gordura Visceral",
+                      ref: `Ideal: ${refVisceral}`,
+                      result: a.visceralFat ? `${a.visceralFat}` : "—",
+                      color: viscCat.color,
+                      tag: viscCat.label,
+                    },
+                    {
+                      l: "Metabolismo Basal",
+                      ref: `Ideal: ${refBasal}`,
+                      result: basalKcal ? `${basalKcal} kcal` : "—",
+                      color: basalEval.c,
+                      tag: basalEval.t,
+                    },
+                  ].map((r) => (
+                    <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
+                      <td style={{ padding: "10px 4px" }}>
+                        <div style={{ fontWeight: 600 }}>{r.l}</div>
+                        <div style={{ fontSize: 10.5, color: "#94a3b8", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
+                      </td>
+                      <td style={{ padding: "10px 4px", textAlign: "right", fontWeight: 800 }}>{r.result}</td>
+                      <td style={{ padding: "10px 4px", textAlign: "right" }}>
+                        <span className="fm-badge" style={{ background: r.color, color: "#fff", fontSize: 10.5 }}>{r.tag}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Água & Óssea */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Outros Indicadores</div>
             <div
