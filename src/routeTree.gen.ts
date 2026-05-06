@@ -45,6 +45,7 @@ import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
+import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -226,6 +227,11 @@ const ApiOauthGoogleStartRoute = ApiOauthGoogleStartRouteImport.update({
   path: '/api/oauth/google/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
+  id: '/api/oauth/google/callback',
+  path: '/api/oauth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
 }
 export interface FileRoutesByTo {
@@ -299,6 +306,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/student': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
 }
 export interface FileRoutesById {
@@ -338,6 +346,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
 }
 export interface FileRouteTypes {
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -414,6 +424,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
+    | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
   id:
     | '__root__'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
   fileRoutesById: FileRoutesById
 }
@@ -466,6 +478,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
   RCodeRoute: typeof RCodeRoute
+  ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
 }
 
@@ -723,6 +736,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOauthGoogleStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/oauth/google/callback': {
+      id: '/api/oauth/google/callback'
+      path: '/api/oauth/google/callback'
+      fullPath: '/api/oauth/google/callback'
+      preLoaderRoute: typeof ApiOauthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -814,6 +834,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
   RCodeRoute: RCodeRoute,
+  ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
 }
 export const routeTree = rootRouteImport
