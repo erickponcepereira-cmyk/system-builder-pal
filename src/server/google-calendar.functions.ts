@@ -106,6 +106,51 @@ export const syncMyCalendar = createServerFn({ method: "POST" })
     return syncCoachAppointments(userId, coach.id);
   });
 
+/** Create an event on the coach's connected Google Calendar. */
+export const createCoachCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: {
+    summary: string;
+    description?: string;
+    startISO: string;
+    endISO: string;
+    attendeeEmail?: string | null;
+    attendeeName?: string | null;
+    location?: string | null;
+  }) => d)
+  .handler(async ({ context, data }) => {
+    const userId = context.userId;
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    const { data: coach } = profile
+      ? await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+    if (!coach) throw new Error("Coach não encontrado");
+
+    // Check connection first to give a clear error
+    const { data: tok } = await supabaseAdmin
+      .from("coach_google_tokens")
+      .select("user_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!tok) {
+      return { connected: false, htmlLink: null as string | null, id: null as string | null };
+    }
+
+    const result = await createGoogleCalendarEvent({
+      userId,
+      coachId: coach.id,
+      summary: data.summary,
+      description: data.description,
+      startISO: data.startISO,
+      endISO: data.endISO,
+      attendeeEmail: data.attendeeEmail ?? null,
+      attendeeName: data.attendeeName ?? null,
+      location: data.location ?? null,
+    });
+    return { connected: true, ...result };
+  });
+
 /** Disconnect Google for current user. */
 export const disconnectGoogle = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
