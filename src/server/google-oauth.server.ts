@@ -97,6 +97,58 @@ export async function fetchGoogleUserInfo(accessToken: string) {
   return { email: data.email ?? null };
 }
 
+/** Create a dedicated FitMindClub calendar for the coach and return its ID. */
+export async function createFitMindCalendar(accessToken: string, coachName: string) {
+  const res = await fetch("https://www.googleapis.com/calendar/v3/calendars", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      summary: `${coachName} - FitMindClub`,
+      timeZone: "America/Sao_Paulo",
+      description: "Agenda exclusiva FitMindClub",
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Google calendar create failed [${res.status}]: ${t.slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { id: string };
+  return data.id;
+}
+
+/** Ensure the user has a FitMindClub calendar; create it if missing. Returns its ID. */
+export async function ensureFitMindCalendarId(userId: string): Promise<string> {
+  const tok = await getValidAccessTokenForUser(userId);
+  if (!tok) throw new Error("Google não conectado");
+  if (tok.row.fitmind_calendar_id) {
+    // Validate it still exists
+    const check = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(tok.row.fitmind_calendar_id)}`,
+      { headers: { Authorization: `Bearer ${tok.accessToken}` } },
+    );
+    if (check.ok) return tok.row.fitmind_calendar_id;
+    // fall through to recreate
+  }
+
+  // Resolve coach display name
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id,name")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const coachName = (profile?.name || "Coach").trim();
+
+  const calId = await createFitMindCalendar(tok.accessToken, coachName);
+  await supabaseAdmin
+    .from("coach_google_tokens")
+    .update({ fitmind_calendar_id: calId })
+    .eq("user_id", userId);
+  return calId;
+}
+
 /** Returns a valid (refreshed if needed) access token for the given user. */
 export async function getValidAccessTokenForUser(userId: string) {
   const { data: row, error } = await supabaseAdmin
