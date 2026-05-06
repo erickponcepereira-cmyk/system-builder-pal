@@ -126,6 +126,16 @@ export function UpcomingAppointments() {
     }
   };
 
+  const toggleComplete = async (ev: UpcomingEvent) => {
+    setBusy(true);
+    try {
+      await setAppointmentCompleted({ data: { appointmentId: ev.id, completed: !ev.completedAt } });
+      toast.success(ev.completedAt ? "Marcado como pendente." : "Evento concluído!");
+      await load();
+    } catch (e: any) { toast.error(e?.message ?? "Falha ao atualizar"); }
+    finally { setBusy(false); }
+  };
+
   const fmt = (iso: string) => {
     if (!iso) return "";
     return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
