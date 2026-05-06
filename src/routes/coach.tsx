@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { PatentBadge } from "@/components/coach/PatentBadge";
 import { GoalsCard } from "@/components/coach/GoalsCard";
 import { CareerProgress } from "@/components/coach/CareerProgress";
+import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
@@ -458,11 +459,7 @@ function OverviewTab({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <GoalsCard />
-        <CareerProgress
-          currentMonths={3}
-          currentStudents={24}
-          isTopSeller={false}
-        />
+        <UpcomingAppointments />
       </div>
 
       {/* Aniversariantes */}
