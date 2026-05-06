@@ -1772,14 +1772,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       { name: "Gordura", value: fatPct, fill: "#fca5a5" },
     ];
 
-    const histWeight =
-      historicalData.length > 0
-        ? historicalData
-        : [
-            { date: "Jan", peso: +(a.weight * 1.03).toFixed(1) },
-            { date: "Fev", peso: +(a.weight * 1.01).toFixed(1) },
-            { date: "Hoje", peso: a.weight },
-          ];
+    const todayLabel = "Hoje";
+    const hasTodayInHistory = historicalData.some((h) => h.peso === a.weight);
+    const histWeight = hasTodayInHistory
+      ? historicalData
+      : [...historicalData, { date: todayLabel, peso: a.weight, gordura: a.bodyFat, musculo: a.skeletalMuscle, idadeCorp: a.bodyAge }];
 
     // ── Resumo / referências clínicas ─────────────────────
     const pastList = (selectedClient?.assessments ?? []).filter((x) => x.id !== a.id);
