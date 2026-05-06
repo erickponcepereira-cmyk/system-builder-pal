@@ -43,7 +43,10 @@ import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
+import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
+import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
+import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -215,10 +218,25 @@ const AdminCoachApplicationsRoute = AdminCoachApplicationsRouteImport.update({
   path: '/coach-applications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCalendarsRoute = AdminCalendarsRouteImport.update({
+  id: '/calendars',
+  path: '/calendars',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCoachesInactivityRoute = AdminCoachesInactivityRouteImport.update({
   id: '/inactivity',
   path: '/inactivity',
   getParentRoute: () => AdminCoachesRoute,
+} as any)
+const ApiOauthGoogleStartRoute = ApiOauthGoogleStartRouteImport.update({
+  id: '/api/oauth/google/start',
+  path: '/api/oauth/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
+  id: '/api/oauth/google/callback',
+  path: '/api/oauth/google/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -231,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -257,6 +276,8 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
+  '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -266,6 +287,7 @@ export interface FileRoutesByTo {
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -292,6 +314,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/student': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
+  '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -304,6 +328,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -330,6 +355,8 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
+  '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -343,6 +370,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/admin/calendars'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -369,6 +397,8 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/api/oauth/google/callback'
+    | '/api/oauth/google/start'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -378,6 +408,7 @@ export interface FileRouteTypes {
     | '/pending-approval'
     | '/register'
     | '/reset-password'
+    | '/admin/calendars'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -404,6 +435,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
+    | '/api/oauth/google/callback'
+    | '/api/oauth/google/start'
   id:
     | '__root__'
     | '/'
@@ -415,6 +448,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/admin/calendars'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -441,6 +475,8 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/api/oauth/google/callback'
+    | '/api/oauth/google/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -454,6 +490,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
   RCodeRoute: typeof RCodeRoute
+  ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
+  ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -696,12 +734,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoachApplicationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/calendars': {
+      id: '/admin/calendars'
+      path: '/calendars'
+      fullPath: '/admin/calendars'
+      preLoaderRoute: typeof AdminCalendarsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/coaches/inactivity': {
       id: '/admin/coaches/inactivity'
       path: '/inactivity'
       fullPath: '/admin/coaches/inactivity'
       preLoaderRoute: typeof AdminCoachesInactivityRouteImport
       parentRoute: typeof AdminCoachesRoute
+    }
+    '/api/oauth/google/start': {
+      id: '/api/oauth/google/start'
+      path: '/api/oauth/google/start'
+      fullPath: '/api/oauth/google/start'
+      preLoaderRoute: typeof ApiOauthGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/oauth/google/callback': {
+      id: '/api/oauth/google/callback'
+      path: '/api/oauth/google/callback'
+      fullPath: '/api/oauth/google/callback'
+      preLoaderRoute: typeof ApiOauthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -719,6 +778,7 @@ const AdminCoachesRouteWithChildren = AdminCoachesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminCalendarsRoute: typeof AdminCalendarsRoute
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
@@ -734,6 +794,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCalendarsRoute: AdminCalendarsRoute,
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
@@ -794,6 +855,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
   RCodeRoute: RCodeRoute,
+  ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
+  ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
