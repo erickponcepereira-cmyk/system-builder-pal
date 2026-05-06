@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Calendar, ExternalLink, MapPin, User as UserIcon, RefreshCw, LogOut, Link2, Pencil, Trash2, Copy, Check } from "lucide-react";
+import { Calendar, ExternalLink, MapPin, User as UserIcon, RefreshCw, LogOut, Link2, Pencil, Trash2, Copy, Check, CheckCircle2, Circle } from "lucide-react";
 import {
   getUpcomingEvents,
   getGoogleConnectionStatus,
@@ -7,6 +7,7 @@ import {
   disconnectGoogle,
   updateCoachCalendarEvent,
   deleteCoachCalendarEvent,
+  setAppointmentCompleted,
   type UpcomingEvent,
   type GoogleConnectionStatus,
 } from "@/server/google-calendar.functions";
