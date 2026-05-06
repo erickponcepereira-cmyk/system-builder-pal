@@ -1176,14 +1176,12 @@ function EvaluateTab() {
             });
             if (!res.connected) {
               toast.error("Conecte sua conta Google na aba Agenda primeiro.");
-              return;
+              return { ok: false, error: "not_connected" };
             }
-            toast.success("Evento criado no Google Agenda");
             return { ok: true, htmlLink: res.htmlLink ?? null };
           } catch (e: any) {
             console.error("createCoachCalendarEvent error:", e);
-            toast.error(e?.message || "Erro ao criar evento no Google Agenda");
-            return;
+            return { ok: false, error: e?.message || "Erro ao criar evento" };
           }
         }}
         groups={[
