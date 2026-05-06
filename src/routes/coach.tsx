@@ -17,6 +17,7 @@ import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
+import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { useTheme } from "@/components/theme-provider";
