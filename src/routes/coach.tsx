@@ -1163,7 +1163,6 @@ function EvaluateTab() {
             const startISO = new Date(`${date}T${time}:00`).toISOString();
             const endISO = new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString();
             const client = clients.find((c) => c.name === clientName);
-            const { createCoachCalendarEvent } = await import("@/server/google-calendar.functions");
             const res = await createCoachCalendarEvent({
               data: {
                 summary: `Avaliação — ${clientName}`,
