@@ -2055,147 +2055,114 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           {/* Composição Corporal */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Composição Corporal</div>
-            {[
-              {
-                label: "Peso",
-                tooltip: null,
-                value: formatPercent(a.weight),
-                eval: "normal",
-                evalLabel: "Percentual informado",
-              },
-              {
-                label: "Músculo Esquelético",
-                tooltip: "skeletalMuscle",
-                value: formatPercent(a.skeletalMuscle),
-                eval: fatCat.eval,
-                evalLabel: evalLabel(fatCat.eval),
-              },
-              {
-                label: "Massa Muscular",
-                tooltip: "muscleMass",
-                value: formatPercent(a.muscleMass),
-                eval: "normal",
-                evalLabel: "Total",
-              },
-              {
-                label: "Idade Corporal",
-                tooltip: "bodyAge",
-                value: formatPercent(a.bodyAge),
-                eval:
-                  ageBodyDiff > 5
-                    ? "danger"
-                    : ageBodyDiff > 0
-                      ? "warning"
-                      : "excellent",
-                evalLabel:
-                  ageBodyDiff === 0
-                    ? "Igual"
-                    : ageBodyDiff > 0
-                      ? `+${ageBodyDiff}%`
-                      : `${ageBodyDiff}%`,
-              },
-            ].map((row) => (
-              <div key={row.label} className="fm-result-row">
-                <div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: "#1e293b",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    {row.label} {row.tooltip && <Tooltip id={row.tooltip} />}
-                  </div>
-                </div>
-                <div
-                  style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}
-                >
-                  {row.value}
-                </div>
-                <span
-                  className="fm-badge"
-                  style={{
-                    background: evalColor(row.eval),
-                    color: "#fff",
-                    minWidth: 70,
-                    textAlign: "center",
-                  }}
-                >
-                  <span
-                    className="fm-eval-dot"
-                    style={{ background: evalColor(row.eval), marginRight: 4 }}
-                  />
-                  {row.evalLabel}
-                </span>
-              </div>
-            ))}
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left", fontSize: 11 }}>
+                    <th style={{ padding: "6px 4px", fontWeight: 700 }}>Descrição</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Resultado</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Avaliação</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "#1e293b" }}>
+                  {[
+                    {
+                      l: "Peso",
+                      ref: `Referência: ${refWeight}`,
+                      result: a.weight ? `${a.weight} kg` : "—",
+                      color: weightEval.c,
+                      tag: weightEval.t,
+                    },
+                    {
+                      l: "Músculo Esquelético",
+                      ref: `Referência: ${refSkeletal}`,
+                      result: a.skeletalMuscle ? `${a.skeletalMuscle}% (${skKg} kg)` : "—",
+                      color: skEval.c,
+                      tag: skEval.t,
+                    },
+                    {
+                      l: "Idade Corporal",
+                      ref: `Idade real: ${a.age || "—"} anos`,
+                      result: bodyAgeYears ? `${bodyAgeYears} anos` : "—",
+                      color: bodyAgeEval.c,
+                      tag: bodyAgeEval.t,
+                    },
+                  ].map((r) => (
+                    <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
+                      <td style={{ padding: "10px 4px" }}>
+                        <div style={{ fontWeight: 600 }}>{r.l}</div>
+                        <div style={{ fontSize: 10.5, color: "#94a3b8", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
+                      </td>
+                      <td style={{ padding: "10px 4px", textAlign: "right", fontWeight: 800 }}>{r.result}</td>
+                      <td style={{ padding: "10px 4px", textAlign: "right" }}>
+                        <span className="fm-badge" style={{ background: r.color, color: "#fff", fontSize: 10.5 }}>{r.tag}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Diagnóstico de Obesidade */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Diagnóstico de Obesidade</div>
-            {[
-              {
-                label: "IMC",
-                tooltip: "bmi",
-                value: formatPercent(bmiPercent),
-                color: bmiCat.color,
-                evalText: bmiCat.label,
-              },
-              {
-                label: "Gordura Corporal",
-                tooltip: "bodyFat",
-                value: formatPercent(a.bodyFat),
-                color: evalColor(fatCat.eval),
-                evalText: evalLabel(fatCat.eval) + ` (${fatCat.label})`,
-              },
-              {
-                label: "Gordura Visceral",
-                tooltip: "visceralFat",
-                value: formatPercent(a.visceralFat),
-                color: viscCat.color,
-                evalText: viscCat.label,
-              },
-              {
-                label: "Metabolismo Basal",
-                tooltip: "basalMetabolism",
-                value: formatPercent(a.basalMetabolism),
-                color: "#60a5fa",
-                evalText: "Harris-Benedict",
-              },
-            ].map((row) => (
-              <div key={row.label} className="fm-result-row">
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "#1e293b",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {row.label} <Tooltip id={row.tooltip} />
-                </div>
-                <div
-                  style={{ fontSize: 15, fontWeight: 800, color: "#1e293b" }}
-                >
-                  {row.value}
-                </div>
-                <span
-                  className="fm-badge"
-                  style={{ background: row.color, color: "#fff", fontSize: 11 }}
-                >
-                  {row.evalText}
-                </span>
-              </div>
-            ))}
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left", fontSize: 11 }}>
+                    <th style={{ padding: "6px 4px", fontWeight: 700 }}>Descrição</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Resultado</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Avaliação</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "#1e293b" }}>
+                  {[
+                    {
+                      l: "IMC",
+                      ref: `Ideal: ${refBMI}`,
+                      result: computedBMI ? `${computedBMI} kg/m²` : "—",
+                      color: bmiCat.color,
+                      tag: bmiCat.label,
+                    },
+                    {
+                      l: "Gordura Corporal",
+                      ref: `Ideal: ${refBodyFat}`,
+                      result: a.bodyFat ? `${a.bodyFat}% (${fatKg} kg)` : "—",
+                      color: evalColor(fatCat.eval),
+                      tag: `${evalLabel(fatCat.eval)} (${fatCat.label})`,
+                    },
+                    {
+                      l: "Gordura Visceral",
+                      ref: `Ideal: ${refVisceral}`,
+                      result: a.visceralFat ? `${a.visceralFat}` : "—",
+                      color: viscCat.color,
+                      tag: viscCat.label,
+                    },
+                    {
+                      l: "Metabolismo Basal",
+                      ref: `Ideal: ${refBasal}`,
+                      result: basalKcal ? `${basalKcal} kcal` : "—",
+                      color: basalEval.c,
+                      tag: basalEval.t,
+                    },
+                  ].map((r) => (
+                    <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
+                      <td style={{ padding: "10px 4px" }}>
+                        <div style={{ fontWeight: 600 }}>{r.l}</div>
+                        <div style={{ fontSize: 10.5, color: "#94a3b8", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
+                      </td>
+                      <td style={{ padding: "10px 4px", textAlign: "right", fontWeight: 800 }}>{r.result}</td>
+                      <td style={{ padding: "10px 4px", textAlign: "right" }}>
+                        <span className="fm-badge" style={{ background: r.color, color: "#fff", fontSize: 10.5 }}>{r.tag}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Água & Óssea */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Outros Indicadores</div>
             <div
