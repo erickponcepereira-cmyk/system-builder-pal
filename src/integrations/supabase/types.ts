@@ -1982,6 +1982,7 @@ export type Database = {
           attendee_email: string | null
           attendee_name: string | null
           coach_id: string
+          completed_at: string | null
           created_at: string
           description: string | null
           end_at: string | null
@@ -2004,6 +2005,7 @@ export type Database = {
           attendee_email?: string | null
           attendee_name?: string | null
           coach_id: string
+          completed_at?: string | null
           created_at?: string
           description?: string | null
           end_at?: string | null
@@ -2026,6 +2028,7 @@ export type Database = {
           attendee_email?: string | null
           attendee_name?: string | null
           coach_id?: string
+          completed_at?: string | null
           created_at?: string
           description?: string | null
           end_at?: string | null
