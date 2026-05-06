@@ -5,6 +5,7 @@ import {
   fetchGoogleUserInfo,
   getRedirectUri,
   syncCoachAppointments,
+  ensureFitMindCalendarId,
 } from "@/server/google-oauth.server";
 
 export const Route = createFileRoute("/api/oauth/google/callback")({
