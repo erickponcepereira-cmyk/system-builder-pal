@@ -5,7 +5,9 @@ export const GOOGLE_OAUTH_SCOPES = [
   "openid",
   "email",
   "profile",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  // Full calendar access is required to CREATE a new (secondary) calendar.
+  // calendar.events alone cannot create calendars, only events.
+  "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/calendar.events",
 ].join(" ");
 
