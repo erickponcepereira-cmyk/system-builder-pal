@@ -101,6 +101,7 @@ export async function fetchGoogleUserInfo(accessToken: string) {
 
 /** Create a dedicated FitMindClub calendar for the coach and return its ID. */
 export async function createFitMindCalendar(accessToken: string, coachName: string) {
+  console.log("[fitmind-cal] creating calendar for", coachName);
   const res = await fetch("https://www.googleapis.com/calendar/v3/calendars", {
     method: "POST",
     headers: {
@@ -115,9 +116,11 @@ export async function createFitMindCalendar(accessToken: string, coachName: stri
   });
   if (!res.ok) {
     const t = await res.text();
+    console.error("[fitmind-cal] create failed", res.status, t.slice(0, 400));
     throw new Error(`Google calendar create failed [${res.status}]: ${t.slice(0, 300)}`);
   }
   const data = (await res.json()) as { id: string };
+  console.log("[fitmind-cal] created calendar id:", data.id);
   return data.id;
 }
 
@@ -125,17 +128,30 @@ export async function createFitMindCalendar(accessToken: string, coachName: stri
 export async function ensureFitMindCalendarId(userId: string): Promise<string> {
   const tok = await getValidAccessTokenForUser(userId);
   if (!tok) throw new Error("Google não conectado");
+  console.log("[fitmind-cal] ensure for user", userId, "existing id:", tok.row.fitmind_calendar_id, "scope:", tok.row.scope);
+
   if (tok.row.fitmind_calendar_id) {
-    // Validate it still exists
     const check = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(tok.row.fitmind_calendar_id)}`,
       { headers: { Authorization: `Bearer ${tok.accessToken}` } },
     );
-    if (check.ok) return tok.row.fitmind_calendar_id;
-    // fall through to recreate
+    if (check.ok) {
+      console.log("[fitmind-cal] reusing existing calendar", tok.row.fitmind_calendar_id);
+      return tok.row.fitmind_calendar_id;
+    }
+    console.warn("[fitmind-cal] existing calendar not accessible, recreating. status:", check.status);
   }
 
-  // Resolve coach display name
+  // Verify scope before attempting create — needs full calendar scope.
+  const scope = tok.row.scope || "";
+  if (!scope.includes("https://www.googleapis.com/auth/calendar") || scope.includes("calendar.readonly") && !scope.split(" ").includes("https://www.googleapis.com/auth/calendar")) {
+    // Note: 'calendar.readonly' is a substring of 'calendar' — check exact tokens
+    const scopes = scope.split(" ");
+    if (!scopes.includes("https://www.googleapis.com/auth/calendar")) {
+      throw new Error("Permissão insuficiente do Google: reconecte sua conta para autorizar a criação do calendário FitMindClub.");
+    }
+  }
+
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("id,name")
@@ -144,10 +160,12 @@ export async function ensureFitMindCalendarId(userId: string): Promise<string> {
   const coachName = (profile?.name || "Coach").trim();
 
   const calId = await createFitMindCalendar(tok.accessToken, coachName);
-  await supabaseAdmin
+  const { error: upErr } = await supabaseAdmin
     .from("coach_google_tokens")
     .update({ fitmind_calendar_id: calId })
     .eq("user_id", userId);
+  if (upErr) console.error("[fitmind-cal] DB update failed:", upErr);
+  else console.log("[fitmind-cal] saved calendar id to DB for user", userId);
   return calId;
 }
 
