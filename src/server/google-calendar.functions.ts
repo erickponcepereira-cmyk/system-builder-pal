@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { syncCoachAppointments, createGoogleCalendarEvent } from "@/server/google-oauth.server";
+import {
+  syncCoachAppointments,
+  createGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+} from "@/server/google-oauth.server";
 
 export type UpcomingEvent = {
   id: string;
@@ -12,6 +17,9 @@ export type UpcomingEvent = {
   attendee?: string;
   location?: string;
   htmlLink?: string;
+  publicToken?: string;
+  attendeeConfirmed?: boolean;
+  googleEventId?: string;
   coachId?: string;
   coachName?: string;
 };
@@ -71,7 +79,7 @@ export const getUpcomingEvents = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await supabaseAdmin
       .from("internal_appointments")
-      .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link")
+      .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link,google_event_id,public_token,attendee_confirmed")
       .eq("coach_id", coach.id)
       .gte("start_at", new Date().toISOString())
       .order("start_at", { ascending: true })
@@ -88,6 +96,9 @@ export const getUpcomingEvents = createServerFn({ method: "GET" })
         attendee: r.attendee_name ?? r.attendee_email ?? undefined,
         location: r.location ?? undefined,
         htmlLink: r.html_link ?? undefined,
+        googleEventId: r.google_event_id ?? undefined,
+        publicToken: r.public_token ?? undefined,
+        attendeeConfirmed: !!r.attendee_confirmed,
       })),
     };
   });
@@ -151,7 +162,57 @@ export const createCoachCalendarEvent = createServerFn({ method: "POST" })
     return { connected: true, ...result };
   });
 
-/** Disconnect Google for current user. */
+/** Update an event on the coach's connected Google Calendar. */
+export const updateCoachCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: {
+    googleEventId: string;
+    summary?: string;
+    description?: string | null;
+    startISO?: string;
+    endISO?: string;
+    location?: string | null;
+  }) => d)
+  .handler(async ({ context, data }) => {
+    const userId = context.userId;
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    const { data: coach } = profile
+      ? await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+    if (!coach) throw new Error("Coach não encontrado");
+    const result = await updateGoogleCalendarEvent({
+      userId,
+      coachId: coach.id,
+      googleEventId: data.googleEventId,
+      summary: data.summary,
+      description: data.description ?? undefined,
+      startISO: data.startISO,
+      endISO: data.endISO,
+      location: data.location ?? undefined,
+    });
+    return { ok: true, ...result };
+  });
+
+/** Delete an event from the coach's connected Google Calendar. */
+export const deleteCoachCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { googleEventId: string }) => d)
+  .handler(async ({ context, data }) => {
+    const userId = context.userId;
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    const { data: coach } = profile
+      ? await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      : { data: null };
+    if (!coach) throw new Error("Coach não encontrado");
+    await deleteGoogleCalendarEvent({
+      userId,
+      coachId: coach.id,
+      googleEventId: data.googleEventId,
+    });
+    return { ok: true };
+  });
 export const disconnectGoogle = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {

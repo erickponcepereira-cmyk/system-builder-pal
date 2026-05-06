@@ -316,7 +316,97 @@ export async function createGoogleCalendarEvent(params: {
   return { id: ev.id, htmlLink: ev.htmlLink ?? null };
 }
 
-/** Sync upcoming Google events into internal_appointments for the given coach. */
+/** Update an existing event on the coach's FitMindClub calendar. */
+export async function updateGoogleCalendarEvent(params: {
+  userId: string;
+  coachId: string;
+  googleEventId: string;
+  summary?: string;
+  description?: string | null;
+  startISO?: string;
+  endISO?: string;
+  location?: string | null;
+}) {
+  const tok = await getValidAccessTokenForUser(params.userId);
+  if (!tok) throw new Error("Google não conectado");
+  const calendarId = await ensureFitMindCalendarId(params.userId);
+
+  const timeZone = "America/Sao_Paulo";
+  const body: Record<string, any> = {};
+  if (params.summary !== undefined) body.summary = params.summary;
+  if (params.description !== undefined) body.description = params.description;
+  if (params.location !== undefined) body.location = params.location;
+  if (params.startISO) body.start = { dateTime: params.startISO, timeZone };
+  if (params.endISO) body.end = { dateTime: params.endISO, timeZone };
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.googleEventId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${tok.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Google [${res.status}]: ${t.slice(0, 300)}`);
+  }
+  const ev = (await res.json()) as GoogleEvent;
+
+  await supabaseAdmin
+    .from("internal_appointments")
+    .update({
+      summary: ev.summary ?? params.summary,
+      description: params.description ?? null,
+      start_at: params.startISO ?? undefined,
+      end_at: params.endISO ?? undefined,
+      location: params.location ?? null,
+      html_link: ev.htmlLink ?? null,
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq("coach_id", params.coachId)
+    .eq("google_event_id", params.googleEventId);
+
+  return { id: ev.id, htmlLink: ev.htmlLink ?? null };
+}
+
+/** Delete an event from the coach's FitMindClub calendar. */
+export async function deleteGoogleCalendarEvent(params: {
+  userId: string;
+  coachId: string;
+  googleEventId: string;
+}) {
+  const tok = await getValidAccessTokenForUser(params.userId);
+  if (!tok) throw new Error("Google não conectado");
+  const calendarId = await ensureFitMindCalendarId(params.userId);
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.googleEventId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${tok.accessToken}` },
+    },
+  );
+  // 410 Gone = already deleted, treat as success
+  if (!res.ok && res.status !== 404 && res.status !== 410) {
+    const t = await res.text();
+    throw new Error(`Google [${res.status}]: ${t.slice(0, 300)}`);
+  }
+
+  await supabaseAdmin
+    .from("internal_appointments")
+    .delete()
+    .eq("coach_id", params.coachId)
+    .eq("google_event_id", params.googleEventId);
+
+  return { ok: true };
+}
+
+/** Sync upcoming Google events into internal_appointments for the given coach.
+ * Removes local rows whose Google events no longer exist (deleted in Google). */
 export async function syncCoachAppointments(userId: string, coachId: string) {
   const tok = await getValidAccessTokenForUser(userId);
   if (!tok) throw new Error("Google não conectado");
@@ -350,6 +440,24 @@ export async function syncCoachAppointments(userId: string, coachId: string) {
       .from("internal_appointments")
       .upsert(rows, { onConflict: "coach_id,google_event_id" });
     if (error) throw error;
+  }
+
+  // Remove local rows whose Google event no longer exists (deleted in Google)
+  const liveIds = new Set(events.map((e) => e.id).filter(Boolean) as string[]);
+  const { data: existing } = await supabaseAdmin
+    .from("internal_appointments")
+    .select("id,google_event_id")
+    .eq("coach_id", coachId)
+    .eq("source", "google")
+    .gte("start_at", new Date(Date.now() - 60_000).toISOString());
+  const stale = (existing ?? []).filter(
+    (r) => r.google_event_id && !liveIds.has(r.google_event_id),
+  );
+  if (stale.length > 0) {
+    await supabaseAdmin
+      .from("internal_appointments")
+      .delete()
+      .in("id", stale.map((s) => s.id));
   }
 
   // Mark token row as synced

@@ -1977,6 +1977,8 @@ export type Database = {
       }
       internal_appointments: {
         Row: {
+          attendee_confirmed: boolean
+          attendee_confirmed_at: string | null
           attendee_email: string | null
           attendee_name: string | null
           coach_id: string
@@ -1988,6 +1990,7 @@ export type Database = {
           id: string
           last_synced_at: string
           location: string | null
+          public_token: string
           source: string
           start_at: string
           status: string
@@ -1996,6 +1999,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attendee_confirmed?: boolean
+          attendee_confirmed_at?: string | null
           attendee_email?: string | null
           attendee_name?: string | null
           coach_id: string
@@ -2007,6 +2012,7 @@ export type Database = {
           id?: string
           last_synced_at?: string
           location?: string | null
+          public_token?: string
           source?: string
           start_at: string
           status?: string
@@ -2015,6 +2021,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attendee_confirmed?: boolean
+          attendee_confirmed_at?: string | null
           attendee_email?: string | null
           attendee_name?: string | null
           coach_id?: string
@@ -2026,6 +2034,7 @@ export type Database = {
           id?: string
           last_synced_at?: string
           location?: string | null
+          public_token?: string
           source?: string
           start_at?: string
           status?: string
