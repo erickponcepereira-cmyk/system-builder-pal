@@ -67,6 +67,25 @@ import poseFrente from "@/assets/photo-pose-frente.png";
 import poseCostas from "@/assets/photo-pose-costas.png";
 import poseLateralDir from "@/assets/photo-pose-lateral-direita.png";
 import poseLateralEsq from "@/assets/photo-pose-lateral-esquerda.png";
+import bodyAbaixo from "@/assets/body-abaixo.png";
+import bodyNormal from "@/assets/body-normal.png";
+import bodyAcima1 from "@/assets/body-acima-1.png";
+import bodyAcima2 from "@/assets/body-acima-2.png";
+import bodyAcima3 from "@/assets/body-acima-3.png";
+import bodyAlto1 from "@/assets/body-alto-1.png";
+import bodyAlto2 from "@/assets/body-alto-2.png";
+import bodyAlto3 from "@/assets/body-alto-3.png";
+
+const BODY_AVATAR_IMAGES = [
+  bodyAbaixo,
+  bodyNormal,
+  bodyAcima1,
+  bodyAcima2,
+  bodyAcima3,
+  bodyAlto1,
+  bodyAlto2,
+  bodyAlto3,
+];
 
 // ============================================================
 // TIPOS E INTERFACES
