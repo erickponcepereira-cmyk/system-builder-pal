@@ -1,7 +1,7 @@
 export type AdminPermKey =
   | "dashboard" | "coaches" | "inactivity" | "students" | "users"
   | "products" | "orders" | "digital_products" | "coach_applications"
-  | "payments" | "reports" | "patents" | "settings";
+  | "payments" | "reports" | "patents" | "settings" | "calendars";
 
 export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
