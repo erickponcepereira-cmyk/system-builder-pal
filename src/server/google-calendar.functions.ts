@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { syncCoachAppointments, createGoogleCalendarEvent } from "@/server/google-oauth.server";
+import {
+  syncCoachAppointments,
+  createGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+} from "@/server/google-oauth.server";
 
 export type UpcomingEvent = {
   id: string;
