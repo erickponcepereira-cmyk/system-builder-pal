@@ -1862,22 +1862,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return { c: "#facc15", t: "Acima" };
     })();
 
-    const histGordura =
-      historicalData.length > 0
-        ? historicalData
-        : [
-            {
-              date: "Jan",
-              gordura: +(a.bodyFat + 2).toFixed(1),
-              musculo: +(a.skeletalMuscle - 1).toFixed(1),
-            },
-            {
-              date: "Fev",
-              gordura: +(a.bodyFat + 1).toFixed(1),
-              musculo: +(a.skeletalMuscle - 0.5).toFixed(1),
-            },
-            { date: "Hoje", gordura: a.bodyFat, musculo: a.skeletalMuscle },
-          ];
+    const histGordura = histWeight;
 
     return (
       <div
