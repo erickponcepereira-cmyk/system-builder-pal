@@ -32,7 +32,7 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career";
+type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career" | "reports";
 
 const money = (value: number | null | undefined) =>
   `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
