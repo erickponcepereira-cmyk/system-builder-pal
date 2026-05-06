@@ -442,6 +442,24 @@ export async function syncCoachAppointments(userId: string, coachId: string) {
     if (error) throw error;
   }
 
+  // Remove local rows whose Google event no longer exists (deleted in Google)
+  const liveIds = new Set(events.map((e) => e.id).filter(Boolean) as string[]);
+  const { data: existing } = await supabaseAdmin
+    .from("internal_appointments")
+    .select("id,google_event_id")
+    .eq("coach_id", coachId)
+    .eq("source", "google")
+    .gte("start_at", new Date(Date.now() - 60_000).toISOString());
+  const stale = (existing ?? []).filter(
+    (r) => r.google_event_id && !liveIds.has(r.google_event_id),
+  );
+  if (stale.length > 0) {
+    await supabaseAdmin
+      .from("internal_appointments")
+      .delete()
+      .in("id", stale.map((s) => s.id));
+  }
+
   // Mark token row as synced
   await supabaseAdmin
     .from("coach_google_tokens")
