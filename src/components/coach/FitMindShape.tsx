@@ -1935,6 +1935,38 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         </div>
 
         <div style={{ padding: "0 16px 24px", marginTop: -16 }}>
+          {/* Resumo Indicador */}
+          <div className="fm-card" style={{ marginBottom: 12 }}>
+            <div className="fm-section-title">Resumo</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left" }}>
+                    <th style={{ padding: "6px 4px", fontWeight: 700 }}>Indicador</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Última</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Geral</th>
+                  </tr>
+                </thead>
+                <tbody style={{ color: "#1e293b" }}>
+                  {[
+                    { l: "Tempo de acompanhamento", last: "—", overall: followLabel, unit: "" },
+                    { l: "Peso", last: diff(a.weight, prevA.weight, " kg"), overall: diff(a.weight, firstA.weight, " kg") },
+                    { l: "Gordura", last: diff(a.bodyFat, prevA.bodyFat, " %"), overall: diff(a.bodyFat, firstA.bodyFat, " %") },
+                    { l: "Músculo Esquelético", last: diff(a.skeletalMuscle, prevA.skeletalMuscle, " %"), overall: diff(a.skeletalMuscle, firstA.skeletalMuscle, " %") },
+                    { l: "Gordura Visceral", last: diff(a.visceralFat, prevA.visceralFat, ""), overall: diff(a.visceralFat, firstA.visceralFat, "") },
+                    { l: "Idade Corporal", last: diff(bodyAgeYears, prevA.bodyAge && prevA.age ? Math.round((prevA.bodyAge / 100) * prevA.age) : bodyAgeYears, " anos"), overall: diff(bodyAgeYears, firstA.bodyAge && firstA.age ? Math.round((firstA.bodyAge / 100) * firstA.age) : bodyAgeYears, " anos") },
+                  ].map((r) => (
+                    <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "8px 4px", fontWeight: 600 }}>{r.l}</td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}>{r.last}</td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 700 }}>{r.overall}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Avatar Row */}
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div
@@ -1977,6 +2009,47 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 {bmiCat.label} · IMC {formatPercent(bmiPercent)}
               </span>
             </div>
+            {(() => {
+              const photos = a.photos || {};
+              const count = [photos.front, photos.back, photos.leftSide, photos.rightSide].filter(Boolean).length;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (count === 0) {
+                      alert("Nenhuma foto anexada nesta avaliação.");
+                      return;
+                    }
+                    const list = [
+                      photos.front && "Frente",
+                      photos.back && "Costas",
+                      photos.rightSide && "Lateral Direita",
+                      photos.leftSide && "Lateral Esquerda",
+                    ].filter(Boolean).join(", ");
+                    alert(`Fotos disponíveis: ${list}`);
+                  }}
+                  style={{
+                    marginTop: 12,
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    background: count > 0 ? "var(--fm-primary)" : "#f1f5f9",
+                    color: count > 0 ? "#fff" : "#94a3b8",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: count > 0 ? "pointer" : "not-allowed",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Camera size={14} />
+                  {count > 0 ? `Visualizar fotos (${count})` : "Sem fotos anexadas"}
+                </button>
+              );
+            })()}
           </div>
 
           {/* Composição Corporal */}
