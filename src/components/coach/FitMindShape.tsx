@@ -63,6 +63,10 @@ import {
   Filter,
   Upload,
 } from "lucide-react";
+import poseFrente from "@/assets/photo-pose-frente.png";
+import poseCostas from "@/assets/photo-pose-costas.png";
+import poseLateralDir from "@/assets/photo-pose-lateral-direita.png";
+import poseLateralEsq from "@/assets/photo-pose-lateral-esquerda.png";
 
 // ============================================================
 // TIPOS E INTERFACES
