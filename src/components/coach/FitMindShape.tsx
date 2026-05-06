@@ -1664,12 +1664,25 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 selectedClient
               ) {
                 const customTitle = ((assessment as any).nextAssessmentTitle as string | undefined)?.trim();
-                await onCreateGoogleCalendarEvent(
-                  assessment.nextAssessmentDate,
-                  assessment.nextAssessmentTime,
-                  selectedClient.name,
-                  customTitle || undefined,
-                );
+                try {
+                  const result: any = await onCreateGoogleCalendarEvent(
+                    assessment.nextAssessmentDate,
+                    assessment.nextAssessmentTime,
+                    selectedClient.name,
+                    customTitle || undefined,
+                  );
+                  const ok = result?.ok !== false;
+                  const { toast } = await import("sonner");
+                  if (ok) {
+                    toast.success("Evento criado com sucesso!");
+                    await handleSave();
+                  } else {
+                    toast.error(result?.error || "Não foi possível criar o evento");
+                  }
+                } catch (err: any) {
+                  const { toast } = await import("sonner");
+                  toast.error(err?.message || "Erro ao criar evento");
+                }
               }
             }}
           >
