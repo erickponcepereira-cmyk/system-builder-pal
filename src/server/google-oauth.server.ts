@@ -300,7 +300,8 @@ export async function syncCoachAppointments(userId: string, coachId: string) {
   const tok = await getValidAccessTokenForUser(userId);
   if (!tok) throw new Error("Google não conectado");
 
-  const events = await fetchUpcomingGoogleEvents(tok.accessToken, 100);
+  const calendarId = await ensureFitMindCalendarId(userId);
+  const events = await fetchUpcomingGoogleEvents(tok.accessToken, calendarId, 100);
 
   const rows = events.map((e) => {
     const start = e.start?.dateTime ?? e.start?.date ?? null;
