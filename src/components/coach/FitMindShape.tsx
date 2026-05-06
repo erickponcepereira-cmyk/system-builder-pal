@@ -443,9 +443,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 220px;
       text-align: center; z-index: 999; pointer-events: none; line-height: 1.4;
     }
-    .fm-avatar-row { display: flex; gap: 8px; align-items: flex-end; justify-content: center; padding: 12px 0; }
-    .fm-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .fm-avatar-active { filter: drop-shadow(0 0 8px var(--fm-primary)); transform: scale(1.12); }
+    .fm-avatar-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; align-items: end; justify-items: center; padding: 12px 0; width: 100%; }
+    .fm-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-width: 0; }
+    .fm-avatar-img { width: 100%; height: auto; max-height: 138px; object-fit: contain; display: block; }
+    .fm-avatar-active { filter: drop-shadow(0 0 8px var(--fm-primary)); }
+    .fm-avatar-active .fm-avatar-img { transform: scale(1.08); transform-origin: bottom center; }
+    @media (max-width: 480px) { .fm-avatar-row { gap: 2px; } .fm-avatar-img { max-height: 96px; } }
     .fm-step-bar { display: flex; gap: 6px; margin-bottom: 20px; }
     .fm-step-dot { flex: 1; height: 4px; border-radius: 999px; background: var(--muted); transition: background .3s; }
     .fm-step-dot.active { background: var(--fm-primary); }
