@@ -82,7 +82,7 @@ export const getUpcomingEvents = createServerFn({ method: "GET" })
       .from("internal_appointments")
       .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link,google_event_id,public_token,attendee_confirmed,completed_at")
       .eq("coach_id", coach.id)
-      .gte("start_at", new Date().toISOString())
+      .gte("start_at", new Date(Date.now() - 24 * 3600_000).toISOString())
       .order("start_at", { ascending: true })
       .limit(20);
 
