@@ -1746,7 +1746,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const avatarIndex = bmiCat.avatar;
     const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
     const viscCat = getVisceralCategory(a.visceralFat);
-    const ageBodyDiff = a.bodyAge ? a.bodyAge - 100 : 0;
+    const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
 
     const evalColor = (ev: string) =>
       ({
