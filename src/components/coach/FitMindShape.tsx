@@ -1779,6 +1779,90 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             { date: "Hoje", peso: a.weight },
           ];
 
+    // ── Resumo / referências clínicas ─────────────────────
+    const pastList = (selectedClient?.assessments ?? []).filter((x) => x.id !== a.id);
+    const firstA = pastList[0] ?? a;
+    const prevA = pastList[pastList.length - 1] ?? a;
+    const daysFollow = (() => {
+      if (!firstA?.date) return 0;
+      const d = (new Date(a.date || Date.now()).getTime() - new Date(firstA.date).getTime()) / 86400000;
+      return Math.max(0, Math.round(d));
+    })();
+    const followLabel = daysFollow >= 30
+      ? `${Math.round(daysFollow / 30)} meses`
+      : `${daysFollow} dias`;
+    const diff = (curr?: number, base?: number, unit = "") => {
+      if (curr == null || base == null || !Number.isFinite(curr) || !Number.isFinite(base)) return "—";
+      const d = +(curr - base).toFixed(1);
+      if (d === 0) return `0${unit}`;
+      return `${d > 0 ? "+" : ""}${d}${unit}`;
+    };
+
+    // Referências clínicas
+    const heightM = (a.height || 0) / 100;
+    const idealWeightMin = heightM ? +(18.5 * heightM * heightM).toFixed(1) : 0;
+    const idealWeightMax = heightM ? +(24.9 * heightM * heightM).toFixed(1) : 0;
+    const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
+    const refSkeletal = client.gender === "male" ? "33–39%" : "24–30%";
+    const refBMI = "18,5–24,9 kg/m²";
+    const refBodyFat = client.gender === "male" ? "10–17%" : "18–24%";
+    const refVisceral = "1–9";
+    const harrisBenedict = (() => {
+      if (!a.weight || !a.height || !a.age) return 0;
+      return Math.round(
+        client.gender === "male"
+          ? 88.36 + 13.4 * a.weight + 4.8 * a.height - 5.7 * a.age
+          : 447.6 + 9.2 * a.weight + 3.1 * a.height - 4.3 * a.age,
+      );
+    })();
+    const basalKcal = a.basalMetabolism && harrisBenedict
+      ? Math.round((a.basalMetabolism / 100) * harrisBenedict)
+      : harrisBenedict;
+    const refBasal = harrisBenedict ? `${Math.round(harrisBenedict * 0.95)}–${Math.round(harrisBenedict * 1.05)} kcal` : "—";
+
+    // Peso ideal eval
+    const weightEval = (() => {
+      if (!a.weight || !idealWeightMax) return { c: "#94a3b8", t: "—" };
+      if (a.weight < idealWeightMin) return { c: "#facc15", t: "Abaixo" };
+      if (a.weight <= idealWeightMax) return { c: "#22c55e", t: "Normal" };
+      const over = a.weight - idealWeightMax;
+      if (over < 5) return { c: "#facc15", t: "Acima" };
+      if (over < 12) return { c: "#fb923c", t: "Muito acima" };
+      return { c: "#dc2626", t: "Risco alto" };
+    })();
+    // Músculo esquelético eval
+    const skMin = client.gender === "male" ? 33 : 24;
+    const skMax = client.gender === "male" ? 39 : 30;
+    const skEval = (() => {
+      if (!a.skeletalMuscle) return { c: "#94a3b8", t: "—" };
+      if (a.skeletalMuscle < skMin - 3) return { c: "#dc2626", t: "Muito baixo" };
+      if (a.skeletalMuscle < skMin) return { c: "#facc15", t: "Abaixo" };
+      if (a.skeletalMuscle <= skMax) return { c: "#22c55e", t: "Normal" };
+      return { c: "#22c55e", t: "Acima (atleta)" };
+    })();
+    const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
+    // Idade corporal: comparar com idade real
+    const bodyAgeYears = a.bodyAge && a.age ? Math.round((a.bodyAge / 100) * a.age) : 0;
+    const bodyAgeDelta = bodyAgeYears - (a.age || 0);
+    const bodyAgeEval = (() => {
+      if (!bodyAgeYears) return { c: "#94a3b8", t: "—" };
+      if (bodyAgeDelta <= 0) return { c: "#22c55e", t: bodyAgeDelta === 0 ? "Igual à idade real" : `${bodyAgeDelta} anos (excelente)` };
+      if (bodyAgeDelta <= 3) return { c: "#facc15", t: `+${bodyAgeDelta} anos` };
+      if (bodyAgeDelta <= 7) return { c: "#fb923c", t: `+${bodyAgeDelta} anos` };
+      return { c: "#dc2626", t: `+${bodyAgeDelta} anos` };
+    })();
+    // Gordura corporal kg
+    const fatKg = a.bodyFat && a.weight ? +((a.bodyFat / 100) * a.weight).toFixed(1) : 0;
+    // Visceral eval reuse viscCat
+    // Metabolismo eval
+    const basalEval = (() => {
+      if (!basalKcal || !harrisBenedict) return { c: "#94a3b8", t: "—" };
+      const ratio = basalKcal / harrisBenedict;
+      if (ratio < 0.9) return { c: "#fb923c", t: "Baixo" };
+      if (ratio <= 1.1) return { c: "#22c55e", t: "Normal" };
+      return { c: "#facc15", t: "Acima" };
+    })();
+
     const histGordura =
       historicalData.length > 0
         ? historicalData
