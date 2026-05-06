@@ -1,6 +1,6 @@
 import { useTheme } from "@/components/theme-provider";
 import logoDark from "@/assets/fitmind-logo-dark.jpeg";
-import logoWhite from "@/assets/fitmind-logo-white.jpeg";
+import logoWhite from "@/assets/fitmind-logo-white.jpg";
 
 type LogoProps = {
   className?: string;
