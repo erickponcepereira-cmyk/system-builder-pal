@@ -1844,7 +1844,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     })();
     const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
     // Idade corporal: comparar com idade real
-    const bodyAgeYears = a.bodyAge && a.age ? Math.round((a.bodyAge / 100) * a.age) : 0;
+    const bodyAgeYears = a.bodyAge ? Math.round(a.bodyAge) : 0;
     const bodyAgeDelta = bodyAgeYears - (a.age || 0);
     const bodyAgeEval = (() => {
       if (!bodyAgeYears) return { c: "#94a3b8", t: "—" };
