@@ -351,6 +351,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       await onSaveAssessment(full, selectedClient);
       setAssessment(full);
       setScreen("result");
+    } catch (err: any) {
+      console.error("Erro ao salvar avaliação:", err);
+      const msg = err?.message || err?.error_description || "Erro ao salvar avaliação";
+      try {
+        // dynamic import to avoid forcing toast in tests
+        const { toast } = await import("sonner");
+        toast.error(msg);
+      } catch {}
+      // Stay on the assessment screen — do NOT throw, otherwise the route's
+      // error boundary will reset the whole flow.
     } finally {
       setIsSaving(false);
     }
