@@ -2411,7 +2411,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
-            <div className="fm-section-title">Idade Corporal (%)</div>
+            <div className="fm-section-title">Idade Corporal</div>
             <div
               style={{
                 display: "flex",
