@@ -2469,10 +2469,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   style={{
                     fontSize: 36,
                     fontWeight: 900,
-                    color: ageBodyDiff <= 0 ? "#16a34a" : "#ef4444",
+                    color: ageBodyDiff <= 0 ? "#16a34a" : ageBodyDiff <= 3 ? "#facc15" : "#ef4444",
                   }}
                 >
-                  {formatPercent(a.bodyAge)}
+                  {bodyAgeYears || "—"}
                 </div>
                 <div
                   style={{
