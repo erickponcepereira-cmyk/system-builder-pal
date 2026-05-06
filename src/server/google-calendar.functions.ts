@@ -17,6 +17,9 @@ export type UpcomingEvent = {
   attendee?: string;
   location?: string;
   htmlLink?: string;
+  publicToken?: string;
+  attendeeConfirmed?: boolean;
+  googleEventId?: string;
   coachId?: string;
   coachName?: string;
 };
