@@ -17,6 +17,7 @@ import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
+import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { useTheme } from "@/components/theme-provider";
@@ -1157,6 +1158,34 @@ function EvaluateTab() {
         onCreateClient={createClient}
         onSaveAssessment={saveAssessment}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
+        onCreateGoogleCalendarEvent={async (date, time, clientName) => {
+          try {
+            const startISO = new Date(`${date}T${time}:00`).toISOString();
+            const endISO = new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString();
+            const client = clients.find((c) => c.name === clientName);
+            const res = await createCoachCalendarEvent({
+              data: {
+                summary: `Avaliação — ${clientName}`,
+                description: "Avaliação física agendada via FitMind",
+                startISO,
+                endISO,
+                attendeeEmail: client?.email ?? null,
+                attendeeName: clientName,
+              },
+            });
+            if (!res.connected) {
+              toast.error("Conecte sua conta Google na aba Agenda primeiro.");
+              const dt = `${date.replace(/-/g, "")}T${time.replace(":", "")}00`;
+              return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Avaliação ${clientName}`)}&dates=${dt}/${dt}`;
+            }
+            toast.success("Evento criado no Google Agenda");
+            return res.htmlLink ?? "https://calendar.google.com/calendar/u/0/r";
+          } catch (e: any) {
+            console.error("createCoachCalendarEvent error:", e);
+            toast.error(e?.message || "Erro ao criar evento no Google Agenda");
+            return "https://calendar.google.com/calendar/u/0/r";
+          }
+        }}
         groups={[
           { id: "challenge", name: "Desafio 30 Dias", color: "#dc2626" },
           { id: "premium", name: "Alunos Premium", color: "#991b1b" },
