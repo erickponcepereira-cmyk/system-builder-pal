@@ -32,6 +32,7 @@ import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-c
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
@@ -45,6 +46,7 @@ import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
+import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 
@@ -163,6 +165,11 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -228,6 +235,11 @@ const AdminCoachesInactivityRoute = AdminCoachesInactivityRouteImport.update({
   path: '/inactivity',
   getParentRoute: () => AdminCoachesRoute,
 } as any)
+const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
+  id: '/api/public/invite/$token',
+  path: '/api/public/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOauthGoogleStartRoute = ApiOauthGoogleStartRouteImport.update({
   id: '/api/oauth/google/start',
   path: '/api/oauth/google/start',
@@ -261,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -278,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
+  '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -299,6 +313,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -316,6 +331,7 @@ export interface FileRoutesByTo {
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
+  '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -340,6 +356,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -357,6 +374,7 @@ export interface FileRoutesById {
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
+  '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -382,6 +400,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/students'
     | '/admin/users'
+    | '/invite/$token'
     | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
@@ -399,6 +418,7 @@ export interface FileRouteTypes {
     | '/admin/coaches/inactivity'
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
+    | '/api/public/invite/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -420,6 +440,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/students'
     | '/admin/users'
+    | '/invite/$token'
     | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
@@ -437,6 +458,7 @@ export interface FileRouteTypes {
     | '/admin/coaches/inactivity'
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
+    | '/api/public/invite/$token'
   id:
     | '__root__'
     | '/'
@@ -460,6 +482,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/students'
     | '/admin/users'
+    | '/invite/$token'
     | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
@@ -477,6 +500,7 @@ export interface FileRouteTypes {
     | '/admin/coaches/inactivity'
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
+    | '/api/public/invite/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -489,9 +513,11 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
+  InviteTokenRoute: typeof InviteTokenRoute
   RCodeRoute: typeof RCodeRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
+  ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -657,6 +683,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/users': {
       id: '/admin/users'
       path: '/users'
@@ -747,6 +780,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/coaches/inactivity'
       preLoaderRoute: typeof AdminCoachesInactivityRouteImport
       parentRoute: typeof AdminCoachesRoute
+    }
+    '/api/public/invite/$token': {
+      id: '/api/public/invite/$token'
+      path: '/api/public/invite/$token'
+      fullPath: '/api/public/invite/$token'
+      preLoaderRoute: typeof ApiPublicInviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/oauth/google/start': {
       id: '/api/oauth/google/start'
@@ -854,9 +894,11 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
+  InviteTokenRoute: InviteTokenRoute,
   RCodeRoute: RCodeRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
+  ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
