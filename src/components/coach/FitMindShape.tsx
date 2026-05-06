@@ -1617,12 +1617,23 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               Agendar no Google Agenda
             </span>
           </div>
+          <div style={{ marginBottom: 12 }}>
+            <label className="fm-label">Nome do evento</label>
+            <input
+              type="text"
+              className="fm-input"
+              placeholder={`Avaliação — ${selectedClient?.name ?? "Aluno"}`}
+              value={(assessment as any).nextAssessmentTitle ?? ""}
+              onChange={(e) => upd("nextAssessmentTitle" as any, e.target.value)}
+            />
+          </div>
           <div className="fm-grid-2" style={{ marginBottom: 12 }}>
             <div>
               <label className="fm-label">Data</label>
               <input
                 type="date"
                 className="fm-input"
+                value={assessment.nextAssessmentDate ?? ""}
                 onChange={(e) => upd("nextAssessmentDate", e.target.value)}
               />
             </div>
@@ -1631,6 +1642,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               <input
                 type="time"
                 className="fm-input"
+                value={assessment.nextAssessmentTime ?? ""}
                 onChange={(e) => upd("nextAssessmentTime", e.target.value)}
               />
             </div>
@@ -1651,12 +1663,21 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 assessment.nextAssessmentTime &&
                 selectedClient
               ) {
-                const link = await onCreateGoogleCalendarEvent(
+                const customTitle = ((assessment as any).nextAssessmentTitle as string | undefined)?.trim();
+                const result = await onCreateGoogleCalendarEvent(
                   assessment.nextAssessmentDate,
                   assessment.nextAssessmentTime,
                   selectedClient.name,
+                  customTitle || undefined,
                 );
-                window.open(link, "_blank");
+                // Backwards compat: if a string URL is returned, open it.
+                // If an object with htmlLink is returned, do nothing (already shown via toast).
+                if (typeof result === "string" && result) {
+                  window.open(result, "_blank");
+                } else if (result && typeof result === "object" && "htmlLink" in result && result.htmlLink) {
+                  // optional: open the created event
+                  window.open(result.htmlLink, "_blank");
+                }
               }
             }}
           >
