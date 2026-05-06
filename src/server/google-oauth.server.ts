@@ -174,19 +174,25 @@ export async function createGoogleCalendarEvent(params: {
   const tok = await getValidAccessTokenForUser(params.userId);
   if (!tok) throw new Error("Google não conectado");
 
+  const timeZone = "America/Sao_Paulo";
   const body: Record<string, any> = {
     summary: params.summary,
     description: params.description ?? undefined,
     location: params.location ?? undefined,
-    start: { dateTime: params.startISO },
-    end: { dateTime: params.endISO },
+    start: { dateTime: params.startISO, timeZone },
+    end: { dateTime: params.endISO, timeZone },
   };
-  if (params.attendeeEmail) {
-    body.attendees = [{ email: params.attendeeEmail, displayName: params.attendeeName ?? undefined }];
+  // Only add valid attendees (Google rejects malformed/empty emails with 400)
+  const emailOk =
+    !!params.attendeeEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(params.attendeeEmail);
+  if (emailOk) {
+    body.attendees = [
+      { email: params.attendeeEmail!, displayName: params.attendeeName ?? undefined },
+    ];
   }
 
   const res = await fetch(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none&conferenceDataVersion=0",
     {
       method: "POST",
       headers: {
@@ -198,7 +204,14 @@ export async function createGoogleCalendarEvent(params: {
   );
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`Google Calendar create failed [${res.status}]: ${t.slice(0, 200)}`);
+    console.error("[google-calendar] create failed", res.status, t);
+    // Surface Google's error message verbatim so the UI can show it
+    let message = t;
+    try {
+      const parsed = JSON.parse(t);
+      message = parsed?.error?.message || message;
+    } catch {}
+    throw new Error(`Google [${res.status}]: ${message.slice(0, 300)}`);
   }
   const ev = (await res.json()) as GoogleEvent;
 
