@@ -1176,6 +1176,7 @@ export type Database = {
           coach_id: string | null
           created_at: string
           expires_at: string
+          fitmind_calendar_id: string | null
           google_email: string | null
           id: string
           last_synced_at: string | null
@@ -1190,6 +1191,7 @@ export type Database = {
           coach_id?: string | null
           created_at?: string
           expires_at: string
+          fitmind_calendar_id?: string | null
           google_email?: string | null
           id?: string
           last_synced_at?: string | null
@@ -1204,6 +1206,7 @@ export type Database = {
           coach_id?: string | null
           created_at?: string
           expires_at?: string
+          fitmind_calendar_id?: string | null
           google_email?: string | null
           id?: string
           last_synced_at?: string | null

@@ -97,6 +97,58 @@ export async function fetchGoogleUserInfo(accessToken: string) {
   return { email: data.email ?? null };
 }
 
+/** Create a dedicated FitMindClub calendar for the coach and return its ID. */
+export async function createFitMindCalendar(accessToken: string, coachName: string) {
+  const res = await fetch("https://www.googleapis.com/calendar/v3/calendars", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      summary: `${coachName} - FitMindClub`,
+      timeZone: "America/Sao_Paulo",
+      description: "Agenda exclusiva FitMindClub",
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Google calendar create failed [${res.status}]: ${t.slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { id: string };
+  return data.id;
+}
+
+/** Ensure the user has a FitMindClub calendar; create it if missing. Returns its ID. */
+export async function ensureFitMindCalendarId(userId: string): Promise<string> {
+  const tok = await getValidAccessTokenForUser(userId);
+  if (!tok) throw new Error("Google não conectado");
+  if (tok.row.fitmind_calendar_id) {
+    // Validate it still exists
+    const check = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(tok.row.fitmind_calendar_id)}`,
+      { headers: { Authorization: `Bearer ${tok.accessToken}` } },
+    );
+    if (check.ok) return tok.row.fitmind_calendar_id;
+    // fall through to recreate
+  }
+
+  // Resolve coach display name
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("id,name")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const coachName = (profile?.name || "Coach").trim();
+
+  const calId = await createFitMindCalendar(tok.accessToken, coachName);
+  await supabaseAdmin
+    .from("coach_google_tokens")
+    .update({ fitmind_calendar_id: calId })
+    .eq("user_id", userId);
+  return calId;
+}
+
 /** Returns a valid (refreshed if needed) access token for the given user. */
 export async function getValidAccessTokenForUser(userId: string) {
   const { data: row, error } = await supabaseAdmin
@@ -140,7 +192,11 @@ export type GoogleEvent = {
   status?: string;
 };
 
-export async function fetchUpcomingGoogleEvents(accessToken: string, max = 50) {
+export async function fetchUpcomingGoogleEvents(
+  accessToken: string,
+  calendarId: string,
+  max = 50,
+) {
   const params = new URLSearchParams({
     timeMin: new Date().toISOString(),
     maxResults: String(max),
@@ -148,7 +204,7 @@ export async function fetchUpcomingGoogleEvents(accessToken: string, max = 50) {
     orderBy: "startTime",
   });
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
@@ -173,6 +229,7 @@ export async function createGoogleCalendarEvent(params: {
 }) {
   const tok = await getValidAccessTokenForUser(params.userId);
   if (!tok) throw new Error("Google não conectado");
+  const calendarId = await ensureFitMindCalendarId(params.userId);
 
   const timeZone = "America/Sao_Paulo";
   const body: Record<string, any> = {
@@ -192,7 +249,7 @@ export async function createGoogleCalendarEvent(params: {
   }
 
   const res = await fetch(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none&conferenceDataVersion=0",
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=none&conferenceDataVersion=0`,
     {
       method: "POST",
       headers: {
@@ -243,7 +300,8 @@ export async function syncCoachAppointments(userId: string, coachId: string) {
   const tok = await getValidAccessTokenForUser(userId);
   if (!tok) throw new Error("Google não conectado");
 
-  const events = await fetchUpcomingGoogleEvents(tok.accessToken, 100);
+  const calendarId = await ensureFitMindCalendarId(userId);
+  const events = await fetchUpcomingGoogleEvents(tok.accessToken, calendarId, 100);
 
   const rows = events.map((e) => {
     const start = e.start?.dateTime ?? e.start?.date ?? null;

@@ -5,6 +5,7 @@ import {
   fetchGoogleUserInfo,
   getRedirectUri,
   syncCoachAppointments,
+  ensureFitMindCalendarId,
 } from "@/server/google-oauth.server";
 
 export const Route = createFileRoute("/api/oauth/google/callback")({
@@ -85,8 +86,13 @@ export const Route = createFileRoute("/api/oauth/google/callback")({
               { onConflict: "user_id" },
             );
 
-          // First sync (best effort)
+          // Ensure dedicated FitMindClub calendar exists, then sync (best effort)
           if (coach?.id) {
+            try {
+              await ensureFitMindCalendarId(stateRow.user_id);
+            } catch (e) {
+              console.error("FitMind calendar provision failed:", e);
+            }
             try {
               await syncCoachAppointments(stateRow.user_id, coach.id);
             } catch (e) {
