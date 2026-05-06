@@ -79,7 +79,7 @@ export const getUpcomingEvents = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await supabaseAdmin
       .from("internal_appointments")
-      .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link")
+      .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link,google_event_id,public_token,attendee_confirmed")
       .eq("coach_id", coach.id)
       .gte("start_at", new Date().toISOString())
       .order("start_at", { ascending: true })
@@ -96,6 +96,9 @@ export const getUpcomingEvents = createServerFn({ method: "GET" })
         attendee: r.attendee_name ?? r.attendee_email ?? undefined,
         location: r.location ?? undefined,
         htmlLink: r.html_link ?? undefined,
+        googleEventId: r.google_event_id ?? undefined,
+        publicToken: r.public_token ?? undefined,
+        attendeeConfirmed: !!r.attendee_confirmed,
       })),
     };
   });
