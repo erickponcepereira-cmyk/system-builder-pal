@@ -1100,36 +1100,47 @@ function EvaluateTab() {
 
   const saveAssessment = async (assessment: FitMindAssessment, client: FitMindClient) => {
     if (!coachInfo.id) throw new Error("Coach não encontrado");
-    const { error } = await supabase.from("coach_body_assessments" as never).insert({
+    const nz = (v: any) => (v === "" || v === undefined ? null : v);
+    const num = (v: any) => {
+      if (v === "" || v === null || v === undefined) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const payload: Record<string, any> = {
       client_id: client.id,
       coach_id: coachInfo.id,
       assessment_date: assessment.date || new Date().toISOString(),
       method: assessment.method || "bioimpedance",
-      age: assessment.age || null,
-      height: assessment.height || null,
-      weight: assessment.weight || null,
-      bmi: assessment.bmi || null,
-      body_fat: assessment.bodyFat || null,
-      skeletal_muscle: assessment.skeletalMuscle || null,
-      muscle_mass: assessment.muscleMass || null,
-      visceral_fat: assessment.visceralFat || null,
-      basal_metabolism: assessment.basalMetabolism || null,
-      body_age: assessment.bodyAge || null,
-      body_water: assessment.bodyWater || null,
-      bone_mass: assessment.boneMass || null,
+      age: num(assessment.age),
+      height: num(assessment.height),
+      weight: num(assessment.weight),
+      bmi: num(assessment.bmi),
+      body_fat: num(assessment.bodyFat),
+      skeletal_muscle: num(assessment.skeletalMuscle),
+      muscle_mass: num(assessment.muscleMass),
+      visceral_fat: num(assessment.visceralFat),
+      basal_metabolism: num(assessment.basalMetabolism),
+      body_age: num(assessment.bodyAge),
+      body_water: num(assessment.bodyWater),
+      bone_mass: num(assessment.boneMass),
       segment_analysis: assessment.segmentAnalysis || {},
-      systolic_bp: assessment.systolicBP || null,
-      diastolic_bp: assessment.diastolicBP || null,
-      heart_rate: assessment.heartRate || null,
-      blood_glucose: assessment.bloodGlucose || null,
-      client_notes: assessment.clientNotes || null,
-      professional_notes: assessment.professionalNotes || null,
+      systolic_bp: num(assessment.systolicBP),
+      diastolic_bp: num(assessment.diastolicBP),
+      heart_rate: num(assessment.heartRate),
+      blood_glucose: num(assessment.bloodGlucose),
+      client_notes: nz(assessment.clientNotes),
+      professional_notes: nz(assessment.professionalNotes),
       photos: assessment.photos || {},
-      next_assessment_date: assessment.nextAssessmentDate || null,
-      next_assessment_time: assessment.nextAssessmentTime || null,
-      group_id: assessment.groupId || null,
-    } as never);
-    if (error) { toast.error("Erro ao salvar avaliação"); throw error; }
+      next_assessment_date: nz(assessment.nextAssessmentDate),
+      next_assessment_time: nz(assessment.nextAssessmentTime),
+      group_id: nz(assessment.groupId),
+    };
+    const { error } = await supabase.from("coach_body_assessments" as never).insert(payload as never);
+    if (error) {
+      console.error("saveAssessment error:", error);
+      toast.error(error.message || "Erro ao salvar avaliação");
+      throw error;
+    }
     toast.success("Avaliação salva");
     await loadClients();
   };
