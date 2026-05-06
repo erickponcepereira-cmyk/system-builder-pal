@@ -17,6 +17,7 @@ import { RankingTable } from "@/components/coach/RankingTable";
 import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
+import { CoachReports } from "@/components/coach/CoachReports";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career";
+type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career" | "reports";
 
 const money = (value: number | null | undefined) =>
   `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -215,6 +216,7 @@ function CoachDashboard() {
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "career", label: "Carreira", icon: Trophy },
+    { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
@@ -376,6 +378,7 @@ function CoachDashboard() {
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "career" && <CareerTab />}
+          {activeTab === "reports" && <CoachReports />}
           </div>
         </div>
       </main>
