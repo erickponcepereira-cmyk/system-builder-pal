@@ -192,7 +192,11 @@ export type GoogleEvent = {
   status?: string;
 };
 
-export async function fetchUpcomingGoogleEvents(accessToken: string, max = 50) {
+export async function fetchUpcomingGoogleEvents(
+  accessToken: string,
+  calendarId: string,
+  max = 50,
+) {
   const params = new URLSearchParams({
     timeMin: new Date().toISOString(),
     maxResults: String(max),
@@ -200,7 +204,7 @@ export async function fetchUpcomingGoogleEvents(accessToken: string, max = 50) {
     orderBy: "startTime",
   });
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
   if (!res.ok) {
