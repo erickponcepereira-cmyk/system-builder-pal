@@ -159,6 +159,72 @@ export async function fetchUpcomingGoogleEvents(accessToken: string, max = 50) {
   return data.items ?? [];
 }
 
+/** Create a Google Calendar event on the user's primary calendar. */
+export async function createGoogleCalendarEvent(params: {
+  userId: string;
+  coachId: string;
+  summary: string;
+  description?: string;
+  startISO: string;
+  endISO: string;
+  attendeeEmail?: string | null;
+  attendeeName?: string | null;
+  location?: string | null;
+}) {
+  const tok = await getValidAccessTokenForUser(params.userId);
+  if (!tok) throw new Error("Google não conectado");
+
+  const body: Record<string, any> = {
+    summary: params.summary,
+    description: params.description ?? undefined,
+    location: params.location ?? undefined,
+    start: { dateTime: params.startISO },
+    end: { dateTime: params.endISO },
+  };
+  if (params.attendeeEmail) {
+    body.attendees = [{ email: params.attendeeEmail, displayName: params.attendeeName ?? undefined }];
+  }
+
+  const res = await fetch(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${tok.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Google Calendar create failed [${res.status}]: ${t.slice(0, 200)}`);
+  }
+  const ev = (await res.json()) as GoogleEvent;
+
+  // Mirror to internal_appointments
+  await supabaseAdmin.from("internal_appointments").upsert(
+    {
+      coach_id: params.coachId,
+      google_event_id: ev.id,
+      summary: ev.summary ?? params.summary,
+      description: ev.description ?? params.description ?? null,
+      start_at: params.startISO,
+      end_at: params.endISO,
+      attendee_name: params.attendeeName ?? null,
+      attendee_email: params.attendeeEmail ?? null,
+      location: params.location ?? null,
+      html_link: ev.htmlLink ?? null,
+      status: ev.status ?? "confirmed",
+      source: "google",
+      last_synced_at: new Date().toISOString(),
+    },
+    { onConflict: "coach_id,google_event_id" },
+  );
+
+  return { id: ev.id, htmlLink: ev.htmlLink ?? null };
+}
+
 /** Sync upcoming Google events into internal_appointments for the given coach. */
 export async function syncCoachAppointments(userId: string, coachId: string) {
   const tok = await getValidAccessTokenForUser(userId);
