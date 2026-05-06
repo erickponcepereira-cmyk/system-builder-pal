@@ -516,12 +516,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         style={{ opacity: active ? 1 : 0.35 }}
       >
         <img
+          className="fm-avatar-img"
           src={BODY_AVATAR_IMAGES[level] ?? BODY_AVATAR_IMAGES[1]}
           alt={label}
           style={{
-            height: 96,
-            width: "auto",
-            objectFit: "contain",
             filter: active ? "none" : "grayscale(0.4)",
           }}
         />
@@ -531,7 +529,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             color: active ? "var(--fm-primary)" : "#94a3b8",
             fontWeight: active ? 700 : 400,
             textAlign: "center",
-            maxWidth: 64,
+            maxWidth: "100%",
+            whiteSpace: "nowrap",
           }}
         >
           {label}
