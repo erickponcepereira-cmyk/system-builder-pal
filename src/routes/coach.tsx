@@ -4,7 +4,7 @@ import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
   Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
-  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat, Sun, Moon, Camera, History, Award, GraduationCap, Activity,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat, Camera, History, Award, GraduationCap, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
-import { useTheme } from "@/components/theme-provider";
+
 
 export const Route = createFileRoute("/coach")({
   head: () => ({
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "products" | "profile" | "students" | "tree" | "physicalStore" | "digitalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career" | "reports";
+type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career" | "reports";
 
 const money = (value: number | null | undefined) =>
   `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -215,10 +215,8 @@ function CoachDashboard() {
     { id: "network", label: "Minha Rede", icon: Users },
     { id: "tree", label: "Árvore da Rede", icon: Network },
     { id: "students", label: "Base de Alunos", icon: UserRound },
-    { id: "products", label: "Esteira de Produtos", icon: Package },
-    { id: "physicalStore", label: "Loja Física", icon: ShoppingBag },
-    { id: "digitalStore", label: "Loja Digital", icon: BookOpen },
-    { id: "benefits", label: "Benefícios", icon: Gift },
+    { id: "physicalStore", label: "Loja", icon: ShoppingBag },
+    { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "career", label: "Carreira", icon: Trophy },
@@ -373,12 +371,10 @@ function CoachDashboard() {
             <OverviewTab coachName={coachName} referralLink={referralLink} onCopy={copyReferral} coachId={coachContext?.coachId || ""} />
           )}
           {activeTab === "network" && <NetworkTab referralLink={referralLink} onCopy={copyReferral} />}
-          {activeTab === "products" && <ProductsTrackTab />}
           {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
           {activeTab === "physicalStore" && <PhysicalStoreTab />}
-          {activeTab === "digitalStore" && <DigitalStoreTab />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "attendance" && <AttendanceTab />}
@@ -622,7 +618,7 @@ function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContex
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme } = useTheme();
+  
 
   useEffect(() => {
     if (!coach) return;
@@ -678,15 +674,8 @@ function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContex
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Meu Perfil</h1>
-          <p className="text-sm text-white/50">Informações do coach, foto, tema e histórico</p>
+          <p className="text-sm text-white/50">Informações do coach, foto e histórico</p>
         </div>
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10"
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          {theme === "dark" ? "Tema claro" : "Tema escuro"}
-        </button>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_0.7fr]">
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
