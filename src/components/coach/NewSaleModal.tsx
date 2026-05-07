@@ -211,7 +211,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
               </div>
 
               <div className="flex gap-2 mb-3">
-                {(["all", "challenge", "digital", "store"] as const).map((k) => (
+                {(["all", "challenge", "digital", "store", "item"] as const).map((k) => (
                   <button
                     key={k}
                     onClick={() => setProductKindFilter(k)}
@@ -219,7 +219,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
                       productKindFilter === k ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"
                     }`}
                   >
-                    {k === "all" ? "Todos" : k === "challenge" ? "Planos" : k === "digital" ? "Digital" : "Físicos"}
+                    {k === "all" ? "Todos" : k === "challenge" ? "Planos" : k === "digital" ? "Digital" : k === "store" ? "Físicos" : "Loja"}
                   </button>
                 ))}
               </div>
