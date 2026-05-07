@@ -2455,6 +2455,84 @@ export type Database = {
           },
         ]
       }
+      mercadopago_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          paid_at: string | null
+          payer_doc: string | null
+          payer_email: string | null
+          payer_name: string | null
+          payment_method: string
+          pix_expires_at: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          pix_ticket_url: string | null
+          raw_response: Json | null
+          raw_webhook: Json | null
+          source_id: string
+          source_kind: string
+          status: string
+          status_detail: string | null
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          paid_at?: string | null
+          payer_doc?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_method: string
+          pix_expires_at?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          pix_ticket_url?: string | null
+          raw_response?: Json | null
+          raw_webhook?: Json | null
+          source_id: string
+          source_kind: string
+          status?: string
+          status_detail?: string | null
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          paid_at?: string | null
+          payer_doc?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_method?: string
+          pix_expires_at?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          pix_ticket_url?: string | null
+          raw_response?: Json | null
+          raw_webhook?: Json | null
+          source_id?: string
+          source_kind?: string
+          status?: string
+          status_detail?: string | null
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_rankings: {
         Row: {
           coach_id: string
@@ -3339,6 +3417,7 @@ export type Database = {
           created_at: string
           id: string
           metadata: Json
+          mp_payment_id: string | null
           notes: string | null
           order_number: string
           payment_fee: number
@@ -3360,6 +3439,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json
+          mp_payment_id?: string | null
           notes?: string | null
           order_number?: string
           payment_fee?: number
@@ -3381,6 +3461,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json
+          mp_payment_id?: string | null
           notes?: string | null
           order_number?: string
           payment_fee?: number
@@ -3399,6 +3480,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "store_orders_mp_payment_id_fkey"
+            columns: ["mp_payment_id"]
+            isOneToOne: false
+            referencedRelation: "mercadopago_payments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "store_orders_student_id_fkey"
             columns: ["student_id"]
@@ -3788,6 +3876,7 @@ export type Database = {
           id: string
           installments: number | null
           metadata: Json | null
+          mp_payment_id: string | null
           net_amount: number
           paid_at: string | null
           payment_fee: number | null
@@ -3809,6 +3898,7 @@ export type Database = {
           id?: string
           installments?: number | null
           metadata?: Json | null
+          mp_payment_id?: string | null
           net_amount: number
           paid_at?: string | null
           payment_fee?: number | null
@@ -3830,6 +3920,7 @@ export type Database = {
           id?: string
           installments?: number | null
           metadata?: Json | null
+          mp_payment_id?: string | null
           net_amount?: number
           paid_at?: string | null
           payment_fee?: number | null
@@ -3843,6 +3934,13 @@ export type Database = {
           tax_amount?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_mp_payment_id_fkey"
+            columns: ["mp_payment_id"]
+            isOneToOne: false
+            referencedRelation: "mercadopago_payments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_product_id_fkey"
             columns: ["product_id"]
