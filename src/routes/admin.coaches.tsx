@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Check, X, Mail, Phone, MapPin, CreditCard, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,6 +12,8 @@ interface CoachRow {
   id: string;
   referral_code: string;
   approved_at: string | null;
+  blocked_at: string | null;
+  blocked_reason: string | null;
   pix_key: string | null;
   pix_key_type: string | null;
   total_active_students: number | null;
@@ -25,6 +27,7 @@ interface CoachRow {
     city: string | null;
     state: string | null;
     cpf: string | null;
+    status: string | null;
   } | null;
 }
 
