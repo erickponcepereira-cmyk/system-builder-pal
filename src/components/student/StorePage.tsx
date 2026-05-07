@@ -247,21 +247,26 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         itemKind: c.kind === "item" ? (c.stock === null || c.stock === undefined ? "digital" : "physical") : undefined,
       }));
       if (!items.length) { toast.error("Carrinho vazio."); setCheckingOut(false); return; }
+      console.log("[coach sale payload]", { client: selectedClient.id, items, paymentMethod });
       const { data: res, error: rpcErr } = await supabase.rpc("create_coach_sale" as never, {
         _client_id: selectedClient.id,
         _items: items,
         _payment_method: paymentMethod,
         _notes: null,
       } as never);
+      console.log("[coach sale response]", { res, rpcErr });
       if (rpcErr) throw new Error(rpcErr.message);
-      const row = (Array.isArray(res) ? res[0] : res) as { order_id: string; order_number: string; total: number };
+      const row = (Array.isArray(res) ? res[0] : res) as { order_id: string; order_number: string; total: number } | null;
+      if (!row || !row.order_id) throw new Error("Pedido não retornado pelo servidor");
       setCart([]); setCartOpen(false);
       setPayOrder({
         id: row.order_id, total: Number(row.total), number: row.order_number,
         email: selectedClient.email || "", name: selectedClient.name,
       });
+      toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
     } catch (e: any) {
+      console.error("[coach checkout error]", e);
       toast.error(e?.message || "Erro ao registrar venda");
     } finally {
       setCheckingOut(false);
