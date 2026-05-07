@@ -32,6 +32,7 @@ import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-c
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
@@ -46,6 +47,7 @@ import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
+import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
@@ -165,6 +167,11 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PayOrderNumberRoute = PayOrderNumberRouteImport.update({
+  id: '/pay/$orderNumber',
+  path: '/pay/$orderNumber',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
@@ -235,6 +242,11 @@ const AdminCoachesInactivityRoute = AdminCoachesInactivityRouteImport.update({
   path: '/inactivity',
   getParentRoute: () => AdminCoachesRoute,
 } as any)
+const ApiPublicPayOrderNumberRoute = ApiPublicPayOrderNumberRouteImport.update({
+  id: '/api/public/pay/$orderNumber',
+  path: '/api/public/pay/$orderNumber',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
   id: '/api/public/invite/$token',
   path: '/api/public/invite/$token',
@@ -274,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -292,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
+  '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -314,6 +328,7 @@ export interface FileRoutesByTo {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -332,6 +347,7 @@ export interface FileRoutesByTo {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
+  '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -357,6 +373,7 @@ export interface FileRoutesById {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -375,6 +392,7 @@ export interface FileRoutesById {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
+  '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -401,6 +419,7 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/invite/$token'
+    | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
@@ -419,6 +438,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
+    | '/api/public/pay/$orderNumber'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -441,6 +461,7 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/invite/$token'
+    | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
@@ -459,6 +480,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
+    | '/api/public/pay/$orderNumber'
   id:
     | '__root__'
     | '/'
@@ -483,6 +505,7 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/invite/$token'
+    | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
     | '/student/challenge'
@@ -501,6 +524,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
+    | '/api/public/pay/$orderNumber'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -514,10 +538,12 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
+  PayOrderNumberRoute: typeof PayOrderNumberRoute
   RCodeRoute: typeof RCodeRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
+  ApiPublicPayOrderNumberRoute: typeof ApiPublicPayOrderNumberRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -683,6 +709,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pay/$orderNumber': {
+      id: '/pay/$orderNumber'
+      path: '/pay/$orderNumber'
+      fullPath: '/pay/$orderNumber'
+      preLoaderRoute: typeof PayOrderNumberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invite/$token': {
       id: '/invite/$token'
       path: '/invite/$token'
@@ -780,6 +813,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/coaches/inactivity'
       preLoaderRoute: typeof AdminCoachesInactivityRouteImport
       parentRoute: typeof AdminCoachesRoute
+    }
+    '/api/public/pay/$orderNumber': {
+      id: '/api/public/pay/$orderNumber'
+      path: '/api/public/pay/$orderNumber'
+      fullPath: '/api/public/pay/$orderNumber'
+      preLoaderRoute: typeof ApiPublicPayOrderNumberRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/invite/$token': {
       id: '/api/public/invite/$token'
@@ -895,10 +935,12 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
+  PayOrderNumberRoute: PayOrderNumberRoute,
   RCodeRoute: RCodeRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
+  ApiPublicPayOrderNumberRoute: ApiPublicPayOrderNumberRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
