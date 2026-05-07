@@ -81,39 +81,54 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         customization: { paymentMethods: { maxInstallments: 12 } },
         callbacks: {
           onReady: () => { /* noop */ },
-          onError: (err: any) => { toast.error(err?.message || "Erro no formulário do cartão"); },
-          onSubmit: async (cardFormData: any) => {
-            setCardLoading(true);
-            try {
-              const r = await cardFn({
-                data: {
-                  source,
-                  payer: {
-                    email: cardFormData.payer?.email || payer.email,
-                    name: payer.name,
-                    doc: cardFormData.payer?.identification?.number || payer.doc,
-                  },
-                  card: {
-                    token: cardFormData.token,
-                    installments: Number(cardFormData.installments || 1),
-                    paymentMethodId: cardFormData.payment_method_id,
-                    issuerId: cardFormData.issuer_id ? String(cardFormData.issuer_id) : undefined,
-                  },
-                },
-              });
-              if (r.status === "approved") {
-                toast.success("Pagamento aprovado!");
-                onApproved?.();
-              } else if (r.status === "in_process" || r.status === "pending") {
-                toast.info("Pagamento em análise. Você será notificado.");
-              } else {
-                toast.error(`Pagamento ${r.status}: ${r.statusDetail || ""}`);
-              }
-            } catch (err: any) {
-              toast.error(err?.message || "Falha no pagamento");
-            } finally {
-              setCardLoading(false);
-            }
+          onError: (err: any) => {
+            console.error("[MP Brick error]", err);
+            const msg = err?.message || err?.cause?.[0]?.description || "Erro no formulário do cartão";
+            toast.error(msg);
+          },
+          onSubmit: (cardFormData: any) => {
+            // O Brick exige uma Promise; resolva sempre para liberar o loading do botão
+            return new Promise<void>((resolve) => {
+              (async () => {
+                setCardLoading(true);
+                try {
+                  const r = await cardFn({
+                    data: {
+                      source,
+                      payer: {
+                        email: cardFormData.payer?.email || payer.email,
+                        name: payer.name,
+                        doc: cardFormData.payer?.identification?.number || payer.doc,
+                      },
+                      card: {
+                        token: cardFormData.token,
+                        installments: Number(cardFormData.installments || 1),
+                        paymentMethodId: cardFormData.payment_method_id,
+                        issuerId: cardFormData.issuer_id ? String(cardFormData.issuer_id) : undefined,
+                      },
+                    },
+                  });
+                  console.log("[MP card response]", r);
+                  if (r.status === "approved") {
+                    toast.success("Pagamento aprovado!");
+                    onApproved?.();
+                  } else if (r.status === "in_process" || r.status === "pending") {
+                    toast.info("Pagamento em análise. Você será notificado.");
+                  } else {
+                    toast.error(
+                      `Pagamento ${r.status === "rejected" ? "recusado" : r.status}${r.statusDetail ? `: ${r.statusDetail}` : ""}`,
+                      { duration: 6000 }
+                    );
+                  }
+                } catch (err: any) {
+                  console.error("[MP card submit error]", err);
+                  toast.error(err?.message || "Falha no pagamento. Verifique os dados do cartão.", { duration: 6000 });
+                } finally {
+                  setCardLoading(false);
+                  resolve();
+                }
+              })();
+            });
           },
         },
       });
