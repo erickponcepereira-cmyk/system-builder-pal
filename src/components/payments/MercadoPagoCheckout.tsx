@@ -22,6 +22,7 @@ const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
 export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // PIX
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string; ticketUrl: string | null; rowId: string } | null>(null);
@@ -45,6 +46,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
     setPayer(defaultPayer || { email: "", name: "", doc: "" });
     setPixData(null);
     setPixApproved(false);
+    setPaymentError(null);
   }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, source.id]);
 
   // Polling do PIX
@@ -84,6 +86,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
           onError: (err: any) => {
             console.error("[MP Brick error]", err);
             const msg = err?.message || err?.cause?.[0]?.description || "Erro no formulário do cartão";
+            setPaymentError(msg);
             toast.error(msg);
           },
           onSubmit: (cardFormData: any) => {
@@ -91,6 +94,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
             return new Promise<void>((resolve) => {
               (async () => {
                 setCardLoading(true);
+                setPaymentError(null);
                 try {
                   const r = await cardFn({
                     data: {
@@ -115,14 +119,15 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                   } else if (r.status === "in_process" || r.status === "pending") {
                     toast.info("Pagamento em análise. Você será notificado.");
                   } else {
-                    toast.error(
-                      `Pagamento ${r.status === "rejected" ? "recusado" : r.status}${r.statusDetail ? `: ${r.statusDetail}` : ""}`,
-                      { duration: 6000 }
-                    );
+                    const msg = `Pagamento ${r.status === "rejected" ? "recusado" : r.status}${r.statusDetail ? `: ${r.statusDetail}` : ""}`;
+                    setPaymentError(msg);
+                    toast.error(msg, { duration: 6000 });
                   }
                 } catch (err: any) {
                   console.error("[MP card submit error]", err);
-                  toast.error(err?.message || "Falha no pagamento. Verifique os dados do cartão.", { duration: 6000 });
+                  const msg = err?.message || "Falha no pagamento. Verifique os dados do cartão.";
+                  setPaymentError(msg);
+                  toast.error(msg, { duration: 6000 });
                 } finally {
                   setCardLoading(false);
                   resolve();
