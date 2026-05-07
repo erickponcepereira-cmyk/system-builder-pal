@@ -873,8 +873,8 @@ function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
   );
 }
 
-function PhysicalStoreTab() {
-  return <StorePage />;
+function PhysicalStoreTab({ hasUpline }: { hasUpline: boolean }) {
+  return <StorePage coachMode hasUpline={hasUpline} />;
 }
 
 function DigitalStoreTab() {
