@@ -2699,12 +2699,14 @@ export type Database = {
           app_fee_percentage: number | null
           badge_color: string | null
           badge_label: string | null
+          card_fee_percentage: number | null
           commission_coach: number | null
           commission_level1: number | null
           commission_level2: number | null
           commission_level3: number | null
           commission_level4: number | null
           commission_level5: number | null
+          cost: number | null
           course_level: number | null
           course_target: string | null
           created_at: string | null
@@ -2733,13 +2735,16 @@ export type Database = {
           image_url: string | null
           is_featured: boolean | null
           is_price_range: boolean | null
+          marketing_plan: number | null
           master_coach_commission: number | null
           max_installments: number | null
           max_price: number | null
           min_price: number | null
           name: string
+          network_commission_percentage: number | null
           nutritionist_fee: number | null
           original_price: number | null
+          other_costs: number | null
           pix_fee_percentage: number | null
           price: number | null
           product_type: Database["public"]["Enums"]["product_type"] | null
@@ -2760,12 +2765,14 @@ export type Database = {
           app_fee_percentage?: number | null
           badge_color?: string | null
           badge_label?: string | null
+          card_fee_percentage?: number | null
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
           commission_level3?: number | null
           commission_level4?: number | null
           commission_level5?: number | null
+          cost?: number | null
           course_level?: number | null
           course_target?: string | null
           created_at?: string | null
@@ -2794,13 +2801,16 @@ export type Database = {
           image_url?: string | null
           is_featured?: boolean | null
           is_price_range?: boolean | null
+          marketing_plan?: number | null
           master_coach_commission?: number | null
           max_installments?: number | null
           max_price?: number | null
           min_price?: number | null
           name: string
+          network_commission_percentage?: number | null
           nutritionist_fee?: number | null
           original_price?: number | null
+          other_costs?: number | null
           pix_fee_percentage?: number | null
           price?: number | null
           product_type?: Database["public"]["Enums"]["product_type"] | null
@@ -2821,12 +2831,14 @@ export type Database = {
           app_fee_percentage?: number | null
           badge_color?: string | null
           badge_label?: string | null
+          card_fee_percentage?: number | null
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
           commission_level3?: number | null
           commission_level4?: number | null
           commission_level5?: number | null
+          cost?: number | null
           course_level?: number | null
           course_target?: string | null
           created_at?: string | null
@@ -2855,13 +2867,16 @@ export type Database = {
           image_url?: string | null
           is_featured?: boolean | null
           is_price_range?: boolean | null
+          marketing_plan?: number | null
           master_coach_commission?: number | null
           max_installments?: number | null
           max_price?: number | null
           min_price?: number | null
           name?: string
+          network_commission_percentage?: number | null
           nutritionist_fee?: number | null
           original_price?: number | null
+          other_costs?: number | null
           pix_fee_percentage?: number | null
           price?: number | null
           product_type?: Database["public"]["Enums"]["product_type"] | null
@@ -3130,7 +3145,14 @@ export type Database = {
       }
       store_items: {
         Row: {
+          app_fee_percentage: number | null
+          card_fee_percentage: number | null
           category_id: string | null
+          commission_coach: number | null
+          commission_level1: number | null
+          commission_level2: number | null
+          commission_level3: number | null
+          cost: number | null
           created_at: string
           description: string | null
           gallery: Json
@@ -3139,19 +3161,29 @@ export type Database = {
           is_active: boolean
           is_featured: boolean
           kind: string
+          marketing_plan: number | null
           metadata: Json
           name: string
           original_price: number | null
+          other_costs: number | null
           price: number
           section_id: string
           short_description: string | null
           sku: string | null
           sort_order: number
           stock: number | null
+          tax_percentage: number | null
           updated_at: string
         }
         Insert: {
+          app_fee_percentage?: number | null
+          card_fee_percentage?: number | null
           category_id?: string | null
+          commission_coach?: number | null
+          commission_level1?: number | null
+          commission_level2?: number | null
+          commission_level3?: number | null
+          cost?: number | null
           created_at?: string
           description?: string | null
           gallery?: Json
@@ -3160,19 +3192,29 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           kind: string
+          marketing_plan?: number | null
           metadata?: Json
           name: string
           original_price?: number | null
+          other_costs?: number | null
           price?: number
           section_id: string
           short_description?: string | null
           sku?: string | null
           sort_order?: number
           stock?: number | null
+          tax_percentage?: number | null
           updated_at?: string
         }
         Update: {
+          app_fee_percentage?: number | null
+          card_fee_percentage?: number | null
           category_id?: string | null
+          commission_coach?: number | null
+          commission_level1?: number | null
+          commission_level2?: number | null
+          commission_level3?: number | null
+          cost?: number | null
           created_at?: string
           description?: string | null
           gallery?: Json
@@ -3181,15 +3223,18 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           kind?: string
+          marketing_plan?: number | null
           metadata?: Json
           name?: string
           original_price?: number | null
+          other_costs?: number | null
           price?: number
           section_id?: string
           short_description?: string | null
           sku?: string | null
           sort_order?: number
           stock?: number | null
+          tax_percentage?: number | null
           updated_at?: string
         }
         Relationships: [
