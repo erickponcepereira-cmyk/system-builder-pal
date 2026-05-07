@@ -86,6 +86,61 @@ function AdminCoaches() {
     else { toast.success("Cadastro rejeitado"); load(); }
   };
 
+  const blockCoach = async (coachId: string) => {
+    if (!confirm("Bloquear este coach? Ele perderá o acesso ao painel.")) return;
+    setActing(`block-${coachId}`);
+    const { error } = await supabase.rpc("block_inactive_coach" as never, {
+      _coach_id: coachId,
+      _reason: "Bloqueado manualmente pelo administrador.",
+    } as never);
+    setActing(null);
+    if (error) toast.error(error.message);
+    else { toast.success("Coach bloqueado"); load(); }
+  };
+
+  const unblockCoach = async (coachId: string) => {
+    setActing(`unblock-${coachId}`);
+    const { error } = await supabase.rpc("unblock_coach" as never, { _coach_id: coachId } as never);
+    setActing(null);
+    if (error) toast.error(error.message);
+    else { toast.success("Coach reativado"); load(); }
+  };
+
+  const openTransfer = (c: CoachRow) => {
+    setTransferring(c);
+    setTransferTargetId("");
+    setTransferSearch("");
+  };
+
+  const confirmTransfer = async () => {
+    if (!transferring || !transferTargetId) {
+      toast.error("Selecione o coach destino");
+      return;
+    }
+    setActing(`transfer-${transferring.id}`);
+    const { error } = await supabase.rpc("transfer_inactive_coach_network" as never, {
+      _from_coach_id: transferring.id,
+      _to_coach_id: transferTargetId,
+      _reason: "Migração administrativa de rede.",
+    } as never);
+    setActing(null);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Rede transferida");
+      setTransferring(null);
+      load();
+    }
+  };
+
+  const transferTargets = useMemo(() => {
+    if (!transferring) return [];
+    const q = transferSearch.trim().toLowerCase();
+    return coaches
+      .filter((c) => c.approved_at && !c.blocked_at && c.id !== transferring.id)
+      .filter((c) => !q || c.profiles?.name.toLowerCase().includes(q))
+      .slice(0, 50);
+  }, [coaches, transferring, transferSearch]);
+
   const filtered = coaches.filter((c) => {
     if (filter === "pending" && c.approved_at) return false;
     if (filter === "approved" && !c.approved_at) return false;
