@@ -173,7 +173,7 @@ export function StoreItemsManager() {
           <p className="text-sm text-white/60 mt-1">Cadastre os produtos físicos e digitais da loja.</p>
         </div>
         <button
-          onClick={() => setEditing({ ...emptyItem(), section_id: sections[0]?.id })}
+          onClick={() => { setEditTab("general"); setEditing({ ...emptyItem(), section_id: sections[0]?.id }); }}
           disabled={sections.length === 0}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40"
         >
@@ -238,7 +238,7 @@ export function StoreItemsManager() {
                   <div className="text-xs text-white/50">Estoque: {it.stock ?? "—"}</div>
                 )}
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => setEditing(it)} className="flex-1 rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 flex items-center justify-center gap-1"><Pencil className="h-3 w-3" />Editar</button>
+                  <button onClick={() => { setEditTab("general"); setEditing(it); }} className="flex-1 rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 flex items-center justify-center gap-1"><Pencil className="h-3 w-3" />Editar</button>
                   <button onClick={() => toggleActive(it)} className="rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/70 hover:bg-white/10">{it.is_active ? "Desativar" : "Ativar"}</button>
                   <button onClick={() => remove(it.id)} className="rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/20"><Trash2 className="h-3 w-3" /></button>
                 </div>
