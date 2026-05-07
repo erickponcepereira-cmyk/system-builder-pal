@@ -15,7 +15,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/coaches/inactivity", label: "Inatividade", icon: AlertTriangle, perm: "inactivity" },
   { to: "/admin/students", label: "Alunos", icon: Users, perm: "students" },
   { to: "/admin/users", label: "Admins", icon: ShieldCheck, perm: "users" },
-  { to: "/admin/products", label: "Produtos", icon: Package, perm: "products" },
+  
   { to: "/admin/orders", label: "Pedidos", icon: ShoppingCart, perm: "orders" },
   { to: "/admin/digital-products", label: "Cursos", icon: Library, perm: "digital_products" },
   { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap, perm: "coach_applications" },

@@ -20,6 +20,16 @@ interface Item {
   is_featured: boolean;
   is_active: boolean;
   sort_order: number;
+  cost: number | null;
+  tax_percentage: number | null;
+  card_fee_percentage: number | null;
+  app_fee_percentage: number | null;
+  marketing_plan: number | null;
+  other_costs: number | null;
+  commission_coach: number | null;
+  commission_level1: number | null;
+  commission_level2: number | null;
+  commission_level3: number | null;
 }
 
 function emptyItem(): Partial<Item> {
@@ -27,6 +37,9 @@ function emptyItem(): Partial<Item> {
     kind: "physical", name: "", description: "", short_description: "",
     price: 0, original_price: null, stock: null, sku: "",
     is_featured: false, is_active: true, sort_order: 0,
+    cost: 0, tax_percentage: 0, card_fee_percentage: 0, app_fee_percentage: 0,
+    marketing_plan: 0, other_costs: 0,
+    commission_coach: 50, commission_level1: 15, commission_level2: 5, commission_level3: 3,
   };
 }
 
@@ -39,6 +52,7 @@ export function StoreItemsManager() {
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [filterKind, setFilterKind] = useState<string>("");
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
+  const [editTab, setEditTab] = useState<"general" | "financial">("general");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -82,6 +96,12 @@ export function StoreItemsManager() {
   const save = async () => {
     if (!editing?.name || !editing?.section_id || !editing?.kind) {
       alert("Preencha nome, seção e tipo.");
+      setEditTab("general");
+      return;
+    }
+    if (editing.cost !== null && editing.cost !== undefined && Number(editing.cost) > Number(editing.price || 0)) {
+      alert("Custo não pode ser maior que o preço de venda.");
+      setEditTab("financial");
       return;
     }
     setSaving(true);
@@ -101,6 +121,16 @@ export function StoreItemsManager() {
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
         sort_order: Number(editing.sort_order) || 0,
+        cost: editing.cost !== null && editing.cost !== undefined ? Number(editing.cost) : null,
+        tax_percentage: Number(editing.tax_percentage) || 0,
+        card_fee_percentage: Number(editing.card_fee_percentage) || 0,
+        app_fee_percentage: Number(editing.app_fee_percentage) || 0,
+        marketing_plan: Number(editing.marketing_plan) || 0,
+        other_costs: Number(editing.other_costs) || 0,
+        commission_coach: Number(editing.commission_coach) || 0,
+        commission_level1: Number(editing.commission_level1) || 0,
+        commission_level2: Number(editing.commission_level2) || 0,
+        commission_level3: Number(editing.commission_level3) || 0,
       };
       if (editing.id) {
         await supabase.from("store_items").update(payload).eq("id", editing.id);
@@ -143,7 +173,7 @@ export function StoreItemsManager() {
           <p className="text-sm text-white/60 mt-1">Cadastre os produtos físicos e digitais da loja.</p>
         </div>
         <button
-          onClick={() => setEditing({ ...emptyItem(), section_id: sections[0]?.id })}
+          onClick={() => { setEditTab("general"); setEditing({ ...emptyItem(), section_id: sections[0]?.id }); }}
           disabled={sections.length === 0}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40"
         >
@@ -208,7 +238,7 @@ export function StoreItemsManager() {
                   <div className="text-xs text-white/50">Estoque: {it.stock ?? "—"}</div>
                 )}
                 <div className="flex gap-2 pt-1">
-                  <button onClick={() => setEditing(it)} className="flex-1 rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 flex items-center justify-center gap-1"><Pencil className="h-3 w-3" />Editar</button>
+                  <button onClick={() => { setEditTab("general"); setEditing(it); }} className="flex-1 rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 flex items-center justify-center gap-1"><Pencil className="h-3 w-3" />Editar</button>
                   <button onClick={() => toggleActive(it)} className="rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/70 hover:bg-white/10">{it.is_active ? "Desativar" : "Ativar"}</button>
                   <button onClick={() => remove(it.id)} className="rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/20"><Trash2 className="h-3 w-3" /></button>
                 </div>
@@ -232,6 +262,12 @@ export function StoreItemsManager() {
               <button onClick={() => setEditing(null)} className="text-white/50 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
 
+            <div className="flex gap-2 border-b border-white/10">
+              <button onClick={() => setEditTab("general")} className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "general" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}>Geral</button>
+              <button onClick={() => setEditTab("financial")} className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "financial" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}>Financeiro</button>
+            </div>
+
+            {editTab === "general" && (<>
             {/* Imagem */}
             <div>
               <label className="text-xs text-white/60 mb-1 block">Imagem</label>
@@ -325,6 +361,48 @@ export function StoreItemsManager() {
                 Ativo
               </label>
             </div>
+            </>)}
+
+            {editTab === "financial" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Custos</h3>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div><label className="text-xs text-white/60 mb-1 block">Custo do produto (R$)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.cost ?? 0} onChange={(e) => setEditing({ ...editing, cost: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Imposto (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.tax_percentage ?? 0} onChange={(e) => setEditing({ ...editing, tax_percentage: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Taxa da maquininha (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.card_fee_percentage ?? 0} onChange={(e) => setEditing({ ...editing, card_fee_percentage: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Taxa do sistema (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.app_fee_percentage ?? 0} onChange={(e) => setEditing({ ...editing, app_fee_percentage: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Plano de marketing (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.marketing_plan ?? 0} onChange={(e) => setEditing({ ...editing, marketing_plan: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Outros (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.other_costs ?? 0} onChange={(e) => setEditing({ ...editing, other_costs: Number(e.target.value) })} /></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Comissões (%)</h3>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div><label className="text-xs text-white/60 mb-1 block">Coach (direto)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_coach ?? 0} onChange={(e) => setEditing({ ...editing, commission_coach: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Linha 1</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level1 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level1: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Linha 2</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level2 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level2: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Linha 3</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level3 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level3: Number(e.target.value) })} /></div>
+                  </div>
+                </div>
+                {(() => {
+                  const price = Number(editing.price || 0);
+                  const cost = Number(editing.cost || 0);
+                  const pct = Number(editing.tax_percentage || 0) + Number(editing.card_fee_percentage || 0) + Number(editing.app_fee_percentage || 0) + Number(editing.marketing_plan || 0) + Number(editing.other_costs || 0) + Number(editing.commission_coach || 0) + Number(editing.commission_level1 || 0) + Number(editing.commission_level2 || 0) + Number(editing.commission_level3 || 0);
+                  const deductions = (price * pct) / 100;
+                  const margin = price - cost - deductions;
+                  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p></div>
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p></div>
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Repasses ({pct.toFixed(1)}%)</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p></div>
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-emerald-400"}`}>{fmt(margin)}</p></div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
