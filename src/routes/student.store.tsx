@@ -180,6 +180,7 @@ function StorePage() {
       <header className="flex items-center justify-between pt-2">
         <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p><h1 className="text-2xl font-bold text-foreground">FitMind Club Store</h1></div>
         <div className="flex items-center gap-2">
+          <Link to="/student/freebies" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-card px-3 text-[10px] font-bold text-foreground"><Gift className="h-3.5 w-3.5 text-primary" /> Grátis</Link>
           <button onClick={inviteFriend} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-3 text-[10px] font-bold text-primary-foreground"><Share2 className="h-3.5 w-3.5" /> Indique</button>
           <button onClick={() => setCartOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card"><ShoppingBag className="h-5 w-5 text-muted-foreground" /><span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{cart.reduce((s, i) => s + i.quantity, 0)}</span></button>
         </div>
