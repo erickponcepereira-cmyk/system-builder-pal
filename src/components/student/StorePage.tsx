@@ -152,13 +152,31 @@ export function StorePage() {
     }
     setCheckingOut(true);
     const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
-    const { error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Pedido criado! Acompanhe o status na loja.");
+    const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
+    if (error) {
+      toast.error(error.message);
+      setCheckingOut(false);
+      return;
+    }
+    // Buscar dados do pedido criado para abrir o checkout MP
+    const { data: orderData } = await supabase
+      .from("store_orders" as never)
+      .select("id,order_number,total_amount" as never)
+      .eq("id" as never, orderId as never)
+      .maybeSingle();
+    const { data: userData } = await supabase.auth.getUser();
+    const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
+    if (od) {
       setCart([]);
       setCartOpen(false);
       setShipping(initialShipping);
+      setPayOrder({
+        id: od.id,
+        total: Number(od.total_amount),
+        number: od.order_number,
+        email: userData.user?.email || "",
+        name: userData.user?.user_metadata?.name || "",
+      });
       await load();
     }
     setCheckingOut(false);
