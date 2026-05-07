@@ -143,6 +143,9 @@ function AdminPayments() {
         <button onClick={() => setActiveTab("orders")} className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold ${activeTab === "orders" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
           Pedidos ({transactions.length})
         </button>
+        <button onClick={() => setActiveTab("mp")} className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold ${activeTab === "mp" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+          Mercado Pago ({mpPayments.length})
+        </button>
         <button onClick={() => setActiveTab("withdrawals")} className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold ${activeTab === "withdrawals" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
           Saques ({withdrawals.length})
         </button>
