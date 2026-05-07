@@ -62,13 +62,21 @@ function StorePage() {
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
 
+  const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
+
   const load = async () => {
-    const [{ data: userData }, plans, digital, physical] = await Promise.all([
+    const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes] = await Promise.all([
       supabase.auth.getUser(),
       supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock").eq("status", "active").order("sort_order"),
+      supabase.from("store_sections" as never).select("id,name" as never).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("store_items" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active" as never).eq("is_active" as never, true as never).order("sort_order" as never),
     ]);
+
+    const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
+    setStoreSections(sections);
+    const sectionName = (id: string) => sections.find((s) => s.id === id)?.name || "Loja";
 
     if (userData.user) {
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
@@ -88,6 +96,20 @@ function StorePage() {
       ...((plans.data || []).map((p) => ({ id: `plan-${p.id}`, sourceId: p.id, title: p.name, subtitle: p.subtitle, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: productCategory(String(p.product_type || p.type)), kind: "challenge" as const, tag: p.badge_label || "FitMind", isPriceRange: p.is_price_range, minPrice: p.min_price ? Number(p.min_price) : null, maxPrice: p.max_price ? Number(p.max_price) : null }))),
       ...((digital.data || []).map((p) => ({ id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: "Cursos", kind: "digital" as const, tag: p.is_featured ? "Destaque" : "Curso" }))),
       ...((physical.data || []).map((p) => ({ id: `store-${p.id}`, sourceId: p.id, title: p.name, description: p.description, price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null, category: p.is_herbalife ? "Herbalife" : p.category || "Suplementos", kind: "store" as const, tag: p.is_herbalife ? "Herbalife" : undefined, stock: p.stock }))),
+      ...(((itemsRes.data as unknown as any[]) || []).map((it) => ({
+        id: `item-${it.id}`,
+        sourceId: it.id,
+        title: it.name,
+        subtitle: it.short_description,
+        description: it.description,
+        price: Number(it.price || 0),
+        originalPrice: it.original_price ? Number(it.original_price) : null,
+        category: sectionName(it.section_id),
+        kind: (it.kind === "digital" ? "digital" : "store") as ProductKind,
+        tag: it.kind === "digital" ? "Digital" : undefined,
+        stock: it.kind === "physical" ? it.stock : null,
+        imageUrl: it.image_url,
+      }))),
     ]);
   };
 
