@@ -2995,6 +2995,131 @@ export type Database = {
           },
         ]
       }
+      store_categories: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          section_id: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          section_id: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          section_id?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_categories_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "store_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          gallery: Json
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          kind: string
+          metadata: Json
+          name: string
+          original_price: number | null
+          price: number
+          section_id: string
+          short_description: string | null
+          sku: string | null
+          sort_order: number
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          gallery?: Json
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          kind: string
+          metadata?: Json
+          name: string
+          original_price?: number | null
+          price?: number
+          section_id: string
+          short_description?: string | null
+          sku?: string | null
+          sort_order?: number
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          gallery?: Json
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          kind?: string
+          metadata?: Json
+          name?: string
+          original_price?: number | null
+          price?: number
+          section_id?: string
+          short_description?: string | null
+          sku?: string | null
+          sort_order?: number
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "store_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_order_items: {
         Row: {
           created_at: string
@@ -3167,6 +3292,39 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           stock?: number | null
+        }
+        Relationships: []
+      }
+      store_sections: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
