@@ -18,6 +18,7 @@ import { MinhaRede } from "@/components/coach/MinhaRede";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import { CoachReports } from "@/components/coach/CoachReports";
+import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
@@ -405,15 +406,17 @@ function OverviewTab({
     { label: "Comissões", value: "R$ 1.104", change: "+22%", icon: BarChart3 },
     { label: "Saldo", value: "R$ 2.450", change: "Disponível", icon: Wallet },
   ];
+  const [saleOpen, setSaleOpen] = useState(false);
 
   return (
     <>
+      <NewSaleModal open={saleOpen} onClose={() => setSaleOpen(false)} />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Olá, {coachName}! 💪</h1>
           <p className="text-sm text-white/50">Resumo do seu mês</p>
         </div>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setSaleOpen(true)}>
           <Plus className="h-4 w-4 mr-1" /> Nova venda
         </Button>
       </div>
