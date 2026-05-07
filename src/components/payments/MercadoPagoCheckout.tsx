@@ -37,6 +37,16 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const cardFn = useServerFn(createCardCheckout);
   const statusFn = useServerFn(getPaymentStatus);
 
+  useEffect(() => {
+    setTab(initialMethod);
+  }, [initialMethod, source.id]);
+
+  useEffect(() => {
+    setPayer(defaultPayer || { email: "", name: "", doc: "" });
+    setPixData(null);
+    setPixApproved(false);
+  }, [defaultPayer?.email, defaultPayer?.name, defaultPayer?.doc, source.id]);
+
   // Polling do PIX
   useEffect(() => {
     if (!pixData || pixApproved) return;
