@@ -104,7 +104,7 @@ export function MLMSimulator() {
           {(["level1", "level2", "level3"] as const).map((lvl, i) => (
             <div key={lvl}>
               <label className="block text-[10px] text-white/50 mb-1">
-                Nível {i + 1} (média)
+                Linha {i + 1} (média)
               </label>
               <input
                 type="number"
@@ -124,10 +124,10 @@ export function MLMSimulator() {
 
       {/* Breakdown */}
       <div className="space-y-1.5 mb-4">
-        <Row label="Direto (50%)" value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos`} />
-        <Row label="Nível 1 (15%)" value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos`} />
-        <Row label="Nível 2 (5%)" value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos`} />
-        <Row label="Nível 3 (3%)" value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos`} />
+        <Row label="Direto (50%) — você como coach" value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos`} />
+        <Row label="Linha 1 (15%) — indicação direta" value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos`} />
+        <Row label="Linha 2 (5%) — abaixo da linha 1" value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos`} />
+        <Row label="Linha 3 (3%) — abaixo da linha 2" value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos`} />
       </div>
 
       {/* Total */}

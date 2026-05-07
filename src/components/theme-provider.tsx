@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect } from "react";
 
-type Theme = "light" | "dark";
+type Theme = "dark";
 
 const ThemeContext = createContext<{ theme: Theme; setTheme: (t: Theme) => void; toggle: () => void }>({
   theme: "dark",
@@ -8,35 +8,20 @@ const ThemeContext = createContext<{ theme: Theme; setTheme: (t: Theme) => void;
   toggle: () => {},
 });
 
-const STORAGE_KEY = "fitmind_theme";
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
-
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = (localStorage.getItem(STORAGE_KEY) as Theme | null) || "dark";
-    applyTheme(saved);
-    setThemeState(saved);
-  }, []);
-
-  const applyTheme = (t: Theme) => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(t);
-    root.dataset.theme = t;
-  };
+    root.classList.remove("light");
+    root.classList.add("dark");
+    root.dataset.theme = "dark";
+  }, []);
 
-  const setTheme = (t: Theme) => {
-    applyTheme(t);
-    setThemeState(t);
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, t);
-  };
-
-  const toggle = () => setTheme(theme === "dark" ? "light" : "dark");
-
-  return <ThemeContext.Provider value={{ theme, setTheme, toggle }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {}, toggle: () => {} }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export const useTheme = () => useContext(ThemeContext);
