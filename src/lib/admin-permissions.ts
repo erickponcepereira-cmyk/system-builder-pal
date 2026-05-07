@@ -17,6 +17,7 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "reports", label: "Relatórios" },
   { key: "patents", label: "Patentes" },
   { key: "calendars", label: "Agendas" },
+  { key: "store", label: "Loja" },
   { key: "settings", label: "Configurações" },
 ];
 
