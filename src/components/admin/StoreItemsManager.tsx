@@ -20,6 +20,16 @@ interface Item {
   is_featured: boolean;
   is_active: boolean;
   sort_order: number;
+  cost: number | null;
+  tax_percentage: number | null;
+  card_fee_percentage: number | null;
+  app_fee_percentage: number | null;
+  marketing_plan: number | null;
+  other_costs: number | null;
+  commission_coach: number | null;
+  commission_level1: number | null;
+  commission_level2: number | null;
+  commission_level3: number | null;
 }
 
 function emptyItem(): Partial<Item> {
@@ -27,6 +37,9 @@ function emptyItem(): Partial<Item> {
     kind: "physical", name: "", description: "", short_description: "",
     price: 0, original_price: null, stock: null, sku: "",
     is_featured: false, is_active: true, sort_order: 0,
+    cost: 0, tax_percentage: 0, card_fee_percentage: 0, app_fee_percentage: 0,
+    marketing_plan: 0, other_costs: 0,
+    commission_coach: 50, commission_level1: 15, commission_level2: 5, commission_level3: 3,
   };
 }
 
@@ -39,6 +52,7 @@ export function StoreItemsManager() {
   const [filterCategory, setFilterCategory] = useState<string>("");
   const [filterKind, setFilterKind] = useState<string>("");
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
+  const [editTab, setEditTab] = useState<"general" | "financial">("general");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -82,6 +96,12 @@ export function StoreItemsManager() {
   const save = async () => {
     if (!editing?.name || !editing?.section_id || !editing?.kind) {
       alert("Preencha nome, seção e tipo.");
+      setEditTab("general");
+      return;
+    }
+    if (editing.cost !== null && editing.cost !== undefined && Number(editing.cost) > Number(editing.price || 0)) {
+      alert("Custo não pode ser maior que o preço de venda.");
+      setEditTab("financial");
       return;
     }
     setSaving(true);
@@ -101,6 +121,16 @@ export function StoreItemsManager() {
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
         sort_order: Number(editing.sort_order) || 0,
+        cost: editing.cost !== null && editing.cost !== undefined ? Number(editing.cost) : null,
+        tax_percentage: Number(editing.tax_percentage) || 0,
+        card_fee_percentage: Number(editing.card_fee_percentage) || 0,
+        app_fee_percentage: Number(editing.app_fee_percentage) || 0,
+        marketing_plan: Number(editing.marketing_plan) || 0,
+        other_costs: Number(editing.other_costs) || 0,
+        commission_coach: Number(editing.commission_coach) || 0,
+        commission_level1: Number(editing.commission_level1) || 0,
+        commission_level2: Number(editing.commission_level2) || 0,
+        commission_level3: Number(editing.commission_level3) || 0,
       };
       if (editing.id) {
         await supabase.from("store_items").update(payload).eq("id", editing.id);
