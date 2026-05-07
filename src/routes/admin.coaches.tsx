@@ -209,9 +209,15 @@ function AdminCoaches() {
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-base font-bold text-white">{c.profiles?.name}</h3>
                     {c.approved_at ? (
-                      <span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
-                        Aprovado
-                      </span>
+                      c.blocked_at ? (
+                        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400">
+                          Bloqueado
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
+                          Aprovado
+                        </span>
+                      )
                     ) : (
                       <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400">
                         Pendente
