@@ -21,12 +21,14 @@ export const Route = createFileRoute("/api/public/pay/$orderNumber")({
 
         return new Response(JSON.stringify({
           order: {
+            id: order.id,
             number: order.order_number,
             status: order.status,
             paymentMethod: order.payment_method,
             total: Number(order.total_amount),
             createdAt: order.created_at,
             clientName: (student as any)?.profiles?.name || "Cliente",
+            clientEmail: (student as any)?.profiles?.email || null,
           },
           items: (items || []).map((i: any) => ({
             title: i.title, quantity: i.quantity, unitPrice: Number(i.unit_price), totalPrice: Number(i.total_price),
