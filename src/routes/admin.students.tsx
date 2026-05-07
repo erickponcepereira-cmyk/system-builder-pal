@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Search, Mail, UserCog, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { changeStudentCoachAdmin } from "@/lib/admin-network.functions";
 
 export const Route = createFileRoute("/admin/students")({
   component: AdminStudents,
@@ -33,6 +35,7 @@ function AdminStudents() {
   const [newCoachId, setNewCoachId] = useState("");
   const [coachSearch, setCoachSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const changeStudentCoach = useServerFn(changeStudentCoachAdmin);
 
   const load = async () => {
     setLoading(true);
@@ -93,15 +96,14 @@ function AdminStudents() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.rpc("admin_change_student_coach" as never, {
-      _student_id: editing.id,
-      _new_coach_id: newCoachId,
-    } as never);
-    setSaving(false);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await changeStudentCoach({ data: { studentId: editing.id, newCoachId } });
+    } catch (error: any) {
+      setSaving(false);
+      toast.error(error?.message || "Erro ao trocar coach");
       return;
     }
+    setSaving(false);
     toast.success("Coach atualizado");
     setEditing(null);
     await load();
