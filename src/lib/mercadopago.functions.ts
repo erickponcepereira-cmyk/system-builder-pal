@@ -223,11 +223,12 @@ export async function applyApproval(kind: "store_order" | "transaction", id: str
       .select("id, metadata")
       .eq("id", id)
       .maybeSingle();
-    // Marca a transação relacionada como paga (trigger on_transaction_paid processa comissões)
+    // Marca a transação espelho como paga (trigger on_transaction_paid processa comissões)
     await supabaseAdmin
       .from("transactions")
       .update({ status: "paid", paid_at: new Date().toISOString() })
-      .filter("metadata->>store_order_id", "eq", id);
+      .eq("purchase_type", "store_order")
+      .contains("metadata", { store_order_id: id } as never);
     void order;
   } else {
     // Transação direta (ex: desafios/digitais) — trigger on_transaction_paid libera tudo
