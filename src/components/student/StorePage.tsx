@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   CheckCircle2, Gift, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2, History, UserRound, ChevronDown,
 } from "lucide-react";
@@ -8,10 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail } from "@/components/store/ProductDetailModal";
-import {
-  listCoachClients, createCoachSale, listCoachSalesHistory,
-  type SaleClient, type CoachSaleRow,
-} from "@/lib/coach-sales.functions";
+
+type SaleClient = { id: string; name: string; email: string | null; phone: string | null };
+type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
 type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
@@ -66,9 +64,6 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [salesHistory, setSalesHistory] = useState<CoachSaleRow[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const fetchClients = useServerFn(listCoachClients);
-  const submitCoachSale = useServerFn(createCoachSale);
-  const fetchSales = useServerFn(listCoachSalesHistory);
 
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes] = await Promise.all([
