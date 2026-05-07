@@ -517,7 +517,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-              onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); load(); if (coachMode) fetchSales().then(setSalesHistory).catch(() => {}); }}
+              onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
             {coachMode && (
               <p className="mt-3 text-center text-[11px] text-muted-foreground">
