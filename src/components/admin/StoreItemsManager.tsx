@@ -153,6 +153,7 @@ export function StoreItemsManager() {
         commission_level1_mode: editing.commission_level1_mode || "percent",
         commission_level2_mode: editing.commission_level2_mode || "percent",
         commission_level3_mode: editing.commission_level3_mode || "percent",
+      };
       if (editing.id) {
         await supabase.from("store_items").update(payload).eq("id", editing.id);
       } else {
