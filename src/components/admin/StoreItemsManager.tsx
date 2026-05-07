@@ -385,46 +385,91 @@ export function StoreItemsManager() {
             </div>
             </>)}
 
-            {editTab === "financial" && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Custos</h3>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div><label className="text-xs text-white/60 mb-1 block">Custo do produto (R$)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.cost ?? 0} onChange={(e) => setEditing({ ...editing, cost: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Imposto (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.tax_percentage ?? 0} onChange={(e) => setEditing({ ...editing, tax_percentage: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Taxa da maquininha (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.card_fee_percentage ?? 0} onChange={(e) => setEditing({ ...editing, card_fee_percentage: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Taxa do sistema (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.app_fee_percentage ?? 0} onChange={(e) => setEditing({ ...editing, app_fee_percentage: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Plano de marketing (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.marketing_plan ?? 0} onChange={(e) => setEditing({ ...editing, marketing_plan: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Outros (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.other_costs ?? 0} onChange={(e) => setEditing({ ...editing, other_costs: Number(e.target.value) })} /></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Comissões (%)</h3>
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <div><label className="text-xs text-white/60 mb-1 block">Coach (direto)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_coach ?? 0} onChange={(e) => setEditing({ ...editing, commission_coach: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Linha 1</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level1 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level1: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Linha 2</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level2 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level2: Number(e.target.value) })} /></div>
-                    <div><label className="text-xs text-white/60 mb-1 block">Linha 3</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level3 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level3: Number(e.target.value) })} /></div>
-                  </div>
-                </div>
-                {(() => {
-                  const price = Number(editing.price || 0);
-                  const cost = Number(editing.cost || 0);
-                  const pct = Number(editing.tax_percentage || 0) + Number(editing.card_fee_percentage || 0) + Number(editing.app_fee_percentage || 0) + Number(editing.marketing_plan || 0) + Number(editing.other_costs || 0) + Number(editing.commission_coach || 0) + Number(editing.commission_level1 || 0) + Number(editing.commission_level2 || 0) + Number(editing.commission_level3 || 0);
-                  const deductions = (price * pct) / 100;
-                  const margin = price - cost - deductions;
-                  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-                  return (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p></div>
-                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p></div>
-                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Repasses ({pct.toFixed(1)}%)</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p></div>
-                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-emerald-400"}`}>{fmt(margin)}</p></div>
+            {editTab === "financial" && (() => {
+              type ModeKey =
+                | "tax_mode" | "card_fee_mode" | "app_fee_mode" | "marketing_mode" | "other_mode"
+                | "commission_coach_mode" | "commission_level1_mode" | "commission_level2_mode" | "commission_level3_mode";
+              type ValKey =
+                | "tax_percentage" | "card_fee_percentage" | "app_fee_percentage" | "marketing_plan" | "other_costs"
+                | "commission_coach" | "commission_level1" | "commission_level2" | "commission_level3";
+
+              const FinField = ({ label, valKey, modeKey }: { label: string; valKey: ValKey; modeKey: ModeKey }) => {
+                const mode = (editing[modeKey] as "percent" | "fixed") || "percent";
+                return (
+                  <div>
+                    <label className="text-xs text-white/60 mb-1 block">{label}</label>
+                    <div className="flex gap-1">
+                      <input
+                        type="number" step="0.01"
+                        className="input-dark w-full"
+                        value={(editing[valKey] as number) ?? 0}
+                        onChange={(e) => setEditing({ ...editing, [valKey]: Number(e.target.value) })}
+                      />
+                      <select
+                        className="input-dark"
+                        value={mode}
+                        onChange={(e) => setEditing({ ...editing, [modeKey]: e.target.value as "percent" | "fixed" })}
+                      >
+                        <option value="percent">%</option>
+                        <option value="fixed">R$</option>
+                      </select>
                     </div>
-                  );
-                })()}
-              </div>
-            )}
+                  </div>
+                );
+              };
+
+              const price = Number(editing.price || 0);
+              const cost = Number(editing.cost || 0);
+              const calc = (val: number, mode: string) => mode === "fixed" ? val : (price * val) / 100;
+              const fields: Array<[ValKey, ModeKey]> = [
+                ["tax_percentage", "tax_mode"],
+                ["card_fee_percentage", "card_fee_mode"],
+                ["app_fee_percentage", "app_fee_mode"],
+                ["marketing_plan", "marketing_mode"],
+                ["other_costs", "other_mode"],
+                ["commission_coach", "commission_coach_mode"],
+                ["commission_level1", "commission_level1_mode"],
+                ["commission_level2", "commission_level2_mode"],
+                ["commission_level3", "commission_level3_mode"],
+              ];
+              const deductions = fields.reduce((acc, [v, m]) => acc + calc(Number(editing[v] || 0), String(editing[m] || "percent")), 0);
+              const margin = price - cost - deductions;
+              const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Custos</h3>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div>
+                        <label className="text-xs text-white/60 mb-1 block">Custo do produto (R$)</label>
+                        <input type="number" step="0.01" className="input-dark w-full" value={editing.cost ?? 0} onChange={(e) => setEditing({ ...editing, cost: Number(e.target.value) })} />
+                      </div>
+                      <FinField label="Imposto" valKey="tax_percentage" modeKey="tax_mode" />
+                      <FinField label="Taxa da maquininha" valKey="card_fee_percentage" modeKey="card_fee_mode" />
+                      <FinField label="Taxa do sistema" valKey="app_fee_percentage" modeKey="app_fee_mode" />
+                      <FinField label="Plano de marketing" valKey="marketing_plan" modeKey="marketing_mode" />
+                      <FinField label="Outros" valKey="other_costs" modeKey="other_mode" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Comissões</h3>
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <FinField label="Coach (direto)" valKey="commission_coach" modeKey="commission_coach_mode" />
+                      <FinField label="Linha 1" valKey="commission_level1" modeKey="commission_level1_mode" />
+                      <FinField label="Linha 2" valKey="commission_level2" modeKey="commission_level2_mode" />
+                      <FinField label="Linha 3" valKey="commission_level3" modeKey="commission_level3_mode" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p></div>
+                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p></div>
+                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Repasses</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p></div>
+                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-emerald-400"}`}>{fmt(margin)}</p></div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
