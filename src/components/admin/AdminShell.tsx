@@ -24,6 +24,8 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/patents", label: "Patentes", icon: Award, perm: "patents" },
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
   { to: "/admin/store", label: "Loja", icon: Store, perm: "store" },
+  { to: "/admin/freebies", label: "Gratuitos", icon: Gift, perm: "freebies" },
+  { to: "/admin/store-reports", label: "Relatórios da Loja", icon: TrendingUp, perm: "store_reports" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 ];
 
