@@ -262,6 +262,12 @@ export function StoreItemsManager() {
               <button onClick={() => setEditing(null)} className="text-white/50 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
 
+            <div className="flex gap-2 border-b border-white/10">
+              <button onClick={() => setEditTab("general")} className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "general" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}>Geral</button>
+              <button onClick={() => setEditTab("financial")} className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "financial" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}>Financeiro</button>
+            </div>
+
+            {editTab === "general" && (<>
             {/* Imagem */}
             <div>
               <label className="text-xs text-white/60 mb-1 block">Imagem</label>
@@ -355,6 +361,48 @@ export function StoreItemsManager() {
                 Ativo
               </label>
             </div>
+            </>)}
+
+            {editTab === "financial" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Custos</h3>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div><label className="text-xs text-white/60 mb-1 block">Custo do produto (R$)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.cost ?? 0} onChange={(e) => setEditing({ ...editing, cost: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Imposto (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.tax_percentage ?? 0} onChange={(e) => setEditing({ ...editing, tax_percentage: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Taxa da maquininha (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.card_fee_percentage ?? 0} onChange={(e) => setEditing({ ...editing, card_fee_percentage: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Taxa do sistema (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.app_fee_percentage ?? 0} onChange={(e) => setEditing({ ...editing, app_fee_percentage: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Plano de marketing (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.marketing_plan ?? 0} onChange={(e) => setEditing({ ...editing, marketing_plan: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Outros (%)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.other_costs ?? 0} onChange={(e) => setEditing({ ...editing, other_costs: Number(e.target.value) })} /></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Comissões (%)</h3>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div><label className="text-xs text-white/60 mb-1 block">Coach (direto)</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_coach ?? 0} onChange={(e) => setEditing({ ...editing, commission_coach: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Linha 1</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level1 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level1: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Linha 2</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level2 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level2: Number(e.target.value) })} /></div>
+                    <div><label className="text-xs text-white/60 mb-1 block">Linha 3</label><input type="number" step="0.01" className="input-dark w-full" value={editing.commission_level3 ?? 0} onChange={(e) => setEditing({ ...editing, commission_level3: Number(e.target.value) })} /></div>
+                  </div>
+                </div>
+                {(() => {
+                  const price = Number(editing.price || 0);
+                  const cost = Number(editing.cost || 0);
+                  const pct = Number(editing.tax_percentage || 0) + Number(editing.card_fee_percentage || 0) + Number(editing.app_fee_percentage || 0) + Number(editing.marketing_plan || 0) + Number(editing.other_costs || 0) + Number(editing.commission_coach || 0) + Number(editing.commission_level1 || 0) + Number(editing.commission_level2 || 0) + Number(editing.commission_level3 || 0);
+                  const deductions = (price * pct) / 100;
+                  const margin = price - cost - deductions;
+                  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p></div>
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p></div>
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Repasses ({pct.toFixed(1)}%)</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p></div>
+                      <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-emerald-400"}`}>{fmt(margin)}</p></div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
