@@ -8,7 +8,7 @@ export const Route = createFileRoute("/student/store")({
   component: StorePage,
 });
 
-type ProductKind = "challenge" | "digital" | "store";
+type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
 
 interface StoreProduct {
@@ -105,7 +105,7 @@ function StorePage() {
         price: Number(it.price || 0),
         originalPrice: it.original_price ? Number(it.original_price) : null,
         category: sectionName(it.section_id),
-        kind: (it.kind === "digital" ? "digital" : "store") as ProductKind,
+        kind: "item" as const,
         tag: it.kind === "digital" ? "Digital" : undefined,
         stock: it.kind === "physical" ? it.stock : null,
         imageUrl: it.image_url,
@@ -124,12 +124,12 @@ function StorePage() {
   const paymentFee = subtotal * (paymentMethod === "pix" ? 0.01 : paymentMethod === "debit_card" ? 0.0169 : 0.0299);
   const taxAmount = subtotal * 0.06;
   const total = subtotal + paymentFee + taxAmount;
-  const requiresShipping = cart.some((item) => item.kind === "store");
+  const requiresShipping = cart.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const priceLabel = (item: StoreProduct) => item.isPriceRange && item.minPrice && item.maxPrice ? `${fmt(item.minPrice)} - ${fmt(item.maxPrice)}` : fmt(item.price);
 
   const addToCart = (item: StoreProduct) => {
-    if (item.kind === "store" && item.stock !== null && item.stock !== undefined && item.stock <= 0) {
+    if ((item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && item.stock <= 0) {
       toast.error("Produto sem estoque.");
       return;
     }
@@ -193,7 +193,7 @@ function StorePage() {
 
       {orders.length > 0 && <section className="rounded-2xl bg-card p-4"><h2 className="mb-3 text-sm font-bold text-foreground">Meus pedidos</h2><div className="space-y-2">{orders.map((order) => <div key={order.id} className="flex items-center justify-between rounded-xl bg-muted px-3 py-2"><div><p className="text-xs font-bold text-foreground">{order.order_number}</p><p className="text-[10px] text-muted-foreground">{order.status}</p></div><span className="text-xs font-bold text-primary">{fmt(Number(order.total_amount || 0))}</span></div>)}</div></section>}
 
-      <div className="grid grid-cols-2 gap-3">{filtered.map((item) => <button key={item.id} onClick={() => addToCart(item)} className="rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent"><div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">{item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}</div>{item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}<p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>{item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}<div className="mt-1 flex flex-wrap items-baseline gap-1.5"><span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>{item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}</div>{item.kind === "store" && item.stock !== null && item.stock !== undefined && <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>}</button>)}</div>
+      <div className="grid grid-cols-2 gap-3">{filtered.map((item) => <button key={item.id} onClick={() => addToCart(item)} className="rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent"><div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">{item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}</div>{item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}<p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>{item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}<div className="mt-1 flex flex-wrap items-baseline gap-1.5"><span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>{item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}</div>{(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>}</button>)}</div>
 
       {cartOpen && <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:justify-center"><div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5"><div className="mb-4 flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div><div><h2 className="text-base font-bold text-foreground">Carrinho</h2><p className="text-xs text-muted-foreground">{cart.length} itens no pedido</p></div></div>
         {cart.length === 0 ? <p className="rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground">Seu carrinho está vazio.</p> : <div className="space-y-2">{cart.map((item) => <div key={item.id} className="flex items-center gap-2 rounded-xl bg-muted p-3"><div className="flex-1"><p className="text-xs font-bold text-foreground">{item.title}</p><p className="text-[10px] text-muted-foreground">{fmt(item.price)} cada</p></div><button onClick={() => updateQty(item.id, -1)}><Minus className="h-4 w-4 text-muted-foreground" /></button><span className="w-5 text-center text-xs font-bold text-foreground">{item.quantity}</span><button onClick={() => updateQty(item.id, 1)}><Plus className="h-4 w-4 text-primary" /></button><button onClick={() => setCart((current) => current.filter((cartItem) => cartItem.id !== item.id))}><Trash2 className="h-4 w-4 text-muted-foreground" /></button></div>)}</div>}
