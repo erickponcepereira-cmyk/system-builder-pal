@@ -59,6 +59,7 @@ export function StorePage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
 
