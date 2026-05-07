@@ -8,7 +8,7 @@ export const Route = createFileRoute("/student/store")({
   component: StorePage,
 });
 
-type ProductKind = "challenge" | "digital" | "store";
+type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
 
 interface StoreProduct {
