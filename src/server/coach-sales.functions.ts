@@ -72,19 +72,28 @@ export const listSellableProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async (): Promise<SaleProduct[]> => {
     const [{ data: challenges }, { data: digitals }, { data: stores }] = await Promise.all([
-      supabaseAdmin.from("products").select("id,name,price,type").eq("status", "active"),
-      supabaseAdmin.from("digital_products").select("id,title,price,type").eq("status", "active"),
-      supabaseAdmin.from("store_products").select("id,name,price,category").eq("status", "active"),
+      supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active"),
+      supabaseAdmin.from("digital_products").select("id,title,description,price,original_price,type,cover_url").eq("status", "active"),
+      supabaseAdmin.from("store_products").select("id,name,description,price,original_price,category,image_url,stock").eq("status", "active"),
     ]);
     const out: SaleProduct[] = [];
     (challenges || []).forEach((p: any) => out.push({
-      id: p.id, kind: "challenge", title: p.name, price: Number(p.price || 0), category: p.type,
+      id: p.id, kind: "challenge", title: p.name, description: p.description, imageUrl: p.image_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.type,
+      commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
+      commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
+      appFee: p.app_fee,
     }));
     (digitals || []).forEach((p: any) => out.push({
-      id: p.id, kind: "digital", title: p.title, price: Number(p.price || 0), category: p.type,
+      id: p.id, kind: "digital", title: p.title, description: p.description, imageUrl: p.cover_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.type,
     }));
     (stores || []).forEach((p: any) => out.push({
-      id: p.id, kind: "store", title: p.name, price: Number(p.price || 0), category: p.category,
+      id: p.id, kind: "store", title: p.name, description: p.description, imageUrl: p.image_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.category, stock: p.stock,
     }));
     return out;
   });
