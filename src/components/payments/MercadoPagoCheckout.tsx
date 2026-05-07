@@ -236,6 +236,11 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
       {tab === "card" && (
         <div className="space-y-3">
           <div ref={cardFormRef} id="mp-card-form-container" />
+          {paymentError && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
+              {paymentError}
+            </div>
+          )}
           {cardLoading && (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> Processando pagamento...
