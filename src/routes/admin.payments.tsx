@@ -37,15 +37,29 @@ interface Transaction {
 type CoachWithdrawalRow = Omit<Withdrawal, "kind" | "owner"> & { profiles: { name: string; email: string } | null };
 type StudentWithdrawalRow = Omit<Withdrawal, "kind" | "owner"> & { students: { profiles: { name: string; email: string } | null } | null };
 
+interface MpPayment {
+  id: string;
+  mp_payment_id: string;
+  source_kind: string;
+  amount: number;
+  status: string;
+  payment_method: string;
+  payer_email: string | null;
+  payer_name: string | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
 function AdminPayments() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activeTab, setActiveTab] = useState<"orders" | "withdrawals">("orders");
+  const [mpPayments, setMpPayments] = useState<MpPayment[]>([]);
+  const [activeTab, setActiveTab] = useState<"orders" | "withdrawals" | "mp">("orders");
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    const [coachWithdrawalRes, studentWithdrawalRes, transactionRes] = await Promise.all([
+    const [coachWithdrawalRes, studentWithdrawalRes, transactionRes, mpRes] = await Promise.all([
       supabase
         .from("withdrawal_requests")
         .select("*, profiles!withdrawal_requests_profile_id_fkey(name, email)")
@@ -59,11 +73,17 @@ function AdminPayments() {
         .select("id,gross_amount,status,purchase_type,payment_method,created_at,paid_at,metadata,students!transactions_student_id_fkey(profiles!students_profile_id_fkey(name,email)),products!transactions_product_id_fkey(name)")
         .order("created_at", { ascending: false })
         .limit(100),
+      supabase
+        .from("mercadopago_payments" as never)
+        .select("id,mp_payment_id,source_kind,amount,status,payment_method,payer_email,payer_name,paid_at,created_at" as never)
+        .order("created_at" as never, { ascending: false })
+        .limit(200),
     ]);
     const coachWithdrawals = ((coachWithdrawalRes.data as unknown as CoachWithdrawalRow[]) || []).map((w) => ({ ...w, kind: "coach", owner: w.profiles })) as Withdrawal[];
     const studentWithdrawals = ((studentWithdrawalRes.data as unknown as StudentWithdrawalRow[]) || []).map((w) => ({ ...w, kind: "student", owner: w.students?.profiles || null })) as Withdrawal[];
     setWithdrawals([...coachWithdrawals, ...studentWithdrawals].sort((a, b) => new Date(b.requested_at || 0).getTime() - new Date(a.requested_at || 0).getTime()));
     setTransactions((transactionRes.data as unknown as Transaction[]) || []);
+    setMpPayments((mpRes.data as unknown as MpPayment[]) || []);
     setLoading(false);
   };
 
@@ -123,6 +143,9 @@ function AdminPayments() {
         <button onClick={() => setActiveTab("orders")} className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold ${activeTab === "orders" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
           Pedidos ({transactions.length})
         </button>
+        <button onClick={() => setActiveTab("mp")} className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold ${activeTab === "mp" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+          Mercado Pago ({mpPayments.length})
+        </button>
         <button onClick={() => setActiveTab("withdrawals")} className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold ${activeTab === "withdrawals" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
           Saques ({withdrawals.length})
         </button>
@@ -168,6 +191,58 @@ function AdminPayments() {
             ))}
           </div>
         )
+      ) : activeTab === "mp" ? (
+        (() => {
+          const approved = mpPayments.filter((p) => p.status === "approved");
+          const totalApproved = approved.reduce((s, p) => s + Number(p.amount || 0), 0);
+          const pending = mpPayments.filter((p) => p.status === "pending").length;
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-2xl bg-card p-4">
+                  <p className="text-xs text-white/50">Total arrecadado</p>
+                  <p className="mt-1 text-2xl font-bold text-primary">{fmt(totalApproved)}</p>
+                </div>
+                <div className="rounded-2xl bg-card p-4">
+                  <p className="text-xs text-white/50">Vendas aprovadas</p>
+                  <p className="mt-1 text-2xl font-bold text-white">{approved.length}</p>
+                </div>
+                <div className="rounded-2xl bg-card p-4">
+                  <p className="text-xs text-white/50">Pendentes</p>
+                  <p className="mt-1 text-2xl font-bold text-white">{pending}</p>
+                </div>
+              </div>
+              {mpPayments.length === 0 ? (
+                <div className="rounded-2xl bg-card p-12 text-center">
+                  <DollarSign className="h-10 w-10 text-white/20 mx-auto mb-3" />
+                  <p className="text-white/50">Nenhum pagamento Mercado Pago ainda.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {mpPayments.map((p) => (
+                    <div key={p.id} className="rounded-2xl border border-white/5 bg-card p-4">
+                      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                        <div className="flex-1">
+                          <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold text-white">{p.payer_name || p.payer_email || "Pagador"}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusColor(p.status)}`}>{p.status}</span>
+                            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-white/50">{p.payment_method}</span>
+                            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-white/50">{p.source_kind}</span>
+                          </div>
+                          <div className="text-xs text-white/60">
+                            MP #{p.mp_payment_id} · {new Date(p.created_at).toLocaleString("pt-BR")}
+                            {p.paid_at && ` · pago em ${new Date(p.paid_at).toLocaleString("pt-BR")}`}
+                          </div>
+                        </div>
+                        <p className="text-xl font-bold text-primary">{fmt(Number(p.amount))}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()
       ) : withdrawals.length === 0 ? (
         <div className="rounded-2xl p-12 text-center" style={{ backgroundColor: "#1A1A1A" }}>
           <DollarSign className="h-10 w-10 text-white/20 mx-auto mb-3" />

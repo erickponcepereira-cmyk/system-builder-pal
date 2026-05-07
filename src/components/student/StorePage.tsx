@@ -220,6 +220,27 @@ export function StorePage() {
         <div className="mb-4 rounded-xl bg-muted p-3 text-xs text-muted-foreground"><div className="flex justify-between"><span>Subtotal</span><b className="text-foreground">{fmt(subtotal)}</b></div><div className="flex justify-between"><span>Taxas</span><b className="text-foreground">{fmt(paymentFee + taxAmount)}</b></div><div className="mt-2 flex justify-between border-t border-border pt-2 text-sm"><span>Total</span><b className="text-primary">{fmt(total)}</b></div></div>
         <div className="flex gap-2"><button onClick={() => setCartOpen(false)} className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground">Fechar</button><button onClick={checkout} disabled={checkingOut || cart.length === 0} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"><CheckCircle2 className="h-4 w-4" /> Finalizar</button></div>
       </div></div>}
+
+      {payOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-foreground">Pagamento</h2>
+                <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+              </div>
+              <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
+            </div>
+            <MercadoPagoCheckout
+              source={{ kind: "store_order", id: payOrder.id }}
+              amount={payOrder.total}
+              description={`Pedido ${payOrder.number}`}
+              defaultPayer={{ email: payOrder.email, name: payOrder.name }}
+              onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); load(); }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
