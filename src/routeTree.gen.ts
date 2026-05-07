@@ -51,6 +51,7 @@ import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
+import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
@@ -265,6 +266,11 @@ const ApiPublicPayOrderNumberRoute = ApiPublicPayOrderNumberRouteImport.update({
   path: '/api/public/pay/$orderNumber',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMpWebhookRoute = ApiPublicMpWebhookRouteImport.update({
+  id: '/api/public/mp/webhook',
+  path: '/api/public/mp/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
   id: '/api/public/invite/$token',
   path: '/api/public/invite/$token',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
+  '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
 }
 export interface FileRoutesByTo {
@@ -371,6 +378,7 @@ export interface FileRoutesByTo {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
+  '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
 }
 export interface FileRoutesById {
@@ -419,6 +427,7 @@ export interface FileRoutesById {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
+  '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
 }
 export interface FileRouteTypes {
@@ -468,6 +477,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
+    | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
+    | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
   id:
     | '__root__'
@@ -560,6 +571,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
+    | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
   fileRoutesById: FileRoutesById
 }
@@ -579,6 +591,7 @@ export interface RootRouteChildren {
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
+  ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
   ApiPublicPayOrderNumberRoute: typeof ApiPublicPayOrderNumberRoute
 }
 
@@ -878,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPayOrderNumberRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mp/webhook': {
+      id: '/api/public/mp/webhook'
+      path: '/api/public/mp/webhook'
+      fullPath: '/api/public/mp/webhook'
+      preLoaderRoute: typeof ApiPublicMpWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/invite/$token': {
       id: '/api/public/invite/$token'
       path: '/api/public/invite/$token'
@@ -1003,6 +1023,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
+  ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
   ApiPublicPayOrderNumberRoute: ApiPublicPayOrderNumberRoute,
 }
 export const routeTree = rootRouteImport

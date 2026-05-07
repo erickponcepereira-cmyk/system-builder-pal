@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Gift, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
@@ -58,6 +59,7 @@ export function StorePage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
 
@@ -150,13 +152,31 @@ export function StorePage() {
     }
     setCheckingOut(true);
     const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
-    const { error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Pedido criado! Acompanhe o status na loja.");
+    const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
+    if (error) {
+      toast.error(error.message);
+      setCheckingOut(false);
+      return;
+    }
+    // Buscar dados do pedido criado para abrir o checkout MP
+    const { data: orderData } = await supabase
+      .from("store_orders" as never)
+      .select("id,order_number,total_amount" as never)
+      .eq("id" as never, orderId as never)
+      .maybeSingle();
+    const { data: userData } = await supabase.auth.getUser();
+    const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
+    if (od) {
       setCart([]);
       setCartOpen(false);
       setShipping(initialShipping);
+      setPayOrder({
+        id: od.id,
+        total: Number(od.total_amount),
+        number: od.order_number,
+        email: userData.user?.email || "",
+        name: userData.user?.user_metadata?.name || "",
+      });
       await load();
     }
     setCheckingOut(false);
