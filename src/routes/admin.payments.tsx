@@ -59,7 +59,7 @@ function AdminPayments() {
 
   const load = async () => {
     setLoading(true);
-    const [coachWithdrawalRes, studentWithdrawalRes, transactionRes] = await Promise.all([
+    const [coachWithdrawalRes, studentWithdrawalRes, transactionRes, mpRes] = await Promise.all([
       supabase
         .from("withdrawal_requests")
         .select("*, profiles!withdrawal_requests_profile_id_fkey(name, email)")
@@ -73,11 +73,17 @@ function AdminPayments() {
         .select("id,gross_amount,status,purchase_type,payment_method,created_at,paid_at,metadata,students!transactions_student_id_fkey(profiles!students_profile_id_fkey(name,email)),products!transactions_product_id_fkey(name)")
         .order("created_at", { ascending: false })
         .limit(100),
+      supabase
+        .from("mercadopago_payments" as never)
+        .select("id,mp_payment_id,source_kind,amount,status,payment_method,payer_email,payer_name,paid_at,created_at" as never)
+        .order("created_at" as never, { ascending: false })
+        .limit(200),
     ]);
     const coachWithdrawals = ((coachWithdrawalRes.data as unknown as CoachWithdrawalRow[]) || []).map((w) => ({ ...w, kind: "coach", owner: w.profiles })) as Withdrawal[];
     const studentWithdrawals = ((studentWithdrawalRes.data as unknown as StudentWithdrawalRow[]) || []).map((w) => ({ ...w, kind: "student", owner: w.students?.profiles || null })) as Withdrawal[];
     setWithdrawals([...coachWithdrawals, ...studentWithdrawals].sort((a, b) => new Date(b.requested_at || 0).getTime() - new Date(a.requested_at || 0).getTime()));
     setTransactions((transactionRes.data as unknown as Transaction[]) || []);
+    setMpPayments((mpRes.data as unknown as MpPayment[]) || []);
     setLoading(false);
   };
 
