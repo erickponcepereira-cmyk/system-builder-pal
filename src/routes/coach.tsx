@@ -4,7 +4,7 @@ import {
   Users, TrendingUp, Wallet, Plus, BarChart3, User, LogOut,
   Menu, X, Calculator, Trophy, Copy, Share2, ArrowUpRight, ClipboardList, CalendarCheck,
   Package, ShoppingBag, Gift, Network, Crown, UserRound, Save, Mail, Phone, MapPin,
-  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat, Sun, Moon, Camera, History, Award, GraduationCap, Activity,
+  BookOpen, Dumbbell, Percent, Star, ChevronDown, ChevronRight, Repeat, Camera, History, Award, GraduationCap, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
