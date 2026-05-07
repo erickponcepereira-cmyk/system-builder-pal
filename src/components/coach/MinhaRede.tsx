@@ -220,7 +220,7 @@ function NodoArvore({
           {podeAdd && (
             <button
               onClick={adicionarFilho}
-              title={`Adicionar N${nivel + 2} abaixo de ${node.nome}`}
+              title={`Adicionar L${nivel + 2} abaixo de ${node.nome}`}
               className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${COR[nivel + 1].bg} ${COR[nivel + 1].text} ${COR[nivel + 1].border} hover:opacity-80`}
             >
               <Plus size={11} /> L{nivel + 2}
