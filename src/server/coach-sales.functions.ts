@@ -162,6 +162,7 @@ export const createCoachSale = createServerFn({ method: "POST" })
       quantity: i.quantity,
       unit_price: i.unitPrice,
       total_price: i.unitPrice * i.quantity,
+      metadata: i.kind === "item" ? { store_item_id: i.productId } : {},
     }));
     const { error: itemsErr } = await supabaseAdmin.from("store_order_items").insert(itemsPayload);
     if (itemsErr) throw new Error(itemsErr.message);
