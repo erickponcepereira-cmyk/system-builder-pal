@@ -165,3 +165,76 @@ export const createCoachSale = createServerFn({ method: "POST" })
       payUrl: `/pay/${order.order_number}`,
     };
   });
+
+/** Lista todas as vendas registradas pelo coach (ou para alunos do coach). */
+export const listCoachSalesHistory = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CoachSaleRow[]> => {
+    const coachId = await getCoachIdForUser(context.userId);
+    if (!coachId) return [];
+
+    // Pedidos de alunos do coach OU pedidos com metadata.created_by_coach_id = coachId
+    const { data: studentRows } = await supabaseAdmin
+      .from("students").select("id").eq("coach_id", coachId);
+    const studentIds = (studentRows || []).map((s: any) => s.id);
+
+    const { data: orders } = await supabaseAdmin
+      .from("store_orders")
+      .select("id, order_number, status, total_amount, created_at, payment_method, student_id, metadata, students:student_id(profiles:profile_id(name)), store_order_items(title)")
+      .or(
+        [
+          studentIds.length ? `student_id.in.(${studentIds.join(",")})` : null,
+          `metadata->>created_by_coach_id.eq.${coachId}`,
+        ].filter(Boolean).join(",")
+      )
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    const orderIds = (orders || []).map((o: any) => o.id);
+    const { data: txs } = orderIds.length
+      ? await supabaseAdmin
+          .from("transactions")
+          .select("id, metadata, status, gross_amount")
+          .filter("metadata->>store_order_id", "in", `(${orderIds.join(",")})`)
+      : { data: [] as any[] };
+    const txByOrder = new Map<string, any>();
+    (txs || []).forEach((t: any) => {
+      const oid = t.metadata?.store_order_id;
+      if (oid) txByOrder.set(oid, t);
+    });
+
+    const txIds = (txs || []).map((t: any) => t.id);
+    const { data: comms } = txIds.length
+      ? await supabaseAdmin
+          .from("commissions")
+          .select("transaction_id, amount, status, beneficiary_coach_id")
+          .in("transaction_id", txIds)
+          .eq("beneficiary_coach_id", coachId)
+      : { data: [] as any[] };
+    const commByTx = new Map<string, { amount: number; status: string | null }>();
+    (comms || []).forEach((c: any) => {
+      const prev = commByTx.get(c.transaction_id) || { amount: 0, status: c.status };
+      commByTx.set(c.transaction_id, {
+        amount: prev.amount + Number(c.amount || 0),
+        status: c.status,
+      });
+    });
+
+    return (orders || []).map((o: any) => {
+      const tx = txByOrder.get(o.id);
+      const comm = tx ? commByTx.get(tx.id) : null;
+      const titles = ((o.store_order_items as any[]) || []).map((i) => i.title).join(", ");
+      return {
+        orderId: o.id,
+        orderNumber: o.order_number,
+        status: o.status,
+        total: Number(o.total_amount || 0),
+        createdAt: o.created_at,
+        paymentMethod: o.payment_method,
+        clientName: o.students?.profiles?.name || "Cliente",
+        productTitles: titles || "—",
+        commissionAmount: comm?.amount || 0,
+        commissionStatus: comm?.status || null,
+      };
+    });
+  });
