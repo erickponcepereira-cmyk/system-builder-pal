@@ -144,7 +144,15 @@ export function StoreItemsManager() {
         commission_level1: Number(editing.commission_level1) || 0,
         commission_level2: Number(editing.commission_level2) || 0,
         commission_level3: Number(editing.commission_level3) || 0,
-      };
+        tax_mode: editing.tax_mode || "percent",
+        card_fee_mode: editing.card_fee_mode || "percent",
+        app_fee_mode: editing.app_fee_mode || "percent",
+        marketing_mode: editing.marketing_mode || "percent",
+        other_mode: editing.other_mode || "percent",
+        commission_coach_mode: editing.commission_coach_mode || "percent",
+        commission_level1_mode: editing.commission_level1_mode || "percent",
+        commission_level2_mode: editing.commission_level2_mode || "percent",
+        commission_level3_mode: editing.commission_level3_mode || "percent",
       if (editing.id) {
         await supabase.from("store_items").update(payload).eq("id", editing.id);
       } else {
