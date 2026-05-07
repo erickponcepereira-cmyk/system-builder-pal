@@ -11,7 +11,7 @@ import { ProductDetailModal, type ProductDetail } from "@/components/store/Produ
 import {
   listCoachClients, createCoachSale, listCoachSalesHistory,
   type SaleClient, type CoachSaleRow,
-} from "@/server/coach-sales.functions";
+} from "@/lib/coach-sales.functions";
 
 type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
@@ -482,6 +482,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
               amount={payOrder.total}
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
+              initialMethod={paymentMethod === "pix" ? "pix" : "card"}
               onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); load(); if (coachMode) fetchSales().then(setSalesHistory).catch(() => {}); }}
             />
             {coachMode && (

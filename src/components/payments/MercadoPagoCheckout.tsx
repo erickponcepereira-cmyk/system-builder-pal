@@ -13,13 +13,14 @@ interface Props {
   amount: number;
   description: string;
   defaultPayer?: Payer;
+  initialMethod?: "pix" | "card";
   onApproved?: () => void;
 }
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function MercadoPagoCheckout({ source, amount, description, defaultPayer, onApproved }: Props) {
-  const [tab, setTab] = useState<"pix" | "card">("pix");
+export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", onApproved }: Props) {
+  const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
 
   // PIX
