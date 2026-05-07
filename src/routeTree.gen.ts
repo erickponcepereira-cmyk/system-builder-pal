@@ -27,6 +27,7 @@ import { Route as StudentNotificationsRouteImport } from './routes/student.notif
 import { Route as StudentLibraryRouteImport } from './routes/student.library'
 import { Route as StudentHealthRouteImport } from './routes/student.health'
 import { Route as StudentGroupRouteImport } from './routes/student.group'
+import { Route as StudentFreebiesRouteImport } from './routes/student.freebies'
 import { Route as StudentEvolutionRouteImport } from './routes/student.evolution'
 import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-course'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
@@ -143,6 +144,11 @@ const StudentHealthRoute = StudentHealthRouteImport.update({
 const StudentGroupRoute = StudentGroupRouteImport.update({
   id: '/group',
   path: '/group',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentFreebiesRoute = StudentFreebiesRouteImport.update({
+  id: '/freebies',
+  path: '/freebies',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentEvolutionRoute = StudentEvolutionRouteImport.update({
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
+  '/student/freebies': typeof StudentFreebiesRoute
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
+  '/student/freebies': typeof StudentFreebiesRoute
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
+  '/student/freebies': typeof StudentFreebiesRoute
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
@@ -455,6 +464,7 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
+    | '/student/freebies'
     | '/student/group'
     | '/student/health'
     | '/student/library'
@@ -500,6 +510,7 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
+    | '/student/freebies'
     | '/student/group'
     | '/student/health'
     | '/student/library'
@@ -547,6 +558,7 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
+    | '/student/freebies'
     | '/student/group'
     | '/student/health'
     | '/student/library'
@@ -708,6 +720,13 @@ declare module '@tanstack/react-router' {
       path: '/group'
       fullPath: '/student/group'
       preLoaderRoute: typeof StudentGroupRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/freebies': {
+      id: '/student/freebies'
+      path: '/freebies'
+      fullPath: '/student/freebies'
+      preLoaderRoute: typeof StudentFreebiesRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/evolution': {
@@ -959,6 +978,7 @@ interface StudentRouteChildren {
   StudentChallengeRoute: typeof StudentChallengeRoute
   StudentCoachCourseRoute: typeof StudentCoachCourseRoute
   StudentEvolutionRoute: typeof StudentEvolutionRoute
+  StudentFreebiesRoute: typeof StudentFreebiesRoute
   StudentGroupRoute: typeof StudentGroupRoute
   StudentHealthRoute: typeof StudentHealthRoute
   StudentLibraryRoute: typeof StudentLibraryRoute
@@ -974,6 +994,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentChallengeRoute: StudentChallengeRoute,
   StudentCoachCourseRoute: StudentCoachCourseRoute,
   StudentEvolutionRoute: StudentEvolutionRoute,
+  StudentFreebiesRoute: StudentFreebiesRoute,
   StudentGroupRoute: StudentGroupRoute,
   StudentHealthRoute: StudentHealthRoute,
   StudentLibraryRoute: StudentLibraryRoute,
