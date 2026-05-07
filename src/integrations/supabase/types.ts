@@ -3177,6 +3177,71 @@ export type Database = {
           },
         ]
       }
+      saved_payment_cards: {
+        Row: {
+          brand: string | null
+          cardholder_name: string | null
+          created_at: string
+          expiration_month: number | null
+          expiration_year: number | null
+          first_six: string | null
+          id: string
+          is_default: boolean
+          issuer_id: string | null
+          last_four: string | null
+          mp_card_id: string
+          mp_customer_id: string | null
+          payer_email: string | null
+          payment_method_id: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          cardholder_name?: string | null
+          created_at?: string
+          expiration_month?: number | null
+          expiration_year?: number | null
+          first_six?: string | null
+          id?: string
+          is_default?: boolean
+          issuer_id?: string | null
+          last_four?: string | null
+          mp_card_id: string
+          mp_customer_id?: string | null
+          payer_email?: string | null
+          payment_method_id?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          cardholder_name?: string | null
+          created_at?: string
+          expiration_month?: number | null
+          expiration_year?: number | null
+          first_six?: string | null
+          id?: string
+          is_default?: boolean
+          issuer_id?: string | null
+          last_four?: string | null
+          mp_card_id?: string
+          mp_customer_id?: string | null
+          payer_email?: string | null
+          payment_method_id?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_payment_cards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_categories: {
         Row: {
           created_at: string
