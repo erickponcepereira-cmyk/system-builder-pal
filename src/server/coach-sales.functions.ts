@@ -110,7 +110,7 @@ export type CartInput = {
   clientId: string;
   items: Array<{
     productId: string;
-    kind: "challenge" | "digital" | "store";
+    kind: "challenge" | "digital" | "store" | "item";
     title: string;
     unitPrice: number;
     quantity: number;
