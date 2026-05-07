@@ -23,7 +23,13 @@ interface Product {
   commission_level1: number | null;
   commission_level2: number | null;
   commission_level3: number | null;
+  network_commission_percentage: number | null;
   app_fee_percentage: number | null;
+  cost: number | null;
+  tax_percentage: number | null;
+  card_fee_percentage: number | null;
+  marketing_plan: number | null;
+  other_costs: number | null;
   feature_calorie_ai?: boolean | null;
   feature_bioimpedance?: boolean | null;
   feature_group_chat?: boolean | null;
@@ -50,6 +56,7 @@ const FEATURES = [
 function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [editTab, setEditTab] = useState<"general" | "financial">("general");
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -62,6 +69,7 @@ function AdminProducts() {
   useEffect(() => { load(); }, []);
 
   const startNew = () => {
+    setEditTab("general");
     setEditing({
       id: "",
       name: "",
@@ -75,12 +83,23 @@ function AdminProducts() {
       commission_level1: 15,
       commission_level2: 5,
       commission_level3: 3,
+      network_commission_percentage: 0,
       app_fee_percentage: 10,
+      cost: 0,
+      tax_percentage: 0,
+      card_fee_percentage: 0,
+      marketing_plan: 0,
+      other_costs: 0,
     });
   };
 
   const save = async () => {
     if (!editing) return;
+    if (editing.cost !== null && editing.cost !== undefined && Number(editing.cost) > Number(editing.price || 0)) {
+      toast.error("Custo não pode ser maior que o preço de venda.");
+      setEditTab("financial");
+      return;
+    }
     const payload = { ...editing };
     let error;
     if (editing.id) {
@@ -112,90 +131,135 @@ function AdminProducts() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {/* Basic info */}
-          <Section title="Informações básicas">
-            <Field label="Nome">
-              <Input value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
-            </Field>
-            <Field label="Descrição">
-              <textarea
-                value={editing.description || ""}
-                onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                rows={3}
-                className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
-                style={{ backgroundColor: "#0F0F0F" }}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Preço (R$)">
-                <Input type="number" value={editing.price} onChange={(v) => setEditing({ ...editing, price: Number(v) })} />
+        <div className="mb-4 flex gap-2 border-b border-white/10">
+          <button
+            onClick={() => setEditTab("general")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${editTab === "general" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}
+          >
+            Geral
+          </button>
+          <button
+            onClick={() => setEditTab("financial")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${editTab === "financial" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}
+          >
+            Financeiro
+          </button>
+        </div>
+
+        {editTab === "general" && (
+          <div className="space-y-4">
+            <Section title="Informações básicas">
+              <Field label="Nome">
+                <Input value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
               </Field>
-              <Field label="Preço original (R$)">
-                <Input type="number" value={editing.original_price || ""} onChange={(v) => setEditing({ ...editing, original_price: v ? Number(v) : null })} />
-              </Field>
-              <Field label="Duração (dias)">
-                <Input type="number" value={editing.duration_days || 30} onChange={(v) => setEditing({ ...editing, duration_days: Number(v) })} />
-              </Field>
-              <Field label="Status">
-                <select
-                  value={editing.status || "active"}
-                  onChange={(e) => setEditing({ ...editing!, status: e.target.value })}
-                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              <Field label="Descrição">
+                <textarea
+                  value={editing.description || ""}
+                  onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
                   style={{ backgroundColor: "#0F0F0F" }}
-                >
-                  <option value="active">Ativo</option>
-                  <option value="inactive">Inativo</option>
-                </select>
+                />
               </Field>
-            </div>
-          </Section>
-
-          {/* Commissions */}
-          <Section title="Comissões MLM (%)">
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              <Field label="Coach (direto)">
-                <Input type="number" value={editing.commission_coach || 0} onChange={(v) => setEditing({ ...editing, commission_coach: Number(v) })} />
-              </Field>
-              <Field label="Nível 1">
-                <Input type="number" value={editing.commission_level1 || 0} onChange={(v) => setEditing({ ...editing, commission_level1: Number(v) })} />
-              </Field>
-              <Field label="Nível 2">
-                <Input type="number" value={editing.commission_level2 || 0} onChange={(v) => setEditing({ ...editing, commission_level2: Number(v) })} />
-              </Field>
-              <Field label="Nível 3">
-                <Input type="number" value={editing.commission_level3 || 0} onChange={(v) => setEditing({ ...editing, commission_level3: Number(v) })} />
-              </Field>
-              <Field label="Taxa app (%)">
-                <Input type="number" value={editing.app_fee_percentage || 0} onChange={(v) => setEditing({ ...editing, app_fee_percentage: Number(v) })} />
-              </Field>
-            </div>
-          </Section>
-
-          {/* Features matrix */}
-          <Section title="Features inclusas">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {FEATURES.map((f) => {
-                const enabled = !!editing[f.key as keyof Product];
-                return (
-                  <label
-                    key={f.key}
-                    className="flex items-center gap-3 rounded-lg p-3 cursor-pointer hover:bg-white/5"
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Preço (R$)">
+                  <Input type="number" value={editing.price} onChange={(v) => setEditing({ ...editing, price: Number(v) })} />
+                </Field>
+                <Field label="Preço original (R$)">
+                  <Input type="number" value={editing.original_price || ""} onChange={(v) => setEditing({ ...editing, original_price: v ? Number(v) : null })} />
+                </Field>
+                <Field label="Duração (dias)">
+                  <Input type="number" value={editing.duration_days || 30} onChange={(v) => setEditing({ ...editing, duration_days: Number(v) })} />
+                </Field>
+                <Field label="Status">
+                  <select
+                    value={editing.status || "active"}
+                    onChange={(e) => setEditing({ ...editing!, status: e.target.value })}
+                    className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
                     style={{ backgroundColor: "#0F0F0F" }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={(e) => setEditing({ ...editing, [f.key]: e.target.checked } as Product)}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    <span className="text-sm text-white">{f.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </Section>
-        </div>
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </Field>
+              </div>
+            </Section>
+
+            <Section title="Features inclusas">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {FEATURES.map((f) => {
+                  const enabled = !!editing[f.key as keyof Product];
+                  return (
+                    <label
+                      key={f.key}
+                      className="flex items-center gap-3 rounded-lg p-3 cursor-pointer hover:bg-white/5"
+                      style={{ backgroundColor: "#0F0F0F" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={(e) => setEditing({ ...editing, [f.key]: e.target.checked } as Product)}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      <span className="text-sm text-white">{f.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {editTab === "financial" && (
+          <div className="space-y-4">
+            <Section title="Custos">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                <Field label="Custo do produto (R$)">
+                  <Input type="number" value={editing.cost ?? 0} onChange={(v) => setEditing({ ...editing, cost: Number(v) })} />
+                </Field>
+                <Field label="Imposto (%)">
+                  <Input type="number" value={editing.tax_percentage ?? 0} onChange={(v) => setEditing({ ...editing, tax_percentage: Number(v) })} />
+                </Field>
+                <Field label="Taxa da maquininha (%)">
+                  <Input type="number" value={editing.card_fee_percentage ?? 0} onChange={(v) => setEditing({ ...editing, card_fee_percentage: Number(v) })} />
+                </Field>
+                <Field label="Taxa do sistema (%)">
+                  <Input type="number" value={editing.app_fee_percentage ?? 0} onChange={(v) => setEditing({ ...editing, app_fee_percentage: Number(v) })} />
+                </Field>
+                <Field label="Plano de marketing (%)">
+                  <Input type="number" value={editing.marketing_plan ?? 0} onChange={(v) => setEditing({ ...editing, marketing_plan: Number(v) })} />
+                </Field>
+                <Field label="Outros (%)">
+                  <Input type="number" value={editing.other_costs ?? 0} onChange={(v) => setEditing({ ...editing, other_costs: Number(v) })} />
+                </Field>
+              </div>
+            </Section>
+
+            <Section title="Comissões (%)">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <Field label="Coach (direto)">
+                  <Input type="number" value={editing.commission_coach || 0} onChange={(v) => setEditing({ ...editing, commission_coach: Number(v) })} />
+                </Field>
+                <Field label="Rede (total)">
+                  <Input type="number" value={editing.network_commission_percentage ?? 0} onChange={(v) => setEditing({ ...editing, network_commission_percentage: Number(v) })} />
+                </Field>
+                <Field label="Linha 1">
+                  <Input type="number" value={editing.commission_level1 || 0} onChange={(v) => setEditing({ ...editing, commission_level1: Number(v) })} />
+                </Field>
+                <Field label="Linha 2">
+                  <Input type="number" value={editing.commission_level2 || 0} onChange={(v) => setEditing({ ...editing, commission_level2: Number(v) })} />
+                </Field>
+                <Field label="Linha 3">
+                  <Input type="number" value={editing.commission_level3 || 0} onChange={(v) => setEditing({ ...editing, commission_level3: Number(v) })} />
+                </Field>
+              </div>
+            </Section>
+
+            <Section title="Resumo">
+              <SummaryRow editing={editing} />
+            </Section>
+          </div>
+        )}
       </>
     );
   }
@@ -280,5 +344,37 @@ function Input({ value, onChange, type = "text" }: { value: string | number; onC
       className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
       style={{ backgroundColor: "#0F0F0F" }}
     />
+  );
+}
+
+function SummaryRow({ editing }: { editing: Product }) {
+  const price = Number(editing.price || 0);
+  const cost = Number(editing.cost || 0);
+  const pctTotal =
+    Number(editing.tax_percentage || 0) +
+    Number(editing.card_fee_percentage || 0) +
+    Number(editing.app_fee_percentage || 0) +
+    Number(editing.marketing_plan || 0) +
+    Number(editing.other_costs || 0) +
+    Number(editing.commission_coach || 0) +
+    Number(editing.network_commission_percentage || 0);
+  const deductions = (price * pctTotal) / 100;
+  const margin = price - cost - deductions;
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p>
+      </div>
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p>
+      </div>
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Repasses ({pctTotal.toFixed(1)}%)</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p>
+      </div>
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-success"}`}>{fmt(margin)}</p>
+      </div>
+    </div>
   );
 }

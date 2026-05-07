@@ -21,7 +21,7 @@ const sections = [
   {
     title: "Programa",
     items: [
-      { icon: Gift, label: "Clube de benefícios", to: "/student/benefits" },
+      { icon: Gift, label: "Gratuitos", to: "/student/freebies" },
       { icon: Users, label: "Indicar amigos" },
       { icon: GraduationCap, label: "Meus cursos", to: "/student/library" },
     ],

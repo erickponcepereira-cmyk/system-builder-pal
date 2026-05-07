@@ -22,6 +22,7 @@ import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
+import { StorePage } from "./student.store";
 
 
 export const Route = createFileRoute("/coach")({
@@ -873,17 +874,7 @@ function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
 }
 
 function PhysicalStoreTab() {
-  const [items, setItems] = useState<StoreProductRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.from("store_products").select("id,name,description,price,original_price,category,stock,is_herbalife,status").eq("status", "active").order("sort_order", { ascending: true });
-      if (error) toast.error("Erro ao carregar loja física");
-      setItems((data as StoreProductRow[]) || []);
-      setLoading(false);
-    })();
-  }, []);
-  return <StoreGrid title="Loja de Produtos Físicos" subtitle="Produtos para demonstrar a clientes e opções com condição de coach" items={items} loading={loading} kind="physical" />;
+  return <StorePage />;
 }
 
 function DigitalStoreTab() {
