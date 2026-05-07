@@ -105,7 +105,7 @@ function StorePage() {
         price: Number(it.price || 0),
         originalPrice: it.original_price ? Number(it.original_price) : null,
         category: sectionName(it.section_id),
-        kind: (it.kind === "digital" ? "digital" : "store") as ProductKind,
+        kind: "item" as const,
         tag: it.kind === "digital" ? "Digital" : undefined,
         stock: it.kind === "physical" ? it.stock : null,
         imageUrl: it.image_url,
