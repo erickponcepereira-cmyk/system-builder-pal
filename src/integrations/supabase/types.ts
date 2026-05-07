@@ -4282,6 +4282,19 @@ export type Database = {
         Returns: undefined
       }
       count_active_admins: { Args: never; Returns: number }
+      create_coach_sale: {
+        Args: {
+          _client_id: string
+          _items: Json
+          _notes?: string
+          _payment_method?: Database["public"]["Enums"]["payment_method"]
+        }
+        Returns: {
+          order_id: string
+          order_number: string
+          total: number
+        }[]
+      }
       create_store_order: {
         Args: {
           _items: Json
