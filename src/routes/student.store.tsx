@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2 } from "lucide-react";
+import { CheckCircle2, Gift, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
