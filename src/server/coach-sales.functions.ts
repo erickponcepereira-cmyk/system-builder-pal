@@ -14,8 +14,30 @@ export type SaleProduct = {
   id: string;
   kind: "challenge" | "digital" | "store";
   title: string;
+  description?: string | null;
+  imageUrl?: string | null;
   price: number;
+  originalPrice?: number | null;
   category?: string | null;
+  commissionCoach?: number | null;
+  commissionLevel1?: number | null;
+  commissionLevel2?: number | null;
+  commissionLevel3?: number | null;
+  appFee?: number | null;
+  stock?: number | null;
+};
+
+export type CoachSaleRow = {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  createdAt: string;
+  paymentMethod: string;
+  clientName: string;
+  productTitles: string;
+  commissionAmount: number;
+  commissionStatus: string | null;
 };
 
 async function getCoachIdForUser(userId: string) {
