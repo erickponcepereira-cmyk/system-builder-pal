@@ -216,7 +216,7 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
 /** Aplica liberação do produto/transação após pagamento aprovado. */
 export async function applyApproval(kind: "store_order" | "transaction", id: string) {
   if (kind === "store_order") {
-    await supabaseAdmin.from("store_orders").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", id);
+    await supabaseAdmin.from("store_orders").update({ status: "paid" }).eq("id", id);
     // O pedido tem uma transação espelho criada por create_store_order; atualiza ela também
     const { data: order } = await supabaseAdmin
       .from("store_orders")
