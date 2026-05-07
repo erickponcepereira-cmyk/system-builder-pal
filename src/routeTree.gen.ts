@@ -43,6 +43,7 @@ import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
+import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
@@ -223,6 +224,11 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
+  id: '/freebies',
+  path: '/freebies',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDigitalProductsRoute = AdminDigitalProductsRouteImport.update({
   id: '/digital-products',
   path: '/digital-products',
@@ -283,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -326,6 +333,7 @@ export interface FileRoutesByTo {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/freebies'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/freebies'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
@@ -507,6 +518,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/freebies'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
@@ -798,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOrdersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/freebies': {
+      id: '/admin/freebies'
+      path: '/freebies'
+      fullPath: '/admin/freebies'
+      preLoaderRoute: typeof AdminFreebiesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/digital-products': {
       id: '/admin/digital-products'
       path: '/digital-products'
@@ -881,6 +900,7 @@ interface AdminRouteChildren {
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
+  AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
@@ -898,6 +918,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
+  AdminFreebiesRoute: AdminFreebiesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
