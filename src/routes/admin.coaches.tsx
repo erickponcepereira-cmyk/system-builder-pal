@@ -36,12 +36,16 @@ function AdminCoaches() {
   const [filter, setFilter] = useState<"pending" | "approved" | "all">("pending");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [transferring, setTransferring] = useState<CoachRow | null>(null);
+  const [transferTargetId, setTransferTargetId] = useState("");
+  const [transferSearch, setTransferSearch] = useState("");
+  const [acting, setActing] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
       .from("coaches")
-      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,cpf)")
+      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,cpf,status)")
       .order("created_at", { ascending: false });
     setCoaches((data as unknown as CoachRow[]) || []);
     setLoading(false);
