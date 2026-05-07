@@ -14,8 +14,30 @@ export type SaleProduct = {
   id: string;
   kind: "challenge" | "digital" | "store";
   title: string;
+  description?: string | null;
+  imageUrl?: string | null;
   price: number;
+  originalPrice?: number | null;
   category?: string | null;
+  commissionCoach?: number | null;
+  commissionLevel1?: number | null;
+  commissionLevel2?: number | null;
+  commissionLevel3?: number | null;
+  appFee?: number | null;
+  stock?: number | null;
+};
+
+export type CoachSaleRow = {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  total: number;
+  createdAt: string;
+  paymentMethod: string;
+  clientName: string;
+  productTitles: string;
+  commissionAmount: number;
+  commissionStatus: string | null;
 };
 
 async function getCoachIdForUser(userId: string) {
@@ -50,19 +72,28 @@ export const listSellableProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async (): Promise<SaleProduct[]> => {
     const [{ data: challenges }, { data: digitals }, { data: stores }] = await Promise.all([
-      supabaseAdmin.from("products").select("id,name,price,type").eq("status", "active"),
-      supabaseAdmin.from("digital_products").select("id,title,price,type").eq("status", "active"),
-      supabaseAdmin.from("store_products").select("id,name,price,category").eq("status", "active"),
+      supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active"),
+      supabaseAdmin.from("digital_products").select("id,title,description,price,original_price,type,cover_url").eq("status", "active"),
+      supabaseAdmin.from("store_products").select("id,name,description,price,original_price,category,image_url,stock").eq("status", "active"),
     ]);
     const out: SaleProduct[] = [];
     (challenges || []).forEach((p: any) => out.push({
-      id: p.id, kind: "challenge", title: p.name, price: Number(p.price || 0), category: p.type,
+      id: p.id, kind: "challenge", title: p.name, description: p.description, imageUrl: p.image_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.type,
+      commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
+      commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
+      appFee: p.app_fee,
     }));
     (digitals || []).forEach((p: any) => out.push({
-      id: p.id, kind: "digital", title: p.title, price: Number(p.price || 0), category: p.type,
+      id: p.id, kind: "digital", title: p.title, description: p.description, imageUrl: p.cover_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.type,
     }));
     (stores || []).forEach((p: any) => out.push({
-      id: p.id, kind: "store", title: p.name, price: Number(p.price || 0), category: p.category,
+      id: p.id, kind: "store", title: p.name, description: p.description, imageUrl: p.image_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.category, stock: p.stock,
     }));
     return out;
   });
@@ -133,4 +164,77 @@ export const createCoachSale = createServerFn({ method: "POST" })
       total: Number(order.total_amount),
       payUrl: `/pay/${order.order_number}`,
     };
+  });
+
+/** Lista todas as vendas registradas pelo coach (ou para alunos do coach). */
+export const listCoachSalesHistory = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CoachSaleRow[]> => {
+    const coachId = await getCoachIdForUser(context.userId);
+    if (!coachId) return [];
+
+    // Pedidos de alunos do coach OU pedidos com metadata.created_by_coach_id = coachId
+    const { data: studentRows } = await supabaseAdmin
+      .from("students").select("id").eq("coach_id", coachId);
+    const studentIds = (studentRows || []).map((s: any) => s.id);
+
+    const { data: orders } = await supabaseAdmin
+      .from("store_orders")
+      .select("id, order_number, status, total_amount, created_at, payment_method, student_id, metadata, students:student_id(profiles:profile_id(name)), store_order_items(title)")
+      .or(
+        [
+          studentIds.length ? `student_id.in.(${studentIds.join(",")})` : null,
+          `metadata->>created_by_coach_id.eq.${coachId}`,
+        ].filter(Boolean).join(",")
+      )
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    const orderIds = (orders || []).map((o: any) => o.id);
+    const { data: txs } = orderIds.length
+      ? await supabaseAdmin
+          .from("transactions")
+          .select("id, metadata, status, gross_amount")
+          .filter("metadata->>store_order_id", "in", `(${orderIds.join(",")})`)
+      : { data: [] as any[] };
+    const txByOrder = new Map<string, any>();
+    (txs || []).forEach((t: any) => {
+      const oid = t.metadata?.store_order_id;
+      if (oid) txByOrder.set(oid, t);
+    });
+
+    const txIds = (txs || []).map((t: any) => t.id);
+    const { data: comms } = txIds.length
+      ? await supabaseAdmin
+          .from("commissions")
+          .select("transaction_id, amount, status, beneficiary_coach_id")
+          .in("transaction_id", txIds)
+          .eq("beneficiary_coach_id", coachId)
+      : { data: [] as any[] };
+    const commByTx = new Map<string, { amount: number; status: string | null }>();
+    (comms || []).forEach((c: any) => {
+      const prev = commByTx.get(c.transaction_id) || { amount: 0, status: c.status };
+      commByTx.set(c.transaction_id, {
+        amount: prev.amount + Number(c.amount || 0),
+        status: c.status,
+      });
+    });
+
+    return (orders || []).map((o: any) => {
+      const tx = txByOrder.get(o.id);
+      const comm = tx ? commByTx.get(tx.id) : null;
+      const titles = ((o.store_order_items as any[]) || []).map((i) => i.title).join(", ");
+      return {
+        orderId: o.id,
+        orderNumber: o.order_number,
+        status: o.status,
+        total: Number(o.total_amount || 0),
+        createdAt: o.created_at,
+        paymentMethod: o.payment_method,
+        clientName: o.students?.profiles?.name || "Cliente",
+        productTitles: titles || "—",
+        commissionAmount: comm?.amount || 0,
+        commissionStatus: comm?.status || null,
+      };
+    });
   });

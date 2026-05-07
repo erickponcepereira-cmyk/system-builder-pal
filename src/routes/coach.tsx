@@ -375,7 +375,7 @@ function CoachDashboard() {
           {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
-          {activeTab === "physicalStore" && <PhysicalStoreTab />}
+          {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "attendance" && <AttendanceTab />}
@@ -873,8 +873,8 @@ function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
   );
 }
 
-function PhysicalStoreTab() {
-  return <StorePage />;
+function PhysicalStoreTab({ hasUpline }: { hasUpline: boolean }) {
+  return <StorePage coachMode hasUpline={hasUpline} />;
 }
 
 function DigitalStoreTab() {
