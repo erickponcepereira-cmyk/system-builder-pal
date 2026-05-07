@@ -26,6 +26,7 @@ interface StoreProduct {
   minPrice?: number | null;
   maxPrice?: number | null;
   stock?: number | null;
+  imageUrl?: string | null;
 }
 
 type CartItem = StoreProduct & { quantity: number };
