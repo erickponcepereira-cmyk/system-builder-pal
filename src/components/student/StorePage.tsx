@@ -256,11 +256,13 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       } as never);
       console.log("[coach sale response]", { res, rpcErr });
       if (rpcErr) throw new Error(rpcErr.message);
-      const row = (Array.isArray(res) ? res[0] : res) as { order_id: string; order_number: string; total: number } | null;
-      if (!row || !row.order_id) throw new Error("Pedido não retornado pelo servidor");
+      const row = (Array.isArray(res) ? res[0] : res) as { order_id?: string; orderId?: string; order_number?: string; orderNumber?: string; total?: number; total_amount?: number } | null;
+      const orderId = row?.order_id || row?.orderId;
+      const orderNumber = row?.order_number || row?.orderNumber || "pedido";
+      if (!orderId) throw new Error("Pedido não retornado pelo servidor");
       setCart([]); setCartOpen(false);
       setPayOrder({
-        id: row.order_id, total: Number(row.total), number: row.order_number,
+        id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
         email: selectedClient.email || "", name: selectedClient.name,
       });
       toast.success("Venda criada. Finalize o pagamento.");
