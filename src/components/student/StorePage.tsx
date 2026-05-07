@@ -244,13 +244,20 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         quantity: c.quantity,
       }));
       if (!items.length) { toast.error("Nenhum item compatível para venda do coach."); setCheckingOut(false); return; }
-      const res = await submitCoachSale({ data: { clientId: selectedClient.id, items, paymentMethod } });
+      const { data: res, error: rpcErr } = await supabase.rpc("create_coach_sale" as never, {
+        _client_id: selectedClient.id,
+        _items: items,
+        _payment_method: paymentMethod,
+        _notes: null,
+      } as never);
+      if (rpcErr) throw new Error(rpcErr.message);
+      const row = (Array.isArray(res) ? res[0] : res) as { order_id: string; order_number: string; total: number };
       setCart([]); setCartOpen(false);
       setPayOrder({
-        id: res.orderId, total: res.total, number: res.orderNumber,
+        id: row.order_id, total: Number(row.total), number: row.order_number,
         email: selectedClient.email || "", name: selectedClient.name,
       });
-      fetchSales().then(setSalesHistory).catch(() => { /* ignore */ });
+      loadCoachData();
     } catch (e: any) {
       toast.error(e?.message || "Erro ao registrar venda");
     } finally {
