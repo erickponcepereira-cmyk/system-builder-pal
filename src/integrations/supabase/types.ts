@@ -1170,6 +1170,50 @@ export type Database = {
           },
         ]
       }
+      coach_goals: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          new_students: number
+          prospections: number
+          reference_month: string
+          renewals: number
+          revenue: number
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          new_students?: number
+          prospections?: number
+          reference_month?: string
+          renewals?: number
+          revenue?: number
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          new_students?: number
+          prospections?: number
+          reference_month?: string
+          renewals?: number
+          revenue?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_goals_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_google_tokens: {
         Row: {
           access_token: string
