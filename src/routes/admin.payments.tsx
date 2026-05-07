@@ -37,10 +37,24 @@ interface Transaction {
 type CoachWithdrawalRow = Omit<Withdrawal, "kind" | "owner"> & { profiles: { name: string; email: string } | null };
 type StudentWithdrawalRow = Omit<Withdrawal, "kind" | "owner"> & { students: { profiles: { name: string; email: string } | null } | null };
 
+interface MpPayment {
+  id: string;
+  mp_payment_id: string;
+  source_kind: string;
+  amount: number;
+  status: string;
+  payment_method: string;
+  payer_email: string | null;
+  payer_name: string | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
 function AdminPayments() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activeTab, setActiveTab] = useState<"orders" | "withdrawals">("orders");
+  const [mpPayments, setMpPayments] = useState<MpPayment[]>([]);
+  const [activeTab, setActiveTab] = useState<"orders" | "withdrawals" | "mp">("orders");
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
