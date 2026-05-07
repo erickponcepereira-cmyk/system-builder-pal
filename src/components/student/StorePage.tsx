@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Gift, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
