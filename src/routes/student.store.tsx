@@ -124,12 +124,12 @@ function StorePage() {
   const paymentFee = subtotal * (paymentMethod === "pix" ? 0.01 : paymentMethod === "debit_card" ? 0.0169 : 0.0299);
   const taxAmount = subtotal * 0.06;
   const total = subtotal + paymentFee + taxAmount;
-  const requiresShipping = cart.some((item) => item.kind === "store");
+  const requiresShipping = cart.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const priceLabel = (item: StoreProduct) => item.isPriceRange && item.minPrice && item.maxPrice ? `${fmt(item.minPrice)} - ${fmt(item.maxPrice)}` : fmt(item.price);
 
   const addToCart = (item: StoreProduct) => {
-    if (item.kind === "store" && item.stock !== null && item.stock !== undefined && item.stock <= 0) {
+    if ((item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && item.stock <= 0) {
       toast.error("Produto sem estoque.");
       return;
     }
