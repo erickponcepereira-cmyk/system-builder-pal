@@ -1,10 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { blockCoachAdmin, transferCoachNetworkAdmin, unblockCoachAdmin } from "@/lib/admin-network.functions";
 
 export const Route = createFileRoute("/admin/coaches")({
   component: AdminCoaches,
@@ -42,9 +40,6 @@ function AdminCoaches() {
   const [transferTargetId, setTransferTargetId] = useState("");
   const [transferSearch, setTransferSearch] = useState("");
   const [acting, setActing] = useState<string | null>(null);
-  const blockCoachFn = useServerFn(blockCoachAdmin);
-  const unblockCoachFn = useServerFn(unblockCoachAdmin);
-  const transferNetworkFn = useServerFn(transferCoachNetworkAdmin);
 
   const load = async () => {
     setLoading(true);
@@ -94,17 +89,20 @@ function AdminCoaches() {
   const blockCoach = async (coachId: string) => {
     if (!confirm("Bloquear este coach? Ele perderá o acesso ao painel.")) return;
     setActing(`block-${coachId}`);
-    const result = await blockCoachFn({ data: { coachId, reason: "Bloqueado manualmente pelo administrador." } }).then(() => null).catch((e) => e);
+    const { error } = await supabase.rpc("block_inactive_coach" as never, {
+      _coach_id: coachId,
+      _reason: "Bloqueado manualmente pelo administrador.",
+    } as never);
     setActing(null);
-    if (result) toast.error(result?.message || "Erro ao desativar coach");
+    if (error) { console.error("[block]", error); toast.error(error.message || "Erro ao desativar coach"); }
     else { toast.success("Coach bloqueado"); load(); }
   };
 
   const unblockCoach = async (coachId: string) => {
     setActing(`unblock-${coachId}`);
-    const result = await unblockCoachFn({ data: { coachId } }).then(() => null).catch((e) => e);
+    const { error } = await supabase.rpc("unblock_coach" as never, { _coach_id: coachId } as never);
     setActing(null);
-    if (result) toast.error(result?.message || "Erro ao reativar coach");
+    if (error) { console.error("[unblock]", error); toast.error(error.message || "Erro ao reativar coach"); }
     else { toast.success("Coach reativado"); load(); }
   };
 
@@ -120,9 +118,13 @@ function AdminCoaches() {
       return;
     }
     setActing(`transfer-${transferring.id}`);
-    const result = await transferNetworkFn({ data: { fromCoachId: transferring.id, toCoachId: transferTargetId, reason: "Migração administrativa de rede." } }).then(() => null).catch((e) => e);
+    const { error } = await supabase.rpc("transfer_inactive_coach_network" as never, {
+      _from_coach_id: transferring.id,
+      _to_coach_id: transferTargetId,
+      _reason: "Migração administrativa de rede.",
+    } as never);
     setActing(null);
-    if (result) toast.error(result?.message || "Erro ao migrar rede");
+    if (error) { console.error("[transfer]", error); toast.error(error.message || "Erro ao migrar rede"); }
     else {
       toast.success("Rede transferida");
       setTransferring(null);
