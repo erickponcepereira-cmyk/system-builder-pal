@@ -12,7 +12,7 @@ export type SaleClient = {
 
 export type SaleProduct = {
   id: string;
-  kind: "challenge" | "digital" | "store";
+  kind: "challenge" | "digital" | "store" | "item";
   title: string;
   description?: string | null;
   imageUrl?: string | null;
