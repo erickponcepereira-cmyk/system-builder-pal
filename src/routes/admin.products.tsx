@@ -23,7 +23,13 @@ interface Product {
   commission_level1: number | null;
   commission_level2: number | null;
   commission_level3: number | null;
+  network_commission_percentage: number | null;
   app_fee_percentage: number | null;
+  cost: number | null;
+  tax_percentage: number | null;
+  card_fee_percentage: number | null;
+  marketing_plan: number | null;
+  other_costs: number | null;
   feature_calorie_ai?: boolean | null;
   feature_bioimpedance?: boolean | null;
   feature_group_chat?: boolean | null;
@@ -50,6 +56,7 @@ const FEATURES = [
 function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [editTab, setEditTab] = useState<"general" | "financial">("general");
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -62,6 +69,7 @@ function AdminProducts() {
   useEffect(() => { load(); }, []);
 
   const startNew = () => {
+    setEditTab("general");
     setEditing({
       id: "",
       name: "",
@@ -75,12 +83,23 @@ function AdminProducts() {
       commission_level1: 15,
       commission_level2: 5,
       commission_level3: 3,
+      network_commission_percentage: 0,
       app_fee_percentage: 10,
+      cost: 0,
+      tax_percentage: 0,
+      card_fee_percentage: 0,
+      marketing_plan: 0,
+      other_costs: 0,
     });
   };
 
   const save = async () => {
     if (!editing) return;
+    if (editing.cost !== null && editing.cost !== undefined && Number(editing.cost) > Number(editing.price || 0)) {
+      toast.error("Custo não pode ser maior que o preço de venda.");
+      setEditTab("financial");
+      return;
+    }
     const payload = { ...editing };
     let error;
     if (editing.id) {
