@@ -178,7 +178,7 @@ function StudentHome() {
             { icon: Camera, label: "Foto", to: "/student/evolution" },
             { icon: ShoppingBag, label: "Loja", to: "/student/store" },
             { icon: BookOpen, label: "Cursos", to: "/student/library" },
-            { icon: Gift, label: "Clube", to: "/student/benefits" },
+            { icon: Gift, label: "Gratuitos", to: "/student/freebies" },
             { icon: Apple, label: "Refeição", to: "/student/evolution" },
             { icon: Scale, label: "Pesagem", to: "/student/challenge" },
             { icon: Sparkles, label: "IA", to: "/student/evolution" },
