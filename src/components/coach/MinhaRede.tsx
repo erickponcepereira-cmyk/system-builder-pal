@@ -9,7 +9,7 @@ const TAXA_MAQ_PERC = 3.49;
 const TAXA_IMP_EMP_PERC = 6.0;
 const TAXA_SISTEMA_R = 20;
 const TAXA_IMP_PESSOA = 6.0;
-const REDE_PERCS = [10, 5, 3]; // N1, N2, N3
+const REDE_PERCS = [10, 5, 3]; // L1, L2, L3
 
 // ─── PRODUTOS BASE ──────────────────────────────────────────────────
 const PRODUTOS_BASE = [
@@ -107,7 +107,7 @@ function NivelBadge({ nivel }: { nivel: number }) {
   const c = COR[nivel];
   return (
     <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${c.bg} ${c.text} ${c.border}`}>
-      N{nivel + 1}
+      L{nivel + 1}
     </span>
   );
 }
@@ -220,10 +220,10 @@ function NodoArvore({
           {podeAdd && (
             <button
               onClick={adicionarFilho}
-              title={`Adicionar N${nivel + 2} abaixo de ${node.nome}`}
+              title={`Adicionar L${nivel + 2} abaixo de ${node.nome}`}
               className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border transition-all ${COR[nivel + 1].bg} ${COR[nivel + 1].text} ${COR[nivel + 1].border} hover:opacity-80`}
             >
-              <Plus size={11} /> N{nivel + 2}
+              <Plus size={11} /> L{nivel + 2}
             </button>
           )}
 
@@ -391,9 +391,9 @@ function AbaRede({
       <div className="grid grid-cols-4 gap-2">
         {[
           { label: "Total", val: todos.length, cor: "text-zinc-200" },
-          { label: "N1", val: n1count, cor: "text-violet-400" },
-          { label: "N2", val: n2count, cor: "text-emerald-400" },
-          { label: "N3", val: n3count, cor: "text-red-400" },
+          { label: "L1", val: n1count, cor: "text-violet-400" },
+          { label: "L2", val: n2count, cor: "text-emerald-400" },
+          { label: "L3", val: n3count, cor: "text-red-400" },
         ].map((s) => (
           <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
             <div className={`text-2xl font-bold ${s.cor}`}>{s.val}</div>
@@ -404,9 +404,9 @@ function AbaRede({
 
       <div className="flex flex-wrap gap-4 text-xs">
         {[
-          { nivel: 0, label: "N1 — indicação direta (10%)" },
-          { nivel: 1, label: "N2 — abaixo do N1 (5%)" },
-          { nivel: 2, label: "N3 — abaixo do N2 (3%)" },
+          { nivel: 0, label: "Linha 1 — indicação direta (10%)" },
+          { nivel: 1, label: "Linha 2 — abaixo da Linha 1 (5%)" },
+          { nivel: 2, label: "Linha 3 — abaixo da Linha 2 (3%)" },
         ].map((l) => (
           <div key={l.nivel} className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${COR[l.nivel].dot}`} />
@@ -449,7 +449,7 @@ function AbaRede({
               onClick={adicionarN1}
               className="flex items-center gap-1.5 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap"
             >
-              <Plus size={12} /> Add N1
+              <Plus size={12} /> Add L1
             </button>
           </div>
         </div>
@@ -458,7 +458,7 @@ function AbaRede({
           <div className="text-center py-10">
             <Users size={32} className="text-zinc-700 mx-auto mb-3" />
             <p className="text-zinc-500 text-sm">Nenhum membro ainda</p>
-            <p className="text-zinc-600 text-xs mt-1">Clique em "Add N1" para começar</p>
+            <p className="text-zinc-600 text-xs mt-1">Clique em "Add L1" para começar</p>
           </div>
         ) : (
           <div>
