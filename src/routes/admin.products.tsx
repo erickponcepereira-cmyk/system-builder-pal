@@ -346,3 +346,35 @@ function Input({ value, onChange, type = "text" }: { value: string | number; onC
     />
   );
 }
+
+function SummaryRow({ editing }: { editing: Product }) {
+  const price = Number(editing.price || 0);
+  const cost = Number(editing.cost || 0);
+  const pctTotal =
+    Number(editing.tax_percentage || 0) +
+    Number(editing.card_fee_percentage || 0) +
+    Number(editing.app_fee_percentage || 0) +
+    Number(editing.marketing_plan || 0) +
+    Number(editing.other_costs || 0) +
+    Number(editing.commission_coach || 0) +
+    Number(editing.network_commission_percentage || 0);
+  const deductions = (price * pctTotal) / 100;
+  const margin = price - cost - deductions;
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p>
+      </div>
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p>
+      </div>
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Repasses ({pctTotal.toFixed(1)}%)</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p>
+      </div>
+      <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+        <p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-success"}`}>{fmt(margin)}</p>
+      </div>
+    </div>
+  );
+}
