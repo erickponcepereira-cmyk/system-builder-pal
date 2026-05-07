@@ -1,102 +1,73 @@
+## Escopo do trabalho
 
-## Objetivo
+Esta é uma lista grande com 11 melhorias diferentes, em áreas distintas do app (avaliação, coachs, metas, loja, gratuitos, relatórios). Vou agrupar por área e executar em ondas para garantir qualidade. Confirme antes de eu iniciar.
 
-1. Cada coach conecta a própria conta Google e vê só a sua agenda.
-2. Toda agenda também fica salva internamente (banco do app).
-3. Admin tem um painel que mostra todas as agendas (compiladas e filtráveis por coach).
+---
 
-## Arquitetura
+### Onda 1 — Correções rápidas de UI e bugs
 
-```text
-Coach → "Conectar Google" → OAuth Google (consent) → callback salva tokens
-                                                       ↓
-                                    coach_google_tokens (por user_id)
-                                                       ↓
-                              Sync periódico/sob demanda
-                                                       ↓
-                              internal_appointments (compartilhada)
-                                                       ↓
-                       Coach vê só os seus  |  Admin vê todos
-```
+1. **Avaliar Aluno — contraste/cores**
+   - Trocar tokens: usar `text-foreground`/`text-white` e `bg-card` corretos no painel de avaliação. Garantir contraste no tema escuro (atual usa `text-muted-foreground` em fundo escuro = ilegível).
 
-## Banco de dados (Lovable Cloud)
+2. **Avaliar Aluno — cálculo correto de calorias e TMB**
+   - Implementar Mifflin-St Jeor (TMB) + fator de atividade (sedentário/leve/moderado/intenso) para gasto total. Hoje os valores estão errados/placeholders.
 
-**`coach_google_tokens`**
-- `user_id` (uuid, FK auth.users, unique)
-- `coach_id` (uuid)
-- `access_token` (text, criptografado em repouso pela cloud)
-- `refresh_token` (text)
-- `expires_at` (timestamptz)
-- `google_email` (text)
-- `scope` (text)
+3. **Avaliar Aluno — análise de Peso e Gordura**
+   - **Peso:** mostrar "X kg acima do limite saudável" (peso atual − peso máx para IMC 24.9 na altura informada).
+   - **Gordura:** mostrar "X kg de gordura a perder" calculado por massa gorda atual − massa gorda alvo (% saudável × peso). Diferente do excesso de peso.
 
-**`internal_appointments`**
-- `coach_id` (uuid)
-- `google_event_id` (text, único por coach)
-- `summary` (text)
-- `description` (text)
-- `start_at` / `end_at` (timestamptz)
-- `attendee_name` / `attendee_email` (text)
-- `student_id` (uuid, opcional — link com aluno)
-- `location` (text)
-- `status` (text: confirmed/cancelled)
-- `last_synced_at` (timestamptz)
+4. **Botão WhatsApp em todo lugar que aparece aluno/coach**
+   - Componente `<WhatsAppButton phone={...} />` reutilizável que gera `https://wa.me/<numero limpo>`.
+   - Adicionar nos cards: lista de Clientes (coach), Avaliar Aluno, lista de Coaches (admin), Aplicações de Coach, perfil do coach, etc.
 
-**RLS:**
-- `coach_google_tokens`: cada usuário só lê/escreve a própria linha. Service role para refresh no servidor.
-- `internal_appointments`: coach vê só linhas com `coach_id = seu coach_id`. Admin (`has_role(auth.uid(),'admin')`) vê tudo.
+5. **Link de convite do coach não funciona**
+   - Investigar `/r/$code` (registro com indicação) e/ou link de convite enviado pelo coach. Corrigir geração e validação do código (provavelmente cadeia coach→profile→referral_code).
 
-## OAuth Google por usuário
+6. **Coachs novos não aparecem no cadastro (CoachSelector)**
+   - Verificar a query: hoje deve estar filtrando por `approved_at` ou status. Ampliar para incluir todo coach com `approved_at IS NOT NULL` e `status='active'`. Garantir que ao aprovar um coach ele apareça automaticamente.
 
-Lovable Cloud só gerencia o Google login do app, não o acesso à API Calendar de cada usuário. Para isso precisa de credenciais OAuth próprias.
+7. **Editar metas manualmente na Visão Geral do coach**
+   - Tornar o `GoalsCard` editável: botão "Editar metas", inputs para meta de vendas, alunos, comissão, etc. Persistir em uma tabela `coach_goals` (criar se não existir) com RLS.
 
-**Você precisa criar no Google Cloud Console:**
-1. Projeto → ativar **Google Calendar API**
-2. Tela de consentimento OAuth (External), adicionar escopos `calendar.readonly` e `calendar.events`
-3. Credenciais → OAuth Client ID (Web Application)
-4. URL de callback autorizada: `https://fitmindclub.lovable.app/api/oauth/google/callback` (e a URL de preview)
+---
 
-Depois eu peço dois secrets via formulário seguro:
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
+### Onda 2 — Unificação da Loja + Gratuitos editáveis
 
-## Rotas e funções de servidor
+8. **Unificar Loja Física + Digital → "Loja"** com Seções e Categorias
+   - Nova estrutura no banco: `store_sections` (Físicos, Digitais, customizáveis) e `store_categories` (filhas das seções). Migrar `store_products` e `digital_products` para uma tabela unificada `store_items` (kind: physical|digital), preservando dados.
+   - Admin: CRUD completo de seções, categorias, produtos (com upload de imagem para o bucket `product-images`).
+   - Front aluno: aba "Loja" com tabs por seção e filtros por categoria.
 
-- `GET /api/oauth/google/start` — gera state CSRF, redireciona para Google com `access_type=offline&prompt=consent` (garante refresh_token).
-- `GET /api/oauth/google/callback` — troca code por tokens, salva em `coach_google_tokens`, redireciona para `/coach`.
-- `serverFn syncMyCalendar()` — usa refresh_token, chama Google Calendar API direto (sem gateway, é OAuth do próprio usuário), faz upsert em `internal_appointments`.
-- `serverFn getMyUpcoming()` — lê `internal_appointments` do coach logado.
-- `serverFn getAllUpcoming({ coachId? })` — admin only; filtra por coach opcionalmente.
+9. **Foto em todos os produtos (físicos e digitais)**
+   - Coberto pela unificação acima: campo `image_url` + upload no bucket `product-images` (público).
 
-Helper de refresh: se `expires_at` passou, troca refresh_token por novo access_token e atualiza linha.
+10. **Renomear "Benefícios" → "Gratuitos"** com seções, categorias e produtos editáveis
+    - Tabelas espelhadas: `freebies_sections`, `freebies_categories`, `freebies_items` (com imagem e detalhes).
+    - Admin CRUD completo. Front: tela com tabs/filtros. Ao tocar num item, abrir modal/rota com mais informações.
+    - Renomear todos os textos/ícones de "Benefícios" para "Gratuitos".
 
-## UI
+---
 
-**Coach › Visão geral**
-- Card "Próximos atendimentos" (já criado) passa a ler de `internal_appointments`.
-- Se coach ainda não conectou Google: botão **Conectar Google Agenda** (vai para `/api/oauth/google/start`).
-- Se conectado: mostra email Google + botão "Sincronizar agora" e "Desconectar".
+### Onda 3 — Relatórios completos
 
-**Admin › nova aba "Agendas"** (`/admin/calendars`)
-- KPIs: total de atendimentos hoje / semana, coaches conectados.
-- Filtro por coach (select) e por período.
-- Visões: lista cronológica + agrupado por coach (accordion).
-- Cada item mostra coach, aluno, horário, status.
+11. **Relatórios admin + coach (com filtro por período)**
+    - **Admin:** alunos por desafio (atual e anteriores), comissões por coach, vendas por produto, ranking, etc.
+    - **Coach (escopo da rede dele):** seus alunos, alunos da rede (downline 1/2/3), crescimento da rede, metas batidas, maiores comissões, maiores vendas, desafios em que participou, top 1/2/3 alunos por desafio.
+    - Filtro por intervalo de datas em todos.
+    - Implementar como `createServerFn` com agregações via Supabase + componentes de visualização (lista + barra/tabela).
 
-## Segurança
+---
 
-- State CSRF (cookie httpOnly) na ida e vinda do OAuth.
-- Tokens só lidos/escritos via service role em server functions.
-- RLS bloqueia leitura cruzada entre coaches.
-- Validação Zod em todas as inputs.
+### Detalhes técnicos relevantes
 
-## Entrega em fases
+- Migrações Supabase necessárias: `coach_goals`, `store_sections`, `store_categories`, `store_items`, `freebies_sections`, `freebies_categories`, `freebies_items`, bucket `product-images` e `freebies-images` públicos. Migração de dados existentes de `store_products`+`digital_products` para `store_items`. Atualizar `store_order_items` para também aceitar `store_item_id`.
+- Manter compatibilidade: `listSellableProducts` continuará funcionando lendo da nova `store_items`.
+- WhatsApp helper em `src/lib/whatsapp.ts`.
 
-1. **Fase 1 (esta resposta após aprovação):** migração das tabelas + RLS, peço os 2 secrets do Google.
-2. **Fase 2:** rotas OAuth, server functions, troca do card do coach para usar a base interna + botão conectar.
-3. **Fase 3:** painel admin `/admin/calendars` com filtros e agrupamento.
+---
 
-## O que preciso de você
+### Como proponho executar
 
-1. Aprovar este plano.
-2. Criar credenciais OAuth no Google Cloud Console e ter `Client ID` e `Client Secret` em mãos (vou pedir num formulário seguro depois da migração).
+Por causa do tamanho, sugiro entregar **Onda 1 primeiro** (todas as correções rápidas + bugs + cálculos + WhatsApp + metas editáveis + bug de convite + coach selector). Em seguida você revisa e seguimos para a Onda 2 (Loja unificada + Gratuitos) e depois Onda 3 (Relatórios).
+
+Confirma essa abordagem? Se preferir outra ordem (ex.: Loja primeiro), me diz.
