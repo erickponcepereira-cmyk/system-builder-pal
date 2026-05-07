@@ -12,7 +12,7 @@ import {
 
 type CartItem = {
   productId: string;
-  kind: "challenge" | "digital" | "store";
+  kind: "challenge" | "digital" | "store" | "item";
   title: string;
   unitPrice: number;
   quantity: number;
@@ -26,6 +26,7 @@ const KIND_LABEL: Record<CartItem["kind"], string> = {
   challenge: "Desafio/Plano",
   digital: "Digital",
   store: "Físico",
+  item: "Loja",
 };
 
 export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
