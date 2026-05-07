@@ -4,6 +4,9 @@ import { CheckCircle2, Gift, Minus, Plus, Search, Share2, ShoppingBag, Sparkles,
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+type ProductKind = "challenge" | "digital" | "store" | "item";
+type PaymentMethod = "pix" | "credit_card" | "debit_card";
+
 
 interface StoreProduct {
   id: string;
