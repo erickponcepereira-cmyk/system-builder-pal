@@ -30,6 +30,15 @@ interface Item {
   commission_level1: number | null;
   commission_level2: number | null;
   commission_level3: number | null;
+  tax_mode: "percent" | "fixed";
+  card_fee_mode: "percent" | "fixed";
+  app_fee_mode: "percent" | "fixed";
+  marketing_mode: "percent" | "fixed";
+  other_mode: "percent" | "fixed";
+  commission_coach_mode: "percent" | "fixed";
+  commission_level1_mode: "percent" | "fixed";
+  commission_level2_mode: "percent" | "fixed";
+  commission_level3_mode: "percent" | "fixed";
 }
 
 function emptyItem(): Partial<Item> {
@@ -40,6 +49,10 @@ function emptyItem(): Partial<Item> {
     cost: 0, tax_percentage: 0, card_fee_percentage: 0, app_fee_percentage: 0,
     marketing_plan: 0, other_costs: 0,
     commission_coach: 50, commission_level1: 15, commission_level2: 5, commission_level3: 3,
+    tax_mode: "percent", card_fee_mode: "percent", app_fee_mode: "percent",
+    marketing_mode: "percent", other_mode: "percent",
+    commission_coach_mode: "percent", commission_level1_mode: "percent",
+    commission_level2_mode: "percent", commission_level3_mode: "percent",
   };
 }
 
