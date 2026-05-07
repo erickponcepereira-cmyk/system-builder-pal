@@ -27,6 +27,7 @@ import { Route as StudentNotificationsRouteImport } from './routes/student.notif
 import { Route as StudentLibraryRouteImport } from './routes/student.library'
 import { Route as StudentHealthRouteImport } from './routes/student.health'
 import { Route as StudentGroupRouteImport } from './routes/student.group'
+import { Route as StudentFreebiesRouteImport } from './routes/student.freebies'
 import { Route as StudentEvolutionRouteImport } from './routes/student.evolution'
 import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-course'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
@@ -36,6 +37,7 @@ import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
+import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-reports'
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
@@ -43,6 +45,7 @@ import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
+import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
@@ -143,6 +146,11 @@ const StudentGroupRoute = StudentGroupRouteImport.update({
   path: '/group',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentFreebiesRoute = StudentFreebiesRouteImport.update({
+  id: '/freebies',
+  path: '/freebies',
+  getParentRoute: () => StudentRoute,
+} as any)
 const StudentEvolutionRoute = StudentEvolutionRouteImport.update({
   id: '/evolution',
   path: '/evolution',
@@ -188,6 +196,11 @@ const AdminStudentsRoute = AdminStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminStoreReportsRoute = AdminStoreReportsRouteImport.update({
+  id: '/store-reports',
+  path: '/store-reports',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminStoreRoute = AdminStoreRouteImport.update({
   id: '/store',
   path: '/store',
@@ -221,6 +234,11 @@ const AdminPatentsRoute = AdminPatentsRouteImport.update({
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
+  id: '/freebies',
+  path: '/freebies',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDigitalProductsRoute = AdminDigitalProductsRouteImport.update({
@@ -283,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -290,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
+  '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -299,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
+  '/student/freebies': typeof StudentFreebiesRoute
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
@@ -326,6 +347,7 @@ export interface FileRoutesByTo {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -333,6 +355,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
+  '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -342,6 +365,7 @@ export interface FileRoutesByTo {
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
+  '/student/freebies': typeof StudentFreebiesRoute
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
@@ -372,6 +396,7 @@ export interface FileRoutesById {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -379,6 +404,7 @@ export interface FileRoutesById {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
+  '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -388,6 +414,7 @@ export interface FileRoutesById {
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
+  '/student/freebies': typeof StudentFreebiesRoute
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
@@ -419,6 +446,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/freebies'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
@@ -426,6 +454,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
+    | '/admin/store-reports'
     | '/admin/students'
     | '/admin/users'
     | '/invite/$token'
@@ -435,6 +464,7 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
+    | '/student/freebies'
     | '/student/group'
     | '/student/health'
     | '/student/library'
@@ -462,6 +492,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/freebies'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
@@ -469,6 +500,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
+    | '/admin/store-reports'
     | '/admin/students'
     | '/admin/users'
     | '/invite/$token'
@@ -478,6 +510,7 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
+    | '/student/freebies'
     | '/student/group'
     | '/student/health'
     | '/student/library'
@@ -507,6 +540,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/freebies'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
@@ -514,6 +548,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
+    | '/admin/store-reports'
     | '/admin/students'
     | '/admin/users'
     | '/invite/$token'
@@ -523,6 +558,7 @@ export interface FileRouteTypes {
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
+    | '/student/freebies'
     | '/student/group'
     | '/student/health'
     | '/student/library'
@@ -686,6 +722,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentGroupRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/student/freebies': {
+      id: '/student/freebies'
+      path: '/freebies'
+      fullPath: '/student/freebies'
+      preLoaderRoute: typeof StudentFreebiesRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/student/evolution': {
       id: '/student/evolution'
       path: '/evolution'
@@ -749,6 +792,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStudentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/store-reports': {
+      id: '/admin/store-reports'
+      path: '/store-reports'
+      fullPath: '/admin/store-reports'
+      preLoaderRoute: typeof AdminStoreReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/store': {
       id: '/admin/store'
       path: '/store'
@@ -796,6 +846,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/admin/orders'
       preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/freebies': {
+      id: '/admin/freebies'
+      path: '/freebies'
+      fullPath: '/admin/freebies'
+      preLoaderRoute: typeof AdminFreebiesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/digital-products': {
@@ -881,6 +938,7 @@ interface AdminRouteChildren {
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
+  AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
@@ -888,6 +946,7 @@ interface AdminRouteChildren {
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStoreRoute: typeof AdminStoreRoute
+  AdminStoreReportsRoute: typeof AdminStoreReportsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -898,6 +957,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
+  AdminFreebiesRoute: AdminFreebiesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
@@ -905,6 +965,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStoreRoute: AdminStoreRoute,
+  AdminStoreReportsRoute: AdminStoreReportsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -917,6 +978,7 @@ interface StudentRouteChildren {
   StudentChallengeRoute: typeof StudentChallengeRoute
   StudentCoachCourseRoute: typeof StudentCoachCourseRoute
   StudentEvolutionRoute: typeof StudentEvolutionRoute
+  StudentFreebiesRoute: typeof StudentFreebiesRoute
   StudentGroupRoute: typeof StudentGroupRoute
   StudentHealthRoute: typeof StudentHealthRoute
   StudentLibraryRoute: typeof StudentLibraryRoute
@@ -932,6 +994,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentChallengeRoute: StudentChallengeRoute,
   StudentCoachCourseRoute: StudentCoachCourseRoute,
   StudentEvolutionRoute: StudentEvolutionRoute,
+  StudentFreebiesRoute: StudentFreebiesRoute,
   StudentGroupRoute: StudentGroupRoute,
   StudentHealthRoute: StudentHealthRoute,
   StudentLibraryRoute: StudentLibraryRoute,

@@ -1883,6 +1883,95 @@ export type Database = {
           },
         ]
       }
+      freebie_redemptions: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          freebie_id: string
+          id: string
+          notes: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          freebie_id: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          freebie_id?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freebie_redemptions_freebie_id_fkey"
+            columns: ["freebie_id"]
+            isOneToOne: false
+            referencedRelation: "freebies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freebies: {
+        Row: {
+          condition_note: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          kind: string
+          name: string
+          per_student_limit: number
+          sort_order: number
+          stock: number | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          condition_note?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          kind?: string
+          name: string
+          per_student_limit?: number
+          sort_order?: number
+          stock?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          condition_note?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          kind?: string
+          name?: string
+          per_student_limit?: number
+          sort_order?: number
+          stock?: number | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           banned_by: string | null
@@ -4007,6 +4096,7 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      redeem_freebie: { Args: { _freebie_id: string }; Returns: string }
       refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
       refresh_monthly_rankings: {
