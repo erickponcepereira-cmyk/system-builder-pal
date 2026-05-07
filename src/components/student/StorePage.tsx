@@ -130,12 +130,44 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     ]);
   };
 
+  const loadCoachData = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", u.user.id).maybeSingle();
+    if (!prof) return;
+    const { data: coach } = await supabase.from("coaches").select("id").eq("profile_id", prof.id).maybeSingle();
+    if (!coach) return;
+    // Clients
+    const { data: cls } = await supabase
+      .from("students")
+      .select("id, profiles:profile_id(name,email,phone)")
+      .eq("coach_id", coach.id);
+    setClients(((cls || []) as any[]).map((s) => ({
+      id: s.id, name: s.profiles?.name || "Cliente", email: s.profiles?.email || null, phone: s.profiles?.phone || null,
+    })));
+    // Sales history (orders for own students or created by this coach)
+    const studentIds = (cls || []).map((s: any) => s.id);
+    const orFilter = [
+      studentIds.length ? `student_id.in.(${studentIds.join(",")})` : null,
+      `metadata->>created_by_coach_id.eq.${coach.id}`,
+    ].filter(Boolean).join(",");
+    const { data: orders } = await supabase
+      .from("store_orders" as never)
+      .select("id, order_number, status, total_amount, created_at, payment_method, student_id, students:student_id(profiles:profile_id(name)), store_order_items(title)" as never)
+      .or(orFilter as never)
+      .order("created_at" as never, { ascending: false })
+      .limit(100);
+    setSalesHistory(((orders || []) as any[]).map((o) => ({
+      orderId: o.id, orderNumber: o.order_number, status: o.status, total: Number(o.total_amount || 0),
+      createdAt: o.created_at, paymentMethod: o.payment_method,
+      clientName: o.students?.profiles?.name || "Cliente",
+      productTitles: ((o.store_order_items as any[]) || []).map((i) => i.title).join(", ") || "—",
+      commissionAmount: 0, commissionStatus: null,
+    })));
+  };
+
   useEffect(() => { load(); }, []);
-  useEffect(() => {
-    if (!coachMode) return;
-    fetchClients().then(setClients).catch(() => toast.error("Erro ao carregar alunos"));
-    fetchSales().then(setSalesHistory).catch(() => { /* ignore */ });
-  }, [coachMode, fetchClients, fetchSales]);
+  useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
