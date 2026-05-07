@@ -71,10 +71,11 @@ export const listCoachClients = createServerFn({ method: "GET" })
 export const listSellableProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async (): Promise<SaleProduct[]> => {
-    const [{ data: challenges }, { data: digitals }, { data: stores }] = await Promise.all([
+    const [{ data: challenges }, { data: digitals }, { data: stores }, { data: items }] = await Promise.all([
       supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active"),
       supabaseAdmin.from("digital_products").select("id,title,description,price,original_price,type,cover_url").eq("status", "active"),
       supabaseAdmin.from("store_products").select("id,name,description,price,original_price,category,image_url,stock").eq("status", "active"),
+      supabaseAdmin.from("store_items").select("id,name,short_description,description,price,original_price,kind,image_url,stock,commission_coach,commission_level1,commission_level2,commission_level3").eq("is_active", true),
     ]);
     const out: SaleProduct[] = [];
     (challenges || []).forEach((p: any) => out.push({
@@ -94,6 +95,13 @@ export const listSellableProducts = createServerFn({ method: "GET" })
       id: p.id, kind: "store", title: p.name, description: p.description, imageUrl: p.image_url,
       price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
       category: p.category, stock: p.stock,
+    }));
+    (items || []).forEach((p: any) => out.push({
+      id: p.id, kind: "item", title: p.name, description: p.short_description || p.description, imageUrl: p.image_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.kind, stock: p.stock,
+      commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
+      commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
     }));
     return out;
   });
