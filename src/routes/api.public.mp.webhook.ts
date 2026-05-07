@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getPayment, mapMpStatus } from "@/server/mercadopago.server";
-import { applyApproval } from "@/lib/mercadopago.functions";
+import { applyApproval } from "@/lib/mercadopago-impl.server";
 
 // Webhook do Mercado Pago. URL pública: /api/public/mp/webhook
 // MP envia POST com { type, data: { id }, action } ou query string.
