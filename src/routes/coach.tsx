@@ -22,7 +22,7 @@ import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import { Logo } from "@/components/Logo";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
-import { StorePage } from "./student.store";
+import { StorePage } from "@/components/student/StorePage";
 
 
 export const Route = createFileRoute("/coach")({
