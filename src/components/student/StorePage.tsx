@@ -137,16 +137,15 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     if (!prof) return;
     const { data: coach } = await supabase.from("coaches").select("id").eq("profile_id", prof.id).maybeSingle();
     if (!coach) return;
-    // Clients
-    const { data: cls } = await supabase
-      .from("students")
-      .select("id, profiles:profile_id(name,email,phone)")
-      .eq("coach_id", coach.id);
-    setClients(((cls || []) as any[]).map((s) => ({
-      id: s.id, name: s.profiles?.name || "Cliente", email: s.profiles?.email || null, phone: s.profiles?.phone || null,
-    })));
+    const { data: clientRows, error: clientsError } = await supabase.rpc("list_coach_team_clients" as never);
+    if (clientsError) toast.error(clientsError.message || "Erro ao carregar alunos da equipe");
+    const normalizedClients = ((clientRows || []) as any[]).map((s) => ({
+      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null,
+    }));
+    setClients(normalizedClients);
+    setSelectedClient((current) => current || normalizedClients[0] || null);
     // Sales history (orders for own students or created by this coach)
-    const studentIds = (cls || []).map((s: any) => s.id);
+    const studentIds = normalizedClients.map((s) => s.id);
     const orFilter = [
       studentIds.length ? `student_id.in.(${studentIds.join(",")})` : null,
       `metadata->>created_by_coach_id.eq.${coach.id}`,
@@ -208,26 +207,30 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       return;
     }
     setCheckingOut(true);
-    const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
-    const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
-    if (error) { toast.error(error.message); setCheckingOut(false); return; }
-    const { data: orderData } = await supabase
-      .from("store_orders" as never)
-      .select("id,order_number,total_amount" as never)
-      .eq("id" as never, orderId as never)
-      .maybeSingle();
-    const { data: userData } = await supabase.auth.getUser();
-    const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
-    if (od) {
+    try {
+      const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
+      const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
+      if (error) throw new Error(error.message);
+      if (!orderId) throw new Error("Pedido não retornado");
+      const { data: orderData } = await supabase
+        .from("store_orders" as never)
+        .select("id,order_number,total_amount" as never)
+        .eq("id" as never, orderId as never)
+        .maybeSingle();
+      const { data: userData } = await supabase.auth.getUser();
+      const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
       setCart([]); setCartOpen(false); setShipping(initialShipping);
       setPayOrder({
-        id: od.id, total: Number(od.total_amount), number: od.order_number,
+        id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
       });
       await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao criar pedido");
+    } finally {
+      setCheckingOut(false);
     }
-    setCheckingOut(false);
   };
 
   const checkoutAsCoach = async () => {
@@ -235,15 +238,15 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     if (cart.length === 0) return;
     setCheckingOut(true);
     try {
-      // Coach só pode vender produtos do tipo challenge/digital/store (RPC limitada)
-      const items = cart.filter((c) => c.kind !== "item").map((c) => ({
+      const items = cart.map((c) => ({
         productId: c.sourceId,
-        kind: c.kind as "challenge" | "digital" | "store",
+        kind: c.kind,
         title: c.title,
         unitPrice: c.price,
         quantity: c.quantity,
+        itemKind: c.kind === "item" ? (c.stock === null || c.stock === undefined ? "digital" : "physical") : undefined,
       }));
-      if (!items.length) { toast.error("Nenhum item compatível para venda do coach."); setCheckingOut(false); return; }
+      if (!items.length) { toast.error("Carrinho vazio."); setCheckingOut(false); return; }
       const { data: res, error: rpcErr } = await supabase.rpc("create_coach_sale" as never, {
         _client_id: selectedClient.id,
         _items: items,
