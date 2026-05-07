@@ -4323,6 +4323,16 @@ export type Database = {
         Args: { _group_id: string }
         Returns: undefined
       }
+      list_coach_team_clients: {
+        Args: never
+        Returns: {
+          coach_id: string
+          email: string
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_coach_course_module_complete: {
         Args: { _module_id: string }
