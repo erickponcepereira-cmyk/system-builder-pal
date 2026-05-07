@@ -8,8 +8,6 @@ export const Route = createFileRoute("/student/store")({
   component: StorePage,
 });
 
-export { StorePage };
-
 type ProductKind = "challenge" | "digital" | "store" | "item";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
 
@@ -53,7 +51,7 @@ const productCategory = (type?: string | null) => ({
   challenge: "Planos 30d",
 }[type || ""] || "Planos 30d");
 
-function StorePage() {
+export function StorePage() {
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeCategory, setActiveCategory] = useState("Todos");
