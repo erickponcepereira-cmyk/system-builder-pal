@@ -465,7 +465,7 @@ function OverviewTab({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <GoalsCard />
+        <GoalsCard coachId={coachId} />
         <UpcomingAppointments />
       </div>
 
