@@ -4208,6 +4208,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_change_student_coach: {
+        Args: { _new_coach_id: string; _student_id: string }
+        Returns: undefined
+      }
       block_inactive_coach: {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
@@ -4310,6 +4314,7 @@ export type Database = {
         Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }
         Returns: Json
       }
+      unblock_coach: { Args: { _coach_id: string }; Returns: undefined }
       update_coach_withdrawal_status: {
         Args: {
           _notes?: string

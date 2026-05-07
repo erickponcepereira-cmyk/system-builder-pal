@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Check, X, Mail, Phone, MapPin, CreditCard, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,6 +12,8 @@ interface CoachRow {
   id: string;
   referral_code: string;
   approved_at: string | null;
+  blocked_at: string | null;
+  blocked_reason: string | null;
   pix_key: string | null;
   pix_key_type: string | null;
   total_active_students: number | null;
@@ -25,6 +27,7 @@ interface CoachRow {
     city: string | null;
     state: string | null;
     cpf: string | null;
+    status: string | null;
   } | null;
 }
 
@@ -33,12 +36,16 @@ function AdminCoaches() {
   const [filter, setFilter] = useState<"pending" | "approved" | "all">("pending");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [transferring, setTransferring] = useState<CoachRow | null>(null);
+  const [transferTargetId, setTransferTargetId] = useState("");
+  const [transferSearch, setTransferSearch] = useState("");
+  const [acting, setActing] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
       .from("coaches")
-      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,cpf)")
+      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,cpf,status)")
       .order("created_at", { ascending: false });
     setCoaches((data as unknown as CoachRow[]) || []);
     setLoading(false);
@@ -78,6 +85,61 @@ function AdminCoaches() {
     if (error) toast.error("Erro ao rejeitar");
     else { toast.success("Cadastro rejeitado"); load(); }
   };
+
+  const blockCoach = async (coachId: string) => {
+    if (!confirm("Bloquear este coach? Ele perderá o acesso ao painel.")) return;
+    setActing(`block-${coachId}`);
+    const { error } = await supabase.rpc("block_inactive_coach" as never, {
+      _coach_id: coachId,
+      _reason: "Bloqueado manualmente pelo administrador.",
+    } as never);
+    setActing(null);
+    if (error) toast.error(error.message);
+    else { toast.success("Coach bloqueado"); load(); }
+  };
+
+  const unblockCoach = async (coachId: string) => {
+    setActing(`unblock-${coachId}`);
+    const { error } = await supabase.rpc("unblock_coach" as never, { _coach_id: coachId } as never);
+    setActing(null);
+    if (error) toast.error(error.message);
+    else { toast.success("Coach reativado"); load(); }
+  };
+
+  const openTransfer = (c: CoachRow) => {
+    setTransferring(c);
+    setTransferTargetId("");
+    setTransferSearch("");
+  };
+
+  const confirmTransfer = async () => {
+    if (!transferring || !transferTargetId) {
+      toast.error("Selecione o coach destino");
+      return;
+    }
+    setActing(`transfer-${transferring.id}`);
+    const { error } = await supabase.rpc("transfer_inactive_coach_network" as never, {
+      _from_coach_id: transferring.id,
+      _to_coach_id: transferTargetId,
+      _reason: "Migração administrativa de rede.",
+    } as never);
+    setActing(null);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Rede transferida");
+      setTransferring(null);
+      load();
+    }
+  };
+
+  const transferTargets = useMemo(() => {
+    if (!transferring) return [];
+    const q = transferSearch.trim().toLowerCase();
+    return coaches
+      .filter((c) => c.approved_at && !c.blocked_at && c.id !== transferring.id)
+      .filter((c) => !q || c.profiles?.name.toLowerCase().includes(q))
+      .slice(0, 50);
+  }, [coaches, transferring, transferSearch]);
 
   const filtered = coaches.filter((c) => {
     if (filter === "pending" && c.approved_at) return false;
@@ -147,9 +209,15 @@ function AdminCoaches() {
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-base font-bold text-white">{c.profiles?.name}</h3>
                     {c.approved_at ? (
-                      <span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
-                        Aprovado
-                      </span>
+                      c.blocked_at ? (
+                        <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400">
+                          Bloqueado
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">
+                          Aprovado
+                        </span>
+                      )
                     ) : (
                       <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-400">
                         Pendente
@@ -183,7 +251,7 @@ function AdminCoaches() {
                   )}
                 </div>
 
-                {!c.approved_at && (
+                {!c.approved_at ? (
                   <div className="flex gap-2">
                     <button
                       onClick={() => approve(c.id)}
@@ -198,10 +266,101 @@ function AdminCoaches() {
                       <X className="h-3.5 w-3.5" /> Rejeitar
                     </button>
                   </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openTransfer(c)}
+                      disabled={acting === `transfer-${c.id}`}
+                      className="flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/25 disabled:opacity-50"
+                    >
+                      <ArrowRightLeft className="h-3.5 w-3.5" /> Migrar rede
+                    </button>
+                    {c.blocked_at ? (
+                      <button
+                        onClick={() => unblockCoach(c.id)}
+                        disabled={acting === `unblock-${c.id}`}
+                        className="flex items-center gap-1.5 rounded-lg bg-success px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {acting === `unblock-${c.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlock className="h-3.5 w-3.5" />} Reativar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => blockCoach(c.id)}
+                        disabled={acting === `block-${c.id}`}
+                        className="flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        {acting === `block-${c.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />} Desativar
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {transferring && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => acting?.startsWith("transfer") ? null : setTransferring(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white">Migrar rede</h2>
+                <p className="text-xs text-white/50">De: <span className="text-white">{transferring.profiles?.name}</span></p>
+              </div>
+              <button onClick={() => setTransferring(null)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="mb-3 text-[11px] text-white/50">
+              Move todos os alunos diretos e downlines imediatos para o coach selecionado.
+            </p>
+
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+              <input
+                type="text"
+                value={transferSearch}
+                onChange={(e) => setTransferSearch(e.target.value)}
+                placeholder="Buscar coach destino..."
+                className="w-full rounded-xl border border-white/10 bg-white/5 pl-9 pr-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+              {transferTargets.length === 0 ? (
+                <p className="p-3 text-xs text-white/50">Nenhum coach disponível.</p>
+              ) : (
+                transferTargets.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTransferTargetId(t.id)}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${transferTargetId === t.id ? "bg-primary text-primary-foreground" : "text-white/80 hover:bg-white/5"}`}
+                  >
+                    {t.profiles?.name}
+                    <span className="ml-2 text-[10px] opacity-60">{t.total_active_students || 0} alunos</span>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setTransferring(null)}
+                className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmTransfer}
+                disabled={!transferTargetId || acting === `transfer-${transferring.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {acting === `transfer-${transferring.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirmar migração
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
