@@ -108,7 +108,12 @@ function CoachDashboard() {
   const [profileIdState, setProfileIdState] = useState<string | null>(null);
   const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
   const referralCode = coachContext?.referralCode || "FITMIND";
-  const referralLink = coachContext?.referralLink || `https://fitmindclub.app/r/${referralCode}`;
+  const referralLink = (() => {
+    const path = coachContext?.referralLink || `/r/${referralCode}`;
+    if (/^https?:\/\//.test(path)) return path;
+    if (typeof window !== "undefined") return `${window.location.origin}${path.startsWith("/") ? "" : "/"}${path}`;
+    return `https://fitmindclub.lovable.app${path.startsWith("/") ? "" : "/"}${path}`;
+  })();
 
   useEffect(() => {
     let active = true;
