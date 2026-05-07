@@ -187,7 +187,7 @@ function StorePage() {
 
       <div className="flex items-center gap-2 rounded-full bg-card px-4 py-3"><Search className="h-4 w-4 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar produtos..." className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" /></div>
 
-      <div className="flex w-full gap-2 overflow-x-auto scrollbar-none">{categories.map((category) => <button key={category} onClick={() => setActiveCategory(category)} className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${activeCategory === category ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}>{category}</button>)}</div>
+      <div className="flex w-full gap-2 overflow-x-auto scrollbar-none">{[...baseCategories, ...storeSections.map((s) => s.name).filter((n) => !baseCategories.includes(n))].map((category: string) => <button key={category} onClick={() => setActiveCategory(category)} className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${activeCategory === category ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}>{category}</button>)}</div>
 
       <div className="relative overflow-hidden rounded-2xl bg-primary p-4"><span className="inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-[10px] font-bold text-primary-foreground"><Tag className="h-3 w-3" /> FITMIND SECRETS 2026</span><p className="mt-2 text-base font-bold text-primary-foreground">Inscrições, planos, protocolos, cursos e aulões</p><p className="text-sm text-primary-foreground/80">catálogo oficial com comissões configuradas</p></div>
 
