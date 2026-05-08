@@ -4327,6 +4327,7 @@ export type Database = {
         Args: never
         Returns: {
           coach_id: string
+          cpf: string
           email: string
           id: string
           name: string
