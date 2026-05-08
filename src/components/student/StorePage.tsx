@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail } from "@/components/store/ProductDetailModal";
 
-type SaleClient = { id: string; name: string; email: string | null; phone: string | null };
+type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
 type ProductKind = "challenge" | "digital" | "store" | "item";
@@ -140,10 +140,10 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     const { data: clientRows, error: clientsError } = await supabase.rpc("list_coach_team_clients" as never);
     if (clientsError) toast.error(clientsError.message || "Erro ao carregar alunos da equipe");
     const normalizedClients = ((clientRows || []) as any[]).map((s) => ({
-      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null,
+      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null,
     }));
     setClients(normalizedClients);
-    setSelectedClient((current) => current || normalizedClients[0] || null);
+    // Não selecionar aluno automaticamente — coach precisa escolher.
     // Sales history (orders for own students or created by this coach)
     const studentIds = normalizedClients.map((s) => s.id);
     const orFilter = [
@@ -312,7 +312,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
 
       {coachMode && (
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary">Vendendo para</p>
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary">Selecione seu aluno</p>
           <button
             onClick={() => setClientPickerOpen(true)}
             className="flex w-full items-center justify-between rounded-xl bg-card px-4 py-3 text-left"
@@ -320,8 +320,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
             <div className="flex items-center gap-3">
               <UserRound className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione um aluno"}</p>
+                <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione seu aluno"}</p>
                 {selectedClient?.email && <p className="text-[11px] text-muted-foreground">{selectedClient.email}</p>}
+                {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {selectedClient.cpf}</p>}
               </div>
             </div>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -428,23 +429,11 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       )}
 
       {clientPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm" onClick={() => setClientPickerOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-            <h2 className="mb-3 text-base font-bold text-foreground">Selecione o aluno</h2>
-            {clients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Você ainda não tem alunos vinculados.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {clients.map((c) => (
-                  <button key={c.id} onClick={() => { setSelectedClient(c); setClientPickerOpen(false); }} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
-                    <p className="text-sm font-bold text-foreground">{c.name}</p>
-                    {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <ClientPickerModal
+          clients={clients}
+          onPick={(c) => { setSelectedClient(c); setClientPickerOpen(false); }}
+          onClose={() => setClientPickerOpen(false)}
+        />
       )}
 
       {cartOpen && (
@@ -538,6 +527,59 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ClientPickerModal({
+  clients, onPick, onClose,
+}: {
+  clients: SaleClient[];
+  onPick: (c: SaleClient) => void;
+  onClose: () => void;
+}) {
+  const [q, setQ] = useState("");
+  const onlyDigits = (s: string) => s.replace(/\D/g, "");
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return clients;
+    const termDigits = onlyDigits(term);
+    return clients.filter((c) => {
+      const nameMatch = c.name.toLowerCase().includes(term);
+      const cpfMatch = termDigits.length > 0 && c.cpf && onlyDigits(c.cpf).includes(termDigits);
+      return nameMatch || cpfMatch;
+    });
+  }, [clients, q]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-3 text-base font-bold text-foreground">Selecione seu aluno</h2>
+        <div className="mb-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nome ou CPF..."
+            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+        {clients.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Você ainda não tem alunos vinculados.</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {filtered.map((c) => (
+              <button key={c.id} onClick={() => onPick(c)} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
+                <p className="text-sm font-bold text-foreground">{c.name}</p>
+                {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
+                {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {c.cpf}</p>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

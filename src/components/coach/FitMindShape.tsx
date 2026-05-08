@@ -245,7 +245,7 @@ const TOOLTIPS: Record<string, string> = {
   visceralFat:
     "Percentual estimado de gordura visceral. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
   basalMetabolism:
-    "Percentual em relação ao metabolismo basal estimado pelo método Harris-Benedict. Fonte: (10).",
+    "Valor absoluto do metabolismo basal em kcal/dia (gasto calórico em repouso). Fonte: (10).",
   bodyAge:
     "Percentual da idade corporal em relação à idade real. Fonte: (2) Omron Healthcare.",
   bodyWater:
@@ -285,6 +285,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
+  const setBioUnit = (key: string, unit: "%" | "kg" | "cm" | "num") =>
+    setBioUnits((prev) => ({ ...prev, [key]: unit }));
   const [newClientData, setNewClientData] = useState<Partial<FitMindClient>>({
     gender: "female",
     ethnicity: "white",
@@ -466,14 +469,19 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
     /* Dark theme overrides for result screen */
-    .fm-result-screen .fm-card { background: #0f172a; color: #e2e8f0; border-color: #1e293b; box-shadow: 0 2px 16px rgba(0,0,0,.5); }
-    .fm-result-screen .fm-section-title { color: #f8fafc !important; }
-    .fm-result-screen [style*="color: #1e293b"], .fm-result-screen [style*="color:#1e293b"] { color: #f1f5f9 !important; }
-    .fm-result-screen [style*="color: #64748b"], .fm-result-screen [style*="color:#64748b"] { color: #94a3b8 !important; }
+    .fm-result-screen { color: #ffffff; }
+    .fm-result-screen .fm-card { background: #0f172a; color: #ffffff; border-color: #1e293b; box-shadow: 0 2px 16px rgba(0,0,0,.5); }
+    .fm-result-screen .fm-section-title { color: #ffffff !important; }
+    .fm-result-screen table, .fm-result-screen th, .fm-result-screen td { color: #ffffff !important; }
+    .fm-result-screen [style*="color: #1e293b"], .fm-result-screen [style*="color:#1e293b"] { color: #ffffff !important; }
+    .fm-result-screen [style*="color: #64748b"], .fm-result-screen [style*="color:#64748b"] { color: #e2e8f0 !important; }
+    .fm-result-screen [style*="color: #94a3b8"], .fm-result-screen [style*="color:#94a3b8"] { color: #cbd5e1 !important; }
     .fm-result-screen [style*="background: #f0fdf4"] { background: rgba(34,197,94,0.12) !important; }
     .fm-result-screen [style*="background: #fef2f2"] { background: rgba(239,68,68,0.12) !important; }
     .fm-result-screen [style*="background: #f8fafc"] { background: #1e293b !important; }
     .fm-result-screen [style*="background: #ffffff"], .fm-result-screen [style*="background:#ffffff"], .fm-result-screen [style*="background: #fff"] { background: #1e293b !important; }
+    .fm-result-screen [style*="background: #eff6ff"] { background: rgba(96,165,250,0.12) !important; }
+    .fm-result-screen [style*="background: #f5f3ff"] { background: rgba(167,139,250,0.12) !important; }
     .fm-result-screen [style*="border-top: 1px solid #f1f5f9"] { border-top-color: #1e293b !important; }
     .fm-result-screen [style*="border: 1px solid #e2e8f0"] { border-color: #334155 !important; }
     .fm-result-row {
@@ -1290,136 +1298,109 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       );
     };
 
+    const UnitChips = ({ fieldKey, options, defaultUnit }: { fieldKey: string; options: Array<"%" | "kg" | "cm" | "num">; defaultUnit: "%" | "kg" | "cm" | "num" }) => {
+      const current = bioUnits[fieldKey] || defaultUnit;
+      const labelOf = (u: "%" | "kg" | "cm" | "num") => (u === "num" ? "número" : u);
+      return (
+        <span style={{ display: "inline-flex", gap: 4, marginLeft: 6 }}>
+          {options.map((u) => (
+            <button
+              key={u}
+              type="button"
+              onClick={(e) => { e.preventDefault(); setBioUnit(fieldKey, u); }}
+              style={{
+                fontSize: 10,
+                padding: "2px 6px",
+                borderRadius: 6,
+                border: "1px solid",
+                borderColor: current === u ? "var(--fm-primary)" : "#cbd5e1",
+                background: current === u ? "var(--fm-primary)" : "transparent",
+                color: current === u ? "#fff" : "#64748b",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {labelOf(u)}
+            </button>
+          ))}
+        </span>
+      );
+    };
+
+    const bioFields: Array<{ key: keyof FitMindAssessment; label: string; tip: string; placeholder: string; defaultUnit: "%" | "kg" | "cm" | "num"; units: Array<"%" | "kg" | "cm" | "num"> }> = [
+      { key: "bodyFat", label: "Gordura Corporal", tip: "bodyFat", placeholder: "Ex: 28.5", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "skeletalMuscle", label: "Músculo Esquelético", tip: "skeletalMuscle", placeholder: "Ex: 32.4", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "muscleMass", label: "Massa Muscular", tip: "muscleMass", placeholder: "Ex: 41.8", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "visceralFat", label: "Gordura Visceral", tip: "visceralFat", placeholder: "Ex: 7.0", defaultUnit: "num", units: ["%", "num"] },
+      { key: "basalMetabolism", label: "Metabolismo Basal", tip: "basalMetabolism", placeholder: "Ex: 1500", defaultUnit: "num", units: ["num", "%"] },
+      { key: "bodyAge", label: "Idade Corporal", tip: "bodyAge", placeholder: "Ex: 32", defaultUnit: "num", units: ["num"] },
+      { key: "bodyWater", label: "Água Corporal", tip: "bodyWater", placeholder: "Ex: 52.3", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "boneMass", label: "Massa Óssea", tip: "boneMass", placeholder: "Ex: 4.2", defaultUnit: "%", units: ["%", "kg", "num"] },
+    ];
+
     const StepBioimpedancia = () => (
       <div>
         <div className="fm-section-title">Bioimpedância</div>
+        <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
+          Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
+          preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
+        </p>
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
-          <div>
-            <label className="fm-label">
-              Gordura Corporal (%) <Tooltip id="bodyFat" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 28.5"
-              onChange={(e) => upd("bodyFat", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Músculo Esquelético (%) <Tooltip id="skeletalMuscle" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 32.4"
-              onChange={(e) => upd("skeletalMuscle", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Massa Muscular (%) <Tooltip id="muscleMass" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 41.8"
-              onChange={(e) => upd("muscleMass", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Gordura Visceral (%) <Tooltip id="visceralFat" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              className="fm-input"
-              placeholder="Ex: 7.0"
-              onChange={(e) => upd("visceralFat", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Metabolismo Basal (%) <Tooltip id="basalMetabolism" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 100"
-              onChange={(e) => upd("basalMetabolism", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Idade Corporal (anos) <Tooltip id="bodyAge" />
-            </label>
-            <input
-              type="number"
-              step="1"
-              className="fm-input"
-              placeholder="Ex: 32"
-              onChange={(e) => upd("bodyAge", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Água Corporal (%) <Tooltip id="bodyWater" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 52.3"
-              onChange={(e) => upd("bodyWater", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Massa Óssea (%) <Tooltip id="boneMass" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 4.2"
-              onChange={(e) => upd("boneMass", +e.target.value)}
-            />
-          </div>
+          {bioFields.map((f) => {
+            const unit = bioUnits[f.key as string] || f.defaultUnit;
+            return (
+              <div key={f.key as string}>
+                <label className="fm-label">
+                  {f.label} ({unit === "num" ? "número" : unit}) <Tooltip id={f.tip} />
+                  <UnitChips fieldKey={f.key as string} options={f.units} defaultUnit={f.defaultUnit} />
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="fm-input"
+                  placeholder={f.placeholder}
+                  onChange={(e) => upd(f.key, +e.target.value)}
+                />
+              </div>
+            );
+          })}
         </div>
         <div className="fm-section-title" style={{ marginTop: 16 }}>
           Análise por Segmento
         </div>
         <div className="fm-grid-2">
-          {[
-            ["Braço Esquerdo (%)", "leftArm"],
-            ["Braço Direito (%)", "rightArm"],
-            ["Tronco (%)", "trunk"],
-            ["Perna Esquerda (%)", "leftLeg"],
-            ["Perna Direita (%)", "rightLeg"],
-          ].map(([label, key]) => (
-            <div key={key}>
-              <label className="fm-label">{label}</label>
-              <input
-                type="number"
-                step="0.1"
-                className="fm-input"
-                placeholder="Ex: 30.5"
-                onChange={(e) =>
-                  upd("segmentAnalysis", {
-                    ...assessment.segmentAnalysis,
-                    [key]: +e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
+          {(
+            [
+              ["Braço Esquerdo", "leftArm"],
+              ["Braço Direito", "rightArm"],
+              ["Tronco", "trunk"],
+              ["Perna Esquerda", "leftLeg"],
+              ["Perna Direita", "rightLeg"],
+            ] as const
+          ).map(([label, key]) => {
+            const fieldKey = `seg_${key}`;
+            const unit = bioUnits[fieldKey] || "%";
+            return (
+              <div key={key}>
+                <label className="fm-label">
+                  {label} ({unit === "num" ? "número" : unit})
+                  <UnitChips fieldKey={fieldKey} options={["%", "kg", "num"]} defaultUnit="%" />
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="fm-input"
+                  placeholder="Ex: 30.5"
+                  onChange={(e) =>
+                    upd("segmentAnalysis", {
+                      ...assessment.segmentAnalysis,
+                      [key]: +e.target.value,
+                    })
+                  }
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -1862,8 +1843,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           : 447.6 + 9.2 * a.weight + 3.1 * a.height - 4.3 * a.age,
       );
     })();
-    const basalKcal = a.basalMetabolism && harrisBenedict
-      ? Math.round((a.basalMetabolism / 100) * harrisBenedict)
+    // Metabolismo basal preenchido em kcal direto (numeral). Usa Harris-Benedict só como referência.
+    const basalKcal = a.basalMetabolism && a.basalMetabolism > 0
+      ? Math.round(a.basalMetabolism)
       : harrisBenedict;
     const refBasal = harrisBenedict ? `${Math.round(harrisBenedict * 0.95)}–${Math.round(harrisBenedict * 1.05)} kcal` : "—";
 
@@ -1901,6 +1883,26 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     // Gordura corporal kg
     const fatKg = a.bodyFat && a.weight ? +((a.bodyFat / 100) * a.weight).toFixed(1) : 0;
     // Visceral eval reuse viscCat
+
+    // Quantos kg para chegar ao peso recomendado
+    const weightDelta = (() => {
+      if (!a.weight || !idealWeightMax) return null as null | string;
+      if (a.weight < idealWeightMin) return `Faltam ${(+(idealWeightMin - a.weight).toFixed(1))} kg para o mínimo recomendado`;
+      if (a.weight <= idealWeightMax) return "Dentro do recomendado";
+      return `Precisa perder ${(+(a.weight - idealWeightMax).toFixed(1))} kg para entrar no recomendado`;
+    })();
+
+    // Quantos kg de gordura para chegar ao recomendado
+    const fatDelta = (() => {
+      if (!a.bodyFat || !a.weight) return null as null | string;
+      const idealMaxPct = client.gender === "male" ? 17 : 24;
+      const idealMinPct = client.gender === "male" ? 10 : 18;
+      if (a.bodyFat < idealMinPct) return `Faltam ${(+((idealMinPct - a.bodyFat) * a.weight / 100).toFixed(1))} kg de gordura para o mínimo`;
+      if (a.bodyFat <= idealMaxPct) return "Dentro do recomendado";
+      const kgToLose = +((a.bodyFat - idealMaxPct) * a.weight / 100).toFixed(1);
+      return `Precisa perder ${kgToLose} kg de gordura para entrar no recomendado`;
+    })();
+
     // Metabolismo eval
     const basalEval = (() => {
       if (!basalKcal || !harrisBenedict) return { c: "#94a3b8", t: "—" };
@@ -2100,7 +2102,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   {[
                     {
                       l: "Peso",
-                      ref: `Referência: ${refWeight}`,
+                      ref: `Referência: ${refWeight}${weightDelta ? ` · ${weightDelta}` : ""}`,
                       result: a.weight ? `${a.weight} kg` : "—",
                       color: weightEval.c,
                       tag: weightEval.t,
@@ -2159,7 +2161,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     },
                     {
                       l: "Gordura Corporal",
-                      ref: `Ideal: ${refBodyFat}`,
+                      ref: `Ideal: ${refBodyFat}${fatDelta ? ` · ${fatDelta}` : ""}`,
                       result: a.bodyFat ? `${a.bodyFat}% (${fatKg} kg)` : "—",
                       color: evalColor(fatCat.eval),
                       tag: `${evalLabel(fatCat.eval)} (${fatCat.label})`,
