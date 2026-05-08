@@ -1820,10 +1820,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       ? `${Math.round(daysFollow / 30)} meses`
       : `${daysFollow} dias`;
     const diff = (curr?: number, base?: number, unit = "") => {
-      if (curr == null || base == null || !Number.isFinite(curr) || !Number.isFinite(base)) return "—";
-      const d = +(curr - base).toFixed(1);
-      if (d === 0) return `0${unit}`;
-      return `${d > 0 ? "+" : ""}${d}${unit}`;
+      if (curr == null || !Number.isFinite(curr)) return "—";
+      const d = base != null && Number.isFinite(base) ? +(curr - base).toFixed(1) : null;
+      const valStr = `${+curr.toFixed(1)}${unit}`;
+      if (d == null || d === 0 || curr === base) return valStr;
+      const sign = d > 0 ? "+" : "";
+      return `${valStr} (${sign}${d}${unit})`;
     };
 
     // Referências clínicas
