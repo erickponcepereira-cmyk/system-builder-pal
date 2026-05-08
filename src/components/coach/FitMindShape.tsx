@@ -1808,12 +1808,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       : [...historicalData, { date: todayLabel, peso: a.weight, gordura: a.bodyFat, musculo: a.skeletalMuscle, idadeCorp: a.bodyAge }];
 
     // ── Resumo / referências clínicas ─────────────────────
-    const pastList = (selectedClient?.assessments ?? []).filter((x) => x.id !== a.id);
-    const firstA = pastList[0] ?? a;
-    const prevA = pastList[pastList.length - 1] ?? a;
+    const allAssessments = (() => {
+      const existing = selectedClient?.assessments ?? [];
+      const merged = existing.some((item) => item.id === a.id) ? existing : [...existing, a];
+      return merged
+        .filter((item) => item?.date)
+        .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+    })();
+    const firstA = allAssessments[0] ?? a;
+    const latestA = allAssessments[allAssessments.length - 1] ?? a;
     const daysFollow = (() => {
       if (!firstA?.date) return 0;
-      const d = (new Date(a.date || Date.now()).getTime() - new Date(firstA.date).getTime()) / 86400000;
+      const d = (Date.now() - new Date(firstA.date).getTime()) / 86400000;
       return Math.max(0, Math.round(d));
     })();
     const followLabel = daysFollow >= 30
@@ -1827,6 +1833,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       const sign = d > 0 ? "+" : "";
       return `${valStr} (${sign}${d}${unit})`;
     };
+    const metric = (value?: number, unit = "") =>
+      value == null || !Number.isFinite(value) ? "—" : `${+value.toFixed(1)}${unit}`;
+    const dateLabel = (value?: string) => value ? new Date(value).toLocaleDateString("pt-BR") : "—";
 
     // Referências clínicas
     const heightM = (a.height || 0) / 100;
