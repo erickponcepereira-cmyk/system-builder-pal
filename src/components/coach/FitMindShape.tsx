@@ -1867,8 +1867,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           : 447.6 + 9.2 * a.weight + 3.1 * a.height - 4.3 * a.age,
       );
     })();
-    const basalKcal = a.basalMetabolism && harrisBenedict
-      ? Math.round((a.basalMetabolism / 100) * harrisBenedict)
+    // Metabolismo basal preenchido em kcal direto (numeral). Usa Harris-Benedict só como referência.
+    const basalKcal = a.basalMetabolism && a.basalMetabolism > 0
+      ? Math.round(a.basalMetabolism)
       : harrisBenedict;
     const refBasal = harrisBenedict ? `${Math.round(harrisBenedict * 0.95)}–${Math.round(harrisBenedict * 1.05)} kcal` : "—";
 
