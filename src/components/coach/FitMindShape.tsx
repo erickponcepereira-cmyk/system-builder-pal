@@ -2126,7 +2126,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   {[
                     {
                       l: "Peso",
-                      ref: `Referência: ${refWeight}`,
+                      ref: `Referência: ${refWeight}${weightDelta ? ` · ${weightDelta}` : ""}`,
                       result: a.weight ? `${a.weight} kg` : "—",
                       color: weightEval.c,
                       tag: weightEval.t,
