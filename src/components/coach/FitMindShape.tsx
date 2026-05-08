@@ -1907,6 +1907,26 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     // Gordura corporal kg
     const fatKg = a.bodyFat && a.weight ? +((a.bodyFat / 100) * a.weight).toFixed(1) : 0;
     // Visceral eval reuse viscCat
+
+    // Quantos kg para chegar ao peso recomendado
+    const weightDelta = (() => {
+      if (!a.weight || !idealWeightMax) return null as null | string;
+      if (a.weight < idealWeightMin) return `Faltam ${(+(idealWeightMin - a.weight).toFixed(1))} kg para o mínimo recomendado`;
+      if (a.weight <= idealWeightMax) return "Dentro do recomendado";
+      return `Precisa perder ${(+(a.weight - idealWeightMax).toFixed(1))} kg para entrar no recomendado`;
+    })();
+
+    // Quantos kg de gordura para chegar ao recomendado
+    const fatDelta = (() => {
+      if (!a.bodyFat || !a.weight) return null as null | string;
+      const idealMaxPct = client.gender === "male" ? 17 : 24;
+      const idealMinPct = client.gender === "male" ? 10 : 18;
+      if (a.bodyFat < idealMinPct) return `Faltam ${(+((idealMinPct - a.bodyFat) * a.weight / 100).toFixed(1))} kg de gordura para o mínimo`;
+      if (a.bodyFat <= idealMaxPct) return "Dentro do recomendado";
+      const kgToLose = +((a.bodyFat - idealMaxPct) * a.weight / 100).toFixed(1);
+      return `Precisa perder ${kgToLose} kg de gordura para entrar no recomendado`;
+    })();
+
     // Metabolismo eval
     const basalEval = (() => {
       if (!basalKcal || !harrisBenedict) return { c: "#94a3b8", t: "—" };
