@@ -1298,136 +1298,109 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       );
     };
 
+    const UnitChips = ({ fieldKey, options, defaultUnit }: { fieldKey: string; options: Array<"%" | "kg" | "cm" | "num">; defaultUnit: "%" | "kg" | "cm" | "num" }) => {
+      const current = bioUnits[fieldKey] || defaultUnit;
+      const labelOf = (u: "%" | "kg" | "cm" | "num") => (u === "num" ? "número" : u);
+      return (
+        <span style={{ display: "inline-flex", gap: 4, marginLeft: 6 }}>
+          {options.map((u) => (
+            <button
+              key={u}
+              type="button"
+              onClick={(e) => { e.preventDefault(); setBioUnit(fieldKey, u); }}
+              style={{
+                fontSize: 10,
+                padding: "2px 6px",
+                borderRadius: 6,
+                border: "1px solid",
+                borderColor: current === u ? "var(--fm-primary)" : "#cbd5e1",
+                background: current === u ? "var(--fm-primary)" : "transparent",
+                color: current === u ? "#fff" : "#64748b",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {labelOf(u)}
+            </button>
+          ))}
+        </span>
+      );
+    };
+
+    const bioFields: Array<{ key: keyof FitMindAssessment; label: string; tip: string; placeholder: string; defaultUnit: "%" | "kg" | "cm" | "num"; units: Array<"%" | "kg" | "cm" | "num"> }> = [
+      { key: "bodyFat", label: "Gordura Corporal", tip: "bodyFat", placeholder: "Ex: 28.5", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "skeletalMuscle", label: "Músculo Esquelético", tip: "skeletalMuscle", placeholder: "Ex: 32.4", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "muscleMass", label: "Massa Muscular", tip: "muscleMass", placeholder: "Ex: 41.8", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "visceralFat", label: "Gordura Visceral", tip: "visceralFat", placeholder: "Ex: 7.0", defaultUnit: "num", units: ["%", "num"] },
+      { key: "basalMetabolism", label: "Metabolismo Basal", tip: "basalMetabolism", placeholder: "Ex: 1500", defaultUnit: "num", units: ["num", "%"] },
+      { key: "bodyAge", label: "Idade Corporal", tip: "bodyAge", placeholder: "Ex: 32", defaultUnit: "num", units: ["num"] },
+      { key: "bodyWater", label: "Água Corporal", tip: "bodyWater", placeholder: "Ex: 52.3", defaultUnit: "%", units: ["%", "kg", "num"] },
+      { key: "boneMass", label: "Massa Óssea", tip: "boneMass", placeholder: "Ex: 4.2", defaultUnit: "%", units: ["%", "kg", "num"] },
+    ];
+
     const StepBioimpedancia = () => (
       <div>
         <div className="fm-section-title">Bioimpedância</div>
+        <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
+          Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
+          preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
+        </p>
         <div className="fm-grid-2" style={{ marginBottom: 12 }}>
-          <div>
-            <label className="fm-label">
-              Gordura Corporal (%) <Tooltip id="bodyFat" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 28.5"
-              onChange={(e) => upd("bodyFat", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Músculo Esquelético (%) <Tooltip id="skeletalMuscle" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 32.4"
-              onChange={(e) => upd("skeletalMuscle", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Massa Muscular (%) <Tooltip id="muscleMass" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 41.8"
-              onChange={(e) => upd("muscleMass", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Gordura Visceral (%) <Tooltip id="visceralFat" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              className="fm-input"
-              placeholder="Ex: 7.0"
-              onChange={(e) => upd("visceralFat", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Metabolismo Basal (%) <Tooltip id="basalMetabolism" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 100"
-              onChange={(e) => upd("basalMetabolism", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Idade Corporal (anos) <Tooltip id="bodyAge" />
-            </label>
-            <input
-              type="number"
-              step="1"
-              className="fm-input"
-              placeholder="Ex: 32"
-              onChange={(e) => upd("bodyAge", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Água Corporal (%) <Tooltip id="bodyWater" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 52.3"
-              onChange={(e) => upd("bodyWater", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">
-              Massa Óssea (%) <Tooltip id="boneMass" />
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              className="fm-input"
-              placeholder="Ex: 4.2"
-              onChange={(e) => upd("boneMass", +e.target.value)}
-            />
-          </div>
+          {bioFields.map((f) => {
+            const unit = bioUnits[f.key as string] || f.defaultUnit;
+            return (
+              <div key={f.key as string}>
+                <label className="fm-label">
+                  {f.label} ({unit === "num" ? "número" : unit}) <Tooltip id={f.tip} />
+                  <UnitChips fieldKey={f.key as string} options={f.units} defaultUnit={f.defaultUnit} />
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="fm-input"
+                  placeholder={f.placeholder}
+                  onChange={(e) => upd(f.key, +e.target.value)}
+                />
+              </div>
+            );
+          })}
         </div>
         <div className="fm-section-title" style={{ marginTop: 16 }}>
           Análise por Segmento
         </div>
         <div className="fm-grid-2">
-          {[
-            ["Braço Esquerdo (%)", "leftArm"],
-            ["Braço Direito (%)", "rightArm"],
-            ["Tronco (%)", "trunk"],
-            ["Perna Esquerda (%)", "leftLeg"],
-            ["Perna Direita (%)", "rightLeg"],
-          ].map(([label, key]) => (
-            <div key={key}>
-              <label className="fm-label">{label}</label>
-              <input
-                type="number"
-                step="0.1"
-                className="fm-input"
-                placeholder="Ex: 30.5"
-                onChange={(e) =>
-                  upd("segmentAnalysis", {
-                    ...assessment.segmentAnalysis,
-                    [key]: +e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
+          {(
+            [
+              ["Braço Esquerdo", "leftArm"],
+              ["Braço Direito", "rightArm"],
+              ["Tronco", "trunk"],
+              ["Perna Esquerda", "leftLeg"],
+              ["Perna Direita", "rightLeg"],
+            ] as const
+          ).map(([label, key]) => {
+            const fieldKey = `seg_${key}`;
+            const unit = bioUnits[fieldKey] || "%";
+            return (
+              <div key={key}>
+                <label className="fm-label">
+                  {label} ({unit === "num" ? "número" : unit})
+                  <UnitChips fieldKey={fieldKey} options={["%", "kg", "num"]} defaultUnit="%" />
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="fm-input"
+                  placeholder="Ex: 30.5"
+                  onChange={(e) =>
+                    upd("segmentAnalysis", {
+                      ...assessment.segmentAnalysis,
+                      [key]: +e.target.value,
+                    })
+                  }
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     );
