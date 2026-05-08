@@ -140,10 +140,10 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     const { data: clientRows, error: clientsError } = await supabase.rpc("list_coach_team_clients" as never);
     if (clientsError) toast.error(clientsError.message || "Erro ao carregar alunos da equipe");
     const normalizedClients = ((clientRows || []) as any[]).map((s) => ({
-      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null,
+      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null,
     }));
     setClients(normalizedClients);
-    setSelectedClient((current) => current || normalizedClients[0] || null);
+    // Não selecionar aluno automaticamente — coach precisa escolher.
     // Sales history (orders for own students or created by this coach)
     const studentIds = normalizedClients.map((s) => s.id);
     const orFilter = [
