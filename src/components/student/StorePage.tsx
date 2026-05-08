@@ -429,23 +429,11 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       )}
 
       {clientPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm" onClick={() => setClientPickerOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-            <h2 className="mb-3 text-base font-bold text-foreground">Selecione o aluno</h2>
-            {clients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Você ainda não tem alunos vinculados.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {clients.map((c) => (
-                  <button key={c.id} onClick={() => { setSelectedClient(c); setClientPickerOpen(false); }} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
-                    <p className="text-sm font-bold text-foreground">{c.name}</p>
-                    {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <ClientPickerModal
+          clients={clients}
+          onPick={(c) => { setSelectedClient(c); setClientPickerOpen(false); }}
+          onClose={() => setClientPickerOpen(false)}
+        />
       )}
 
       {cartOpen && (
