@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail } from "@/components/store/ProductDetailModal";
 
-type SaleClient = { id: string; name: string; email: string | null; phone: string | null };
+type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
 type ProductKind = "challenge" | "digital" | "store" | "item";
