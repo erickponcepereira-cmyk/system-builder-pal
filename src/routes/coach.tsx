@@ -110,10 +110,11 @@ function CoachDashboard() {
   const { coach: coachContext, loading: coachContextLoading, reload: reloadCoach, setCoach: setCoachContext } = useCoachContext();
   const referralCode = coachContext?.referralCode || "FITMIND";
   const referralLink = (() => {
-    const path = coachContext?.referralLink || `/r/${referralCode}`;
-    if (/^https?:\/\//.test(path)) return path;
-    if (typeof window !== "undefined") return `${window.location.origin}${path.startsWith("/") ? "" : "/"}${path}`;
-    return `https://fitmindclub.lovable.app${path.startsWith("/") ? "" : "/"}${path}`;
+    // Sempre gerar um link absoluto para a URL publicada da página, levando direto
+    // para o cadastro com o coach indicador já preenchido (via /r/:code).
+    const path = `/r/${referralCode}`;
+    if (typeof window !== "undefined") return `${window.location.origin}${path}`;
+    return `https://fitmindclub.lovable.app${path}`;
   })();
 
   useEffect(() => {
