@@ -245,7 +245,7 @@ const TOOLTIPS: Record<string, string> = {
   visceralFat:
     "Percentual estimado de gordura visceral. Fonte: (2) Omron Healthcare e (9) Omron Healthcare/Tanita.",
   basalMetabolism:
-    "Percentual em relação ao metabolismo basal estimado pelo método Harris-Benedict. Fonte: (10).",
+    "Valor absoluto do metabolismo basal em kcal/dia (gasto calórico em repouso). Fonte: (10).",
   bodyAge:
     "Percentual da idade corporal em relação à idade real. Fonte: (2) Omron Healthcare.",
   bodyWater:
