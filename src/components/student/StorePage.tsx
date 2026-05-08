@@ -530,3 +530,56 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     </div>
   );
 }
+
+function ClientPickerModal({
+  clients, onPick, onClose,
+}: {
+  clients: SaleClient[];
+  onPick: (c: SaleClient) => void;
+  onClose: () => void;
+}) {
+  const [q, setQ] = useState("");
+  const onlyDigits = (s: string) => s.replace(/\D/g, "");
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return clients;
+    const termDigits = onlyDigits(term);
+    return clients.filter((c) => {
+      const nameMatch = c.name.toLowerCase().includes(term);
+      const cpfMatch = termDigits.length > 0 && c.cpf && onlyDigits(c.cpf).includes(termDigits);
+      return nameMatch || cpfMatch;
+    });
+  }, [clients, q]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-3 text-base font-bold text-foreground">Selecione seu aluno</h2>
+        <div className="mb-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nome ou CPF..."
+            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+        {clients.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Você ainda não tem alunos vinculados.</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {filtered.map((c) => (
+              <button key={c.id} onClick={() => onPick(c)} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
+                <p className="text-sm font-bold text-foreground">{c.name}</p>
+                {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
+                {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {c.cpf}</p>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
