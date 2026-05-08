@@ -2185,7 +2185,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     },
                     {
                       l: "Gordura Corporal",
-                      ref: `Ideal: ${refBodyFat}`,
+                      ref: `Ideal: ${refBodyFat}${fatDelta ? ` · ${fatDelta}` : ""}`,
                       result: a.bodyFat ? `${a.bodyFat}% (${fatKg} kg)` : "—",
                       color: evalColor(fatCat.eval),
                       tag: `${evalLabel(fatCat.eval)} (${fatCat.label})`,
