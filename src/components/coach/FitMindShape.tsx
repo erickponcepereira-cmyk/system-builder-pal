@@ -466,14 +466,19 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
     /* Dark theme overrides for result screen */
-    .fm-result-screen .fm-card { background: #0f172a; color: #e2e8f0; border-color: #1e293b; box-shadow: 0 2px 16px rgba(0,0,0,.5); }
-    .fm-result-screen .fm-section-title { color: #f8fafc !important; }
-    .fm-result-screen [style*="color: #1e293b"], .fm-result-screen [style*="color:#1e293b"] { color: #f1f5f9 !important; }
-    .fm-result-screen [style*="color: #64748b"], .fm-result-screen [style*="color:#64748b"] { color: #94a3b8 !important; }
+    .fm-result-screen { color: #ffffff; }
+    .fm-result-screen .fm-card { background: #0f172a; color: #ffffff; border-color: #1e293b; box-shadow: 0 2px 16px rgba(0,0,0,.5); }
+    .fm-result-screen .fm-section-title { color: #ffffff !important; }
+    .fm-result-screen table, .fm-result-screen th, .fm-result-screen td { color: #ffffff !important; }
+    .fm-result-screen [style*="color: #1e293b"], .fm-result-screen [style*="color:#1e293b"] { color: #ffffff !important; }
+    .fm-result-screen [style*="color: #64748b"], .fm-result-screen [style*="color:#64748b"] { color: #e2e8f0 !important; }
+    .fm-result-screen [style*="color: #94a3b8"], .fm-result-screen [style*="color:#94a3b8"] { color: #cbd5e1 !important; }
     .fm-result-screen [style*="background: #f0fdf4"] { background: rgba(34,197,94,0.12) !important; }
     .fm-result-screen [style*="background: #fef2f2"] { background: rgba(239,68,68,0.12) !important; }
     .fm-result-screen [style*="background: #f8fafc"] { background: #1e293b !important; }
     .fm-result-screen [style*="background: #ffffff"], .fm-result-screen [style*="background:#ffffff"], .fm-result-screen [style*="background: #fff"] { background: #1e293b !important; }
+    .fm-result-screen [style*="background: #eff6ff"] { background: rgba(96,165,250,0.12) !important; }
+    .fm-result-screen [style*="background: #f5f3ff"] { background: rgba(167,139,250,0.12) !important; }
     .fm-result-screen [style*="border-top: 1px solid #f1f5f9"] { border-top-color: #1e293b !important; }
     .fm-result-screen [style*="border: 1px solid #e2e8f0"] { border-color: #334155 !important; }
     .fm-result-row {
