@@ -48,6 +48,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "debit_card">("pix");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ orderNumber: string; payUrl: string; total: number } | null>(null);
+  const [preview, setPreview] = useState<{ items: SaleEarningsItem[]; commissionTotal: number; pointsTotal: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
