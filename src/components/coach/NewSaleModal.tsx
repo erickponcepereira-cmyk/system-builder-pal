@@ -294,7 +294,18 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
                   <div key={idx} className="rounded-lg p-3 flex items-center gap-3" style={{ backgroundColor: "#1A1A1A" }}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{it.title}</p>
-                      <p className="text-[11px] text-white/40">{money(it.unitPrice)} cada</p>
+                      <p className="text-[11px] text-white/40">
+                        {money(it.unitPrice)} cada
+                        {(() => {
+                          const pv = preview?.items.find((x) => x.productId === it.productId);
+                          if (!pv || (pv.commissionTotal === 0 && pv.pointsTotal === 0)) return null;
+                          return (
+                            <span className="ml-2 text-success">
+                              +{money(pv.commissionTotal)} • <span className="text-primary">{pv.pointsTotal} pts</span>
+                            </span>
+                          );
+                        })()}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => updateQty(idx, -1)} className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/70">
