@@ -343,6 +343,19 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
                 <span className="text-sm text-white/60">Total</span>
                 <span className="text-2xl font-bold text-primary">{money(total)}</span>
               </div>
+
+              {preview && (
+                <div className="mt-2 rounded-lg p-3 grid grid-cols-2 gap-2" style={{ backgroundColor: "#1A1A1A" }}>
+                  <div>
+                    <p className="text-[11px] text-white/50">Sua comissão</p>
+                    <p className="text-base font-bold text-success">{money(preview.commissionTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/50">Pontos que você ganha</p>
+                    <p className="text-base font-bold text-primary">{preview.pointsTotal} pts</p>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
