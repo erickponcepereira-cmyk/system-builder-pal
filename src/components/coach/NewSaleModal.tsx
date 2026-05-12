@@ -9,6 +9,8 @@ import {
   type SaleClient,
   type SaleProduct,
 } from "@/server/coach-sales.functions";
+import { previewCoachSaleEarnings, type SaleEarningsItem } from "@/lib/financial.functions";
+import type { PaymentMethod } from "@/lib/financialEngine";
 
 type CartItem = {
   productId: string;
@@ -33,6 +35,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
   const fetchClients = useServerFn(listCoachClients);
   const fetchProducts = useServerFn(listSellableProducts);
   const submitSale = useServerFn(createCoachSale);
+  const fetchPreview = useServerFn(previewCoachSaleEarnings);
 
   const [step, setStep] = useState<Step>("client");
   const [clients, setClients] = useState<SaleClient[]>([]);
@@ -45,6 +48,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "debit_card">("pix");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ orderNumber: string; payUrl: string; total: number } | null>(null);
+  const [preview, setPreview] = useState<{ items: SaleEarningsItem[]; commissionTotal: number; pointsTotal: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -70,6 +74,21 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
   }, [products, searchProduct, productKindFilter]);
 
   const total = useMemo(() => cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0), [cart]);
+
+  // Map UI payment to engine PaymentMethod
+  const enginePaymentMethod: PaymentMethod = paymentMethod === "pix" ? "pix" : paymentMethod === "debit_card" ? "debit" : "credit_1x";
+
+  useEffect(() => {
+    if (!cart.length) { setPreview(null); return; }
+    let cancelled = false;
+    fetchPreview({
+      data: {
+        items: cart.map((c) => ({ productId: c.productId, kind: c.kind, title: c.title, unitPrice: c.unitPrice, quantity: c.quantity })),
+        paymentMethod: enginePaymentMethod,
+      },
+    }).then((r) => { if (!cancelled) setPreview(r); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [cart, enginePaymentMethod, fetchPreview]);
 
   const addToCart = (p: SaleProduct) => {
     setCart((prev) => {
@@ -275,7 +294,18 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
                   <div key={idx} className="rounded-lg p-3 flex items-center gap-3" style={{ backgroundColor: "#1A1A1A" }}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate">{it.title}</p>
-                      <p className="text-[11px] text-white/40">{money(it.unitPrice)} cada</p>
+                      <p className="text-[11px] text-white/40">
+                        {money(it.unitPrice)} cada
+                        {(() => {
+                          const pv = preview?.items.find((x) => x.productId === it.productId);
+                          if (!pv || (pv.commissionTotal === 0 && pv.pointsTotal === 0)) return null;
+                          return (
+                            <span className="ml-2 text-success">
+                              +{money(pv.commissionTotal)} • <span className="text-primary">{pv.pointsTotal} pts</span>
+                            </span>
+                          );
+                        })()}
+                      </p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => updateQty(idx, -1)} className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/70">
@@ -324,6 +354,19 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
                 <span className="text-sm text-white/60">Total</span>
                 <span className="text-2xl font-bold text-primary">{money(total)}</span>
               </div>
+
+              {preview && (
+                <div className="mt-2 rounded-lg p-3 grid grid-cols-2 gap-2" style={{ backgroundColor: "#1A1A1A" }}>
+                  <div>
+                    <p className="text-[11px] text-white/50">Sua comissão</p>
+                    <p className="text-base font-bold text-success">{money(preview.commissionTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/50">Pontos que você ganha</p>
+                    <p className="text-base font-bold text-primary">{preview.pointsTotal} pts</p>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
