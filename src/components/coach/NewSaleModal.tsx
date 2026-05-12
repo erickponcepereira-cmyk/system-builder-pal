@@ -75,6 +75,21 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
 
   const total = useMemo(() => cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0), [cart]);
 
+  // Map UI payment to engine PaymentMethod
+  const enginePaymentMethod: PaymentMethod = paymentMethod === "pix" ? "pix" : paymentMethod === "debit_card" ? "debit" : "credit_1x";
+
+  useEffect(() => {
+    if (!cart.length) { setPreview(null); return; }
+    let cancelled = false;
+    fetchPreview({
+      data: {
+        items: cart.map((c) => ({ productId: c.productId, kind: c.kind, title: c.title, unitPrice: c.unitPrice, quantity: c.quantity })),
+        paymentMethod: enginePaymentMethod,
+      },
+    }).then((r) => { if (!cancelled) setPreview(r); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [cart, enginePaymentMethod, fetchPreview]);
+
   const addToCart = (p: SaleProduct) => {
     setCart((prev) => {
       const idx = prev.findIndex((i) => i.productId === p.id && i.kind === p.kind);
