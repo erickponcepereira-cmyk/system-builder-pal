@@ -1270,6 +1270,68 @@ export type Database = {
           },
         ]
       }
+      coach_points_log: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          points: number
+          product_id: string | null
+          reason: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points: number
+          product_id?: string | null
+          reason?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          points?: number
+          product_id?: string | null
+          reason?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_points_log_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_points_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_points_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_points_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_transfers: {
         Row: {
           coaches_transferred: number | null
@@ -1352,6 +1414,7 @@ export type Database = {
           referral_code: string
           referral_link: string | null
           total_active_students: number | null
+          total_points: number
           total_sales: number | null
           transferred_at: string | null
           transferred_to_coach_id: string | null
@@ -1383,6 +1446,7 @@ export type Database = {
           referral_code: string
           referral_link?: string | null
           total_active_students?: number | null
+          total_points?: number
           total_sales?: number | null
           transferred_at?: string | null
           transferred_to_coach_id?: string | null
@@ -1414,6 +1478,7 @@ export type Database = {
           referral_code?: string
           referral_link?: string | null
           total_active_students?: number | null
+          total_points?: number
           total_sales?: number | null
           transferred_at?: string | null
           transferred_to_coach_id?: string | null
@@ -4727,6 +4792,12 @@ export type Database = {
           _status: string
         }
         Returns: undefined
+      }
+      slot_target_profile_id: {
+        Args: {
+          _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]
+        }
+        Returns: string
       }
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
