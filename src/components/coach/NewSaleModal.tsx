@@ -35,6 +35,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
   const fetchClients = useServerFn(listCoachClients);
   const fetchProducts = useServerFn(listSellableProducts);
   const submitSale = useServerFn(createCoachSale);
+  const fetchPreview = useServerFn(previewCoachSaleEarnings);
 
   const [step, setStep] = useState<Step>("client");
   const [clients, setClients] = useState<SaleClient[]>([]);
