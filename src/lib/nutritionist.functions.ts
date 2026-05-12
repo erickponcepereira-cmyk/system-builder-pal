@@ -129,7 +129,7 @@ export const releaseNutritionistEntry = createServerFn({ method: "POST" })
     await ensureAdmin(context.userId);
     const { error } = await supabaseAdmin.rpc("release_nutritionist_blocked_entry", {
       _entry_id: data.entryId,
-      _notes: data.notes ?? null,
+      _notes: data.notes ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -142,7 +142,7 @@ export const cancelNutritionistEntry = createServerFn({ method: "POST" })
     await ensureAdmin(context.userId);
     const { error } = await supabaseAdmin.rpc("cancel_nutritionist_blocked_entry", {
       _entry_id: data.entryId,
-      _notes: data.notes ?? null,
+      _notes: data.notes ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
