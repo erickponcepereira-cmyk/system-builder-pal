@@ -20,6 +20,7 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "store", label: "Loja" },
   { key: "freebies", label: "Gratuitos" },
   { key: "store_reports", label: "Relatórios da Loja" },
+  { key: "products", label: "Motor Financeiro" },
   { key: "settings", label: "Configurações" },
 ];
 
