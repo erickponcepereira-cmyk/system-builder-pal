@@ -9,6 +9,8 @@ import {
   type SaleClient,
   type SaleProduct,
 } from "@/server/coach-sales.functions";
+import { previewCoachSaleEarnings, type SaleEarningsItem } from "@/lib/financial.functions";
+import type { PaymentMethod } from "@/lib/financialEngine";
 
 type CartItem = {
   productId: string;
