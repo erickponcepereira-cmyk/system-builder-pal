@@ -2771,6 +2771,197 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_fee_configs: {
+        Row: {
+          card_fee_3x12_percentage: number
+          card_fee_percentage: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          notes: string | null
+          pix_fee_percentage: number
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          card_fee_3x12_percentage?: number
+          card_fee_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          notes?: string | null
+          pix_fee_percentage?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          card_fee_3x12_percentage?: number
+          card_fee_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          notes?: string | null
+          pix_fee_percentage?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_fee_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_referral_rules: {
+        Row: {
+          coach_pool_percentage: number
+          created_at: string
+          enabled: boolean
+          id: string
+          pre_deduction_fixed: number
+          pre_deduction_label: string
+          product_id: string
+          student_referral_percentage: number
+          updated_at: string
+        }
+        Insert: {
+          coach_pool_percentage?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          pre_deduction_fixed?: number
+          pre_deduction_label?: string
+          product_id: string
+          student_referral_percentage?: number
+          updated_at?: string
+        }
+        Update: {
+          coach_pool_percentage?: number
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          pre_deduction_fixed?: number
+          pre_deduction_label?: string
+          product_id?: string
+          student_referral_percentage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_referral_rules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_referral_rules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_value_slots: {
+        Row: {
+          applies_to_referral_sales: boolean
+          applies_to_student_referral: boolean
+          created_at: string
+          delivery_trigger: string | null
+          description: string | null
+          destination: Database["public"]["Enums"]["value_destination_type"]
+          destination_label: string | null
+          id: string
+          is_active: boolean
+          is_blocked_until_delivery: boolean
+          is_system_fee: boolean
+          label: string
+          linked_profile_role: string | null
+          product_id: string
+          redirect_metadata: Json
+          redirect_to_module: string | null
+          slot_order: number
+          updated_at: string
+          value_amount: number
+          value_type: string
+        }
+        Insert: {
+          applies_to_referral_sales?: boolean
+          applies_to_student_referral?: boolean
+          created_at?: string
+          delivery_trigger?: string | null
+          description?: string | null
+          destination: Database["public"]["Enums"]["value_destination_type"]
+          destination_label?: string | null
+          id?: string
+          is_active?: boolean
+          is_blocked_until_delivery?: boolean
+          is_system_fee?: boolean
+          label: string
+          linked_profile_role?: string | null
+          product_id: string
+          redirect_metadata?: Json
+          redirect_to_module?: string | null
+          slot_order?: number
+          updated_at?: string
+          value_amount?: number
+          value_type?: string
+        }
+        Update: {
+          applies_to_referral_sales?: boolean
+          applies_to_student_referral?: boolean
+          created_at?: string
+          delivery_trigger?: string | null
+          description?: string | null
+          destination?: Database["public"]["Enums"]["value_destination_type"]
+          destination_label?: string | null
+          id?: string
+          is_active?: boolean
+          is_blocked_until_delivery?: boolean
+          is_system_fee?: boolean
+          label?: string
+          linked_profile_role?: string | null
+          product_id?: string
+          redirect_metadata?: Json
+          redirect_to_module?: string | null
+          slot_order?: number
+          updated_at?: string
+          value_amount?: number
+          value_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_value_slots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_value_slots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           app_fee: number | null
@@ -2824,6 +3015,8 @@ export type Database = {
           original_price: number | null
           other_costs: number | null
           pix_fee_percentage: number | null
+          points_auto_calculated: boolean
+          points_per_sale: number
           price: number | null
           product_type: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max: number | null
@@ -2890,6 +3083,8 @@ export type Database = {
           original_price?: number | null
           other_costs?: number | null
           pix_fee_percentage?: number | null
+          points_auto_calculated?: boolean
+          points_per_sale?: number
           price?: number | null
           product_type?: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max?: number | null
@@ -2956,6 +3151,8 @@ export type Database = {
           original_price?: number | null
           other_costs?: number | null
           pix_fee_percentage?: number | null
+          points_auto_calculated?: boolean
+          points_per_sale?: number
           price?: number | null
           product_type?: Database["public"]["Enums"]["product_type"] | null
           profit_percentage_max?: number | null
@@ -4359,6 +4556,10 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      recalc_product_points: {
+        Args: { _product_id: string }
+        Returns: undefined
+      }
       redeem_freebie: { Args: { _freebie_id: string }; Returns: string }
       refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
@@ -4471,6 +4672,22 @@ export type Database = {
         | "refunded"
         | "chargeback"
       user_role: "admin" | "director" | "manager" | "coach" | "student"
+      value_destination_type:
+        | "admin_wallet"
+        | "coach_wallet"
+        | "network_l1"
+        | "network_l2"
+        | "network_l3"
+        | "nutritionist_wallet"
+        | "health_pro_wallet"
+        | "product_order_pool"
+        | "referral_student"
+        | "master_coach_wallet"
+        | "event_organizer"
+        | "platform_reserve"
+        | "payment_gateway"
+        | "government_tax"
+        | "custom"
       withdrawal_status:
         | "requested"
         | "approved"
@@ -4648,6 +4865,23 @@ export const Constants = {
         "chargeback",
       ],
       user_role: ["admin", "director", "manager", "coach", "student"],
+      value_destination_type: [
+        "admin_wallet",
+        "coach_wallet",
+        "network_l1",
+        "network_l2",
+        "network_l3",
+        "nutritionist_wallet",
+        "health_pro_wallet",
+        "product_order_pool",
+        "referral_student",
+        "master_coach_wallet",
+        "event_organizer",
+        "platform_reserve",
+        "payment_gateway",
+        "government_tax",
+        "custom",
+      ],
       withdrawal_status: [
         "requested",
         "approved",
