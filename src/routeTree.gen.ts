@@ -42,9 +42,11 @@ import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminProductOrdersRouteImport } from './routes/admin.product-orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
+import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
@@ -222,6 +224,11 @@ const AdminProductsRoute = AdminProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProductOrdersRoute = AdminProductOrdersRouteImport.update({
+  id: '/product-orders',
+  path: '/product-orders',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -235,6 +242,11 @@ const AdminPatentsRoute = AdminPatentsRouteImport.update({
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNutritionistWalletRoute = AdminNutritionistWalletRouteImport.update({
+  id: '/nutritionist-wallet',
+  path: '/nutritionist-wallet',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
@@ -308,9 +320,11 @@ export interface FileRoutesByFullPath {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
+  '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -355,9 +369,11 @@ export interface FileRoutesByTo {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
+  '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -405,9 +421,11 @@ export interface FileRoutesById {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
+  '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -456,9 +474,11 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/freebies'
+    | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
+    | '/admin/product-orders'
     | '/admin/products'
     | '/admin/reports'
     | '/admin/settings'
@@ -503,9 +523,11 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/freebies'
+    | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
+    | '/admin/product-orders'
     | '/admin/products'
     | '/admin/reports'
     | '/admin/settings'
@@ -552,9 +574,11 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/freebies'
+    | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/patents'
     | '/admin/payments'
+    | '/admin/product-orders'
     | '/admin/products'
     | '/admin/reports'
     | '/admin/settings'
@@ -840,6 +864,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/product-orders': {
+      id: '/admin/product-orders'
+      path: '/product-orders'
+      fullPath: '/admin/product-orders'
+      preLoaderRoute: typeof AdminProductOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/payments': {
       id: '/admin/payments'
       path: '/payments'
@@ -859,6 +890,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/admin/orders'
       preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/nutritionist-wallet': {
+      id: '/admin/nutritionist-wallet'
+      path: '/nutritionist-wallet'
+      fullPath: '/admin/nutritionist-wallet'
+      preLoaderRoute: typeof AdminNutritionistWalletRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/freebies': {
@@ -959,9 +997,11 @@ interface AdminRouteChildren {
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
   AdminFreebiesRoute: typeof AdminFreebiesRoute
+  AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminProductOrdersRoute: typeof AdminProductOrdersRoute
   AdminProductsRoute: typeof AdminProductsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -978,9 +1018,11 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
   AdminFreebiesRoute: AdminFreebiesRoute,
+  AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminProductOrdersRoute: AdminProductOrdersRoute,
   AdminProductsRoute: AdminProductsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,

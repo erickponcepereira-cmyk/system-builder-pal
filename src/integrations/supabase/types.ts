@@ -2651,6 +2651,87 @@ export type Database = {
           },
         ]
       }
+      nutritionist_blocked_entries: {
+        Row: {
+          amount: number
+          cancelled_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          product_id: string | null
+          profile_id: string
+          reason: string | null
+          released_at: string | null
+          slot_label: string | null
+          status: Database["public"]["Enums"]["nutri_block_status"]
+          student_id: string | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          profile_id: string
+          reason?: string | null
+          released_at?: string | null
+          slot_label?: string | null
+          status?: Database["public"]["Enums"]["nutri_block_status"]
+          student_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          profile_id?: string
+          reason?: string | null
+          released_at?: string | null
+          slot_label?: string | null
+          status?: Database["public"]["Enums"]["nutri_block_status"]
+          student_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      nutritionist_wallets: {
+        Row: {
+          available_balance: number
+          blocked_balance: number
+          profile_id: string
+          total_earned: number
+          total_released: number
+          total_withdrawn: number
+          updated_at: string
+        }
+        Insert: {
+          available_balance?: number
+          blocked_balance?: number
+          profile_id: string
+          total_earned?: number
+          total_released?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Update: {
+          available_balance?: number
+          blocked_balance?: number
+          profile_id?: string
+          total_earned?: number
+          total_released?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       oauth_states: {
         Row: {
           created_at: string
@@ -2826,6 +2907,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_order_pool_entries: {
+        Row: {
+          amount: number
+          cancelled_at: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          notes: string | null
+          preparing_at: string | null
+          product_id: string | null
+          shipped_at: string | null
+          slot_label: string | null
+          status: Database["public"]["Enums"]["order_pool_status"]
+          student_id: string | null
+          tracking_code: string | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          cancelled_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          preparing_at?: string | null
+          product_id?: string | null
+          shipped_at?: string | null
+          slot_label?: string | null
+          status?: Database["public"]["Enums"]["order_pool_status"]
+          student_id?: string | null
+          tracking_code?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          cancelled_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          notes?: string | null
+          preparing_at?: string | null
+          product_id?: string | null
+          shipped_at?: string | null
+          slot_label?: string | null
+          status?: Database["public"]["Enums"]["order_pool_status"]
+          student_id?: string | null
+          tracking_code?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       product_referral_rules: {
         Row: {
@@ -4478,6 +4613,10 @@ export type Database = {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
       }
+      cancel_nutritionist_blocked_entry: {
+        Args: { _entry_id: string; _notes?: string }
+        Returns: undefined
+      }
       count_active_admins: { Args: never; Returns: number }
       create_coach_sale: {
         Args: {
@@ -4540,6 +4679,15 @@ export type Database = {
         Args: { _notification_id: string }
         Returns: undefined
       }
+      mark_order_pool_entry_status: {
+        Args: {
+          _entry_id: string
+          _notes?: string
+          _status: Database["public"]["Enums"]["order_pool_status"]
+          _tracking?: string
+        }
+        Returns: undefined
+      }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -4568,6 +4716,10 @@ export type Database = {
         Returns: undefined
       }
       release_available_commissions: { Args: never; Returns: number }
+      release_nutritionist_blocked_entry: {
+        Args: { _entry_id: string; _notes?: string }
+        Returns: undefined
+      }
       review_coach_application: {
         Args: {
           _admin_notes?: string
@@ -4639,6 +4791,13 @@ export type Database = {
         | "managers_only"
         | "admins_only"
       commission_status: "pending" | "available" | "withdrawn" | "cancelled"
+      nutri_block_status: "blocked" | "released" | "cancelled"
+      order_pool_status:
+        | "pending"
+        | "preparing"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
       patent_level:
         | "coach"
         | "senior_coach"
@@ -4828,6 +4987,14 @@ export const Constants = {
         "admins_only",
       ],
       commission_status: ["pending", "available", "withdrawn", "cancelled"],
+      nutri_block_status: ["blocked", "released", "cancelled"],
+      order_pool_status: [
+        "pending",
+        "preparing",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
       patent_level: [
         "coach",
         "senior_coach",
