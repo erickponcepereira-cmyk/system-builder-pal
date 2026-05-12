@@ -93,8 +93,8 @@ export const updateOrderPoolEntry = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.rpc("mark_order_pool_entry_status", {
       _entry_id: data.entryId,
       _status: data.status,
-      _tracking: data.tracking ?? null,
-      _notes: data.notes ?? null,
+      _tracking: data.tracking ?? undefined,
+      _notes: data.notes ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
