@@ -122,6 +122,7 @@ function AdminSettings() {
         description: plan.description,
         duration_months: plan.duration_months,
         min_monthly_students: plan.min_monthly_students,
+        min_monthly_points: plan.min_monthly_points,
         must_be_top_seller: plan.must_be_top_seller,
         reward_value: plan.reward_value,
         reward_description: plan.reward_description,
