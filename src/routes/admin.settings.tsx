@@ -15,6 +15,7 @@ type CareerPlan = {
   description: string | null;
   duration_months: number | null;
   min_monthly_students: number | null;
+  min_monthly_points: number;
   must_be_top_seller: boolean | null;
   reward_value: number | null;
   reward_description: string | null;
@@ -83,6 +84,7 @@ function AdminSettings() {
       description: "Recompensa para coaches que mantêm rede ativa",
       duration_months: 6,
       min_monthly_students: 100,
+      min_monthly_points: 75,
       must_be_top_seller: true,
       reward_value: 6000,
       reward_description: "Viagem com tudo pago",
@@ -120,6 +122,7 @@ function AdminSettings() {
         description: plan.description,
         duration_months: plan.duration_months,
         min_monthly_students: plan.min_monthly_students,
+        min_monthly_points: plan.min_monthly_points,
         must_be_top_seller: plan.must_be_top_seller,
         reward_value: plan.reward_value,
         reward_description: plan.reward_description,
@@ -217,10 +220,11 @@ function AdminSettings() {
               <Field label="Descrição"><Textarea value={plan.description || ""} onChange={(v) => setPlan({ ...plan, description: v })} rows={2} /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Meses consecutivos"><Input type="number" value={plan.duration_months || 6} onChange={(v) => setPlan({ ...plan, duration_months: Number(v) })} /></Field>
-                <Field label="Mínimo alunos/mês"><Input type="number" value={plan.min_monthly_students || 100} onChange={(v) => setPlan({ ...plan, min_monthly_students: Number(v) })} /></Field>
+                <Field label="Mínimo pontos/mês"><Input type="number" value={plan.min_monthly_points ?? 75} onChange={(v) => setPlan({ ...plan, min_monthly_points: Number(v) })} /></Field>
                 <Field label="Valor recompensa (R$)"><Input type="number" value={plan.reward_value || 0} onChange={(v) => setPlan({ ...plan, reward_value: Number(v) })} /></Field>
                 <Field label="Resumo recompensa"><Input value={plan.reward_description || ""} onChange={(v) => setPlan({ ...plan, reward_description: v })} /></Field>
               </div>
+              <p className="text-xs text-white/40">Coaches qualificam ao plano acumulando ao menos esse total de pontos no mês. Pontos são gerados automaticamente a partir das vendas (ver Produtos &gt; Slots de valor).</p>
               <Field label="Detalhes da recompensa"><Textarea value={plan.reward_details || ""} onChange={(v) => setPlan({ ...plan, reward_details: v })} rows={2} /></Field>
               <Toggle label="Exigir top vendedor da unidade" checked={!!plan.must_be_top_seller} onChange={(checked) => setPlan({ ...plan, must_be_top_seller: checked })} />
             </div>
