@@ -15,7 +15,7 @@ type CareerPlan = {
   description: string | null;
   duration_months: number | null;
   min_monthly_students: number | null;
-  min_monthly_points: number | null;
+  min_monthly_points: number;
   must_be_top_seller: boolean | null;
   reward_value: number | null;
   reward_description: string | null;
