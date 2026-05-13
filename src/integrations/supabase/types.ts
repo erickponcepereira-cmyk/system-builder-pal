@@ -396,6 +396,7 @@ export type Database = {
           duration_months: number | null
           id: string
           is_active: boolean | null
+          min_monthly_points: number
           min_monthly_students: number | null
           must_be_top_seller: boolean | null
           name: string
@@ -409,6 +410,7 @@ export type Database = {
           duration_months?: number | null
           id?: string
           is_active?: boolean | null
+          min_monthly_points?: number
           min_monthly_students?: number | null
           must_be_top_seller?: boolean | null
           name: string
@@ -422,6 +424,7 @@ export type Database = {
           duration_months?: number | null
           id?: string
           is_active?: boolean | null
+          min_monthly_points?: number
           min_monthly_students?: number | null
           must_be_top_seller?: boolean | null
           name?: string
@@ -2609,6 +2612,7 @@ export type Database = {
           ranking_position: number | null
           reference_month: string
           renewed_students: number | null
+          total_points: number
           total_revenue: number | null
           total_students: number | null
         }
@@ -2622,6 +2626,7 @@ export type Database = {
           ranking_position?: number | null
           reference_month: string
           renewed_students?: number | null
+          total_points?: number
           total_revenue?: number | null
           total_students?: number | null
         }
@@ -2635,6 +2640,7 @@ export type Database = {
           ranking_position?: number | null
           reference_month?: string
           renewed_students?: number | null
+          total_points?: number
           total_revenue?: number | null
           total_students?: number | null
         }
