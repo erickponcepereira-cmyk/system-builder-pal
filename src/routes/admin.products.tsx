@@ -2,7 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Save, Settings2, Calculator } from "lucide-react";
+import {
+  Loader2, Plus, Trash2, Save, Settings2, Bolt, Lock, CreditCard, Receipt,
+  Building2, Package, Stethoscope, UserCircle, Network, Shield, SlidersHorizontal,
+  Vault, CircleCheck, AlertTriangle, AlertCircle, Users, X,
+} from "lucide-react";
 import {
   listAdminProducts,
   getProductFinancial,
