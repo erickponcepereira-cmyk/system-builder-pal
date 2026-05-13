@@ -84,6 +84,7 @@ function AdminSettings() {
       description: "Recompensa para coaches que mantêm rede ativa",
       duration_months: 6,
       min_monthly_students: 100,
+      min_monthly_points: 75,
       must_be_top_seller: true,
       reward_value: 6000,
       reward_description: "Viagem com tudo pago",
