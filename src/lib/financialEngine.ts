@@ -28,11 +28,13 @@ export interface PaymentFeeConfig {
   pix_fee_percentage: number;
 }
 
+export type SlotValueType = "percentage" | "fixed" | "pct_running";
+
 export interface ValueSlot {
   id: string;
   slot_order: number;
   label: string;
-  value_type: "percentage" | "fixed";
+  value_type: SlotValueType;
   value_amount: number;
   destination: string;
   destination_label: string;
@@ -40,6 +42,8 @@ export interface ValueSlot {
   is_system_fee: boolean;
   applies_to_referral_sales: boolean;
   applies_to_student_referral: boolean;
+  /** Slots com mesmo slot_group são paralelos: usam o mesmo snapshot do saldo no início do grupo. */
+  slot_group?: number | null;
 }
 
 export interface ReferralRule {
