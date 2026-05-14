@@ -28,11 +28,13 @@ export interface PaymentFeeConfig {
   pix_fee_percentage: number;
 }
 
+export type SlotValueType = "percentage" | "fixed" | "pct_running";
+
 export interface ValueSlot {
   id: string;
   slot_order: number;
   label: string;
-  value_type: "percentage" | "fixed";
+  value_type: SlotValueType;
   value_amount: number;
   destination: string;
   destination_label: string;
@@ -40,6 +42,8 @@ export interface ValueSlot {
   is_system_fee: boolean;
   applies_to_referral_sales: boolean;
   applies_to_student_referral: boolean;
+  /** Slots com mesmo slot_group são paralelos: usam o mesmo snapshot do saldo no início do grupo. */
+  slot_group?: number | null;
 }
 
 export interface ReferralRule {
@@ -125,11 +129,45 @@ export function calculateDistribution(
     .filter((s) => s.applies_to_referral_sales)
     .sort((a, b) => a.slot_order - b.slot_order);
 
+  // Cálculo com suporte a slot_group (paralelo) e pct_running (sobre saldo).
+  let runningBalance = baseDistributable;
+  let groupSnapshot = baseDistributable;
+  let groupTotal = 0;
+  let currentGroup: number | null | undefined = -1 as number;
+  const slotAmts: number[] = [];
+
+  const flushGroup = () => {
+    runningBalance = Math.max(0, runningBalance - groupTotal);
+    groupSnapshot = runningBalance;
+    groupTotal = 0;
+  };
+
+  for (let i = 0; i < activeSlots.length; i++) {
+    const slot = activeSlots[i];
+    const slotGroup = slot.slot_group ?? null;
+    if (slotGroup !== currentGroup) {
+      flushGroup();
+      currentGroup = slotGroup;
+    }
+    let amount: number;
+    if (slot.value_type === "fixed") amount = slot.value_amount;
+    else if (slot.value_type === "pct_running") amount = groupSnapshot * (slot.value_amount / 100);
+    else amount = baseDistributable * (slot.value_amount / 100);
+    amount = round2(Math.max(0, amount));
+
+    if (slotGroup === null) {
+      runningBalance = Math.max(0, runningBalance - amount);
+      groupSnapshot = runningBalance;
+    } else {
+      groupTotal += amount;
+    }
+    slotAmts.push(amount);
+  }
+  flushGroup();
+
   let totalDistributed = 0;
-  for (const slot of activeSlots) {
-    const amount = round2(
-      slot.value_type === "fixed" ? slot.value_amount : baseDistributable * (slot.value_amount / 100),
-    );
+  activeSlots.forEach((slot, i) => {
+    const amount = slotAmts[i];
     totalDistributed += amount;
     lines.push({
       label: slot.label,
@@ -142,7 +180,7 @@ export function calculateDistribution(
       redirect_to: slot.destination === "product_order_pool" ? "Painel de Pedidos" : undefined,
       type: "distribution",
     });
-  }
+  });
 
   const remainder = round2(baseDistributable - totalDistributed);
   return {

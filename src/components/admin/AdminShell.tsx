@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, UserCheck, Package, CreditCard,
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
-  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, Store, Gift, TrendingUp, DollarSign, Truck, Lock,
+  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/products", label: "Motor Financeiro", icon: DollarSign, perm: "products" },
   { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },
   { to: "/admin/nutritionist-wallet", label: "Carteira Nutricionista", icon: Lock, perm: "nutritionist_wallet" },
+  { to: "/admin/career", label: "Carreira", icon: Trophy, perm: "career" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 ];
 

@@ -162,6 +162,7 @@ export const getProductFinancial = createServerFn({ method: "GET" })
         is_system_fee: !!s.is_system_fee,
         applies_to_referral_sales: !!s.applies_to_referral_sales,
         applies_to_student_referral: !!s.applies_to_student_referral,
+        slot_group: s.slot_group ?? null,
       })),
       referralRule: rule
         ? {
@@ -217,6 +218,7 @@ export const saveProductFinancial = createServerFn({ method: "POST" })
         is_system_fee: s.is_system_fee,
         applies_to_referral_sales: s.applies_to_referral_sales,
         applies_to_student_referral: s.applies_to_student_referral,
+        slot_group: s.slot_group ?? null,
       }));
       const { error } = await supabaseAdmin.from("product_value_slots").insert(payload as never);
       if (error) throw new Error(error.message);

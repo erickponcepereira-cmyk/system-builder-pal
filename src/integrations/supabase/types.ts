@@ -389,6 +389,105 @@ export type Database = {
           },
         ]
       }
+      career_challenge_progress: {
+        Row: {
+          achieved_at: string | null
+          challenge_id: string
+          coach_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          points_in_period: number
+          reward_delivered_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          challenge_id: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          points_in_period?: number
+          reward_delivered_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          achieved_at?: string | null
+          challenge_id?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          points_in_period?: number
+          reward_delivered_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_challenge_progress_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "career_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_challenge_progress_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_challenges: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean
+          required_points: number
+          reward_image_url: string | null
+          reward_label: string
+          reward_value: number | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean
+          required_points?: number
+          reward_image_url?: string | null
+          reward_label: string
+          reward_value?: number | null
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          required_points?: number
+          reward_image_url?: string | null
+          reward_label?: string
+          reward_value?: number | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       career_plan_config: {
         Row: {
           created_at: string | null
@@ -2979,6 +3078,102 @@ export type Database = {
           },
         ]
       }
+      points_redeem_orders: {
+        Row: {
+          admin_notes: string | null
+          coach_id: string
+          created_at: string
+          id: string
+          points_spent: number
+          redeem_product_id: string
+          shipping_address: string | null
+          status: string
+          tracking_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          coach_id: string
+          created_at?: string
+          id?: string
+          points_spent: number
+          redeem_product_id: string
+          shipping_address?: string | null
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          coach_id?: string
+          created_at?: string
+          id?: string
+          points_spent?: number
+          redeem_product_id?: string
+          shipping_address?: string | null
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_redeem_orders_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_redeem_orders_redeem_product_id_fkey"
+            columns: ["redeem_product_id"]
+            isOneToOne: false
+            referencedRelation: "points_redeem_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      points_redeem_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          points_cost: number
+          sort_order: number
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          points_cost: number
+          sort_order?: number
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          points_cost?: number
+          sort_order?: number
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_order_pool_entries: {
         Row: {
           amount: number
@@ -3102,6 +3297,7 @@ export type Database = {
           product_id: string
           redirect_metadata: Json
           redirect_to_module: string | null
+          slot_group: number | null
           slot_order: number
           updated_at: string
           value_amount: number
@@ -3124,6 +3320,7 @@ export type Database = {
           product_id: string
           redirect_metadata?: Json
           redirect_to_module?: string | null
+          slot_group?: number | null
           slot_order?: number
           updated_at?: string
           value_amount?: number
@@ -3146,6 +3343,7 @@ export type Database = {
           product_id?: string
           redirect_metadata?: Json
           redirect_to_module?: string | null
+          slot_group?: number | null
           slot_order?: number
           updated_at?: string
           value_amount?: number

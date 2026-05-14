@@ -51,6 +51,7 @@ import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
+import { Route as AdminCareerRouteImport } from './routes/admin.career'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
@@ -269,6 +270,11 @@ const AdminCoachApplicationsRoute = AdminCoachApplicationsRouteImport.update({
   path: '/coach-applications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCareerRoute = AdminCareerRouteImport.update({
+  id: '/career',
+  path: '/career',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCalendarsRoute = AdminCalendarsRouteImport.update({
   id: '/calendars',
   path: '/calendars',
@@ -316,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
   '/admin/calendars': typeof AdminCalendarsRoute
+  '/admin/career': typeof AdminCareerRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/calendars': typeof AdminCalendarsRoute
+  '/admin/career': typeof AdminCareerRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -417,6 +425,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
   '/admin/calendars': typeof AdminCalendarsRoute
+  '/admin/career': typeof AdminCareerRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -470,6 +479,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/student'
     | '/admin/calendars'
+    | '/admin/career'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/admin/calendars'
+    | '/admin/career'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -570,6 +581,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/student'
     | '/admin/calendars'
+    | '/admin/career'
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -927,6 +939,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoachApplicationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/career': {
+      id: '/admin/career'
+      path: '/career'
+      fullPath: '/admin/career'
+      preLoaderRoute: typeof AdminCareerRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/calendars': {
       id: '/admin/calendars'
       path: '/calendars'
@@ -993,6 +1012,7 @@ const AdminCoachesRouteWithChildren = AdminCoachesRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminCalendarsRoute: typeof AdminCalendarsRoute
+  AdminCareerRoute: typeof AdminCareerRoute
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
@@ -1014,6 +1034,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCalendarsRoute: AdminCalendarsRoute,
+  AdminCareerRoute: AdminCareerRoute,
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
