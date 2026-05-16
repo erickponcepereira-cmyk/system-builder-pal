@@ -191,10 +191,15 @@ function ProductFinancialDrawer({
     return calculateDistribution(data.product.price, previewMethod, feeCfg, data.slots, taxPct);
   }, [data, previewMethod, feeCfg, taxPct]);
 
-  const autoPoints = useMemo(() => {
-    if (!data) return 0;
-    return calculatePointsFromSystemFee(sumSystemFee(data.slots, data.product.price));
-  }, [data]);
+  // Mapa slot.id → valor calculado (respeita grupos paralelos e pct_running)
+  const slotAmtMap = useMemo(() => {
+    if (!data || !dist) return new Map<string, number>();
+    const active = data.slots.filter((s) => s.applies_to_referral_sales);
+    const amts = computeSlotAmounts(active, dist.base_distributable);
+    const map = new Map<string, number>();
+    active.forEach((s, i) => map.set(s.id, amts[i]));
+    return map;
+  }, [data, dist]);
 
   const handleSave = async () => {
     if (!data) return;
@@ -203,8 +208,8 @@ function ProductFinancialDrawer({
       await save({
         data: {
           productId,
-          points_per_sale: data.product.points_auto_calculated ? autoPoints : data.product.points_per_sale,
-          points_auto_calculated: data.product.points_auto_calculated,
+          points_per_sale: data.product.points_per_sale,
+          points_auto_calculated: false,
           slots: data.slots.map(({ id: _id, ...rest }) => rest),
           referralRule: data.referralRule,
         },
