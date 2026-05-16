@@ -424,6 +424,11 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
         <div className="text-[13px] font-medium flex items-center gap-1.5">
           <m.Icon className="h-3.5 w-3.5 text-white/60" />
           {slot.label}
+          {slot.slot_group != null && (
+            <span className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded bg-[#E24B4A]/20 text-[#E24B4A]">
+              Grupo {slot.slot_group} · paralelo
+            </span>
+          )}
           {slot.is_blocked_until_delivery && (
             <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">
               <Lock className="h-2.5 w-2.5" /> aguarda entrega
@@ -441,11 +446,11 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
         </div>
       </div>
       <div className="grid grid-cols-12 gap-1.5 pt-2 border-t border-white/10">
-        <div className="col-span-5">
+        <div className="col-span-4">
           <label className="text-[10px] text-white/50 block mb-1">Rótulo</label>
           <InputBox value={slot.label} onChange={(v) => onChange({ label: v })} />
         </div>
-        <div className="col-span-4">
+        <div className="col-span-3">
           <label className="text-[10px] text-white/50 block mb-1">Destino</label>
           <select value={slot.destination}
             onChange={(e) => onChange({ destination: e.target.value, destination_label: getMeta(e.target.value).label })}
@@ -456,13 +461,19 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
         <div className="col-span-3">
           <label className="text-[10px] text-white/50 block mb-1">Tipo / valor</label>
           <select value={slot.value_type}
-            onChange={(e) => onChange({ value_type: e.target.value as "percentage" | "fixed" })}
+            onChange={(e) => onChange({ value_type: e.target.value as SlotValueType })}
             className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1 text-[11px] text-white mb-1 outline-none focus:border-[#E24B4A]">
             <option value="fixed">R$ fixo</option>
             <option value="percentage">% da base</option>
+            <option value="pct_running">% do saldo restante</option>
           </select>
-          <InputBox type="number" value={slot.value_amount} step={slot.value_type === "percentage" ? "0.1" : "0.01"} min="0"
+          <InputBox type="number" value={slot.value_amount} step={slot.value_type === "fixed" ? "0.01" : "0.1"} min="0"
             onChange={(v) => onChange({ value_amount: parseFloat(v) || 0 })} />
+        </div>
+        <div className="col-span-2">
+          <label className="text-[10px] text-white/50 block mb-1" title="Slots com mesmo Grupo são deduzidos em paralelo sobre o mesmo saldo">Grupo</label>
+          <InputBox type="number" min="0" value={slot.slot_group ?? ""} placeholder="—"
+            onChange={(v) => onChange({ slot_group: v === "" ? null : parseInt(v) })} />
         </div>
       </div>
       <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-white/10 text-[11px] text-white/60">
