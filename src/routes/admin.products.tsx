@@ -285,7 +285,7 @@ function ProductFinancialDrawer({
                   <div className="space-y-2">
                     {data.slots.map((s, idx) => (
                       <SlotCard key={s.id || idx} slot={s}
-                        amount={s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100)}
+                        amount={slotAmtMap.get(s.id) ?? 0}
                         gross={data.product.price}
                         onChange={(p) => updateSlot(idx, p)}
                         onRemove={() => removeSlot(idx)} />
