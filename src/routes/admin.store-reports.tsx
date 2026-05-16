@@ -15,7 +15,7 @@ type OrderItem = {
   total_price: number;
   product_kind: string;
   store_item_id: string | null;
-  store_items: { name: string; section_id: string | null; store_sections: { name: string } | null } | null;
+  products: { name: string; section_id: string | null; store_sections: { name: string } | null } | null;
   store_orders: { status: string; created_at: string } | null;
 };
 
