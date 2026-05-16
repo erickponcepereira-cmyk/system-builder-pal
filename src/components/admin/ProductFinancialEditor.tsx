@@ -441,7 +441,7 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
   active.forEach((s, i) => {
     segs.push({ w: (amts[i] / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
   });
-  if (dist.remainder > 0) segs.push({ w: (dist.remainder / dist.gross_amount) * 100, cls: "bg-[#888780]" });
+  if (dist.remainder > 0) segs.push({ w: (dist.remainder / dist.gross_amount) * 100, cls: "bg-[#E24B4A]" });
   return (
     <div className="h-1.5 mt-2 rounded overflow-hidden flex gap-px" style={{ backgroundColor: "#0F0F0F" }}>
       {segs.map((s, i) => <div key={i} className={s.cls} style={{ width: `${s.w.toFixed(2)}%`, height: "100%" }} />)}
