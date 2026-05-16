@@ -1,73 +1,70 @@
-## Escopo do trabalho
+## Objetivo
 
-Esta é uma lista grande com 11 melhorias diferentes, em áreas distintas do app (avaliação, coachs, metas, loja, gratuitos, relatórios). Vou agrupar por área e executar em ondas para garantir qualidade. Confirme antes de eu iniciar.
+Hoje a Loja (`/admin/store` → "Itens da Loja") usa a tabela `store_items` com uma UI financeira antiga (campos fixos: imposto, taxa, comissões L1/L2/L3 em `%`/`R$`). Em paralelo, `/admin/products` tem a calculadora nova (slots paralelos com `slot_group`, tipo `pct_running`, pontos manuais, fluxo visual em tempo real). Vamos **unificar**: a Loja passa a operar sobre `products`, o cadastro de item ganha a calculadora nova na aba Financeiro, e `/admin/products` sai do menu.
 
----
+## Decisões já confirmadas
 
-### Onda 1 — Correções rápidas de UI e bugs
+- Unificar: store_items deixa de ser usado; tudo passa para `products`.
+- Campos financeiros antigos em store_items: removidos (slots são a única fonte de verdade).
+- Aba "Motor Financeiro" some do menu — a calculadora vive apenas dentro do item.
 
-1. **Avaliar Aluno — contraste/cores**
-   - Trocar tokens: usar `text-foreground`/`text-white` e `bg-card` corretos no painel de avaliação. Garantir contraste no tema escuro (atual usa `text-muted-foreground` em fundo escuro = ilegível).
+## Escopo da mudança
 
-2. **Avaliar Aluno — cálculo correto de calorias e TMB**
-   - Implementar Mifflin-St Jeor (TMB) + fator de atividade (sedentário/leve/moderado/intenso) para gasto total. Hoje os valores estão errados/placeholders.
+### 1. Banco (migration)
 
-3. **Avaliar Aluno — análise de Peso e Gordura**
-   - **Peso:** mostrar "X kg acima do limite saudável" (peso atual − peso máx para IMC 24.9 na altura informada).
-   - **Gordura:** mostrar "X kg de gordura a perder" calculado por massa gorda atual − massa gorda alvo (% saudável × peso). Diferente do excesso de peso.
+- Adicionar em `products` as colunas que existem só em `store_items` e são necessárias para a vitrine:
+  `section_id uuid`, `category_id uuid`, `kind text check (kind in ('physical','digital'))`, `short_description text`, `gallery jsonb default '[]'`, `stock int`, `sku text`, `is_featured bool default false`, `is_active bool default true`, `metadata jsonb default '{}'`.
+- Backfill: copiar o único `store_items` existente para `products` (mapeando `name`, `description`, `image_url`, `price`, `original_price`, seção/categoria, kind, stock, etc.). Status `active`, `points_per_sale = 0`.
+- Trocar a referência soft em `store_order_items.store_item_id` para apontar para `products.id` (mesmo nome de coluna mantido por enquanto, só muda a semântica — ou renomear para `product_id` numa migration de aliasing). Atualizar o registro existente, se houver.
+- Após confirmação visual, `DROP TABLE store_items` em migration separada (passo 5). Numa primeira passada deixamos a tabela vazia para rollback fácil.
 
-4. **Botão WhatsApp em todo lugar que aparece aluno/coach**
-   - Componente `<WhatsAppButton phone={...} />` reutilizável que gera `https://wa.me/<numero limpo>`.
-   - Adicionar nos cards: lista de Clientes (coach), Avaliar Aluno, lista de Coaches (admin), Aplicações de Coach, perfil do coach, etc.
+### 2. Frontend — Loja Admin
 
-5. **Link de convite do coach não funciona**
-   - Investigar `/r/$code` (registro com indicação) e/ou link de convite enviado pelo coach. Corrigir geração e validação do código (provavelmente cadeia coach→profile→referral_code).
+- **`src/components/admin/StoreItemsManager.tsx`**: passar a ler/gravar de `products` em vez de `store_items`. Remover toda a interface antiga da aba "Financeiro" (`FinField`, `tax_percentage`, `commission_*`, `*_mode`) e toda a lógica de cálculo embutida.
+- Extrair a calculadora de `src/routes/admin.products.tsx` (`ProductFinancialDrawer`, `SlotCard`, `FlowLine`, `ProgressTrack`, `SummaryGrid`) para um componente reutilizável: `src/components/admin/ProductFinancialEditor.tsx`. O drawer vira um painel embed (sem o wrapper de drawer) que recebe `productId` e usa `getProductFinancial` / `saveProductFinancial` existentes.
+- Na aba "Financeiro" do item: renderizar `<ProductFinancialEditor productId={editing.id} />`. Para item novo, exige salvar a aba "Geral" primeiro (cria o `products`), aí libera a aba financeira.
+- Botão "Salvar" da aba Geral grava só os campos não-financeiros em `products`. A calculadora tem seu próprio botão salvar (já existe em `ProductFinancialEditor`).
 
-6. **Coachs novos não aparecem no cadastro (CoachSelector)**
-   - Verificar a query: hoje deve estar filtrando por `approved_at` ou status. Ampliar para incluir todo coach com `approved_at IS NOT NULL` e `status='active'`. Garantir que ao aprovar um coach ele apareça automaticamente.
+### 3. Frontend — Vitrine e relatórios
 
-7. **Editar metas manualmente na Visão Geral do coach**
-   - Tornar o `GoalsCard` editável: botão "Editar metas", inputs para meta de vendas, alunos, comissão, etc. Persistir em uma tabela `coach_goals` (criar se não existir) com RLS.
+- `src/components/student/StorePage.tsx`, `src/server/coach-sales.functions.ts`, `src/routes/admin.store-reports.tsx`: trocar `from("store_items")` → `from("products")` e remover colunas legadas das selects (`commission_*`, `app_fee_percentage`). Onde a vitrine precisava do valor de comissão para exibição (se precisa), buscar via `product_value_slots` ou esconder.
+- `coach-sales.functions.ts`: a comissão do coach passa a vir dos slots (já é o caso para products); remover o cálculo legado baseado em `commission_coach`.
 
----
+### 4. Menu/rotas
 
-### Onda 2 — Unificação da Loja + Gratuitos editáveis
+- `src/components/admin/AdminShell.tsx`: remover o item `"Motor Financeiro"` (`/admin/products`) do `navItems`.
+- Manter o arquivo `src/routes/admin.products.tsx` por enquanto (acessível por URL direto) para fallback durante a transição; remover num segundo passo após validar.
 
-8. **Unificar Loja Física + Digital → "Loja"** com Seções e Categorias
-   - Nova estrutura no banco: `store_sections` (Físicos, Digitais, customizáveis) e `store_categories` (filhas das seções). Migrar `store_products` e `digital_products` para uma tabela unificada `store_items` (kind: physical|digital), preservando dados.
-   - Admin: CRUD completo de seções, categorias, produtos (com upload de imagem para o bucket `product-images`).
-   - Front aluno: aba "Loja" com tabs por seção e filtros por categoria.
+### 5. Limpeza (migration separada, depois do OK)
 
-9. **Foto em todos os produtos (físicos e digitais)**
-   - Coberto pela unificação acima: campo `image_url` + upload no bucket `product-images` (público).
+- `DROP TABLE store_items`.
+- Renomear `store_order_items.store_item_id` → `product_id` se desejado.
+- Deletar `src/routes/admin.products.tsx` e `StoreItemsManager` antigo (substituído).
 
-10. **Renomear "Benefícios" → "Gratuitos"** com seções, categorias e produtos editáveis
-    - Tabelas espelhadas: `freebies_sections`, `freebies_categories`, `freebies_items` (com imagem e detalhes).
-    - Admin CRUD completo. Front: tela com tabs/filtros. Ao tocar num item, abrir modal/rota com mais informações.
-    - Renomear todos os textos/ícones de "Benefícios" para "Gratuitos".
+## Arquivos afetados
 
----
+```text
+supabase/migrations/<novo>_unify_products.sql        (criar)
+supabase/migrations/<novo>_drop_store_items.sql       (criar, passo 5)
+src/components/admin/ProductFinancialEditor.tsx       (novo - extração)
+src/components/admin/StoreItemsManager.tsx            (reescrita parcial)
+src/components/admin/AdminShell.tsx                   (remover item do menu)
+src/routes/admin.products.tsx                         (extrair componente; manter rota)
+src/components/student/StorePage.tsx                  (trocar tabela)
+src/server/coach-sales.functions.ts                   (trocar tabela + remover legado)
+src/routes/admin.store-reports.tsx                    (trocar tabela)
+```
 
-### Onda 3 — Relatórios completos
+## Riscos
 
-11. **Relatórios admin + coach (com filtro por período)**
-    - **Admin:** alunos por desafio (atual e anteriores), comissões por coach, vendas por produto, ranking, etc.
-    - **Coach (escopo da rede dele):** seus alunos, alunos da rede (downline 1/2/3), crescimento da rede, metas batidas, maiores comissões, maiores vendas, desafios em que participou, top 1/2/3 alunos por desafio.
-    - Filtro por intervalo de datas em todos.
-    - Implementar como `createServerFn` com agregações via Supabase + componentes de visualização (lista + barra/tabela).
+- `store_order_items.store_item_id` aponta hoje para `store_items.id` por convenção (sem FK). Ao migrar o item para `products`, o id muda — precisamos preservar o mesmo UUID na cópia para não quebrar pedidos antigos.
+- Funções/queries que esperam o shape antigo de `store_items` (campos `commission_*` etc.) vão quebrar até serem atualizadas no mesmo passo.
+- Calculadora atual exige um `products.id` salvo antes de configurar slots — UX de item novo exige salvar "Geral" antes de abrir "Financeiro".
 
----
+## Validação após implementar
 
-### Detalhes técnicos relevantes
-
-- Migrações Supabase necessárias: `coach_goals`, `store_sections`, `store_categories`, `store_items`, `freebies_sections`, `freebies_categories`, `freebies_items`, bucket `product-images` e `freebies-images` públicos. Migração de dados existentes de `store_products`+`digital_products` para `store_items`. Atualizar `store_order_items` para também aceitar `store_item_id`.
-- Manter compatibilidade: `listSellableProducts` continuará funcionando lendo da nova `store_items`.
-- WhatsApp helper em `src/lib/whatsapp.ts`.
-
----
-
-### Como proponho executar
-
-Por causa do tamanho, sugiro entregar **Onda 1 primeiro** (todas as correções rápidas + bugs + cálculos + WhatsApp + metas editáveis + bug de convite + coach selector). Em seguida você revisa e seguimos para a Onda 2 (Loja unificada + Gratuitos) e depois Onda 3 (Relatórios).
-
-Confirma essa abordagem? Se preferir outra ordem (ex.: Loja primeiro), me diz.
+1. Criar item novo na Loja → salvar Geral → abrir Financeiro → ver calculadora com slots paralelos, grupo, % do saldo restante e pontos manuais.
+2. Editar o item migrado → confirmar dados e slots.
+3. Vitrine `/student/store` lista o item normalmente.
+4. `/admin/store-reports` e venda de coach continuam funcionando.
+5. Item "Motor Financeiro" não aparece mais no menu.

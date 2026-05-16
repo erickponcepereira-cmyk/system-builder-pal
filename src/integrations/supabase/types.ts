@@ -3373,6 +3373,7 @@ export type Database = {
           badge_color: string | null
           badge_label: string | null
           card_fee_percentage: number | null
+          category_id: string | null
           commission_coach: number | null
           commission_level1: number | null
           commission_level2: number | null
@@ -3403,15 +3404,19 @@ export type Database = {
           feature_store: boolean | null
           feature_weight_tracking: boolean | null
           feature_winners_forum: boolean | null
+          gallery: Json
           highlights: Json | null
           id: string
           image_url: string | null
+          is_active: boolean
           is_featured: boolean | null
           is_price_range: boolean | null
+          kind: string | null
           marketing_plan: number | null
           master_coach_commission: number | null
           max_installments: number | null
           max_price: number | null
+          metadata: Json
           min_price: number | null
           name: string
           network_commission_percentage: number | null
@@ -3427,9 +3432,13 @@ export type Database = {
           profit_percentage_min: number | null
           referral_commission_percentage: number | null
           room_rental_commission: number | null
+          section_id: string | null
+          short_description: string | null
+          sku: string | null
           slug: string | null
           sort_order: number | null
           status: string | null
+          stock: number | null
           subtitle: string | null
           tax_percentage: number | null
           type: Database["public"]["Enums"]["product_type"] | null
@@ -3441,6 +3450,7 @@ export type Database = {
           badge_color?: string | null
           badge_label?: string | null
           card_fee_percentage?: number | null
+          category_id?: string | null
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
@@ -3471,15 +3481,19 @@ export type Database = {
           feature_store?: boolean | null
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
+          gallery?: Json
           highlights?: Json | null
           id?: string
           image_url?: string | null
+          is_active?: boolean
           is_featured?: boolean | null
           is_price_range?: boolean | null
+          kind?: string | null
           marketing_plan?: number | null
           master_coach_commission?: number | null
           max_installments?: number | null
           max_price?: number | null
+          metadata?: Json
           min_price?: number | null
           name: string
           network_commission_percentage?: number | null
@@ -3495,9 +3509,13 @@ export type Database = {
           profit_percentage_min?: number | null
           referral_commission_percentage?: number | null
           room_rental_commission?: number | null
+          section_id?: string | null
+          short_description?: string | null
+          sku?: string | null
           slug?: string | null
           sort_order?: number | null
           status?: string | null
+          stock?: number | null
           subtitle?: string | null
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
@@ -3509,6 +3527,7 @@ export type Database = {
           badge_color?: string | null
           badge_label?: string | null
           card_fee_percentage?: number | null
+          category_id?: string | null
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
@@ -3539,15 +3558,19 @@ export type Database = {
           feature_store?: boolean | null
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
+          gallery?: Json
           highlights?: Json | null
           id?: string
           image_url?: string | null
+          is_active?: boolean
           is_featured?: boolean | null
           is_price_range?: boolean | null
+          kind?: string | null
           marketing_plan?: number | null
           master_coach_commission?: number | null
           max_installments?: number | null
           max_price?: number | null
+          metadata?: Json
           min_price?: number | null
           name?: string
           network_commission_percentage?: number | null
@@ -3563,15 +3586,26 @@ export type Database = {
           profit_percentage_min?: number | null
           referral_commission_percentage?: number | null
           room_rental_commission?: number | null
+          section_id?: string | null
+          short_description?: string | null
+          sku?: string | null
           slug?: string | null
           sort_order?: number | null
           status?: string | null
+          stock?: number | null
           subtitle?: string | null
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_category_fk"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_creator_coach_id_fkey"
             columns: ["creator_coach_id"]
@@ -3880,144 +3914,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "store_categories_section_id_fkey"
-            columns: ["section_id"]
-            isOneToOne: false
-            referencedRelation: "store_sections"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      store_items: {
-        Row: {
-          app_fee_mode: string
-          app_fee_percentage: number | null
-          card_fee_mode: string
-          card_fee_percentage: number | null
-          category_id: string | null
-          commission_coach: number | null
-          commission_coach_mode: string
-          commission_level1: number | null
-          commission_level1_mode: string
-          commission_level2: number | null
-          commission_level2_mode: string
-          commission_level3: number | null
-          commission_level3_mode: string
-          cost: number | null
-          created_at: string
-          description: string | null
-          gallery: Json
-          id: string
-          image_url: string | null
-          is_active: boolean
-          is_featured: boolean
-          kind: string
-          marketing_mode: string
-          marketing_plan: number | null
-          metadata: Json
-          name: string
-          original_price: number | null
-          other_costs: number | null
-          other_mode: string
-          price: number
-          section_id: string
-          short_description: string | null
-          sku: string | null
-          sort_order: number
-          stock: number | null
-          tax_mode: string
-          tax_percentage: number | null
-          updated_at: string
-        }
-        Insert: {
-          app_fee_mode?: string
-          app_fee_percentage?: number | null
-          card_fee_mode?: string
-          card_fee_percentage?: number | null
-          category_id?: string | null
-          commission_coach?: number | null
-          commission_coach_mode?: string
-          commission_level1?: number | null
-          commission_level1_mode?: string
-          commission_level2?: number | null
-          commission_level2_mode?: string
-          commission_level3?: number | null
-          commission_level3_mode?: string
-          cost?: number | null
-          created_at?: string
-          description?: string | null
-          gallery?: Json
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_featured?: boolean
-          kind: string
-          marketing_mode?: string
-          marketing_plan?: number | null
-          metadata?: Json
-          name: string
-          original_price?: number | null
-          other_costs?: number | null
-          other_mode?: string
-          price?: number
-          section_id: string
-          short_description?: string | null
-          sku?: string | null
-          sort_order?: number
-          stock?: number | null
-          tax_mode?: string
-          tax_percentage?: number | null
-          updated_at?: string
-        }
-        Update: {
-          app_fee_mode?: string
-          app_fee_percentage?: number | null
-          card_fee_mode?: string
-          card_fee_percentage?: number | null
-          category_id?: string | null
-          commission_coach?: number | null
-          commission_coach_mode?: string
-          commission_level1?: number | null
-          commission_level1_mode?: string
-          commission_level2?: number | null
-          commission_level2_mode?: string
-          commission_level3?: number | null
-          commission_level3_mode?: string
-          cost?: number | null
-          created_at?: string
-          description?: string | null
-          gallery?: Json
-          id?: string
-          image_url?: string | null
-          is_active?: boolean
-          is_featured?: boolean
-          kind?: string
-          marketing_mode?: string
-          marketing_plan?: number | null
-          metadata?: Json
-          name?: string
-          original_price?: number | null
-          other_costs?: number | null
-          other_mode?: string
-          price?: number
-          section_id?: string
-          short_description?: string | null
-          sku?: string | null
-          sort_order?: number
-          stock?: number | null
-          tax_mode?: string
-          tax_percentage?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "store_items_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "store_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_items_section_id_fkey"
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "store_sections"
