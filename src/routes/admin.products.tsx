@@ -19,10 +19,10 @@ import {
 } from "@/lib/financial.functions";
 import {
   calculateDistribution,
-  calculatePointsFromSystemFee,
-  sumSystemFee,
+  computeSlotAmounts,
   type PaymentMethod,
   type ValueSlot,
+  type SlotValueType,
 } from "@/lib/financialEngine";
 
 export const Route = createFileRoute("/admin/products")({
@@ -191,10 +191,15 @@ function ProductFinancialDrawer({
     return calculateDistribution(data.product.price, previewMethod, feeCfg, data.slots, taxPct);
   }, [data, previewMethod, feeCfg, taxPct]);
 
-  const autoPoints = useMemo(() => {
-    if (!data) return 0;
-    return calculatePointsFromSystemFee(sumSystemFee(data.slots, data.product.price));
-  }, [data]);
+  // Mapa slot.id → valor calculado (respeita grupos paralelos e pct_running)
+  const slotAmtMap = useMemo(() => {
+    if (!data || !dist) return new Map<string, number>();
+    const active = data.slots.filter((s) => s.applies_to_referral_sales);
+    const amts = computeSlotAmounts(active, dist.base_distributable);
+    const map = new Map<string, number>();
+    active.forEach((s, i) => map.set(s.id, amts[i]));
+    return map;
+  }, [data, dist]);
 
   const handleSave = async () => {
     if (!data) return;
@@ -203,8 +208,8 @@ function ProductFinancialDrawer({
       await save({
         data: {
           productId,
-          points_per_sale: data.product.points_auto_calculated ? autoPoints : data.product.points_per_sale,
-          points_auto_calculated: data.product.points_auto_calculated,
+          points_per_sale: data.product.points_per_sale,
+          points_auto_calculated: false,
           slots: data.slots.map(({ id: _id, ...rest }) => rest),
           referralRule: data.referralRule,
         },
@@ -280,7 +285,7 @@ function ProductFinancialDrawer({
                   <div className="space-y-2">
                     {data.slots.map((s, idx) => (
                       <SlotCard key={s.id || idx} slot={s}
-                        amount={s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100)}
+                        amount={slotAmtMap.get(s.id) ?? 0}
                         gross={data.product.price}
                         onChange={(p) => updateSlot(idx, p)}
                         onRemove={() => removeSlot(idx)} />
@@ -297,22 +302,16 @@ function ProductFinancialDrawer({
 
                 {/* Pontos */}
                 <div className="mt-4">
-                  <SectionLabel>Pontos por venda</SectionLabel>
+                  <SectionLabel>Pontos por venda (carreira do coach)</SectionLabel>
                   <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: "#161616" }}>
-                    <label className="flex items-center gap-2 text-xs text-white/70">
-                      <input type="checkbox" checked={data.product.points_auto_calculated}
-                        onChange={(e) => setData({
-                          ...data, product: { ...data.product, points_auto_calculated: e.target.checked,
-                            points_per_sale: e.target.checked ? autoPoints : data.product.points_per_sale },
-                        })} />
-                      Calcular automaticamente — FLOOR(Taxa do Sistema / 20) × 10
-                    </label>
+                    <p className="text-[11px] text-white/50">
+                      Pontos manuais atribuídos ao coach que vendeu. Não interferem no valor do produto e alimentam o sistema de carreira.
+                    </p>
                     <div className="flex items-center gap-3">
                       <input type="number" min={0} value={data.product.points_per_sale}
-                        disabled={data.product.points_auto_calculated}
                         onChange={(e) => setData({ ...data, product: { ...data.product, points_per_sale: Number(e.target.value || 0) } })}
-                        className="rounded-md bg-white/5 border border-white/10 px-3 py-1.5 text-sm w-32 disabled:opacity-50" />
-                      <span className="text-xs text-white/50">Auto: <strong className="text-[#E24B4A]">{autoPoints} pts</strong></span>
+                        className="rounded-md bg-white/5 border border-white/10 px-3 py-1.5 text-sm w-32" />
+                      <span className="text-xs text-white/50">pts por venda</span>
                     </div>
                   </div>
                 </div>
@@ -335,8 +334,9 @@ function ProductFinancialDrawer({
 
                 {data.slots.map((s, i) => {
                   const m = getMeta(s.destination);
-                  const amt = s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100);
-                  return <FlowLine key={i} name={s.label} val={amt} gross={dist.gross_amount} barClass={m.barClass} Icon={m.Icon} locked={s.is_blocked_until_delivery} />;
+                  const amt = slotAmtMap.get(s.id) ?? 0;
+                  const groupTag = s.slot_group != null ? ` · G${s.slot_group}` : "";
+                  return <FlowLine key={i} name={`${s.label}${groupTag}`} val={amt} gross={dist.gross_amount} barClass={m.barClass} Icon={m.Icon} locked={s.is_blocked_until_delivery} />;
                 })}
                 {dist.remainder > 0.005 && (
                   <FlowLine name="Reserva plataforma" val={dist.remainder} gross={dist.gross_amount} barClass="bg-[#888780]" Icon={Vault} />
@@ -424,6 +424,11 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
         <div className="text-[13px] font-medium flex items-center gap-1.5">
           <m.Icon className="h-3.5 w-3.5 text-white/60" />
           {slot.label}
+          {slot.slot_group != null && (
+            <span className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded bg-[#E24B4A]/20 text-[#E24B4A]">
+              Grupo {slot.slot_group} · paralelo
+            </span>
+          )}
           {slot.is_blocked_until_delivery && (
             <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">
               <Lock className="h-2.5 w-2.5" /> aguarda entrega
@@ -441,11 +446,11 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
         </div>
       </div>
       <div className="grid grid-cols-12 gap-1.5 pt-2 border-t border-white/10">
-        <div className="col-span-5">
+        <div className="col-span-4">
           <label className="text-[10px] text-white/50 block mb-1">Rótulo</label>
           <InputBox value={slot.label} onChange={(v) => onChange({ label: v })} />
         </div>
-        <div className="col-span-4">
+        <div className="col-span-3">
           <label className="text-[10px] text-white/50 block mb-1">Destino</label>
           <select value={slot.destination}
             onChange={(e) => onChange({ destination: e.target.value, destination_label: getMeta(e.target.value).label })}
@@ -456,13 +461,19 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
         <div className="col-span-3">
           <label className="text-[10px] text-white/50 block mb-1">Tipo / valor</label>
           <select value={slot.value_type}
-            onChange={(e) => onChange({ value_type: e.target.value as "percentage" | "fixed" })}
+            onChange={(e) => onChange({ value_type: e.target.value as SlotValueType })}
             className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1 text-[11px] text-white mb-1 outline-none focus:border-[#E24B4A]">
             <option value="fixed">R$ fixo</option>
             <option value="percentage">% da base</option>
+            <option value="pct_running">% do saldo restante</option>
           </select>
-          <InputBox type="number" value={slot.value_amount} step={slot.value_type === "percentage" ? "0.1" : "0.01"} min="0"
+          <InputBox type="number" value={slot.value_amount} step={slot.value_type === "fixed" ? "0.01" : "0.1"} min="0"
             onChange={(v) => onChange({ value_amount: parseFloat(v) || 0 })} />
+        </div>
+        <div className="col-span-2">
+          <label className="text-[10px] text-white/50 block mb-1" title="Slots com mesmo Grupo são deduzidos em paralelo sobre o mesmo saldo">Grupo</label>
+          <InputBox type="number" min="0" value={slot.slot_group ?? ""} placeholder="—"
+            onChange={(v) => onChange({ slot_group: v === "" ? null : parseInt(v) })} />
         </div>
       </div>
       <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-white/10 text-[11px] text-white/60">
@@ -514,9 +525,10 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
     { w: (dist.payment_fee_amount / dist.gross_amount) * 100, cls: "bg-[#E24B4A]" },
     { w: (dist.tax_amount / dist.gross_amount) * 100, cls: "bg-[#F09595]" },
   ];
-  slots.forEach((s) => {
-    const amt = s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100);
-    segs.push({ w: (amt / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
+  const active = slots.filter((s) => s.applies_to_referral_sales);
+  const amts = computeSlotAmounts(active, dist.base_distributable);
+  active.forEach((s, i) => {
+    segs.push({ w: (amts[i] / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
   });
   if (dist.remainder > 0) segs.push({ w: (dist.remainder / dist.gross_amount) * 100, cls: "bg-[#888780]" });
   return (
@@ -526,10 +538,12 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
   );
 }
 function SummaryGrid({ dist, slots }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[] }) {
+  const active = slots.filter((s) => s.applies_to_referral_sales);
+  const amts = computeSlotAmounts(active, dist.base_distributable);
   const sumBy = (preds: string[]) =>
-    slots.filter((s) => preds.includes(s.destination))
-      .reduce((a, s) => a + (s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100)), 0);
-  const adminT = sumBy(["admin_wallet"]) + slots.filter((s) => s.is_system_fee).reduce((a, s) => a + (s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100)), 0) + (dist.remainder > 0.005 ? dist.remainder : 0);
+    active.reduce((a, s, i) => a + (preds.includes(s.destination) ? amts[i] : 0), 0);
+  const systemFeeT = active.reduce((a, s, i) => a + (s.is_system_fee ? amts[i] : 0), 0);
+  const adminT = sumBy(["admin_wallet"]) + systemFeeT + (dist.remainder > 0.005 ? dist.remainder : 0);
   const coachT = sumBy(["coach_wallet"]);
   const netT = sumBy(["network_l1", "network_l2", "network_l3"]);
   const nutriT = sumBy(["nutritionist_blocked"]);
