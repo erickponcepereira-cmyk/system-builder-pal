@@ -30,7 +30,7 @@ const DEST_META: Record<string, DestMeta> = {
   network_l1:          { label: "Upline nível 1",            barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Network },
   network_l2:          { label: "Upline nível 2",            barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Network },
   network_l3:          { label: "Upline nível 3",            barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Network },
-  platform_reserve:    { label: "Reserva plataforma",        barClass: "bg-[#888780]", borderClass: "border-l-[#888780]", Icon: Vault },
+  platform_reserve:    { label: "Comissão do vendedor",     barClass: "bg-[#E24B4A]", borderClass: "border-l-[#E24B4A]", Icon: UserCircle },
   product_order_pool:  { label: "Painel de Pedidos (custos)",barClass: "bg-[#B4B2A9]", borderClass: "border-l-[#B4B2A9]", Icon: Package },
   nutritionist_blocked:{ label: "Nutricionista (bloqueado)", barClass: "bg-white/40",  borderClass: "border-l-white/40",  Icon: Stethoscope },
   referral_student:    { label: "Aluno indicador",           barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Users },
