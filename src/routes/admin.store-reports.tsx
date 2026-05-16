@@ -33,13 +33,22 @@ function StoreReports() {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const [a, b, c] = await Promise.all([
       supabase.from("store_order_items" as never)
-        .select("id,title,quantity,total_price,product_kind,store_item_id,products!store_order_items_store_item_id_fkey(name,section_id,store_sections(name)),store_orders!inner(status,created_at)" as never)
+        .select("id,title,quantity,total_price,product_kind,store_item_id,store_orders!inner(status,created_at)" as never)
         .gte("store_orders.created_at" as never, since)
         .in("store_orders.status" as never, ["paid", "preparing", "shipped", "delivered"] as never),
       supabase.from("products" as never).select("id,name,stock").eq("kind" as never, "physical").not("stock" as never, "is", null).lte("stock" as never, 5).order("stock" as never),
       supabase.from("freebie_redemptions" as never).select("freebies(name)" as never).gte("created_at" as never, since).neq("status" as never, "cancelled"),
     ]);
-    setItems((a.data as unknown as OrderItem[]) || []);
+    const rawItems = (a.data as unknown as OrderItem[]) || [];
+    const productIds = Array.from(new Set(rawItems.map((i) => i.store_item_id).filter(Boolean))) as string[];
+    let prodMap = new Map<string, { name: string; section_id: string | null; store_sections: { name: string } | null }>();
+    if (productIds.length) {
+      const { data: prods } = await supabase.from("products" as never)
+        .select("id,name,section_id,store_sections(name)" as never)
+        .in("id" as never, productIds as never);
+      ((prods as unknown as any[]) || []).forEach((p) => prodMap.set(p.id, { name: p.name, section_id: p.section_id, store_sections: p.store_sections }));
+    }
+    setItems(rawItems.map((i) => ({ ...i, products: i.store_item_id ? prodMap.get(i.store_item_id) || null : null })));
     setLowStock((b.data as unknown as LowStockItem[]) || []);
     const counts: Record<string, number> = {};
     ((c.data as unknown as { freebies: { name: string } | null }[]) || []).forEach((r) => {
