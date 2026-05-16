@@ -30,7 +30,7 @@ const DEST_META: Record<string, DestMeta> = {
   network_l1:          { label: "Upline nível 1",            barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Network },
   network_l2:          { label: "Upline nível 2",            barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Network },
   network_l3:          { label: "Upline nível 3",            barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Network },
-  platform_reserve:    { label: "Reserva plataforma",        barClass: "bg-[#888780]", borderClass: "border-l-[#888780]", Icon: Vault },
+  platform_reserve:    { label: "Comissão do vendedor",     barClass: "bg-[#E24B4A]", borderClass: "border-l-[#E24B4A]", Icon: UserCircle },
   product_order_pool:  { label: "Painel de Pedidos (custos)",barClass: "bg-[#B4B2A9]", borderClass: "border-l-[#B4B2A9]", Icon: Package },
   nutritionist_blocked:{ label: "Nutricionista (bloqueado)", barClass: "bg-white/40",  borderClass: "border-l-white/40",  Icon: Stethoscope },
   referral_student:    { label: "Aluno indicador",           barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Users },
@@ -233,7 +233,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
             return <FlowLine key={i} name={`${s.label}${groupTag}`} val={amt} gross={dist.gross_amount} barClass={m.barClass} Icon={m.Icon} locked={s.is_blocked_until_delivery} />;
           })}
           {dist.remainder > 0.005 && (
-            <FlowLine name="Reserva plataforma" val={dist.remainder} gross={dist.gross_amount} barClass="bg-[#888780]" Icon={Vault} />
+            <FlowLine name="Comissão do vendedor (sobra)" val={dist.remainder} gross={dist.gross_amount} barClass="bg-[#E24B4A]" Icon={UserCircle} />
           )}
 
           <div className="mt-3 rounded-md p-3" style={{ backgroundColor: "#161616" }}>
@@ -244,15 +244,15 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
               </span>
             </div>
             <div className="flex justify-between items-center text-xs mt-1">
-              <span className="text-white/60">Reserva plataforma</span>
-              <span className="font-mono">{dist.remainder > 0.005 ? money(dist.remainder) : "—"}</span>
+              <span className="text-white/60">Comissão do vendedor (sobra)</span>
+              <span className="font-mono text-[#E24B4A]">{dist.remainder > 0.005 ? money(dist.remainder) : "—"}</span>
             </div>
             <ProgressTrack dist={dist} slots={data.slots} />
             <div className="mt-2 text-[11px]">
               {Math.abs(dist.remainder) < 0.01 ? (
                 <span className="text-emerald-400 inline-flex items-center gap-1"><CircleCheck className="h-3 w-3" /> 100% distribuído</span>
               ) : dist.remainder > 0 ? (
-                <span className="text-amber-400 inline-flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> {money(dist.remainder)} vai para reserva da plataforma</span>
+                <span className="text-[#E24B4A] inline-flex items-center gap-1"><UserCircle className="h-3 w-3" /> {money(dist.remainder)} vai para a comissão do vendedor</span>
               ) : (
                 <span className="text-[#E24B4A] inline-flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Distribui {money(Math.abs(dist.remainder))} a mais — revise os valores</span>
               )}
@@ -441,7 +441,7 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
   active.forEach((s, i) => {
     segs.push({ w: (amts[i] / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
   });
-  if (dist.remainder > 0) segs.push({ w: (dist.remainder / dist.gross_amount) * 100, cls: "bg-[#888780]" });
+  if (dist.remainder > 0) segs.push({ w: (dist.remainder / dist.gross_amount) * 100, cls: "bg-[#E24B4A]" });
   return (
     <div className="h-1.5 mt-2 rounded overflow-hidden flex gap-px" style={{ backgroundColor: "#0F0F0F" }}>
       {segs.map((s, i) => <div key={i} className={s.cls} style={{ width: `${s.w.toFixed(2)}%`, height: "100%" }} />)}
@@ -454,8 +454,8 @@ function SummaryGrid({ dist, slots }: { dist: NonNullable<ReturnType<typeof calc
   const sumBy = (preds: string[]) =>
     active.reduce((a, s, i) => a + (preds.includes(s.destination) ? amts[i] : 0), 0);
   const systemFeeT = active.reduce((a, s, i) => a + (s.is_system_fee ? amts[i] : 0), 0);
-  const adminT = sumBy(["admin_wallet"]) + systemFeeT + (dist.remainder > 0.005 ? dist.remainder : 0);
-  const coachT = sumBy(["coach_wallet"]);
+  const adminT = sumBy(["admin_wallet"]) + systemFeeT;
+  const coachT = sumBy(["coach_wallet"]) + (dist.remainder > 0.005 ? dist.remainder : 0);
   const netT = sumBy(["network_l1", "network_l2", "network_l3"]);
   const nutriT = sumBy(["nutritionist_blocked"]);
   const prodT = sumBy(["product_order_pool"]);
