@@ -525,9 +525,10 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
     { w: (dist.payment_fee_amount / dist.gross_amount) * 100, cls: "bg-[#E24B4A]" },
     { w: (dist.tax_amount / dist.gross_amount) * 100, cls: "bg-[#F09595]" },
   ];
-  slots.forEach((s) => {
-    const amt = s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100);
-    segs.push({ w: (amt / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
+  const active = slots.filter((s) => s.applies_to_referral_sales);
+  const amts = computeSlotAmounts(active, dist.base_distributable);
+  active.forEach((s, i) => {
+    segs.push({ w: (amts[i] / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
   });
   if (dist.remainder > 0) segs.push({ w: (dist.remainder / dist.gross_amount) * 100, cls: "bg-[#888780]" });
   return (
@@ -537,10 +538,12 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
   );
 }
 function SummaryGrid({ dist, slots }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[] }) {
+  const active = slots.filter((s) => s.applies_to_referral_sales);
+  const amts = computeSlotAmounts(active, dist.base_distributable);
   const sumBy = (preds: string[]) =>
-    slots.filter((s) => preds.includes(s.destination))
-      .reduce((a, s) => a + (s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100)), 0);
-  const adminT = sumBy(["admin_wallet"]) + slots.filter((s) => s.is_system_fee).reduce((a, s) => a + (s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100)), 0) + (dist.remainder > 0.005 ? dist.remainder : 0);
+    active.reduce((a, s, i) => a + (preds.includes(s.destination) ? amts[i] : 0), 0);
+  const systemFeeT = active.reduce((a, s, i) => a + (s.is_system_fee ? amts[i] : 0), 0);
+  const adminT = sumBy(["admin_wallet"]) + systemFeeT + (dist.remainder > 0.005 ? dist.remainder : 0);
   const coachT = sumBy(["coach_wallet"]);
   const netT = sumBy(["network_l1", "network_l2", "network_l3"]);
   const nutriT = sumBy(["nutritionist_blocked"]);
