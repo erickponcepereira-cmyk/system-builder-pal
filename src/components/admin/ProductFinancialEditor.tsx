@@ -454,8 +454,8 @@ function SummaryGrid({ dist, slots }: { dist: NonNullable<ReturnType<typeof calc
   const sumBy = (preds: string[]) =>
     active.reduce((a, s, i) => a + (preds.includes(s.destination) ? amts[i] : 0), 0);
   const systemFeeT = active.reduce((a, s, i) => a + (s.is_system_fee ? amts[i] : 0), 0);
-  const adminT = sumBy(["admin_wallet"]) + systemFeeT + (dist.remainder > 0.005 ? dist.remainder : 0);
-  const coachT = sumBy(["coach_wallet"]);
+  const adminT = sumBy(["admin_wallet"]) + systemFeeT;
+  const coachT = sumBy(["coach_wallet"]) + (dist.remainder > 0.005 ? dist.remainder : 0);
   const netT = sumBy(["network_l1", "network_l2", "network_l3"]);
   const nutriT = sumBy(["nutritionist_blocked"]);
   const prodT = sumBy(["product_order_pool"]);
