@@ -233,7 +233,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
             return <FlowLine key={i} name={`${s.label}${groupTag}`} val={amt} gross={dist.gross_amount} barClass={m.barClass} Icon={m.Icon} locked={s.is_blocked_until_delivery} />;
           })}
           {dist.remainder > 0.005 && (
-            <FlowLine name="Reserva plataforma" val={dist.remainder} gross={dist.gross_amount} barClass="bg-[#888780]" Icon={Vault} />
+            <FlowLine name="Comissão do vendedor (sobra)" val={dist.remainder} gross={dist.gross_amount} barClass="bg-[#E24B4A]" Icon={UserCircle} />
           )}
 
           <div className="mt-3 rounded-md p-3" style={{ backgroundColor: "#161616" }}>
