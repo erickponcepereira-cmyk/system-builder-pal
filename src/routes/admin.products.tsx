@@ -19,10 +19,10 @@ import {
 } from "@/lib/financial.functions";
 import {
   calculateDistribution,
-  calculatePointsFromSystemFee,
-  sumSystemFee,
+  computeSlotAmounts,
   type PaymentMethod,
   type ValueSlot,
+  type SlotValueType,
 } from "@/lib/financialEngine";
 
 export const Route = createFileRoute("/admin/products")({
