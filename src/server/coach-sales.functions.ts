@@ -72,10 +72,10 @@ export const listSellableProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async (): Promise<SaleProduct[]> => {
     const [{ data: challenges }, { data: digitals }, { data: stores }, { data: items }] = await Promise.all([
-      supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active"),
+      supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active").is("kind", null),
       supabaseAdmin.from("digital_products").select("id,title,description,price,original_price,type,cover_url").eq("status", "active"),
       supabaseAdmin.from("store_products").select("id,name,description,price,original_price,category,image_url,stock").eq("status", "active"),
-      supabaseAdmin.from("store_items").select("id,name,short_description,description,price,original_price,kind,image_url,stock,commission_coach,commission_level1,commission_level2,commission_level3").eq("is_active", true),
+      supabaseAdmin.from("products").select("id,name,short_description,description,price,original_price,kind,image_url,stock,commission_coach,commission_level1,commission_level2,commission_level3").eq("is_active", true).not("kind", "is", null),
     ]);
     const out: SaleProduct[] = [];
     (challenges || []).forEach((p: any) => out.push({
