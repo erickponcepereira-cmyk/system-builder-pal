@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star } from "lucide-react";
+import { ProductFinancialEditor } from "./ProductFinancialEditor";
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
 interface Item {
   id: string;
-  section_id: string;
+  section_id: string | null;
   category_id: string | null;
   kind: "physical" | "digital";
   name: string;
@@ -20,25 +21,6 @@ interface Item {
   is_featured: boolean;
   is_active: boolean;
   sort_order: number;
-  cost: number | null;
-  tax_percentage: number | null;
-  card_fee_percentage: number | null;
-  app_fee_percentage: number | null;
-  marketing_plan: number | null;
-  other_costs: number | null;
-  commission_coach: number | null;
-  commission_level1: number | null;
-  commission_level2: number | null;
-  commission_level3: number | null;
-  tax_mode: "percent" | "fixed";
-  card_fee_mode: "percent" | "fixed";
-  app_fee_mode: "percent" | "fixed";
-  marketing_mode: "percent" | "fixed";
-  other_mode: "percent" | "fixed";
-  commission_coach_mode: "percent" | "fixed";
-  commission_level1_mode: "percent" | "fixed";
-  commission_level2_mode: "percent" | "fixed";
-  commission_level3_mode: "percent" | "fixed";
 }
 
 function emptyItem(): Partial<Item> {
@@ -46,13 +28,6 @@ function emptyItem(): Partial<Item> {
     kind: "physical", name: "", description: "", short_description: "",
     price: 0, original_price: null, stock: null, sku: "",
     is_featured: false, is_active: true, sort_order: 0,
-    cost: 0, tax_percentage: 0, card_fee_percentage: 0, app_fee_percentage: 0,
-    marketing_plan: 0, other_costs: 0,
-    commission_coach: 50, commission_level1: 15, commission_level2: 5, commission_level3: 3,
-    tax_mode: "percent", card_fee_mode: "percent", app_fee_mode: "percent",
-    marketing_mode: "percent", other_mode: "percent",
-    commission_coach_mode: "percent", commission_level1_mode: "percent",
-    commission_level2_mode: "percent", commission_level3_mode: "percent",
   };
 }
 
@@ -74,11 +49,15 @@ export function StoreItemsManager() {
     const [{ data: s }, { data: c }, { data: i }] = await Promise.all([
       supabase.from("store_sections").select("id,name").order("sort_order"),
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
-      supabase.from("store_items").select("*").order("sort_order"),
+      supabase
+        .from("products")
+        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,sort_order")
+        .not("kind", "is", null)
+        .order("sort_order"),
     ]);
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
-    setItems((i as Item[]) || []);
+    setItems(((i as unknown) as Item[]) || []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -112,11 +91,6 @@ export function StoreItemsManager() {
       setEditTab("general");
       return;
     }
-    if (editing.cost !== null && editing.cost !== undefined && Number(editing.cost) > Number(editing.price || 0)) {
-      alert("Custo não pode ser maior que o preço de venda.");
-      setEditTab("financial");
-      return;
-    }
     setSaving(true);
     try {
       const payload: any = {
@@ -134,33 +108,23 @@ export function StoreItemsManager() {
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
         sort_order: Number(editing.sort_order) || 0,
-        cost: editing.cost !== null && editing.cost !== undefined ? Number(editing.cost) : null,
-        tax_percentage: Number(editing.tax_percentage) || 0,
-        card_fee_percentage: Number(editing.card_fee_percentage) || 0,
-        app_fee_percentage: Number(editing.app_fee_percentage) || 0,
-        marketing_plan: Number(editing.marketing_plan) || 0,
-        other_costs: Number(editing.other_costs) || 0,
-        commission_coach: Number(editing.commission_coach) || 0,
-        commission_level1: Number(editing.commission_level1) || 0,
-        commission_level2: Number(editing.commission_level2) || 0,
-        commission_level3: Number(editing.commission_level3) || 0,
-        tax_mode: editing.tax_mode || "percent",
-        card_fee_mode: editing.card_fee_mode || "percent",
-        app_fee_mode: editing.app_fee_mode || "percent",
-        marketing_mode: editing.marketing_mode || "percent",
-        other_mode: editing.other_mode || "percent",
-        commission_coach_mode: editing.commission_coach_mode || "percent",
-        commission_level1_mode: editing.commission_level1_mode || "percent",
-        commission_level2_mode: editing.commission_level2_mode || "percent",
-        commission_level3_mode: editing.commission_level3_mode || "percent",
+        status: editing.is_active === false ? "inactive" : "active",
       };
       if (editing.id) {
-        await supabase.from("store_items").update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
+        if (error) throw error;
       } else {
-        await supabase.from("store_items").insert(payload);
+        const { data: created, error } = await supabase
+          .from("products")
+          .insert({ ...payload, type: "challenge", product_type: "plan_30" } as any)
+          .select("id")
+          .single();
+        if (error) throw error;
+        // Keep editing this newly created product so user can switch to Financeiro tab
+        setEditing({ ...(editing as any), id: created.id });
+        setEditTab("financial");
       }
-      setEditing(null);
-      load();
+      await load();
     } catch (e: any) {
       alert("Erro ao salvar: " + e.message);
     } finally {
@@ -169,13 +133,14 @@ export function StoreItemsManager() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Excluir este item?")) return;
-    await supabase.from("store_items").delete().eq("id", id);
+    if (!confirm("Excluir este item? Os slots financeiros vinculados também serão removidos.")) return;
+    await supabase.from("product_value_slots").delete().eq("product_id", id);
+    await supabase.from("products").delete().eq("id", id);
     load();
   };
 
   const toggleActive = async (it: Item) => {
-    await supabase.from("store_items").update({ is_active: !it.is_active }).eq("id", it.id);
+    await supabase.from("products").update({ is_active: !it.is_active, status: !it.is_active ? "active" : "inactive" }).eq("id", it.id);
     load();
   };
 
@@ -192,7 +157,7 @@ export function StoreItemsManager() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Package className="h-6 w-6 text-primary" />Loja — Itens</h1>
-          <p className="text-sm text-white/60 mt-1">Cadastre os produtos físicos e digitais da loja.</p>
+          <p className="text-sm text-white/60 mt-1">Cadastre os produtos físicos e digitais da loja. A aba <strong>Financeiro</strong> abre a calculadora completa de slots, comissões paralelas e pontos.</p>
         </div>
         <button
           onClick={() => { setEditTab("general"); setEditing({ ...emptyItem(), section_id: sections[0]?.id }); }}
@@ -278,7 +243,7 @@ export function StoreItemsManager() {
       {/* Modal */}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setEditing(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-white/10 bg-[#0F0F0F] p-6 space-y-4">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-xl border border-white/10 bg-[#0F0F0F] p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">{editing.id ? "Editar item" : "Novo item"}</h2>
               <button onClick={() => setEditing(null)} className="text-white/50 hover:text-white"><X className="h-5 w-5" /></button>
@@ -286,7 +251,13 @@ export function StoreItemsManager() {
 
             <div className="flex gap-2 border-b border-white/10">
               <button onClick={() => setEditTab("general")} className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "general" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}>Geral</button>
-              <button onClick={() => setEditTab("financial")} className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "financial" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"}`}>Financeiro</button>
+              <button
+                onClick={() => editing.id ? setEditTab("financial") : alert("Salve a aba Geral primeiro para liberar a configuração financeira.")}
+                className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors ${editTab === "financial" ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"} ${!editing.id ? "opacity-50" : ""}`}
+                title={!editing.id ? "Salve o item primeiro" : ""}
+              >
+                Financeiro {!editing.id && "🔒"}
+              </button>
             </div>
 
             {editTab === "general" && (<>
@@ -383,101 +354,19 @@ export function StoreItemsManager() {
                 Ativo
               </label>
             </div>
-            </>)}
-
-            {editTab === "financial" && (() => {
-              type ModeKey =
-                | "tax_mode" | "card_fee_mode" | "app_fee_mode" | "marketing_mode" | "other_mode"
-                | "commission_coach_mode" | "commission_level1_mode" | "commission_level2_mode" | "commission_level3_mode";
-              type ValKey =
-                | "tax_percentage" | "card_fee_percentage" | "app_fee_percentage" | "marketing_plan" | "other_costs"
-                | "commission_coach" | "commission_level1" | "commission_level2" | "commission_level3";
-
-              const FinField = ({ label, valKey, modeKey }: { label: string; valKey: ValKey; modeKey: ModeKey }) => {
-                const mode = (editing[modeKey] as "percent" | "fixed") || "percent";
-                return (
-                  <div>
-                    <label className="text-xs text-white/60 mb-1 block">{label}</label>
-                    <div className="flex gap-1">
-                      <input
-                        type="number" step="0.01"
-                        className="input-dark w-full"
-                        value={(editing[valKey] as number) ?? 0}
-                        onChange={(e) => setEditing({ ...editing, [valKey]: Number(e.target.value) })}
-                      />
-                      <select
-                        className="input-dark"
-                        value={mode}
-                        onChange={(e) => setEditing({ ...editing, [modeKey]: e.target.value as "percent" | "fixed" })}
-                      >
-                        <option value="percent">%</option>
-                        <option value="fixed">R$</option>
-                      </select>
-                    </div>
-                  </div>
-                );
-              };
-
-              const price = Number(editing.price || 0);
-              const cost = Number(editing.cost || 0);
-              const calc = (val: number, mode: string) => mode === "fixed" ? val : (price * val) / 100;
-              const fields: Array<[ValKey, ModeKey]> = [
-                ["tax_percentage", "tax_mode"],
-                ["card_fee_percentage", "card_fee_mode"],
-                ["app_fee_percentage", "app_fee_mode"],
-                ["marketing_plan", "marketing_mode"],
-                ["other_costs", "other_mode"],
-                ["commission_coach", "commission_coach_mode"],
-                ["commission_level1", "commission_level1_mode"],
-                ["commission_level2", "commission_level2_mode"],
-                ["commission_level3", "commission_level3_mode"],
-              ];
-              const deductions = fields.reduce((acc, [v, m]) => acc + calc(Number(editing[v] || 0), String(editing[m] || "percent")), 0);
-              const margin = price - cost - deductions;
-              const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-              return (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Custos</h3>
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div>
-                        <label className="text-xs text-white/60 mb-1 block">Custo do produto (R$)</label>
-                        <input type="number" step="0.01" className="input-dark w-full" value={editing.cost ?? 0} onChange={(e) => setEditing({ ...editing, cost: Number(e.target.value) })} />
-                      </div>
-                      <FinField label="Imposto" valKey="tax_percentage" modeKey="tax_mode" />
-                      <FinField label="Taxa da maquininha" valKey="card_fee_percentage" modeKey="card_fee_mode" />
-                      <FinField label="Taxa do sistema" valKey="app_fee_percentage" modeKey="app_fee_mode" />
-                      <FinField label="Plano de marketing" valKey="marketing_plan" modeKey="marketing_mode" />
-                      <FinField label="Outros" valKey="other_costs" modeKey="other_mode" />
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 mb-2">Comissões</h3>
-                    <div className="grid gap-3 md:grid-cols-4">
-                      <FinField label="Coach (direto)" valKey="commission_coach" modeKey="commission_coach_mode" />
-                      <FinField label="Linha 1" valKey="commission_level1" modeKey="commission_level1_mode" />
-                      <FinField label="Linha 2" valKey="commission_level2" modeKey="commission_level2_mode" />
-                      <FinField label="Linha 3" valKey="commission_level3" modeKey="commission_level3_mode" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Preço</p><p className="text-sm font-bold text-white">{fmt(price)}</p></div>
-                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Custo</p><p className="text-sm font-bold text-white">{fmt(cost)}</p></div>
-                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Repasses</p><p className="text-sm font-bold text-white">{fmt(deductions)}</p></div>
-                    <div className="rounded-lg bg-black/40 p-3"><p className="text-white/50">Margem</p><p className={`text-sm font-bold ${margin < 0 ? "text-red-400" : "text-emerald-400"}`}>{fmt(margin)}</p></div>
-                  </div>
-                </div>
-              );
-            })()}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
               <button onClick={save} disabled={saving} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Salvar
+                {editing.id ? "Salvar" : "Salvar e configurar financeiro"}
               </button>
             </div>
+            </>)}
+
+            {editTab === "financial" && editing.id && (
+              <ProductFinancialEditor productId={editing.id} onSaved={load} />
+            )}
           </div>
         </div>
       )}
