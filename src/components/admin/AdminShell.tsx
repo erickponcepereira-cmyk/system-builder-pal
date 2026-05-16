@@ -26,7 +26,6 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/store", label: "Loja", icon: Store, perm: "store" },
   { to: "/admin/freebies", label: "Gratuitos", icon: Gift, perm: "freebies" },
   { to: "/admin/store-reports", label: "Relatórios da Loja", icon: TrendingUp, perm: "store_reports" },
-  { to: "/admin/products", label: "Motor Financeiro", icon: DollarSign, perm: "products" },
   { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },
   { to: "/admin/nutritionist-wallet", label: "Carteira Nutricionista", icon: Lock, perm: "nutritionist_wallet" },
   { to: "/admin/career", label: "Carreira", icon: Trophy, perm: "career" },
