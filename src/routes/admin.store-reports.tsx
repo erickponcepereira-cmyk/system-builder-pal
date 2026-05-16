@@ -56,7 +56,7 @@ function StoreReports() {
   const bySection = useMemo(() => {
     const map = new Map<string, { revenue: number; qty: number }>();
     items.forEach((i) => {
-      const sec = i.store_items?.store_sections?.name || "Outros";
+      const sec = i.products?.store_sections?.name || "Outros";
       const cur = map.get(sec) || { revenue: 0, qty: 0 };
       cur.revenue += Number(i.total_price); cur.qty += i.quantity;
       map.set(sec, cur);
@@ -68,7 +68,7 @@ function StoreReports() {
     const map = new Map<string, { name: string; qty: number; revenue: number }>();
     items.forEach((i) => {
       const key = i.store_item_id || i.title;
-      const cur = map.get(key) || { name: i.store_items?.name || i.title, qty: 0, revenue: 0 };
+      const cur = map.get(key) || { name: i.products?.name || i.title, qty: 0, revenue: 0 };
       cur.qty += i.quantity; cur.revenue += Number(i.total_price);
       map.set(key, cur);
     });
