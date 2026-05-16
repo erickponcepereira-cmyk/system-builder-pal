@@ -89,6 +89,41 @@ export function getPaymentFeePct(method: PaymentMethod, cfg: PaymentFeeConfig): 
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/**
+ * Calcula valores de cada slot respeitando slot_group (paralelo) e pct_running.
+ * Retorna os valores na mesma ordem dos slots passados.
+ */
+export function computeSlotAmounts(slots: ValueSlot[], baseDistributable: number): number[] {
+  let runningBalance = baseDistributable;
+  let groupSnapshot = baseDistributable;
+  let groupTotal = 0;
+  let currentGroup: number | null = -1 as unknown as number;
+  const out: number[] = [];
+  const flush = () => {
+    runningBalance = Math.max(0, runningBalance - groupTotal);
+    groupSnapshot = runningBalance;
+    groupTotal = 0;
+  };
+  for (const slot of slots) {
+    const g = slot.slot_group ?? null;
+    if (g !== currentGroup) { flush(); currentGroup = g as number | null; }
+    let amount: number;
+    if (slot.value_type === "fixed") amount = slot.value_amount;
+    else if (slot.value_type === "pct_running") amount = groupSnapshot * (slot.value_amount / 100);
+    else amount = baseDistributable * (slot.value_amount / 100);
+    amount = round2(Math.max(0, amount));
+    if (g === null) {
+      runningBalance = Math.max(0, runningBalance - amount);
+      groupSnapshot = runningBalance;
+    } else {
+      groupTotal += amount;
+    }
+    out.push(amount);
+  }
+  flush();
+  return out;
+}
+
 // ─── VENDA NORMAL ────────────────────────────────────────────
 export function calculateDistribution(
   grossAmount: number,
