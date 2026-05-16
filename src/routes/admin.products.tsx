@@ -334,8 +334,9 @@ function ProductFinancialDrawer({
 
                 {data.slots.map((s, i) => {
                   const m = getMeta(s.destination);
-                  const amt = s.value_type === "fixed" ? s.value_amount : dist.base_distributable * (s.value_amount / 100);
-                  return <FlowLine key={i} name={s.label} val={amt} gross={dist.gross_amount} barClass={m.barClass} Icon={m.Icon} locked={s.is_blocked_until_delivery} />;
+                  const amt = slotAmtMap.get(s.id) ?? 0;
+                  const groupTag = s.slot_group != null ? ` · G${s.slot_group}` : "";
+                  return <FlowLine key={i} name={`${s.label}${groupTag}`} val={amt} gross={dist.gross_amount} barClass={m.barClass} Icon={m.Icon} locked={s.is_blocked_until_delivery} />;
                 })}
                 {dist.remainder > 0.005 && (
                   <FlowLine name="Reserva plataforma" val={dist.remainder} gross={dist.gross_amount} barClass="bg-[#888780]" Icon={Vault} />
