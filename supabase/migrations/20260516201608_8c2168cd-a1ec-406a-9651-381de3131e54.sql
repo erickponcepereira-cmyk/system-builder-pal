@@ -1,0 +1,1 @@
+ALTER TABLE public.product_value_slots ALTER COLUMN value_type TYPE varchar(20);
