@@ -302,22 +302,16 @@ function ProductFinancialDrawer({
 
                 {/* Pontos */}
                 <div className="mt-4">
-                  <SectionLabel>Pontos por venda</SectionLabel>
+                  <SectionLabel>Pontos por venda (carreira do coach)</SectionLabel>
                   <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: "#161616" }}>
-                    <label className="flex items-center gap-2 text-xs text-white/70">
-                      <input type="checkbox" checked={data.product.points_auto_calculated}
-                        onChange={(e) => setData({
-                          ...data, product: { ...data.product, points_auto_calculated: e.target.checked,
-                            points_per_sale: e.target.checked ? autoPoints : data.product.points_per_sale },
-                        })} />
-                      Calcular automaticamente — FLOOR(Taxa do Sistema / 20) × 10
-                    </label>
+                    <p className="text-[11px] text-white/50">
+                      Pontos manuais atribuídos ao coach que vendeu. Não interferem no valor do produto e alimentam o sistema de carreira.
+                    </p>
                     <div className="flex items-center gap-3">
                       <input type="number" min={0} value={data.product.points_per_sale}
-                        disabled={data.product.points_auto_calculated}
                         onChange={(e) => setData({ ...data, product: { ...data.product, points_per_sale: Number(e.target.value || 0) } })}
-                        className="rounded-md bg-white/5 border border-white/10 px-3 py-1.5 text-sm w-32 disabled:opacity-50" />
-                      <span className="text-xs text-white/50">Auto: <strong className="text-[#E24B4A]">{autoPoints} pts</strong></span>
+                        className="rounded-md bg-white/5 border border-white/10 px-3 py-1.5 text-sm w-32" />
+                      <span className="text-xs text-white/50">pts por venda</span>
                     </div>
                   </div>
                 </div>
