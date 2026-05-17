@@ -101,19 +101,24 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
     setData({ ...data, slots: data.slots.filter((_, i) => i !== idx) });
   };
 
+  const sortedSlots = useMemo(
+    () => (data ? [...data.slots].sort((a, b) => a.slot_order - b.slot_order) : []),
+    [data],
+  );
+
   const dist = useMemo(() => {
     if (!data) return null;
-    return calculateDistribution(data.product.price, previewMethod, feeCfg, data.slots, taxPct);
-  }, [data, previewMethod, feeCfg, taxPct]);
+    return calculateDistribution(data.product.price, previewMethod, feeCfg, sortedSlots, taxPct);
+  }, [data, sortedSlots, previewMethod, feeCfg, taxPct]);
 
   const slotAmtMap = useMemo(() => {
     if (!data || !dist) return new Map<string, number>();
-    const active = data.slots.filter((s) => s.applies_to_referral_sales);
+    const active = sortedSlots.filter((s) => s.applies_to_referral_sales);
     const amts = computeSlotAmounts(active, dist.base_distributable);
     const map = new Map<string, number>();
     active.forEach((s, i) => map.set(s.id, amts[i]));
     return map;
-  }, [data, dist]);
+  }, [data, dist, sortedSlots]);
 
   const handleSave = async () => {
     if (!data) return;
