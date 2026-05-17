@@ -253,7 +253,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
 
           <FlowDivider />
 
-          {data.slots.map((s, i) => {
+          {sortedSlots.map((s, i) => {
             const m = getMeta(s.destination);
             const amt = slotAmtMap.get(s.id) ?? 0;
             const groupTag = s.slot_group != null ? ` · G${s.slot_group}` : "";
