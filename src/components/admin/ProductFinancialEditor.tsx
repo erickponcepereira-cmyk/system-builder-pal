@@ -201,14 +201,18 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
           <SectionLabel>Distribuição da venda normal</SectionLabel>
           <div className="rounded-lg p-3" style={{ backgroundColor: "#161616" }}>
             <div className="space-y-2">
-              {data.slots.map((s, idx) => (
+              {sortedSlots.map((s, idx) => (
                 <SlotCard key={s.id || idx} slot={s}
                   amount={slotAmtMap.get(s.id) ?? 0}
                   gross={data.product.price}
-                  onChange={(p) => updateSlot(idx, p)}
-                  onRemove={() => removeSlot(idx)} />
+                  canMoveUp={idx > 0}
+                  canMoveDown={idx < sortedSlots.length - 1}
+                  onMoveUp={() => moveSlot(s.id, -1)}
+                  onMoveDown={() => moveSlot(s.id, 1)}
+                  onChange={(p) => updateSlot(data.slots.findIndex((x) => x.id === s.id), p)}
+                  onRemove={() => removeSlot(s.id)} />
               ))}
-              {data.slots.length === 0 && (
+              {sortedSlots.length === 0 && (
                 <p className="text-xs text-white/40 text-center py-4">Nenhum slot. Adicione para distribuir o valor.</p>
               )}
             </div>
