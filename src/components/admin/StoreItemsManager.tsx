@@ -374,6 +374,8 @@ export function StoreItemsManager() {
       <style>{`
         .input-dark { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; outline: none; }
         .input-dark:focus { border-color: hsl(var(--primary)); }
+        select.input-dark { background-color: #1a1a1a; }
+        select.input-dark > option { background-color: #1a1a1a; color: white; }
       `}</style>
     </div>
   );
