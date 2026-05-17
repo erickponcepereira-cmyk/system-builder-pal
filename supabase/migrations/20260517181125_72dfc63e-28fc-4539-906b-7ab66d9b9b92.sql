@@ -1,0 +1,1 @@
+ALTER TYPE value_destination_type ADD VALUE IF NOT EXISTS 'nutritionist_blocked';
