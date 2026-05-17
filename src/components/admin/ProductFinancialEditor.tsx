@@ -147,13 +147,13 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
       <SectionLabel>Produto e impostos</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-6">
         <Field label="Nome do produto"><InputBox value={data.product.name} disabled /></Field>
-        <Field label="Valor bruto (R$)">
-          <InputBox type="number" value={data.product.price} step="0.01" min="0"
-            onChange={(v: string) => setData({ ...data, product: { ...data.product, price: Number(v) || 0 } })} />
+        <Field label="Valor bruto">
+          <MoneyInput value={data.product.price}
+            onChange={(v) => setData({ ...data, product: { ...data.product, price: v } })} />
         </Field>
         <Field label="Imposto — Simples Nacional (%)">
-          <InputBox type="number" value={taxPct} step="0.01" min="0" max="100"
-            onChange={(v: string) => setTaxPct(Number(v) || 0)} />
+          <NumberInput value={taxPct}
+            onChange={(v) => setTaxPct(parseFloat(v) || 0)} />
         </Field>
       </div>
 
@@ -203,9 +203,10 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
                 Pontos manuais atribuídos ao coach que vendeu. Não interferem no valor do produto e alimentam o sistema de carreira.
               </p>
               <div className="flex items-center gap-3">
-                <input type="number" min={0} value={data.product.points_per_sale}
-                  onChange={(e) => setData({ ...data, product: { ...data.product, points_per_sale: Number(e.target.value || 0) } })}
-                  className="rounded-md bg-white/5 border border-white/10 px-3 py-1.5 text-sm w-32" />
+                <div className="w-32">
+                  <NumberInput value={data.product.points_per_sale}
+                    onChange={(v) => setData({ ...data, product: { ...data.product, points_per_sale: parseInt(v) || 0 } })} />
+                </div>
                 <span className="text-xs text-white/50">pts por venda</span>
               </div>
             </div>
@@ -323,6 +324,72 @@ function InputBox(props: Omit<React.InputHTMLAttributes<HTMLInputElement>, "onCh
   );
 }
 
+function MoneyInput({ value, onChange, disabled }: { value: number; onChange?: (v: number) => void; disabled?: boolean }) {
+  const fmt = (cents: number) =>
+    `R$ ${(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const [text, setText] = useState(() => fmt(Math.round((value || 0) * 100)));
+  const lastEmitted = useMemo(() => ({ v: value }), []);
+  useEffect(() => {
+    if (Math.abs((lastEmitted.v ?? 0) - (value ?? 0)) > 0.0001) {
+      setText(fmt(Math.round((value || 0) * 100)));
+      lastEmitted.v = value;
+    }
+  }, [value, lastEmitted]);
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      disabled={disabled}
+      value={text}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, "");
+        const cents = digits ? parseInt(digits, 10) : 0;
+        const next = cents / 100;
+        setText(fmt(cents));
+        lastEmitted.v = next;
+        onChange?.(next);
+      }}
+      className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A] disabled:opacity-50"
+    />
+  );
+}
+
+function NumberInput({ value, onChange, placeholder, allowEmpty }: {
+  value: number | null | undefined;
+  onChange?: (v: string) => void;
+  placeholder?: string;
+  allowEmpty?: boolean;
+}) {
+  const toStr = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
+  const [text, setText] = useState(() => toStr(value));
+  const focused = useMemo(() => ({ on: false }), []);
+  useEffect(() => {
+    if (!focused.on) setText(toStr(value));
+  }, [value, focused]);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={text}
+      placeholder={placeholder}
+      onFocus={() => { focused.on = true; }}
+      onBlur={() => {
+        focused.on = false;
+        if (text === "" && !allowEmpty) {
+          setText("0");
+          onChange?.("0");
+        }
+      }}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/[^\d.,-]/g, "").replace(",", ".");
+        setText(e.target.value);
+        onChange?.(raw);
+      }}
+      className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A] disabled:opacity-50"
+    />
+  );
+}
+
 function SlotCard({ slot, amount, gross, onChange, onRemove }: {
   slot: ValueSlot; amount: number; gross: number;
   onChange: (p: Partial<ValueSlot>) => void; onRemove: () => void;
@@ -365,7 +432,7 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
           <label className="text-[10px] text-white/50 block mb-1">Destino</label>
           <select value={slot.destination}
             onChange={(e) => onChange({ destination: e.target.value, destination_label: getMeta(e.target.value).label })}
-            className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A]">
+            className="w-full rounded-md bg-[#1a1a1a] border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A] [&>option]:bg-[#1a1a1a] [&>option]:text-white">
             {DESTINATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
@@ -373,17 +440,18 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
           <label className="text-[10px] text-white/50 block mb-1">Tipo / valor</label>
           <select value={slot.value_type}
             onChange={(e) => onChange({ value_type: e.target.value as SlotValueType })}
-            className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1 text-[11px] text-white mb-1 outline-none focus:border-[#E24B4A]">
+            className="w-full rounded-md bg-[#1a1a1a] border border-white/10 px-2 py-1 text-[11px] text-white mb-1 outline-none focus:border-[#E24B4A] [&>option]:bg-[#1a1a1a] [&>option]:text-white">
             <option value="fixed">R$ fixo</option>
             <option value="percentage">% da base</option>
             <option value="pct_running">% do saldo restante</option>
           </select>
-          <InputBox type="number" value={slot.value_amount} step={slot.value_type === "fixed" ? "0.01" : "0.1"} min="0"
-            onChange={(v) => onChange({ value_amount: parseFloat(v) || 0 })} />
+          {slot.value_type === "fixed"
+            ? <MoneyInput value={slot.value_amount} onChange={(v) => onChange({ value_amount: v })} />
+            : <NumberInput value={slot.value_amount} onChange={(v) => onChange({ value_amount: parseFloat(v) || 0 })} />}
         </div>
         <div className="col-span-2">
           <label className="text-[10px] text-white/50 block mb-1" title="Slots com mesmo Grupo são deduzidos em paralelo sobre o mesmo saldo">Grupo</label>
-          <InputBox type="number" min="0" value={slot.slot_group ?? ""} placeholder="—"
+          <NumberInput value={slot.slot_group ?? null} placeholder="—" allowEmpty
             onChange={(v) => onChange({ slot_group: v === "" ? null : parseInt(v) })} />
         </div>
       </div>
@@ -507,16 +575,16 @@ function ReferralSection({ referralRule, onChange, gross, feePct, feeAmt, taxAmt
       {referralRule.enabled && (
         <div className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
-            <Field label="1. Dedução fixa do sistema (R$)">
-              <InputBox type="number" value={referralRule.pre_deduction_fixed} step="0.01"
-                onChange={(v) => onChange({ ...referralRule, pre_deduction_fixed: parseFloat(v) || 0 })} />
+            <Field label="1. Dedução fixa do sistema">
+              <MoneyInput value={referralRule.pre_deduction_fixed}
+                onChange={(v) => onChange({ ...referralRule, pre_deduction_fixed: v })} />
             </Field>
             <Field label="2. % do restante para o aluno indicador">
-              <InputBox type="number" value={referralRule.student_referral_percentage} step="1" min="0" max="100"
+              <NumberInput value={referralRule.student_referral_percentage}
                 onChange={(v) => onChange({ ...referralRule, student_referral_percentage: parseFloat(v) || 0 })} />
             </Field>
             <Field label="3. % do restante para o coach vendedor">
-              <InputBox type="number" value={referralRule.coach_pool_percentage} step="1" min="0" max="100"
+              <NumberInput value={referralRule.coach_pool_percentage}
                 onChange={(v) => onChange({ ...referralRule, coach_pool_percentage: parseFloat(v) || 0 })} />
             </Field>
           </div>

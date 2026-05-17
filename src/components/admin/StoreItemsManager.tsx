@@ -242,7 +242,7 @@ export function StoreItemsManager() {
 
       {/* Modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setEditing(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-5xl max-h-[92vh] overflow-y-auto rounded-xl border border-white/10 bg-[#0F0F0F] p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">{editing.id ? "Editar item" : "Novo item"}</h2>
@@ -374,6 +374,8 @@ export function StoreItemsManager() {
       <style>{`
         .input-dark { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; outline: none; }
         .input-dark:focus { border-color: hsl(var(--primary)); }
+        select.input-dark { background-color: #1a1a1a; }
+        select.input-dark > option { background-color: #1a1a1a; color: white; }
       `}</style>
     </div>
   );
