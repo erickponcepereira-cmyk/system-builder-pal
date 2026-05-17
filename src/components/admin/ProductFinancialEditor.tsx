@@ -203,9 +203,10 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
                 Pontos manuais atribuídos ao coach que vendeu. Não interferem no valor do produto e alimentam o sistema de carreira.
               </p>
               <div className="flex items-center gap-3">
-                <input type="number" min={0} value={data.product.points_per_sale}
-                  onChange={(e) => setData({ ...data, product: { ...data.product, points_per_sale: Number(e.target.value || 0) } })}
-                  className="rounded-md bg-white/5 border border-white/10 px-3 py-1.5 text-sm w-32" />
+                <div className="w-32">
+                  <NumberInput value={data.product.points_per_sale}
+                    onChange={(v) => setData({ ...data, product: { ...data.product, points_per_sale: parseInt(v) || 0 } })} />
+                </div>
                 <span className="text-xs text-white/50">pts por venda</span>
               </div>
             </div>
