@@ -416,9 +416,11 @@ function NumberInput({ value, onChange, placeholder, allowEmpty }: {
   );
 }
 
-function SlotCard({ slot, amount, gross, onChange, onRemove }: {
+function SlotCard({ slot, amount, gross, onChange, onRemove, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: {
   slot: ValueSlot; amount: number; gross: number;
   onChange: (p: Partial<ValueSlot>) => void; onRemove: () => void;
+  onMoveUp?: () => void; onMoveDown?: () => void;
+  canMoveUp?: boolean; canMoveDown?: boolean;
 }) {
   const m = getMeta(slot.destination);
   const pct = gross > 0 ? (amount / gross) * 100 : 0;
@@ -443,6 +445,16 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
           <div className="text-right">
             <div className={`text-[18px] font-medium font-mono ${slot.destination === "coach_wallet" ? "text-[#E24B4A]" : ""}`}>{money(amount)}</div>
             <div className="text-[10px] text-white/40">{m.label} · {pct.toFixed(2)}%</div>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <button type="button" onClick={onMoveUp} disabled={!canMoveUp} title="Mover para cima"
+              className="rounded-md border border-white/10 hover:border-[#E24B4A] hover:text-[#E24B4A] p-0.5 text-white/60 disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60">
+              <ChevronUp className="h-3 w-3" />
+            </button>
+            <button type="button" onClick={onMoveDown} disabled={!canMoveDown} title="Mover para baixo"
+              className="rounded-md border border-white/10 hover:border-[#E24B4A] hover:text-[#E24B4A] p-0.5 text-white/60 disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60">
+              <ChevronDown className="h-3 w-3" />
+            </button>
           </div>
           <button type="button" onClick={onRemove} className="rounded-md border border-white/10 hover:border-[#E24B4A] hover:text-[#E24B4A] p-1.5 text-white/60">
             <Trash2 className="h-3 w-3" />
