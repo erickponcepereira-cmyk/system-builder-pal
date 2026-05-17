@@ -179,8 +179,15 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
         </Field>
       </div>
 
-      <SectionLabel>Forma de pagamento</SectionLabel>
-      <div className="flex flex-wrap gap-1.5 mb-6">
+      <SectionLabel>Simulação · forma de pagamento</SectionLabel>
+      <div className="mb-2 flex items-start gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/60">
+        <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[#E24B4A] shrink-0" />
+        <span>
+          A forma de pagamento é definida pelo <b className="text-white">cliente</b> no checkout. Este seletor apenas <b className="text-white">simula</b> como ficam os valores e a comissão do coach em cada cenário.
+          O relatório de pagamentos registra automaticamente o método usado em cada venda.
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {PAYMENT_METHODS.map((m) => {
           const fee = m.feeKey === "pix" ? feeCfg.pix_fee_percentage : m.feeKey === "card" ? feeCfg.card_fee_percentage : feeCfg.card_fee_3x12_percentage;
           const active = previewMethod === m.id;
@@ -195,6 +202,15 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
           );
         })}
       </div>
+
+      <CoachCommissionByMethod
+        price={data.product.price}
+        feeCfg={feeCfg}
+        slots={sortedSlots}
+        taxPct={taxPct}
+        selected={previewMethod}
+        onSelect={setPreviewMethod}
+      />
 
       <div className={`grid grid-cols-1 ${compact ? "" : "lg:grid-cols-2"} gap-4`}>
         <div>
