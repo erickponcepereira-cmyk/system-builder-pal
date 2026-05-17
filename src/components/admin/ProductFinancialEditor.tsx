@@ -147,13 +147,13 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
       <SectionLabel>Produto e impostos</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-6">
         <Field label="Nome do produto"><InputBox value={data.product.name} disabled /></Field>
-        <Field label="Valor bruto (R$)">
-          <InputBox type="number" value={data.product.price} step="0.01" min="0"
-            onChange={(v: string) => setData({ ...data, product: { ...data.product, price: Number(v) || 0 } })} />
+        <Field label="Valor bruto">
+          <MoneyInput value={data.product.price}
+            onChange={(v) => setData({ ...data, product: { ...data.product, price: v } })} />
         </Field>
         <Field label="Imposto — Simples Nacional (%)">
-          <InputBox type="number" value={taxPct} step="0.01" min="0" max="100"
-            onChange={(v: string) => setTaxPct(Number(v) || 0)} />
+          <NumberInput value={taxPct}
+            onChange={(v) => setTaxPct(parseFloat(v) || 0)} />
         </Field>
       </div>
 
