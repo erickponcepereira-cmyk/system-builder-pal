@@ -179,8 +179,15 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
         </Field>
       </div>
 
-      <SectionLabel>Forma de pagamento</SectionLabel>
-      <div className="flex flex-wrap gap-1.5 mb-6">
+      <SectionLabel>Simulação · forma de pagamento</SectionLabel>
+      <div className="mb-2 flex items-start gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/60">
+        <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[#E24B4A] shrink-0" />
+        <span>
+          A forma de pagamento é definida pelo <b className="text-white">cliente</b> no checkout. Este seletor apenas <b className="text-white">simula</b> como ficam os valores e a comissão do coach em cada cenário.
+          O relatório de pagamentos registra automaticamente o método usado em cada venda.
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {PAYMENT_METHODS.map((m) => {
           const fee = m.feeKey === "pix" ? feeCfg.pix_fee_percentage : m.feeKey === "card" ? feeCfg.card_fee_percentage : feeCfg.card_fee_3x12_percentage;
           const active = previewMethod === m.id;
@@ -195,6 +202,15 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
           );
         })}
       </div>
+
+      <CoachCommissionByMethod
+        price={data.product.price}
+        feeCfg={feeCfg}
+        slots={sortedSlots}
+        taxPct={taxPct}
+        selected={previewMethod}
+        onSelect={setPreviewMethod}
+      />
 
       <div className={`grid grid-cols-1 ${compact ? "" : "lg:grid-cols-2"} gap-4`}>
         <div>
@@ -336,6 +352,62 @@ export function ProductFinancialDrawer({ productId, onClose, onSaved }: { produc
 }
 
 // ── Internal subcomponents ─────────────────────────────────────
+function CoachCommissionByMethod({ price, feeCfg, slots, taxPct, selected, onSelect }: {
+  price: number; feeCfg: FeeLike; slots: ValueSlot[]; taxPct: number;
+  selected: PaymentMethod; onSelect: (m: PaymentMethod) => void;
+}) {
+  const groups: { label: string; method: PaymentMethod; feePct: number }[] = [
+    { label: "PIX",         method: "pix",        feePct: feeCfg.pix_fee_percentage },
+    { label: "Cartão 1-2x", method: "credit_1x",  feePct: feeCfg.card_fee_percentage },
+    { label: "Cartão 3-12x",method: "credit_3x",  feePct: feeCfg.card_fee_3x12_percentage },
+  ];
+  const calc = (method: PaymentMethod) => {
+    const d = calculateDistribution(price, method, feeCfg, slots, taxPct);
+    const coachSlots = d.lines
+      .filter((l) => l.type === "distribution" && (l.destination === "coach_wallet" || l.destination === "platform_reserve"))
+      .reduce((s, l) => s + l.amount, 0);
+    return Math.max(0, coachSlots + Math.max(0, d.remainder));
+  };
+  return (
+    <div className="mb-6 rounded-lg p-3" style={{ backgroundColor: "#161616" }}>
+      <div className="flex items-center gap-2 mb-2">
+        <UserCircle className="h-3.5 w-3.5 text-[#E24B4A]" />
+        <span className="text-[11px] font-medium uppercase tracking-wider text-white/60">
+          Comissão do coach vendedor por forma de pagamento
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {groups.map((g) => {
+          const amount = calc(g.method);
+          const active = selected === g.method ||
+            (g.method === "credit_1x" && (selected === "debit" || selected === "credit_2x")) ||
+            (g.method === "credit_3x" && (selected === "credit_6x" || selected === "credit_12x"));
+          return (
+            <button type="button" key={g.method} onClick={() => onSelect(g.method)}
+              className={`rounded-md px-3 py-2 text-left border transition ${
+                active ? "bg-[#E24B4A]/10 border-[#E24B4A]" : "bg-white/5 border-white/10 hover:border-[#E24B4A]/50"
+              }`}>
+              <div className="flex items-center justify-between text-[10px] text-white/50 mb-1">
+                <span>{g.label}</span>
+                <span>taxa {g.feePct}%</span>
+              </div>
+              <div className={`font-mono text-[17px] font-medium ${active ? "text-[#E24B4A]" : "text-white"}`}>
+                {money(amount)}
+              </div>
+              <div className="text-[10px] text-white/40 mt-0.5">
+                {price > 0 ? ((amount / price) * 100).toFixed(2) : "0.00"}% do bruto
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-white/40 mt-2">
+        O coach recebe exatamente o valor da forma de pagamento escolhida pelo cliente no checkout.
+      </p>
+    </div>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] font-medium uppercase tracking-wider text-white/40 mb-2">{children}</div>;
 }
