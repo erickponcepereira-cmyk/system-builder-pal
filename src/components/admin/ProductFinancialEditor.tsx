@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   Loader2, Plus, Trash2, Save, Bolt, Lock, CreditCard, Receipt,
   Package, Stethoscope, UserCircle, Network, Shield, SlidersHorizontal,
-  Vault, CircleCheck, AlertTriangle, AlertCircle, Users, X,
+  Vault, CircleCheck, AlertTriangle, AlertCircle, Users, X, ChevronUp, ChevronDown,
 } from "lucide-react";
 import {
   getProductFinancial,
@@ -79,11 +79,12 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
   };
   const addSlot = () => {
     if (!data) return;
+    const maxOrder = data.slots.reduce((m, s) => Math.max(m, s.slot_order ?? 0), -1);
     setData({
       ...data,
       slots: [...data.slots, {
         id: `tmp-${Date.now()}`,
-        slot_order: data.slots.length,
+        slot_order: maxOrder + 1,
         label: "Nova linha",
         value_type: "percentage",
         value_amount: 0,
@@ -96,9 +97,25 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
       }],
     });
   };
-  const removeSlot = (idx: number) => {
+  const removeSlot = (id: string) => {
     if (!data) return;
-    setData({ ...data, slots: data.slots.filter((_, i) => i !== idx) });
+    setData({ ...data, slots: data.slots.filter((s) => s.id !== id) });
+  };
+  const moveSlot = (id: string, dir: -1 | 1) => {
+    if (!data) return;
+    const ordered = [...data.slots].sort((a, b) => a.slot_order - b.slot_order);
+    const idx = ordered.findIndex((s) => s.id === id);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= ordered.length) return;
+    const a = ordered[idx], b = ordered[swap];
+    const ao = a.slot_order, bo = b.slot_order;
+    setData({
+      ...data,
+      slots: data.slots.map((s) =>
+        s.id === a.id ? { ...s, slot_order: bo } :
+        s.id === b.id ? { ...s, slot_order: ao } : s,
+      ),
+    });
   };
 
   const sortedSlots = useMemo(
@@ -184,14 +201,18 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
           <SectionLabel>Distribuição da venda normal</SectionLabel>
           <div className="rounded-lg p-3" style={{ backgroundColor: "#161616" }}>
             <div className="space-y-2">
-              {data.slots.map((s, idx) => (
+              {sortedSlots.map((s, idx) => (
                 <SlotCard key={s.id || idx} slot={s}
                   amount={slotAmtMap.get(s.id) ?? 0}
                   gross={data.product.price}
-                  onChange={(p) => updateSlot(idx, p)}
-                  onRemove={() => removeSlot(idx)} />
+                  canMoveUp={idx > 0}
+                  canMoveDown={idx < sortedSlots.length - 1}
+                  onMoveUp={() => moveSlot(s.id, -1)}
+                  onMoveDown={() => moveSlot(s.id, 1)}
+                  onChange={(p) => updateSlot(data.slots.findIndex((x) => x.id === s.id), p)}
+                  onRemove={() => removeSlot(s.id)} />
               ))}
-              {data.slots.length === 0 && (
+              {sortedSlots.length === 0 && (
                 <p className="text-xs text-white/40 text-center py-4">Nenhum slot. Adicione para distribuir o valor.</p>
               )}
             </div>
@@ -232,7 +253,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
 
           <FlowDivider />
 
-          {data.slots.map((s, i) => {
+          {sortedSlots.map((s, i) => {
             const m = getMeta(s.destination);
             const amt = slotAmtMap.get(s.id) ?? 0;
             const groupTag = s.slot_group != null ? ` · G${s.slot_group}` : "";
@@ -395,9 +416,11 @@ function NumberInput({ value, onChange, placeholder, allowEmpty }: {
   );
 }
 
-function SlotCard({ slot, amount, gross, onChange, onRemove }: {
+function SlotCard({ slot, amount, gross, onChange, onRemove, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: {
   slot: ValueSlot; amount: number; gross: number;
   onChange: (p: Partial<ValueSlot>) => void; onRemove: () => void;
+  onMoveUp?: () => void; onMoveDown?: () => void;
+  canMoveUp?: boolean; canMoveDown?: boolean;
 }) {
   const m = getMeta(slot.destination);
   const pct = gross > 0 ? (amount / gross) * 100 : 0;
@@ -422,6 +445,16 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
           <div className="text-right">
             <div className={`text-[18px] font-medium font-mono ${slot.destination === "coach_wallet" ? "text-[#E24B4A]" : ""}`}>{money(amount)}</div>
             <div className="text-[10px] text-white/40">{m.label} · {pct.toFixed(2)}%</div>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <button type="button" onClick={onMoveUp} disabled={!canMoveUp} title="Mover para cima"
+              className="rounded-md border border-white/10 hover:border-[#E24B4A] hover:text-[#E24B4A] p-0.5 text-white/60 disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60">
+              <ChevronUp className="h-3 w-3" />
+            </button>
+            <button type="button" onClick={onMoveDown} disabled={!canMoveDown} title="Mover para baixo"
+              className="rounded-md border border-white/10 hover:border-[#E24B4A] hover:text-[#E24B4A] p-0.5 text-white/60 disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-white/60">
+              <ChevronDown className="h-3 w-3" />
+            </button>
           </div>
           <button type="button" onClick={onRemove} className="rounded-md border border-white/10 hover:border-[#E24B4A] hover:text-[#E24B4A] p-1.5 text-white/60">
             <Trash2 className="h-3 w-3" />
