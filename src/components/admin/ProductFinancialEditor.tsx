@@ -432,7 +432,7 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
           <label className="text-[10px] text-white/50 block mb-1">Destino</label>
           <select value={slot.destination}
             onChange={(e) => onChange({ destination: e.target.value, destination_label: getMeta(e.target.value).label })}
-            className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A]">
+            className="w-full rounded-md bg-[#1a1a1a] border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A] [&>option]:bg-[#1a1a1a] [&>option]:text-white">
             {DESTINATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
@@ -440,17 +440,18 @@ function SlotCard({ slot, amount, gross, onChange, onRemove }: {
           <label className="text-[10px] text-white/50 block mb-1">Tipo / valor</label>
           <select value={slot.value_type}
             onChange={(e) => onChange({ value_type: e.target.value as SlotValueType })}
-            className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1 text-[11px] text-white mb-1 outline-none focus:border-[#E24B4A]">
+            className="w-full rounded-md bg-[#1a1a1a] border border-white/10 px-2 py-1 text-[11px] text-white mb-1 outline-none focus:border-[#E24B4A] [&>option]:bg-[#1a1a1a] [&>option]:text-white">
             <option value="fixed">R$ fixo</option>
             <option value="percentage">% da base</option>
             <option value="pct_running">% do saldo restante</option>
           </select>
-          <InputBox type="number" value={slot.value_amount} step={slot.value_type === "fixed" ? "0.01" : "0.1"} min="0"
-            onChange={(v) => onChange({ value_amount: parseFloat(v) || 0 })} />
+          {slot.value_type === "fixed"
+            ? <MoneyInput value={slot.value_amount} onChange={(v) => onChange({ value_amount: v })} />
+            : <NumberInput value={slot.value_amount} onChange={(v) => onChange({ value_amount: parseFloat(v) || 0 })} />}
         </div>
         <div className="col-span-2">
           <label className="text-[10px] text-white/50 block mb-1" title="Slots com mesmo Grupo são deduzidos em paralelo sobre o mesmo saldo">Grupo</label>
-          <InputBox type="number" min="0" value={slot.slot_group ?? ""} placeholder="—"
+          <NumberInput value={slot.slot_group ?? null} placeholder="—" allowEmpty
             onChange={(v) => onChange({ slot_group: v === "" ? null : parseInt(v) })} />
         </div>
       </div>
