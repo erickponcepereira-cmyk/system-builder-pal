@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   Loader2, Plus, Trash2, Save, Bolt, Lock, CreditCard, Receipt,
   Package, Stethoscope, UserCircle, Network, Shield, SlidersHorizontal,
-  Vault, CircleCheck, AlertTriangle, AlertCircle, Users, X,
+  Vault, CircleCheck, AlertTriangle, AlertCircle, Users, X, ChevronUp, ChevronDown,
 } from "lucide-react";
 import {
   getProductFinancial,
