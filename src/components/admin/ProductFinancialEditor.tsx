@@ -79,11 +79,12 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
   };
   const addSlot = () => {
     if (!data) return;
+    const maxOrder = data.slots.reduce((m, s) => Math.max(m, s.slot_order ?? 0), -1);
     setData({
       ...data,
       slots: [...data.slots, {
         id: `tmp-${Date.now()}`,
-        slot_order: data.slots.length,
+        slot_order: maxOrder + 1,
         label: "Nova linha",
         value_type: "percentage",
         value_amount: 0,
@@ -96,9 +97,25 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
       }],
     });
   };
-  const removeSlot = (idx: number) => {
+  const removeSlot = (id: string) => {
     if (!data) return;
-    setData({ ...data, slots: data.slots.filter((_, i) => i !== idx) });
+    setData({ ...data, slots: data.slots.filter((s) => s.id !== id) });
+  };
+  const moveSlot = (id: string, dir: -1 | 1) => {
+    if (!data) return;
+    const ordered = [...data.slots].sort((a, b) => a.slot_order - b.slot_order);
+    const idx = ordered.findIndex((s) => s.id === id);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= ordered.length) return;
+    const a = ordered[idx], b = ordered[swap];
+    const ao = a.slot_order, bo = b.slot_order;
+    setData({
+      ...data,
+      slots: data.slots.map((s) =>
+        s.id === a.id ? { ...s, slot_order: bo } :
+        s.id === b.id ? { ...s, slot_order: ao } : s,
+      ),
+    });
   };
 
   const sortedSlots = useMemo(
