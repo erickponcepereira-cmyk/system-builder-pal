@@ -575,16 +575,16 @@ function ReferralSection({ referralRule, onChange, gross, feePct, feeAmt, taxAmt
       {referralRule.enabled && (
         <div className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
-            <Field label="1. Dedução fixa do sistema (R$)">
-              <InputBox type="number" value={referralRule.pre_deduction_fixed} step="0.01"
-                onChange={(v) => onChange({ ...referralRule, pre_deduction_fixed: parseFloat(v) || 0 })} />
+            <Field label="1. Dedução fixa do sistema">
+              <MoneyInput value={referralRule.pre_deduction_fixed}
+                onChange={(v) => onChange({ ...referralRule, pre_deduction_fixed: v })} />
             </Field>
             <Field label="2. % do restante para o aluno indicador">
-              <InputBox type="number" value={referralRule.student_referral_percentage} step="1" min="0" max="100"
+              <NumberInput value={referralRule.student_referral_percentage}
                 onChange={(v) => onChange({ ...referralRule, student_referral_percentage: parseFloat(v) || 0 })} />
             </Field>
             <Field label="3. % do restante para o coach vendedor">
-              <InputBox type="number" value={referralRule.coach_pool_percentage} step="1" min="0" max="100"
+              <NumberInput value={referralRule.coach_pool_percentage}
                 onChange={(v) => onChange({ ...referralRule, coach_pool_percentage: parseFloat(v) || 0 })} />
             </Field>
           </div>
