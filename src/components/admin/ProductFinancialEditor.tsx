@@ -323,6 +323,72 @@ function InputBox(props: Omit<React.InputHTMLAttributes<HTMLInputElement>, "onCh
   );
 }
 
+function MoneyInput({ value, onChange, disabled }: { value: number; onChange?: (v: number) => void; disabled?: boolean }) {
+  const fmt = (cents: number) =>
+    `R$ ${(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const [text, setText] = useState(() => fmt(Math.round((value || 0) * 100)));
+  const lastEmitted = useMemo(() => ({ v: value }), []);
+  useEffect(() => {
+    if (Math.abs((lastEmitted.v ?? 0) - (value ?? 0)) > 0.0001) {
+      setText(fmt(Math.round((value || 0) * 100)));
+      lastEmitted.v = value;
+    }
+  }, [value, lastEmitted]);
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      disabled={disabled}
+      value={text}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, "");
+        const cents = digits ? parseInt(digits, 10) : 0;
+        const next = cents / 100;
+        setText(fmt(cents));
+        lastEmitted.v = next;
+        onChange?.(next);
+      }}
+      className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A] disabled:opacity-50"
+    />
+  );
+}
+
+function NumberInput({ value, onChange, placeholder, allowEmpty }: {
+  value: number | null | undefined;
+  onChange?: (v: string) => void;
+  placeholder?: string;
+  allowEmpty?: boolean;
+}) {
+  const toStr = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
+  const [text, setText] = useState(() => toStr(value));
+  const focused = useMemo(() => ({ on: false }), []);
+  useEffect(() => {
+    if (!focused.on) setText(toStr(value));
+  }, [value, focused]);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={text}
+      placeholder={placeholder}
+      onFocus={() => { focused.on = true; }}
+      onBlur={() => {
+        focused.on = false;
+        if (text === "" && !allowEmpty) {
+          setText("0");
+          onChange?.("0");
+        }
+      }}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/[^\d.,-]/g, "").replace(",", ".");
+        setText(e.target.value);
+        onChange?.(raw);
+      }}
+      className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A] disabled:opacity-50"
+    />
+  );
+}
+
 function SlotCard({ slot, amount, gross, onChange, onRemove }: {
   slot: ValueSlot; amount: number; gross: number;
   onChange: (p: Partial<ValueSlot>) => void; onRemove: () => void;
