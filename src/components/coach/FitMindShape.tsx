@@ -2698,25 +2698,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               Comparar avaliações
             </button>
             <button
-              className="fm-btn-outline"
-              style={{ flex: 1, minWidth: 140, color: "#dc2626", borderColor: "#fecaca" }}
-              onClick={async () => {
-                if (!selectedClient || !onDeleteAssessment) return;
-                const a = assessment as FitMindAssessment;
-                if (!a?.id) return;
-                const reason = window.prompt("Informe o motivo da exclusão (obrigatório):\nEste registro será enviado ao painel admin.");
-                if (!reason || !reason.trim()) return;
-                try {
-                  await onDeleteAssessment(a.id, reason.trim(), selectedClient);
-                  setScreen("home");
-                  setSelectedClient(null);
-                  setAssessment({});
-                } catch (e) { console.error(e); }
-              }}
-            >
-              Excluir avaliação
-            </button>
-            <button
               className="fm-btn-primary"
               style={{ flex: 1, minWidth: 140 }}
               onClick={() => window.print()}
