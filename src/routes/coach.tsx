@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart3, User, LogOut,
   Menu, X, Trophy, ClipboardList, CalendarCheck,
-  ShoppingBag, Gift, Network, UserRound, Repeat, Award,
+  ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
+import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 
 // Link "/" usage to satisfy unused import warnings (not required)
 void Link;
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/coach")({
   component: CoachDashboard,
 });
 
-type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "attendance" | "wallet" | "career" | "reports";
+type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports";
 
 export const money = (value: number | null | undefined) =>
   `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -220,6 +221,7 @@ function CoachDashboard() {
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
+    { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "career", label: "Carreira", icon: Trophy },
     { id: "reports", label: "Relatórios", icon: BarChart3 },
@@ -379,6 +381,7 @@ function CoachDashboard() {
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
+          {activeTab === "protocol" && <ProtocolTab />}
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "career" && <CareerTab />}

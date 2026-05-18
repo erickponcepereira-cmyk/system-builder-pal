@@ -2006,6 +2006,59 @@ export type Database = {
           },
         ]
       }
+      exercise_library: {
+        Row: {
+          created_at: string
+          created_by_coach_id: string | null
+          description: string | null
+          difficulty: string | null
+          equipment: string | null
+          id: string
+          image_url: string | null
+          is_global: boolean
+          muscle_group: string | null
+          name: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_coach_id?: string | null
+          description?: string | null
+          difficulty?: string | null
+          equipment?: string | null
+          id?: string
+          image_url?: string | null
+          is_global?: boolean
+          muscle_group?: string | null
+          name: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_coach_id?: string | null
+          description?: string | null
+          difficulty?: string | null
+          equipment?: string | null
+          id?: string
+          image_url?: string | null
+          is_global?: boolean
+          muscle_group?: string | null
+          name?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_library_created_by_coach_id_fkey"
+            columns: ["created_by_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_logs: {
         Row: {
           ai_analysis: Json | null
@@ -4176,6 +4229,78 @@ export type Database = {
             foreignKeyName: "student_checkin_scans_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_protocols: {
+        Row: {
+          coach_id: string
+          created_at: string
+          daily_calorie_goal: number | null
+          general_notes: string | null
+          id: string
+          ideal_times: Json
+          marmita_tips: string | null
+          meal_plan: Json
+          meals_per_day: number | null
+          restrictions: Json
+          shopping_list: string | null
+          student_id: string
+          updated_at: string
+          water_goal_ml: number | null
+          weight_goal: number | null
+          workout_plan: Json
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          daily_calorie_goal?: number | null
+          general_notes?: string | null
+          id?: string
+          ideal_times?: Json
+          marmita_tips?: string | null
+          meal_plan?: Json
+          meals_per_day?: number | null
+          restrictions?: Json
+          shopping_list?: string | null
+          student_id: string
+          updated_at?: string
+          water_goal_ml?: number | null
+          weight_goal?: number | null
+          workout_plan?: Json
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          daily_calorie_goal?: number | null
+          general_notes?: string | null
+          id?: string
+          ideal_times?: Json
+          marmita_tips?: string | null
+          meal_plan?: Json
+          meals_per_day?: number | null
+          restrictions?: Json
+          shopping_list?: string | null
+          student_id?: string
+          updated_at?: string
+          water_goal_ml?: number | null
+          weight_goal?: number | null
+          workout_plan?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_protocols_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_protocols_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
