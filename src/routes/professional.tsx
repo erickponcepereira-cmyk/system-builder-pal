@@ -142,7 +142,8 @@ function ProfessionalPanel() {
     );
   }
 
-  const tabs = info.specialty?.default_tabs ?? ["students", "wallet", "network"];
+  const baseTabs = info.specialty?.default_tabs ?? ["students", "wallet", "network"];
+  const tabs = baseTabs.includes("products") ? baseTabs : [...baseTabs, "products"];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
