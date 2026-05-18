@@ -27,6 +27,10 @@ export type FinalizeRegistrationInput = {
     referralLink?: string | null;
     completedCoachCourse?: boolean;
     coachCourseNotes?: string | null;
+    isProfessional?: boolean;
+    specialtyKey?: string | null;
+    professionalCouncil?: string | null;
+    councilNumber?: string | null;
   };
   student?: {
     coachId: string;
