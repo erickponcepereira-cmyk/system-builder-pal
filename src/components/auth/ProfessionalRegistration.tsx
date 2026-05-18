@@ -92,83 +92,92 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async () => {
     if (!acceptTerms) return fail("Aceite os Termos de Uso para continuar.");
-    if (!existingMode && !selectedCoach) return fail("Selecione o coach que te indicou.");
 
     setLoading(true); setFormError(null);
     try {
-      const referralCode = generateReferralCode();
-      let userId: string;
-      let resolvedName = name;
-      let resolvedPhone = phone;
-      let resolvedCpf = cpf;
-      let resolvedBirthdate = birthdate;
-      let uplineCoachId = selectedCoach?.id || null;
+      const selectedSpecLocal = specialties.find((s) => s.key === specialtyKey);
+      const professionalPatch = {
+        is_professional: true,
+        specialty_key: specialtyKey,
+        specialty_custom_description: selectedSpecLocal?.requires_admin_setup ? specialtyCustom.trim() : null,
+        professional_council: council || null,
+        council_number: councilNumber || null,
+        specialty_pending_setup: !!selectedSpecLocal?.requires_admin_setup,
+        approved_at: null as string | null,
+      };
 
       if (existingMode) {
-        // Vincular profissional a conta existente — autentica com a senha atual
+        // Mesmo padrão do PartnerRegistration: autentica e mexe direto na tabela coaches
         const { data: signIn, error: signErr } = await supabase.auth.signInWithPassword({
           email: email.trim().toLowerCase(),
           password,
         });
         if (signErr || !signIn.user) {
-          throw new Error("Senha incorreta para esta conta. Use a senha do FitMind.");
+          throw new Error("Senha incorreta para esta conta. Use a senha que você já usa no FitMind.");
         }
-        userId = signIn.user.id;
-        // Reaproveita dados já cadastrados
+
         const { data: prof } = await supabase
           .from("profiles")
-          .select("id, name, phone, cpf, birthdate")
-          .eq("user_id", userId)
+          .select("id")
+          .eq("user_id", signIn.user.id)
           .maybeSingle();
-        if (prof) {
-          resolvedName = name || prof.name || "";
-          resolvedPhone = phone || prof.phone || "";
-          resolvedCpf = cpf || prof.cpf || "";
-          resolvedBirthdate = birthdate || prof.birthdate || "";
+        if (!prof?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
 
-          // Mantém o coach indicador atual (do registro existente de coach ou aluno)
-          if (!uplineCoachId) {
-            const { data: existingCoach } = await supabase
-              .from("coaches")
-              .select("upline_coach_id")
-              .eq("profile_id", prof.id)
-              .maybeSingle();
-            if (existingCoach?.upline_coach_id) {
-              uplineCoachId = existingCoach.upline_coach_id;
-            } else {
-              const { data: existingStudent } = await supabase
-                .from("students")
-                .select("coach_id")
-                .eq("profile_id", prof.id)
-                .maybeSingle();
-              if (existingStudent?.coach_id) uplineCoachId = existingStudent.coach_id;
-            }
-          }
+        // Verifica se já existe linha em coaches
+        const { data: existingCoach } = await supabase
+          .from("coaches")
+          .select("id, upline_coach_id")
+          .eq("profile_id", prof.id)
+          .maybeSingle();
+
+        const uplineCoachId = selectedCoach?.id || existingCoach?.upline_coach_id || null;
+        if (!uplineCoachId) throw new Error("Selecione o coach indicador.");
+
+        if (existingCoach) {
+          const { error: updErr } = await supabase
+            .from("coaches")
+            .update({ ...professionalPatch, upline_coach_id: uplineCoachId })
+            .eq("id", existingCoach.id);
+          if (updErr) throw updErr;
+        } else {
+          const referralCode = generateReferralCode();
+          const { error: insErr } = await supabase
+            .from("coaches")
+            .insert({
+              profile_id: prof.id,
+              referral_code: referralCode,
+              referral_link: `${window.location.origin}/r/${referralCode}`,
+              upline_coach_id: uplineCoachId,
+              completed_coach_course: false,
+              ...professionalPatch,
+            });
+          if (insErr) throw insErr;
         }
-        if (!resolvedName || resolvedName.trim().length < 2) {
-          throw new Error("Sua conta não possui um nome cadastrado. Preencha o campo Nome completo.");
-        }
-        if (!uplineCoachId) {
-          throw new Error("Selecione o coach que te indicou.");
-        }
-      } else {
-        const user = await createAuthUser(email, password, name, "coach");
-        userId = user.id;
+
+        await supabase.from("profiles").update({ status: "pending" }).eq("id", prof.id);
+        await supabase.auth.signOut().catch(() => {});
+        setRegisteredEmail(email.trim().toLowerCase());
+        toast.success("Conta vinculada como profissional! Aguarde aprovação do admin.");
+        return;
       }
+
+      // Conta nova — fluxo padrão via server function
+      if (!selectedCoach) return fail("Selecione o coach que te indicou.");
+      const referralCode = generateReferralCode();
+      const user = await createAuthUser(email, password, name, "coach");
 
       await finalizeRegistrationFn({
         data: {
-          userId, role: "coach",
-          name: resolvedName, email,
-          phone: resolvedPhone, cpf: resolvedCpf, birthdate: resolvedBirthdate,
+          userId: user.id, role: "coach",
+          name, email, phone, cpf, birthdate,
           coach: {
-            uplineCoachId: uplineCoachId!,
+            uplineCoachId: selectedCoach.id,
             referralCode,
             referralLink: `${window.location.origin}/r/${referralCode}`,
             completedCoachCourse: false,
             isProfessional: true,
             specialtyKey,
-            specialtyCustomDescription: selectedSpec?.requires_admin_setup ? specialtyCustom.trim() : null,
+            specialtyCustomDescription: selectedSpecLocal?.requires_admin_setup ? specialtyCustom.trim() : null,
             professionalCouncil: council || null,
             councilNumber: councilNumber || null,
           },
@@ -176,9 +185,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       });
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success(existingMode
-        ? "Conta vinculada! Aguarde aprovação do admin para acessar como profissional."
-        : "Cadastro criado! Confira seu e-mail para confirmar.");
+      toast.success("Cadastro criado! Confira seu e-mail para confirmar.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly); toast.error(friendly);
