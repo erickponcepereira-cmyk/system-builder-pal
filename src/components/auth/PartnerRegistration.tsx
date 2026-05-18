@@ -59,16 +59,57 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     if (doc.replace(/\D/g, "").length < (docType === "cnpj" ? 14 : 11)) return setErr(`${docType.toUpperCase()} incompleto.`);
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido.");
     if (whatsapp.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto.");
-    if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    if (!isExisting && password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
 
     setLoading(true);
     setFormError(null);
     try {
+      let profileId: string | null = null;
+
+      if (isExisting && authProfile) {
+        // Reaproveita a conta atual: cria/atualiza somente o registro de parceiro
+        profileId = authProfile.id;
+
+        // Verifica se já existe parceiro vinculado
+        const { data: existingPartner } = await supabase
+          .from("partners" as never)
+          .select("id" as never)
+          .eq("profile_id" as never, profileId)
+          .maybeSingle();
+
+        if (existingPartner) {
+          throw new Error("Esta conta já possui um cadastro de parceiro.");
+        }
+
+        const { error: insertErr } = await supabase
+          .from("partners" as never)
+          .insert({
+            profile_id: profileId,
+            fantasy_name: fantasyName.trim(),
+            document: doc.replace(/\D/g, ""),
+            document_type: docType,
+            whatsapp,
+            city: city || null,
+            state: state || null,
+            status: "pending",
+          } as never);
+        if (insertErr) throw insertErr;
+
+        await supabase
+          .from("profiles")
+          .update({ phone: whatsapp })
+          .eq("id", profileId);
+
+        setCreatedForExisting(true);
+        toast.success("Cadastro de parceiro enviado para aprovação!");
+        return;
+      }
+
+      // Fluxo padrão: cria nova conta de parceiro
       const user = await createAuthUser(email, password, responsibleName, "partner", {
         fantasy_name: fantasyName.trim(),
       });
 
-      // Atualiza dados básicos da empresa (perfil é criado via trigger)
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
@@ -107,6 +148,21 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   };
 
   if (registeredEmail) return <CheckEmailNotice email={registeredEmail} />;
+
+  if (createdForExisting) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
+        <div className="w-full max-w-md text-center text-white">
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary mb-3">
+            <Building2 className="h-3.5 w-3.5" /> Empresa Parceira
+          </div>
+          <h1 className="text-xl font-bold mb-2">Cadastro enviado!</h1>
+          <p className="text-sm text-white/60 mb-6">Sua empresa está aguardando aprovação. Você poderá acessar o painel de parceiro assim que for aprovada.</p>
+          <Button onClick={onBack} className="w-full">Voltar</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
