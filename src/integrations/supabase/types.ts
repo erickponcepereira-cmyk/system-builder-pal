@@ -4737,6 +4737,7 @@ export type Database = {
           coach_id: string
           created_at: string
           daily_calorie_goal: number | null
+          evaluation_client_id: string | null
           general_notes: string | null
           id: string
           ideal_times: Json
@@ -4745,7 +4746,7 @@ export type Database = {
           meals_per_day: number | null
           restrictions: Json
           shopping_list: string | null
-          student_id: string
+          student_id: string | null
           updated_at: string
           water_goal_ml: number | null
           weight_goal: number | null
@@ -4755,6 +4756,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           daily_calorie_goal?: number | null
+          evaluation_client_id?: string | null
           general_notes?: string | null
           id?: string
           ideal_times?: Json
@@ -4763,7 +4765,7 @@ export type Database = {
           meals_per_day?: number | null
           restrictions?: Json
           shopping_list?: string | null
-          student_id: string
+          student_id?: string | null
           updated_at?: string
           water_goal_ml?: number | null
           weight_goal?: number | null
@@ -4773,6 +4775,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           daily_calorie_goal?: number | null
+          evaluation_client_id?: string | null
           general_notes?: string | null
           id?: string
           ideal_times?: Json
@@ -4781,7 +4784,7 @@ export type Database = {
           meals_per_day?: number | null
           restrictions?: Json
           shopping_list?: string | null
-          student_id?: string
+          student_id?: string | null
           updated_at?: string
           water_goal_ml?: number | null
           weight_goal?: number | null
@@ -4793,6 +4796,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_protocols_evaluation_client_id_fkey"
+            columns: ["evaluation_client_id"]
+            isOneToOne: false
+            referencedRelation: "coach_evaluation_clients"
             referencedColumns: ["id"]
           },
           {

@@ -6,11 +6,12 @@ import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/comp
 
 type Student = {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   name: string;
   email: string;
   current_weight: number | null;
   goal_weight: number | null;
+  external: boolean; // true = coach_evaluation_clients (cliente externo)
 };
 
 type MealSlot = { name: string; time: string; options: [string, string, string] };
@@ -70,6 +71,8 @@ const emptyProtocol = (): Protocol => ({
 export function ProtocolTab() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [externals, setExternals] = useState<Student[]>([]);
+  const [scope, setScope] = useState<"mine" | "external">("mine");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Student | null>(null);
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
@@ -86,6 +89,9 @@ export function ProtocolTab() {
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", goal: "general" as WorkoutTemplate["goal"], level: "iniciante" as WorkoutTemplate["level"] });
   const [templateGoalFilter, setTemplateGoalFilter] = useState<string>("all");
+  const [newExternalOpen, setNewExternalOpen] = useState(false);
+  const [newExternal, setNewExternal] = useState({ name: "", email: "", whatsapp: "" });
+  const [creatingExternal, setCreatingExternal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -109,6 +115,22 @@ export function ProtocolTab() {
         email: s.profiles?.email || "",
         current_weight: s.current_weight,
         goal_weight: s.goal_weight,
+        external: false,
+      })));
+
+      const { data: ext } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id, name, email, whatsapp" as never)
+        .eq("coach_id" as never, coach.id as never)
+        .order("name" as never);
+      setExternals(((ext as any[]) || []).map((e) => ({
+        id: e.id,
+        profile_id: null,
+        name: e.name,
+        email: e.email || e.whatsapp || "",
+        current_weight: null,
+        goal_weight: null,
+        external: true,
       })));
 
       const { data: lib } = await supabase.from("exercise_library" as never).select("*" as never).order("name" as never);
@@ -155,10 +177,11 @@ export function ProtocolTab() {
   };
 
   const filtered = useMemo(() => {
+    const base = scope === "mine" ? students : externals;
     const q = query.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((s) => `${s.name} ${s.email}`.toLowerCase().includes(q));
-  }, [students, query]);
+    if (!q) return base;
+    return base.filter((s) => `${s.name} ${s.email}`.toLowerCase().includes(q));
+  }, [students, externals, scope, query]);
 
   const filteredLib = useMemo(() => {
     const q = libQuery.trim().toLowerCase();
@@ -166,10 +189,39 @@ export function ProtocolTab() {
     return library.filter((e) => `${e.name} ${e.muscle_group || ""} ${e.equipment || ""}`.toLowerCase().includes(q));
   }, [library, libQuery]);
 
+  const createExternalClient = async () => {
+    if (!coachId) return;
+    if (!newExternal.name.trim()) { toast.error("Informe o nome"); return; }
+    setCreatingExternal(true);
+    const { data, error } = await supabase.from("coach_evaluation_clients" as never).insert({
+      coach_id: coachId,
+      name: newExternal.name.trim().slice(0, 120),
+      email: newExternal.email.trim().slice(0, 255) || null,
+      whatsapp: newExternal.whatsapp.slice(0, 24) || null,
+      gender: "other",
+      ethnicity: "other",
+      height_unit: "cm",
+      language: "pt",
+    } as never).select("*" as never).single();
+    setCreatingExternal(false);
+    if (error || !data) { toast.error(error?.message || "Erro ao criar cliente"); return; }
+    const d = data as any;
+    const created: Student = {
+      id: d.id, profile_id: null, name: d.name,
+      email: d.email || d.whatsapp || "", current_weight: null, goal_weight: null, external: true,
+    };
+    setExternals((curr) => [created, ...curr]);
+    setNewExternal({ name: "", email: "", whatsapp: "" });
+    setNewExternalOpen(false);
+    toast.success("Cliente externo criado");
+    loadProtocol(created);
+  };
+
   const loadProtocol = async (s: Student) => {
     setSelected(s);
     setLoading(true);
-    const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, s.id as never).maybeSingle();
+    const idCol = s.external ? "evaluation_client_id" : "student_id";
+    const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq(idCol as never, s.id as never).maybeSingle();
     if (data) {
       const d = data as any;
       setProtocol({
@@ -189,10 +241,15 @@ export function ProtocolTab() {
       setProtocol({ ...emptyProtocol(), weight_goal: s.goal_weight });
     }
 
-    const { data: bio } = await supabase.from("bioimpedance_evaluations").select("id").eq("student_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    setBioEvalUrl(bio ? `/admin/students?student=${s.id}` : null);
-    const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
-    setAnamnesisUrl(an ? `/admin/students?student=${s.id}` : null);
+    if (!s.external) {
+      const { data: bio } = await supabase.from("bioimpedance_evaluations").select("id").eq("student_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      setBioEvalUrl(bio ? `/admin/students?student=${s.id}` : null);
+      const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
+      setAnamnesisUrl(an ? `/admin/students?student=${s.id}` : null);
+    } else {
+      setBioEvalUrl(null);
+      setAnamnesisUrl(null);
+    }
 
     setLoading(false);
   };
@@ -201,7 +258,8 @@ export function ProtocolTab() {
     if (!selected || !coachId) return;
     setSaving(true);
     const payload: any = {
-      student_id: selected.id,
+      student_id: selected.external ? null : selected.id,
+      evaluation_client_id: selected.external ? selected.id : null,
       coach_id: coachId,
       meals_per_day: protocol.meals_per_day,
       meal_plan: protocol.meal_plan,
@@ -214,9 +272,10 @@ export function ProtocolTab() {
       general_notes: protocol.general_notes.slice(0, 5000),
       workout_plan: protocol.workout_plan,
     };
-    const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict: "student_id" } as never);
+    const onConflict = selected.external ? "evaluation_client_id" : "student_id";
+    const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict } as never);
 
-    if (protocol.weight_goal != null) {
+    if (!selected.external && protocol.weight_goal != null) {
       await supabase.from("students").update({ goal_weight: protocol.weight_goal }).eq("id", selected.id);
     }
 
@@ -272,17 +331,35 @@ export function ProtocolTab() {
 
       {!selected ? (
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-          <div className="mb-3 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
-            <Search className="h-4 w-4 text-white/40" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar aluno por nome ou e-mail" className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+          <div className="mb-3 flex gap-1 rounded-lg bg-black/30 p-1">
+            <button onClick={() => setScope("mine")} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${scope === "mine" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}>Meus alunos ({students.length})</button>
+            <button onClick={() => setScope("external")} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${scope === "external" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}>Externos ({externals.length})</button>
+          </div>
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+              <Search className="h-4 w-4 text-white/40" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={scope === "mine" ? "Buscar meu aluno" : "Buscar cliente externo"} className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+            </div>
+            <button onClick={() => setNewExternalOpen(true)} className="flex items-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/25">
+              <Plus className="h-3.5 w-3.5" /> Novo externo
+            </button>
           </div>
           <div className="space-y-2">
-            {filtered.length === 0 && <p className="py-6 text-center text-sm text-white/40">Nenhum aluno vinculado a você ainda.</p>}
+            {filtered.length === 0 && (
+              <p className="py-6 text-center text-sm text-white/40">
+                {scope === "mine"
+                  ? "Nenhum aluno vinculado a você ainda. Use a aba 'Externos' para criar treinos para pessoas de fora do app."
+                  : "Nenhum cliente externo. Clique em 'Novo externo' para começar."}
+              </p>
+            )}
             {filtered.map((s) => (
               <button key={s.id} onClick={() => loadProtocol(s)} className="flex w-full items-center justify-between rounded-xl bg-white/5 p-3 text-left transition-colors hover:bg-white/10">
                 <div>
-                  <p className="text-sm font-semibold text-white">{s.name}</p>
-                  <p className="text-xs text-white/40">{s.email}</p>
+                  <p className="text-sm font-semibold text-white">
+                    {s.name}
+                    {s.external && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">Externo</span>}
+                  </p>
+                  <p className="text-xs text-white/40">{s.email || "—"}</p>
                 </div>
                 <span className="text-xs text-primary">Abrir →</span>
               </button>
@@ -544,6 +621,24 @@ export function ProtocolTab() {
             <div className="mt-4 flex gap-2">
               <button onClick={() => setSaveTemplateOpen(false)} className="flex-1 rounded bg-white/10 px-3 py-2 text-sm text-white">Cancelar</button>
               <button onClick={saveAsTemplate} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {newExternalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !creatingExternal && setNewExternalOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-bold text-white">Novo cliente externo</h3>
+            <p className="mb-3 text-xs text-white/50">Crie um protocolo/treino para alguém de fora do app. O cliente fica disponível também na avaliação.</p>
+            <div className="space-y-2">
+              <input value={newExternal.name} onChange={(e) => setNewExternal({ ...newExternal, name: e.target.value })} placeholder="Nome *" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+              <input value={newExternal.email} onChange={(e) => setNewExternal({ ...newExternal, email: e.target.value })} placeholder="E-mail (opcional)" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+              <input value={newExternal.whatsapp} onChange={(e) => setNewExternal({ ...newExternal, whatsapp: e.target.value })} placeholder="WhatsApp (opcional)" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button disabled={creatingExternal} onClick={() => setNewExternalOpen(false)} className="flex-1 rounded bg-white/10 px-3 py-2 text-sm text-white">Cancelar</button>
+              <button disabled={creatingExternal} onClick={createExternalClient} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{creatingExternal ? "Criando..." : "Criar e abrir"}</button>
             </div>
           </div>
         </div>
