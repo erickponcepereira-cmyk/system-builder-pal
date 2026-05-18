@@ -541,6 +541,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-app.fm-dark .fm-label { color: #cbd5e1; }
     .fm-app.fm-dark .fm-photo-box { background: #0F0F0F; border-color: rgba(255,255,255,0.15); color: #cbd5e1; }
     .fm-app.fm-dark .fm-step-dot { background: rgba(255,255,255,0.1); }
+    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
+    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #cbd5e1 !important; }
+    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #94a3b8 !important; }
   `;
 
   // ────────────────────────────────────────────────────────
@@ -673,7 +676,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       style={{
         padding: 24,
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+        background: "#0A0A0A",
+        color: "#ffffff",
       }}
     >
       <div
@@ -2696,25 +2700,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               title={(selectedClient?.assessments?.length ?? 0) < 2 ? "É necessário ter pelo menos 2 avaliações" : "Comparar avaliações"}
             >
               Comparar avaliações
-            </button>
-            <button
-              className="fm-btn-outline"
-              style={{ flex: 1, minWidth: 140, color: "#dc2626", borderColor: "#fecaca" }}
-              onClick={async () => {
-                if (!selectedClient || !onDeleteAssessment) return;
-                const a = assessment as FitMindAssessment;
-                if (!a?.id) return;
-                const reason = window.prompt("Informe o motivo da exclusão (obrigatório):\nEste registro será enviado ao painel admin.");
-                if (!reason || !reason.trim()) return;
-                try {
-                  await onDeleteAssessment(a.id, reason.trim(), selectedClient);
-                  setScreen("home");
-                  setSelectedClient(null);
-                  setAssessment({});
-                } catch (e) { console.error(e); }
-              }}
-            >
-              Excluir avaliação
             </button>
             <button
               className="fm-btn-primary"
