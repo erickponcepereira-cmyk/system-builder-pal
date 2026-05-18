@@ -927,8 +927,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }}
             onClick={() => {
               setSelectedClient(c);
-              setScreen("assessment");
-              setStep(0);
+              const sorted = (c.assessments ?? [])
+                .filter((it) => it?.date)
+                .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
+              if (sorted.length > 0) {
+                setAssessment(sorted[sorted.length - 1]);
+                setScreen("result");
+              } else {
+                setAssessment({ height: c.height || undefined });
+                setStep(0);
+                setScreen("assessment");
+              }
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
