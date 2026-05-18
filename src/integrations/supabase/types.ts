@@ -5099,6 +5099,56 @@ export type Database = {
           },
         ]
       }
+      workout_templates: {
+        Row: {
+          created_at: string
+          created_by_coach_id: string | null
+          description: string | null
+          goal: string
+          id: string
+          is_active: boolean
+          is_global: boolean
+          items: Json
+          level: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_coach_id?: string | null
+          description?: string | null
+          goal?: string
+          id?: string
+          is_active?: boolean
+          is_global?: boolean
+          items?: Json
+          level?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_coach_id?: string | null
+          description?: string | null
+          goal?: string
+          id?: string
+          is_active?: boolean
+          is_global?: boolean
+          items?: Json
+          level?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_templates_created_by_coach_id_fkey"
+            columns: ["created_by_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       product_commission_preview: {

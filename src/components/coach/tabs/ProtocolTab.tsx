@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library } from "lucide-react";
+import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen } from "lucide-react";
+import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/components/workouts/WorkoutTemplatesPanel";
 
 type Student = {
   id: string;
@@ -74,12 +75,17 @@ export function ProtocolTab() {
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<"meal" | "workout" | "health" | "library">("meal");
+  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("meal");
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
   const [newExercise, setNewExercise] = useState<Partial<Exercise>>({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
   const [bioEvalUrl, setBioEvalUrl] = useState<string | null>(null);
   const [anamnesisUrl, setAnamnesisUrl] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ name: "", description: "", goal: "general" as WorkoutTemplate["goal"], level: "iniciante" as WorkoutTemplate["level"] });
+  const [templateGoalFilter, setTemplateGoalFilter] = useState<string>("all");
 
   useEffect(() => {
     (async () => {
@@ -107,8 +113,46 @@ export function ProtocolTab() {
 
       const { data: lib } = await supabase.from("exercise_library" as never).select("*" as never).order("name" as never);
       setLibrary((lib as any[]) || []);
+
+      const { data: tpl } = await supabase.from("workout_templates" as never).select("*" as never).order("is_global" as never, { ascending: false }).order("name" as never);
+      setTemplates((tpl as unknown as WorkoutTemplate[]) || []);
     })();
   }, []);
+
+  const reloadTemplates = async () => {
+    const { data: tpl } = await supabase.from("workout_templates" as never).select("*" as never).order("is_global" as never, { ascending: false }).order("name" as never);
+    setTemplates((tpl as unknown as WorkoutTemplate[]) || []);
+  };
+
+  const applyTemplate = (t: WorkoutTemplate, mode: "replace" | "append") => {
+    setProtocol((p) => ({
+      ...p,
+      workout_plan: mode === "replace" ? [...t.items] : [...p.workout_plan, ...t.items],
+    }));
+    setTemplatePickerOpen(false);
+    toast.success(`Treino "${t.name}" aplicado.`);
+  };
+
+  const saveAsTemplate = async () => {
+    if (!coachId) return;
+    if (!templateForm.name.trim()) return toast.error("Informe o nome do treino.");
+    const items = protocol.workout_plan.filter((w) => w.name.trim());
+    if (items.length === 0) return toast.error("Adicione exercícios antes de salvar.");
+    const { error } = await supabase.from("workout_templates" as never).insert({
+      name: templateForm.name.trim(),
+      description: templateForm.description || null,
+      goal: templateForm.goal,
+      level: templateForm.level,
+      items,
+      is_global: false,
+      created_by_coach_id: coachId,
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success("Treino salvo nos seus templates.");
+    setSaveTemplateOpen(false);
+    setTemplateForm({ name: "", description: "", goal: "general", level: "iniciante" });
+    reloadTemplates();
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -274,6 +318,7 @@ export function ProtocolTab() {
             <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "health"} onClick={() => setSection("health")} icon={Heart} label="Saúde & metas" />
             <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            <TabBtn active={section === "templates"} onClick={() => setSection("templates")} icon={BookOpen} label="Treinos prontos" />
           </div>
 
           {loading && <p className="text-sm text-white/40">Carregando...</p>}
@@ -324,9 +369,13 @@ export function ProtocolTab() {
           {!loading && section === "workout" && (
             <div className="space-y-4">
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
                   <h2 className="text-sm font-bold text-white">Treino prescrito</h2>
-                  <button onClick={() => addWorkout()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Plus className="h-3 w-3" /> Exercício</button>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => setTemplatePickerOpen(true)} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15"><BookOpen className="h-3 w-3" /> Usar template</button>
+                    <button onClick={() => setSaveTemplateOpen(true)} disabled={protocol.workout_plan.length === 0} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-white disabled:opacity-40"><Save className="h-3 w-3" /> Salvar template</button>
+                    <button onClick={() => addWorkout()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Plus className="h-3 w-3" /> Exercício</button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {protocol.workout_plan.length === 0 && <p className="text-xs text-white/40">Nenhum exercício. Use a aba “Biblioteca” para selecionar.</p>}
@@ -426,7 +475,78 @@ export function ProtocolTab() {
               </div>
             </div>
           )}
+
+          {!loading && section === "templates" && (
+            <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+              <WorkoutTemplatesPanel mode="coach" coachId={coachId} />
+            </div>
+          )}
         </>
+      )}
+
+      {templatePickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setTemplatePickerOpen(false)}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-bold text-white">Escolher treino pronto</h3>
+              <button onClick={() => setTemplatePickerOpen(false)} className="text-white/60"><Trash2 className="hidden" /><span className="text-xl">×</span></button>
+            </div>
+            <select value={templateGoalFilter} onChange={(e) => setTemplateGoalFilter(e.target.value)} className="mb-3 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white">
+              <option value="all">Todos os objetivos</option>
+              {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <div className="space-y-2">
+              {templates.filter((t) => templateGoalFilter === "all" || t.goal === templateGoalFilter).map((t) => (
+                <div key={t.id} className="rounded-xl bg-white/5 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white">{t.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">{GOAL_LABELS[t.goal]}</span>
+                        {t.level && <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/70">{t.level}</span>}
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] ${t.is_global ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>{t.is_global ? "Global" : "Meu"}</span>
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60">{t.items?.length || 0} ex.</span>
+                      </div>
+                      {t.description && <p className="mt-1 text-xs text-white/50">{t.description}</p>}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => applyTemplate(t, "replace")} className="flex-1 rounded bg-primary px-2 py-1.5 text-xs font-bold text-primary-foreground">Substituir treino</button>
+                    <button onClick={() => applyTemplate(t, "append")} className="flex-1 rounded bg-white/10 px-2 py-1.5 text-xs text-white">Adicionar ao atual</button>
+                  </div>
+                </div>
+              ))}
+              {templates.length === 0 && <p className="py-6 text-center text-sm text-white/40">Nenhum treino disponível. Crie um em "Treinos prontos".</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {saveTemplateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSaveTemplateOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-3 text-base font-bold text-white">Salvar treino atual como template</h3>
+            <p className="mb-3 text-xs text-white/50">Este template ficará disponível só para você reutilizar em outros alunos.</p>
+            <div className="space-y-2">
+              <input value={templateForm.name} onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })} placeholder="Nome do treino *" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+              <textarea value={templateForm.description} onChange={(e) => setTemplateForm({ ...templateForm, description: e.target.value })} placeholder="Descrição (opcional)" rows={2} className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+              <div className="grid grid-cols-2 gap-2">
+                <select value={templateForm.goal} onChange={(e) => setTemplateForm({ ...templateForm, goal: e.target.value as WorkoutTemplate["goal"] })} className="rounded bg-white/5 px-3 py-2 text-sm text-white">
+                  {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <select value={templateForm.level || ""} onChange={(e) => setTemplateForm({ ...templateForm, level: e.target.value as WorkoutTemplate["level"] })} className="rounded bg-white/5 px-3 py-2 text-sm text-white">
+                  <option value="iniciante">Iniciante</option>
+                  <option value="intermediario">Intermediário</option>
+                  <option value="avancado">Avançado</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setSaveTemplateOpen(false)} className="flex-1 rounded bg-white/10 px-3 py-2 text-sm text-white">Cancelar</button>
+              <button onClick={saveAsTemplate} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">Salvar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
