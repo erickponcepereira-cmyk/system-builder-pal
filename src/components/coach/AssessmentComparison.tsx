@@ -153,15 +153,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
     t === "good" ? <TrendingDown size={12} /> : t === "bad" ? <TrendingUp size={12} /> : <Minus size={12} />;
 
   return (
-    <div style={{ padding: 20, minHeight: "100vh", background: "#f8fafc", fontFamily: "inherit" }}>
+    <div style={{ padding: 20, minHeight: "100vh", background: "#0A0A0A", color: "#ffffff", fontFamily: "inherit" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer" }}>
           <ChevronLeft size={22} color="#64748b" />
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>Comparar avaliações</div>
-          <div style={{ fontSize: 12, color: "#64748b" }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}>Comparar avaliações</div>
+          <div style={{ fontSize: 12, color: "#ffffff" }}>
             {client.name} · {all.length} avaliação{all.length === 1 ? "" : "s"} no histórico
           </div>
         </div>
@@ -169,7 +169,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
           onClick={() => window.print()}
           title="Imprimir relatório comparativo"
           style={{
-            background: "white",
+            background: "#1A1A1A",
             border: "1px solid #e2e8f0",
             borderRadius: 8,
             padding: "8px 10px",
@@ -178,7 +178,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
             alignItems: "center",
             gap: 6,
             fontSize: 12,
-            color: "#1e293b",
+            color: "#ffffff",
           }}
         >
           <Printer size={14} /> Relatório
@@ -186,13 +186,13 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
       </div>
 
       {all.length < 2 ? (
-        <div style={{ background: "white", padding: 24, borderRadius: 12, textAlign: "center", color: "#64748b" }}>
+        <div style={{ background: "#1A1A1A", padding: 24, borderRadius: 12, textAlign: "center", color: "#ffffff" }}>
           É necessário ter pelo menos 2 avaliações para comparar. Este aluno tem {all.length}.
         </div>
       ) : (
         <>
           {/* Seleção de avaliações */}
-          <div style={{ background: "white", borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+          <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
                 Avaliações ({selected.length} selecionada{selected.length === 1 ? "" : "s"})
