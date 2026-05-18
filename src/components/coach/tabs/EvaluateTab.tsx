@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
@@ -8,6 +8,33 @@ import FineshapeImport from "@/components/coach/FineshapeImport";
 export function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
+  const googleConnectedRef = useRef<(() => void) | null>(null);
+
+  // Listen for popup connect completion
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e?.data?.type === "google-oauth-connected") {
+        toast.success("Google Agenda conectado! Clique novamente em 'Criar Evento'.");
+        googleConnectedRef.current?.();
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  const openGoogleConnectPopup = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) { toast.error("Faça login novamente."); return; }
+    const w = 520, h = 640;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top = window.screenY + (window.outerHeight - h) / 2;
+    window.open(
+      `/api/oauth/google/start?popup=1&access_token=${encodeURIComponent(token)}`,
+      "google-oauth",
+      `width=${w},height=${h},left=${left},top=${top}`
+    );
+  };
 
   const mapAssessment = (row: any): FitMindAssessment => ({
     id: row.id,
