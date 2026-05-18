@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse, Package } from "lucide-react";
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 
 export const Route = createFileRoute("/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
@@ -157,7 +158,7 @@ function ProfessionalPanel() {
             </div>
           </Link>
           <div className="flex items-center gap-3">
-            <Link to="/coach" className="text-xs text-white/50 hover:text-white">Painel Coach</Link>
+            <RoleSwitcher current="professional" />
             <button onClick={handleLogout} className="rounded-lg border border-white/10 p-2 text-white/50 hover:bg-white/5">
               <LogOut className="h-4 w-4" />
             </button>
