@@ -54,6 +54,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   sessions: { label: "Sessões", icon: Calendar },
   legal_docs: { label: "Documentos", icon: FileText },
   consultations: { label: "Consultas", icon: Calendar },
+  products: { label: "Produtos", icon: Package },
   wallet: { label: "Carteira", icon: Wallet },
   network: { label: "Rede", icon: Network },
 };
