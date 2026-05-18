@@ -18,6 +18,7 @@
 // ============================================================
 
 import React, { useState, useCallback, useMemo } from "react";
+import AssessmentComparison from "./AssessmentComparison";
 import {
   LineChart,
   Line,
@@ -275,7 +276,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
 }) => {
   const [screen, setScreen] = useState<
-    "home" | "select-client" | "new-client" | "assessment" | "result"
+    "home" | "select-client" | "new-client" | "assessment" | "result" | "compare"
   >("home");
   const [selectedClient, setSelectedClient] = useState<FitMindClient | null>(
     null,
@@ -2644,10 +2645,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
           </div>
 
-          <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+          <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
               className="fm-btn-outline"
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 140 }}
               onClick={() => {
                 setAssessment({ height: selectedClient?.height || undefined });
                 setStep(0);
@@ -2657,8 +2658,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               + Nova Avaliação
             </button>
             <button
+              className="fm-btn-outline"
+              style={{ flex: 1, minWidth: 140 }}
+              onClick={() => setScreen("compare")}
+              disabled={(selectedClient?.assessments?.length ?? 0) < 2}
+              title={(selectedClient?.assessments?.length ?? 0) < 2 ? "É necessário ter pelo menos 2 avaliações" : "Comparar avaliações"}
+            >
+              Comparar avaliações
+            </button>
+            <button
               className="fm-btn-primary"
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 140 }}
               onClick={() => window.print()}
             >
               Gerar Relatório
@@ -2682,6 +2692,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       {screen === "new-client" && NewClientScreen()}
       {screen === "assessment" && AssessmentScreen()}
       {screen === "result" && selectedClient && ResultScreen()}
+      {screen === "compare" && selectedClient && (
+        <AssessmentComparison
+          client={selectedClient}
+          themeColor={themeColor}
+          onBack={() => setScreen("result")}
+        />
+      )}
     </div>
   );
 };
