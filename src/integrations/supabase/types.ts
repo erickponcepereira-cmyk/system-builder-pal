@@ -3030,6 +3030,238 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          partner_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          partner_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_posts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_products: {
+        Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active_by_partner: boolean
+          kind: string
+          name: string
+          partner_id: string
+          price: number | null
+          redemption_instructions: string | null
+          status: string
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active_by_partner?: boolean
+          kind: string
+          name: string
+          partner_id: string
+          price?: number | null
+          redemption_instructions?: string | null
+          status?: string
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active_by_partner?: boolean
+          kind?: string
+          name?: string
+          partner_id?: string
+          price?: number | null
+          redemption_instructions?: string | null
+          status?: string
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_products_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_products_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_visits: {
+        Row: {
+          id: string
+          partner_id: string
+          source: string | null
+          student_id: string
+          visited_at: string
+        }
+        Insert: {
+          id?: string
+          partner_id: string
+          source?: string | null
+          student_id: string
+          visited_at?: string
+        }
+        Update: {
+          id?: string
+          partner_id?: string
+          source?: string | null
+          student_id?: string
+          visited_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_visits_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_visits_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          address: string | null
+          approved_at: string | null
+          blocked_at: string | null
+          blocked_reason: string | null
+          city: string | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          document: string | null
+          document_type: string | null
+          facebook: string | null
+          fantasy_name: string
+          id: string
+          instagram: string | null
+          latitude: number | null
+          longitude: number | null
+          photo_url: string | null
+          profile_id: string
+          state: string | null
+          status: string
+          updated_at: string
+          website: string | null
+          whatsapp: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          approved_at?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          city?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          document?: string | null
+          document_type?: string | null
+          facebook?: string | null
+          fantasy_name: string
+          id?: string
+          instagram?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          photo_url?: string | null
+          profile_id: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          approved_at?: string | null
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          city?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          document?: string | null
+          document_type?: string | null
+          facebook?: string | null
+          fantasy_name?: string
+          id?: string
+          instagram?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          photo_url?: string | null
+          profile_id?: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partners_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patent_rules: {
         Row: {
           badge_color: string
@@ -4979,6 +5211,7 @@ export type Database = {
         Returns: string
       }
       current_coach_id: { Args: never; Returns: string }
+      current_partner_id: { Args: never; Returns: string }
       current_profile_id: { Args: never; Returns: string }
       current_student_id: { Args: never; Returns: string }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
@@ -5026,6 +5259,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      partner_checkin: { Args: { _partner_id: string }; Returns: Json }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -5178,7 +5412,13 @@ export type Database = {
         | "failed"
         | "refunded"
         | "chargeback"
-      user_role: "admin" | "director" | "manager" | "coach" | "student"
+      user_role:
+        | "admin"
+        | "director"
+        | "manager"
+        | "coach"
+        | "student"
+        | "partner"
       value_destination_type:
         | "admin_wallet"
         | "coach_wallet"
@@ -5380,7 +5620,14 @@ export const Constants = {
         "refunded",
         "chargeback",
       ],
-      user_role: ["admin", "director", "manager", "coach", "student"],
+      user_role: [
+        "admin",
+        "director",
+        "manager",
+        "coach",
+        "student",
+        "partner",
+      ],
       value_destination_type: [
         "admin_wallet",
         "coach_wallet",
