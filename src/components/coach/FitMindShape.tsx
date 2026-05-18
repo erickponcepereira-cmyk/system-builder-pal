@@ -185,6 +185,11 @@ export interface FitMindShapeProps {
     assessment: FitMindAssessment,
     client: FitMindClient,
   ) => Promise<void>;
+  onDeleteAssessment?: (
+    assessmentId: string,
+    reason: string,
+    client: FitMindClient,
+  ) => Promise<void>;
   onCreateClient?: (
     client: Omit<FitMindClient, "id">,
   ) => Promise<FitMindClient>;
