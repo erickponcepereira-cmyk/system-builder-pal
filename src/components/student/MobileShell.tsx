@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User, ShieldCheck } from "lucide-react";
+import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User, ShieldCheck, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +22,7 @@ export function MobileShell({ children }: MobileShellProps) {
   const navigate = useNavigate();
   const [isCoach, setIsCoach] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasPartner, setHasPartner] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -35,13 +36,13 @@ export function MobileShell({ children }: MobileShellProps) {
         .maybeSingle();
       if (!profile?.id || !active) return;
       setIsAdmin(profile.role === "admin");
-      const { data: coach } = await supabase
-        .from("coaches")
-        .select("id")
-        .eq("profile_id", profile.id)
-        .maybeSingle();
+      const [{ data: coach }, { data: partner }] = await Promise.all([
+        supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
+      ]);
       if (!active) return;
       setIsCoach(!!coach);
+      setHasPartner(!!partner);
     })();
     return () => { active = false; };
   }, []);
@@ -52,6 +53,7 @@ export function MobileShell({ children }: MobileShellProps) {
   };
 
   const goToAdmin = () => navigate({ to: "/admin" });
+  const goToPartner = () => navigate({ to: "/partner" });
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
@@ -84,6 +86,15 @@ export function MobileShell({ children }: MobileShellProps) {
             >
               <Repeat className="h-3.5 w-3.5" />
               Painel do coach
+            </button>
+          )}
+          {hasPartner && (
+            <button
+              onClick={goToPartner}
+              className="flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-colors"
+            >
+              <Store className="h-3.5 w-3.5" />
+              Painel parceiro
             </button>
           )}
         </div>

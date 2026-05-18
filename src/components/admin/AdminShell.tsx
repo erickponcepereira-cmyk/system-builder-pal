@@ -41,6 +41,7 @@ export function AdminShell() {
   const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
   const [hasCoach, setHasCoach] = useState(false);
   const [hasStudent, setHasStudent] = useState(false);
+  const [hasPartner, setHasPartner] = useState(false);
   const [isMaster, setIsMaster] = useState(false);
   const [perms, setPerms] = useState<AdminPerms | null>(null);
 
@@ -63,13 +64,15 @@ export function AdminShell() {
         setIsMaster(!!(profile as any).is_master_admin);
         setPerms(((profile as any).admin_permissions as AdminPerms) || {});
         if (profile?.id) {
-          const [{ data: coach }, { data: student }] = await Promise.all([
+          const [{ data: coach }, { data: student }, { data: partner }] = await Promise.all([
             supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
             supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+            supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
           ]);
           if (!active) return;
           setHasCoach(!!coach);
           setHasStudent(!!student);
+          setHasPartner(!!partner);
         }
       } else setAuthState("denied");
     })();
@@ -177,6 +180,23 @@ export function AdminShell() {
             >
               <Dumbbell className="h-4 w-4" />
               Painel do aluno
+            </button>
+          )}
+          {hasPartner ? (
+            <button
+              onClick={() => navigate({ to: "/partner" })}
+              className="flex w-full items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/10 transition-colors"
+            >
+              <Store className="h-4 w-4" />
+              Painel de parceiro
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate({ to: "/become-partner" })}
+              className="flex w-full items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <Store className="h-4 w-4" />
+              Tornar-se parceiro
             </button>
           )}
           <button
