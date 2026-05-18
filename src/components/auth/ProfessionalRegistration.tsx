@@ -97,10 +97,44 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     setLoading(true); setFormError(null);
     try {
       const referralCode = generateReferralCode();
-      const user = await createAuthUser(email, password, name, "coach");
+      let userId: string;
+      let resolvedName = name;
+      let resolvedPhone = phone;
+      let resolvedCpf = cpf;
+      let resolvedBirthdate = birthdate;
+
+      if (existingMode) {
+        // Vincular profissional a conta existente — autentica com a senha atual
+        const { data: signIn, error: signErr } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        if (signErr || !signIn.user) {
+          throw new Error("Senha incorreta para esta conta. Use a senha do FitMind.");
+        }
+        userId = signIn.user.id;
+        // Reaproveita dados já cadastrados, se o usuário não preencheu
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("name, phone, cpf, birthdate")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (prof) {
+          resolvedName = name || prof.name || "";
+          resolvedPhone = phone || prof.phone || "";
+          resolvedCpf = cpf || prof.cpf || "";
+          resolvedBirthdate = birthdate || prof.birthdate || "";
+        }
+      } else {
+        const user = await createAuthUser(email, password, name, "coach");
+        userId = user.id;
+      }
+
       await finalizeRegistrationFn({
         data: {
-          userId: user.id, role: "coach", name, email, phone, cpf, birthdate,
+          userId, role: "coach",
+          name: resolvedName, email,
+          phone: resolvedPhone, cpf: resolvedCpf, birthdate: resolvedBirthdate,
           coach: {
             uplineCoachId: selectedCoach.id,
             referralCode,
@@ -116,7 +150,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       });
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar.");
+      toast.success(existingMode
+        ? "Conta vinculada! Aguarde aprovação do admin para acessar como profissional."
+        : "Cadastro criado! Confira seu e-mail para confirmar.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly); toast.error(friendly);
