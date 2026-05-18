@@ -2013,9 +2013,11 @@ export type Database = {
           description: string | null
           difficulty: string | null
           equipment: string | null
+          gif_url: string | null
           id: string
           image_url: string | null
           is_global: boolean
+          media_type: string
           muscle_group: string | null
           name: string
           updated_at: string
@@ -2027,9 +2029,11 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           equipment?: string | null
+          gif_url?: string | null
           id?: string
           image_url?: string | null
           is_global?: boolean
+          media_type?: string
           muscle_group?: string | null
           name: string
           updated_at?: string
@@ -2041,9 +2045,11 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           equipment?: string | null
+          gif_url?: string | null
           id?: string
           image_url?: string | null
           is_global?: boolean
+          media_type?: string
           muscle_group?: string | null
           name?: string
           updated_at?: string
