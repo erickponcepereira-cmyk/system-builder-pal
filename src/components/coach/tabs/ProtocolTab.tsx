@@ -113,8 +113,46 @@ export function ProtocolTab() {
 
       const { data: lib } = await supabase.from("exercise_library" as never).select("*" as never).order("name" as never);
       setLibrary((lib as any[]) || []);
+
+      const { data: tpl } = await supabase.from("workout_templates" as never).select("*" as never).order("is_global" as never, { ascending: false }).order("name" as never);
+      setTemplates((tpl as unknown as WorkoutTemplate[]) || []);
     })();
   }, []);
+
+  const reloadTemplates = async () => {
+    const { data: tpl } = await supabase.from("workout_templates" as never).select("*" as never).order("is_global" as never, { ascending: false }).order("name" as never);
+    setTemplates((tpl as unknown as WorkoutTemplate[]) || []);
+  };
+
+  const applyTemplate = (t: WorkoutTemplate, mode: "replace" | "append") => {
+    setProtocol((p) => ({
+      ...p,
+      workout_plan: mode === "replace" ? [...t.items] : [...p.workout_plan, ...t.items],
+    }));
+    setTemplatePickerOpen(false);
+    toast.success(`Treino "${t.name}" aplicado.`);
+  };
+
+  const saveAsTemplate = async () => {
+    if (!coachId) return;
+    if (!templateForm.name.trim()) return toast.error("Informe o nome do treino.");
+    const items = protocol.workout_plan.filter((w) => w.name.trim());
+    if (items.length === 0) return toast.error("Adicione exercícios antes de salvar.");
+    const { error } = await supabase.from("workout_templates" as never).insert({
+      name: templateForm.name.trim(),
+      description: templateForm.description || null,
+      goal: templateForm.goal,
+      level: templateForm.level,
+      items,
+      is_global: false,
+      created_by_coach_id: coachId,
+    } as never);
+    if (error) return toast.error(error.message);
+    toast.success("Treino salvo nos seus templates.");
+    setSaveTemplateOpen(false);
+    setTemplateForm({ name: "", description: "", goal: "general", level: "iniciante" });
+    reloadTemplates();
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
