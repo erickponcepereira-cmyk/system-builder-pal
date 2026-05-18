@@ -133,3 +133,15 @@ function htmlResult(message: string, redirectTo: string) {
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
+
+function popupCloseHtml() {
+  const html = `<!doctype html><meta charset="utf-8"><title>Conectado</title>
+<body style="font-family:system-ui;background:#0A0A0A;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center">
+<div><h1 style="font-size:18px;margin:0 0 12px">✓ Google Agenda conectado</h1>
+<p style="color:#bbb;margin:0">Esta janela fechará automaticamente...</p></div>
+<script>
+try { if (window.opener) { window.opener.postMessage({ type: 'google-oauth-connected' }, '*'); } } catch(e) {}
+setTimeout(() => { try { window.close(); } catch(e) {} }, 600);
+</script></body>`;
+  return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
