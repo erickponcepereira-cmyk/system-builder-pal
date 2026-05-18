@@ -135,10 +135,15 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
           {referral && (
             <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-white/80">
-              <p className="font-semibold text-primary">Convite válido</p>
+              <p className="font-semibold text-primary">
+                {referral.kind === "partner" ? "Convite de colaborador" : "Convite válido"}
+              </p>
               <p className="mt-1">
-                Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>
-                {referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.
+                {referral.kind === "partner" ? (
+                  <>Você foi convidado(a) como colaborador(a) de <span className="font-semibold text-white">{referral.sponsorName}</span>. Você terá acesso ao painel de aluno com todos os benefícios.</>
+                ) : (
+                  <>Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>{referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.</>
+                )}
               </p>
             </div>
           )}
