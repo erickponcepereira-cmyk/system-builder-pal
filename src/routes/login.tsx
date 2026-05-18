@@ -31,11 +31,12 @@ function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  const enterArea = (area: "coach" | "student" | "admin") => {
-    if (area !== "admin") sessionStorage.setItem("fitmind_selected_area", area);
-    const target = area === "admin" ? "/admin" : area === "coach" ? "/coach" : "/student";
+  const enterArea = (area: "coach" | "student" | "admin" | "partner") => {
+    if (area !== "admin" && area !== "partner") sessionStorage.setItem("fitmind_selected_area", area);
+    const target = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : "/student";
     window.location.assign(target);
   };
+
 
   const routeSignedInUser = async (userId: string, showSuccess = false) => {
     setLoading(true);
