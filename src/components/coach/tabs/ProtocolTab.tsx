@@ -75,12 +75,17 @@ export function ProtocolTab() {
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<"meal" | "workout" | "health" | "library">("meal");
+  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("meal");
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
   const [newExercise, setNewExercise] = useState<Partial<Exercise>>({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
   const [bioEvalUrl, setBioEvalUrl] = useState<string | null>(null);
   const [anamnesisUrl, setAnamnesisUrl] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ name: "", description: "", goal: "general" as WorkoutTemplate["goal"], level: "iniciante" as WorkoutTemplate["level"] });
+  const [templateGoalFilter, setTemplateGoalFilter] = useState<string>("all");
 
   useEffect(() => {
     (async () => {
