@@ -88,6 +88,8 @@ export type Database = {
           filled_at: string | null
           food_allergies: string | null
           food_diary: Json | null
+          gender: string | null
+          height: number | null
           id: string
           marital_status: string | null
           objective: string | null
@@ -126,6 +128,8 @@ export type Database = {
           filled_at?: string | null
           food_allergies?: string | null
           food_diary?: Json | null
+          gender?: string | null
+          height?: number | null
           id?: string
           marital_status?: string | null
           objective?: string | null
@@ -164,6 +168,8 @@ export type Database = {
           filled_at?: string | null
           food_allergies?: string | null
           food_diary?: Json | null
+          gender?: string | null
+          height?: number | null
           id?: string
           marital_status?: string | null
           objective?: string | null
@@ -3912,11 +3918,13 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           birthdate: string | null
+          blood_type: string | null
           city: string | null
           cpf: string | null
           created_at: string | null
           email: string
           id: string
+          instagram: string | null
           is_master_admin: boolean
           name: string
           neighborhood: string | null
@@ -3924,6 +3932,7 @@ export type Database = {
           patent: Database["public"]["Enums"]["patent_level"] | null
           phone: string | null
           photo_url: string | null
+          profession: string | null
           report_permissions: Json | null
           role: Database["public"]["Enums"]["user_role"]
           state: string | null
@@ -3939,11 +3948,13 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           birthdate?: string | null
+          blood_type?: string | null
           city?: string | null
           cpf?: string | null
           created_at?: string | null
           email: string
           id?: string
+          instagram?: string | null
           is_master_admin?: boolean
           name: string
           neighborhood?: string | null
@@ -3951,6 +3962,7 @@ export type Database = {
           patent?: Database["public"]["Enums"]["patent_level"] | null
           phone?: string | null
           photo_url?: string | null
+          profession?: string | null
           report_permissions?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
           state?: string | null
@@ -3966,11 +3978,13 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           birthdate?: string | null
+          blood_type?: string | null
           city?: string | null
           cpf?: string | null
           created_at?: string | null
           email?: string
           id?: string
+          instagram?: string | null
           is_master_admin?: boolean
           name?: string
           neighborhood?: string | null
@@ -3978,6 +3992,7 @@ export type Database = {
           patent?: Database["public"]["Enums"]["patent_level"] | null
           phone?: string | null
           photo_url?: string | null
+          profession?: string | null
           report_permissions?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
           state?: string | null

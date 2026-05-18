@@ -13,7 +13,7 @@ const sections = [
     title: "Conta",
     items: [
       { icon: QrCode, label: "Minha Carteirinha", to: "/student/card" },
-      { icon: Settings, label: "Editar perfil" },
+      { icon: Settings, label: "Editar perfil", to: "/student/profile/edit" },
       { icon: CreditCard, label: "Meus planos" },
       { icon: Award, label: "Minha evolução" },
       { icon: ClipboardList, label: "Anamnese", to: "/student/health" },
