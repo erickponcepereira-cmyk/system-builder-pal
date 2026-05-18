@@ -32,10 +32,12 @@ import { Route as StudentFreebiesRouteImport } from './routes/student.freebies'
 import { Route as StudentEvolutionRouteImport } from './routes/student.evolution'
 import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-course'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
+import { Route as StudentCardRouteImport } from './routes/student.card'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-reports'
@@ -176,6 +178,11 @@ const StudentChallengeRoute = StudentChallengeRouteImport.update({
   path: '/challenge',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentCardRoute = StudentCardRouteImport.update({
+  id: '/card',
+  path: '/card',
+  getParentRoute: () => StudentRoute,
+} as any)
 const StudentBenefitsRoute = StudentBenefitsRouteImport.update({
   id: '/benefits',
   path: '/benefits',
@@ -194,6 +201,11 @@ const PayOrderNumberRoute = PayOrderNumberRouteImport.update({
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
+  id: '/checkin/$studentId',
+  path: '/checkin/$studentId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -345,10 +357,12 @@ export interface FileRoutesByFullPath {
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
+  '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
@@ -396,10 +410,12 @@ export interface FileRoutesByTo {
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
+  '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
@@ -450,10 +466,12 @@ export interface FileRoutesById {
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
+  '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
   '/student/evolution': typeof StudentEvolutionRoute
@@ -505,10 +523,12 @@ export interface FileRouteTypes {
     | '/admin/store-reports'
     | '/admin/students'
     | '/admin/users'
+    | '/checkin/$studentId'
     | '/invite/$token'
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
+    | '/student/card'
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
@@ -556,10 +576,12 @@ export interface FileRouteTypes {
     | '/admin/store-reports'
     | '/admin/students'
     | '/admin/users'
+    | '/checkin/$studentId'
     | '/invite/$token'
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
+    | '/student/card'
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
@@ -609,10 +631,12 @@ export interface FileRouteTypes {
     | '/admin/store-reports'
     | '/admin/students'
     | '/admin/users'
+    | '/checkin/$studentId'
     | '/invite/$token'
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
+    | '/student/card'
     | '/student/challenge'
     | '/student/coach-course'
     | '/student/evolution'
@@ -645,6 +669,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
+  CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PayOrderNumberRoute: typeof PayOrderNumberRoute
   RCodeRoute: typeof RCodeRoute
@@ -818,6 +843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentChallengeRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/student/card': {
+      id: '/student/card'
+      path: '/card'
+      fullPath: '/student/card'
+      preLoaderRoute: typeof StudentCardRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/student/benefits': {
       id: '/student/benefits'
       path: '/benefits'
@@ -844,6 +876,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkin/$studentId': {
+      id: '/checkin/$studentId'
+      path: '/checkin/$studentId'
+      fullPath: '/checkin/$studentId'
+      preLoaderRoute: typeof CheckinStudentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -1077,6 +1116,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface StudentRouteChildren {
   StudentBenefitsRoute: typeof StudentBenefitsRoute
+  StudentCardRoute: typeof StudentCardRoute
   StudentChallengeRoute: typeof StudentChallengeRoute
   StudentCoachCourseRoute: typeof StudentCoachCourseRoute
   StudentEvolutionRoute: typeof StudentEvolutionRoute
@@ -1094,6 +1134,7 @@ interface StudentRouteChildren {
 
 const StudentRouteChildren: StudentRouteChildren = {
   StudentBenefitsRoute: StudentBenefitsRoute,
+  StudentCardRoute: StudentCardRoute,
   StudentChallengeRoute: StudentChallengeRoute,
   StudentCoachCourseRoute: StudentCoachCourseRoute,
   StudentEvolutionRoute: StudentEvolutionRoute,
@@ -1122,6 +1163,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
+  CheckinStudentIdRoute: CheckinStudentIdRoute,
   InviteTokenRoute: InviteTokenRoute,
   PayOrderNumberRoute: PayOrderNumberRoute,
   RCodeRoute: RCodeRoute,
