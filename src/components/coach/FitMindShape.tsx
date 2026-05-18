@@ -2683,6 +2683,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       {screen === "new-client" && NewClientScreen()}
       {screen === "assessment" && AssessmentScreen()}
       {screen === "result" && selectedClient && ResultScreen()}
+      {screen === "compare" && selectedClient && (
+        <AssessmentComparison
+          client={selectedClient}
+          themeColor={themeColor}
+          onBack={() => setScreen("result")}
+        />
+      )}
     </div>
   );
 };
