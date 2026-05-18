@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock } from "lucide-react";
+import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
