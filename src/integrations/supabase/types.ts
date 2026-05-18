@@ -4035,6 +4035,83 @@ export type Database = {
           },
         ]
       }
+      professional_products: {
+        Row: {
+          admin_notes: string | null
+          coach_commission_amount: number | null
+          coach_commission_percentage: number
+          coach_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active_by_professional: boolean
+          name: string
+          network_l1_amount: number | null
+          network_l2_amount: number | null
+          network_l3_amount: number | null
+          price: number
+          price_input_mode: string
+          professional_net_amount: number | null
+          redemption_instructions: string | null
+          status: string
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          coach_commission_amount?: number | null
+          coach_commission_percentage?: number
+          coach_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active_by_professional?: boolean
+          name: string
+          network_l1_amount?: number | null
+          network_l2_amount?: number | null
+          network_l3_amount?: number | null
+          price?: number
+          price_input_mode?: string
+          professional_net_amount?: number | null
+          redemption_instructions?: string | null
+          status?: string
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          coach_commission_amount?: number | null
+          coach_commission_percentage?: number
+          coach_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active_by_professional?: boolean
+          name?: string
+          network_l1_amount?: number | null
+          network_l2_amount?: number | null
+          network_l3_amount?: number | null
+          price?: number
+          price_input_mode?: string
+          professional_net_amount?: number | null
+          redemption_instructions?: string | null
+          status?: string
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_products_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_specialties: {
         Row: {
           capabilities: Json
