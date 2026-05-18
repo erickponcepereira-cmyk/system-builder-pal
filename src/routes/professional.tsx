@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse, Package } from "lucide-react";
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import { MyNetworkPanel } from "@/components/MyNetworkPanel";
 
 export const Route = createFileRoute("/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
