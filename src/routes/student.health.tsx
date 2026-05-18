@@ -270,7 +270,7 @@ function AnamneseWizardPage() {
   );
 }
 
-type StepDef = { section: string; title: string; help?: string; render: () => JSX.Element };
+type StepDef = { section: string; title: string; help?: string; render: () => React.ReactNode };
 
 function buildSteps(form: FormState, update: <K extends keyof FormState>(k: K, v: FormState[K]) => void): StepDef[] {
   const text = (k: keyof FormState, placeholder = "", maxLen = 500) => (
