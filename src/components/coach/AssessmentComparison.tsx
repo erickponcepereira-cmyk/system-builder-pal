@@ -194,7 +194,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
           {/* Seleção de avaliações */}
           <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#ffffff" }}>
                 Avaliações ({selected.length} selecionada{selected.length === 1 ? "" : "s"})
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -323,7 +323,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                       {picked.map((a, i) => (
                         <th key={a.id} style={th}>
                           {fmtDateShort(a.date)}
-                          {i === 0 && <div style={{ fontSize: 9, color: "#64748b" }}>base</div>}
+                          {i === 0 && <div style={{ fontSize: 9, color: "#ffffff" }}>base</div>}
                           {i === picked.length - 1 && picked.length > 1 && <div style={{ fontSize: 9, color: themeColor }}>atual</div>}
                         </th>
                       ))}
