@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, User, Dumbbell } from "lucide-react";
+import { ArrowLeft, User, Dumbbell, Building2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { CoachRegistration } from "@/components/auth/CoachRegistration";
 import { StudentRegistration } from "@/components/auth/StudentRegistration";
+import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 
 type SearchParams = { role?: string };
 
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
       { title: "Cadastro — FitMind Club" },
-      { name: "description", content: "Cadastre-se como coach ou aluno na plataforma FitMind Club." },
+      { name: "description", content: "Cadastre-se como coach, aluno ou empresa parceira na plataforma FitMind Club." },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
@@ -22,18 +23,14 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const search = Route.useSearch();
-  const [role, setRole] = useState<"student" | "coach" | null>(
-    search.role === "coach" ? "coach" : search.role === "student" ? "student" : null
+  const [role, setRole] = useState<"student" | "coach" | "partner" | null>(
+    search.role === "coach" ? "coach" : search.role === "student" ? "student" : search.role === "partner" ? "partner" : null
   );
 
-  // If coach, show multi-step. If student, simpler form.
-  if (role === "coach") {
-    return <CoachRegistration onBack={() => setRole(null)} />;
-  }
+  if (role === "coach") return <CoachRegistration onBack={() => setRole(null)} />;
+  if (role === "student") return <StudentRegistration onBack={() => setRole(null)} />;
+  if (role === "partner") return <PartnerRegistration onBack={() => setRole(null)} />;
 
-  if (role === "student") {
-    return <StudentRegistration onBack={() => setRole(null)} />;
-  }
 
   // Role selection
   return (
