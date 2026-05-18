@@ -28,6 +28,7 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "library", label: "Biblioteca" },
   { key: "partners", label: "Empresas Parceiras" },
   { key: "professionals", label: "Profissionais" },
+  { key: "assessment_deletions", label: "Exclusões de Avaliações" },
   { key: "settings", label: "Configurações" },
 ];
 
