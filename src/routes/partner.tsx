@@ -364,15 +364,134 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
 
 function QrCodePanel({ partner }: { partner: Partner }) {
   const url = `${window.location.origin}/partner-checkin/${partner.id}`;
+  const [mode, setMode] = useState<"display" | "scan">("scan");
   return (
-    <div className="rounded-xl p-6 text-center space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
-      <h2 className="text-lg font-bold text-white">{partner.fantasy_name}</h2>
-      <p className="text-xs text-white/50">QR Code fixo de check-in — imprima e deixe visível no estabelecimento</p>
-      <div className="inline-block bg-white p-4 rounded-xl">
-        <QRCodeSVG value={url} size={220} />
+    <div className="space-y-3">
+      <div className="flex rounded-lg overflow-hidden border border-white/10">
+        <button onClick={() => setMode("scan")} className={`flex-1 py-2 text-xs font-bold ${mode === "scan" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60"}`}>Ler QR do aluno</button>
+        <button onClick={() => setMode("display")} className={`flex-1 py-2 text-xs font-bold ${mode === "display" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60"}`}>Meu QR fixo</button>
       </div>
-      <p className="text-[10px] text-white/40 break-all">{url}</p>
-      <button onClick={() => window.print()} className="rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Imprimir</button>
+      {mode === "scan" ? (
+        <StudentQrScanner partner={partner} />
+      ) : (
+        <div className="rounded-xl p-6 text-center space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
+          <h2 className="text-lg font-bold text-white">{partner.fantasy_name}</h2>
+          <p className="text-xs text-white/50">QR Code fixo de check-in — imprima e deixe visível no estabelecimento. Alunos podem escanear para registrar a visita.</p>
+          <div className="inline-block bg-white p-4 rounded-xl">
+            <QRCodeSVG value={url} size={220} />
+          </div>
+          <p className="text-[10px] text-white/40 break-all">{url}</p>
+          <button onClick={() => window.print()} className="rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Imprimir</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
+
+function StudentQrScanner({ partner }: { partner: Partner }) {
+  const [scanning, setScanning] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<ScanResult | null>(null);
+  const [lastValue, setLastValue] = useState<string>("");
+
+  const extractStudentId = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    // Accept full URL like .../checkin/<uuid> or bare UUID
+    const m = trimmed.match(/checkin\/([0-9a-f-]{36})/i);
+    if (m) return m[1];
+    if (/^[0-9a-f-]{36}$/i.test(trimmed)) return trimmed;
+    return null;
+  };
+
+  const onDetected = async (value: string) => {
+    if (processing || value === lastValue) return;
+    setLastValue(value);
+    const studentId = extractStudentId(value);
+    if (!studentId) {
+      toast.error("QR inválido. Use o QR da carteirinha do aluno.");
+      setTimeout(() => setLastValue(""), 1500);
+      return;
+    }
+    setProcessing(true);
+    setScanning(false);
+    const { data, error } = await supabase.rpc("partner_scan_student" as never, { _student_id: studentId } as never);
+    if (error) {
+      setResult({ ok: false, error: error.message });
+    } else {
+      const r = data as unknown as ScanResult;
+      setResult({ ...r, ok: true });
+      toast.success(`Check-in: ${r.student_name}`);
+    }
+    setProcessing(false);
+  };
+
+  const reset = () => { setResult(null); setLastValue(""); setScanning(true); };
+
+  if (partner.status !== "approved") {
+    return (
+      <div className="rounded-xl p-6 text-center" style={{ backgroundColor: "#1A1A1A" }}>
+        <AlertTriangle className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
+        <p className="text-sm text-white/70">Sua empresa precisa estar aprovada para validar QR codes de alunos.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+        <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR Code da carteirinha do aluno</p>
+        {scanning && !result && <QrScannerView onDetected={onDetected} />}
+        {processing && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+        {result?.ok && (
+          <div className="text-center py-6">
+            {result.student_avatar ? (
+              <img src={result.student_avatar} className="mx-auto h-20 w-20 rounded-full object-cover" alt={result.student_name} />
+            ) : (
+              <div className="mx-auto h-20 w-20 rounded-full bg-green-500/15 flex items-center justify-center">
+                <Check className="h-10 w-10 text-green-400" />
+              </div>
+            )}
+            <p className="mt-3 text-lg font-bold text-white">{result.student_name}</p>
+            <p className="text-xs text-green-400 mt-1">Visita registrada com sucesso</p>
+            <p className="text-[10px] text-white/40 mt-1">{result.visited_at ? new Date(result.visited_at).toLocaleString("pt-BR") : ""}</p>
+            <button onClick={reset} className="mt-4 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Ler outro QR</button>
+          </div>
+        )}
+        {result && !result.ok && (
+          <div className="text-center py-6">
+            <AlertTriangle className="mx-auto h-10 w-10 text-red-400" />
+            <p className="mt-2 text-sm text-red-300">{result.error}</p>
+            <button onClick={reset} className="mt-4 rounded bg-white/10 px-4 py-2 text-sm text-white">Tentar novamente</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QrScannerView({ onDetected }: { onDetected: (v: string) => void }) {
+  // Lazy import to avoid SSR issues
+  const [Comp, setComp] = useState<React.ComponentType<{ onScan: (codes: { rawValue: string }[]) => void; onError?: (e: unknown) => void; constraints?: MediaTrackConstraints; styles?: { container?: React.CSSProperties }; components?: { finder?: boolean }; }> | null>(null);
+  useEffect(() => {
+    let active = true;
+    import("@yudiel/react-qr-scanner").then((m) => { if (active) setComp(() => m.Scanner); });
+    return () => { active = false; };
+  }, []);
+  if (!Comp) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  return (
+    <div className="overflow-hidden rounded-lg">
+      <Comp
+        onScan={(codes) => { if (codes[0]?.rawValue) onDetected(codes[0].rawValue); }}
+        onError={(e) => console.warn("scanner", e)}
+        constraints={{ facingMode: "environment" }}
+        components={{ finder: true }}
+      />
     </div>
   );
 }
