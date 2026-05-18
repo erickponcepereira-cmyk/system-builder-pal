@@ -199,11 +199,8 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "products") {
     return <ProfessionalProductsPanel coachId={info.coachId} />;
   }
-  if (tab === "wallet") {
-    return <PlaceholderCard title="Carteira" hint="Suas comissões da rede MLM aparecem aqui. Em breve: pagamentos por atendimento concluído." icon={<Wallet className="h-5 w-5" />} />;
-  }
-  if (tab === "network") {
-    return <PlaceholderCard title="Sua rede" hint="Acompanhe os coaches e alunos da sua rede MLM." icon={<Network className="h-5 w-5" />} actionLabel="Abrir painel coach" actionTo="/coach" />;
+  if (tab === "wallet" || tab === "network") {
+    return <MyNetworkPanel />;
   }
 
   if (["students", "clients"].includes(tab)) {
