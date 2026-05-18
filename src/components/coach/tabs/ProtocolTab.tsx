@@ -625,6 +625,24 @@ export function ProtocolTab() {
           </div>
         </div>
       )}
+
+      {newExternalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !creatingExternal && setNewExternalOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-base font-bold text-white">Novo cliente externo</h3>
+            <p className="mb-3 text-xs text-white/50">Crie um protocolo/treino para alguém de fora do app. O cliente fica disponível também na avaliação.</p>
+            <div className="space-y-2">
+              <input value={newExternal.name} onChange={(e) => setNewExternal({ ...newExternal, name: e.target.value })} placeholder="Nome *" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+              <input value={newExternal.email} onChange={(e) => setNewExternal({ ...newExternal, email: e.target.value })} placeholder="E-mail (opcional)" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+              <input value={newExternal.whatsapp} onChange={(e) => setNewExternal({ ...newExternal, whatsapp: e.target.value })} placeholder="WhatsApp (opcional)" className="w-full rounded bg-white/5 px-3 py-2 text-sm text-white" />
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button disabled={creatingExternal} onClick={() => setNewExternalOpen(false)} className="flex-1 rounded bg-white/10 px-3 py-2 text-sm text-white">Cancelar</button>
+              <button disabled={creatingExternal} onClick={createExternalClient} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{creatingExternal ? "Criando..." : "Criar e abrir"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
