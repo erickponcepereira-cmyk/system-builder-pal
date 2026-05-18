@@ -3073,6 +3073,9 @@ export type Database = {
           admin_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          card_fee_percentage: number
+          coach_commission_amount: number | null
+          coach_commission_percentage: number
           created_at: string
           description: string | null
           id: string
@@ -3080,17 +3083,28 @@ export type Database = {
           is_active_by_partner: boolean
           kind: string
           name: string
+          network_l1_amount: number | null
+          network_l2_amount: number | null
+          network_l3_amount: number | null
           partner_id: string
+          partner_net_amount: number | null
+          pix_fee_percentage: number
           price: number | null
+          price_input_mode: string
           redemption_instructions: string | null
           status: string
           stock: number | null
+          system_fee_fixed: number
+          tax_percentage: number
           updated_at: string
         }
         Insert: {
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          card_fee_percentage?: number
+          coach_commission_amount?: number | null
+          coach_commission_percentage?: number
           created_at?: string
           description?: string | null
           id?: string
@@ -3098,17 +3112,28 @@ export type Database = {
           is_active_by_partner?: boolean
           kind: string
           name: string
+          network_l1_amount?: number | null
+          network_l2_amount?: number | null
+          network_l3_amount?: number | null
           partner_id: string
+          partner_net_amount?: number | null
+          pix_fee_percentage?: number
           price?: number | null
+          price_input_mode?: string
           redemption_instructions?: string | null
           status?: string
           stock?: number | null
+          system_fee_fixed?: number
+          tax_percentage?: number
           updated_at?: string
         }
         Update: {
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          card_fee_percentage?: number
+          coach_commission_amount?: number | null
+          coach_commission_percentage?: number
           created_at?: string
           description?: string | null
           id?: string
@@ -3116,11 +3141,19 @@ export type Database = {
           is_active_by_partner?: boolean
           kind?: string
           name?: string
+          network_l1_amount?: number | null
+          network_l2_amount?: number | null
+          network_l3_amount?: number | null
           partner_id?: string
+          partner_net_amount?: number | null
+          pix_fee_percentage?: number
           price?: number | null
+          price_input_mode?: string
           redemption_instructions?: string | null
           status?: string
           stock?: number | null
+          system_fee_fixed?: number
+          tax_percentage?: number
           updated_at?: string
         }
         Relationships: [
@@ -3202,6 +3235,7 @@ export type Database = {
           state: string | null
           status: string
           updated_at: string
+          upline_coach_id: string | null
           website: string | null
           whatsapp: string | null
           zip_code: string | null
@@ -3228,6 +3262,7 @@ export type Database = {
           state?: string | null
           status?: string
           updated_at?: string
+          upline_coach_id?: string | null
           website?: string | null
           whatsapp?: string | null
           zip_code?: string | null
@@ -3254,6 +3289,7 @@ export type Database = {
           state?: string | null
           status?: string
           updated_at?: string
+          upline_coach_id?: string | null
           website?: string | null
           whatsapp?: string | null
           zip_code?: string | null
@@ -3264,6 +3300,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partners_upline_coach_id_fkey"
+            columns: ["upline_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
         ]
