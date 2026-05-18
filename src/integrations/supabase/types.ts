@@ -1525,6 +1525,7 @@ export type Database = {
           referral_code: string
           referral_link: string | null
           serves_whole_network: boolean
+          specialty_custom_description: string | null
           specialty_key: string | null
           specialty_pending_setup: boolean
           total_active_students: number | null
@@ -1563,6 +1564,7 @@ export type Database = {
           referral_code: string
           referral_link?: string | null
           serves_whole_network?: boolean
+          specialty_custom_description?: string | null
           specialty_key?: string | null
           specialty_pending_setup?: boolean
           total_active_students?: number | null
@@ -1601,6 +1603,7 @@ export type Database = {
           referral_code?: string
           referral_link?: string | null
           serves_whole_network?: boolean
+          specialty_custom_description?: string | null
           specialty_key?: string | null
           specialty_pending_setup?: boolean
           total_active_students?: number | null

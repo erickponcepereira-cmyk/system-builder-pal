@@ -15,6 +15,7 @@ type Pro = {
   id: string;
   profile_id: string;
   specialty_key: string | null;
+  specialty_custom_description: string | null;
   professional_council: string | null;
   council_number: string | null;
   approved_at: string | null;
@@ -36,7 +37,7 @@ function AdminProfessionals() {
     const [{ data: list }, { data: specs }] = await Promise.all([
       supabase
         .from("coaches")
-        .select("id,profile_id,specialty_key,professional_council,council_number,approved_at,specialty_pending_setup,serves_whole_network,profiles!coaches_profile_id_fkey(name,email,phone,avatar_url,status)")
+        .select("id,profile_id,specialty_key,specialty_custom_description,professional_council,council_number,approved_at,specialty_pending_setup,serves_whole_network,profiles!coaches_profile_id_fkey(name,email,phone,avatar_url,status)")
         .eq("is_professional", true)
         .order("created_at", { ascending: false }),
       supabase.from("professional_specialties").select("key,label,requires_admin_setup,default_tabs").order("sort_order"),
@@ -116,6 +117,12 @@ function AdminProfessionals() {
                     <p className="text-[11px] text-white/40 mt-1">
                       {p.professional_council ? `${p.professional_council} ${p.council_number || ""}` : "Sem conselho informado"}
                     </p>
+                    {p.specialty_custom_description && (
+                      <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2 py-1.5">
+                        <p className="text-[10px] uppercase tracking-wide text-amber-400/80 font-semibold">Área informada pelo profissional</p>
+                        <p className="text-xs text-amber-200 mt-0.5">{p.specialty_custom_description}</p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2 min-w-[200px]">
                     <Select value={p.specialty_key || ""} onValueChange={(v) => setSpecialty(p, v)}>

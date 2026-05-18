@@ -27,6 +27,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [specialtyKey, setSpecialtyKey] = useState("");
+  const [specialtyCustom, setSpecialtyCustom] = useState("");
   const [council, setCouncil] = useState("");
   const [councilNumber, setCouncilNumber] = useState("");
 
@@ -70,6 +71,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const validateStep1 = () => {
     if (!specialtyKey) return fail("Selecione sua área de atuação.");
+    if (selectedSpec?.requires_admin_setup && specialtyCustom.trim().length < 3)
+      return fail("Descreva sua área de atuação para que o admin possa configurar seu painel.");
     if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
       return fail("Preencha todos os campos obrigatórios.");
     if (emailStatus === "taken") return fail("Este e-mail já está cadastrado.");
@@ -99,6 +102,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
             completedCoachCourse: false,
             isProfessional: true,
             specialtyKey,
+            specialtyCustomDescription: selectedSpec?.requires_admin_setup ? specialtyCustom.trim() : null,
             professionalCouncil: council || null,
             councilNumber: councilNumber || null,
           },
@@ -162,7 +166,16 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                 </Select>
                 {selectedSpec?.description && <p className="text-[11px] text-white/40">{selectedSpec.description}</p>}
                 {selectedSpec?.requires_admin_setup && (
-                  <p className="text-[11px] text-amber-400">⚠️ O admin será notificado para configurar seu painel após aprovação.</p>
+                  <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                    <Label className="text-amber-300 text-xs">Descreva sua área de atuação *</Label>
+                    <Input
+                      value={specialtyCustom}
+                      onChange={(e) => setSpecialtyCustom(e.target.value.slice(0, 200))}
+                      placeholder="Ex.: Fisioterapeuta esportivo, Psicólogo clínico..."
+                      className="bg-white/5 border-white/10 text-white"
+                    />
+                    <p className="text-[11px] text-amber-400">⚠️ O admin será notificado para configurar seu painel personalizado após aprovação.</p>
+                  </div>
                 )}
               </div>
 

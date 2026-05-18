@@ -9,6 +9,31 @@ export function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
 
+  // Listen for popup connect completion
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e?.data?.type === "google-oauth-connected") {
+        toast.success("Google Agenda conectado! Clique novamente em 'Criar Evento'.");
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  const openGoogleConnectPopup = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) { toast.error("Faça login novamente."); return; }
+    const w = 520, h = 640;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top = window.screenY + (window.outerHeight - h) / 2;
+    window.open(
+      `/api/oauth/google/start?popup=1&access_token=${encodeURIComponent(token)}`,
+      "google-oauth",
+      `width=${w},height=${h},left=${left},top=${top}`
+    );
+  };
+
   const mapAssessment = (row: any): FitMindAssessment => ({
     id: row.id,
     clientId: row.client_id,
@@ -179,7 +204,10 @@ export function EvaluateTab() {
               },
             });
             if (!res.connected) {
-              toast.error("Conecte sua conta Google na aba Agenda primeiro.");
+              toast.error("Conecte sua conta Google para agendar o evento.", {
+                duration: 10000,
+                action: { label: "Conectar agora", onClick: () => openGoogleConnectPopup() },
+              });
               return { ok: false, error: "not_connected" };
             }
             return { ok: true, htmlLink: res.htmlLink ?? null };

@@ -32,6 +32,7 @@ const registrationSchema = z.object({
       coachCourseNotes: z.string().optional().nullable(),
       isProfessional: z.boolean().optional(),
       specialtyKey: z.string().optional().nullable(),
+      specialtyCustomDescription: z.string().max(500).optional().nullable(),
       professionalCouncil: z.string().optional().nullable(),
       councilNumber: z.string().optional().nullable(),
     })

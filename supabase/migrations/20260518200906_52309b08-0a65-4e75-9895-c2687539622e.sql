@@ -1,0 +1,1 @@
+ALTER TABLE public.coaches ADD COLUMN IF NOT EXISTS specialty_custom_description text;
