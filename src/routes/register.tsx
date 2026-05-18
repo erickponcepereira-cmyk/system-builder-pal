@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, User, Dumbbell, Building2 } from "lucide-react";
+import { ArrowLeft, User, Dumbbell, Building2, Stethoscope } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { CoachRegistration } from "@/components/auth/CoachRegistration";
 import { StudentRegistration } from "@/components/auth/StudentRegistration";
 import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
+import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
 
 type SearchParams = { role?: string };
 
@@ -23,13 +24,18 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const search = Route.useSearch();
-  const [role, setRole] = useState<"student" | "coach" | "partner" | null>(
-    search.role === "coach" ? "coach" : search.role === "student" ? "student" : search.role === "partner" ? "partner" : null
+  const [role, setRole] = useState<"student" | "coach" | "partner" | "professional" | null>(
+    search.role === "coach" ? "coach"
+    : search.role === "student" ? "student"
+    : search.role === "partner" ? "partner"
+    : search.role === "professional" ? "professional"
+    : null
   );
 
   if (role === "coach") return <CoachRegistration onBack={() => setRole(null)} />;
   if (role === "student") return <StudentRegistration onBack={() => setRole(null)} />;
   if (role === "partner") return <PartnerRegistration onBack={() => setRole(null)} />;
+  if (role === "professional") return <ProfessionalRegistration onBack={() => setRole(null)} />;
 
 
   // Role selection
@@ -90,6 +96,22 @@ function RegisterPage() {
               <div>
                 <h3 className="font-semibold text-white">Sou Empresa Parceira</h3>
                 <p className="text-sm text-white/50">Quero oferecer benefícios e produtos aos alunos</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setRole("professional")}
+            className="group w-full rounded-2xl border border-white/10 p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+            style={{ backgroundColor: "#1A1A1A" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                <Stethoscope className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Sou Profissional</h3>
+                <p className="text-sm text-white/50">Nutricionista, personal, médico, esteticista, advogado...</p>
               </div>
             </div>
           </button>

@@ -1,100 +1,108 @@
-# Novo perfil: Empresa Parceira (Partner)
+## Novo papel: Profissional da Saúde (e correlatos)
 
-Criar um quarto tipo de usuário no FitChain — **Partner** (empresa parceira) — que cadastra benefícios gratuitos e produtos patrocinados para alunos e coaches, com aprovação obrigatória do admin.
+Vamos criar um novo tipo de usuário "Profissional" que é, na prática, um **Coach com especialização**. Eles compartilham a árvore da rede de coaches (recebem comissões, têm upline/downline) mas ganham um painel personalizado de acordo com a área de atuação.
 
-## Regras de negócio
+### 1. Modelo de dados (migration)
 
-1. Cadastro pela tela de registro pública com role `partner` (CPF/CNPJ, nome fantasia, foto, descrição, localização, WhatsApp, redes sociais).
-2. Login direciona para `/partner` (painel próprio, mobile-first como o do coach).
-3. **Regra do gratuito obrigatório:** a empresa só pode publicar produtos pagos enquanto tiver pelo menos 1 produto gratuito ativo e aprovado. Se desativar/expirar o gratuito → todos os pagos da empresa são automaticamente despublicados (trigger no banco).
-4. Todo produto (gratuito ou pago) entra com status `pending` e precisa de aprovação do admin. Admin pode aprovar ou reprovar com observação que aparece para o partner corrigir.
-5. Produtos aprovados:
-   - Gratuitos → aparecem na aba **Gratuitos** (aluno + coach) com selo "Parceiro"
-   - Pagos → aparecem na **Loja**, em categoria fixa **"Patrocinados"**
-6. Cada produto exibe o perfil da empresa clicável (modal): fotos, descrição, redes sociais, WhatsApp, **timeline de posts** (galeria de fotos que a empresa publica).
-7. QR Code de check-in: cada empresa tem QR fixo (`/partner-checkin/:partnerId`). Aluno escaneia → registra visita automática na `attendance_logs` (activity_type = `partner_visit`) e fica visível no perfil dele.
-8. Admin pode editar todos os campos da empresa via painel Admin → nova aba **Empresas Parceiras**.
+**Nova tabela `professional_specialties`** (catálogo editável pelo admin):
+- `key` (slug: `personal_trainer`, `nutritionist`, `doctor`, `esthetician`, `lawyer`, `cardiologist`, `other`)
+- `label`, `description`, `icon`
+- `capabilities` jsonb: `{ can_prescribe_diet, can_prescribe_workout, can_prescribe_medication, can_issue_aesthetic_protocol, can_issue_legal_doc, ... }`
+- `default_tabs` jsonb: lista das abas pré-configuradas (ex: `["students","diet","evaluations","wallet"]`)
+- `requires_admin_setup` boolean (true para "outro")
 
-## Fases
+**Seed inicial** das 6 áreas + "outro" + "cardiologista".
 
-### Fase 1 — Banco de dados (migration)
-- enum `user_role` adicionar `'partner'`
-- tabela `partners` (profile_id, fantasy_name, document, document_type, photo_url, description, latitude/longitude, address, city, state, whatsapp, instagram, facebook, website, status, approved_at, blocked_at)
-- tabela `partner_products` (partner_id, kind 'free'|'paid', name, description, image_url, price, stock, status `pending|approved|rejected|inactive`, admin_notes, approved_at, approved_by)
-- tabela `partner_posts` (partner_id, image_url, caption, created_at) — timeline
-- tabela `partner_visits` (partner_id, student_id, visited_at, source) — check-ins por QR
-- Trigger `enforce_partner_free_required`: ao desativar/reprovar/expirar o último produto gratuito aprovado, faz UPDATE em `partner_products` setando `status='inactive'` para todos pagos da mesma empresa.
-- Função `partner_checkin(_partner_id)`: insere `partner_visits` + `attendance_logs`.
-- RLS:
-  - partners: owner select/update próprio, admin tudo, público select (aprovados)
-  - partner_products: owner CRUD próprios, admin tudo, público select (status approved)
-  - partner_posts: owner CRUD, público select (se partner aprovado)
-  - partner_visits: owner select próprios, student select próprios, admin tudo
+**Extensão da tabela `coaches`**:
+- `specialty_key` text (FK lógica → `professional_specialties.key`)
+- `is_professional` boolean (true quando especialidade ≠ coach generalista)
+- `professional_council` text (CRN, CREF, CRM, OAB…)
+- `council_number` text
+- `serves_whole_network` boolean default true (profissional atende toda a base, não só rede direta)
 
-### Fase 2 — Cadastro e Auth
-- `PartnerRegistration.tsx` (form com CNPJ/CPF, máscara, validação Zod)
-- Adicionar opção "Sou empresa parceira" em `/register`
-- `handle_new_user` trigger: criar linha em `partners` quando role = partner
-- Roteamento pós-login em `/login`: se role partner → `/partner`
+**Tabela `product_professional_requirements`**:
+- `product_id`, `specialty_key`, `is_required` — define quais profissionais um produto precisa.
 
-### Fase 3 — Painel do Parceiro (`/partner`)
-- Shell mobile com abas: **Início**, **Produtos**, **Timeline**, **QR Code**, **Perfil**
-- Início: stats (visitas, produtos ativos, pendentes de aprovação), alerta se faltar gratuito ativo
-- Produtos: CRUD com formulário (kind, nome, descrição, imagem, preço, estoque) — bloqueia "novo pago" se não houver gratuito ativo aprovado. Mostra status e admin_notes em caso de rejeição.
-- Timeline: upload de fotos com legenda, grid estilo Instagram
-- QR Code: gera QR fixo apontando para `/partner-checkin/:partnerId`, botão download/print
-- Perfil: editar fantasy_name, foto, descrição, endereço, WhatsApp, redes sociais
+**Tabela `transaction_professional_assignments`**:
+- `transaction_id`, `specialty_key`, `assigned_coach_id`, `assignment_reason` ("upline_nearest", "direct_referral_choice", "fallback_global") — registra qual nutri/personal foi escolhido para aquela venda.
 
-### Fase 4 — Aprovação no Admin
-- Nova aba **Empresas** em AdminShell (perm key `partners`)
-- Listagem com filtros (pendentes, ativas, bloqueadas), aprovar/bloquear empresa
-- Sub-aba **Produtos pendentes**: lista de partner_products aguardando; aprovar ou reprovar com observação
-- Edição completa de qualquer empresa (todos os campos)
-- Permissão também controlada em `admin-permissions.ts`
+### 2. Algoritmo de seleção do profissional (função SQL)
 
-### Fase 5 — Exposição para Aluno e Coach
-- `student.freebies.tsx`: adicionar seção "Benefícios de parceiros" listando `partner_products` aprovados com kind=free; card com modal de perfil da empresa
-- `student.store.tsx`: adicionar categoria fixa "Patrocinados" listando partner_products approved + kind=paid
-- `coach`: aba **Gratuitos** ganha mesma seção de parceiros
-- Componente `PartnerProfileModal`: exibe info da empresa, redes sociais, WhatsApp, timeline (grid), lista de outros produtos da empresa
-- Rota pública `/partner-checkin/$partnerId.tsx`: aluno logado → chama `partner_checkin`, mostra confirmação visual e badge no perfil
+`pick_professional_for_sale(_selling_coach_id, _specialty_key, _preferred_coach_id)`:
 
-### Fase 6 — Integração no perfil do aluno
-- Em `student.profile.tsx` mostrar histórico de visitas a parceiros (últimas 10) com data e nome da empresa
+```text
+1. Se _preferred_coach_id foi informado E é downline DIRETO do vendedor
+   E tem a specialty → retorna ele
+2. Sobe pela upline do vendedor (ele mesmo → upline1 → upline2 → ...)
+   procurando o primeiro coach com specialty_key=X e aprovado → retorna
+3. Procura nos downlines DIRETOS do vendedor (1º nível) com specialty
+   → se houver vários, retorna o mais antigo (ou o que o vendedor escolheu)
+4. Fallback: qualquer profissional aprovado com a specialty no sistema
+   (serves_whole_network=true), priorizando menor carga atual
+```
 
-## Detalhes técnicos
+Chamada no `process_paid_transaction` para cada `product_professional_requirements`.
 
-- Imagens via bucket `store-images` (já existe) em pasta `partners/`
-- Realtime opcional para notificar partner quando produto é aprovado (usa tabela `notifications` existente)
-- Timeline limitada a 30 posts por empresa para manter leveza
-- Lista de produtos paginada (12 por página) em Loja e Gratuitos
-- Validação Zod em todos os formulários
-- Trigger de "free required" roda em `AFTER UPDATE OF status ON partner_products` para garantir consistência
+### 3. Cadastro e fluxo de aprovação
 
-## Arquivos novos
+- Em `register?role=professional` (novo) — coleta dados básicos + **seletor de especialidade** + conselho profissional + upline (igual coach).
+- `handle_new_user` cria profile com role `coach` + flag `is_professional=true`.
+- Após aprovação do admin, no primeiro login, modal **"Confirme sua área de atuação"** se `specialty_key` for null.
+- Se escolher "outro" → cria notificação para admin: "Profissional X precisa de configuração de painel".
 
-- `supabase/migrations/<timestamp>_partners.sql`
-- `src/components/auth/PartnerRegistration.tsx`
-- `src/routes/partner.tsx` (layout shell)
-- `src/routes/partner.index.tsx`
-- `src/routes/partner.products.tsx`
-- `src/routes/partner.timeline.tsx`
-- `src/routes/partner.qrcode.tsx`
-- `src/routes/partner.profile.tsx`
-- `src/routes/partner-checkin.$partnerId.tsx`
-- `src/routes/admin.partners.tsx`
-- `src/components/partners/PartnerProfileModal.tsx`
-- `src/components/partners/PartnerProductCard.tsx`
+### 4. Painel do profissional (`/professional`)
 
-## Arquivos editados
+Reutiliza shell do coach, mas as abas renderizadas vêm de `specialty.default_tabs`:
 
-- `src/lib/admin-permissions.ts` (+ key `partners`)
-- `src/components/admin/AdminShell.tsx` (+ aba Empresas)
-- `src/routes/register.tsx` (+ opção parceira)
-- `src/routes/login.tsx` (+ redirect partner)
-- `src/routes/student.freebies.tsx` (+ benefícios de parceiros)
-- `src/routes/student.store.tsx` (+ categoria patrocinados)
-- `src/routes/student.profile.tsx` (+ histórico de visitas)
-- `src/routes/coach.tsx` (aba Gratuitos com parceiros)
+| Specialty | Abas padrão |
+|-----------|-------------|
+| Personal trainer | Alunos, **Treinos**, Avaliações, Carteira, Rede |
+| Nutricionista | Alunos, **Dieta/Protocolo**, Anamnese, Carteira, Rede |
+| Médico/Cardiologista | Alunos, **Prescrições**, Exames, Carteira, Rede |
+| Esteticista | Alunos, **Protocolo estético**, Sessões, Carteira |
+| Advogado | Clientes, **Documentos**, Consultas, Carteira |
+| Outro | Apenas Alunos + Carteira + Rede, com aviso "aguardando configuração" |
 
-Confirma o plano? Começo pela Fase 1 (migration) assim que aprovar.
+**Visualização de alunos**: por padrão mostra os alunos atribuídos a ele (via `transaction_professional_assignments`) com toggle "Ver toda a base" (se `serves_whole_network`).
+
+### 5. Tela de venda (NewSaleModal)
+
+Quando o produto tem `product_professional_requirements`:
+- Para cada specialty exigida, mostra um **seletor** populado pelo algoritmo:
+  - Pré-selecionado: profissional encontrado pela regra (upline mais próximo).
+  - Lista alternativa: downlines diretos do vendedor com a specialty.
+  - Tooltip explicando a escolha.
+
+### 6. Admin
+
+- Nova aba **"Profissionais"** em `/admin` listando coaches com `is_professional=true`, filtros por especialidade, status do conselho.
+- Em `/admin/products` (Motor Financeiro) — campo "Profissionais necessários" (multi-select de especialidades).
+- Aba **"Especialidades"** para criar/editar catálogo e configurar abas/capacidades para "outro".
+
+### 7. Arquivos
+
+**Migration**: `*_professional_role.sql` — tabelas + seed + função `pick_professional_for_sale` + hook no `process_paid_transaction`.
+
+**Criados**:
+- `src/routes/professional.tsx` (shell)
+- `src/components/professional/SpecialtyTabs.tsx` (router de abas por specialty)
+- `src/components/professional/tabs/{DietTab,WorkoutTab,PrescriptionTab,AestheticTab,LegalTab,PendingSetupTab}.tsx`
+- `src/components/auth/ProfessionalRegistration.tsx`
+- `src/routes/admin.professionals.tsx`
+- `src/routes/admin.specialties.tsx`
+- `src/lib/professional-assignment.functions.ts`
+
+**Editados**:
+- `src/server/registration.{server,functions}.ts` — aceita `role=professional`
+- `src/routes/register.tsx` — botão "Sou profissional da saúde"
+- `src/components/coach/NewSaleModal.tsx` — seletor de profissional
+- `src/routes/admin.tsx` — links novos
+- `src/components/admin/ProductFinancialEditor.tsx` — campo requirements
+
+### Pontos para confirmar
+
+1. **"Outro" profissional**: ao aprovar, admin escolhe manualmente quais abas liberar de uma lista, ou ele cria uma especialidade nova reutilizável? (Sugiro: cria especialidade nova reutilizável.)
+2. **Comissões**: quando o profissional atende uma venda, ele recebe um **slot dedicado** no produto (`destination='professional_wallet'` no Motor Financeiro), correto? Ou continua só recebendo via rede MLM normal?
+3. **Painel duplo**: o profissional também tem acesso ao painel `/coach` normal (rede/MLM/carteira) OU só ao `/professional`? Sugestão: `/professional` tem aba "Rede" que reutiliza componentes do coach, mantendo um único shell.
+
+Posso seguir com essas premissas se você confirmar — em especial sobre comissionamento (item 2), que afeta o motor financeiro.

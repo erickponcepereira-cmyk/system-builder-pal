@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudentRouteImport } from './routes/student'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfessionalRouteImport } from './routes/professional'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -48,6 +49,7 @@ import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-repo
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminProfessionalsRouteImport } from './routes/admin.professionals'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminProductOrdersRouteImport } from './routes/admin.product-orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
@@ -84,6 +86,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfessionalRoute = ProfessionalRouteImport.update({
+  id: '/professional',
+  path: '/professional',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PendingApprovalRoute = PendingApprovalRouteImport.update({
@@ -266,6 +273,11 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProfessionalsRoute = AdminProfessionalsRouteImport.update({
+  id: '/professionals',
+  path: '/professionals',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -387,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
+  '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
@@ -404,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/professionals': typeof AdminProfessionalsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
@@ -449,6 +463,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
+  '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -465,6 +480,7 @@ export interface FileRoutesByTo {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/professionals': typeof AdminProfessionalsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
@@ -512,6 +528,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
+  '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
@@ -529,6 +546,7 @@ export interface FileRoutesById {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/professionals': typeof AdminProfessionalsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
@@ -577,6 +595,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
+    | '/professional'
     | '/register'
     | '/reset-password'
     | '/student'
@@ -594,6 +613,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/product-orders'
     | '/admin/products'
+    | '/admin/professionals'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -639,6 +659,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
+    | '/professional'
     | '/register'
     | '/reset-password'
     | '/admin/calendars'
@@ -655,6 +676,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/product-orders'
     | '/admin/products'
+    | '/admin/professionals'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -701,6 +723,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
+    | '/professional'
     | '/register'
     | '/reset-password'
     | '/student'
@@ -718,6 +741,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/product-orders'
     | '/admin/products'
+    | '/admin/professionals'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -765,6 +789,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
+  ProfessionalRoute: typeof ProfessionalRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
@@ -801,6 +826,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/professional': {
+      id: '/professional'
+      path: '/professional'
+      fullPath: '/professional'
+      preLoaderRoute: typeof ProfessionalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pending-approval': {
@@ -1055,6 +1087,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/professionals': {
+      id: '/admin/professionals'
+      path: '/professionals'
+      fullPath: '/admin/professionals'
+      preLoaderRoute: typeof AdminProfessionalsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/products': {
       id: '/admin/products'
       path: '/products'
@@ -1239,6 +1278,7 @@ interface AdminRouteChildren {
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminProductOrdersRoute: typeof AdminProductOrdersRoute
   AdminProductsRoute: typeof AdminProductsRoute
+  AdminProfessionalsRoute: typeof AdminProfessionalsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStoreRoute: typeof AdminStoreRoute
@@ -1263,6 +1303,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminProductOrdersRoute: AdminProductOrdersRoute,
   AdminProductsRoute: AdminProductsRoute,
+  AdminProfessionalsRoute: AdminProfessionalsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStoreRoute: AdminStoreRoute,
@@ -1348,6 +1389,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
   PendingApprovalRoute: PendingApprovalRoute,
+  ProfessionalRoute: ProfessionalRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
