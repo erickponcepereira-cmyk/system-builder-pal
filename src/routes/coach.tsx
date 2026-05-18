@@ -221,6 +221,7 @@ function CoachDashboard() {
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
+    { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "career", label: "Carreira", icon: Trophy },
     { id: "reports", label: "Relatórios", icon: BarChart3 },
