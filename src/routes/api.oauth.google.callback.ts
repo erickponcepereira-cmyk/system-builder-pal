@@ -100,6 +100,9 @@ export const Route = createFileRoute("/api/oauth/google/callback")({
             }
           }
 
+          if (stateRow.redirect_to === "__popup__") {
+            return popupCloseHtml();
+          }
           throw redirect({ href: stateRow.redirect_to || "/coach" });
         } catch (e) {
           if (e instanceof Response) throw e;
