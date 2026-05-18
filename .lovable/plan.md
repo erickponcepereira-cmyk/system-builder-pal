@@ -1,70 +1,82 @@
-## Objetivo
+# Plano: Configuração completa do Perfil do Aluno
 
-Hoje a Loja (`/admin/store` → "Itens da Loja") usa a tabela `store_items` com uma UI financeira antiga (campos fixos: imposto, taxa, comissões L1/L2/L3 em `%`/`R$`). Em paralelo, `/admin/products` tem a calculadora nova (slots paralelos com `slot_group`, tipo `pct_running`, pontos manuais, fluxo visual em tempo real). Vamos **unificar**: a Loja passa a operar sobre `products`, o cadastro de item ganha a calculadora nova na aba Financeiro, e `/admin/products` sai do menu.
+Vou agrupar o trabalho em blocos lógicos. Algumas partes precisam de confirmação antes de eu começar.
 
-## Decisões já confirmadas
+## 1. Checkout e Indicação (paridade com Coach)
 
-- Unificar: store_items deixa de ser usado; tudo passa para `products`.
-- Campos financeiros antigos em store_items: removidos (slots são a única fonte de verdade).
-- Aba "Motor Financeiro" some do menu — a calculadora vive apenas dentro do item.
+- Replicar fluxo de checkout do Coach na Loja do Aluno (Mercado Pago, mesmas opções de PIX/Cartão usadas no painel admin).
+- Corrigir link de indicação `/r/:code`:
+  - Hoje gera código por aluno, mas o registro nem sempre herda o coach do indicador.
+  - Ajuste: ao acessar `/r/{code}`, redirecionar direto para `/register` com o `coach_id` do aluno indicador pré-vinculado e o `referred_by_student_id` salvo.
+  - Quando o indicado comprar um produto (challenge), a função `process_paid_transaction` já paga comissão de indicação — vou validar que o slot `referral_student` está nos produtos padrão e ajustar se faltar.
 
-## Escopo da mudança
+## 2. Home do Aluno
 
-### 1. Banco (migration)
+- Saudação dinâmica: "Bom dia / Boa tarde / Boa noite, {nome}" baseada em `new Date().getHours()` (00-11 / 12-17 / 18-23). Fallback: "Seja bem-vindo, {nome}".
+- **Ações rápidas**: remover Loja, Cursos, Gratuitos, Refeição, IA, Ajuda. Manter Foto, Pesagem; adicionar **Protocolo**.
 
-- Adicionar em `products` as colunas que existem só em `store_items` e são necessárias para a vitrine:
-  `section_id uuid`, `category_id uuid`, `kind text check (kind in ('physical','digital'))`, `short_description text`, `gallery jsonb default '[]'`, `stock int`, `sku text`, `is_featured bool default false`, `is_active bool default true`, `metadata jsonb default '{}'`.
-- Backfill: copiar o único `store_items` existente para `products` (mapeando `name`, `description`, `image_url`, `price`, `original_price`, seção/categoria, kind, stock, etc.). Status `active`, `points_per_sale = 0`.
-- Trocar a referência soft em `store_order_items.store_item_id` para apontar para `products.id` (mesmo nome de coluna mantido por enquanto, só muda a semântica — ou renomear para `product_id` numa migration de aliasing). Atualizar o registro existente, se houver.
-- Após confirmação visual, `DROP TABLE store_items` em migration separada (passo 5). Numa primeira passada deixamos a tabela vazia para rollback fácil.
+## 3. Foto (IA de refeição)
 
-### 2. Frontend — Loja Admin
+- Marcar como "Em breve" — botão desabilitado com badge.
 
-- **`src/components/admin/StoreItemsManager.tsx`**: passar a ler/gravar de `products` em vez de `store_items`. Remover toda a interface antiga da aba "Financeiro" (`FinField`, `tax_percentage`, `commission_*`, `*_mode`) e toda a lógica de cálculo embutida.
-- Extrair a calculadora de `src/routes/admin.products.tsx` (`ProductFinancialDrawer`, `SlotCard`, `FlowLine`, `ProgressTrack`, `SummaryGrid`) para um componente reutilizável: `src/components/admin/ProductFinancialEditor.tsx`. O drawer vira um painel embed (sem o wrapper de drawer) que recebe `productId` e usa `getProductFinancial` / `saveProductFinancial` existentes.
-- Na aba "Financeiro" do item: renderizar `<ProductFinancialEditor productId={editing.id} />`. Para item novo, exige salvar a aba "Geral" primeiro (cria o `products`), aí libera a aba financeira.
-- Botão "Salvar" da aba Geral grava só os campos não-financeiros em `products`. A calculadora tem seu próprio botão salvar (já existe em `ProductFinancialEditor`).
+## 4. Perfil do Aluno → Carteirinha
 
-### 3. Frontend — Vitrine e relatórios
+- Nova seção "Minha Carteirinha":
+  - Card com foto, nome, código de aluno, plano ativo, coach.
+  - **QR Code fixo** (gerado a partir do `student.id`, sempre o mesmo).
+  - Quando qualquer pessoa autenticada escaneia esse QR, abre rota `/checkin/:studentId` que registra presença no desafio do aluno e vincula quem leu (`scanned_by_profile_id`).
+- Servirá também como identificação para benefícios gratuitos (será usado depois pelos parceiros).
 
-- `src/components/student/StorePage.tsx`, `src/server/coach-sales.functions.ts`, `src/routes/admin.store-reports.tsx`: trocar `from("store_items")` → `from("products")` e remover colunas legadas das selects (`commission_*`, `app_fee_percentage`). Onde a vitrine precisava do valor de comissão para exibição (se precisa), buscar via `product_value_slots` ou esconder.
-- `coach-sales.functions.ts`: a comissão do coach passa a vir dos slots (já é o caso para products); remover o cálculo legado baseado em `commission_coach`.
+**Backend necessário:**
+- Tabela `student_checkin_scans` (id, student_id, scanned_by_profile_id, scanned_at).
+- Server function `register_checkin_via_qr(student_id)` que chama `student_check_in` no contexto do aluno escaneado e registra o scan.
 
-### 4. Menu/rotas
+## 5. Ficha de Protocolo (nova)
 
-- `src/components/admin/AdminShell.tsx`: remover o item `"Motor Financeiro"` (`/admin/products`) do `navItems`.
-- Manter o arquivo `src/routes/admin.products.tsx` por enquanto (acessível por URL direto) para fallback durante a transição; remover num segundo passo após validar.
+Nova rota `/student/protocol` acessada pelo card "Protocolo":
 
-### 5. Limpeza (migration separada, depois do OK)
+- **Dados clínicos** (editáveis pelo aluno/coach): tipo sanguíneo, alergias, cirurgias, restrições físicas, condições (cardiopata, diabético, etc.), medicações em uso.
+- **Protocolo atual** (preenchido pelo Coach — UI somente leitura para o aluno):
+  - Dieta atribuída
+  - Exercícios atribuídos
+  - Meta de calorias/dia
+  - Meta de água/dia
+- **Atalhos**: botões para Anamnese, Resultado da Bioimpedância, Fichas profissionais (nutricionista, médico).
 
-- `DROP TABLE store_items`.
-- Renomear `store_order_items.store_item_id` → `product_id` se desejado.
-- Deletar `src/routes/admin.products.tsx` e `StoreItemsManager` antigo (substituído).
+**Backend necessário:**
+- Tabela `student_health_profile` (1:1 com student): tipo_sanguineo, alergias[], cirurgias, restricoes, condicoes, medicacoes.
+- Tabela `student_protocols` (criada pelo coach posteriormente): student_id, coach_id, diet_plan, exercise_plan, daily_calories, daily_water_ml, active, dates.
+- Tabela `student_professional_records`: student_id, professional_profile_id, type (nutritionist/doctor/...), document_url, notes.
 
-## Arquivos afetados
+A criação pelo Coach virá em iteração futura — agora deixo a estrutura e a tela do aluno lendo o que existir.
 
-```text
-supabase/migrations/<novo>_unify_products.sql        (criar)
-supabase/migrations/<novo>_drop_store_items.sql       (criar, passo 5)
-src/components/admin/ProductFinancialEditor.tsx       (novo - extração)
-src/components/admin/StoreItemsManager.tsx            (reescrita parcial)
-src/components/admin/AdminShell.tsx                   (remover item do menu)
-src/routes/admin.products.tsx                         (extrair componente; manter rota)
-src/components/student/StorePage.tsx                  (trocar tabela)
-src/server/coach-sales.functions.ts                   (trocar tabela + remover legado)
-src/routes/admin.store-reports.tsx                    (trocar tabela)
-```
+## 6. Desafio — Ranking por categoria
 
-## Riscos
+- Substituir categorias atuais por: **Gordura**, **Músculo**, **Peso**.
+- Ordenar pelos campos da última `coach_body_assessments` (body_fat ↓, skeletal_muscle ↓, weight perda %).
 
-- `store_order_items.store_item_id` aponta hoje para `store_items.id` por convenção (sem FK). Ao migrar o item para `products`, o id muda — precisamos preservar o mesmo UUID na cópia para não quebrar pedidos antigos.
-- Funções/queries que esperam o shape antigo de `store_items` (campos `commission_*` etc.) vão quebrar até serem atualizadas no mesmo passo.
-- Calculadora atual exige um `products.id` salvo antes de configurar slots — UX de item novo exige salvar "Geral" antes de abrir "Financeiro".
+## 7. Grupo do Aluno (real)
 
-## Validação após implementar
+- Hoje é mock. Tornar real:
+  - Listar membros: todos os alunos + coaches ativos do mesmo `group_id` (ou da rede do coach do aluno).
+  - Mensagens reais via tabela `group_messages` já existente (vou verificar; criar se faltar).
+  - Realtime via `supabase.channel`.
 
-1. Criar item novo na Loja → salvar Geral → abrir Financeiro → ver calculadora com slots paralelos, grupo, % do saldo restante e pontos manuais.
-2. Editar o item migrado → confirmar dados e slots.
-3. Vitrine `/student/store` lista o item normalmente.
-4. `/admin/store-reports` e venda de coach continuam funcionando.
-5. Item "Motor Financeiro" não aparece mais no menu.
+## 8. Loja — Categorias
+
+- Bug: filtros mostram categorias hardcoded.
+- Carregar categorias apenas da tabela `store_categories` (ou equivalente) + opção fixa "Todos".
+
+---
+
+## Perguntas antes de começar
+
+Como isso é grande, prefiro entregar em fases pra você validar cada uma. Sugestão de ordem:
+
+**Fase 1** (UI rápida, sem backend novo): saudação dinâmica, ações rápidas, foto "em breve", ranking por categoria, loja só com categorias do admin.
+
+**Fase 2** (backend + UI): carteirinha com QR + check-in por scan, ficha de protocolo (estrutura), correção do link de indicação.
+
+**Fase 3**: checkout do aluno (paridade com coach), grupo real com realtime.
+
+Confirma se posso seguir nessa ordem? Ou prefere que eu faça tudo de uma vez (vai ser uma resposta longa e mais difícil de revisar)?
