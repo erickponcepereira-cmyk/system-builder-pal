@@ -41,7 +41,6 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-checkin.$partnerId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
-import { Route as CoachPartnersRouteImport } from './routes/coach.partners'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
@@ -231,11 +230,6 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CoachPartnersRoute = CoachPartnersRouteImport.update({
-  id: '/partners',
-  path: '/partners',
-  getParentRoute: () => CoachRoute,
-} as any)
 const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
   id: '/checkin/$studentId',
   path: '/checkin/$studentId',
@@ -382,7 +376,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
-  '/coach': typeof CoachRouteWithChildren
+  '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
@@ -411,7 +405,6 @@ export interface FileRoutesByFullPath {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
-  '/coach/partners': typeof CoachPartnersRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -444,7 +437,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
-  '/coach': typeof CoachRouteWithChildren
+  '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
@@ -472,7 +465,6 @@ export interface FileRoutesByTo {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
-  '/coach/partners': typeof CoachPartnersRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -507,7 +499,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
-  '/coach': typeof CoachRouteWithChildren
+  '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
@@ -536,7 +528,6 @@ export interface FileRoutesById {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
-  '/coach/partners': typeof CoachPartnersRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -601,7 +592,6 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/checkin/$studentId'
-    | '/coach/partners'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -662,7 +652,6 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/checkin/$studentId'
-    | '/coach/partners'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -725,7 +714,6 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/checkin/$studentId'
-    | '/coach/partners'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -760,7 +748,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   BecomePartnerRoute: typeof BecomePartnerRoute
-  CoachRoute: typeof CoachRouteWithChildren
+  CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
@@ -1005,13 +993,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/coach/partners': {
-      id: '/coach/partners'
-      path: '/partners'
-      fullPath: '/coach/partners'
-      preLoaderRoute: typeof CoachPartnersRouteImport
-      parentRoute: typeof CoachRoute
     }
     '/checkin/$studentId': {
       id: '/checkin/$studentId'
@@ -1274,16 +1255,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface CoachRouteChildren {
-  CoachPartnersRoute: typeof CoachPartnersRoute
-}
-
-const CoachRouteChildren: CoachRouteChildren = {
-  CoachPartnersRoute: CoachPartnersRoute,
-}
-
-const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
-
 interface StudentPartnersRouteChildren {
   StudentPartnersPartnerIdRoute: typeof StudentPartnersPartnerIdRoute
 }
@@ -1341,7 +1312,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   BecomePartnerRoute: BecomePartnerRoute,
-  CoachRoute: CoachRouteWithChildren,
+  CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
