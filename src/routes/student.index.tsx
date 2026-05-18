@@ -16,6 +16,12 @@ function StudentHome() {
   const [showReferral, setShowReferral] = useState(false);
   const [dailyQuote, setDailyQuote] = useState({ quote: "Seu único competidor é a versão de ontem de você mesmo.", author: "FitMind Club" });
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Bom dia";
+    if (h < 18) return "Boa tarde";
+    return "Boa noite";
+  })();
 
   useEffect(() => {
     (async () => {
