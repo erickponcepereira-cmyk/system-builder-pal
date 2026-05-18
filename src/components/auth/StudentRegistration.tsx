@@ -19,10 +19,11 @@ import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 // ============================================================
 type ReferralContext = {
   code: string;
-  kind: "coach" | "student";
+  kind: "coach" | "student" | "partner";
   sponsorName: string;
   coachId: string | null;
   referredByStudentId: string | null;
+  partnerId?: string | null;
 };
 
 export function StudentRegistration({ onBack }: { onBack: () => void }) {
