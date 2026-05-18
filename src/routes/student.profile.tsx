@@ -24,9 +24,14 @@ const sections = [
     items: [
       { icon: Gift, label: "Gratuitos", to: "/student/freebies" },
       { icon: Building2, label: "Empresas Parceiras", to: "/student/partners" },
-      { icon: Building2, label: "Tornar-se Parceiro", to: "/register", search: { role: "partner" } },
       { icon: Users, label: "Indicar amigos" },
       { icon: GraduationCap, label: "Meus cursos", to: "/student/library" },
+    ],
+  },
+  {
+    title: "Negócios",
+    items: [
+      { icon: Building2, label: "Tornar-se Empresa Parceira", to: "/become-partner" },
     ],
   },
   {
