@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Eye, EyeOff, Building2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
@@ -12,7 +12,7 @@ import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
-export function PartnerRegistration({ onBack }: { onBack: () => void }) {
+export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => void; mode?: "auto" | "signup" | "existing" }) {
   const [fantasyName, setFantasyName] = useState("");
   const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
   const [doc, setDoc] = useState("");
@@ -26,6 +26,30 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [createdForExisting, setCreatedForExisting] = useState(false);
+  const [authProfile, setAuthProfile] = useState<{ id: string; user_id: string; email: string; name: string; phone: string | null } | null>(null);
+
+  // Detect logged-in user — if signed in, switch to "existing account" flow
+  useEffect(() => {
+    if (mode === "signup") return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, user_id, email, name, phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (profile) {
+        setAuthProfile(profile as never);
+        setEmail(profile.email || "");
+        setResponsibleName(profile.name || "");
+        if (profile.phone) setWhatsapp(profile.phone);
+      }
+    })();
+  }, [mode]);
+
+  const isExisting = mode === "existing" || (mode === "auto" && !!authProfile);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
