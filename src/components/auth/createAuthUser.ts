@@ -7,7 +7,7 @@ export async function createAuthUser(email: string, password: string, name: stri
     email: normalizedEmail,
     password,
     options: {
-      data: { name: name.trim(), role },
+      data: { name: name.trim(), role, ...extraMeta },
       emailRedirectTo: `${window.location.origin}/login`,
     },
   });
