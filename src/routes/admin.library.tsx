@@ -80,7 +80,7 @@ function AdminLibraryPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Exercise | null>(null);
-  const [form, setForm] = useState<typeof empty>(empty);
+  const [form, setForm] = useState<FormState>(empty);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
 
