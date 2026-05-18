@@ -1833,21 +1833,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     // ── Resumo / referências clínicas ─────────────────────
     const allAssessments = (() => {
       const existing = selectedClient?.assessments ?? [];
-      const merged = existing.some((item) => item.id === a.id) ? existing : [...existing, a];
+      const merged = a?.id && existing.some((item) => item.id === a.id) ? existing : (a?.date ? [...existing, a] : existing);
       return merged
         .filter((item) => item?.date)
         .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
     })();
+    const N = allAssessments.length;
     const firstA = allAssessments[0] ?? a;
-    const latestA = allAssessments[allAssessments.length - 1] ?? a;
+    // "Última" column shows the PREVIOUS assessment when 3+ exist;
+    // when only 1 or 2 exist, it shows the most recent (which is the current).
+    const previousA = N >= 3 ? allAssessments[N - 2] : (allAssessments[N - 1] ?? a);
     const daysFollow = (() => {
       if (!firstA?.date) return 0;
       const d = (Date.now() - new Date(firstA.date).getTime()) / 86400000;
       return Math.max(0, Math.round(d));
     })();
-    const followLabel = daysFollow >= 30
-      ? `${Math.round(daysFollow / 30)} meses`
-      : `${daysFollow} dias`;
+    const followLabel = (() => {
+      if (!daysFollow) return "Hoje";
+      const years = Math.floor(daysFollow / 365);
+      const remAfterYears = daysFollow - years * 365;
+      const months = Math.floor(remAfterYears / 30);
+      const days = remAfterYears - months * 30;
+      const parts: string[] = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? "ano" : "anos"}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? "mês" : "meses"}`);
+      if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? "dia" : "dias"}`);
+      return parts.join(", ");
+    })();
     const diff = (curr?: number, base?: number, unit = "") => {
       if (curr == null || !Number.isFinite(curr)) return "—";
       const d = base != null && Number.isFinite(base) ? +(curr - base).toFixed(1) : null;
