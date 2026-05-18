@@ -39,6 +39,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   const [birthdate, setBirthdate] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [existingMode, setExistingMode] = useState(false); // vinculação a conta existente
 
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
