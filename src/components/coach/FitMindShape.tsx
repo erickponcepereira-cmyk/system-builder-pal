@@ -284,6 +284,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "assessment" | "result" | "compare"
   >("home");
+  // "new" = forçar abrir nova avaliação; "browse" = abrir resultado existente se houver
+  const [entryIntent, setEntryIntent] = useState<"new" | "browse">("browse");
   const [selectedClient, setSelectedClient] = useState<FitMindClient | null>(
     null,
   );
