@@ -127,31 +127,19 @@ function StudentEvolution() {
         {photos.length > 0 && <div className="mt-4 grid grid-cols-2 gap-2">{[firstPhoto, latestPhoto].filter(Boolean).map((photo, index) => <div key={`${photo.id}-${index}`} className="overflow-hidden rounded-xl bg-muted"><img src={photo.signedUrl || ""} alt={index === 0 ? "Primeira foto de evolução" : "Foto mais recente de evolução"} className="aspect-[3/4] w-full object-cover" /><div className="p-2"><p className="text-[10px] font-bold text-foreground">{index === 0 ? "Primeira" : "Atual"}</p><p className="text-[9px] text-muted-foreground">Semana {photo.week_number || "—"}</p></div></div>)}</div>}
       </section>
 
-      <section className="rounded-2xl bg-card p-4">
-        <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-bold text-foreground">Diário alimentar com IA</h2><p className="text-[11px] text-muted-foreground">Foto da refeição, calorias e macros estimados</p></div><Sparkles className="h-5 w-5 text-primary" /></div>
-        <input ref={mealInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadFoodPhoto(e.target.files[0])} />
-        <div className="grid gap-2">
-          <select value={mealType} onChange={(e) => setMealType(e.target.value)} className="field-control"><option value="breakfast">Café da manhã</option><option value="lunch">Almoço</option><option value="dinner">Jantar</option><option value="snack">Lanche</option></select>
-          <textarea value={mealDescription} onChange={(e) => setMealDescription(e.target.value)} className="field-control" rows={3} placeholder="Descreva a refeição se quiser complementar a foto" />
-          <button disabled={saving} onClick={() => mealInputRef.current?.click()} className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"><Upload className="h-4 w-4" /> Registrar refeição</button>
+      <section className="rounded-2xl bg-card p-4 opacity-90">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-foreground">Diário alimentar com IA</h2>
+            <p className="text-[11px] text-muted-foreground">Análise automática de calorias e dicas pela foto da refeição</p>
+          </div>
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-8 text-center">
+          <span className="rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">Em breve</span>
+          <p className="max-w-xs text-xs text-muted-foreground">Estamos finalizando essa funcionalidade. Em breve você poderá enviar a foto da refeição e a IA fará a leitura nutricional automaticamente.</p>
         </div>
       </section>
-
-      <div className="space-y-3">
-        {foods.length === 0 ? <div className="rounded-2xl bg-card p-8 text-center"><Apple className="mx-auto mb-3 h-10 w-10 text-muted-foreground" /><p className="text-sm font-bold text-foreground">Nenhuma refeição registrada</p></div> : foods.map((food) => (
-          <div key={food.id} className="rounded-2xl bg-card p-3">
-            <div className="flex gap-3">
-              {food.signedUrl ? <img src={food.signedUrl} alt="Foto da refeição analisada" className="h-20 w-20 rounded-xl object-cover" /> : <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-muted"><Apple className="h-6 w-6 text-muted-foreground" /></div>}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2"><p className="text-sm font-bold text-foreground">{mealLabel(food.meal_type)}</p><span className="text-xs font-bold text-primary">{food.ai_analysis?.calories ? `${food.ai_analysis.calories} kcal` : "IA pendente"}</span></div>
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{food.ai_analysis?.summary || food.description || "Refeição registrada."}</p>
-                {food.ai_analysis && <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground"><span>P {food.ai_analysis.protein_g || 0}g</span><span>C {food.ai_analysis.carbs_g || 0}g</span><span>G {food.ai_analysis.fat_g || 0}g</span></div>}
-              </div>
-            </div>
-            {food.ai_analysis?.coach_tip && <div className="mt-3 flex gap-2 rounded-xl bg-primary/10 p-2 text-xs text-foreground"><TrendingDown className="h-4 w-4 shrink-0 text-primary" />{food.ai_analysis.coach_tip}</div>}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

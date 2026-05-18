@@ -22,6 +22,7 @@ import { Route as StudentIndexRouteImport } from './routes/student.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as StudentSupportRouteImport } from './routes/student.support'
 import { Route as StudentStoreRouteImport } from './routes/student.store'
+import { Route as StudentProtocolRouteImport } from './routes/student.protocol'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
 import { Route as StudentLibraryRouteImport } from './routes/student.library'
@@ -123,6 +124,11 @@ const StudentSupportRoute = StudentSupportRouteImport.update({
 const StudentStoreRoute = StudentStoreRouteImport.update({
   id: '/store',
   path: '/store',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentProtocolRoute = StudentProtocolRouteImport.update({
+  id: '/protocol',
+  path: '/protocol',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentProfileRoute = StudentProfileRouteImport.update({
@@ -352,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
   '/student/support': typeof StudentSupportRoute
   '/admin/': typeof AdminIndexRoute
@@ -402,6 +409,7 @@ export interface FileRoutesByTo {
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
   '/student/support': typeof StudentSupportRoute
   '/admin': typeof AdminIndexRoute
@@ -455,6 +463,7 @@ export interface FileRoutesById {
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
   '/student/support': typeof StudentSupportRoute
   '/admin/': typeof AdminIndexRoute
@@ -509,6 +518,7 @@ export interface FileRouteTypes {
     | '/student/library'
     | '/student/notifications'
     | '/student/profile'
+    | '/student/protocol'
     | '/student/store'
     | '/student/support'
     | '/admin/'
@@ -559,6 +569,7 @@ export interface FileRouteTypes {
     | '/student/library'
     | '/student/notifications'
     | '/student/profile'
+    | '/student/protocol'
     | '/student/store'
     | '/student/support'
     | '/admin'
@@ -611,6 +622,7 @@ export interface FileRouteTypes {
     | '/student/library'
     | '/student/notifications'
     | '/student/profile'
+    | '/student/protocol'
     | '/student/store'
     | '/student/support'
     | '/admin/'
@@ -734,6 +746,13 @@ declare module '@tanstack/react-router' {
       path: '/store'
       fullPath: '/student/store'
       preLoaderRoute: typeof StudentStoreRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/protocol': {
+      id: '/student/protocol'
+      path: '/protocol'
+      fullPath: '/student/protocol'
+      preLoaderRoute: typeof StudentProtocolRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/profile': {
@@ -1067,6 +1086,7 @@ interface StudentRouteChildren {
   StudentLibraryRoute: typeof StudentLibraryRoute
   StudentNotificationsRoute: typeof StudentNotificationsRoute
   StudentProfileRoute: typeof StudentProfileRoute
+  StudentProtocolRoute: typeof StudentProtocolRoute
   StudentStoreRoute: typeof StudentStoreRoute
   StudentSupportRoute: typeof StudentSupportRoute
   StudentIndexRoute: typeof StudentIndexRoute
@@ -1083,6 +1103,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentLibraryRoute: StudentLibraryRoute,
   StudentNotificationsRoute: StudentNotificationsRoute,
   StudentProfileRoute: StudentProfileRoute,
+  StudentProtocolRoute: StudentProtocolRoute,
   StudentStoreRoute: StudentStoreRoute,
   StudentSupportRoute: StudentSupportRoute,
   StudentIndexRoute: StudentIndexRoute,
