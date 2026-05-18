@@ -3,17 +3,19 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { maskPhone } from "@/lib/masks";
 import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
+import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
+import { StorePage } from "@/components/student/StorePage";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "profile";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "profile";
 
 interface Partner {
   id: string; profile_id: string; fantasy_name: string; description: string | null;
@@ -21,6 +23,7 @@ interface Partner {
   instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   status: string; document: string | null; document_type: string | null;
+  referral_code: string | null; referral_link: string | null;
 }
 
 interface Product {
@@ -88,12 +91,21 @@ function PartnerPanel() {
   const hasActiveFree = products.some(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner);
   const pendingCount = products.filter(p => p.status === "pending").length;
 
-  const tabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
+  const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
     { key: "timeline", label: "Timeline", icon: ImageIcon },
-    { key: "qrcode", label: "QR Code", icon: QrCode },
-    { key: "profile", label: "Perfil", icon: UserCog },
+    { key: "qrcode", label: "QR", icon: QrCode },
+  ];
+  const benefitTabs: { key: Tab; label: string; icon: typeof Building2 }[] = hasActiveFree ? [
+    { key: "freebies", label: "Gratuitos", icon: Gift },
+    { key: "store", label: "Loja", icon: ShoppingBag },
+  ] : [];
+  const tabs = [
+    ...baseTabs,
+    ...benefitTabs,
+    { key: "collaborators" as Tab, label: "Equipe", icon: Users },
+    { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
   return (
@@ -131,12 +143,15 @@ function PartnerPanel() {
         {tab === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
         {tab === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
         {tab === "qrcode" && <QrCodePanel partner={partner} />}
+        {tab === "freebies" && hasActiveFree && <CoachBenefitsTab />}
+        {tab === "store" && hasActiveFree && <StorePage />}
+        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex" style={{ backgroundColor: "#111" }}>
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
             <t.icon className="h-5 w-5" />
             {t.label}
           </button>
@@ -672,6 +687,112 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
       </div>
       <button onClick={save} disabled={saving} className="w-full rounded bg-primary py-2 text-sm font-bold text-primary-foreground">{saving ? <Loader2 className="h-4 w-4 animate-spin inline" /> : <><Save className="inline h-4 w-4 mr-1" /> Salvar</>}</button>
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+    </div>
+  );
+}
+
+type Collaborator = {
+  id: string;
+  created_at: string;
+  profiles: { name: string; email: string | null; phone: string | null; photo_url: string | null } | null;
+};
+
+function CollaboratorsPanel({ partner }: { partner: Partner }) {
+  const [collabs, setCollabs] = useState<Collaborator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const link = partner.referral_code ? `${window.location.origin}/r/${partner.referral_code}` : "";
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("students")
+        .select("id, created_at, profiles!students_profile_id_fkey(name, email, phone, photo_url)")
+        .eq("partner_id", partner.id)
+        .order("created_at", { ascending: false });
+      setCollabs((data as unknown as Collaborator[]) || []);
+      setLoading(false);
+    })();
+  }, [partner.id]);
+
+  const copy = () => {
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    toast.success("Link copiado!");
+  };
+
+  const share = async () => {
+    if (!link) return;
+    const text = `Você foi convidado(a) para ser colaborador(a) da ${partner.fantasy_name} no FitMind Club. Crie sua conta:`;
+    if (navigator.share) {
+      try { await navigator.share({ title: partner.fantasy_name, text, url: link }); } catch { /* ignore */ }
+    } else {
+      copy();
+    }
+  };
+
+  if (!partner.referral_code) {
+    return (
+      <div className="rounded-xl p-6 text-center" style={{ backgroundColor: "#1A1A1A" }}>
+        <AlertTriangle className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
+        <p className="text-sm text-white/70">Código de indicação ainda não gerado. Atualize a página em instantes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: "#1A1A1A" }}>
+        <Users className="h-7 w-7 text-primary mx-auto mb-2" />
+        <h2 className="text-base font-bold text-white">Convidar colaboradores</h2>
+        <p className="mt-1 text-xs text-white/50">
+          Compartilhe este link com seus colaboradores. Eles entram como alunos vinculados à <b className="text-white/80">{partner.fantasy_name}</b> e recebem todos os benefícios do painel do aluno.
+        </p>
+
+        <div className="mt-4 inline-block bg-white p-3 rounded-xl">
+          <QRCodeSVG value={link} size={180} />
+        </div>
+
+        <div className="mt-3 rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{link}</div>
+        <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{partner.referral_code}</span></p>
+
+        <div className="mt-4 flex gap-2">
+          <button onClick={copy} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20">
+            <Copy className="h-3.5 w-3.5" /> Copiar link
+          </button>
+          <button onClick={share} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90">
+            <Share2 className="h-3.5 w-3.5" /> Compartilhar
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-white">Meus colaboradores</h3>
+          <span className="text-[11px] text-white/50">{collabs.length} cadastrado(s)</span>
+        </div>
+        {loading ? (
+          <p className="text-xs text-white/40">Carregando...</p>
+        ) : collabs.length === 0 ? (
+          <p className="text-xs text-white/40 text-center py-6">Nenhum colaborador cadastrado ainda. Compartilhe o link acima.</p>
+        ) : (
+          <div className="space-y-2">
+            {collabs.map(c => (
+              <div key={c.id} className="flex items-center gap-3 rounded-lg bg-black/30 px-3 py-2">
+                {c.profiles?.photo_url ? (
+                  <img src={c.profiles.photo_url} className="h-9 w-9 rounded-full object-cover" alt={c.profiles.name} />
+                ) : (
+                  <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-xs text-white/60">{c.profiles?.name?.[0]?.toUpperCase() || "?"}</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{c.profiles?.name || "—"}</p>
+                  <p className="text-[10px] text-white/40 truncate">{c.profiles?.email || c.profiles?.phone || ""}</p>
+                </div>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold">Colab.</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

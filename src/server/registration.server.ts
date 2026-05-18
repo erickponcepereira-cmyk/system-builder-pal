@@ -32,6 +32,7 @@ export type FinalizeRegistrationInput = {
     coachId: string;
     referredByStudentId?: string | null;
     referralCode?: string | null;
+    partnerId?: string | null;
   };
 };
 
@@ -167,6 +168,7 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
       coach_id: input.student.coachId,
       referred_by_student_id: input.student.referredByStudentId || null,
       referral_code: clean(input.student.referralCode),
+      partner_id: input.student.partnerId || null,
     },
     { onConflict: "profile_id" }
   );

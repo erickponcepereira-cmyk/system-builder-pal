@@ -19,10 +19,11 @@ import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 // ============================================================
 type ReferralContext = {
   code: string;
-  kind: "coach" | "student";
+  kind: "coach" | "student" | "partner";
   sponsorName: string;
   coachId: string | null;
   referredByStudentId: string | null;
+  partnerId?: string | null;
 };
 
 export function StudentRegistration({ onBack }: { onBack: () => void }) {
@@ -47,11 +48,10 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
       setReferral(parsed);
       if (parsed.coachId) {
         setSelectedCoach({ id: parsed.coachId, profileId: "", name: parsed.sponsorName, referralCode: parsed.code } as unknown as CoachOption);
-        // Se o sponsor for coach, o nome dele já é o nome do coach
         if (parsed.kind === "coach") {
           setReferralCoachName(parsed.sponsorName);
         } else {
-          // Se o sponsor for um aluno (padrinho), buscamos o nome do coach vinculado
+          // Sponsor é aluno (padrinho) ou parceiro (empresa): buscar nome do coach vinculado
           (async () => {
             const { data } = await supabase
               .from("coaches")
@@ -94,6 +94,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
             coachId: coachIdToUse,
             referredByStudentId: referral?.referredByStudentId || null,
             referralCode: referral?.code || null,
+            partnerId: referral?.partnerId || null,
           },
         },
       });
@@ -134,10 +135,15 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
         <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
           {referral && (
             <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-white/80">
-              <p className="font-semibold text-primary">Convite válido</p>
+              <p className="font-semibold text-primary">
+                {referral.kind === "partner" ? "Convite de colaborador" : "Convite válido"}
+              </p>
               <p className="mt-1">
-                Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>
-                {referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.
+                {referral.kind === "partner" ? (
+                  <>Você foi convidado(a) como colaborador(a) de <span className="font-semibold text-white">{referral.sponsorName}</span>. Você terá acesso ao painel de aluno com todos os benefícios.</>
+                ) : (
+                  <>Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>{referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.</>
+                )}
               </p>
             </div>
           )}

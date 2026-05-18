@@ -3232,6 +3232,8 @@ export type Database = {
           longitude: number | null
           photo_url: string | null
           profile_id: string
+          referral_code: string | null
+          referral_link: string | null
           state: string | null
           status: string
           updated_at: string
@@ -3259,6 +3261,8 @@ export type Database = {
           longitude?: number | null
           photo_url?: string | null
           profile_id: string
+          referral_code?: string | null
+          referral_link?: string | null
           state?: string | null
           status?: string
           updated_at?: string
@@ -3286,6 +3290,8 @@ export type Database = {
           longitude?: number | null
           photo_url?: string | null
           profile_id?: string
+          referral_code?: string | null
+          referral_link?: string | null
           state?: string | null
           status?: string
           updated_at?: string
@@ -4735,6 +4741,7 @@ export type Database = {
           metabolic_age: number | null
           muscle_mass: number | null
           notes: string | null
+          partner_id: string | null
           profile_id: string
           referral_code: string | null
           referral_link: string | null
@@ -4763,6 +4770,7 @@ export type Database = {
           metabolic_age?: number | null
           muscle_mass?: number | null
           notes?: string | null
+          partner_id?: string | null
           profile_id: string
           referral_code?: string | null
           referral_link?: string | null
@@ -4791,6 +4799,7 @@ export type Database = {
           metabolic_age?: number | null
           muscle_mass?: number | null
           notes?: string | null
+          partner_id?: string | null
           profile_id?: string
           referral_code?: string | null
           referral_link?: string | null
@@ -4806,6 +4815,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
           {
@@ -5470,6 +5486,7 @@ export type Database = {
         Returns: {
           coach_id: string
           kind: string
+          partner_id: string
           referred_by_student_id: string
           sponsor_name: string
           valid: boolean
