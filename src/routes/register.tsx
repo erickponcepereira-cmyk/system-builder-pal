@@ -77,7 +77,24 @@ function RegisterPage() {
               </div>
             </div>
           </button>
+
+          <button
+            onClick={() => setRole("partner")}
+            className="group w-full rounded-2xl border border-white/10 p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+            style={{ backgroundColor: "#1A1A1A" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                <Building2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Sou Empresa Parceira</h3>
+                <p className="text-sm text-white/50">Quero oferecer benefícios e produtos aos alunos</p>
+              </div>
+            </div>
+          </button>
         </div>
+
 
         <div className="mt-6 text-center text-sm text-white/40">
           Já tem conta?{" "}
