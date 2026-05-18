@@ -41,6 +41,7 @@ export function AdminShell() {
   const [authState, setAuthState] = useState<"checking" | "ok" | "denied">("checking");
   const [hasCoach, setHasCoach] = useState(false);
   const [hasStudent, setHasStudent] = useState(false);
+  const [hasPartner, setHasPartner] = useState(false);
   const [isMaster, setIsMaster] = useState(false);
   const [perms, setPerms] = useState<AdminPerms | null>(null);
 
@@ -63,13 +64,15 @@ export function AdminShell() {
         setIsMaster(!!(profile as any).is_master_admin);
         setPerms(((profile as any).admin_permissions as AdminPerms) || {});
         if (profile?.id) {
-          const [{ data: coach }, { data: student }] = await Promise.all([
+          const [{ data: coach }, { data: student }, { data: partner }] = await Promise.all([
             supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
             supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+            supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
           ]);
           if (!active) return;
           setHasCoach(!!coach);
           setHasStudent(!!student);
+          setHasPartner(!!partner);
         }
       } else setAuthState("denied");
     })();
