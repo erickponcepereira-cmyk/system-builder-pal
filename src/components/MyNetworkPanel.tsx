@@ -71,8 +71,8 @@ export function MyNetworkPanel() {
           available: Number(w.available_balance ?? 0),
           pending: Number(w.pending_balance ?? 0),
           total: Number(w.total_earned ?? 0),
-          directs: (directsRes as { count: number }).count ?? 0,
-          network: networkCount,
+          directs: directsCount,
+          network: directsCount,
           recent: ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string }>) || []).map((r) => ({
             id: r.id,
             amount: Number(r.amount),
