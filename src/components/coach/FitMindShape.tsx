@@ -673,7 +673,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       style={{
         padding: 24,
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+        background: "#0A0A0A",
+        color: "#ffffff",
       }}
     >
       <div
