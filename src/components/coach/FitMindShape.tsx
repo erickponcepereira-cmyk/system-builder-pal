@@ -718,7 +718,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           background: "var(--fm-primary)",
           border: "none",
         }}
-        onClick={() => setScreen("select-client")}
+        onClick={() => { setEntryIntent("new"); setScreen("select-client"); }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
@@ -749,7 +749,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       <div
         className="fm-card"
         style={{ cursor: "pointer" }}
-        onClick={() => setScreen("select-client")}
+        onClick={() => { setEntryIntent("browse"); setScreen("select-client"); }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
@@ -940,6 +940,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }}
             onClick={() => {
               setSelectedClient(c);
+              if (entryIntent === "new") {
+                setAssessment({ height: c.height || undefined });
+                setStep(0);
+                setScreen("assessment");
+                return;
+              }
               const sorted = (c.assessments ?? [])
                 .filter((it) => it?.date)
                 .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
