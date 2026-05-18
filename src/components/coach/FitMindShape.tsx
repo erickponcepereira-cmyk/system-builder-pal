@@ -524,6 +524,23 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       background: var(--fm-primary); color: #fff; border-radius: 16px;
       padding: 20px; display: flex; align-items: center; gap: 16px; margin-top: 24px;
     }
+    /* === Dark mode global do FitMindShape === */
+    .fm-app.fm-dark { color: #ffffff; }
+    .fm-app.fm-dark [style*="background: #f8fafc"], .fm-app.fm-dark [style*="background:#f8fafc"] { background: #0A0A0A !important; }
+    .fm-app.fm-dark [style*="background: #ffffff"], .fm-app.fm-dark [style*="background:#ffffff"], .fm-app.fm-dark [style*="background: #fff"], .fm-app.fm-dark [style*="background:#fff"] { background: #1A1A1A !important; }
+    .fm-app.fm-dark [style*="background: #f1f5f9"], .fm-app.fm-dark [style*="background:#f1f5f9"] { background: #1f2937 !important; }
+    .fm-app.fm-dark [style*="background: #f5f5f5"], .fm-app.fm-dark [style*="background:#f5f5f5"] { background: #1f2937 !important; }
+    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
+    .fm-app.fm-dark [style*="color: #0f172a"], .fm-app.fm-dark [style*="color:#0f172a"] { color: #ffffff !important; }
+    .fm-app.fm-dark [style*="color: #334155"], .fm-app.fm-dark [style*="color:#334155"] { color: #e2e8f0 !important; }
+    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #cbd5e1 !important; }
+    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #94a3b8 !important; }
+    .fm-app.fm-dark .fm-card { background: #1A1A1A; color: #ffffff; border-color: rgba(255,255,255,0.08); box-shadow: 0 2px 16px rgba(0,0,0,0.4); }
+    .fm-app.fm-dark .fm-input, .fm-app.fm-dark .fm-select { background: #0F0F0F; color: #ffffff; border-color: rgba(255,255,255,0.1); }
+    .fm-app.fm-dark .fm-input::placeholder { color: #6b7280; }
+    .fm-app.fm-dark .fm-label { color: #cbd5e1; }
+    .fm-app.fm-dark .fm-photo-box { background: #0F0F0F; border-color: rgba(255,255,255,0.15); color: #cbd5e1; }
+    .fm-app.fm-dark .fm-step-dot { background: rgba(255,255,255,0.1); }
   `;
 
   // ────────────────────────────────────────────────────────
@@ -2716,8 +2733,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   return (
     <div
-      className="fm-app"
-      style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily }}
+      className="fm-app fm-dark"
+      style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily, background: "#0A0A0A", minHeight: "100vh" }}
     >
       <style>{css}</style>
       {screen === "home" && HomeScreen()}
