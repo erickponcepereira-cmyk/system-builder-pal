@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { PatentBadge } from "@/components/coach/PatentBadge";
 import { CoachReports } from "@/components/coach/CoachReports";
 import { Logo } from "@/components/Logo";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { OverviewTab } from "@/components/coach/tabs/OverviewTab";
 import { NetworkTab } from "@/components/coach/tabs/NetworkTab";
 import { CoachProfileTab } from "@/components/coach/tabs/CoachProfileTab";
@@ -250,9 +251,12 @@ function CoachDashboard() {
 <Logo className="h-9 w-auto object-contain" />
           <span className="font-bold text-white">FitMind Club</span>
         </div>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
-          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <RoleSwitcher current="coach" />
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Sidebar */}
