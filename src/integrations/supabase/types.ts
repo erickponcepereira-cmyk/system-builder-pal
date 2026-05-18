@@ -4139,6 +4139,48 @@ export type Database = {
         }
         Relationships: []
       }
+      student_checkin_scans: {
+        Row: {
+          id: string
+          location: string | null
+          notes: string | null
+          scanned_at: string
+          scanned_by_profile_id: string | null
+          student_id: string
+        }
+        Insert: {
+          id?: string
+          location?: string | null
+          notes?: string | null
+          scanned_at?: string
+          scanned_by_profile_id?: string | null
+          student_id: string
+        }
+        Update: {
+          id?: string
+          location?: string | null
+          notes?: string | null
+          scanned_at?: string
+          scanned_by_profile_id?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_checkin_scans_scanned_by_profile_id_fkey"
+            columns: ["scanned_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_checkin_scans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_wallets: {
         Row: {
           available_balance: number | null
@@ -4879,6 +4921,10 @@ export type Database = {
       refresh_monthly_rankings: {
         Args: { _reference_month?: string }
         Returns: undefined
+      }
+      register_checkin_via_qr: {
+        Args: { _location?: string; _notes?: string; _student_id: string }
+        Returns: Json
       }
       release_available_commissions: { Args: never; Returns: number }
       release_nutritionist_blocked_entry: {
