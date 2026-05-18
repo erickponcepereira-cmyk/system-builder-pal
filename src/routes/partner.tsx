@@ -98,7 +98,18 @@ function PartnerPanel() {
             <p className="text-[10px] text-white/40">Status: <span className={partner.status === "approved" ? "text-green-400" : "text-yellow-400"}>{partner.status}</span></p>
           </div>
         </div>
-        <button onClick={signOut} className="text-white/60 hover:text-white"><LogOut className="h-5 w-5" /></button>
+        <div className="flex items-center gap-1.5">
+          {otherRoles.admin && (
+            <button onClick={() => switchTo("/admin")} className="rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-bold text-black hover:bg-amber-400">Admin</button>
+          )}
+          {otherRoles.coach && (
+            <button onClick={() => switchTo("/coach")} className="rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold text-primary-foreground hover:bg-primary/90">Coach</button>
+          )}
+          {otherRoles.student && (
+            <button onClick={() => switchTo("/student")} className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-white/20">Aluno</button>
+          )}
+          <button onClick={signOut} className="ml-1 text-white/60 hover:text-white"><LogOut className="h-5 w-5" /></button>
+        </div>
       </header>
 
       {partner.status !== "approved" && (
