@@ -27,6 +27,13 @@ interface Product {
   description: string | null; image_url: string | null; price: number; stock: number | null;
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
+  price_input_mode?: "charge" | "receive";
+  coach_commission_percentage?: number;
+  partner_net_amount?: number;
+  coach_commission_amount?: number;
+  network_l1_amount?: number;
+  network_l2_amount?: number;
+  network_l3_amount?: number;
 }
 
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
