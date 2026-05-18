@@ -3,7 +3,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse, Package } from "lucide-react";
+import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 
 export const Route = createFileRoute("/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
@@ -53,6 +54,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   sessions: { label: "Sessões", icon: Calendar },
   legal_docs: { label: "Documentos", icon: FileText },
   consultations: { label: "Consultas", icon: Calendar },
+  products: { label: "Produtos", icon: Package },
   wallet: { label: "Carteira", icon: Wallet },
   network: { label: "Rede", icon: Network },
 };
@@ -140,7 +142,8 @@ function ProfessionalPanel() {
     );
   }
 
-  const tabs = info.specialty?.default_tabs ?? ["students", "wallet", "network"];
+  const baseTabs = info.specialty?.default_tabs ?? ["students", "wallet", "network"];
+  const tabs = baseTabs.includes("products") ? baseTabs : [...baseTabs, "products"];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
@@ -192,6 +195,9 @@ function ProfessionalPanel() {
 }
 
 function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; assignments: AssignmentRow[] }) {
+  if (tab === "products") {
+    return <ProfessionalProductsPanel coachId={info.coachId} />;
+  }
   if (tab === "wallet") {
     return <PlaceholderCard title="Carteira" hint="Suas comissões da rede MLM aparecem aqui. Em breve: pagamentos por atendimento concluído." icon={<Wallet className="h-5 w-5" />} />;
   }

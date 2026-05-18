@@ -20,7 +20,7 @@ export const DEFAULT_PARTNER_FEES: PartnerFeeConfig = {
   pixFeePct: 0.99,
 };
 
-export const COACH_COMMISSION_OPTIONS = [10, 20, 30] as const;
+export const COACH_COMMISSION_OPTIONS = [10, 20, 30, 40, 50] as const;
 export type CoachCommissionPct = (typeof COACH_COMMISSION_OPTIONS)[number];
 
 // Distribuição da rede (sobre o valor da comissão do coach vendedor)
