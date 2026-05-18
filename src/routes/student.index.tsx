@@ -179,16 +179,11 @@ function StudentHome() {
 
       <div>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">Ações Rápidas</h2>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {[
             { icon: Camera, label: "Foto", to: "/student/evolution" },
-            { icon: ShoppingBag, label: "Loja", to: "/student/store" },
-            { icon: BookOpen, label: "Cursos", to: "/student/library" },
-            { icon: Gift, label: "Gratuitos", to: "/student/freebies" },
-            { icon: Apple, label: "Refeição", to: "/student/evolution" },
             { icon: Scale, label: "Pesagem", to: "/student/challenge" },
-            { icon: Sparkles, label: "IA", to: "/student/evolution" },
-            { icon: HelpCircle, label: "Ajuda", to: "/student/support" },
+            { icon: ClipboardList, label: "Protocolo", to: "/student/protocol" },
           ].map((a) => (
             <Link key={a.label} to={a.to} className="flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
