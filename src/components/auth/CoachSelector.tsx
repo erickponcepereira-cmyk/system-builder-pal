@@ -119,7 +119,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
         />
       </div>
 
-      <div className="max-h-44 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+      <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
         {loading ? (
           <p className="px-2 py-3 text-xs text-white/40">Buscando coaches...</p>
         ) : coaches.length === 0 ? (
