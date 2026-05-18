@@ -1,0 +1,411 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { maskPhone } from "@/lib/masks";
+
+export const Route = createFileRoute("/partner")({
+  head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
+  component: PartnerPanel,
+});
+
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "profile";
+
+interface Partner {
+  id: string; profile_id: string; fantasy_name: string; description: string | null;
+  photo_url: string | null; cover_url: string | null; whatsapp: string | null;
+  instagram: string | null; facebook: string | null; website: string | null;
+  address: string | null; city: string | null; state: string | null;
+  status: string; document: string | null; document_type: string | null;
+}
+
+interface Product {
+  id: string; partner_id: string; kind: "free" | "paid"; name: string;
+  description: string | null; image_url: string | null; price: number; stock: number | null;
+  redemption_instructions: string | null; status: string; admin_notes: string | null;
+  is_active_by_partner: boolean;
+}
+
+interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
+
+function PartnerPanel() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>("overview");
+  const [partner, setPartner] = useState<Partner | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [visits, setVisits] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) { navigate({ to: "/login" }); return; }
+    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
+    if (!profile) { setLoading(false); return; }
+    const { data: p } = await supabase.from("partners" as never).select("*").eq("profile_id" as never, profile.id).maybeSingle();
+    if (!p) { setLoading(false); return; }
+    const pt = p as unknown as Partner;
+    setPartner(pt);
+    const [pr, ps, v] = await Promise.all([
+      supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }),
+      supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }).limit(30),
+      supabase.from("partner_visits" as never).select("id" as never, { count: "exact", head: true }).eq("partner_id" as never, pt.id),
+    ]);
+    setProducts((pr.data as unknown as Product[]) || []);
+    setPosts((ps.data as unknown as Post[]) || []);
+    setVisits(v.count || 0);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (!partner) return <div className="min-h-screen flex items-center justify-center text-white" style={{ backgroundColor: "#0A0A0A" }}>Cadastro de parceiro não encontrado.</div>;
+
+  const hasActiveFree = products.some(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner);
+  const pendingCount = products.filter(p => p.status === "pending").length;
+
+  const tabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
+    { key: "overview", label: "Início", icon: Building2 },
+    { key: "products", label: "Produtos", icon: Package },
+    { key: "timeline", label: "Timeline", icon: ImageIcon },
+    { key: "qrcode", label: "QR Code", icon: QrCode },
+    { key: "profile", label: "Perfil", icon: UserCog },
+  ];
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
+      <header className="border-b border-white/5 px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "#111" }}>
+        <div className="flex items-center gap-2">
+          <Logo className="h-8 w-8" />
+          <div>
+            <p className="text-sm font-bold text-white">{partner.fantasy_name}</p>
+            <p className="text-[10px] text-white/40">Status: <span className={partner.status === "approved" ? "text-green-400" : "text-yellow-400"}>{partner.status}</span></p>
+          </div>
+        </div>
+        <button onClick={signOut} className="text-white/60 hover:text-white"><LogOut className="h-5 w-5" /></button>
+      </header>
+
+      {partner.status !== "approved" && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-2 text-xs text-yellow-200 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" /> Sua empresa aguarda aprovação do admin. Você já pode preencher o perfil e cadastrar produtos.
+        </div>
+      )}
+
+      <main className="px-4 py-4 pb-24 max-w-3xl mx-auto">
+        {tab === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} />}
+        {tab === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
+        {tab === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
+        {tab === "qrcode" && <QrCodePanel partner={partner} />}
+        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
+      </main>
+
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex" style={{ backgroundColor: "#111" }}>
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+            <t.icon className="h-5 w-5" />
+            {t.label}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number }) {
+  const approved = products.filter(p => p.status === "approved" && p.is_active_by_partner).length;
+  return (
+    <div className="space-y-3">
+      {!hasActiveFree && (
+        <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
+          <AlertTriangle className="inline h-4 w-4 mr-1" /> Você precisa de pelo menos <b>1 produto gratuito aprovado e ativo</b> para publicar produtos pagos. Os pagos ficam pausados enquanto isso.
+        </div>
+      )}
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="Visitas" value={visits} />
+        <Stat label="Produtos ativos" value={approved} />
+        <Stat label="Pendentes" value={pendingCount} />
+      </div>
+      <div className="rounded-xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <p className="text-xs text-white/40 mb-2">Bem-vindo(a), {partner.fantasy_name}</p>
+        <p className="text-sm text-white/70">Use as abas para gerenciar produtos, timeline, QR code de presença e seu perfil público.</p>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-[10px] text-white/40">{label}</p>
+    </div>
+  );
+}
+
+function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
+  const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const blank = (): Partial<Product> => ({ partner_id: partner.id, kind: hasActiveFree ? "paid" : "free", name: "", description: "", image_url: "", price: 0, stock: null, redemption_instructions: "", is_active_by_partner: true });
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `partners/${partner.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setUploading(false); return; }
+    const { data } = supabase.storage.from("store-images").getPublicUrl(path);
+    setEditing(e => e ? { ...e, image_url: data.publicUrl } : e);
+    setUploading(false);
+  };
+
+  const save = async () => {
+    if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
+    const payload = { ...editing, partner_id: partner.id, status: "pending" as const, admin_notes: null };
+    if (editing.id) {
+      const { id, ...up } = payload;
+      const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("partner_products" as never).insert(payload as never);
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Salvo. Aguardando aprovação do admin.");
+    setEditing(null); onReload();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Excluir produto?")) return;
+    const { error } = await supabase.from("partner_products" as never).delete().eq("id" as never, id);
+    if (error) return toast.error(error.message);
+    toast.success("Removido"); onReload();
+  };
+
+  const toggleActive = async (p: Product) => {
+    const { error } = await supabase.from("partner_products" as never).update({ is_active_by_partner: !p.is_active_by_partner } as never).eq("id" as never, p.id);
+    if (error) return toast.error(error.message);
+    onReload();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-white">Meus produtos</h2>
+        <button onClick={() => setEditing(blank())} className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Novo</button>
+      </div>
+
+      {products.length === 0 && <p className="text-sm text-white/40 text-center py-8">Nenhum produto cadastrado ainda.</p>}
+
+      <div className="space-y-2">
+        {products.map(p => (
+          <div key={p.id} className="rounded-xl p-3 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
+            {p.image_url ? <img src={p.image_url} className="h-16 w-16 rounded object-cover" alt={p.name} /> : <div className="h-16 w-16 rounded bg-white/5" />}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.kind === "free" ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>{p.kind === "free" ? "Gratuito" : "Pago"}</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded ${statusColor(p.status)}`}>{p.status}</span>
+              </div>
+              {p.kind === "paid" && <p className="text-xs text-primary">R$ {Number(p.price).toFixed(2)}</p>}
+              {p.status === "rejected" && p.admin_notes && <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>}
+              <div className="mt-1.5 flex gap-2">
+                <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
+                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
+                <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2" onClick={() => setEditing(null)}>
+          <div className="w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-base font-bold text-white">{editing.id ? "Editar" : "Novo"} produto</h3>
+              <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-white/60" /></button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="text-xs text-white/60">Tipo</label>
+                <select value={editing.kind} onChange={e => setEditing({ ...editing, kind: e.target.value as "free" | "paid" })} disabled={editing.kind === "paid" && !hasActiveFree && !editing.id} className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-white">
+                  <option value="free">Gratuito (obrigatório ter ao menos 1)</option>
+                  <option value="paid" disabled={!hasActiveFree && !editing.id}>Pago / Patrocinado {!hasActiveFree && !editing.id ? "(crie 1 gratuito antes)" : ""}</option>
+                </select>
+              </div>
+              <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
+              <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
+              <Field label="Imagem">
+                {editing.image_url ? (
+                  <div className="relative"><img src={editing.image_url} className="h-32 w-full rounded object-cover" /><button onClick={() => setEditing({ ...editing, image_url: "" })} className="absolute top-1 right-1 bg-black/70 rounded p-1"><X className="h-3 w-3 text-white" /></button></div>
+                ) : (
+                  <label className="flex h-24 cursor-pointer items-center justify-center rounded border border-dashed border-white/20">
+                    {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
+                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
+                  </label>
+                )}
+              </Field>
+              {editing.kind === "paid" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Preço (R$)"><input type="number" step="0.01" value={editing.price || 0} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="field-input" /></Field>
+                  <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
+                </div>
+              )}
+              <Field label="Instruções de resgate"><textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Apresente o QR Code da carteirinha na loja" /></Field>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
+              <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><Save className="inline h-4 w-4 mr-1" /> Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+    </div>
+  );
+}
+
+function statusColor(s: string) {
+  return s === "approved" ? "bg-green-500/15 text-green-400" : s === "rejected" ? "bg-red-500/15 text-red-400" : s === "inactive" ? "bg-white/10 text-white/50" : "bg-yellow-500/15 text-yellow-400";
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><label className="text-xs text-white/60">{label}</label><div className="mt-1">{children}</div></div>;
+}
+
+function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: Post[]; onReload: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [pending, setPending] = useState<string | null>(null);
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `partners/${partner.id}/posts/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("store-images").upload(path, file);
+    if (error) { toast.error(error.message); setUploading(false); return; }
+    const { data } = supabase.storage.from("store-images").getPublicUrl(path);
+    setPending(data.publicUrl);
+    setUploading(false);
+  };
+
+  const publish = async () => {
+    if (!pending) return;
+    const { error } = await supabase.from("partner_posts" as never).insert({ partner_id: partner.id, image_url: pending, caption } as never);
+    if (error) return toast.error(error.message);
+    toast.success("Publicado"); setPending(null); setCaption(""); onReload();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Excluir post?")) return;
+    await supabase.from("partner_posts" as never).delete().eq("id" as never, id);
+    onReload();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+        <p className="text-xs text-white/60 mb-2">Adicionar foto à timeline (máx. 30 posts)</p>
+        {pending ? (
+          <div className="space-y-2">
+            <img src={pending} className="w-full rounded" />
+            <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Legenda (opcional)" className="w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white" />
+            <div className="flex gap-2">
+              <button onClick={() => setPending(null)} className="flex-1 rounded bg-white/5 py-2 text-sm text-white">Cancelar</button>
+              <button onClick={publish} className="flex-1 rounded bg-primary py-2 text-sm font-bold text-primary-foreground">Publicar</button>
+            </div>
+          </div>
+        ) : (
+          <label className="flex h-24 cursor-pointer items-center justify-center rounded border border-dashed border-white/20">
+            {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
+            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} disabled={posts.length >= 30} />
+          </label>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+        {posts.map(p => (
+          <div key={p.id} className="relative aspect-square group">
+            <img src={p.image_url} className="h-full w-full object-cover rounded" />
+            <button onClick={() => remove(p.id)} className="absolute top-1 right-1 bg-black/70 rounded p-1 opacity-0 group-hover:opacity-100"><Trash2 className="h-3 w-3 text-white" /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QrCodePanel({ partner }: { partner: Partner }) {
+  const url = `${window.location.origin}/partner-checkin/${partner.id}`;
+  return (
+    <div className="rounded-xl p-6 text-center space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
+      <h2 className="text-lg font-bold text-white">{partner.fantasy_name}</h2>
+      <p className="text-xs text-white/50">QR Code fixo de check-in — imprima e deixe visível no estabelecimento</p>
+      <div className="inline-block bg-white p-4 rounded-xl">
+        <QRCodeSVG value={url} size={220} />
+      </div>
+      <p className="text-[10px] text-white/40 break-all">{url}</p>
+      <button onClick={() => window.print()} className="rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Imprimir</button>
+    </div>
+  );
+}
+
+function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () => void }) {
+  const [form, setForm] = useState(partner);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const upload = async (file: File, field: "photo_url" | "cover_url") => {
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `partners/${partner.id}/${field}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setUploading(false); return; }
+    const { data } = supabase.storage.from("store-images").getPublicUrl(path);
+    setForm({ ...form, [field]: data.publicUrl });
+    setUploading(false);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const { id, profile_id, status, ...up } = form;
+    const { error } = await supabase.from("partners" as never).update(up as never).eq("id" as never, partner.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Perfil atualizado"); onReload();
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+      <Field label="Foto / Logo">
+        <div className="flex items-center gap-3">
+          {form.photo_url && <img src={form.photo_url} className="h-16 w-16 rounded-full object-cover" />}
+          <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Trocar foto"}
+            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "photo_url")} />
+          </label>
+        </div>
+      </Field>
+      <Field label="Nome fantasia"><input className="field-input" value={form.fantasy_name} onChange={e => setForm({ ...form, fantasy_name: e.target.value })} /></Field>
+      <Field label="Descrição"><textarea className="field-input" rows={3} value={form.description || ""} onChange={e => setForm({ ...form, description: e.target.value })} /></Field>
+      <Field label="WhatsApp"><input className="field-input" value={form.whatsapp || ""} onChange={e => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} /></Field>
+      <Field label="Instagram (@usuario ou URL)"><input className="field-input" value={form.instagram || ""} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
+      <Field label="Facebook (URL)"><input className="field-input" value={form.facebook || ""} onChange={e => setForm({ ...form, facebook: e.target.value })} /></Field>
+      <Field label="Website"><input className="field-input" value={form.website || ""} onChange={e => setForm({ ...form, website: e.target.value })} /></Field>
+      <Field label="Endereço"><input className="field-input" value={form.address || ""} onChange={e => setForm({ ...form, address: e.target.value })} /></Field>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-2"><Field label="Cidade"><input className="field-input" value={form.city || ""} onChange={e => setForm({ ...form, city: e.target.value })} /></Field></div>
+        <Field label="UF"><input className="field-input" value={form.state || ""} onChange={e => setForm({ ...form, state: e.target.value.toUpperCase().slice(0, 2) })} /></Field>
+      </div>
+      <button onClick={save} disabled={saving} className="w-full rounded bg-primary py-2 text-sm font-bold text-primary-foreground">{saving ? <Loader2 className="h-4 w-4 animate-spin inline" /> : <><Save className="inline h-4 w-4 mr-1" /> Salvar</>}</button>
+      <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+    </div>
+  );
+}
