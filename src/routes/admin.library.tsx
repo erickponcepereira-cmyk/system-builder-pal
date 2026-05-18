@@ -151,22 +151,35 @@ function AdminLibraryPage() {
 
   return (
     <div className="mx-auto max-w-6xl text-white">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Biblioteca de Exercícios</h1>
-          <p className="text-sm text-white/60">Cadastre exercícios com vídeo, GIF ou imagem para uso dos coaches.</p>
-        </div>
+      <header className="mb-4">
+        <h1 className="text-2xl font-bold">Biblioteca</h1>
+        <p className="text-sm text-white/60">Exercícios e treinos prontos para os coaches.</p>
+      </header>
+
+      <div className="mb-5 flex gap-2 border-b border-white/10">
+        <button onClick={() => setTab("exercises")} className={`flex items-center gap-1.5 px-3 pb-2 text-sm font-semibold ${tab === "exercises" ? "text-primary border-b-2 border-primary" : "text-white/50"}`}>
+          <Dumbbell className="h-4 w-4" /> Exercícios
+        </button>
+        <button onClick={() => setTab("templates")} className={`flex items-center gap-1.5 px-3 pb-2 text-sm font-semibold ${tab === "templates" ? "text-primary border-b-2 border-primary" : "text-white/50"}`}>
+          <ClipboardList className="h-4 w-4" /> Treinos prontos
+        </button>
+      </div>
+
+      {tab === "templates" ? (
+        <WorkoutTemplatesPanel mode="admin" />
+      ) : (
+      <>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nome ou grupo muscular..."
+          className="flex-1 min-w-[200px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30"
+        />
         <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
           <Plus className="h-4 w-4" /> Novo exercício
         </button>
-      </header>
-
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por nome ou grupo muscular..."
-        className="mb-4 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30"
-      />
+      </div>
 
       {loading ? (
         <p className="text-sm text-white/60">Carregando...</p>
