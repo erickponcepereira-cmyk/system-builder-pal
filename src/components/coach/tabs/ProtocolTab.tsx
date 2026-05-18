@@ -318,6 +318,7 @@ export function ProtocolTab() {
             <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "health"} onClick={() => setSection("health")} icon={Heart} label="Saúde & metas" />
             <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            <TabBtn active={section === "templates"} onClick={() => setSection("templates")} icon={BookOpen} label="Treinos prontos" />
           </div>
 
           {loading && <p className="text-sm text-white/40">Carregando...</p>}
