@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, User, Dumbbell } from "lucide-react";
+import { ArrowLeft, User, Dumbbell, Building2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { CoachRegistration } from "@/components/auth/CoachRegistration";
 import { StudentRegistration } from "@/components/auth/StudentRegistration";
+import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 
 type SearchParams = { role?: string };
 
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
       { title: "Cadastro — FitMind Club" },
-      { name: "description", content: "Cadastre-se como coach ou aluno na plataforma FitMind Club." },
+      { name: "description", content: "Cadastre-se como coach, aluno ou empresa parceira na plataforma FitMind Club." },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
@@ -22,18 +23,14 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const search = Route.useSearch();
-  const [role, setRole] = useState<"student" | "coach" | null>(
-    search.role === "coach" ? "coach" : search.role === "student" ? "student" : null
+  const [role, setRole] = useState<"student" | "coach" | "partner" | null>(
+    search.role === "coach" ? "coach" : search.role === "student" ? "student" : search.role === "partner" ? "partner" : null
   );
 
-  // If coach, show multi-step. If student, simpler form.
-  if (role === "coach") {
-    return <CoachRegistration onBack={() => setRole(null)} />;
-  }
+  if (role === "coach") return <CoachRegistration onBack={() => setRole(null)} />;
+  if (role === "student") return <StudentRegistration onBack={() => setRole(null)} />;
+  if (role === "partner") return <PartnerRegistration onBack={() => setRole(null)} />;
 
-  if (role === "student") {
-    return <StudentRegistration onBack={() => setRole(null)} />;
-  }
 
   // Role selection
   return (
@@ -80,7 +77,24 @@ function RegisterPage() {
               </div>
             </div>
           </button>
+
+          <button
+            onClick={() => setRole("partner")}
+            className="group w-full rounded-2xl border border-white/10 p-6 text-left transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+            style={{ backgroundColor: "#1A1A1A" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                <Building2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">Sou Empresa Parceira</h3>
+                <p className="text-sm text-white/50">Quero oferecer benefícios e produtos aos alunos</p>
+              </div>
+            </div>
+          </button>
         </div>
+
 
         <div className="mt-6 text-center text-sm text-white/40">
           Já tem conta?{" "}

@@ -13,6 +13,7 @@ import { Route as StudentRouteImport } from './routes/student'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
@@ -36,6 +37,7 @@ import { Route as StudentCardRouteImport } from './routes/student.card'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
+import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-checkin.$partnerId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -48,6 +50,7 @@ import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminProductOrdersRouteImport } from './routes/admin.product-orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
+import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
@@ -82,6 +85,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const PendingApprovalRoute = PendingApprovalRouteImport.update({
   id: '/pending-approval',
   path: '/pending-approval',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -199,6 +207,11 @@ const PayOrderNumberRoute = PayOrderNumberRouteImport.update({
   path: '/pay/$orderNumber',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PartnerCheckinPartnerIdRoute = PartnerCheckinPartnerIdRouteImport.update({
+  id: '/partner-checkin/$partnerId',
+  path: '/partner-checkin/$partnerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
@@ -257,6 +270,11 @@ const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
 const AdminPatentsRoute = AdminPatentsRouteImport.update({
   id: '/patents',
   path: '/patents',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPartnersRoute = AdminPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
@@ -341,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -354,6 +373,7 @@ export interface FileRoutesByFullPath {
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
@@ -366,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
@@ -396,6 +417,7 @@ export interface FileRoutesByTo {
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -408,6 +430,7 @@ export interface FileRoutesByTo {
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
@@ -420,6 +443,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
@@ -452,6 +476,7 @@ export interface FileRoutesById {
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -465,6 +490,7 @@ export interface FileRoutesById {
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
@@ -477,6 +503,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/student/benefits': typeof StudentBenefitsRoute
@@ -510,6 +537,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/login'
     | '/onboarding'
+    | '/partner'
     | '/pending-approval'
     | '/register'
     | '/reset-password'
@@ -523,6 +551,7 @@ export interface FileRouteTypes {
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
     | '/admin/product-orders'
@@ -535,6 +564,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/checkin/$studentId'
     | '/invite/$token'
+    | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
@@ -565,6 +595,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/login'
     | '/onboarding'
+    | '/partner'
     | '/pending-approval'
     | '/register'
     | '/reset-password'
@@ -577,6 +608,7 @@ export interface FileRouteTypes {
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
     | '/admin/product-orders'
@@ -589,6 +621,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/checkin/$studentId'
     | '/invite/$token'
+    | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
@@ -620,6 +653,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/login'
     | '/onboarding'
+    | '/partner'
     | '/pending-approval'
     | '/register'
     | '/reset-password'
@@ -633,6 +667,7 @@ export interface FileRouteTypes {
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
     | '/admin/product-orders'
@@ -645,6 +680,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/checkin/$studentId'
     | '/invite/$token'
+    | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/student/benefits'
@@ -677,12 +713,14 @@ export interface RootRouteChildren {
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  PartnerRoute: typeof PartnerRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  PartnerCheckinPartnerIdRoute: typeof PartnerCheckinPartnerIdRoute
   PayOrderNumberRoute: typeof PayOrderNumberRoute
   RCodeRoute: typeof RCodeRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
@@ -720,6 +758,13 @@ declare module '@tanstack/react-router' {
       path: '/pending-approval'
       fullPath: '/pending-approval'
       preLoaderRoute: typeof PendingApprovalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -883,6 +928,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PayOrderNumberRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partner-checkin/$partnerId': {
+      id: '/partner-checkin/$partnerId'
+      path: '/partner-checkin/$partnerId'
+      fullPath: '/partner-checkin/$partnerId'
+      preLoaderRoute: typeof PartnerCheckinPartnerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/invite/$token': {
       id: '/invite/$token'
       path: '/invite/$token'
@@ -965,6 +1017,13 @@ declare module '@tanstack/react-router' {
       path: '/patents'
       fullPath: '/admin/patents'
       preLoaderRoute: typeof AdminPatentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/partners': {
+      id: '/admin/partners'
+      path: '/partners'
+      fullPath: '/admin/partners'
+      preLoaderRoute: typeof AdminPartnersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/orders': {
@@ -1097,6 +1156,7 @@ interface AdminRouteChildren {
   AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminPartnersRoute: typeof AdminPartnersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminProductOrdersRoute: typeof AdminProductOrdersRoute
@@ -1120,6 +1180,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLibraryRoute: AdminLibraryRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
+  AdminPartnersRoute: AdminPartnersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminProductOrdersRoute: AdminProductOrdersRoute,
@@ -1180,12 +1241,14 @@ const rootRouteChildren: RootRouteChildren = {
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  PartnerRoute: PartnerRoute,
   PendingApprovalRoute: PendingApprovalRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   InviteTokenRoute: InviteTokenRoute,
+  PartnerCheckinPartnerIdRoute: PartnerCheckinPartnerIdRoute,
   PayOrderNumberRoute: PayOrderNumberRoute,
   RCodeRoute: RCodeRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,

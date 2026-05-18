@@ -1,82 +1,100 @@
-# Plano: Configuração completa do Perfil do Aluno
+# Novo perfil: Empresa Parceira (Partner)
 
-Vou agrupar o trabalho em blocos lógicos. Algumas partes precisam de confirmação antes de eu começar.
+Criar um quarto tipo de usuário no FitChain — **Partner** (empresa parceira) — que cadastra benefícios gratuitos e produtos patrocinados para alunos e coaches, com aprovação obrigatória do admin.
 
-## 1. Checkout e Indicação (paridade com Coach)
+## Regras de negócio
 
-- Replicar fluxo de checkout do Coach na Loja do Aluno (Mercado Pago, mesmas opções de PIX/Cartão usadas no painel admin).
-- Corrigir link de indicação `/r/:code`:
-  - Hoje gera código por aluno, mas o registro nem sempre herda o coach do indicador.
-  - Ajuste: ao acessar `/r/{code}`, redirecionar direto para `/register` com o `coach_id` do aluno indicador pré-vinculado e o `referred_by_student_id` salvo.
-  - Quando o indicado comprar um produto (challenge), a função `process_paid_transaction` já paga comissão de indicação — vou validar que o slot `referral_student` está nos produtos padrão e ajustar se faltar.
+1. Cadastro pela tela de registro pública com role `partner` (CPF/CNPJ, nome fantasia, foto, descrição, localização, WhatsApp, redes sociais).
+2. Login direciona para `/partner` (painel próprio, mobile-first como o do coach).
+3. **Regra do gratuito obrigatório:** a empresa só pode publicar produtos pagos enquanto tiver pelo menos 1 produto gratuito ativo e aprovado. Se desativar/expirar o gratuito → todos os pagos da empresa são automaticamente despublicados (trigger no banco).
+4. Todo produto (gratuito ou pago) entra com status `pending` e precisa de aprovação do admin. Admin pode aprovar ou reprovar com observação que aparece para o partner corrigir.
+5. Produtos aprovados:
+   - Gratuitos → aparecem na aba **Gratuitos** (aluno + coach) com selo "Parceiro"
+   - Pagos → aparecem na **Loja**, em categoria fixa **"Patrocinados"**
+6. Cada produto exibe o perfil da empresa clicável (modal): fotos, descrição, redes sociais, WhatsApp, **timeline de posts** (galeria de fotos que a empresa publica).
+7. QR Code de check-in: cada empresa tem QR fixo (`/partner-checkin/:partnerId`). Aluno escaneia → registra visita automática na `attendance_logs` (activity_type = `partner_visit`) e fica visível no perfil dele.
+8. Admin pode editar todos os campos da empresa via painel Admin → nova aba **Empresas Parceiras**.
 
-## 2. Home do Aluno
+## Fases
 
-- Saudação dinâmica: "Bom dia / Boa tarde / Boa noite, {nome}" baseada em `new Date().getHours()` (00-11 / 12-17 / 18-23). Fallback: "Seja bem-vindo, {nome}".
-- **Ações rápidas**: remover Loja, Cursos, Gratuitos, Refeição, IA, Ajuda. Manter Foto, Pesagem; adicionar **Protocolo**.
+### Fase 1 — Banco de dados (migration)
+- enum `user_role` adicionar `'partner'`
+- tabela `partners` (profile_id, fantasy_name, document, document_type, photo_url, description, latitude/longitude, address, city, state, whatsapp, instagram, facebook, website, status, approved_at, blocked_at)
+- tabela `partner_products` (partner_id, kind 'free'|'paid', name, description, image_url, price, stock, status `pending|approved|rejected|inactive`, admin_notes, approved_at, approved_by)
+- tabela `partner_posts` (partner_id, image_url, caption, created_at) — timeline
+- tabela `partner_visits` (partner_id, student_id, visited_at, source) — check-ins por QR
+- Trigger `enforce_partner_free_required`: ao desativar/reprovar/expirar o último produto gratuito aprovado, faz UPDATE em `partner_products` setando `status='inactive'` para todos pagos da mesma empresa.
+- Função `partner_checkin(_partner_id)`: insere `partner_visits` + `attendance_logs`.
+- RLS:
+  - partners: owner select/update próprio, admin tudo, público select (aprovados)
+  - partner_products: owner CRUD próprios, admin tudo, público select (status approved)
+  - partner_posts: owner CRUD, público select (se partner aprovado)
+  - partner_visits: owner select próprios, student select próprios, admin tudo
 
-## 3. Foto (IA de refeição)
+### Fase 2 — Cadastro e Auth
+- `PartnerRegistration.tsx` (form com CNPJ/CPF, máscara, validação Zod)
+- Adicionar opção "Sou empresa parceira" em `/register`
+- `handle_new_user` trigger: criar linha em `partners` quando role = partner
+- Roteamento pós-login em `/login`: se role partner → `/partner`
 
-- Marcar como "Em breve" — botão desabilitado com badge.
+### Fase 3 — Painel do Parceiro (`/partner`)
+- Shell mobile com abas: **Início**, **Produtos**, **Timeline**, **QR Code**, **Perfil**
+- Início: stats (visitas, produtos ativos, pendentes de aprovação), alerta se faltar gratuito ativo
+- Produtos: CRUD com formulário (kind, nome, descrição, imagem, preço, estoque) — bloqueia "novo pago" se não houver gratuito ativo aprovado. Mostra status e admin_notes em caso de rejeição.
+- Timeline: upload de fotos com legenda, grid estilo Instagram
+- QR Code: gera QR fixo apontando para `/partner-checkin/:partnerId`, botão download/print
+- Perfil: editar fantasy_name, foto, descrição, endereço, WhatsApp, redes sociais
 
-## 4. Perfil do Aluno → Carteirinha
+### Fase 4 — Aprovação no Admin
+- Nova aba **Empresas** em AdminShell (perm key `partners`)
+- Listagem com filtros (pendentes, ativas, bloqueadas), aprovar/bloquear empresa
+- Sub-aba **Produtos pendentes**: lista de partner_products aguardando; aprovar ou reprovar com observação
+- Edição completa de qualquer empresa (todos os campos)
+- Permissão também controlada em `admin-permissions.ts`
 
-- Nova seção "Minha Carteirinha":
-  - Card com foto, nome, código de aluno, plano ativo, coach.
-  - **QR Code fixo** (gerado a partir do `student.id`, sempre o mesmo).
-  - Quando qualquer pessoa autenticada escaneia esse QR, abre rota `/checkin/:studentId` que registra presença no desafio do aluno e vincula quem leu (`scanned_by_profile_id`).
-- Servirá também como identificação para benefícios gratuitos (será usado depois pelos parceiros).
+### Fase 5 — Exposição para Aluno e Coach
+- `student.freebies.tsx`: adicionar seção "Benefícios de parceiros" listando `partner_products` aprovados com kind=free; card com modal de perfil da empresa
+- `student.store.tsx`: adicionar categoria fixa "Patrocinados" listando partner_products approved + kind=paid
+- `coach`: aba **Gratuitos** ganha mesma seção de parceiros
+- Componente `PartnerProfileModal`: exibe info da empresa, redes sociais, WhatsApp, timeline (grid), lista de outros produtos da empresa
+- Rota pública `/partner-checkin/$partnerId.tsx`: aluno logado → chama `partner_checkin`, mostra confirmação visual e badge no perfil
 
-**Backend necessário:**
-- Tabela `student_checkin_scans` (id, student_id, scanned_by_profile_id, scanned_at).
-- Server function `register_checkin_via_qr(student_id)` que chama `student_check_in` no contexto do aluno escaneado e registra o scan.
+### Fase 6 — Integração no perfil do aluno
+- Em `student.profile.tsx` mostrar histórico de visitas a parceiros (últimas 10) com data e nome da empresa
 
-## 5. Ficha de Protocolo (nova)
+## Detalhes técnicos
 
-Nova rota `/student/protocol` acessada pelo card "Protocolo":
+- Imagens via bucket `store-images` (já existe) em pasta `partners/`
+- Realtime opcional para notificar partner quando produto é aprovado (usa tabela `notifications` existente)
+- Timeline limitada a 30 posts por empresa para manter leveza
+- Lista de produtos paginada (12 por página) em Loja e Gratuitos
+- Validação Zod em todos os formulários
+- Trigger de "free required" roda em `AFTER UPDATE OF status ON partner_products` para garantir consistência
 
-- **Dados clínicos** (editáveis pelo aluno/coach): tipo sanguíneo, alergias, cirurgias, restrições físicas, condições (cardiopata, diabético, etc.), medicações em uso.
-- **Protocolo atual** (preenchido pelo Coach — UI somente leitura para o aluno):
-  - Dieta atribuída
-  - Exercícios atribuídos
-  - Meta de calorias/dia
-  - Meta de água/dia
-- **Atalhos**: botões para Anamnese, Resultado da Bioimpedância, Fichas profissionais (nutricionista, médico).
+## Arquivos novos
 
-**Backend necessário:**
-- Tabela `student_health_profile` (1:1 com student): tipo_sanguineo, alergias[], cirurgias, restricoes, condicoes, medicacoes.
-- Tabela `student_protocols` (criada pelo coach posteriormente): student_id, coach_id, diet_plan, exercise_plan, daily_calories, daily_water_ml, active, dates.
-- Tabela `student_professional_records`: student_id, professional_profile_id, type (nutritionist/doctor/...), document_url, notes.
+- `supabase/migrations/<timestamp>_partners.sql`
+- `src/components/auth/PartnerRegistration.tsx`
+- `src/routes/partner.tsx` (layout shell)
+- `src/routes/partner.index.tsx`
+- `src/routes/partner.products.tsx`
+- `src/routes/partner.timeline.tsx`
+- `src/routes/partner.qrcode.tsx`
+- `src/routes/partner.profile.tsx`
+- `src/routes/partner-checkin.$partnerId.tsx`
+- `src/routes/admin.partners.tsx`
+- `src/components/partners/PartnerProfileModal.tsx`
+- `src/components/partners/PartnerProductCard.tsx`
 
-A criação pelo Coach virá em iteração futura — agora deixo a estrutura e a tela do aluno lendo o que existir.
+## Arquivos editados
 
-## 6. Desafio — Ranking por categoria
+- `src/lib/admin-permissions.ts` (+ key `partners`)
+- `src/components/admin/AdminShell.tsx` (+ aba Empresas)
+- `src/routes/register.tsx` (+ opção parceira)
+- `src/routes/login.tsx` (+ redirect partner)
+- `src/routes/student.freebies.tsx` (+ benefícios de parceiros)
+- `src/routes/student.store.tsx` (+ categoria patrocinados)
+- `src/routes/student.profile.tsx` (+ histórico de visitas)
+- `src/routes/coach.tsx` (aba Gratuitos com parceiros)
 
-- Substituir categorias atuais por: **Gordura**, **Músculo**, **Peso**.
-- Ordenar pelos campos da última `coach_body_assessments` (body_fat ↓, skeletal_muscle ↓, weight perda %).
-
-## 7. Grupo do Aluno (real)
-
-- Hoje é mock. Tornar real:
-  - Listar membros: todos os alunos + coaches ativos do mesmo `group_id` (ou da rede do coach do aluno).
-  - Mensagens reais via tabela `group_messages` já existente (vou verificar; criar se faltar).
-  - Realtime via `supabase.channel`.
-
-## 8. Loja — Categorias
-
-- Bug: filtros mostram categorias hardcoded.
-- Carregar categorias apenas da tabela `store_categories` (ou equivalente) + opção fixa "Todos".
-
----
-
-## Perguntas antes de começar
-
-Como isso é grande, prefiro entregar em fases pra você validar cada uma. Sugestão de ordem:
-
-**Fase 1** (UI rápida, sem backend novo): saudação dinâmica, ações rápidas, foto "em breve", ranking por categoria, loja só com categorias do admin.
-
-**Fase 2** (backend + UI): carteirinha com QR + check-in por scan, ficha de protocolo (estrutura), correção do link de indicação.
-
-**Fase 3**: checkout do aluno (paridade com coach), grupo real com realtime.
-
-Confirma se posso seguir nessa ordem? Ou prefere que eu faça tudo de uma vez (vai ser uma resposta longa e mais difícil de revisar)?
+Confirma o plano? Começo pela Fase 1 (migration) assim que aprovar.
