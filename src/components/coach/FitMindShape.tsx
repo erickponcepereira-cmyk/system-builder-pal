@@ -327,9 +327,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
   // ── Histórico mock (substitua pelos dados reais da API) ──
   const historicalData = useMemo(() => {
-    const past = selectedClient?.assessments ?? [];
+    const past = (selectedClient?.assessments ?? [])
+      .filter((a) => a?.date)
+      .slice()
+      .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
     return past.map((a) => ({
       date: new Date(a.date).toLocaleDateString("pt-BR", {
+        day: "2-digit",
         month: "short",
         year: "2-digit",
       }),
@@ -784,7 +788,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             style={{ marginBottom: 8, padding: "12px 16px", cursor: "pointer" }}
             onClick={() => {
               setSelectedClient(c);
-              setScreen("result");
+              const sorted = (c.assessments ?? [])
+                .filter((it) => it?.date)
+                .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
+              if (sorted.length > 0) {
+                setAssessment(sorted[sorted.length - 1]);
+                setScreen("result");
+              } else {
+                setAssessment({ height: c.height || undefined });
+                setStep(0);
+                setScreen("assessment");
+              }
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -917,8 +931,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }}
             onClick={() => {
               setSelectedClient(c);
-              setScreen("assessment");
-              setStep(0);
+              const sorted = (c.assessments ?? [])
+                .filter((it) => it?.date)
+                .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
+              if (sorted.length > 0) {
+                setAssessment(sorted[sorted.length - 1]);
+                setScreen("result");
+              } else {
+                setAssessment({ height: c.height || undefined });
+                setStep(0);
+                setScreen("assessment");
+              }
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1810,21 +1833,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     // ── Resumo / referências clínicas ─────────────────────
     const allAssessments = (() => {
       const existing = selectedClient?.assessments ?? [];
-      const merged = existing.some((item) => item.id === a.id) ? existing : [...existing, a];
+      const merged = a?.id && existing.some((item) => item.id === a.id) ? existing : (a?.date ? [...existing, a] : existing);
       return merged
         .filter((item) => item?.date)
         .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
     })();
+    const N = allAssessments.length;
     const firstA = allAssessments[0] ?? a;
-    const latestA = allAssessments[allAssessments.length - 1] ?? a;
+    // "Última" column shows the PREVIOUS assessment when 3+ exist;
+    // when only 1 or 2 exist, it shows the most recent (which is the current).
+    const previousA = N >= 3 ? allAssessments[N - 2] : (allAssessments[N - 1] ?? a);
     const daysFollow = (() => {
       if (!firstA?.date) return 0;
       const d = (Date.now() - new Date(firstA.date).getTime()) / 86400000;
       return Math.max(0, Math.round(d));
     })();
-    const followLabel = daysFollow >= 30
-      ? `${Math.round(daysFollow / 30)} meses`
-      : `${daysFollow} dias`;
+    const followLabel = (() => {
+      if (!daysFollow) return "Hoje";
+      const years = Math.floor(daysFollow / 365);
+      const remAfterYears = daysFollow - years * 365;
+      const months = Math.floor(remAfterYears / 30);
+      const days = remAfterYears - months * 30;
+      const parts: string[] = [];
+      if (years > 0) parts.push(`${years} ${years === 1 ? "ano" : "anos"}`);
+      if (months > 0) parts.push(`${months} ${months === 1 ? "mês" : "meses"}`);
+      if (days > 0 || parts.length === 0) parts.push(`${days} ${days === 1 ? "dia" : "dias"}`);
+      return parts.join(", ");
+    })();
     const diff = (curr?: number, base?: number, unit = "") => {
       if (curr == null || !Number.isFinite(curr)) return "—";
       const d = base != null && Number.isFinite(base) ? +(curr - base).toFixed(1) : null;
@@ -1989,17 +2024,20 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <tr style={{ color: "#64748b", textAlign: "left" }}>
                     <th style={{ padding: "6px 4px", fontWeight: 700 }}>Indicador</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Primeira</th>
-                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Última</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>
+                      {N >= 3 ? "Anterior" : "Última"}
+                    </th>
                   </tr>
                 </thead>
                 <tbody style={{ color: "#1e293b" }}>
                   {[
-                    { l: "Tempo de acompanhamento", first: dateLabel(firstA.date), latest: followLabel },
-                    { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(latestA.weight, firstA.weight, " kg") },
-                    { l: "Gordura", first: metric(firstA.bodyFat, " %"), latest: diff(latestA.bodyFat, firstA.bodyFat, " %") },
-                    { l: "Músculo Esquelético", first: metric(firstA.skeletalMuscle, " %"), latest: diff(latestA.skeletalMuscle, firstA.skeletalMuscle, " %") },
-                    { l: "Gordura Visceral", first: metric(firstA.visceralFat, ""), latest: diff(latestA.visceralFat, firstA.visceralFat, "") },
-                    { l: "Idade Corporal", first: metric(firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos"), latest: diff(latestA.bodyAge ? Math.round(latestA.bodyAge) : undefined, firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos") },
+                    { l: "Tempo de acompanhamento", first: dateLabel(firstA.date), latest: N >= 3 ? `${dateLabel(previousA.date)} · ${followLabel}` : followLabel },
+                    { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(previousA.weight, firstA.weight, " kg") },
+                    { l: "Gordura", first: metric(firstA.bodyFat, " %"), latest: diff(previousA.bodyFat, firstA.bodyFat, " %") },
+                    { l: "Músculo Esquelético", first: metric(firstA.skeletalMuscle, " %"), latest: diff(previousA.skeletalMuscle, firstA.skeletalMuscle, " %") },
+                    { l: "Massa Muscular", first: metric(firstA.muscleMass, " kg"), latest: diff(previousA.muscleMass, firstA.muscleMass, " kg") },
+                    { l: "Gordura Visceral", first: metric(firstA.visceralFat, ""), latest: diff(previousA.visceralFat, firstA.visceralFat, "") },
+                    { l: "Idade Corporal", first: metric(firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos"), latest: diff(previousA.bodyAge ? Math.round(previousA.bodyAge) : undefined, firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos") },
                   ].map((r) => (
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "8px 4px", fontWeight: 600 }}>{r.l}</td>
@@ -2611,11 +2649,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               className="fm-btn-outline"
               style={{ flex: 1 }}
               onClick={() => {
+                setAssessment({ height: selectedClient?.height || undefined });
                 setStep(0);
                 setScreen("assessment");
               }}
             >
-              Editar Dados
+              + Nova Avaliação
             </button>
             <button
               className="fm-btn-primary"

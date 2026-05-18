@@ -116,7 +116,12 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
             whatsapp: (r[iTel] || "").trim().slice(0, 24) || null,
             email: (r[iEmail] || "").trim().slice(0, 255) || null,
             notes: (r[iNot] || "").slice(0, 1000) || null,
-            groups: (r[iGrp] || "") ? [(r[iGrp] || "").trim()] : [],
+            groups: (() => {
+              const g = (r[iGrp] || "").trim();
+              const list = g ? [g] : [];
+              if (!list.includes("Importados Fineshape")) list.push("Importados Fineshape");
+              return list;
+            })(),
           });
         }
         // chunk insert
@@ -164,7 +169,7 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
             height: num(r[I.alt]),
             height_unit: "cm",
             language: "pt",
-            groups: [],
+            groups: ["Importados Fineshape"],
           });
         }
         if (missing.length) {
@@ -177,11 +182,13 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
         }
 
         const toInsert: any[] = [];
+        const touchedClientIds = new Set<string>();
         let skipped = 0;
         for (const r of rows) {
           const name = (r[I.nome] || "").trim();
           const cid = byName.get(norm(name));
           if (!cid) { skipped++; continue; }
+          touchedClientIds.add(cid);
           const date = parseDateBR(r[I.dta] || "") || new Date().toISOString();
           toInsert.push({
             client_id: cid,
@@ -208,6 +215,23 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
             photos: {},
             professional_notes: "Importado do Fineshape",
           });
+        }
+
+        // Garante que TODOS os clientes que receberam avaliações tenham a tag "Importados Fineshape"
+        if (touchedClientIds.size > 0) {
+          const { data: existingForTag } = await supabase
+            .from("coach_evaluation_clients" as never)
+            .select("id,groups" as never)
+            .in("id" as never, Array.from(touchedClientIds) as never);
+          for (const row of ((existingForTag as any[]) || [])) {
+            const groups: string[] = Array.isArray(row.groups) ? row.groups : [];
+            if (!groups.includes("Importados Fineshape")) {
+              await supabase
+                .from("coach_evaluation_clients" as never)
+                .update({ groups: [...groups, "Importados Fineshape"] } as never)
+                .eq("id" as never, row.id as never);
+            }
+          }
         }
 
         const chunkSize = 200;
