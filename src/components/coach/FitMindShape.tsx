@@ -527,7 +527,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     /* === Dark mode global do FitMindShape === */
     .fm-app.fm-dark, .fm-app.fm-dark > .fm-animate { background: #0A0A0A !important; color: #ffffff; }
     .fm-app.fm-dark [style*="background: #f8fafc"], .fm-app.fm-dark [style*="background:#f8fafc"] { background: #0A0A0A !important; }
-    .fm-app.fm-dark [style*="background: #ffffff"], .fm-app.fm-dark [style*="background:#ffffff"], .fm-app.fm-dark [style*="background: #fff"], .fm-app.fm-dark [style*="background:#fff"] { background: #1A1A1A !important; }
+    .fm-app.fm-dark [style*="background: #ffffff"], .fm-app.fm-dark [style*="background:#ffffff"], .fm-app.fm-dark [style*="background: #fff"], .fm-app.fm-dark [style*="background:#fff"], .fm-app.fm-dark [style*="background: white"], .fm-app.fm-dark [style*="background:white"] { background: #1A1A1A !important; }
     .fm-app.fm-dark [style*="background: #f1f5f9"], .fm-app.fm-dark [style*="background:#f1f5f9"] { background: #1f2937 !important; }
     .fm-app.fm-dark [style*="background: #f5f5f5"], .fm-app.fm-dark [style*="background:#f5f5f5"] { background: #1f2937 !important; }
     .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
@@ -2736,6 +2736,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             onDeleteAssessment
               ? async (id, reason) => {
                   await onDeleteAssessment(id, reason, selectedClient);
+                  setSelectedClient((current) =>
+                    current
+                      ? { ...current, assessments: (current.assessments || []).filter((item) => item.id !== id) }
+                      : current,
+                  );
+                  setAssessment((current) => (current.id === id ? {} : current));
                 }
               : undefined
           }
