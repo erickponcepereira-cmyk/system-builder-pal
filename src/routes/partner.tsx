@@ -183,6 +183,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
   const blank = (): Partial<Product> => ({ partner_id: partner.id, kind: hasActiveFree ? "paid" : "free", name: "", description: "", image_url: "", price: 0, stock: null, redemption_instructions: "", is_active_by_partner: true });
 
+function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
+  const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const blank = (): Partial<Product> => ({
+    partner_id: partner.id,
+    kind: hasActiveFree ? "paid" : "free",
+    name: "", description: "", image_url: "", price: 0, stock: null,
+    redemption_instructions: "", is_active_by_partner: true,
+    price_input_mode: "charge",
+    coach_commission_percentage: 10,
+    partner_net_amount: 0,
+  });
+
   const upload = async (file: File) => {
     setUploading(true);
     const ext = file.name.split(".").pop();
@@ -196,7 +210,28 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
-    const payload = { ...editing, partner_id: partner.id, status: "pending" as const, admin_notes: null };
+
+    // Para produtos pagos, recalcula breakdown antes de salvar
+    let extra: Partial<Product> = {};
+    if (editing.kind === "paid") {
+      const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
+      const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
+      const b = mode === "receive"
+        ? computeFromReceive(editing.partner_net_amount || 0, pct)
+        : computeFromCharge(editing.price || 0, pct);
+      if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
+      if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
+      extra = {
+        price: b.gross,
+        partner_net_amount: b.partnerNet,
+        coach_commission_amount: b.coachCommission,
+        network_l1_amount: b.networkL1,
+        network_l2_amount: b.networkL2,
+        network_l3_amount: b.networkL3,
+      };
+    }
+
+    const payload = { ...editing, ...extra, partner_id: partner.id, status: "pending" as const, admin_notes: null };
     if (editing.id) {
       const { id, ...up } = payload;
       const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
@@ -241,7 +276,17 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.kind === "free" ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>{p.kind === "free" ? "Gratuito" : "Pago"}</span>
                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${statusColor(p.status)}`}>{p.status}</span>
               </div>
-              {p.kind === "paid" && <p className="text-xs text-primary">R$ {Number(p.price).toFixed(2)}</p>}
+              {p.kind === "paid" && (
+                <div className="mt-0.5 text-[11px] text-white/60">
+                  <span className="text-primary font-semibold">R$ {Number(p.price).toFixed(2)}</span>
+                  {typeof p.partner_net_amount === "number" && p.partner_net_amount > 0 && (
+                    <span className="ml-2">• Líquido: <span className="text-green-400">R$ {p.partner_net_amount.toFixed(2)}</span></span>
+                  )}
+                  {typeof p.coach_commission_percentage === "number" && (
+                    <span className="ml-2">• Coach: {p.coach_commission_percentage}%</span>
+                  )}
+                </div>
+              )}
               {p.status === "rejected" && p.admin_notes && <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>}
               <div className="mt-1.5 flex gap-2">
                 <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
@@ -280,12 +325,18 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   </label>
                 )}
               </Field>
+
               {editing.kind === "paid" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Field label="Preço (R$)"><input type="number" step="0.01" value={editing.price || 0} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="field-input" /></Field>
-                  <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
-                </div>
+                <PaidPricingEditor
+                  product={editing}
+                  onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
+                />
               )}
+
+              {editing.kind === "paid" && (
+                <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
+              )}
+
               <Field label="Instruções de resgate"><textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Apresente o QR Code da carteirinha na loja" /></Field>
             </div>
             <div className="mt-4 flex gap-2">
@@ -300,6 +351,79 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     </div>
   );
 }
+
+function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; onChange: (patch: Partial<Product>) => void }) {
+  const mode = (product.price_input_mode || "charge") as PartnerPriceMode;
+  const pct = (product.coach_commission_percentage || 10) as CoachCommissionPct;
+  const charge = product.price || 0;
+  const receive = product.partner_net_amount || 0;
+  const breakdown = mode === "receive"
+    ? computeFromReceive(receive, pct)
+    : computeFromCharge(charge, pct);
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+      <div className="flex items-center gap-2 text-xs font-bold text-primary">
+        <DollarSign className="h-3.5 w-3.5" /> Financeiro do produto
+      </div>
+
+      {/* Tabs Cobrar / Receber */}
+      <div className="flex rounded-lg bg-black/40 p-0.5">
+        <button type="button" onClick={() => onChange({ price_input_mode: "charge" })} className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${mode === "charge" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>Quanto cobrar</button>
+        <button type="button" onClick={() => onChange({ price_input_mode: "receive" })} className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${mode === "receive" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>Quanto receber</button>
+      </div>
+
+      {mode === "charge" ? (
+        <Field label="Preço cobrado do cliente (R$)">
+          <input type="number" step="0.01" min="0" value={charge} onChange={e => onChange({ price: Number(e.target.value) })} className="field-input" />
+        </Field>
+      ) : (
+        <Field label="Quanto você quer receber líquido (R$)">
+          <input type="number" step="0.01" min="0" value={receive} onChange={e => onChange({ partner_net_amount: Number(e.target.value) })} className="field-input" />
+        </Field>
+      )}
+
+      {/* Comissão coach */}
+      <div>
+        <label className="text-xs text-white/60">Comissão para o coach vendedor</label>
+        <div className="mt-1 grid grid-cols-3 gap-1.5">
+          {COACH_COMMISSION_OPTIONS.map(opt => (
+            <button key={opt} type="button" onClick={() => onChange({ coach_commission_percentage: opt })} className={`rounded-lg py-1.5 text-xs font-bold transition ${pct === opt ? "bg-primary text-primary-foreground" : "bg-black/40 text-white/60 hover:text-white"}`}>{opt}%</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Breakdown */}
+      <div className="rounded-lg bg-black/40 p-2.5 text-[11px] space-y-1">
+        <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
+        <BreakdownLine label="− Taxa cartão (4,98%)*" value={-breakdown.paymentFee} muted />
+        <BreakdownLine label="− Imposto (6%)" value={-breakdown.tax} muted />
+        <BreakdownLine label="− Taxa do sistema" value={-breakdown.systemFee} muted />
+        <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
+        <div className="my-1 border-t border-white/10" />
+        <BreakdownLine label="✓ Líquido para você" value={breakdown.partnerNet} highlight />
+        <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
+          <p className="text-white/40 text-[10px] font-semibold uppercase">Distribuição da comissão do coach</p>
+          <BreakdownLine label="Coach vendedor (líquido)" value={breakdown.coachNet} muted />
+          <BreakdownLine label="Rede L1 (3%)" value={breakdown.networkL1} muted />
+          <BreakdownLine label="Rede L2 (2%)" value={breakdown.networkL2} muted />
+          <BreakdownLine label="Rede L3 (1%)" value={breakdown.networkL3} muted />
+        </div>
+        <p className="mt-2 text-[10px] text-white/40">* Considerado pior cenário (cartão). PIX cobra 0,99%.</p>
+      </div>
+    </div>
+  );
+}
+
+function BreakdownLine({ label, value, bold, muted, highlight }: { label: string; value: number; bold?: boolean; muted?: boolean; highlight?: boolean }) {
+  return (
+    <div className={`flex justify-between ${bold ? "font-bold text-white" : muted ? "text-white/60" : ""} ${highlight ? "text-green-400 font-bold" : ""}`}>
+      <span>{label}</span>
+      <span>R$ {value.toFixed(2)}</span>
+    </div>
+  );
+}
+
 
 function statusColor(s: string) {
   return s === "approved" ? "bg-green-500/15 text-green-400" : s === "rejected" ? "bg-red-500/15 text-red-400" : s === "inactive" ? "bg-white/10 text-white/50" : "bg-yellow-500/15 text-yellow-400";
