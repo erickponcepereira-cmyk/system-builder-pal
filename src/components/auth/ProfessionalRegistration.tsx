@@ -92,7 +92,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async () => {
     if (!acceptTerms) return fail("Aceite os Termos de Uso para continuar.");
-    if (!selectedCoach) return fail("Selecione o coach que te indicou.");
+    if (!existingMode && !selectedCoach) return fail("Selecione o coach que te indicou.");
 
     setLoading(true); setFormError(null);
     try {
@@ -102,6 +102,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       let resolvedPhone = phone;
       let resolvedCpf = cpf;
       let resolvedBirthdate = birthdate;
+      let uplineCoachId = selectedCoach?.id || null;
 
       if (existingMode) {
         // Vincular profissional a conta existente — autentica com a senha atual
@@ -113,10 +114,10 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           throw new Error("Senha incorreta para esta conta. Use a senha do FitMind.");
         }
         userId = signIn.user.id;
-        // Reaproveita dados já cadastrados, se o usuário não preencheu
+        // Reaproveita dados já cadastrados
         const { data: prof } = await supabase
           .from("profiles")
-          .select("name, phone, cpf, birthdate")
+          .select("id, name, phone, cpf, birthdate")
           .eq("user_id", userId)
           .maybeSingle();
         if (prof) {
@@ -124,6 +125,31 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           resolvedPhone = phone || prof.phone || "";
           resolvedCpf = cpf || prof.cpf || "";
           resolvedBirthdate = birthdate || prof.birthdate || "";
+
+          // Mantém o coach indicador atual (do registro existente de coach ou aluno)
+          if (!uplineCoachId) {
+            const { data: existingCoach } = await supabase
+              .from("coaches")
+              .select("upline_coach_id")
+              .eq("profile_id", prof.id)
+              .maybeSingle();
+            if (existingCoach?.upline_coach_id) {
+              uplineCoachId = existingCoach.upline_coach_id;
+            } else {
+              const { data: existingStudent } = await supabase
+                .from("students")
+                .select("coach_id")
+                .eq("profile_id", prof.id)
+                .maybeSingle();
+              if (existingStudent?.coach_id) uplineCoachId = existingStudent.coach_id;
+            }
+          }
+        }
+        if (!resolvedName || resolvedName.trim().length < 2) {
+          throw new Error("Sua conta não possui um nome cadastrado. Preencha o campo Nome completo.");
+        }
+        if (!uplineCoachId) {
+          throw new Error("Selecione o coach que te indicou.");
         }
       } else {
         const user = await createAuthUser(email, password, name, "coach");
@@ -136,7 +162,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           name: resolvedName, email,
           phone: resolvedPhone, cpf: resolvedCpf, birthdate: resolvedBirthdate,
           coach: {
-            uplineCoachId: selectedCoach.id,
+            uplineCoachId: uplineCoachId!,
             referralCode,
             referralLink: `${window.location.origin}/r/${referralCode}`,
             completedCoachCourse: false,
@@ -158,6 +184,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       setFormError(friendly); toast.error(friendly);
     } finally { setLoading(false); }
   };
+
 
   if (registeredEmail) return <CheckEmailNotice email={registeredEmail} />;
 
@@ -295,7 +322,19 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
           {step === 2 && (
             <div className="space-y-4">
-              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+              {existingMode ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <p className="text-xs text-white/80">
+                    Identificamos seu cadastro. Vamos manter o <strong>coach indicador atual</strong> da sua conta.
+                  </p>
+                  <p className="text-[11px] text-white/50">
+                    Quer indicar outro coach? Selecione abaixo (opcional):
+                  </p>
+                  <CoachSelector value={selectedCoach} onChange={setSelectedCoach} label="Trocar coach indicador (opcional)" />
+                </div>
+              ) : (
+                <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+              )}
 
               <label className="flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
@@ -312,6 +351,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               </div>
             </div>
           )}
+
         </div>
 
         <div className="mt-6 text-center text-sm text-white/40">

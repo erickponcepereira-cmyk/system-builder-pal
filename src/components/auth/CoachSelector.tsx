@@ -47,9 +47,10 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
       try {
         let request = supabase
           .from("coaches")
-          .select("id, profile_id, profiles!coaches_profile_id_fkey(name, city, state)")
+          .select("id, profile_id, profiles!inner(name, city, state)")
           .not("approved_at", "is", null)
-          .limit(8);
+          .order("name", { foreignTable: "profiles", ascending: true })
+          .limit(50);
 
         if (normalizedQuery) {
           request = request.ilike("profiles.name", `%${normalizedQuery}%`);
@@ -60,18 +61,21 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
           id: string;
           profile_id: string;
           profiles?: { name?: string | null; city?: string | null; state?: string | null } | null;
-        }>).map((row) => ({
-          id: row.id,
-          profileId: row.profile_id,
-          name: row.profiles?.name || "Coach sem nome",
-          city: row.profiles?.city,
-          state: row.profiles?.state,
-        }));
+        }>)
+          .filter((row) => row.profiles?.name)
+          .map((row) => ({
+            id: row.id,
+            profileId: row.profile_id,
+            name: row.profiles?.name || "Coach sem nome",
+            city: row.profiles?.city,
+            state: row.profiles?.state,
+          }));
         const shouldShowMaster = !normalizedQuery || "master".includes(normalizedQuery.toLowerCase());
         const mergedRows = shouldShowMaster && !rows.some((coach) => coach.id === MASTER_COACH.id)
           ? [MASTER_COACH, ...rows]
           : rows;
         setCoaches(mergedRows);
+
       } finally {
         setLoading(false);
       }
@@ -115,7 +119,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
         />
       </div>
 
-      <div className="max-h-44 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+      <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
         {loading ? (
           <p className="px-2 py-3 text-xs text-white/40">Buscando coaches...</p>
         ) : coaches.length === 0 ? (
