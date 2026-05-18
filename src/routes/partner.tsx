@@ -91,12 +91,21 @@ function PartnerPanel() {
   const hasActiveFree = products.some(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner);
   const pendingCount = products.filter(p => p.status === "pending").length;
 
-  const tabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
+  const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
     { key: "timeline", label: "Timeline", icon: ImageIcon },
-    { key: "qrcode", label: "QR Code", icon: QrCode },
-    { key: "profile", label: "Perfil", icon: UserCog },
+    { key: "qrcode", label: "QR", icon: QrCode },
+  ];
+  const benefitTabs: { key: Tab; label: string; icon: typeof Building2 }[] = hasActiveFree ? [
+    { key: "freebies", label: "Gratuitos", icon: Gift },
+    { key: "store", label: "Loja", icon: ShoppingBag },
+  ] : [];
+  const tabs = [
+    ...baseTabs,
+    ...benefitTabs,
+    { key: "collaborators" as Tab, label: "Equipe", icon: Users },
+    { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
   return (
@@ -134,12 +143,15 @@ function PartnerPanel() {
         {tab === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
         {tab === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
         {tab === "qrcode" && <QrCodePanel partner={partner} />}
+        {tab === "freebies" && hasActiveFree && <CoachBenefitsTab />}
+        {tab === "store" && hasActiveFree && <StorePage />}
+        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex" style={{ backgroundColor: "#111" }}>
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
             <t.icon className="h-5 w-5" />
             {t.label}
           </button>
