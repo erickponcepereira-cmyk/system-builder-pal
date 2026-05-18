@@ -369,9 +369,13 @@ export function ProtocolTab() {
           {!loading && section === "workout" && (
             <div className="space-y-4">
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
                   <h2 className="text-sm font-bold text-white">Treino prescrito</h2>
-                  <button onClick={() => addWorkout()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Plus className="h-3 w-3" /> Exercício</button>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => setTemplatePickerOpen(true)} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15"><BookOpen className="h-3 w-3" /> Usar template</button>
+                    <button onClick={() => setSaveTemplateOpen(true)} disabled={protocol.workout_plan.length === 0} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-white disabled:opacity-40"><Save className="h-3 w-3" /> Salvar template</button>
+                    <button onClick={() => addWorkout()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Plus className="h-3 w-3" /> Exercício</button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {protocol.workout_plan.length === 0 && <p className="text-xs text-white/40">Nenhum exercício. Use a aba “Biblioteca” para selecionar.</p>}
