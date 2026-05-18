@@ -141,6 +141,7 @@ function PartnerPanel() {
         {tab === "freebies" && hasActiveFree && <CoachBenefitsTab />}
         {tab === "store" && hasActiveFree && <StorePage />}
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
+        {tab === "network" && <MyNetworkPanel />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>
 
