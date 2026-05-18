@@ -56,13 +56,15 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (!email) { setEmailStatus("idle"); return; }
+    if (!email) { setEmailStatus("idle"); setExistingMode(false); return; }
     if (!email.includes("@") || !email.includes(".")) { setEmailStatus("invalid"); return; }
     setEmailStatus("checking");
     const handle = window.setTimeout(async () => {
       try {
         const res = await checkEmailAvailable({ data: { email } });
-        setEmailStatus(res.available ? "available" : "taken");
+        const taken = !res.available;
+        setEmailStatus(taken ? "taken" : "available");
+        setExistingMode(taken);
       } catch { setEmailStatus("idle"); }
     }, 500);
     return () => window.clearTimeout(handle);
@@ -74,14 +76,17 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     if (!specialtyKey) return fail("Selecione sua área de atuação.");
     if (selectedSpec?.requires_admin_setup && specialtyCustom.trim().length < 3)
       return fail("Descreva sua área de atuação para que o admin possa configurar seu painel.");
-    if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
-      return fail("Preencha todos os campos obrigatórios.");
-    if (emailStatus === "taken") return fail("Este e-mail já está cadastrado.");
-    if (emailStatus === "checking") return fail("Aguarde a verificação do e-mail.");
-    if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF incompleto.");
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
-      return fail("Senha: 8+ chars, 1 maiúscula e 1 número.");
-    if (password !== confirmPassword) return fail("As senhas não coincidem.");
+    if (existingMode) {
+      if (!email || !password) return fail("Informe e-mail e senha da sua conta existente.");
+    } else {
+      if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
+        return fail("Preencha todos os campos obrigatórios.");
+      if (emailStatus === "checking") return fail("Aguarde a verificação do e-mail.");
+      if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF incompleto.");
+      if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
+        return fail("Senha: 8+ chars, 1 maiúscula e 1 número.");
+      if (password !== confirmPassword) return fail("As senhas não coincidem.");
+    }
     setFormError(null); return true;
   };
 
