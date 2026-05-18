@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
+import FineshapeImport from "@/components/coach/FineshapeImport";
 
 export function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
@@ -148,9 +149,12 @@ export function EvaluateTab() {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
-        <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+          <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
+        </div>
+        {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}
       </div>
       <FitMindShape
         coach={coachInfo}
