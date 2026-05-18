@@ -71,6 +71,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const validateStep1 = () => {
     if (!specialtyKey) return fail("Selecione sua área de atuação.");
+    if (selectedSpec?.requires_admin_setup && specialtyCustom.trim().length < 3)
+      return fail("Descreva sua área de atuação para que o admin possa configurar seu painel.");
     if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
       return fail("Preencha todos os campos obrigatórios.");
     if (emailStatus === "taken") return fail("Este e-mail já está cadastrado.");
