@@ -1,108 +1,74 @@
-## Novo papel: Profissional da Saúde (e correlatos)
+## Objetivo
 
-Vamos criar um novo tipo de usuário "Profissional" que é, na prática, um **Coach com especialização**. Eles compartilham a árvore da rede de coaches (recebem comissões, têm upline/downline) mas ganham um painel personalizado de acordo com a área de atuação.
+Continuar o MLM aplicando as regras combinadas:
+- Parceiros e profissionais da saúde entram na rede MLM como "coaches" da estrutura.
+- Eles viram o coach dos próprios colaboradores (alunos vinculados ao CNPJ/CPF deles).
+- Vendas dos colaboradores distribuem comissão normalmente subindo pela rede a partir do parceiro/profissional.
+- Quando o parceiro ou profissional compra individualmente (para si mesmo), a comissão "de coach" vai para o upline que o trouxe (a empresa/coach que o cadastrou).
 
-### 1. Modelo de dados (migration)
+## Estado atual (já existe)
 
-**Nova tabela `professional_specialties`** (catálogo editável pelo admin):
-- `key` (slug: `personal_trainer`, `nutritionist`, `doctor`, `esthetician`, `lawyer`, `cardiologist`, `other`)
-- `label`, `description`, `icon`
-- `capabilities` jsonb: `{ can_prescribe_diet, can_prescribe_workout, can_prescribe_medication, can_issue_aesthetic_protocol, can_issue_legal_doc, ... }`
-- `default_tabs` jsonb: lista das abas pré-configuradas (ex: `["students","diet","evaluations","wallet"]`)
-- `requires_admin_setup` boolean (true para "outro")
+- `coaches.is_professional = true` — profissionais já viram coach.
+- `partners.upline_coach_id` — parceiros já têm upline, mas NÃO têm linha em `coaches`, então a função `process_paid_transaction` não consegue subir comissões pela rede do parceiro.
+- `students.partner_id` — link de colaborador→empresa já existe; falta usar como coach default.
+- `process_paid_transaction` percorre `coaches.upline_coach_id` para níveis 1/2/3.
 
-**Seed inicial** das 6 áreas + "outro" + "cardiologista".
+## Mudanças
 
-**Extensão da tabela `coaches`**:
-- `specialty_key` text (FK lógica → `professional_specialties.key`)
-- `is_professional` boolean (true quando especialidade ≠ coach generalista)
-- `professional_council` text (CRN, CREF, CRM, OAB…)
-- `council_number` text
-- `serves_whole_network` boolean default true (profissional atende toda a base, não só rede direta)
+### 1. Backend / DB (migration)
 
-**Tabela `product_professional_requirements`**:
-- `product_id`, `specialty_key`, `is_required` — define quais profissionais um produto precisa.
+a. **Espelhar parceiro como coach**
+- Adicionar trigger `AFTER INSERT/UPDATE` em `public.partners` que cria/atualiza uma linha em `coaches` para o mesmo `profile_id` com:
+  - `upline_coach_id = partners.upline_coach_id`
+  - `is_professional = false`, `approved_at = partners.approved_at`
+  - `referral_code` único (gerado se necessário)
+- Backfill: criar coach para todos parceiros aprovados existentes.
 
-**Tabela `transaction_professional_assignments`**:
-- `transaction_id`, `specialty_key`, `assigned_coach_id`, `assignment_reason` ("upline_nearest", "direct_referral_choice", "fallback_global") — registra qual nutri/personal foi escolhido para aquela venda.
+b. **Colaboradores entram com coach = parceiro/profissional**
+- Função `public.resolve_collaborator_coach(_partner_id uuid)` retorna o `coaches.id` do parceiro (cria sob demanda no backfill).
+- Quando um aluno é criado com `partner_id` setado e `coach_id` nulo, atribuir `coach_id` ao coach espelho do parceiro (trigger BEFORE INSERT em `students`).
 
-### 2. Algoritmo de seleção do profissional (função SQL)
+c. **Auto-compra do parceiro/profissional**
+- Quando o próprio parceiro/profissional compra algo: ele é student dele mesmo? Hoje não. Solução: garantir linha em `students` para profile do parceiro/profissional (trigger no insert em `coaches` quando `is_professional=true` ou no trigger de parceiro→coach). Esse student tem `coach_id = upline` (quem o trouxe), para que `process_paid_transaction` distribua corretamente: nível 0 (coach) vai para o upline, e a rede sobe a partir dali.
 
-`pick_professional_for_sale(_selling_coach_id, _specialty_key, _preferred_coach_id)`:
+d. **Sem mudanças em `process_paid_transaction`** — a lógica atual já funciona se as estruturas acima existirem.
 
-```text
-1. Se _preferred_coach_id foi informado E é downline DIRETO do vendedor
-   E tem a specialty → retorna ele
-2. Sobe pela upline do vendedor (ele mesmo → upline1 → upline2 → ...)
-   procurando o primeiro coach com specialty_key=X e aprovado → retorna
-3. Procura nos downlines DIRETOS do vendedor (1º nível) com specialty
-   → se houver vários, retorna o mais antigo (ou o que o vendedor escolheu)
-4. Fallback: qualquer profissional aprovado com a specialty no sistema
-   (serves_whole_network=true), priorizando menor carga atual
+### 2. Frontend
+
+- Em `ProfessionalRegistration` e fluxo de cadastro de parceiros: nada novo de UI; trigger faz o trabalho.
+- Painel de parceiro/profissional: garantir aba "Minha rede" mostrando colaboradores (alunos com `partner_id = meu_id` ou `coach_id = meu_coach_id`) e comissões da rede pela `wallets` deles.
+
+### 3. Validação
+
+- Após migration, simular: criar profissional → comprar produto como ele mesmo → verificar que comissão coach foi para o upline dele.
+- Criar colaborador (student com partner_id) → comprar → verificar comissão sobe pela rede (parceiro recebe nível 0, upline do parceiro recebe nível 1, etc.).
+
+## Detalhe técnico
+
+```sql
+-- Trigger principal: espelhar parceiro como coach
+CREATE OR REPLACE FUNCTION public.mirror_partner_as_coach()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE _coach_id uuid; _code text;
+BEGIN
+  SELECT id INTO _coach_id FROM coaches WHERE profile_id = NEW.profile_id;
+  IF _coach_id IS NULL THEN
+    _code := 'EMP' || upper(substring(md5(NEW.id::text), 1, 6));
+    INSERT INTO coaches (profile_id, referral_code, upline_coach_id, approved_at, is_professional)
+    VALUES (NEW.profile_id, _code, NEW.upline_coach_id, NEW.approved_at, false);
+  ELSE
+    UPDATE coaches SET upline_coach_id = COALESCE(upline_coach_id, NEW.upline_coach_id),
+                       approved_at = COALESCE(approved_at, NEW.approved_at)
+    WHERE id = _coach_id;
+  END IF;
+  RETURN NEW;
+END $$;
 ```
 
-Chamada no `process_paid_transaction` para cada `product_professional_requirements`.
+E backfill equivalente para parceiros existentes e students faltantes.
 
-### 3. Cadastro e fluxo de aprovação
+## Fora de escopo (não mudar agora)
 
-- Em `register?role=professional` (novo) — coleta dados básicos + **seletor de especialidade** + conselho profissional + upline (igual coach).
-- `handle_new_user` cria profile com role `coach` + flag `is_professional=true`.
-- Após aprovação do admin, no primeiro login, modal **"Confirme sua área de atuação"** se `specialty_key` for null.
-- Se escolher "outro" → cria notificação para admin: "Profissional X precisa de configuração de painel".
-
-### 4. Painel do profissional (`/professional`)
-
-Reutiliza shell do coach, mas as abas renderizadas vêm de `specialty.default_tabs`:
-
-| Specialty | Abas padrão |
-|-----------|-------------|
-| Personal trainer | Alunos, **Treinos**, Avaliações, Carteira, Rede |
-| Nutricionista | Alunos, **Dieta/Protocolo**, Anamnese, Carteira, Rede |
-| Médico/Cardiologista | Alunos, **Prescrições**, Exames, Carteira, Rede |
-| Esteticista | Alunos, **Protocolo estético**, Sessões, Carteira |
-| Advogado | Clientes, **Documentos**, Consultas, Carteira |
-| Outro | Apenas Alunos + Carteira + Rede, com aviso "aguardando configuração" |
-
-**Visualização de alunos**: por padrão mostra os alunos atribuídos a ele (via `transaction_professional_assignments`) com toggle "Ver toda a base" (se `serves_whole_network`).
-
-### 5. Tela de venda (NewSaleModal)
-
-Quando o produto tem `product_professional_requirements`:
-- Para cada specialty exigida, mostra um **seletor** populado pelo algoritmo:
-  - Pré-selecionado: profissional encontrado pela regra (upline mais próximo).
-  - Lista alternativa: downlines diretos do vendedor com a specialty.
-  - Tooltip explicando a escolha.
-
-### 6. Admin
-
-- Nova aba **"Profissionais"** em `/admin` listando coaches com `is_professional=true`, filtros por especialidade, status do conselho.
-- Em `/admin/products` (Motor Financeiro) — campo "Profissionais necessários" (multi-select de especialidades).
-- Aba **"Especialidades"** para criar/editar catálogo e configurar abas/capacidades para "outro".
-
-### 7. Arquivos
-
-**Migration**: `*_professional_role.sql` — tabelas + seed + função `pick_professional_for_sale` + hook no `process_paid_transaction`.
-
-**Criados**:
-- `src/routes/professional.tsx` (shell)
-- `src/components/professional/SpecialtyTabs.tsx` (router de abas por specialty)
-- `src/components/professional/tabs/{DietTab,WorkoutTab,PrescriptionTab,AestheticTab,LegalTab,PendingSetupTab}.tsx`
-- `src/components/auth/ProfessionalRegistration.tsx`
-- `src/routes/admin.professionals.tsx`
-- `src/routes/admin.specialties.tsx`
-- `src/lib/professional-assignment.functions.ts`
-
-**Editados**:
-- `src/server/registration.{server,functions}.ts` — aceita `role=professional`
-- `src/routes/register.tsx` — botão "Sou profissional da saúde"
-- `src/components/coach/NewSaleModal.tsx` — seletor de profissional
-- `src/routes/admin.tsx` — links novos
-- `src/components/admin/ProductFinancialEditor.tsx` — campo requirements
-
-### Pontos para confirmar
-
-1. **"Outro" profissional**: ao aprovar, admin escolhe manualmente quais abas liberar de uma lista, ou ele cria uma especialidade nova reutilizável? (Sugiro: cria especialidade nova reutilizável.)
-2. **Comissões**: quando o profissional atende uma venda, ele recebe um **slot dedicado** no produto (`destination='professional_wallet'` no Motor Financeiro), correto? Ou continua só recebendo via rede MLM normal?
-3. **Painel duplo**: o profissional também tem acesso ao painel `/coach` normal (rede/MLM/carteira) OU só ao `/professional`? Sugestão: `/professional` tem aba "Rede" que reutiliza componentes do coach, mantendo um único shell.
-
-Posso seguir com essas premissas se você confirmar — em especial sobre comissionamento (item 2), que afeta o motor financeiro.
+- Layout de painéis.
+- Lógica de carteira/saque (já existente).
+- Sistema de pontos.
