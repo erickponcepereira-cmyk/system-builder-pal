@@ -102,6 +102,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
             completedCoachCourse: false,
             isProfessional: true,
             specialtyKey,
+            specialtyCustomDescription: selectedSpec?.requires_admin_setup ? specialtyCustom.trim() : null,
             professionalCouncil: council || null,
             councilNumber: councilNumber || null,
           },
