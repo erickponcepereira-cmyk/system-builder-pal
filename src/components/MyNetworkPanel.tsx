@@ -42,7 +42,7 @@ export function MyNetworkPanel() {
           .eq("profile_id", profile.id)
           .maybeSingle();
 
-        const [walletRes, directsRes, networkRes, commRes] = await Promise.all([
+        const [walletRes, directsRes, commRes] = await Promise.all([
           supabase
             .from("wallets")
             .select("available_balance,pending_balance,total_earned")
@@ -54,9 +54,6 @@ export function MyNetworkPanel() {
                 .select("id", { count: "exact", head: true })
                 .eq("coach_id", coach.id)
             : Promise.resolve({ count: 0 } as { count: number }),
-          coach?.id
-            ? supabase.rpc("count_network_students" as never, { _coach_id: coach.id } as never)
-            : Promise.resolve({ data: null } as { data: number | null }),
           supabase
             .from("commissions")
             .select("id, amount, level, created_at")
@@ -68,8 +65,7 @@ export function MyNetworkPanel() {
         if (cancelled) return;
 
         const w = (walletRes.data as { available_balance?: number; pending_balance?: number; total_earned?: number } | null) || {};
-        const networkCount =
-          (networkRes as { data: number | null }).data ?? (directsRes as { count: number }).count ?? 0;
+        const directsCount = (directsRes as { count: number }).count ?? 0;
 
         setStats({
           available: Number(w.available_balance ?? 0),
