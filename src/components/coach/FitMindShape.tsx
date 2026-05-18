@@ -276,7 +276,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
 }) => {
   const [screen, setScreen] = useState<
-    "home" | "select-client" | "new-client" | "assessment" | "result"
+    "home" | "select-client" | "new-client" | "assessment" | "result" | "compare"
   >("home");
   const [selectedClient, setSelectedClient] = useState<FitMindClient | null>(
     null,
