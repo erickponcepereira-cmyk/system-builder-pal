@@ -312,6 +312,8 @@ function AdminLibraryPage() {
           </div>
         </div>
       )}
+      </>
+      )}
     </div>
   );
 }
