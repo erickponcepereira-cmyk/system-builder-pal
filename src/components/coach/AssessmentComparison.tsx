@@ -391,25 +391,25 @@ const th: React.CSSProperties = {
   padding: "10px 8px",
   textAlign: "left",
   fontSize: 11,
-  color: "#475569",
+  color: "#ffffff",
   fontWeight: 700,
   textTransform: "uppercase",
   whiteSpace: "nowrap",
 };
 const td: React.CSSProperties = {
   padding: "8px",
-  color: "#1e293b",
+  color: "#ffffff",
   verticalAlign: "top",
   whiteSpace: "nowrap",
 };
 const miniBtn: React.CSSProperties = {
   fontSize: 11,
   padding: "4px 8px",
-  border: "1px solid #e2e8f0",
-  background: "white",
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "#0F0F0F",
   borderRadius: 6,
   cursor: "pointer",
-  color: "#1e293b",
+  color: "#ffffff",
 };
 
 export default AssessmentComparison;
