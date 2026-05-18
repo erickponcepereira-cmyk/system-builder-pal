@@ -206,7 +206,10 @@ export function EvaluateTab() {
               },
             });
             if (!res.connected) {
-              toast.error("Conecte sua conta Google na aba Agenda primeiro.");
+              toast.error("Conecte sua conta Google para agendar o evento.", {
+                duration: 10000,
+                action: { label: "Conectar agora", onClick: () => openGoogleConnectPopup() },
+              });
               return { ok: false, error: "not_connected" };
             }
             return { ok: true, htmlLink: res.htmlLink ?? null };
