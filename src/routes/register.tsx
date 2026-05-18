@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, User, Dumbbell, Building2 } from "lucide-react";
+import { ArrowLeft, User, Dumbbell, Building2, Stethoscope } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { CoachRegistration } from "@/components/auth/CoachRegistration";
 import { StudentRegistration } from "@/components/auth/StudentRegistration";
 import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
+import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
 
 type SearchParams = { role?: string };
 
