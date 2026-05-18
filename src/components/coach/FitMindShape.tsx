@@ -18,6 +18,7 @@
 // ============================================================
 
 import React, { useState, useCallback, useMemo } from "react";
+import AssessmentComparison from "./AssessmentComparison";
 import {
   LineChart,
   Line,
