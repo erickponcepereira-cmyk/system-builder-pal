@@ -24,13 +24,18 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const search = Route.useSearch();
-  const [role, setRole] = useState<"student" | "coach" | "partner" | null>(
-    search.role === "coach" ? "coach" : search.role === "student" ? "student" : search.role === "partner" ? "partner" : null
+  const [role, setRole] = useState<"student" | "coach" | "partner" | "professional" | null>(
+    search.role === "coach" ? "coach"
+    : search.role === "student" ? "student"
+    : search.role === "partner" ? "partner"
+    : search.role === "professional" ? "professional"
+    : null
   );
 
   if (role === "coach") return <CoachRegistration onBack={() => setRole(null)} />;
   if (role === "student") return <StudentRegistration onBack={() => setRole(null)} />;
   if (role === "partner") return <PartnerRegistration onBack={() => setRole(null)} />;
+  if (role === "professional") return <ProfessionalRegistration onBack={() => setRole(null)} />;
 
 
   // Role selection
