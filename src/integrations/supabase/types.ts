@@ -961,6 +961,60 @@ export type Database = {
           },
         ]
       }
+      coach_assessment_deletions: {
+        Row: {
+          assessment_date: string | null
+          assessment_id: string | null
+          client_id: string | null
+          client_name: string | null
+          coach_id: string
+          created_at: string
+          deleted_by: string | null
+          id: string
+          reason: string
+          snapshot: Json
+        }
+        Insert: {
+          assessment_date?: string | null
+          assessment_id?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          coach_id: string
+          created_at?: string
+          deleted_by?: string | null
+          id?: string
+          reason: string
+          snapshot?: Json
+        }
+        Update: {
+          assessment_date?: string | null
+          assessment_id?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          coach_id?: string
+          created_at?: string
+          deleted_by?: string | null
+          id?: string
+          reason?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_assessment_deletions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "coach_evaluation_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_assessment_deletions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_body_assessments: {
         Row: {
           age: number | null

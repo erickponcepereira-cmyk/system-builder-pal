@@ -64,6 +64,7 @@ import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
 import { Route as AdminCareerRouteImport } from './routes/admin.career'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
+import { Route as AdminAssessmentDeletionsRouteImport } from './routes/admin.assessment-deletions'
 import { Route as StudentProfileEditRouteImport } from './routes/student.profile.edit'
 import { Route as StudentPartnersPartnerIdRouteImport } from './routes/student.partners.$partnerId'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
@@ -348,6 +349,12 @@ const AdminCalendarsRoute = AdminCalendarsRouteImport.update({
   path: '/calendars',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAssessmentDeletionsRoute =
+  AdminAssessmentDeletionsRouteImport.update({
+    id: '/assessment-deletions',
+    path: '/assessment-deletions',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const StudentProfileEditRoute = StudentProfileEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -403,6 +410,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/career': typeof AdminCareerRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
@@ -466,6 +474,7 @@ export interface FileRoutesByTo {
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/career': typeof AdminCareerRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
@@ -532,6 +541,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/career': typeof AdminCareerRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
@@ -599,6 +609,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/admin/assessment-deletions'
     | '/admin/calendars'
     | '/admin/career'
     | '/admin/coach-applications'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/professional'
     | '/register'
     | '/reset-password'
+    | '/admin/assessment-deletions'
     | '/admin/calendars'
     | '/admin/career'
     | '/admin/coach-applications'
@@ -727,6 +739,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/admin/assessment-deletions'
     | '/admin/calendars'
     | '/admin/career'
     | '/admin/coach-applications'
@@ -1192,6 +1205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCalendarsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/assessment-deletions': {
+      id: '/admin/assessment-deletions'
+      path: '/assessment-deletions'
+      fullPath: '/admin/assessment-deletions'
+      preLoaderRoute: typeof AdminAssessmentDeletionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/student/profile/edit': {
       id: '/student/profile/edit'
       path: '/edit'
@@ -1264,6 +1284,7 @@ const AdminCoachesRouteWithChildren = AdminCoachesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAssessmentDeletionsRoute: typeof AdminAssessmentDeletionsRoute
   AdminCalendarsRoute: typeof AdminCalendarsRoute
   AdminCareerRoute: typeof AdminCareerRoute
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
@@ -1289,6 +1310,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAssessmentDeletionsRoute: AdminAssessmentDeletionsRoute,
   AdminCalendarsRoute: AdminCalendarsRoute,
   AdminCareerRoute: AdminCareerRoute,
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,

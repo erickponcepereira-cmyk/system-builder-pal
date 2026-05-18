@@ -16,13 +16,14 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer } from "lucide-react";
+import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2 } from "lucide-react";
 import type { FitMindAssessment, FitMindClient } from "./FitMindShape";
 
 interface Props {
   client: FitMindClient;
   themeColor?: string;
   onBack: () => void;
+  onDelete?: (assessmentId: string, reason: string) => Promise<void>;
 }
 
 type MetricKey =
@@ -76,7 +77,7 @@ const fmtNum = (v?: number, unit = "") => {
   return `${+v.toFixed(1)}${unit ? ` ${unit}` : ""}`;
 };
 
-const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack }) => {
+const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete }) => {
   const all = useMemo(
     () =>
       (client.assessments ?? [])
@@ -205,31 +206,49 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               {all.map((a, idx) => {
                 const checked = selected.includes(a.id);
                 return (
-                  <button
+                  <div
                     key={a.id}
-                    onClick={() => toggle(a.id)}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
+                      gap: 8,
                       padding: "8px 10px",
                       background: checked ? `${themeColor}11` : "#f8fafc",
                       border: `1px solid ${checked ? themeColor : "#e2e8f0"}`,
                       borderRadius: 8,
-                      cursor: "pointer",
-                      textAlign: "left",
                     }}
                   >
-                    {checked ? <CheckSquare size={16} color={themeColor} /> : <Square size={16} color="#94a3b8" />}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
-                        {fmtDate(a.date)} {idx === 0 && <span style={{ fontSize: 10, color: themeColor, marginLeft: 4 }}>(atual)</span>}
+                    <button
+                      onClick={() => toggle(a.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, background: "transparent", border: "none", textAlign: "left", cursor: "pointer", padding: 0 }}
+                    >
+                      {checked ? <CheckSquare size={16} color={themeColor} /> : <Square size={16} color="#94a3b8" />}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                          {fmtDate(a.date)} {idx === 0 && <span style={{ fontSize: 10, color: themeColor, marginLeft: 4 }}>(atual)</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>
+                          {fmtNum(a.weight, "kg")} · {fmtNum(a.bodyFat, "% gord.")} · IMC {fmtNum(a.bmi)}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>
-                        {fmtNum(a.weight, "kg")} · {fmtNum(a.bodyFat, "% gord.")} · IMC {fmtNum(a.bmi)}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                    {onDelete && (
+                      <button
+                        title="Excluir avaliação"
+                        onClick={async () => {
+                          const reason = window.prompt("Informe o motivo da exclusão (obrigatório):\nEste registro será enviado ao painel admin.");
+                          if (!reason || !reason.trim()) return;
+                          try {
+                            await onDelete(a.id, reason.trim());
+                            setSelected((s) => s.filter((x) => x !== a.id));
+                          } catch (e) { console.error(e); }
+                        }}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", color: "#dc2626", padding: 4 }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>

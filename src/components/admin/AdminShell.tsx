@@ -31,6 +31,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/career", label: "Carreira", icon: Trophy, perm: "career" },
   { to: "/admin/library", label: "Biblioteca", icon: Dumbbell, perm: "library" },
   { to: "/admin/partners", label: "Empresas Parceiras", icon: Store, perm: "partners" },
+  { to: "/admin/assessment-deletions", label: "Exclusões de Avaliações", icon: AlertTriangle, perm: "assessment_deletions" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 ];
 
