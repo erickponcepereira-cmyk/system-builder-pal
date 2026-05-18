@@ -5311,6 +5311,7 @@ export type Database = {
         Returns: undefined
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
+      partner_scan_student: { Args: { _student_id: string }; Returns: Json }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
