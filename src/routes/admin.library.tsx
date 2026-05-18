@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Dumbbell, Video, Image as ImageIcon, Film, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Dumbbell, Video, Image as ImageIcon, Film, X, ClipboardList } from "lucide-react";
+import { WorkoutTemplatesPanel } from "@/components/workouts/WorkoutTemplatesPanel";
 
 export const Route = createFileRoute("/admin/library")({
   head: () => ({
     meta: [
-      { title: "Biblioteca de Exercícios — Admin" },
-      { name: "description", content: "Gerencie a biblioteca de exercícios." },
+      { title: "Biblioteca — Admin" },
+      { name: "description", content: "Gerencie a biblioteca de exercícios e treinos prontos." },
     ],
   }),
   component: AdminLibraryPage,
