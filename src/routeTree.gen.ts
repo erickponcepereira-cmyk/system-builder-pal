@@ -50,6 +50,7 @@ import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
+import { Route as AdminLibraryRouteImport } from './routes/admin.library'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
@@ -268,6 +269,11 @@ const AdminNutritionistWalletRoute = AdminNutritionistWalletRouteImport.update({
   path: '/nutritionist-wallet',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLibraryRoute = AdminLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
   id: '/freebies',
   path: '/freebies',
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
+  '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
@@ -398,6 +405,7 @@ export interface FileRoutesByTo {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
+  '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
@@ -454,6 +462,7 @@ export interface FileRoutesById {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
+  '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/patents': typeof AdminPatentsRoute
@@ -511,6 +520,7 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/freebies'
+    | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/patents'
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/freebies'
+    | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/patents'
@@ -619,6 +630,7 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/freebies'
+    | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/patents'
@@ -969,6 +981,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNutritionistWalletRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/library': {
+      id: '/admin/library'
+      path: '/library'
+      fullPath: '/admin/library'
+      preLoaderRoute: typeof AdminLibraryRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/freebies': {
       id: '/admin/freebies'
       path: '/freebies'
@@ -1075,6 +1094,7 @@ interface AdminRouteChildren {
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
   AdminFreebiesRoute: typeof AdminFreebiesRoute
+  AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
@@ -1097,6 +1117,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
   AdminFreebiesRoute: AdminFreebiesRoute,
+  AdminLibraryRoute: AdminLibraryRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
