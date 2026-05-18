@@ -71,6 +71,23 @@ function LoginPage() {
       return;
     }
 
+    // Partner: rota direta
+    if (profile.role === "partner") {
+      const { data: partner } = await supabase
+        .from("partners" as never)
+        .select("id" as never)
+        .eq("profile_id" as never, profile.id)
+        .maybeSingle();
+      if (!partner) {
+        setLoading(false);
+        const m = "Cadastro de parceiro incompleto. Contate o suporte.";
+        setFormError(m); toast.error(m); return;
+      }
+      if (showSuccess) toast.success("Login realizado!");
+      enterArea("partner");
+      return;
+    }
+
     const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
       supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
@@ -85,7 +102,6 @@ function LoginPage() {
     }
 
     const role = profile.role;
-    const coachApproved = !!coach && !!coach.approved_at;
     // Coach pendente também pode entrar no painel de coach (em modo travado)
     const canCoach = role === "admin" || role === "manager" || role === "director" || !!coach;
     const canStudent = role === "student" || !!student;
@@ -123,6 +139,7 @@ function LoginPage() {
     else if (canCoach) enterArea("coach");
     else enterArea("student");
   };
+
 
   // Auto-login desativado durante a fase de testes.
   // O usuário precisa preencher e-mail/senha manualmente toda vez.
