@@ -29,6 +29,7 @@ export type FinalizeRegistrationInput = {
     coachCourseNotes?: string | null;
     isProfessional?: boolean;
     specialtyKey?: string | null;
+    specialtyCustomDescription?: string | null;
     professionalCouncil?: string | null;
     councilNumber?: string | null;
   };
