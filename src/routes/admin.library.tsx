@@ -29,17 +29,21 @@ interface Exercise {
   is_global: boolean;
 }
 
-const empty: Omit<Exercise, "id"> = {
-  name: "",
-  muscle_group: "",
-  equipment: "",
-  difficulty: "iniciante",
-  description: "",
-  media_type: "video",
-  video_url: "",
-  gif_url: "",
-  image_url: "",
-  is_global: true,
+interface FormState {
+  name: string;
+  muscle_group: string;
+  equipment: string;
+  difficulty: string;
+  description: string;
+  media_type: MediaType;
+  video_url: string;
+  gif_url: string;
+  image_url: string;
+  is_global: boolean;
+}
+const empty: FormState = {
+  name: "", muscle_group: "", equipment: "", difficulty: "iniciante", description: "",
+  media_type: "video", video_url: "", gif_url: "", image_url: "", is_global: true,
 };
 
 function MediaPreview({ ex }: { ex: Exercise }) {
