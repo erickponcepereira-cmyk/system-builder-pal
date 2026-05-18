@@ -169,7 +169,7 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
             height: num(r[I.alt]),
             height_unit: "cm",
             language: "pt",
-            groups: [],
+            groups: ["Importados Fineshape"],
           });
         }
         if (missing.length) {
