@@ -94,6 +94,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
             coachId: coachIdToUse,
             referredByStudentId: referral?.referredByStudentId || null,
             referralCode: referral?.code || null,
+            partnerId: referral?.partnerId || null,
           },
         },
       });
