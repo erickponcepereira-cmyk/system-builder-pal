@@ -30,6 +30,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/nutritionist-wallet", label: "Carteira Nutricionista", icon: Lock, perm: "nutritionist_wallet" },
   { to: "/admin/career", label: "Carreira", icon: Trophy, perm: "career" },
   { to: "/admin/library", label: "Biblioteca", icon: Dumbbell, perm: "library" },
+  { to: "/admin/partners", label: "Empresas Parceiras", icon: Store, perm: "partners" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 ];
 
