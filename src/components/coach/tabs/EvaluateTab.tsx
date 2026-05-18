@@ -202,12 +202,25 @@ export function EvaluateTab() {
               snapshot: (target as any) || {},
             } as never);
           if (logErr) { toast.error("Não foi possível registrar o motivo"); throw logErr; }
-          const { error: delErr } = await supabase
+          const { data: deletedRows, error: delErr } = await supabase
             .from("coach_body_assessments" as never)
             .delete()
             .eq("id" as never, assessmentId as never)
-            .eq("coach_id" as never, coachInfo.id as never);
+            .eq("coach_id" as never, coachInfo.id as never)
+            .select("id" as never);
           if (delErr) { toast.error("Erro ao excluir avaliação"); throw delErr; }
+          if (!deletedRows || (deletedRows as any[]).length === 0) {
+            const err = new Error("A avaliação não foi removida. Atualize a tela e tente novamente.");
+            toast.error(err.message);
+            throw err;
+          }
+          setClients((current) =>
+            current.map((item) =>
+              item.id === client.id
+                ? { ...item, assessments: (item.assessments || []).filter((a) => a.id !== assessmentId) }
+                : item,
+            ),
+          );
           toast.success("Avaliação excluída");
           await loadClients();
         }}
