@@ -27,10 +27,11 @@ function ReferralLandingPage() {
       if (cancelled) return;
       type Row = {
         valid: boolean;
-        kind: "coach" | "student" | null;
+        kind: "coach" | "student" | "partner" | null;
         sponsor_name: string | null;
         coach_id: string | null;
         referred_by_student_id: string | null;
+        partner_id: string | null;
       };
       const row = (Array.isArray(data) ? (data[0] as Row | undefined) : null) ?? null;
       if (error || !row || !row.valid) {
@@ -45,6 +46,7 @@ function ReferralLandingPage() {
           sponsorName: row.sponsor_name,
           coachId: row.coach_id,
           referredByStudentId: row.referred_by_student_id,
+          partnerId: row.partner_id,
         })
       );
       setSponsorName(row.sponsor_name || "");
