@@ -3,17 +3,19 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { maskPhone } from "@/lib/masks";
 import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
+import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
+import { StorePage } from "@/components/student/StorePage";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "profile";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "profile";
 
 interface Partner {
   id: string; profile_id: string; fantasy_name: string; description: string | null;
@@ -21,6 +23,7 @@ interface Partner {
   instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   status: string; document: string | null; document_type: string | null;
+  referral_code: string | null; referral_link: string | null;
 }
 
 interface Product {
