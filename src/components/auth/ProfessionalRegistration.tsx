@@ -200,9 +200,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                   <SelectTrigger className="bg-white/5 border-white/10 text-white">
                     <SelectValue placeholder="Selecione sua especialidade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-neutral-900 border-white/10 text-white z-[100]">
                     {specialties.map((s) => (
-                      <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                      <SelectItem key={s.key} value={s.key} className="text-white focus:bg-white/10 focus:text-white">{s.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -233,42 +233,54 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white/70">Nome completo *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">CPF *</Label>
-                <Input value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} placeholder="000.000.000-00" className="bg-white/5 border-white/10 text-white" required />
-              </div>
-              <div className="space-y-2">
                 <Label className="text-white/70">E-mail *</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value.trim().toLowerCase())} className={`bg-white/5 text-white ${emailStatus === "taken" ? "border-destructive" : emailStatus === "available" ? "border-success" : "border-white/10"}`} required />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value.trim().toLowerCase())} className={`bg-white/5 text-white ${emailStatus === "taken" ? "border-amber-500" : emailStatus === "available" ? "border-success" : "border-white/10"}`} required />
                 {emailStatus === "checking" && <p className="text-[11px] text-white/40">Verificando...</p>}
-                {emailStatus === "taken" && <p className="text-[11px] text-destructive">Já cadastrado.</p>}
+                {emailStatus === "taken" && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-200">
+                    Este e-mail já tem conta no FitMind. Confirme sua senha abaixo para <strong>vincular esta conta como Profissional</strong> (ainda passa por aprovação do admin).
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-white/70">WhatsApp *</Label>
-                  <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white" required />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white/70">Nascimento *</Label>
-                  <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
-                </div>
-              </div>
+
+              {!existingMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-white/70">Nome completo *</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-white/70">CPF *</Label>
+                    <Input value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} placeholder="000.000.000-00" className="bg-white/5 border-white/10 text-white" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-white/70">WhatsApp *</Label>
+                      <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white/70">Nascimento *</Label>
+                      <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
-                <Label className="text-white/70">Senha *</Label>
+                <Label className="text-white/70">{existingMode ? "Sua senha atual *" : "Senha *"}</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 8 chars, 1 maiúscula, 1 número" className="bg-white/5 border-white/10 text-white pr-10" required />
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={existingMode ? "Senha que você usa para entrar" : "Mín. 8 chars, 1 maiúscula, 1 número"} className="bg-white/5 border-white/10 text-white pr-10" required />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">Confirmar senha *</Label>
-                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
-              </div>
+              {!existingMode && (
+                <div className="space-y-2">
+                  <Label className="text-white/70">Confirmar senha *</Label>
+                  <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
