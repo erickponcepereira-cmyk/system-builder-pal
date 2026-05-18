@@ -177,10 +177,11 @@ export function ProtocolTab() {
   };
 
   const filtered = useMemo(() => {
+    const base = scope === "mine" ? students : externals;
     const q = query.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((s) => `${s.name} ${s.email}`.toLowerCase().includes(q));
-  }, [students, query]);
+    if (!q) return base;
+    return base.filter((s) => `${s.name} ${s.email}`.toLowerCase().includes(q));
+  }, [students, externals, scope, query]);
 
   const filteredLib = useMemo(() => {
     const q = libQuery.trim().toLowerCase();
@@ -188,10 +189,39 @@ export function ProtocolTab() {
     return library.filter((e) => `${e.name} ${e.muscle_group || ""} ${e.equipment || ""}`.toLowerCase().includes(q));
   }, [library, libQuery]);
 
+  const createExternalClient = async () => {
+    if (!coachId) return;
+    if (!newExternal.name.trim()) { toast.error("Informe o nome"); return; }
+    setCreatingExternal(true);
+    const { data, error } = await supabase.from("coach_evaluation_clients" as never).insert({
+      coach_id: coachId,
+      name: newExternal.name.trim().slice(0, 120),
+      email: newExternal.email.trim().slice(0, 255) || null,
+      whatsapp: newExternal.whatsapp.slice(0, 24) || null,
+      gender: "other",
+      ethnicity: "other",
+      height_unit: "cm",
+      language: "pt",
+    } as never).select("*" as never).single();
+    setCreatingExternal(false);
+    if (error || !data) { toast.error(error?.message || "Erro ao criar cliente"); return; }
+    const d = data as any;
+    const created: Student = {
+      id: d.id, profile_id: null, name: d.name,
+      email: d.email || d.whatsapp || "", current_weight: null, goal_weight: null, external: true,
+    };
+    setExternals((curr) => [created, ...curr]);
+    setNewExternal({ name: "", email: "", whatsapp: "" });
+    setNewExternalOpen(false);
+    toast.success("Cliente externo criado");
+    loadProtocol(created);
+  };
+
   const loadProtocol = async (s: Student) => {
     setSelected(s);
     setLoading(true);
-    const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, s.id as never).maybeSingle();
+    const idCol = s.external ? "evaluation_client_id" : "student_id";
+    const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq(idCol as never, s.id as never).maybeSingle();
     if (data) {
       const d = data as any;
       setProtocol({
@@ -211,10 +241,15 @@ export function ProtocolTab() {
       setProtocol({ ...emptyProtocol(), weight_goal: s.goal_weight });
     }
 
-    const { data: bio } = await supabase.from("bioimpedance_evaluations").select("id").eq("student_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    setBioEvalUrl(bio ? `/admin/students?student=${s.id}` : null);
-    const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
-    setAnamnesisUrl(an ? `/admin/students?student=${s.id}` : null);
+    if (!s.external) {
+      const { data: bio } = await supabase.from("bioimpedance_evaluations").select("id").eq("student_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      setBioEvalUrl(bio ? `/admin/students?student=${s.id}` : null);
+      const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
+      setAnamnesisUrl(an ? `/admin/students?student=${s.id}` : null);
+    } else {
+      setBioEvalUrl(null);
+      setAnamnesisUrl(null);
+    }
 
     setLoading(false);
   };
@@ -223,7 +258,8 @@ export function ProtocolTab() {
     if (!selected || !coachId) return;
     setSaving(true);
     const payload: any = {
-      student_id: selected.id,
+      student_id: selected.external ? null : selected.id,
+      evaluation_client_id: selected.external ? selected.id : null,
       coach_id: coachId,
       meals_per_day: protocol.meals_per_day,
       meal_plan: protocol.meal_plan,
@@ -236,9 +272,10 @@ export function ProtocolTab() {
       general_notes: protocol.general_notes.slice(0, 5000),
       workout_plan: protocol.workout_plan,
     };
-    const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict: "student_id" } as never);
+    const onConflict = selected.external ? "evaluation_client_id" : "student_id";
+    const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict } as never);
 
-    if (protocol.weight_goal != null) {
+    if (!selected.external && protocol.weight_goal != null) {
       await supabase.from("students").update({ goal_weight: protocol.weight_goal }).eq("id", selected.id);
     }
 
