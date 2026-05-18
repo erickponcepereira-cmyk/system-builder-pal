@@ -25,6 +25,7 @@ import { Route as StudentSupportRouteImport } from './routes/student.support'
 import { Route as StudentStoreRouteImport } from './routes/student.store'
 import { Route as StudentProtocolRouteImport } from './routes/student.protocol'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentPartnersRouteImport } from './routes/student.partners'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
 import { Route as StudentLibraryRouteImport } from './routes/student.library'
 import { Route as StudentHealthRouteImport } from './routes/student.health'
@@ -60,6 +61,7 @@ import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
 import { Route as AdminCareerRouteImport } from './routes/admin.career'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
+import { Route as StudentPartnersPartnerIdRouteImport } from './routes/student.partners.$partnerId'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
@@ -145,6 +147,11 @@ const StudentProtocolRoute = StudentProtocolRouteImport.update({
 const StudentProfileRoute = StudentProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentPartnersRoute = StudentPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentNotificationsRoute = StudentNotificationsRouteImport.update({
@@ -322,6 +329,12 @@ const AdminCalendarsRoute = AdminCalendarsRouteImport.update({
   path: '/calendars',
   getParentRoute: () => AdminRoute,
 } as any)
+const StudentPartnersPartnerIdRoute =
+  StudentPartnersPartnerIdRouteImport.update({
+    id: '/$partnerId',
+    path: '/$partnerId',
+    getParentRoute: () => StudentPartnersRoute,
+  } as any)
 const AdminCoachesInactivityRoute = AdminCoachesInactivityRouteImport.update({
   id: '/inactivity',
   path: '/inactivity',
@@ -399,6 +412,7 @@ export interface FileRoutesByFullPath {
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
+  '/student/partners': typeof StudentPartnersRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
@@ -406,6 +420,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/student/partners/$partnerId': typeof StudentPartnersPartnerIdRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
@@ -456,6 +471,7 @@ export interface FileRoutesByTo {
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
+  '/student/partners': typeof StudentPartnersRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
@@ -463,6 +479,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/student': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/student/partners/$partnerId': typeof StudentPartnersPartnerIdRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
@@ -516,6 +533,7 @@ export interface FileRoutesById {
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
+  '/student/partners': typeof StudentPartnersRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
@@ -523,6 +541,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
+  '/student/partners/$partnerId': typeof StudentPartnersPartnerIdRoute
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
@@ -577,6 +596,7 @@ export interface FileRouteTypes {
     | '/student/health'
     | '/student/library'
     | '/student/notifications'
+    | '/student/partners'
     | '/student/profile'
     | '/student/protocol'
     | '/student/store'
@@ -584,6 +604,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/student/partners/$partnerId'
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
@@ -634,6 +655,7 @@ export interface FileRouteTypes {
     | '/student/health'
     | '/student/library'
     | '/student/notifications'
+    | '/student/partners'
     | '/student/profile'
     | '/student/protocol'
     | '/student/store'
@@ -641,6 +663,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
+    | '/student/partners/$partnerId'
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
@@ -693,6 +716,7 @@ export interface FileRouteTypes {
     | '/student/health'
     | '/student/library'
     | '/student/notifications'
+    | '/student/partners'
     | '/student/profile'
     | '/student/protocol'
     | '/student/store'
@@ -700,6 +724,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
+    | '/student/partners/$partnerId'
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/invite/$token'
@@ -842,6 +867,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/student/profile'
       preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/partners': {
+      id: '/student/partners'
+      path: '/partners'
+      fullPath: '/student/partners'
+      preLoaderRoute: typeof StudentPartnersRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/notifications': {
@@ -1089,6 +1121,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCalendarsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/student/partners/$partnerId': {
+      id: '/student/partners/$partnerId'
+      path: '/$partnerId'
+      fullPath: '/student/partners/$partnerId'
+      preLoaderRoute: typeof StudentPartnersPartnerIdRouteImport
+      parentRoute: typeof StudentPartnersRoute
+    }
     '/admin/coaches/inactivity': {
       id: '/admin/coaches/inactivity'
       path: '/inactivity'
@@ -1196,6 +1235,18 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface StudentPartnersRouteChildren {
+  StudentPartnersPartnerIdRoute: typeof StudentPartnersPartnerIdRoute
+}
+
+const StudentPartnersRouteChildren: StudentPartnersRouteChildren = {
+  StudentPartnersPartnerIdRoute: StudentPartnersPartnerIdRoute,
+}
+
+const StudentPartnersRouteWithChildren = StudentPartnersRoute._addFileChildren(
+  StudentPartnersRouteChildren,
+)
+
 interface StudentRouteChildren {
   StudentBenefitsRoute: typeof StudentBenefitsRoute
   StudentCardRoute: typeof StudentCardRoute
@@ -1207,6 +1258,7 @@ interface StudentRouteChildren {
   StudentHealthRoute: typeof StudentHealthRoute
   StudentLibraryRoute: typeof StudentLibraryRoute
   StudentNotificationsRoute: typeof StudentNotificationsRoute
+  StudentPartnersRoute: typeof StudentPartnersRouteWithChildren
   StudentProfileRoute: typeof StudentProfileRoute
   StudentProtocolRoute: typeof StudentProtocolRoute
   StudentStoreRoute: typeof StudentStoreRoute
@@ -1225,6 +1277,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentHealthRoute: StudentHealthRoute,
   StudentLibraryRoute: StudentLibraryRoute,
   StudentNotificationsRoute: StudentNotificationsRoute,
+  StudentPartnersRoute: StudentPartnersRouteWithChildren,
   StudentProfileRoute: StudentProfileRoute,
   StudentProtocolRoute: StudentProtocolRoute,
   StudentStoreRoute: StudentStoreRoute,

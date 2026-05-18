@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode } from "lucide-react";
+import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
