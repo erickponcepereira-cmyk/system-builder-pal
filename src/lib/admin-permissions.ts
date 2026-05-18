@@ -25,6 +25,7 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "product_orders", label: "Painel de Pedidos" },
   { key: "nutritionist_wallet", label: "Carteira Nutricionista" },
   { key: "career", label: "Carreira" },
+  { key: "library", label: "Biblioteca" },
   { key: "settings", label: "Configurações" },
 ];
 
