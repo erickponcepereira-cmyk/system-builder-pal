@@ -331,17 +331,35 @@ export function ProtocolTab() {
 
       {!selected ? (
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-          <div className="mb-3 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
-            <Search className="h-4 w-4 text-white/40" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar aluno por nome ou e-mail" className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+          <div className="mb-3 flex gap-1 rounded-lg bg-black/30 p-1">
+            <button onClick={() => setScope("mine")} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${scope === "mine" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}>Meus alunos ({students.length})</button>
+            <button onClick={() => setScope("external")} className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${scope === "external" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}>Externos ({externals.length})</button>
+          </div>
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+              <Search className="h-4 w-4 text-white/40" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={scope === "mine" ? "Buscar meu aluno" : "Buscar cliente externo"} className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30" />
+            </div>
+            <button onClick={() => setNewExternalOpen(true)} className="flex items-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/25">
+              <Plus className="h-3.5 w-3.5" /> Novo externo
+            </button>
           </div>
           <div className="space-y-2">
-            {filtered.length === 0 && <p className="py-6 text-center text-sm text-white/40">Nenhum aluno vinculado a você ainda.</p>}
+            {filtered.length === 0 && (
+              <p className="py-6 text-center text-sm text-white/40">
+                {scope === "mine"
+                  ? "Nenhum aluno vinculado a você ainda. Use a aba 'Externos' para criar treinos para pessoas de fora do app."
+                  : "Nenhum cliente externo. Clique em 'Novo externo' para começar."}
+              </p>
+            )}
             {filtered.map((s) => (
               <button key={s.id} onClick={() => loadProtocol(s)} className="flex w-full items-center justify-between rounded-xl bg-white/5 p-3 text-left transition-colors hover:bg-white/10">
                 <div>
-                  <p className="text-sm font-semibold text-white">{s.name}</p>
-                  <p className="text-xs text-white/40">{s.email}</p>
+                  <p className="text-sm font-semibold text-white">
+                    {s.name}
+                    {s.external && <span className="ml-2 rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">Externo</span>}
+                  </p>
+                  <p className="text-xs text-white/40">{s.email || "—"}</p>
                 </div>
                 <span className="text-xs text-primary">Abrir →</span>
               </button>
