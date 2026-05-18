@@ -78,7 +78,7 @@ function StudentHome() {
             <span className="text-base font-bold text-primary">{studentName.charAt(0)}</span>
           </div>
           <div>
-            <p className="text-xs text-white/40">Bom dia,</p>
+            <p className="text-xs text-white/40">{greeting},</p>
             <p className="text-sm font-bold text-white">{studentName} 🔥</p>
           </div>
         </div>
