@@ -2736,12 +2736,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             onDeleteAssessment
               ? async (id, reason) => {
                   await onDeleteAssessment(id, reason, selectedClient);
-                  setSelectedClient((current) =>
-                    current
-                      ? { ...current, assessments: (current.assessments || []).filter((item) => item.id !== id) }
-                      : current,
-                  );
-                  setAssessment((current) => (current.id === id ? {} : current));
+                  const remaining = (selectedClient.assessments || []).filter((item) => item.id !== id);
+                  setSelectedClient({ ...selectedClient, assessments: remaining });
+                  setAssessment((current) => {
+                    if (current.id !== id) return current;
+                    return remaining.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || {};
+                  });
                 }
               : undefined
           }
