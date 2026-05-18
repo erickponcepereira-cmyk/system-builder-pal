@@ -37,7 +37,7 @@ function AdminProfessionals() {
     const [{ data: list }, { data: specs }] = await Promise.all([
       supabase
         .from("coaches")
-        .select("id,profile_id,specialty_key,professional_council,council_number,approved_at,specialty_pending_setup,serves_whole_network,profiles!coaches_profile_id_fkey(name,email,phone,avatar_url,status)")
+        .select("id,profile_id,specialty_key,specialty_custom_description,professional_council,council_number,approved_at,specialty_pending_setup,serves_whole_network,profiles!coaches_profile_id_fkey(name,email,phone,avatar_url,status)")
         .eq("is_professional", true)
         .order("created_at", { ascending: false }),
       supabase.from("professional_specialties").select("key,label,requires_admin_setup,default_tabs").order("sort_order"),
