@@ -29,20 +29,41 @@ type Redemption = {
   freebies: { name: string } | null;
 };
 
+type PartnerFreeProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  redemption_instructions: string | null;
+  stock: number | null;
+  partner_id: string;
+  partners: { fantasy_name: string; photo_url: string | null; status: string } | null;
+};
+
 function StudentFreebies() {
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
+  const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const [a, b] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       supabase.from("freebies" as never).select("*").eq("is_active" as never, true).order("sort_order"),
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
+      supabase
+        .from("partner_products" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,partners(fantasy_name,photo_url,status)" as never)
+        .eq("kind" as never, "free" as never)
+        .eq("status" as never, "approved" as never)
+        .eq("is_active_by_partner" as never, true as never)
+        .order("created_at" as never, { ascending: false }),
     ]);
     setItems((a.data as unknown as Freebie[]) || []);
     setMine((b.data as unknown as Redemption[]) || []);
+    const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
+    setPartnerFreebies(pf);
     setLoading(false);
   };
 
