@@ -186,6 +186,31 @@ export function EvaluateTab() {
         clients={clients}
         onCreateClient={createClient}
         onSaveAssessment={saveAssessment}
+        onDeleteAssessment={async (assessmentId, reason, client) => {
+          if (!coachInfo.id) throw new Error("Coach não encontrado");
+          if (!reason?.trim()) throw new Error("Motivo obrigatório");
+          const target = client.assessments?.find((a) => a.id === assessmentId);
+          const { error: logErr } = await supabase
+            .from("coach_assessment_deletions" as never)
+            .insert({
+              coach_id: coachInfo.id,
+              client_id: client.id,
+              client_name: client.name,
+              assessment_id: assessmentId,
+              assessment_date: target?.date || null,
+              reason: reason.trim().slice(0, 1000),
+              snapshot: (target as any) || {},
+            } as never);
+          if (logErr) { toast.error("Não foi possível registrar o motivo"); throw logErr; }
+          const { error: delErr } = await supabase
+            .from("coach_body_assessments" as never)
+            .delete()
+            .eq("id" as never, assessmentId as never)
+            .eq("coach_id" as never, coachInfo.id as never);
+          if (delErr) { toast.error("Erro ao excluir avaliação"); throw delErr; }
+          toast.success("Avaliação excluída");
+          await loadClients();
+        }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         onCreateGoogleCalendarEvent={async (date, time, clientName, eventName) => {
           try {
