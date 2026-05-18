@@ -327,9 +327,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
   // ── Histórico mock (substitua pelos dados reais da API) ──
   const historicalData = useMemo(() => {
-    const past = selectedClient?.assessments ?? [];
+    const past = (selectedClient?.assessments ?? [])
+      .filter((a) => a?.date)
+      .slice()
+      .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
     return past.map((a) => ({
       date: new Date(a.date).toLocaleDateString("pt-BR", {
+        day: "2-digit",
         month: "short",
         year: "2-digit",
       }),
