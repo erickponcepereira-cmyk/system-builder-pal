@@ -175,8 +175,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary mb-2">
             <Building2 className="h-3.5 w-3.5" /> Empresa Parceira
           </div>
-          <h1 className="text-xl font-bold text-white">Cadastro de Parceiro</h1>
-          <p className="mt-1 text-xs text-white/50">Após confirmar o e-mail, sua empresa passa por aprovação do admin.</p>
+          <h1 className="text-xl font-bold text-white">{isExisting ? "Tornar-se Parceiro" : "Cadastro de Parceiro"}</h1>
+          <p className="mt-1 text-xs text-white/50">{isExisting ? "Vincule sua empresa à sua conta atual. Após análise, o painel de parceiro será liberado." : "Após confirmar o e-mail, sua empresa passa por aprovação do admin ou de um coach."}</p>
         </div>
 
         <div className="rounded-2xl p-6" style={{ backgroundColor: "#1A1A1A" }}>
@@ -208,8 +208,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
               <Input value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} placeholder="Seu nome" className="bg-white/5 border-white/10 text-white" required />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">E-mail (login)</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required />
+              <Label className="text-white/70 text-xs">E-mail {isExisting ? "(da sua conta)" : "(login)"}</Label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required disabled={isExisting} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">WhatsApp</Label>
@@ -225,21 +225,23 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
                 <Input value={state} onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))} className="bg-white/5 border-white/10 text-white" />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Senha</Label>
-              <div className="relative">
-                <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="bg-white/5 border-white/10 text-white pr-10" required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {!isExisting && (
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-xs">Senha</Label>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="bg-white/5 border-white/10 text-white pr-10" required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
               <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Criar conta"}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isExisting ? "Enviar para aprovação" : "Criar conta"}
               </Button>
             </div>
           </form>
