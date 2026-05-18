@@ -134,6 +134,7 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
           coach_course_notes: clean(input.coach.coachCourseNotes),
           is_professional: input.coach.isProfessional ?? false,
           specialty_key: clean(input.coach.specialtyKey),
+          specialty_custom_description: clean(input.coach.specialtyCustomDescription),
           professional_council: clean(input.coach.professionalCouncil),
           council_number: clean(input.coach.councilNumber),
           specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
