@@ -27,7 +27,7 @@ type OrderRow = { id: string; order_number: string; status: string; total_amount
 
 type ShippingForm = { name: string; phone: string; zip: string; address: string; city: string; state: string };
 
-const baseCategories = ["Todos", "Inscrições", "Planos 30d", "Protocolos 90d", "Cursos", "Aulões", "Salas", "Herbalife"];
+const baseCategories = ["Todos"];
 const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "" };
 
 const productCategory = (type?: string | null) => ({
