@@ -153,15 +153,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
     t === "good" ? <TrendingDown size={12} /> : t === "bad" ? <TrendingUp size={12} /> : <Minus size={12} />;
 
   return (
-    <div style={{ padding: 20, minHeight: "100vh", background: "#f8fafc", fontFamily: "inherit" }}>
+    <div style={{ padding: 20, minHeight: "100vh", background: "#0A0A0A", color: "#ffffff", fontFamily: "inherit" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer" }}>
           <ChevronLeft size={22} color="#64748b" />
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>Comparar avaliações</div>
-          <div style={{ fontSize: 12, color: "#64748b" }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff" }}>Comparar avaliações</div>
+          <div style={{ fontSize: 12, color: "#ffffff" }}>
             {client.name} · {all.length} avaliação{all.length === 1 ? "" : "s"} no histórico
           </div>
         </div>
@@ -169,7 +169,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
           onClick={() => window.print()}
           title="Imprimir relatório comparativo"
           style={{
-            background: "white",
+            background: "#1A1A1A",
             border: "1px solid #e2e8f0",
             borderRadius: 8,
             padding: "8px 10px",
@@ -178,7 +178,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
             alignItems: "center",
             gap: 6,
             fontSize: 12,
-            color: "#1e293b",
+            color: "#ffffff",
           }}
         >
           <Printer size={14} /> Relatório
@@ -186,15 +186,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
       </div>
 
       {all.length < 2 ? (
-        <div style={{ background: "white", padding: 24, borderRadius: 12, textAlign: "center", color: "#64748b" }}>
+        <div style={{ background: "#1A1A1A", padding: 24, borderRadius: 12, textAlign: "center", color: "#ffffff" }}>
           É necessário ter pelo menos 2 avaliações para comparar. Este aluno tem {all.length}.
         </div>
       ) : (
         <>
           {/* Seleção de avaliações */}
-          <div style={{ background: "white", borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+          <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#ffffff" }}>
                 Avaliações ({selected.length} selecionada{selected.length === 1 ? "" : "s"})
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -213,8 +213,8 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                       alignItems: "center",
                       gap: 8,
                       padding: "8px 10px",
-                      background: checked ? `${themeColor}11` : "#f8fafc",
-                      border: `1px solid ${checked ? themeColor : "#e2e8f0"}`,
+                      background: checked ? `${themeColor}22` : "#0F0F0F",
+                      border: `1px solid ${checked ? themeColor : "rgba(255,255,255,0.14)"}`,
                       borderRadius: 8,
                     }}
                   >
@@ -224,10 +224,10 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                     >
                       {checked ? <CheckSquare size={16} color={themeColor} /> : <Square size={16} color="#94a3b8" />}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}>
                           {fmtDate(a.date)} {idx === 0 && <span style={{ fontSize: 10, color: themeColor, marginLeft: 4 }}>(atual)</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>
+                        <div style={{ fontSize: 11, color: "#ffffff" }}>
                           {fmtNum(a.weight, "kg")} · {fmtNum(a.bodyFat, "% gord.")} · IMC {fmtNum(a.bmi)}
                         </div>
                       </div>
@@ -255,37 +255,37 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
           </div>
 
           {picked.length < 2 ? (
-            <div style={{ background: "white", padding: 18, borderRadius: 12, color: "#64748b", textAlign: "center" }}>
+              <div style={{ background: "#1A1A1A", padding: 18, borderRadius: 12, color: "#ffffff", textAlign: "center" }}>
               Selecione 2 ou mais avaliações para ver o comparativo.
             </div>
           ) : (
             <>
               {/* Resumo evolutivo */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-                <div style={{ background: "white", borderRadius: 12, padding: 12, border: "1px solid #dcfce7" }}>
+                <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 12, border: "1px solid #14532d" }}>
                   <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>
                     Melhoraram
                   </div>
                   {summary.improved.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Nenhum indicador.</div>
+                    <div style={{ fontSize: 12, color: "#ffffff" }}>Nenhum indicador.</div>
                   ) : (
                     summary.improved.map((it) => (
-                      <div key={it.label} style={{ fontSize: 12, color: "#1e293b", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div key={it.label} style={{ fontSize: 12, color: "#ffffff", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>{it.label}</span>
                         <span style={{ fontWeight: 700, color: "#16a34a" }}>{it.text}</span>
                       </div>
                     ))
                   )}
                 </div>
-                <div style={{ background: "white", borderRadius: 12, padding: 12, border: "1px solid #fee2e2" }}>
+                <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 12, border: "1px solid #7f1d1d" }}>
                   <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>
                     Precisam melhorar
                   </div>
                   {summary.worsened.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Nenhum indicador.</div>
+                    <div style={{ fontSize: 12, color: "#ffffff" }}>Nenhum indicador.</div>
                   ) : (
                     summary.worsened.map((it) => (
-                      <div key={it.label} style={{ fontSize: 12, color: "#1e293b", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div key={it.label} style={{ fontSize: 12, color: "#ffffff", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>{it.label}</span>
                         <span style={{ fontWeight: 700, color: "#dc2626" }}>{it.text}</span>
                       </div>
@@ -295,8 +295,8 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               </div>
 
               {/* Gráficos */}
-              <div style={{ background: "white", borderRadius: 12, padding: 14, marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 8 }}>Evolução</div>
+              <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>Evolução</div>
                 <div style={{ width: "100%", height: 220 }}>
                   <ResponsiveContainer>
                     <LineChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
@@ -315,15 +315,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               </div>
 
               {/* Tabela comparativa */}
-              <div style={{ background: "white", borderRadius: 12, padding: 0, overflowX: "auto" }}>
+              <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 0, overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
-                    <tr style={{ background: "#f1f5f9" }}>
+                    <tr style={{ background: "#0F0F0F" }}>
                       <th style={th}>Indicador</th>
                       {picked.map((a, i) => (
                         <th key={a.id} style={th}>
                           {fmtDateShort(a.date)}
-                          {i === 0 && <div style={{ fontSize: 9, color: "#64748b" }}>base</div>}
+                          {i === 0 && <div style={{ fontSize: 9, color: "#ffffff" }}>base</div>}
                           {i === picked.length - 1 && picked.length > 1 && <div style={{ fontSize: 9, color: themeColor }}>atual</div>}
                         </th>
                       ))}
@@ -391,25 +391,25 @@ const th: React.CSSProperties = {
   padding: "10px 8px",
   textAlign: "left",
   fontSize: 11,
-  color: "#475569",
+  color: "#ffffff",
   fontWeight: 700,
   textTransform: "uppercase",
   whiteSpace: "nowrap",
 };
 const td: React.CSSProperties = {
   padding: "8px",
-  color: "#1e293b",
+  color: "#ffffff",
   verticalAlign: "top",
   whiteSpace: "nowrap",
 };
 const miniBtn: React.CSSProperties = {
   fontSize: 11,
   padding: "4px 8px",
-  border: "1px solid #e2e8f0",
-  background: "white",
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "#0F0F0F",
   borderRadius: 6,
   cursor: "pointer",
-  color: "#1e293b",
+  color: "#ffffff",
 };
 
 export default AssessmentComparison;
