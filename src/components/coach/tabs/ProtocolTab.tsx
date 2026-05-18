@@ -6,11 +6,12 @@ import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/comp
 
 type Student = {
   id: string;
-  profile_id: string;
+  profile_id: string | null;
   name: string;
   email: string;
   current_weight: number | null;
   goal_weight: number | null;
+  external: boolean; // true = coach_evaluation_clients (cliente externo)
 };
 
 type MealSlot = { name: string; time: string; options: [string, string, string] };
