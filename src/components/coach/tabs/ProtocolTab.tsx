@@ -71,6 +71,8 @@ const emptyProtocol = (): Protocol => ({
 export function ProtocolTab() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [externals, setExternals] = useState<Student[]>([]);
+  const [scope, setScope] = useState<"mine" | "external">("mine");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Student | null>(null);
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
@@ -87,6 +89,9 @@ export function ProtocolTab() {
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [templateForm, setTemplateForm] = useState({ name: "", description: "", goal: "general" as WorkoutTemplate["goal"], level: "iniciante" as WorkoutTemplate["level"] });
   const [templateGoalFilter, setTemplateGoalFilter] = useState<string>("all");
+  const [newExternalOpen, setNewExternalOpen] = useState(false);
+  const [newExternal, setNewExternal] = useState({ name: "", email: "", whatsapp: "" });
+  const [creatingExternal, setCreatingExternal] = useState(false);
 
   useEffect(() => {
     (async () => {
