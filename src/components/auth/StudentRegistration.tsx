@@ -48,11 +48,10 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
       setReferral(parsed);
       if (parsed.coachId) {
         setSelectedCoach({ id: parsed.coachId, profileId: "", name: parsed.sponsorName, referralCode: parsed.code } as unknown as CoachOption);
-        // Se o sponsor for coach, o nome dele já é o nome do coach
         if (parsed.kind === "coach") {
           setReferralCoachName(parsed.sponsorName);
         } else {
-          // Se o sponsor for um aluno (padrinho), buscamos o nome do coach vinculado
+          // Sponsor é aluno (padrinho) ou parceiro (empresa): buscar nome do coach vinculado
           (async () => {
             const { data } = await supabase
               .from("coaches")
