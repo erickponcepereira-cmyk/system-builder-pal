@@ -277,15 +277,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                     ))
                   )}
                 </div>
-                <div style={{ background: "white", borderRadius: 12, padding: 12, border: "1px solid #fee2e2" }}>
+                <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 12, border: "1px solid #7f1d1d" }}>
                   <div style={{ fontSize: 11, color: "#dc2626", fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>
                     Precisam melhorar
                   </div>
                   {summary.worsened.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Nenhum indicador.</div>
+                    <div style={{ fontSize: 12, color: "#ffffff" }}>Nenhum indicador.</div>
                   ) : (
                     summary.worsened.map((it) => (
-                      <div key={it.label} style={{ fontSize: 12, color: "#1e293b", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div key={it.label} style={{ fontSize: 12, color: "#ffffff", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>{it.label}</span>
                         <span style={{ fontWeight: 700, color: "#dc2626" }}>{it.text}</span>
                       </div>
@@ -295,8 +295,8 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               </div>
 
               {/* Gráficos */}
-              <div style={{ background: "white", borderRadius: 12, padding: 14, marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 8 }}>Evolução</div>
+              <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>Evolução</div>
                 <div style={{ width: "100%", height: 220 }}>
                   <ResponsiveContainer>
                     <LineChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
@@ -315,10 +315,10 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               </div>
 
               {/* Tabela comparativa */}
-              <div style={{ background: "white", borderRadius: 12, padding: 0, overflowX: "auto" }}>
+              <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 0, overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
-                    <tr style={{ background: "#f1f5f9" }}>
+                    <tr style={{ background: "#0F0F0F" }}>
                       <th style={th}>Indicador</th>
                       {picked.map((a, i) => (
                         <th key={a.id} style={th}>
