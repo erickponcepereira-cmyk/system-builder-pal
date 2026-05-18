@@ -274,6 +274,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   clients = [],
   groups = [],
   onSaveAssessment,
+  onDeleteAssessment,
   onCreateClient,
   onSearchClients,
   onCreateGoogleCalendarEvent,
