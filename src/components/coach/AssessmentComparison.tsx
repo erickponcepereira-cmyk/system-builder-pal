@@ -213,8 +213,8 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                       alignItems: "center",
                       gap: 8,
                       padding: "8px 10px",
-                      background: checked ? `${themeColor}11` : "#f8fafc",
-                      border: `1px solid ${checked ? themeColor : "#e2e8f0"}`,
+                      background: checked ? `${themeColor}22` : "#0F0F0F",
+                      border: `1px solid ${checked ? themeColor : "rgba(255,255,255,0.14)"}`,
                       borderRadius: 8,
                     }}
                   >
@@ -224,10 +224,10 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                     >
                       {checked ? <CheckSquare size={16} color={themeColor} /> : <Square size={16} color="#94a3b8" />}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#ffffff" }}>
                           {fmtDate(a.date)} {idx === 0 && <span style={{ fontSize: 10, color: themeColor, marginLeft: 4 }}>(atual)</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>
+                        <div style={{ fontSize: 11, color: "#ffffff" }}>
                           {fmtNum(a.weight, "kg")} · {fmtNum(a.bodyFat, "% gord.")} · IMC {fmtNum(a.bmi)}
                         </div>
                       </div>
@@ -255,22 +255,22 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
           </div>
 
           {picked.length < 2 ? (
-            <div style={{ background: "white", padding: 18, borderRadius: 12, color: "#64748b", textAlign: "center" }}>
+              <div style={{ background: "#1A1A1A", padding: 18, borderRadius: 12, color: "#ffffff", textAlign: "center" }}>
               Selecione 2 ou mais avaliações para ver o comparativo.
             </div>
           ) : (
             <>
               {/* Resumo evolutivo */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-                <div style={{ background: "white", borderRadius: 12, padding: 12, border: "1px solid #dcfce7" }}>
+                <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 12, border: "1px solid #14532d" }}>
                   <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, marginBottom: 6, textTransform: "uppercase" }}>
                     Melhoraram
                   </div>
                   {summary.improved.length === 0 ? (
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Nenhum indicador.</div>
+                    <div style={{ fontSize: 12, color: "#ffffff" }}>Nenhum indicador.</div>
                   ) : (
                     summary.improved.map((it) => (
-                      <div key={it.label} style={{ fontSize: 12, color: "#1e293b", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                      <div key={it.label} style={{ fontSize: 12, color: "#ffffff", display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
                         <span>{it.label}</span>
                         <span style={{ fontWeight: 700, color: "#16a34a" }}>{it.text}</span>
                       </div>
