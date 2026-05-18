@@ -177,11 +177,6 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
-  const [editing, setEditing] = useState<Partial<Product> | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  const blank = (): Partial<Product> => ({ partner_id: partner.id, kind: hasActiveFree ? "paid" : "free", name: "", description: "", image_url: "", price: 0, stock: null, redemption_instructions: "", is_active_by_partner: true });
 
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
