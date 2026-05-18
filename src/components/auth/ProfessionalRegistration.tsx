@@ -322,7 +322,19 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
           {step === 2 && (
             <div className="space-y-4">
-              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+              {existingMode ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <p className="text-xs text-white/80">
+                    Identificamos seu cadastro. Vamos manter o <strong>coach indicador atual</strong> da sua conta.
+                  </p>
+                  <p className="text-[11px] text-white/50">
+                    Quer indicar outro coach? Selecione abaixo (opcional):
+                  </p>
+                  <CoachSelector value={selectedCoach} onChange={setSelectedCoach} label="Trocar coach indicador (opcional)" />
+                </div>
+              ) : (
+                <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+              )}
 
               <label className="flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
@@ -339,6 +351,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               </div>
             </div>
           )}
+
         </div>
 
         <div className="mt-6 text-center text-sm text-white/40">
