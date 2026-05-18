@@ -17,6 +17,7 @@ import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
+import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentIndexRouteImport } from './routes/student.index'
@@ -107,6 +108,11 @@ const LoginRoute = LoginRouteImport.update({
 const CoachRoute = CoachRouteImport.update({
   id: '/coach',
   path: '/coach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BecomePartnerRoute = BecomePartnerRouteImport.update({
+  id: '/become-partner',
+  path: '/become-partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -369,6 +375,7 @@ const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
@@ -429,6 +436,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
@@ -490,6 +498,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/become-partner'
     | '/coach'
     | '/login'
     | '/onboarding'
@@ -613,6 +623,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/become-partner'
     | '/coach'
     | '/login'
     | '/onboarding'
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/become-partner'
     | '/coach'
     | '/login'
     | '/onboarding'
@@ -735,6 +747,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  BecomePartnerRoute: typeof BecomePartnerRoute
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -811,6 +824,13 @@ declare module '@tanstack/react-router' {
       path: '/coach'
       fullPath: '/coach'
       preLoaderRoute: typeof CoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/become-partner': {
+      id: '/become-partner'
+      path: '/become-partner'
+      fullPath: '/become-partner'
+      preLoaderRoute: typeof BecomePartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -1291,6 +1311,7 @@ const StudentRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  BecomePartnerRoute: BecomePartnerRoute,
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
