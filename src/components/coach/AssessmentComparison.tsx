@@ -77,7 +77,7 @@ const fmtNum = (v?: number, unit = "") => {
   return `${+v.toFixed(1)}${unit ? ` ${unit}` : ""}`;
 };
 
-const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack }) => {
+const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete }) => {
   const all = useMemo(
     () =>
       (client.assessments ?? [])
