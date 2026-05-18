@@ -27,6 +27,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [specialtyKey, setSpecialtyKey] = useState("");
+  const [specialtyCustom, setSpecialtyCustom] = useState("");
   const [council, setCouncil] = useState("");
   const [councilNumber, setCouncilNumber] = useState("");
 
