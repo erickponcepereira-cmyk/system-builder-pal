@@ -541,6 +541,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-app.fm-dark .fm-label { color: #cbd5e1; }
     .fm-app.fm-dark .fm-photo-box { background: #0F0F0F; border-color: rgba(255,255,255,0.15); color: #cbd5e1; }
     .fm-app.fm-dark .fm-step-dot { background: rgba(255,255,255,0.1); }
+    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
+    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #cbd5e1 !important; }
+    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #94a3b8 !important; }
   `;
 
   // ────────────────────────────────────────────────────────
