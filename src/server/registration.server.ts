@@ -131,6 +131,11 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
           bank_account_type: clean(input.coach.bankAccountType),
           completed_coach_course: input.coach.completedCoachCourse ?? false,
           coach_course_notes: clean(input.coach.coachCourseNotes),
+          is_professional: input.coach.isProfessional ?? false,
+          specialty_key: clean(input.coach.specialtyKey),
+          professional_council: clean(input.coach.professionalCouncil),
+          council_number: clean(input.coach.councilNumber),
+          specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
           // Coach NÃO é aprovado automaticamente — admin precisa liberar
           approved_at: null,
         },
