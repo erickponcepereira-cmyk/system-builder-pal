@@ -63,10 +63,13 @@ function StudentFreebies() {
     <div className="min-h-screen pb-24" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-[#0F0F0F] px-4 py-3">
         <Link to="/student/store" className="text-white/60"><ArrowLeft className="h-5 w-5" /></Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg font-bold text-white flex items-center gap-2"><Gift className="h-5 w-5 text-primary" /> Gratuitos</h1>
           <p className="text-xs text-white/50">Brindes e bônus para você resgatar</p>
         </div>
+        <Link to="/student/partners" className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-3 py-1.5">
+          <Building2 className="h-3.5 w-3.5" /> Parceiros
+        </Link>
       </div>
 
       <div className="p-4">
