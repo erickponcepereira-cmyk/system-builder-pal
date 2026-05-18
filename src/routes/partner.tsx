@@ -105,6 +105,7 @@ function PartnerPanel() {
   const tabs = [
     ...baseTabs,
     ...benefitTabs,
+    { key: "network" as Tab, label: "Rede", icon: TrendingUp },
     { key: "collaborators" as Tab, label: "Equipe", icon: Users },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
