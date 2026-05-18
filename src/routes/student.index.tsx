@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, Flame, QrCode, Calendar, Camera, Apple, Scale, Trophy, Sparkles, Quote, Link as LinkIcon, Copy, Share2, X, ShoppingBag, BookOpen, Gift, HelpCircle } from "lucide-react";
+import { Bell, Flame, QrCode, Calendar, Camera, Scale, Trophy, Quote, Link as LinkIcon, Copy, Share2, X, ClipboardList } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
