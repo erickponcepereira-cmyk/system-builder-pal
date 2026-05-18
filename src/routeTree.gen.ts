@@ -17,6 +17,7 @@ import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
+import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentIndexRouteImport } from './routes/student.index'
@@ -40,6 +41,7 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-checkin.$partnerId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as CoachPartnersRouteImport } from './routes/coach.partners'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
@@ -107,6 +109,11 @@ const LoginRoute = LoginRouteImport.update({
 const CoachRoute = CoachRouteImport.update({
   id: '/coach',
   path: '/coach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BecomePartnerRoute = BecomePartnerRouteImport.update({
+  id: '/become-partner',
+  path: '/become-partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -223,6 +230,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CoachPartnersRoute = CoachPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
+  getParentRoute: () => CoachRoute,
 } as any)
 const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
   id: '/checkin/$studentId',
@@ -369,7 +381,8 @@ const ApiOauthGoogleCallbackRoute = ApiOauthGoogleCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/coach': typeof CoachRoute
+  '/become-partner': typeof BecomePartnerRoute
+  '/coach': typeof CoachRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
@@ -398,6 +411,7 @@ export interface FileRoutesByFullPath {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
+  '/coach/partners': typeof CoachPartnersRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -429,7 +443,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/coach': typeof CoachRoute
+  '/become-partner': typeof BecomePartnerRoute
+  '/coach': typeof CoachRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
@@ -457,6 +472,7 @@ export interface FileRoutesByTo {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
+  '/coach/partners': typeof CoachPartnersRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -490,7 +506,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/coach': typeof CoachRoute
+  '/become-partner': typeof BecomePartnerRoute
+  '/coach': typeof CoachRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
@@ -519,6 +536,7 @@ export interface FileRoutesById {
   '/admin/students': typeof AdminStudentsRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
+  '/coach/partners': typeof CoachPartnersRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -553,6 +571,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/become-partner'
     | '/coach'
     | '/login'
     | '/onboarding'
@@ -582,6 +601,7 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/checkin/$studentId'
+    | '/coach/partners'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -613,6 +633,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/become-partner'
     | '/coach'
     | '/login'
     | '/onboarding'
@@ -641,6 +662,7 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/checkin/$studentId'
+    | '/coach/partners'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -673,6 +695,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/become-partner'
     | '/coach'
     | '/login'
     | '/onboarding'
@@ -702,6 +725,7 @@ export interface FileRouteTypes {
     | '/admin/students'
     | '/admin/users'
     | '/checkin/$studentId'
+    | '/coach/partners'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -735,7 +759,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  CoachRoute: typeof CoachRoute
+  BecomePartnerRoute: typeof BecomePartnerRoute
+  CoachRoute: typeof CoachRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
@@ -811,6 +836,13 @@ declare module '@tanstack/react-router' {
       path: '/coach'
       fullPath: '/coach'
       preLoaderRoute: typeof CoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/become-partner': {
+      id: '/become-partner'
+      path: '/become-partner'
+      fullPath: '/become-partner'
+      preLoaderRoute: typeof BecomePartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -973,6 +1005,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/coach/partners': {
+      id: '/coach/partners'
+      path: '/partners'
+      fullPath: '/coach/partners'
+      preLoaderRoute: typeof CoachPartnersRouteImport
+      parentRoute: typeof CoachRoute
     }
     '/checkin/$studentId': {
       id: '/checkin/$studentId'
@@ -1235,6 +1274,16 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface CoachRouteChildren {
+  CoachPartnersRoute: typeof CoachPartnersRoute
+}
+
+const CoachRouteChildren: CoachRouteChildren = {
+  CoachPartnersRoute: CoachPartnersRoute,
+}
+
+const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
+
 interface StudentPartnersRouteChildren {
   StudentPartnersPartnerIdRoute: typeof StudentPartnersPartnerIdRoute
 }
@@ -1291,7 +1340,8 @@ const StudentRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  CoachRoute: CoachRoute,
+  BecomePartnerRoute: BecomePartnerRoute,
+  CoachRoute: CoachRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,

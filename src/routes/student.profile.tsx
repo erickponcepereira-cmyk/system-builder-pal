@@ -29,6 +29,12 @@ const sections = [
     ],
   },
   {
+    title: "Negócios",
+    items: [
+      { icon: Building2, label: "Tornar-se Empresa Parceira", to: "/become-partner" },
+    ],
+  },
+  {
     title: "Suporte",
     items: [
       { icon: HelpCircle, label: "Central de ajuda", to: "/student/support" },

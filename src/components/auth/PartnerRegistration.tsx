@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Eye, EyeOff, Building2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
@@ -12,7 +12,7 @@ import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
-export function PartnerRegistration({ onBack }: { onBack: () => void }) {
+export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => void; mode?: "auto" | "signup" | "existing" }) {
   const [fantasyName, setFantasyName] = useState("");
   const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
   const [doc, setDoc] = useState("");
@@ -26,6 +26,30 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [createdForExisting, setCreatedForExisting] = useState(false);
+  const [authProfile, setAuthProfile] = useState<{ id: string; user_id: string; email: string; name: string; phone: string | null } | null>(null);
+
+  // Detect logged-in user — if signed in, switch to "existing account" flow
+  useEffect(() => {
+    if (mode === "signup") return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, user_id, email, name, phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (profile) {
+        setAuthProfile(profile as never);
+        setEmail(profile.email || "");
+        setResponsibleName(profile.name || "");
+        if (profile.phone) setWhatsapp(profile.phone);
+      }
+    })();
+  }, [mode]);
+
+  const isExisting = mode === "existing" || (mode === "auto" && !!authProfile);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,16 +59,57 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
     if (doc.replace(/\D/g, "").length < (docType === "cnpj" ? 14 : 11)) return setErr(`${docType.toUpperCase()} incompleto.`);
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido.");
     if (whatsapp.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto.");
-    if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    if (!isExisting && password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
 
     setLoading(true);
     setFormError(null);
     try {
+      let profileId: string | null = null;
+
+      if (isExisting && authProfile) {
+        // Reaproveita a conta atual: cria/atualiza somente o registro de parceiro
+        profileId = authProfile.id;
+
+        // Verifica se já existe parceiro vinculado
+        const { data: existingPartner } = await supabase
+          .from("partners" as never)
+          .select("id" as never)
+          .eq("profile_id" as never, profileId)
+          .maybeSingle();
+
+        if (existingPartner) {
+          throw new Error("Esta conta já possui um cadastro de parceiro.");
+        }
+
+        const { error: insertErr } = await supabase
+          .from("partners" as never)
+          .insert({
+            profile_id: profileId,
+            fantasy_name: fantasyName.trim(),
+            document: doc.replace(/\D/g, ""),
+            document_type: docType,
+            whatsapp,
+            city: city || null,
+            state: state || null,
+            status: "pending",
+          } as never);
+        if (insertErr) throw insertErr;
+
+        await supabase
+          .from("profiles")
+          .update({ phone: whatsapp })
+          .eq("id", profileId);
+
+        setCreatedForExisting(true);
+        toast.success("Cadastro de parceiro enviado para aprovação!");
+        return;
+      }
+
+      // Fluxo padrão: cria nova conta de parceiro
       const user = await createAuthUser(email, password, responsibleName, "partner", {
         fantasy_name: fantasyName.trim(),
       });
 
-      // Atualiza dados básicos da empresa (perfil é criado via trigger)
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
@@ -84,6 +149,21 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
 
   if (registeredEmail) return <CheckEmailNotice email={registeredEmail} />;
 
+  if (createdForExisting) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
+        <div className="w-full max-w-md text-center text-white">
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary mb-3">
+            <Building2 className="h-3.5 w-3.5" /> Empresa Parceira
+          </div>
+          <h1 className="text-xl font-bold mb-2">Cadastro enviado!</h1>
+          <p className="text-sm text-white/60 mb-6">Sua empresa está aguardando aprovação. Você poderá acessar o painel de parceiro assim que for aprovada.</p>
+          <Button onClick={onBack} className="w-full">Voltar</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="w-full max-w-md">
@@ -95,8 +175,8 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary mb-2">
             <Building2 className="h-3.5 w-3.5" /> Empresa Parceira
           </div>
-          <h1 className="text-xl font-bold text-white">Cadastro de Parceiro</h1>
-          <p className="mt-1 text-xs text-white/50">Após confirmar o e-mail, sua empresa passa por aprovação do admin.</p>
+          <h1 className="text-xl font-bold text-white">{isExisting ? "Tornar-se Parceiro" : "Cadastro de Parceiro"}</h1>
+          <p className="mt-1 text-xs text-white/50">{isExisting ? "Vincule sua empresa à sua conta atual. Após análise, o painel de parceiro será liberado." : "Após confirmar o e-mail, sua empresa passa por aprovação do admin ou de um coach."}</p>
         </div>
 
         <div className="rounded-2xl p-6" style={{ backgroundColor: "#1A1A1A" }}>
@@ -128,8 +208,8 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
               <Input value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} placeholder="Seu nome" className="bg-white/5 border-white/10 text-white" required />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">E-mail (login)</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required />
+              <Label className="text-white/70 text-xs">E-mail {isExisting ? "(da sua conta)" : "(login)"}</Label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required disabled={isExisting} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">WhatsApp</Label>
@@ -145,21 +225,23 @@ export function PartnerRegistration({ onBack }: { onBack: () => void }) {
                 <Input value={state} onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))} className="bg-white/5 border-white/10 text-white" />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Senha</Label>
-              <div className="relative">
-                <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="bg-white/5 border-white/10 text-white pr-10" required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {!isExisting && (
+              <div className="space-y-1.5">
+                <Label className="text-white/70 text-xs">Senha</Label>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="bg-white/5 border-white/10 text-white pr-10" required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
               <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Criar conta"}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isExisting ? "Enviar para aprovação" : "Criar conta"}
               </Button>
             </div>
           </form>

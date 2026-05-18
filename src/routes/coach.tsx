@@ -105,6 +105,7 @@ function CoachDashboard() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [isPending, setIsPending] = useState(false);
   const [hasStudentProfile, setHasStudentProfile] = useState(false);
+  const [hasPartnerProfile, setHasPartnerProfile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [coachRowId, setCoachRowId] = useState<string | null>(null);
   const [profileIdState, setProfileIdState] = useState<string | null>(null);
@@ -142,6 +143,10 @@ function CoachDashboard() {
         ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
 
+      const { data: partnerRow } = profile
+        ? await supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle()
+        : { data: null };
+
       if (!active) return;
       setIsAdmin(profile?.role === "admin");
       const coachApproved = !!coach && !!coach.approved_at;
@@ -154,6 +159,7 @@ function CoachDashboard() {
 
       setIsPending(!coachApproved && !isPrivilegedRole);
       setHasStudentProfile(!!studentRow);
+      setHasPartnerProfile(!!partnerRow);
       setCoachRowId(coach?.id || null);
       setProfileIdState(profile?.id || null);
       if (profile?.name) setCoachName(profile.name.split(" ")[0]);
@@ -321,6 +327,32 @@ function CoachDashboard() {
             Ir para painel do aluno
           </button>
         )}
+
+        {hasPartnerProfile ? (
+          <button
+            onClick={() => navigate({ to: "/partner" })}
+            className="mt-2 flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors"
+          >
+            <Repeat className="h-4 w-4" />
+            Painel de Parceiro
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate({ to: "/become-partner" })}
+            className="mt-2 flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 transition-colors"
+          >
+            <Repeat className="h-4 w-4" />
+            Tornar-se Empresa Parceira
+          </button>
+        )}
+
+        <button
+          onClick={() => navigate({ to: "/coach/partners" })}
+          className="mt-2 flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 transition-colors"
+        >
+          <Repeat className="h-4 w-4" />
+          Aprovar Parceiros
+        </button>
 
         <button
           onClick={handleLogout}
