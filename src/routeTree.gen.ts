@@ -50,6 +50,7 @@ import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminProductOrdersRouteImport } from './routes/admin.product-orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
+import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
@@ -271,6 +272,11 @@ const AdminPatentsRoute = AdminPatentsRouteImport.update({
   path: '/patents',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPartnersRoute = AdminPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
@@ -367,6 +373,7 @@ export interface FileRoutesByFullPath {
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
@@ -423,6 +430,7 @@ export interface FileRoutesByTo {
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
@@ -482,6 +490,7 @@ export interface FileRoutesById {
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
@@ -542,6 +551,7 @@ export interface FileRouteTypes {
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
     | '/admin/product-orders'
@@ -598,6 +608,7 @@ export interface FileRouteTypes {
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
     | '/admin/product-orders'
@@ -656,6 +667,7 @@ export interface FileRouteTypes {
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
     | '/admin/product-orders'
@@ -1007,6 +1019,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPatentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/partners': {
+      id: '/admin/partners'
+      path: '/partners'
+      fullPath: '/admin/partners'
+      preLoaderRoute: typeof AdminPartnersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/orders': {
       id: '/admin/orders'
       path: '/orders'
@@ -1137,6 +1156,7 @@ interface AdminRouteChildren {
   AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminPartnersRoute: typeof AdminPartnersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminProductOrdersRoute: typeof AdminProductOrdersRoute
@@ -1160,6 +1180,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLibraryRoute: AdminLibraryRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
+  AdminPartnersRoute: AdminPartnersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminProductOrdersRoute: AdminProductOrdersRoute,
