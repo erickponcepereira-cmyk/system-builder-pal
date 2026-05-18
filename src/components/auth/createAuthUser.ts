@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student") {
+export async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student" | "partner", extraMeta: Record<string, unknown> = {}) {
   const normalizedEmail = email.trim().toLowerCase();
 
   const { data, error } = await supabase.auth.signUp({
