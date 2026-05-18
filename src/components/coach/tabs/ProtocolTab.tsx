@@ -115,6 +115,22 @@ export function ProtocolTab() {
         email: s.profiles?.email || "",
         current_weight: s.current_weight,
         goal_weight: s.goal_weight,
+        external: false,
+      })));
+
+      const { data: ext } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id, name, email, whatsapp" as never)
+        .eq("coach_id" as never, coach.id as never)
+        .order("name" as never);
+      setExternals(((ext as any[]) || []).map((e) => ({
+        id: e.id,
+        profile_id: null,
+        name: e.name,
+        email: e.email || e.whatsapp || "",
+        current_weight: null,
+        goal_weight: null,
+        external: true,
       })));
 
       const { data: lib } = await supabase.from("exercise_library" as never).select("*" as never).order("name" as never);
