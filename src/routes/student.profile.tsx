@@ -23,6 +23,7 @@ const sections = [
     title: "Programa",
     items: [
       { icon: Gift, label: "Gratuitos", to: "/student/freebies" },
+      { icon: Building2, label: "Empresas Parceiras", to: "/student/partners" },
       { icon: Users, label: "Indicar amigos" },
       { icon: GraduationCap, label: "Meus cursos", to: "/student/library" },
     ],
