@@ -2722,6 +2722,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           client={selectedClient}
           themeColor={themeColor}
           onBack={() => setScreen("result")}
+          onDelete={
+            onDeleteAssessment
+              ? async (id, reason) => {
+                  await onDeleteAssessment(id, reason, selectedClient);
+                }
+              : undefined
+          }
         />
       )}
     </div>
