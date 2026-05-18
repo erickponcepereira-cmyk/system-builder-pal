@@ -89,6 +89,15 @@ export function MobileShell({ children }: MobileShellProps) {
               Painel do coach
             </button>
           )}
+          {hasPartner && (
+            <button
+              onClick={goToPartner}
+              className="flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-xs font-bold text-black shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition-colors"
+            >
+              <Store className="h-3.5 w-3.5" />
+              Painel parceiro
+            </button>
+          )}
         </div>
 
         {/* Bottom Navigation */}
