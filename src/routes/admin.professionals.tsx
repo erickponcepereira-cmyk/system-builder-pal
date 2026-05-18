@@ -15,6 +15,7 @@ type Pro = {
   id: string;
   profile_id: string;
   specialty_key: string | null;
+  specialty_custom_description: string | null;
   professional_council: string | null;
   council_number: string | null;
   approved_at: string | null;
