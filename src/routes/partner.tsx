@@ -3,9 +3,10 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { maskPhone } from "@/lib/masks";
+import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
