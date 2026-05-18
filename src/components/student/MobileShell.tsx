@@ -54,7 +54,6 @@ export function MobileShell({ children }: MobileShellProps) {
 
   const goToAdmin = () => navigate({ to: "/admin" });
   const goToPartner = () => navigate({ to: "/partner" });
-  const goToBecomePartner = () => navigate({ to: "/become-partner" });
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
