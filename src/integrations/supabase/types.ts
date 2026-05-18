@@ -1509,18 +1509,24 @@ export type Database = {
           coach_course_notes: string | null
           completed_coach_course: boolean
           consecutive_months_as_top: number | null
+          council_number: string | null
           created_at: string | null
           herbalife_portal_url: string | null
           id: string
           inactive_since: string | null
           inactivity_grace_until: string | null
           inactivity_warning_sent: boolean | null
+          is_professional: boolean
           last_activity_at: string | null
           pix_key: string | null
           pix_key_type: string | null
+          professional_council: string | null
           profile_id: string
           referral_code: string
           referral_link: string | null
+          serves_whole_network: boolean
+          specialty_key: string | null
+          specialty_pending_setup: boolean
           total_active_students: number | null
           total_points: number
           total_sales: number | null
@@ -1541,18 +1547,24 @@ export type Database = {
           coach_course_notes?: string | null
           completed_coach_course?: boolean
           consecutive_months_as_top?: number | null
+          council_number?: string | null
           created_at?: string | null
           herbalife_portal_url?: string | null
           id?: string
           inactive_since?: string | null
           inactivity_grace_until?: string | null
           inactivity_warning_sent?: boolean | null
+          is_professional?: boolean
           last_activity_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          professional_council?: string | null
           profile_id: string
           referral_code: string
           referral_link?: string | null
+          serves_whole_network?: boolean
+          specialty_key?: string | null
+          specialty_pending_setup?: boolean
           total_active_students?: number | null
           total_points?: number
           total_sales?: number | null
@@ -1573,18 +1585,24 @@ export type Database = {
           coach_course_notes?: string | null
           completed_coach_course?: boolean
           consecutive_months_as_top?: number | null
+          council_number?: string | null
           created_at?: string | null
           herbalife_portal_url?: string | null
           id?: string
           inactive_since?: string | null
           inactivity_grace_until?: string | null
           inactivity_warning_sent?: boolean | null
+          is_professional?: boolean
           last_activity_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          professional_council?: string | null
           profile_id?: string
           referral_code?: string
           referral_link?: string | null
+          serves_whole_network?: boolean
+          specialty_key?: string | null
+          specialty_pending_setup?: boolean
           total_active_students?: number | null
           total_points?: number
           total_sales?: number | null
@@ -1606,6 +1624,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaches_specialty_key_fkey"
+            columns: ["specialty_key"]
+            isOneToOne: false
+            referencedRelation: "professional_specialties"
+            referencedColumns: ["key"]
           },
           {
             foreignKeyName: "coaches_transferred_to_coach_id_fkey"
@@ -3574,6 +3599,55 @@ export type Database = {
         }
         Relationships: []
       }
+      product_professional_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          notes: string | null
+          product_id: string
+          specialty_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          product_id: string
+          specialty_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          product_id?: string
+          specialty_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_professional_requirements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_professional_requirements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_professional_requirements_specialty_key_fkey"
+            columns: ["specialty_key"]
+            isOneToOne: false
+            referencedRelation: "professional_specialties"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       product_referral_rules: {
         Row: {
           coach_pool_percentage: number
@@ -3960,6 +4034,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      professional_specialties: {
+        Row: {
+          capabilities: Json
+          created_at: string
+          default_tabs: Json
+          description: string | null
+          icon: string | null
+          is_active: boolean
+          key: string
+          label: string
+          requires_admin_setup: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          capabilities?: Json
+          created_at?: string
+          default_tabs?: Json
+          description?: string | null
+          icon?: string | null
+          is_active?: boolean
+          key: string
+          label: string
+          requires_admin_setup?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          capabilities?: Json
+          created_at?: string
+          default_tabs?: Json
+          description?: string | null
+          icon?: string | null
+          is_active?: boolean
+          key?: string
+          label?: string
+          requires_admin_setup?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -4907,6 +5023,74 @@ export type Database = {
           },
         ]
       }
+      transaction_professional_assignments: {
+        Row: {
+          assigned_coach_id: string | null
+          assignment_reason: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          preferred_coach_id: string | null
+          specialty_key: string
+          status: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_coach_id?: string | null
+          assignment_reason?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          preferred_coach_id?: string | null
+          specialty_key: string
+          status?: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_coach_id?: string | null
+          assignment_reason?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          preferred_coach_id?: string | null
+          specialty_key?: string
+          status?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_professional_assignments_assigned_coach_id_fkey"
+            columns: ["assigned_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_professional_assignments_preferred_coach_id_fkey"
+            columns: ["preferred_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_professional_assignments_specialty_key_fkey"
+            columns: ["specialty_key"]
+            isOneToOne: false
+            referencedRelation: "professional_specialties"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "transaction_professional_assignments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           app_fee: number | null
@@ -5303,6 +5487,10 @@ export type Database = {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
       }
+      assign_professionals_for_transaction: {
+        Args: { _transaction_id: string }
+        Returns: number
+      }
       block_inactive_coach: {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
@@ -5384,8 +5572,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_admin_pending_specialty: {
+        Args: { _coach_id: string }
+        Returns: undefined
+      }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
       partner_scan_student: { Args: { _student_id: string }; Returns: Json }
+      pick_professional_for_sale: {
+        Args: {
+          _preferred_coach_id?: string
+          _selling_coach_id: string
+          _specialty_key: string
+        }
+        Returns: {
+          coach_id: string
+          reason: string
+        }[]
+      }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
