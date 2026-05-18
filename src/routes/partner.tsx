@@ -39,31 +39,40 @@ function PartnerPanel() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [visits, setVisits] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [otherRoles, setOtherRoles] = useState<{ admin: boolean; coach: boolean; student: boolean }>({ admin: false, coach: false, student: false });
 
   const load = async () => {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) { navigate({ to: "/login" }); return; }
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("id, role").eq("user_id", userData.user.id).maybeSingle();
     if (!profile) { setLoading(false); return; }
     const { data: p } = await supabase.from("partners" as never).select("*").eq("profile_id" as never, profile.id).maybeSingle();
     if (!p) { setLoading(false); return; }
     const pt = p as unknown as Partner;
     setPartner(pt);
-    const [pr, ps, v] = await Promise.all([
+    const [pr, ps, v, coach, student] = await Promise.all([
       supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }),
       supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }).limit(30),
       supabase.from("partner_visits" as never).select("id" as never, { count: "exact", head: true }).eq("partner_id" as never, pt.id),
+      supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
     setProducts((pr.data as unknown as Product[]) || []);
     setPosts((ps.data as unknown as Post[]) || []);
     setVisits(v.count || 0);
+    setOtherRoles({ admin: profile.role === "admin", coach: !!coach.data, student: !!student.data });
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/login" }); };
+  const switchTo = (path: "/admin" | "/coach" | "/student") => {
+    if (path === "/student") sessionStorage.setItem("fitmind_selected_area", "student");
+    else sessionStorage.removeItem("fitmind_selected_area");
+    navigate({ to: path });
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!partner) return <div className="min-h-screen flex items-center justify-center text-white" style={{ backgroundColor: "#0A0A0A" }}>Cadastro de parceiro não encontrado.</div>;
