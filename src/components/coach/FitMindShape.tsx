@@ -2024,17 +2024,20 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <tr style={{ color: "#64748b", textAlign: "left" }}>
                     <th style={{ padding: "6px 4px", fontWeight: 700 }}>Indicador</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Primeira</th>
-                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Última</th>
+                    <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>
+                      {N >= 3 ? "Anterior" : "Última"}
+                    </th>
                   </tr>
                 </thead>
                 <tbody style={{ color: "#1e293b" }}>
                   {[
-                    { l: "Tempo de acompanhamento", first: dateLabel(firstA.date), latest: followLabel },
-                    { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(latestA.weight, firstA.weight, " kg") },
-                    { l: "Gordura", first: metric(firstA.bodyFat, " %"), latest: diff(latestA.bodyFat, firstA.bodyFat, " %") },
-                    { l: "Músculo Esquelético", first: metric(firstA.skeletalMuscle, " %"), latest: diff(latestA.skeletalMuscle, firstA.skeletalMuscle, " %") },
-                    { l: "Gordura Visceral", first: metric(firstA.visceralFat, ""), latest: diff(latestA.visceralFat, firstA.visceralFat, "") },
-                    { l: "Idade Corporal", first: metric(firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos"), latest: diff(latestA.bodyAge ? Math.round(latestA.bodyAge) : undefined, firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos") },
+                    { l: "Tempo de acompanhamento", first: dateLabel(firstA.date), latest: N >= 3 ? `${dateLabel(previousA.date)} · ${followLabel}` : followLabel },
+                    { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(previousA.weight, firstA.weight, " kg") },
+                    { l: "Gordura", first: metric(firstA.bodyFat, " %"), latest: diff(previousA.bodyFat, firstA.bodyFat, " %") },
+                    { l: "Músculo Esquelético", first: metric(firstA.skeletalMuscle, " %"), latest: diff(previousA.skeletalMuscle, firstA.skeletalMuscle, " %") },
+                    { l: "Massa Muscular", first: metric(firstA.muscleMass, " kg"), latest: diff(previousA.muscleMass, firstA.muscleMass, " kg") },
+                    { l: "Gordura Visceral", first: metric(firstA.visceralFat, ""), latest: diff(previousA.visceralFat, firstA.visceralFat, "") },
+                    { l: "Idade Corporal", first: metric(firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos"), latest: diff(previousA.bodyAge ? Math.round(previousA.bodyAge) : undefined, firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos") },
                   ].map((r) => (
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "8px 4px", fontWeight: 600 }}>{r.l}</td>
