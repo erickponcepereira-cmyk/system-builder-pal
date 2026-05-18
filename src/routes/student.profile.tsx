@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ const sections = [
   {
     title: "Conta",
     items: [
+      { icon: QrCode, label: "Minha Carteirinha", to: "/student/card" },
       { icon: Settings, label: "Editar perfil" },
       { icon: CreditCard, label: "Meus planos" },
       { icon: Award, label: "Minha evolução" },
