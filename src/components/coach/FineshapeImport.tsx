@@ -116,7 +116,12 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
             whatsapp: (r[iTel] || "").trim().slice(0, 24) || null,
             email: (r[iEmail] || "").trim().slice(0, 255) || null,
             notes: (r[iNot] || "").slice(0, 1000) || null,
-            groups: (r[iGrp] || "") ? [(r[iGrp] || "").trim()] : [],
+            groups: (() => {
+              const g = (r[iGrp] || "").trim();
+              const list = g ? [g] : [];
+              if (!list.includes("Importados Fineshape")) list.push("Importados Fineshape");
+              return list;
+            })(),
           });
         }
         // chunk insert
