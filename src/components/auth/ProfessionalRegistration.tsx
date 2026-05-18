@@ -39,6 +39,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   const [birthdate, setBirthdate] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [existingMode, setExistingMode] = useState(false); // vinculação a conta existente
 
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
@@ -55,13 +56,15 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (!email) { setEmailStatus("idle"); return; }
+    if (!email) { setEmailStatus("idle"); setExistingMode(false); return; }
     if (!email.includes("@") || !email.includes(".")) { setEmailStatus("invalid"); return; }
     setEmailStatus("checking");
     const handle = window.setTimeout(async () => {
       try {
         const res = await checkEmailAvailable({ data: { email } });
-        setEmailStatus(res.available ? "available" : "taken");
+        const taken = !res.available;
+        setEmailStatus(taken ? "taken" : "available");
+        setExistingMode(taken);
       } catch { setEmailStatus("idle"); }
     }, 500);
     return () => window.clearTimeout(handle);
@@ -73,14 +76,17 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     if (!specialtyKey) return fail("Selecione sua área de atuação.");
     if (selectedSpec?.requires_admin_setup && specialtyCustom.trim().length < 3)
       return fail("Descreva sua área de atuação para que o admin possa configurar seu painel.");
-    if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
-      return fail("Preencha todos os campos obrigatórios.");
-    if (emailStatus === "taken") return fail("Este e-mail já está cadastrado.");
-    if (emailStatus === "checking") return fail("Aguarde a verificação do e-mail.");
-    if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF incompleto.");
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
-      return fail("Senha: 8+ chars, 1 maiúscula e 1 número.");
-    if (password !== confirmPassword) return fail("As senhas não coincidem.");
+    if (existingMode) {
+      if (!email || !password) return fail("Informe e-mail e senha da sua conta existente.");
+    } else {
+      if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
+        return fail("Preencha todos os campos obrigatórios.");
+      if (emailStatus === "checking") return fail("Aguarde a verificação do e-mail.");
+      if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF incompleto.");
+      if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
+        return fail("Senha: 8+ chars, 1 maiúscula e 1 número.");
+      if (password !== confirmPassword) return fail("As senhas não coincidem.");
+    }
     setFormError(null); return true;
   };
 
@@ -91,10 +97,44 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     setLoading(true); setFormError(null);
     try {
       const referralCode = generateReferralCode();
-      const user = await createAuthUser(email, password, name, "coach");
+      let userId: string;
+      let resolvedName = name;
+      let resolvedPhone = phone;
+      let resolvedCpf = cpf;
+      let resolvedBirthdate = birthdate;
+
+      if (existingMode) {
+        // Vincular profissional a conta existente — autentica com a senha atual
+        const { data: signIn, error: signErr } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        if (signErr || !signIn.user) {
+          throw new Error("Senha incorreta para esta conta. Use a senha do FitMind.");
+        }
+        userId = signIn.user.id;
+        // Reaproveita dados já cadastrados, se o usuário não preencheu
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("name, phone, cpf, birthdate")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (prof) {
+          resolvedName = name || prof.name || "";
+          resolvedPhone = phone || prof.phone || "";
+          resolvedCpf = cpf || prof.cpf || "";
+          resolvedBirthdate = birthdate || prof.birthdate || "";
+        }
+      } else {
+        const user = await createAuthUser(email, password, name, "coach");
+        userId = user.id;
+      }
+
       await finalizeRegistrationFn({
         data: {
-          userId: user.id, role: "coach", name, email, phone, cpf, birthdate,
+          userId, role: "coach",
+          name: resolvedName, email,
+          phone: resolvedPhone, cpf: resolvedCpf, birthdate: resolvedBirthdate,
           coach: {
             uplineCoachId: selectedCoach.id,
             referralCode,
@@ -110,7 +150,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       });
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar.");
+      toast.success(existingMode
+        ? "Conta vinculada! Aguarde aprovação do admin para acessar como profissional."
+        : "Cadastro criado! Confira seu e-mail para confirmar.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly); toast.error(friendly);
@@ -158,9 +200,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                   <SelectTrigger className="bg-white/5 border-white/10 text-white">
                     <SelectValue placeholder="Selecione sua especialidade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-neutral-900 border-white/10 text-white z-[100]">
                     {specialties.map((s) => (
-                      <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                      <SelectItem key={s.key} value={s.key} className="text-white focus:bg-white/10 focus:text-white">{s.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -191,42 +233,54 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white/70">Nome completo *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">CPF *</Label>
-                <Input value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} placeholder="000.000.000-00" className="bg-white/5 border-white/10 text-white" required />
-              </div>
-              <div className="space-y-2">
                 <Label className="text-white/70">E-mail *</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value.trim().toLowerCase())} className={`bg-white/5 text-white ${emailStatus === "taken" ? "border-destructive" : emailStatus === "available" ? "border-success" : "border-white/10"}`} required />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value.trim().toLowerCase())} className={`bg-white/5 text-white ${emailStatus === "taken" ? "border-amber-500" : emailStatus === "available" ? "border-success" : "border-white/10"}`} required />
                 {emailStatus === "checking" && <p className="text-[11px] text-white/40">Verificando...</p>}
-                {emailStatus === "taken" && <p className="text-[11px] text-destructive">Já cadastrado.</p>}
+                {emailStatus === "taken" && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-200">
+                    Este e-mail já tem conta no FitMind. Confirme sua senha abaixo para <strong>vincular esta conta como Profissional</strong> (ainda passa por aprovação do admin).
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-white/70">WhatsApp *</Label>
-                  <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white" required />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white/70">Nascimento *</Label>
-                  <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
-                </div>
-              </div>
+
+              {!existingMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-white/70">Nome completo *</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-white/70">CPF *</Label>
+                    <Input value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} placeholder="000.000.000-00" className="bg-white/5 border-white/10 text-white" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-white/70">WhatsApp *</Label>
+                      <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white/70">Nascimento *</Label>
+                      <Input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
-                <Label className="text-white/70">Senha *</Label>
+                <Label className="text-white/70">{existingMode ? "Sua senha atual *" : "Senha *"}</Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 8 chars, 1 maiúscula, 1 número" className="bg-white/5 border-white/10 text-white pr-10" required />
+                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={existingMode ? "Senha que você usa para entrar" : "Mín. 8 chars, 1 maiúscula, 1 número"} className="bg-white/5 border-white/10 text-white pr-10" required />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-white/70">Confirmar senha *</Label>
-                <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
-              </div>
+              {!existingMode && (
+                <div className="space-y-2">
+                  <Label className="text-white/70">Confirmar senha *</Label>
+                  <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
