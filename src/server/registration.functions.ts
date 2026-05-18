@@ -37,6 +37,7 @@ const registrationSchema = z.object({
       coachId: z.string().uuid(),
       referredByStudentId: z.string().uuid().optional().nullable(),
       referralCode: z.string().optional().nullable(),
+      partnerId: z.string().uuid().optional().nullable(),
     })
     .optional(),
 });
