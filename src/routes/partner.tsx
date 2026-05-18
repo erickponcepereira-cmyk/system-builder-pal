@@ -16,7 +16,7 @@ export const Route = createFileRoute("/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "profile";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "profile";
 
 interface Partner {
   id: string; profile_id: string; fantasy_name: string; description: string | null;
