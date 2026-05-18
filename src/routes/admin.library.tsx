@@ -77,6 +77,7 @@ function MediaPreview({ ex }: { ex: Exercise }) {
 }
 
 function AdminLibraryPage() {
+  const [tab, setTab] = useState<"exercises" | "templates">("exercises");
   const [list, setList] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
