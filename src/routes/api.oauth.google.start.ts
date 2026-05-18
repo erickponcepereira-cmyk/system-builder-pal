@@ -36,6 +36,7 @@ export const Route = createFileRoute("/api/oauth/google/start")({
         const url = new URL(request.url);
         const origin = `${url.protocol}//${url.host}`;
         const redirectUri = getRedirectUri(origin);
+        const isPopup = url.searchParams.get("popup") === "1";
 
         // Generate state and store
         const state = crypto.randomUUID() + "." + crypto.randomUUID();
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/api/oauth/google/start")({
           state,
           user_id: userId,
           provider: "google",
-          redirect_to: "/coach",
+          redirect_to: isPopup ? "__popup__" : "/coach",
         });
 
         const authUrl = buildAuthUrl({ clientId, redirectUri, state });
