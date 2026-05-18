@@ -381,6 +381,7 @@ function CoachDashboard() {
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
+          {activeTab === "protocol" && <ProtocolTab />}
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "wallet" && <WalletTab />}
           {activeTab === "career" && <CareerTab />}
