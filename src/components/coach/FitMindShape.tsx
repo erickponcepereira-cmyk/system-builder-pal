@@ -2649,11 +2649,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               className="fm-btn-outline"
               style={{ flex: 1 }}
               onClick={() => {
+                setAssessment({ height: selectedClient?.height || undefined });
                 setStep(0);
                 setScreen("assessment");
               }}
             >
-              Editar Dados
+              + Nova Avaliação
             </button>
             <button
               className="fm-btn-primary"
