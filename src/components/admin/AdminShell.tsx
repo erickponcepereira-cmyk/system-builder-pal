@@ -205,6 +205,9 @@ export function AdminShell() {
               Tornar-se parceiro
             </button>
           )}
+          <div className="px-1 pb-2">
+            <RoleSwitcher current="admin" />
+          </div>
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/50 hover:text-white transition-colors"
