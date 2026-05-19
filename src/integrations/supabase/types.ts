@@ -1015,6 +1015,48 @@ export type Database = {
           },
         ]
       }
+      coach_badges: {
+        Row: {
+          badge_key: Database["public"]["Enums"]["coach_badge_key"]
+          coach_id: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          badge_key: Database["public"]["Enums"]["coach_badge_key"]
+          coach_id: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          badge_key?: Database["public"]["Enums"]["coach_badge_key"]
+          coach_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_badges_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_badges_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_body_assessments: {
         Row: {
           age: number | null
@@ -3918,6 +3960,7 @@ export type Database = {
       }
       products: {
         Row: {
+          allow_master_coach_sale: boolean
           app_fee: number | null
           app_fee_percentage: number | null
           badge_color: string | null
@@ -3954,6 +3997,7 @@ export type Database = {
           feature_store: boolean | null
           feature_weight_tracking: boolean | null
           feature_winners_forum: boolean | null
+          free_for_council: boolean
           gallery: Json
           highlights: Json | null
           id: string
@@ -3981,6 +4025,7 @@ export type Database = {
           profit_percentage_max: number | null
           profit_percentage_min: number | null
           referral_commission_percentage: number | null
+          required_badge: Database["public"]["Enums"]["coach_badge_key"] | null
           room_rental_commission: number | null
           section_id: string | null
           short_description: string | null
@@ -3995,6 +4040,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allow_master_coach_sale?: boolean
           app_fee?: number | null
           app_fee_percentage?: number | null
           badge_color?: string | null
@@ -4031,6 +4077,7 @@ export type Database = {
           feature_store?: boolean | null
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
+          free_for_council?: boolean
           gallery?: Json
           highlights?: Json | null
           id?: string
@@ -4058,6 +4105,7 @@ export type Database = {
           profit_percentage_max?: number | null
           profit_percentage_min?: number | null
           referral_commission_percentage?: number | null
+          required_badge?: Database["public"]["Enums"]["coach_badge_key"] | null
           room_rental_commission?: number | null
           section_id?: string | null
           short_description?: string | null
@@ -4072,6 +4120,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allow_master_coach_sale?: boolean
           app_fee?: number | null
           app_fee_percentage?: number | null
           badge_color?: string | null
@@ -4108,6 +4157,7 @@ export type Database = {
           feature_store?: boolean | null
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
+          free_for_council?: boolean
           gallery?: Json
           highlights?: Json | null
           id?: string
@@ -4135,6 +4185,7 @@ export type Database = {
           profit_percentage_max?: number | null
           profit_percentage_min?: number | null
           referral_commission_percentage?: number | null
+          required_badge?: Database["public"]["Enums"]["coach_badge_key"] | null
           room_rental_commission?: number | null
           section_id?: string | null
           short_description?: string | null
@@ -5895,6 +5946,13 @@ export type Database = {
         Args: { _student_id?: string }
         Returns: Json
       }
+      has_coach_badge: {
+        Args: {
+          _badge: Database["public"]["Enums"]["coach_badge_key"]
+          _coach_id: string
+        }
+        Returns: boolean
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_coach: { Args: { _user_id: string }; Returns: boolean }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
@@ -6061,6 +6119,12 @@ export type Database = {
         | "coaches_only"
         | "managers_only"
         | "admins_only"
+      coach_badge_key:
+        | "master_coach"
+        | "coach_hbl_42"
+        | "coach_hbl_50"
+        | "nutritionist_partner"
+        | "council"
       commission_status: "pending" | "available" | "withdrawn" | "cancelled"
       nutri_block_status: "blocked" | "released" | "cancelled"
       order_pool_status:
@@ -6263,6 +6327,13 @@ export const Constants = {
         "coaches_only",
         "managers_only",
         "admins_only",
+      ],
+      coach_badge_key: [
+        "master_coach",
+        "coach_hbl_42",
+        "coach_hbl_50",
+        "nutritionist_partner",
+        "council",
       ],
       commission_status: ["pending", "available", "withdrawn", "cancelled"],
       nutri_block_status: ["blocked", "released", "cancelled"],
