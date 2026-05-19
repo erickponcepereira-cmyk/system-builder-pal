@@ -22,6 +22,17 @@ export interface ProductDetail {
 const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+export interface ProfessionalCard {
+  name: string;
+  avatarUrl?: string | null;
+  headline?: string | null;
+  bioLong?: string | null;
+  instagram?: string | null;
+  website?: string | null;
+  services?: string | null;
+  socialLinks?: Array<{ label?: string; url: string }> | null;
+}
+
 interface Props {
   product: ProductDetail;
   onClose: () => void;
@@ -31,6 +42,8 @@ interface Props {
   /** Se o coach tem upline (afeta o que ele ganha de níveis). */
   hasUpline?: boolean;
   addLabel?: string;
+  /** Profissional vinculado a este produto (nutricionista/profissional da saúde). */
+  professional?: ProfessionalCard | null;
 }
 
 export function ProductDetailModal({
