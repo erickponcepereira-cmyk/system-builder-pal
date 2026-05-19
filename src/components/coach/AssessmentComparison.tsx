@@ -16,7 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2 } from "lucide-react";
+import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2, Pencil, X } from "lucide-react";
 import type { FitMindAssessment, FitMindClient } from "./FitMindShape";
 
 interface Props {
@@ -24,6 +24,7 @@ interface Props {
   themeColor?: string;
   onBack: () => void;
   onDelete?: (assessmentId: string, reason: string) => Promise<void>;
+  onEdit?: (assessment: FitMindAssessment) => Promise<void>;
 }
 
 type MetricKey =
@@ -77,7 +78,36 @@ const fmtNum = (v?: number, unit = "") => {
   return `${+v.toFixed(1)}${unit ? ` ${unit}` : ""}`;
 };
 
-const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete }) => {
+const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit }) => {
+  const [editing, setEditing] = useState<FitMindAssessment | null>(null);
+  const [editForm, setEditForm] = useState<Partial<FitMindAssessment>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
+  const openEdit = (a: FitMindAssessment) => {
+    setEditing(a);
+    setEditForm({ ...a });
+  };
+  const closeEdit = () => { setEditing(null); setEditForm({}); };
+  const saveEdit = async () => {
+    if (!editing || !onEdit) return;
+    setSavingEdit(true);
+    try {
+      await onEdit({ ...editing, ...editForm } as FitMindAssessment);
+      closeEdit();
+    } catch (e) { console.error(e); }
+    finally { setSavingEdit(false); }
+  };
+  const numField = (key: keyof FitMindAssessment, label: string, unit = "") => (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1" }}>
+      <span>{label}{unit && ` (${unit})`}</span>
+      <input
+        type="number"
+        step="0.1"
+        value={(editForm[key] as number | undefined) ?? ""}
+        onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value === "" ? undefined : Number(e.target.value) }))}
+        style={{ background: "#0F0F0F", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
+      />
+    </label>
+  );
   const all = useMemo(
     () =>
       (client.assessments ?? [])
@@ -232,6 +262,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                         </div>
                       </div>
                     </button>
+                    {onEdit && (
+                      <button
+                        title="Editar avaliação"
+                        onClick={() => openEdit(a)}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", color: themeColor, padding: 4 }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
                     {onDelete && (
                       <button
                         title="Excluir avaliação"
@@ -382,6 +421,81 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
             </>
           )}
         </>
+      )}
+
+      {editing && (
+        <div
+          onClick={closeEdit}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "#0F0F0F", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 12, padding: 18, width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Editar avaliação · {fmtDate(editing.date)}</div>
+              <button onClick={closeEdit} style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}><X size={18} /></button>
+            </div>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginBottom: 10 }}>
+              <span>Data da avaliação</span>
+              <input
+                type="date"
+                value={(editForm.date || "").slice(0, 10)}
+                onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value ? new Date(e.target.value).toISOString() : f.date }))}
+                style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
+              />
+            </label>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {numField("weight", "Peso", "kg")}
+              {numField("height", "Altura", "cm")}
+              {numField("bmi", "IMC")}
+              {numField("bodyFat", "Gordura corporal", "%")}
+              {numField("skeletalMuscle", "Músculo esquelético", "%")}
+              {numField("muscleMass", "Massa muscular", "%")}
+              {numField("visceralFat", "Gordura visceral")}
+              {numField("basalMetabolism", "Metabolismo basal", "kcal")}
+              {numField("bodyAge", "Idade corporal", "anos")}
+              {numField("bodyWater", "Água corporal", "%")}
+              {numField("boneMass", "Massa óssea", "%")}
+              {numField("systolicBP", "PA sistólica", "mmHg")}
+              {numField("diastolicBP", "PA diastólica", "mmHg")}
+              {numField("heartRate", "Freq. cardíaca", "bpm")}
+              {numField("bloodGlucose", "Glicemia", "mg/dL")}
+            </div>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginTop: 10 }}>
+              <span>Notas do profissional</span>
+              <textarea
+                rows={3}
+                value={editForm.professionalNotes || ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, professionalNotes: e.target.value }))}
+                style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13, resize: "vertical" }}
+              />
+            </label>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginTop: 10 }}>
+              <span>Notas do cliente</span>
+              <textarea
+                rows={3}
+                value={editForm.clientNotes || ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, clientNotes: e.target.value }))}
+                style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13, resize: "vertical" }}
+              />
+            </label>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button onClick={closeEdit} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "10px 12px", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit}
+                style={{ flex: 1, background: themeColor, color: "#fff", border: "none", borderRadius: 8, padding: "10px 12px", cursor: savingEdit ? "wait" : "pointer", fontSize: 13, fontWeight: 700, opacity: savingEdit ? 0.6 : 1 }}
+              >
+                {savingEdit ? "Salvando…" : "Salvar alterações"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

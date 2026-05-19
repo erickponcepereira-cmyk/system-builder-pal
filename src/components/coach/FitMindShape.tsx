@@ -190,6 +190,10 @@ export interface FitMindShapeProps {
     reason: string,
     client: FitMindClient,
   ) => Promise<void>;
+  onEditAssessment?: (
+    assessment: FitMindAssessment,
+    client: FitMindClient,
+  ) => Promise<void>;
   onCreateClient?: (
     client: Omit<FitMindClient, "id">,
   ) => Promise<FitMindClient>;
@@ -275,6 +279,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   groups = [],
   onSaveAssessment,
   onDeleteAssessment,
+  onEditAssessment,
   onCreateClient,
   onSearchClients,
   onCreateGoogleCalendarEvent,
@@ -2742,6 +2747,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     if (current.id !== id) return current;
                     return remaining.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || {};
                   });
+                }
+              : undefined
+          }
+          onEdit={
+            onEditAssessment
+              ? async (updated) => {
+                  await onEditAssessment(updated, selectedClient);
+                  const updatedList = (selectedClient.assessments || []).map((item) =>
+                    item.id === updated.id ? updated : item,
+                  );
+                  setSelectedClient({ ...selectedClient, assessments: updatedList });
+                  setAssessment((current) => (current.id === updated.id ? updated : current));
                 }
               : undefined
           }
