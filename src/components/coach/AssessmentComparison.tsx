@@ -78,7 +78,36 @@ const fmtNum = (v?: number, unit = "") => {
   return `${+v.toFixed(1)}${unit ? ` ${unit}` : ""}`;
 };
 
-const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete }) => {
+const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit }) => {
+  const [editing, setEditing] = useState<FitMindAssessment | null>(null);
+  const [editForm, setEditForm] = useState<Partial<FitMindAssessment>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
+  const openEdit = (a: FitMindAssessment) => {
+    setEditing(a);
+    setEditForm({ ...a });
+  };
+  const closeEdit = () => { setEditing(null); setEditForm({}); };
+  const saveEdit = async () => {
+    if (!editing || !onEdit) return;
+    setSavingEdit(true);
+    try {
+      await onEdit({ ...editing, ...editForm } as FitMindAssessment);
+      closeEdit();
+    } catch (e) { console.error(e); }
+    finally { setSavingEdit(false); }
+  };
+  const numField = (key: keyof FitMindAssessment, label: string, unit = "") => (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1" }}>
+      <span>{label}{unit && ` (${unit})`}</span>
+      <input
+        type="number"
+        step="0.1"
+        value={(editForm[key] as number | undefined) ?? ""}
+        onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value === "" ? undefined : Number(e.target.value) }))}
+        style={{ background: "#0F0F0F", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
+      />
+    </label>
+  );
   const all = useMemo(
     () =>
       (client.assessments ?? [])
