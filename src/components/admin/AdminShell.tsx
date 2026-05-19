@@ -7,6 +7,7 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { canAccess, type AdminPermKey, type AdminPerms } from "@/lib/admin-permissions";
 
 const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; perm: AdminPermKey }[] = [
@@ -123,9 +124,12 @@ export function AdminShell() {
 <Logo className="h-8 w-auto object-contain" />
           <span className="font-bold text-white">FitMind Club Admin</span>
         </div>
-        <button onClick={() => setOpen(!open)} className="text-white">
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <RoleSwitcher current="admin" />
+          <button onClick={() => setOpen(!open)} className="text-white">
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </header>
 
       {/* Sidebar */}
@@ -201,6 +205,9 @@ export function AdminShell() {
               Tornar-se parceiro
             </button>
           )}
+          <div className="px-1 pb-2">
+            <RoleSwitcher current="admin" />
+          </div>
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/50 hover:text-white transition-colors"
