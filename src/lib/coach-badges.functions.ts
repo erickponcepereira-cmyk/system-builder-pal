@@ -119,10 +119,17 @@ export const getProductBadgeFlags = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data: p } = await supabaseAdmin
       .from("products")
-      .select("required_badge, allow_master_coach_sale, free_for_council")
+      .select("required_badge, allow_master_coach_sale, free_for_council, free_for_nutritionist")
       .eq("id", data.productId)
       .maybeSingle();
-    return p ?? { required_badge: null, allow_master_coach_sale: false, free_for_council: false };
+    return (
+      p ?? {
+        required_badge: null,
+        allow_master_coach_sale: false,
+        free_for_council: false,
+        free_for_nutritionist: false,
+      }
+    );
   });
 
 export const saveProductBadgeFlags = createServerFn({ method: "POST" })
@@ -132,6 +139,7 @@ export const saveProductBadgeFlags = createServerFn({ method: "POST" })
     required_badge: BadgeKey | null;
     allow_master_coach_sale: boolean;
     free_for_council: boolean;
+    free_for_nutritionist: boolean;
   }) =>
     z
       .object({
@@ -139,6 +147,7 @@ export const saveProductBadgeFlags = createServerFn({ method: "POST" })
         required_badge: z.enum(BADGE_KEYS).nullable(),
         allow_master_coach_sale: z.boolean(),
         free_for_council: z.boolean(),
+        free_for_nutritionist: z.boolean(),
       })
       .parse(d)
   )
@@ -150,8 +159,38 @@ export const saveProductBadgeFlags = createServerFn({ method: "POST" })
         required_badge: data.required_badge,
         allow_master_coach_sale: data.allow_master_coach_sale,
         free_for_council: data.free_for_council,
+        free_for_nutritionist: data.free_for_nutritionist,
       })
       .eq("id", data.productId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// Used by the coach Loja/FitMindShape to know if the current coach pays
+export const getMyFitMindShapeAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!profile?.id) return { bypass: false, reason: null as null | "council" | "nutritionist_partner" };
+    const { data: coach } = await supabaseAdmin
+      .from("coaches")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    if (!coach?.id) return { bypass: false, reason: null };
+    const { data: badges } = await supabaseAdmin
+      .from("coach_badges")
+      .select("badge_key")
+      .eq("coach_id", coach.id)
+      .in("badge_key", ["council", "nutritionist_partner"]);
+    if (!badges || badges.length === 0) return { bypass: false, reason: null };
+    const hasCouncil = badges.some((b) => b.badge_key === "council");
+    return {
+      bypass: true,
+      reason: (hasCouncil ? "council" : "nutritionist_partner") as "council" | "nutritionist_partner",
+    };
   });
