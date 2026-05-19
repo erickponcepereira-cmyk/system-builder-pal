@@ -68,12 +68,12 @@ export function StudentEvaluationPanel() {
   ];
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="space-y-5 text-white">
+      <div className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Avaliar Aluno</h2>
-            <p className="text-sm text-muted-foreground">Bioimpedância com classificação em tempo real</p>
+            <h2 className="text-lg font-bold text-white">Avaliar Aluno</h2>
+            <p className="text-sm text-white">Bioimpedância com classificação em tempo real</p>
           </div>
           <ClipboardList className="h-6 w-6 text-primary" />
         </div>
@@ -90,7 +90,7 @@ export function StudentEvaluationPanel() {
               className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
                 evaluationType === value
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-white/5 text-white hover:bg-white/10"
               }`}
             >
               {label}
@@ -101,13 +101,13 @@ export function StudentEvaluationPanel() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {fields.map((field) => (
             <div key={field.label} className="space-y-2">
-              <Label className="text-muted-foreground">{field.label}</Label>
+              <Label className="text-white">{field.label}</Label>
               <div className="relative">
-                <field.icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <field.icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white" />
                 <Input
                   value={field.value}
                   onChange={(event) => field.setValue(event.target.value)}
-                  className="pl-9"
+                  className="pl-9 text-white"
                 />
               </div>
             </div>
@@ -122,27 +122,27 @@ export function StudentEvaluationPanel() {
           { label: "Músculos", value: muscle ? `${muscle}%` : "—", detail: muscleClass, extra: "Classificação automática" },
           { label: "Visceral", value: visceral || "—", detail: visceralClass, extra: "Escala 1–30" },
         ].map((card) => (
-          <div key={card.label} className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{card.label}</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">{card.value}</p>
+          <div key={card.label} className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-4">
+            <p className="text-xs text-white">{card.label}</p>
+            <p className="mt-1 text-2xl font-bold text-white">{card.value}</p>
             <p className="mt-1 text-xs font-semibold uppercase text-primary">{card.detail}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">{card.extra}</p>
+            <p className="mt-1 text-[11px] text-white">{card.extra}</p>
           </div>
         ))}
       </div>
 
       {/* Photo positioning guide */}
-      <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-foreground">Fotos da avaliação</h3>
-            <p className="text-xs text-muted-foreground">
+            <h3 className="text-sm font-bold text-white">Fotos da avaliação</h3>
+            <p className="text-xs text-white">
               Siga o guia de posicionamento ao tirar as 4 fotos do aluno
             </p>
           </div>
           <Camera className="h-5 w-5 text-primary" />
         </div>
-        <div className="overflow-hidden rounded-xl border border-border bg-muted">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
           <img
             src={photoGuide}
             alt="Guia de posicionamento: frente, costas, lateral direita e lateral esquerda"
@@ -151,19 +151,19 @@ export function StudentEvaluationPanel() {
         </div>
         <button
           type="button"
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/50 px-4 py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted hover:text-foreground"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 px-4 py-6 text-sm font-medium text-white transition-colors hover:border-primary/50 hover:bg-white/10"
         >
           <Camera className="h-4 w-4" /> Adicionar nova foto seguindo o guia
         </button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="text-sm font-bold text-foreground">Anamnese Digital</h3>
+      <div className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
+        <h3 className="text-sm font-bold text-white">Anamnese Digital</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {["Objetivo do protocolo", "Condições pré-existentes", "Medicamentos atuais", "Rotina de exercícios"].map((label) => (
             <label key={label} className="space-y-2">
-              <span className="text-xs text-muted-foreground">{label}</span>
-              <textarea className="min-h-20 w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground outline-none focus:border-primary/40" />
+              <span className="text-xs text-white">{label}</span>
+              <textarea className="min-h-20 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-primary/40" />
             </label>
           ))}
         </div>

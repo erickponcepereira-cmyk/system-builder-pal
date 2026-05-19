@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Plus, Users, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import NewStudentModal from "./NewStudentModal";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+
 
 interface Props {
   coachId: string;
@@ -91,9 +93,12 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
                       <h3 className="truncate text-sm font-bold text-white">{s.name}</h3>
                       <p className="truncate text-xs text-white/45">{s.whatsapp || s.email || "—"}</p>
                     </div>
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                      {GENDER_LABEL[s.gender] || "—"}{age ? ` · ${age}a` : ""}
-                    </span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                        {GENDER_LABEL[s.gender] || "—"}{age ? ` · ${age}a` : ""}
+                      </span>
+                      <WhatsAppButton phone={s.whatsapp} size="sm" message={`Olá ${s.name.split(" ")[0]}!`} />
+                    </div>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <Stat label="Peso" value={s.current_weight ? `${s.current_weight}kg` : "—"} />
@@ -104,6 +109,7 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
                     Use as abas Dieta/Anamnese/Avaliações no menu para gerenciar este aluno.
                   </p>
                 </div>
+
               );
             })}
           </div>

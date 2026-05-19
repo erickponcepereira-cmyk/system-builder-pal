@@ -1,61 +1,59 @@
-## Objetivo
-Transformar o painel atual da nutricionista (`/professional`) em um workspace funcional, reaproveitando o máximo possível dos componentes já existentes do Coach.
+Esta lista tem ~10 mudanças significativas em painéis diferentes (coach, admin, simulador, perfil, FitMindShape, protocolo, saúde&metas, carreira/medalhas, loja). Vou propor uma ordem de execução em fases para entregar tudo de forma estável, e confirmar com você antes de implementar.
 
-## 1. Aba "Meus Alunos"
-- Adicionar botão **"+ Novo Aluno"** (estilo coach).
-- Modal de cadastro pedindo: **nome, idade, telefone, altura, peso, sexo, cor da pele**.
-- Ao salvar:
-  - Cria `profile` (role `student`, sem auth — perfil "gerenciado pela nutri").
-  - Cria `students` vinculado ao `coach_id` da nutricionista (campo `coach_id` é usado como dono do aluno aqui também, já que a tabela é a mesma).
-  - Marca metadado indicando que o aluno foi criado por uma profissional (campo novo `created_by_professional_id` em `students`, via migration).
-- Lista combina:
-  - Alunos atribuídos via `transaction_professional_assignments` (já existente).
-  - Alunos criados manualmente pela nutricionista.
-- Clicar em um aluno abre o detalhe (mesmo padrão do coach: aluno selecionado dita o conteúdo das abas de Dieta/Anamnese/Avaliações).
+## Fase 1 — Quick wins de UI (sem migração)
+1. **Botão WhatsApp do aluno** em todos os pontos onde o coach vê o aluno: lista "Meus Alunos" (coach + profissional), FitMindShape (seletor de cliente e header), Protocolo & Treinos (cabeçalho do aluno selecionado), Frequência/Check-in, Avaliações. Componente reutilizável `<WhatsAppButton phone={...} />` usando o helper `src/lib/whatsapp.ts` já existente. O link é gerado on-the-fly a partir do telefone — não precisa salvar nada novo no banco (telefone já é capturado no cadastro).
+2. **Avaliar Aluno — todas as letras em branco**: ajustar classes de texto no `StudentEvaluationPanel` / `EvaluateTab`.
+3. **Protocolo & Treinos > Alimentação**:
+   - Campos "opção 1/2/3" viram `<Textarea>` grandes (multiline).
+   - Botão "+ Nova observação" que cria card com título + texto livre, no mesmo padrão visual.
+4. **Meu Perfil (coach) > Redes Sociais**: adicionar campos Instagram, Facebook, YouTube, TikTok, Site no `CoachProfileTab` (já existe `professional_public_profile` pra profissional — para coach vou usar campos diretos em `coaches` ou JSON `social_links`).
 
-## 2. Aba "Dieta / Protocolo"
-- Reaproveitar `ProtocolTab` do coach (copiar para `src/components/professional/ProtocolTab.tsx` ajustando imports / labels).
-- Funciona com o aluno selecionado em "Meus Alunos".
+## Fase 2 — Loja: comissões corretas no NewSaleModal
+5. No `NewSaleModal` ao selecionar produto: ler `commission_coach`, `commission_level1/2/3`, `app_fee` do produto e mostrar:
+   - Comissão do coach (R$ e %)
+   - Upline 1, 2, 3 (R$ e %)
+   - Separar por método: **Cartão** (descontar taxa MP ~4,99%) vs **Pix/Boleto** (taxa ~0,99%). Usar `financialEngine.ts` que já existe.
+   - Remover o "50% + 18%" hardcoded.
 
-## 3. Aba "Anamnese"
-- Reaproveitar a anamnese do coach (atualmente parte de Evaluate/Protocol — vou copiar o trecho específico).
-- Perguntas vêm de uma tabela nova `professional_anamnese_questions` (por profissional). Se vazia, usa o set padrão do coach.
-- CRUD das perguntas fica dentro da aba **Configurações** (item 6).
+## Fase 3 — Saúde & Metas vinculado ao FitMindShape
+6. Em `student.health.tsx` puxar última avaliação do aluno em `coach_body_assessments` e pré-preencher:
+   - Calorias/dia → `basal_metabolism × fator atividade` (padrão 1.4, editável)
+   - Meta de peso (editável)
+   Campos permanecem editáveis pelo nutricionista/aluno; salva override em `student_health_goals` (nova tabela).
 
-## 4. Aba "Avaliações" (FitMindShape)
-- Copiar `FitMindShape.tsx` e `StudentEvaluationPanel.tsx` / `AssessmentComparison.tsx` para uso da nutri (mesma UI, mesmas tabelas `body_assessments`).
-- Já funciona apontando para o aluno selecionado.
+## Fase 4 — Visão Geral: bug "metas do mês não salvam" do outro coach
+7. Investigar `OverviewTab` salvamento de metas. Provável: RLS exigindo `auth.uid() = coach.user_id` mas o coach é "criado por admin" sem user vinculado, ou faltando policy de UPDATE. Vou ler logs + policy da tabela `coach_monthly_goals` (ou equivalente) e corrigir.
 
-## 5. Aba "Rede"
-- Trocar o `MyNetworkPanel` resumido pelo `NetworkTreeTab` (árvore completa que o coach vê).
+## Fase 5 — Simulador de rede + Minha Rede
+8. **Simulador**: trocar mocks por produtos reais (`products` ativos da Fitmind), usar % reais de upline 1/2/3 do produto. Renomear "Nível X" → "Upline X".
+9. **Minha Rede - projeção**: campos numéricos editáveis por teclado (não só seta), botão **Salvar projeção** persistindo em nova tabela `coach_network_projections (coach_id, product_id, l1_sales, l2_sales, l3_sales, updated_at)`.
 
-## 6. Aba "Configurações" (nova)
-Sub-seções:
-- **Perfil público**: foto, bio, Instagram, outras redes sociais (array), sites, descrição "vender seu trabalho". Salvo em `profiles` + nova tabela `professional_public_profile` (instagram, website, social_links jsonb, bio_long, headline).
-- **Perguntas da anamnese**: editor (adicionar/editar/remover/reordenar perguntas).
-- Os dados de perfil ficam visíveis na ficha pública do nutricionista quando alguém clica num produto dele na loja (ajuste leve no `ProductDetailModal` para mostrar bloco "Sobre o profissional" com links).
+## Fase 6 — Sistema de Medalhas (maior bloco, migração nova)
+10. Nova tabela `coach_badges` com enum:
+    - `master_coach`
+    - `coach_hbl_42`
+    - `coach_hbl_50`
+    - `nutritionist_partner`
+    - `council`
+11. Tabela `coach_badge_assignments (coach_id, badge_key, granted_by, granted_at)` — admin atribui no painel Carreira.
+12. **Em cada produto (admin)** novas flags:
+    - `allow_master_coach_sale boolean` (se true → master coach ganha 10% da comissão do coach que vendeu, deduzido)
+    - `required_badge text` (se setado, só coach com essa medalha vê/vende — pra HBL 42% vs 50%)
+13. **Engine de comissão**: estender `financialEngine` para:
+    - Detectar venda cruzada (cliente fora da rede do master coach): coach da rede recebe comissão padrão, master coach ganha 10% deduzido dessa comissão.
+    - Master coach vendendo direto: ganha 10% extra do lucro.
+14. **Storefront/Loja**: filtrar produtos por medalha do coach (HBL 42% não vê HBL 50% e vice-versa).
+15. **Atribuição de nutricionista parceiro** em vendas que exigem nutricionista: lógica de "mais próximo na rede / preferência indicação direta / seletor se empate". Vou começar pela parte mais simples (atribuição automática ao único nutricionista da rede, ou seletor manual) e depois evoluir geolocalização.
+16. **FitMindShape grátis** pra "Medalha do conselho" — flag de bypass de pagamento.
 
-## 7. Migrations necessárias
-- `students.created_by_professional_id uuid null` + index.
-- `professional_anamnese_questions` (id, coach_id, label, kind, options jsonb, order, is_active, timestamps) + RLS (o dono CRUD; admin lê tudo).
-- `professional_public_profile` (id, profile_id unique, headline, bio_long, instagram, website, social_links jsonb, timestamps) + RLS (dono CRUD, leitura pública para profissionais aprovados).
-- Policy/trigger para permitir nutricionista criar `profiles` + `students` de alunos gerenciados (sem auth.users).
+---
 
-## 8. Arquivos a criar/editar
-**Criar**
-- `src/components/professional/NewStudentModal.tsx`
-- `src/components/professional/ProfessionalStudentsTab.tsx`
-- `src/components/professional/ProtocolTab.tsx` (cópia adaptada)
-- `src/components/professional/AnamneseTab.tsx`
-- `src/components/professional/EvaluationsTab.tsx` (reusa FitMindShape)
-- `src/components/professional/SettingsTab.tsx` (perfil público + perguntas anamnese)
+## Pergunta antes de começar
+Esse escopo é grande (especialmente Fase 6 — Medalhas, que é praticamente um subsistema novo). Posso executar tudo em sequência, mas vai gerar várias migrações e mudanças amplas em comissão/loja.
 
-**Editar**
-- `src/routes/professional.tsx` (wire das novas abas + aluno selecionado em contexto).
-- `src/components/store/ProductDetailModal.tsx` (bloco "Sobre o profissional" quando o produto pertence a uma nutri).
+Sugiro priorizar:
+- **Hoje:** Fases 1, 2, 3, 4 (rápidas, alto impacto, sem mexer em engine de comissão).
+- **Próxima rodada:** Fase 5 (simulador/projeção).
+- **Rodada dedicada:** Fase 6 (medalhas + lógica de comissão cruzada — precisa de cuidado pra não quebrar vendas existentes).
 
-## Escopo fora deste plano
-- Não vamos criar fluxo de convidar o aluno gerenciado a virar usuário real (pode vir depois).
-- Não vamos mexer em comissões nem na fila bloqueada da nutri — já existe.
-
-Confirma esse plano ou quer ajustar alguma parte (ex.: cor da pele em lista fixa, aluno gerenciado vs convite, etc.)?
+Confirma essa ordem? Ou prefere que eu ataque tudo de uma vez mesmo?

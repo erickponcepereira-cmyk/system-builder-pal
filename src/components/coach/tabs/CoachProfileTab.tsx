@@ -4,12 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   User, Save, Mail, Phone, MapPin, BookOpen, Trophy, Award, UserRound,
-  History, Camera, GraduationCap, Activity,
+  History, Camera, GraduationCap, Activity, Instagram, Globe, Youtube, Facebook, Music2,
 } from "lucide-react";
 import { money, type CoachContext } from "@/routes/coach";
 
 export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContext | null; onSaved: () => void; onLocalChange: (value: CoachContext | null) => void }) {
-  const [form, setForm] = useState({ name: "", phone: "", city: "", state: "", bio: "", pix_key: "", pix_key_type: "cpf" });
+  const [form, setForm] = useState({
+    name: "", phone: "", city: "", state: "", bio: "", pix_key: "", pix_key_type: "cpf",
+    instagram: "", facebook: "", youtube: "", tiktok: "", website: "",
+  });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +20,20 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
 
   useEffect(() => {
     if (!coach) return;
-    setForm((current) => ({ ...current, name: coach.name, phone: coach.phone, city: coach.city, state: coach.state, bio: coach.bio }));
+    (async () => {
+      // Carrega campos sociais do coach
+      const { data } = await supabase.from("coaches")
+        .select("instagram,facebook,youtube,tiktok,website,pix_key,pix_key_type")
+        .eq("id", coach.coachId).maybeSingle();
+      const d = (data as any) || {};
+      setForm((current) => ({
+        ...current,
+        name: coach.name, phone: coach.phone, city: coach.city, state: coach.state, bio: coach.bio,
+        pix_key: d.pix_key || "", pix_key_type: d.pix_key_type || "cpf",
+        instagram: d.instagram || "", facebook: d.facebook || "", youtube: d.youtube || "",
+        tiktok: d.tiktok || "", website: d.website || "",
+      }));
+    })();
   }, [coach]);
 
   const save = async () => {
@@ -25,13 +41,19 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     if (!form.name.trim()) return toast.error("Informe seu nome para salvar o perfil");
     setSaving(true);
     const { error: profileError } = await supabase.from("profiles").update({ name: form.name.trim(), phone: form.phone.trim() || null, city: form.city.trim() || null, state: form.state.trim() || null, bio: form.bio.trim() || null }).eq("id", coach.profileId);
-    const { error: coachError } = await supabase.from("coaches").update({ pix_key: form.pix_key.trim() || null, pix_key_type: form.pix_key_type || null }).eq("id", coach.coachId);
+    const { error: coachError } = await supabase.from("coaches").update({
+      pix_key: form.pix_key.trim() || null, pix_key_type: form.pix_key_type || null,
+      instagram: form.instagram.trim() || null, facebook: form.facebook.trim() || null,
+      youtube: form.youtube.trim() || null, tiktok: form.tiktok.trim() || null,
+      website: form.website.trim() || null,
+    } as never).eq("id", coach.coachId);
     setSaving(false);
     if (profileError || coachError) return toast.error("Não foi possível salvar. Verifique os dados e tente novamente.");
     onLocalChange({ ...coach, name: form.name.trim(), phone: form.phone.trim(), city: form.city.trim(), state: form.state.trim(), bio: form.bio.trim() });
     toast.success("Perfil atualizado");
     onSaved();
   };
+
 
   const uploadAvatar = async (file: File) => {
     if (!coach) return;
@@ -83,8 +105,29 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
             <label className="text-xs text-white/50"><span className="mb-1 block">Tipo de chave PIX</span><select className="field-control" value={form.pix_key_type} onChange={(e) => setForm({ ...form, pix_key_type: e.target.value })}><option value="cpf">CPF</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Aleatória</option></select></label>
             <label className="text-xs text-white/50"><span className="mb-1 block">Chave PIX</span><input className="field-control" value={form.pix_key} onChange={(e) => setForm({ ...form, pix_key: e.target.value })} /></label>
           </div>
+          <div className="mt-5 border-t border-white/5 pt-4">
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-white/60">Redes sociais</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { key: "instagram", label: "Instagram", icon: Instagram, placeholder: "@seuusuario" },
+                { key: "facebook", label: "Facebook", icon: Facebook, placeholder: "facebook.com/voce" },
+                { key: "youtube", label: "YouTube", icon: Youtube, placeholder: "youtube.com/@canal" },
+                { key: "tiktok", label: "TikTok", icon: Music2, placeholder: "@seuusuario" },
+                { key: "website", label: "Site / link na bio", icon: Globe, placeholder: "https://..." },
+              ].map((f) => {
+                const Icon = f.icon;
+                return (
+                  <label key={f.key} className="text-xs text-white/50">
+                    <span className="mb-1 flex items-center gap-1.5"><Icon className="h-3 w-3" />{f.label}</span>
+                    <input className="field-control" placeholder={f.placeholder} value={form[f.key as keyof typeof form]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
           <Button onClick={save} disabled={saving} className="mt-4"><Save className="mr-2 h-4 w-4" /> {saving ? "Salvando..." : "Salvar perfil"}</Button>
         </div>
+
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="relative mb-4 h-20 w-20">
             {coach?.avatarUrl ? (

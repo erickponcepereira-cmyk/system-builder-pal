@@ -1009,7 +1009,31 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   {c.email} · {c.groups?.join(", ")}
                 </div>
               </div>
+              {c.whatsapp && (
+                <a
+                  href={`https://wa.me/${(c.whatsapp.replace(/\D/g, "").length <= 11 ? "55" : "") + c.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${c.name.split(" ")[0]}!`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Abrir conversa no WhatsApp"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: "rgba(34,197,94,0.15)",
+                    color: "#16a34a",
+                    textDecoration: "none",
+                    marginRight: 6,
+                  }}
+                >
+                  <Phone size={14} />
+                </a>
+              )}
               <ChevronRight size={16} color="#cbd5e1" />
+
             </div>
           </div>
         ))}
