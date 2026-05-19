@@ -13,6 +13,12 @@ import {
   type ProductFinancial,
 } from "@/lib/financial.functions";
 import {
+  getProductBadgeFlags,
+  saveProductBadgeFlags,
+  BADGE_KEYS,
+  type BadgeKey,
+} from "@/lib/coach-badges.functions";
+import {
   calculateDistribution,
   computeSlotAmounts,
   type PaymentMethod,
