@@ -53,6 +53,7 @@ export function ProductDetailModal({
   showCommissions,
   hasUpline,
   addLabel,
+  professional,
 }: Props) {
   const hasCommissionData =
     showCommissions &&
