@@ -1568,11 +1568,13 @@ export type Database = {
           consecutive_months_as_top: number | null
           council_number: string | null
           created_at: string | null
+          facebook: string | null
           herbalife_portal_url: string | null
           id: string
           inactive_since: string | null
           inactivity_grace_until: string | null
           inactivity_warning_sent: boolean | null
+          instagram: string | null
           is_professional: boolean
           last_activity_at: string | null
           pix_key: string | null
@@ -1582,15 +1584,19 @@ export type Database = {
           referral_code: string
           referral_link: string | null
           serves_whole_network: boolean
+          social_links: Json
           specialty_custom_description: string | null
           specialty_key: string | null
           specialty_pending_setup: boolean
+          tiktok: string | null
           total_active_students: number | null
           total_points: number
           total_sales: number | null
           transferred_at: string | null
           transferred_to_coach_id: string | null
           upline_coach_id: string | null
+          website: string | null
+          youtube: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -1607,11 +1613,13 @@ export type Database = {
           consecutive_months_as_top?: number | null
           council_number?: string | null
           created_at?: string | null
+          facebook?: string | null
           herbalife_portal_url?: string | null
           id?: string
           inactive_since?: string | null
           inactivity_grace_until?: string | null
           inactivity_warning_sent?: boolean | null
+          instagram?: string | null
           is_professional?: boolean
           last_activity_at?: string | null
           pix_key?: string | null
@@ -1621,15 +1629,19 @@ export type Database = {
           referral_code: string
           referral_link?: string | null
           serves_whole_network?: boolean
+          social_links?: Json
           specialty_custom_description?: string | null
           specialty_key?: string | null
           specialty_pending_setup?: boolean
+          tiktok?: string | null
           total_active_students?: number | null
           total_points?: number
           total_sales?: number | null
           transferred_at?: string | null
           transferred_to_coach_id?: string | null
           upline_coach_id?: string | null
+          website?: string | null
+          youtube?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -1646,11 +1658,13 @@ export type Database = {
           consecutive_months_as_top?: number | null
           council_number?: string | null
           created_at?: string | null
+          facebook?: string | null
           herbalife_portal_url?: string | null
           id?: string
           inactive_since?: string | null
           inactivity_grace_until?: string | null
           inactivity_warning_sent?: boolean | null
+          instagram?: string | null
           is_professional?: boolean
           last_activity_at?: string | null
           pix_key?: string | null
@@ -1660,15 +1674,19 @@ export type Database = {
           referral_code?: string
           referral_link?: string | null
           serves_whole_network?: boolean
+          social_links?: Json
           specialty_custom_description?: string | null
           specialty_key?: string | null
           specialty_pending_setup?: boolean
+          tiktok?: string | null
           total_active_students?: number | null
           total_points?: number
           total_sales?: number | null
           transferred_at?: string | null
           transferred_to_coach_id?: string | null
           upline_coach_id?: string | null
+          website?: string | null
+          youtube?: string | null
         }
         Relationships: [
           {
@@ -4929,6 +4947,7 @@ export type Database = {
           id: string
           ideal_times: Json
           marmita_tips: string | null
+          meal_notes: Json
           meal_plan: Json
           meals_per_day: number | null
           restrictions: Json
@@ -4948,6 +4967,7 @@ export type Database = {
           id?: string
           ideal_times?: Json
           marmita_tips?: string | null
+          meal_notes?: Json
           meal_plan?: Json
           meals_per_day?: number | null
           restrictions?: Json
@@ -4967,6 +4987,7 @@ export type Database = {
           id?: string
           ideal_times?: Json
           marmita_tips?: string | null
+          meal_notes?: Json
           meal_plan?: Json
           meals_per_day?: number | null
           restrictions?: Json
