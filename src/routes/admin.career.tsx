@@ -1,15 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Trophy, Gift, Plus, Save, Trash2, X, Loader2 } from "lucide-react";
+import { Trophy, Gift, Plus, Save, Trash2, X, Loader2, Award, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  listCoachesWithBadges,
+  assignBadge,
+  revokeBadge,
+  BADGE_KEYS,
+  type BadgeKey,
+} from "@/lib/coach-badges.functions";
 
 export const Route = createFileRoute("/admin/career")({
   head: () => ({ meta: [{ title: "Carreira — Admin" }] }),
   component: AdminCareerPage,
 });
 
-type Tab = "challenges" | "redeem";
+type Tab = "challenges" | "redeem" | "badges";
 
 function AdminCareerPage() {
   const [tab, setTab] = useState<Tab>("challenges");
@@ -17,13 +25,14 @@ function AdminCareerPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-white">Carreira</h1>
-        <p className="text-xs text-white/50">Desafios com tempo limitado e loja de troca de pontos por produtos.</p>
+        <p className="text-xs text-white/50">Desafios, loja de pontos e medalhas dos coaches.</p>
       </div>
       <div className="flex gap-2 border-b border-white/10">
-        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy} label="Desafios por tempo limitado" />
-        <TabBtn active={tab === "redeem"} onClick={() => setTab("redeem")} icon={Gift} label="Loja de troca de pontos" />
+        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy} label="Desafios" />
+        <TabBtn active={tab === "redeem"} onClick={() => setTab("redeem")} icon={Gift} label="Loja de pontos" />
+        <TabBtn active={tab === "badges"} onClick={() => setTab("badges")} icon={Award} label="Medalhas" />
       </div>
-      {tab === "challenges" ? <ChallengesTab /> : <RedeemTab />}
+      {tab === "challenges" ? <ChallengesTab /> : tab === "redeem" ? <RedeemTab /> : <BadgesTab />}
     </div>
   );
 }
@@ -38,6 +47,116 @@ function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onCli
     </button>
   );
 }
+
+const BADGE_META: Record<BadgeKey, { label: string; color: string; description: string }> = {
+  master_coach: { label: "Master Coach", color: "bg-amber-500/20 text-amber-300 border-amber-500/40", description: "Recebe 10% de comissão cruzada em vendas autorizadas" },
+  coach_hbl_42: { label: "Coach HBL 42%", color: "bg-blue-500/20 text-blue-300 border-blue-500/40", description: "Acesso aos produtos HBL com margem 42%" },
+  coach_hbl_50: { label: "Coach HBL 50%", color: "bg-violet-500/20 text-violet-300 border-violet-500/40", description: "Acesso aos produtos HBL com margem 50%" },
+  nutritionist_partner: { label: "Nutricionista Parceiro", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40", description: "Recebe atribuições automáticas de planos nutricionais" },
+  council: { label: "Conselho", color: "bg-rose-500/20 text-rose-300 border-rose-500/40", description: "Acesso gratuito a produtos liberados pelo conselho" },
+};
+
+function BadgesTab() {
+  const [rows, setRows] = useState<{ id: string; name: string; email: string; badges: { badge_key: string }[] }[] | null>(null);
+  const [filter, setFilter] = useState("");
+  const fetchAll = useServerFn(listCoachesWithBadges);
+  const grant = useServerFn(assignBadge);
+  const revoke = useServerFn(revokeBadge);
+
+  const load = async () => {
+    setRows(null);
+    try {
+      const data = await fetchAll();
+      setRows(data as any);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao carregar");
+      setRows([]);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const toggle = async (coachId: string, badge: BadgeKey, has: boolean) => {
+    try {
+      if (has) {
+        await revoke({ data: { coachId, badge } });
+        toast.success("Medalha removida");
+      } else {
+        await grant({ data: { coachId, badge } });
+        toast.success("Medalha atribuída");
+      }
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro");
+    }
+  };
+
+  if (!rows) return <Loader2 className="h-5 w-5 animate-spin text-white/50" />;
+
+  const filtered = rows.filter((r) => {
+    const q = filter.toLowerCase().trim();
+    if (!q) return true;
+    return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Buscar coach por nome ou email..."
+          className="flex-1 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-[#E24B4A]"
+        />
+        <span className="text-xs text-white/50">{filtered.length} coaches</span>
+      </div>
+
+      <div className="grid gap-3 text-xs">
+        {(Object.keys(BADGE_META) as BadgeKey[]).map((k) => (
+          <div key={k} className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 ${BADGE_META[k].color}`}>
+            <Award className="h-3.5 w-3.5" />
+            <span className="font-semibold">{BADGE_META[k].label}</span>
+            <span className="text-white/60">— {BADGE_META[k].description}</span>
+          </div>
+        ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-white/50">Nenhum coach encontrado.</p>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((c) => (
+            <div key={c.id} className="rounded-xl border border-white/10 p-3" style={{ backgroundColor: "#161616" }}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">{c.name}</p>
+                  <p className="text-[11px] text-white/40">{c.email}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(Object.keys(BADGE_META) as BadgeKey[]).map((b) => {
+                  const has = c.badges.some((x) => x.badge_key === b);
+                  return (
+                    <button
+                      key={b}
+                      onClick={() => toggle(c.id, b, has)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition ${
+                        has ? BADGE_META[b].color : "bg-white/5 text-white/40 border-white/10 hover:border-white/30"
+                      }`}
+                    >
+                      {has && <Check className="h-3 w-3" />}
+                      {BADGE_META[b].label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 // ─── Desafios ────────────────────────────────────────────────────
 type Challenge = {
