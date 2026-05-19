@@ -172,6 +172,43 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
+  useEffect(() => {
+    const coachId = detailProduct?.creatorCoachId;
+    if (!coachId) { setDetailProfessional(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: coach } = await supabase
+        .from("coaches")
+        .select("profile_id, is_professional")
+        .eq("id", coachId)
+        .maybeSingle();
+      if (!coach?.profile_id || !coach.is_professional) {
+        if (!cancelled) setDetailProfessional(null);
+        return;
+      }
+      const [{ data: profile }, { data: pub }] = await Promise.all([
+        supabase.from("profiles").select("name, avatar_url").eq("id", coach.profile_id).maybeSingle(),
+        supabase.from("professional_public_profile" as never)
+          .select("headline,bio_long,instagram,website,services,social_links" as never)
+          .eq("profile_id" as never, coach.profile_id as never)
+          .maybeSingle(),
+      ]);
+      if (cancelled || !profile) { if (!cancelled) setDetailProfessional(null); return; }
+      const p = (pub as any) || {};
+      setDetailProfessional({
+        name: (profile as any).name || "Profissional",
+        avatarUrl: (profile as any).avatar_url || null,
+        headline: p.headline ?? null,
+        bioLong: p.bio_long ?? null,
+        instagram: p.instagram ?? null,
+        website: p.website ?? null,
+        services: p.services ?? null,
+        socialLinks: Array.isArray(p.social_links) ? p.social_links : [],
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [detailProduct]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return items.filter((item) => (activeCategory === "Todos" || item.category === activeCategory) &&
