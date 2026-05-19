@@ -621,11 +621,78 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
 // ─── COMPONENTE PRINCIPAL ───────────────────────────────────────────
 export function MinhaRede() {
   const [abaAtiva, setAbaAtiva] = useState<"produto" | "rede" | "ganhos">("rede");
-  const [produtos, setProdutos] = useState<ProdutoT[]>(PRODUTOS_BASE.map((p) => ({ ...p })));
-  const [produtoId, setProdutoId] = useState("p2");
+  const [produtos, setProdutos] = useState<ProdutoT[]>([]);
+  const [produtoId, setProdutoId] = useState<string>("");
   const [preco, setPreco] = useState(100);
   const [nodes, setNodes] = useState<NodesMap>({});
   const [vendasCoach, setVendasCoach] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchProducts = useServerFn(listSimulatorProducts);
+  const fetchProjection = useServerFn(getNetworkProjection);
+  const saveProjection = useServerFn(saveNetworkProjection);
+
+  // Carrega produtos reais
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await fetchProducts();
+        const mapped: ProdutoT[] = (list ?? []).map((p) => ({
+          id: p.id,
+          nome: p.name,
+          preco: p.price,
+        }));
+        setProdutos(mapped);
+        if (mapped.length > 0) {
+          setProdutoId(mapped[0].id);
+          setPreco(mapped[0].preco);
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("Erro ao carregar produtos");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Carrega projeção salva quando o produto muda
+  useEffect(() => {
+    if (!produtoId) return;
+    (async () => {
+      try {
+        const proj = await fetchProjection({ data: { productId: produtoId } });
+        if (proj) {
+          setNodes((proj.tree ?? {}) as NodesMap);
+          setVendasCoach(proj.vendas_coach ?? 1);
+        } else {
+          setNodes({});
+          setVendasCoach(1);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [produtoId]);
+
+  const handleSave = async () => {
+    if (!produtoId) {
+      toast.error("Selecione um produto antes de salvar");
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveProjection({
+        data: { productId: produtoId, vendasCoach, tree: nodes },
+      });
+      toast.success("Projeção salva com sucesso");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const abas = [
     { id: "produto" as const, label: "Produto", icon: Package },
@@ -635,14 +702,24 @@ export function MinhaRede() {
 
   return (
     <div className="text-zinc-100">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-          <BarChart3 size={20} className="text-emerald-400" />
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+            <BarChart3 size={20} className="text-emerald-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-zinc-100">Simulador de rede</h2>
+            <p className="text-xs text-zinc-500">Monte sua equipe e simule ganhos por upline</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-zinc-100">Simulador de rede</h2>
-          <p className="text-xs text-zinc-500">Monte sua equipe e simule ganhos por nível</p>
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-sm font-semibold disabled:opacity-50"
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Salvar projeção
+        </button>
       </div>
 
       <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl mb-6">
