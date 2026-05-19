@@ -143,7 +143,7 @@ function NodoArvore({
   const alterarVendas = (delta: number) => {
     setNodes((prev) => ({
       ...prev,
-      [nodeId]: { ...prev[nodeId], vendas: Math.max(1, prev[nodeId].vendas + delta) },
+      [nodeId]: { ...prev[nodeId], vendas: Math.max(0, prev[nodeId].vendas + delta) },
     }));
   };
 
