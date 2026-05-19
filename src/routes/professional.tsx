@@ -1,12 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse, Package } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse, Package, Settings } from "lucide-react";
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
+import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
+import { AnamneseTab } from "@/components/professional/AnamneseTab";
+import { SettingsTab } from "@/components/professional/SettingsTab";
+import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
+import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
+import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
+import type { CoachContext } from "@/routes/coach";
 
 export const Route = createFileRoute("/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
