@@ -2827,6 +2827,64 @@ export type Database = {
           },
         ]
       }
+      master_coach_commissions: {
+        Row: {
+          base_commission: number
+          created_at: string
+          id: string
+          is_cross_sale: boolean
+          master_amount: number
+          master_coach_id: string
+          order_id: string | null
+          product_id: string | null
+          seller_coach_id: string
+        }
+        Insert: {
+          base_commission?: number
+          created_at?: string
+          id?: string
+          is_cross_sale?: boolean
+          master_amount?: number
+          master_coach_id: string
+          order_id?: string | null
+          product_id?: string | null
+          seller_coach_id: string
+        }
+        Update: {
+          base_commission?: number
+          created_at?: string
+          id?: string
+          is_cross_sale?: boolean
+          master_amount?: number
+          master_coach_id?: string
+          order_id?: string | null
+          product_id?: string | null
+          seller_coach_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "master_coach_commissions_master_coach_id_fkey"
+            columns: ["master_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_coach_commissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_coach_commissions_seller_coach_id_fkey"
+            columns: ["seller_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       master_coaches: {
         Row: {
           approved_at: string | null
@@ -4674,6 +4732,55 @@ export type Database = {
           },
         ]
       }
+      sale_nutritionist_assignments: {
+        Row: {
+          assignment_method: string
+          created_at: string
+          id: string
+          nutritionist_coach_id: string | null
+          order_id: string
+          seller_coach_id: string
+        }
+        Insert: {
+          assignment_method?: string
+          created_at?: string
+          id?: string
+          nutritionist_coach_id?: string | null
+          order_id: string
+          seller_coach_id: string
+        }
+        Update: {
+          assignment_method?: string
+          created_at?: string
+          id?: string
+          nutritionist_coach_id?: string | null
+          order_id?: string
+          seller_coach_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_nutritionist_assignments_nutritionist_coach_id_fkey"
+            columns: ["nutritionist_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_nutritionist_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_nutritionist_assignments_seller_coach_id_fkey"
+            columns: ["seller_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_payment_cards: {
         Row: {
           brand: string | null
@@ -5951,6 +6058,15 @@ export type Database = {
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
         Returns: undefined
+      }
+      find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
+      find_nutritionist_for: { Args: { _coach_id: string }; Returns: string }
+      find_upline_with_badge: {
+        Args: {
+          _badge: Database["public"]["Enums"]["coach_badge_key"]
+          _coach_id: string
+        }
+        Returns: string
       }
       get_or_create_daily_quote: { Args: never; Returns: Json }
       get_student_attendance_summary: {
