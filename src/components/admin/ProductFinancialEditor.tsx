@@ -761,6 +761,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
   const [requiredBadge, setRequiredBadge] = useState<BadgeKey | "">("");
   const [allowMaster, setAllowMaster] = useState(false);
   const [freeCouncil, setFreeCouncil] = useState(false);
+  const [freeNutritionist, setFreeNutritionist] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -770,6 +771,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
         setRequiredBadge((f?.required_badge ?? "") as BadgeKey | "");
         setAllowMaster(!!f?.allow_master_coach_sale);
         setFreeCouncil(!!f?.free_for_council);
+        setFreeNutritionist(!!f?.free_for_nutritionist);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -784,6 +786,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
           required_badge: (requiredBadge || null) as BadgeKey | null,
           allow_master_coach_sale: allowMaster,
           free_for_council: freeCouncil,
+          free_for_nutritionist: freeNutritionist,
         },
       });
       toast.success("Restrições salvas");
