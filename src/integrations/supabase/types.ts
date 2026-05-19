@@ -1435,6 +1435,58 @@ export type Database = {
           },
         ]
       }
+      coach_network_projections: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          product_id: string | null
+          tree: Json
+          updated_at: string
+          vendas_coach: number
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          tree?: Json
+          updated_at?: string
+          vendas_coach?: number
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          tree?: Json
+          updated_at?: string
+          vendas_coach?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_network_projections_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_network_projections_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_network_projections_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_points_log: {
         Row: {
           coach_id: string
