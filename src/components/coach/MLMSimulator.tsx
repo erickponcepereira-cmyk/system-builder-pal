@@ -1,39 +1,72 @@
-import { useState, useMemo } from "react";
-import { Calculator, TrendingUp, Users, DollarSign } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Calculator, TrendingUp, Users, DollarSign, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { listSimulatorProducts } from "@/lib/coach-network.functions";
 
-const COMMISSION_RATES = {
-  coach: 50,
-  level1: 15,
-  level2: 5,
-  level3: 3,
-  level4: 0,
-  level5: 0,
-} as const;
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  commission_coach: number;
+  commission_level1: number;
+  commission_level2: number;
+  commission_level3: number;
+};
 
 export function MLMSimulator() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productId, setProductId] = useState<string>("");
   const [productPrice, setProductPrice] = useState(197);
   const [directStudents, setDirectStudents] = useState(20);
   const [networkLevels, setNetworkLevels] = useState({
-    level1: 10, // alunos de cada um dos seus indicados
+    level1: 10,
     level2: 5,
     level3: 3,
   });
+  const [loading, setLoading] = useState(true);
+
+  const fetchProducts = useServerFn(listSimulatorProducts);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await fetchProducts();
+        setProducts(list);
+        if (list.length > 0) {
+          setProductId(list[0].id);
+          setProductPrice(list[0].price);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const selectedProduct = useMemo(
+    () => products.find((p) => p.id === productId),
+    [products, productId]
+  );
+
+  const rates = useMemo(
+    () => ({
+      coach: selectedProduct?.commission_coach ?? 50,
+      level1: selectedProduct?.commission_level1 ?? 15,
+      level2: selectedProduct?.commission_level2 ?? 5,
+      level3: selectedProduct?.commission_level3 ?? 3,
+    }),
+    [selectedProduct]
+  );
 
   const result = useMemo(() => {
-    // Comissão direta (você como coach)
-    const directRevenue = directStudents * productPrice * (COMMISSION_RATES.coach / 100);
-
-    // Rede nível 1: cada aluno seu indicou X alunos
+    const directRevenue = directStudents * productPrice * (rates.coach / 100);
     const level1Count = directStudents * networkLevels.level1;
-    const level1Revenue = level1Count * productPrice * (COMMISSION_RATES.level1 / 100);
-
-    // Rede nível 2
+    const level1Revenue = level1Count * productPrice * (rates.level1 / 100);
     const level2Count = level1Count * networkLevels.level2;
-    const level2Revenue = level2Count * productPrice * (COMMISSION_RATES.level2 / 100);
-
-    // Rede nível 3
+    const level2Revenue = level2Count * productPrice * (rates.level2 / 100);
     const level3Count = level2Count * networkLevels.level3;
-    const level3Revenue = level3Count * productPrice * (COMMISSION_RATES.level3 / 100);
+    const level3Revenue = level3Count * productPrice * (rates.level3 / 100);
 
     const totalNetwork = level1Count + level2Count + level3Count;
     const totalMonthly = directRevenue + level1Revenue + level2Revenue + level3Revenue;
@@ -50,7 +83,7 @@ export function MLMSimulator() {
       totalMonthly,
       totalAnnual: totalMonthly * 12,
     };
-  }, [productPrice, directStudents, networkLevels]);
+  }, [productPrice, directStudents, networkLevels, rates]);
 
   const fmt = (n: number) =>
     n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -67,17 +100,51 @@ export function MLMSimulator() {
         </div>
       </div>
 
+      {/* Product selector */}
+      <div className="mb-4">
+        <label className="block text-xs text-white/60 mb-1.5">Produto</label>
+        {loading ? (
+          <div className="flex items-center gap-2 text-xs text-white/40">
+            <Loader2 className="h-3 w-3 animate-spin" /> Carregando produtos...
+          </div>
+        ) : (
+          <select
+            value={productId}
+            onChange={(e) => {
+              setProductId(e.target.value);
+              const p = products.find((pp) => pp.id === e.target.value);
+              if (p) setProductPrice(p.price);
+            }}
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+            style={{ backgroundColor: "#252525" }}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {fmt(p.price)}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
       {/* Inputs */}
       <div className="space-y-3 mb-5">
         <div>
           <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
             <span>Preço do produto</span>
-            <span className="font-bold text-white">{fmt(productPrice)}</span>
+            <input
+              type="number"
+              min={1}
+              value={productPrice}
+              onChange={(e) => setProductPrice(Math.max(1, +e.target.value || 0))}
+              className="w-24 rounded-md px-2 py-1 text-xs font-bold text-white text-right outline-none focus:ring-1 focus:ring-primary"
+              style={{ backgroundColor: "#252525" }}
+            />
           </label>
           <input
             type="range"
             min={49}
-            max={997}
+            max={9997}
             step={10}
             value={productPrice}
             onChange={(e) => setProductPrice(Number(e.target.value))}
@@ -88,12 +155,19 @@ export function MLMSimulator() {
         <div>
           <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
             <span>Seus alunos diretos</span>
-            <span className="font-bold text-white">{directStudents}</span>
+            <input
+              type="number"
+              min={0}
+              value={directStudents}
+              onChange={(e) => setDirectStudents(Math.max(0, +e.target.value || 0))}
+              className="w-20 rounded-md px-2 py-1 text-xs font-bold text-white text-right outline-none focus:ring-1 focus:ring-primary"
+              style={{ backgroundColor: "#252525" }}
+            />
           </label>
           <input
             type="range"
             min={0}
-            max={100}
+            max={500}
             value={directStudents}
             onChange={(e) => setDirectStudents(Number(e.target.value))}
             className="w-full accent-primary"
@@ -104,15 +178,14 @@ export function MLMSimulator() {
           {(["level1", "level2", "level3"] as const).map((lvl, i) => (
             <div key={lvl}>
               <label className="block text-[10px] text-white/50 mb-1">
-                Linha {i + 1} (média)
+                Upline {i + 1} (média)
               </label>
               <input
                 type="number"
                 min={0}
-                max={50}
                 value={networkLevels[lvl]}
                 onChange={(e) =>
-                  setNetworkLevels({ ...networkLevels, [lvl]: Number(e.target.value) || 0 })
+                  setNetworkLevels({ ...networkLevels, [lvl]: Math.max(0, +e.target.value || 0) })
                 }
                 className="w-full rounded-lg px-2 py-1.5 text-sm font-bold text-white outline-none focus:ring-1 focus:ring-primary"
                 style={{ backgroundColor: "#252525" }}
@@ -124,10 +197,10 @@ export function MLMSimulator() {
 
       {/* Breakdown */}
       <div className="space-y-1.5 mb-4">
-        <Row label="Direto (50%) — você como coach" value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos`} />
-        <Row label="Linha 1 (15%) — indicação direta" value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos`} />
-        <Row label="Linha 2 (5%) — abaixo da linha 1" value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos`} />
-        <Row label="Linha 3 (3%) — abaixo da linha 2" value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos`} />
+        <Row label={`Direto (${rates.coach}%) — você como coach`} value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos`} />
+        <Row label={`Upline 1 (${rates.level1}%) — indicação direta`} value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos`} />
+        <Row label={`Upline 2 (${rates.level2}%) — abaixo do Upline 1`} value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos`} />
+        <Row label={`Upline 3 (${rates.level3}%) — abaixo do Upline 2`} value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos`} />
       </div>
 
       {/* Total */}
