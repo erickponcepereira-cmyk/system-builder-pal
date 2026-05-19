@@ -39,7 +39,10 @@ export function GoalsCard({ coachId }: Props) {
   }, [coachId, monthIso]);
 
   async function save() {
-    if (!coachId) return;
+    if (!coachId) {
+      toast.error("Coach não identificado — recarregue a página e tente novamente.");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("coach_goals" as never)
@@ -50,12 +53,14 @@ export function GoalsCard({ coachId }: Props) {
       } as never, { onConflict: "coach_id,reference_month" } as never);
     setSaving(false);
     if (error) {
-      toast.error("Não foi possível salvar as metas");
+      console.error("[GoalsCard] save error:", error);
+      toast.error(`Não foi possível salvar: ${error.message || "erro desconhecido"}`);
       return;
     }
     toast.success("Metas atualizadas");
     setEditing(false);
   }
+
 
   const items = [
     { key: "new_students" as const, label: "Novos alunos", current: progress.new_students, target: goals.new_students, icon: Users },

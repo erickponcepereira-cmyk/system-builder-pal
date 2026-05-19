@@ -4,12 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   User, Save, Mail, Phone, MapPin, BookOpen, Trophy, Award, UserRound,
-  History, Camera, GraduationCap, Activity,
+  History, Camera, GraduationCap, Activity, Instagram, Globe, Youtube, Facebook, Music2,
 } from "lucide-react";
 import { money, type CoachContext } from "@/routes/coach";
 
 export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContext | null; onSaved: () => void; onLocalChange: (value: CoachContext | null) => void }) {
-  const [form, setForm] = useState({ name: "", phone: "", city: "", state: "", bio: "", pix_key: "", pix_key_type: "cpf" });
+  const [form, setForm] = useState({
+    name: "", phone: "", city: "", state: "", bio: "", pix_key: "", pix_key_type: "cpf",
+    instagram: "", facebook: "", youtube: "", tiktok: "", website: "",
+  });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +20,20 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
 
   useEffect(() => {
     if (!coach) return;
-    setForm((current) => ({ ...current, name: coach.name, phone: coach.phone, city: coach.city, state: coach.state, bio: coach.bio }));
+    (async () => {
+      // Carrega campos sociais do coach
+      const { data } = await supabase.from("coaches")
+        .select("instagram,facebook,youtube,tiktok,website,pix_key,pix_key_type")
+        .eq("id", coach.coachId).maybeSingle();
+      const d = (data as any) || {};
+      setForm((current) => ({
+        ...current,
+        name: coach.name, phone: coach.phone, city: coach.city, state: coach.state, bio: coach.bio,
+        pix_key: d.pix_key || "", pix_key_type: d.pix_key_type || "cpf",
+        instagram: d.instagram || "", facebook: d.facebook || "", youtube: d.youtube || "",
+        tiktok: d.tiktok || "", website: d.website || "",
+      }));
+    })();
   }, [coach]);
 
   const save = async () => {
@@ -25,13 +41,19 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     if (!form.name.trim()) return toast.error("Informe seu nome para salvar o perfil");
     setSaving(true);
     const { error: profileError } = await supabase.from("profiles").update({ name: form.name.trim(), phone: form.phone.trim() || null, city: form.city.trim() || null, state: form.state.trim() || null, bio: form.bio.trim() || null }).eq("id", coach.profileId);
-    const { error: coachError } = await supabase.from("coaches").update({ pix_key: form.pix_key.trim() || null, pix_key_type: form.pix_key_type || null }).eq("id", coach.coachId);
+    const { error: coachError } = await supabase.from("coaches").update({
+      pix_key: form.pix_key.trim() || null, pix_key_type: form.pix_key_type || null,
+      instagram: form.instagram.trim() || null, facebook: form.facebook.trim() || null,
+      youtube: form.youtube.trim() || null, tiktok: form.tiktok.trim() || null,
+      website: form.website.trim() || null,
+    } as never).eq("id", coach.coachId);
     setSaving(false);
     if (profileError || coachError) return toast.error("Não foi possível salvar. Verifique os dados e tente novamente.");
     onLocalChange({ ...coach, name: form.name.trim(), phone: form.phone.trim(), city: form.city.trim(), state: form.state.trim(), bio: form.bio.trim() });
     toast.success("Perfil atualizado");
     onSaved();
   };
+
 
   const uploadAvatar = async (file: File) => {
     if (!coach) return;
