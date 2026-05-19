@@ -16,7 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2 } from "lucide-react";
+import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2, Pencil, X } from "lucide-react";
 import type { FitMindAssessment, FitMindClient } from "./FitMindShape";
 
 interface Props {
@@ -24,6 +24,7 @@ interface Props {
   themeColor?: string;
   onBack: () => void;
   onDelete?: (assessmentId: string, reason: string) => Promise<void>;
+  onEdit?: (assessment: FitMindAssessment) => Promise<void>;
 }
 
 type MetricKey =
