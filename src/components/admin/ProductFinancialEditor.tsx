@@ -745,3 +745,111 @@ function RefStep({ n, label, detail, val, color, last }: { n: number; label: str
     </div>
   );
 }
+
+// ─── Seção de restrições por medalha ────────────────────────────────
+const BADGE_LABEL: Record<BadgeKey, string> = {
+  master_coach: "Master Coach",
+  coach_hbl_42: "Coach HBL 42%",
+  coach_hbl_50: "Coach HBL 50%",
+  nutritionist_partner: "Nutricionista Parceiro",
+  council: "Conselho",
+};
+
+function BadgeFlagsSection({ productId }: { productId: string }) {
+  const getFlags = useServerFn(getProductBadgeFlags);
+  const saveFlags = useServerFn(saveProductBadgeFlags);
+  const [requiredBadge, setRequiredBadge] = useState<BadgeKey | "">("");
+  const [allowMaster, setAllowMaster] = useState(false);
+  const [freeCouncil, setFreeCouncil] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getFlags({ data: { productId } })
+      .then((f: any) => {
+        setRequiredBadge((f?.required_badge ?? "") as BadgeKey | "");
+        setAllowMaster(!!f?.allow_master_coach_sale);
+        setFreeCouncil(!!f?.free_for_council);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [productId]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await saveFlags({
+        data: {
+          productId,
+          required_badge: (requiredBadge || null) as BadgeKey | null,
+          allow_master_coach_sale: allowMaster,
+          free_for_council: freeCouncil,
+        },
+      });
+      toast.success("Restrições salvas");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-6 rounded-lg border border-white/10 p-4" style={{ backgroundColor: "#161616" }}>
+      <div className="flex items-center justify-between mb-3">
+        <SectionLabel>Acesso por medalha</SectionLabel>
+        <button
+          onClick={handleSave}
+          disabled={loading || saving}
+          className="flex items-center gap-1.5 rounded-md bg-[#E24B4A] hover:bg-[#E24B4A]/90 disabled:opacity-50 px-3 py-1.5 text-xs font-bold text-white"
+        >
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          Salvar restrições
+        </button>
+      </div>
+      {loading ? (
+        <Loader2 className="h-4 w-4 animate-spin text-white/40" />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <label className="block">
+            <span className="block text-xs text-white/60 mb-1">Medalha exigida para vender</span>
+            <select
+              value={requiredBadge}
+              onChange={(e) => setRequiredBadge(e.target.value as BadgeKey | "")}
+              className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A]"
+            >
+              <option value="">Sem restrição (todos vendem)</option>
+              {BADGE_KEYS.map((k) => (
+                <option key={k} value={k}>{BADGE_LABEL[k]}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-3 cursor-pointer hover:border-white/30">
+            <input
+              type="checkbox"
+              checked={allowMaster}
+              onChange={(e) => setAllowMaster(e.target.checked)}
+              className="mt-0.5 accent-[#E24B4A]"
+            />
+            <div>
+              <p className="text-xs font-semibold text-white">Permitir venda do Master Coach</p>
+              <p className="text-[11px] text-white/50">Master coach ganha 10% extra ao vender</p>
+            </div>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-3 cursor-pointer hover:border-white/30">
+            <input
+              type="checkbox"
+              checked={freeCouncil}
+              onChange={(e) => setFreeCouncil(e.target.checked)}
+              className="mt-0.5 accent-[#E24B4A]"
+            />
+            <div>
+              <p className="text-xs font-semibold text-white">Gratuito para Conselho</p>
+              <p className="text-[11px] text-white/50">Coaches com medalha "Conselho" não pagam</p>
+            </div>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
