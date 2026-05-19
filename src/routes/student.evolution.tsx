@@ -112,6 +112,8 @@ function StudentEvolution() {
         <h1 className="text-2xl font-bold text-foreground">Evolução e IA</h1>
       </header>
 
+      <HealthGoalsCard totalCaloriesToday={totalCalories} />
+
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{photos.length}</p><p className="text-[10px] text-muted-foreground">fotos</p></div>
         <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-primary">{totalCalories || "—"}</p><p className="text-[10px] text-muted-foreground">kcal hoje</p></div>
