@@ -190,6 +190,10 @@ export interface FitMindShapeProps {
     reason: string,
     client: FitMindClient,
   ) => Promise<void>;
+  onEditAssessment?: (
+    assessment: FitMindAssessment,
+    client: FitMindClient,
+  ) => Promise<void>;
   onCreateClient?: (
     client: Omit<FitMindClient, "id">,
   ) => Promise<FitMindClient>;
