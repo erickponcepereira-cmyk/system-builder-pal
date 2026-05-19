@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Apple, Camera, ImagePlus, Loader2, Sparkles, TrendingDown, Upload } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Apple, Camera, ImagePlus, Loader2, Sparkles, Target, TrendingDown, Upload, Pencil, X, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
 
 export const Route = createFileRoute("/student/evolution")({ component: StudentEvolution });
 
