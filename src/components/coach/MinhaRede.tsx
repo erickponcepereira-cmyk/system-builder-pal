@@ -1,8 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus, Trash2, Users, TrendingUp, Package,
-  Edit3, Check, X, Network, BarChart3, Info, ChevronDown, ChevronRight,
+  Edit3, Check, X, Network, BarChart3, Info, ChevronDown, ChevronRight, Save, Loader2,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { getNetworkProjection, saveNetworkProjection, listSimulatorProducts } from "@/lib/coach-network.functions";
+import { toast } from "sonner";
 
 // ─── CONSTANTES FIXAS ────────────────────────────────────────────────
 const TAXA_MAQ_PERC = 3.49;
