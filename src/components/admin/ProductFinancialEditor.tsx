@@ -813,7 +813,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin text-white/40" />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <label className="block">
             <span className="block text-xs text-white/60 mb-1">Medalha exigida para vender</span>
             <select
