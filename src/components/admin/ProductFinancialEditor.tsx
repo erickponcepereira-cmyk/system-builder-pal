@@ -851,6 +851,18 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
               <p className="text-[11px] text-white/50">Coaches com medalha "Conselho" não pagam</p>
             </div>
           </label>
+          <label className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-3 cursor-pointer hover:border-white/30">
+            <input
+              type="checkbox"
+              checked={freeNutritionist}
+              onChange={(e) => setFreeNutritionist(e.target.checked)}
+              className="mt-0.5 accent-[#E24B4A]"
+            />
+            <div>
+              <p className="text-xs font-semibold text-white">Gratuito para Nutricionista Parceiro</p>
+              <p className="text-[11px] text-white/50">Coaches com medalha "Nutricionista Parceiro" não pagam (ex.: FitMindShape)</p>
+            </div>
+          </label>
         </div>
       )}
     </div>
