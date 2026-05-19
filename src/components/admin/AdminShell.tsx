@@ -7,6 +7,7 @@ import {
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { canAccess, type AdminPermKey, type AdminPerms } from "@/lib/admin-permissions";
 
 const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; perm: AdminPermKey }[] = [
