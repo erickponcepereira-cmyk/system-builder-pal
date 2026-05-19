@@ -262,6 +262,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                         </div>
                       </div>
                     </button>
+                    {onEdit && (
+                      <button
+                        title="Editar avaliação"
+                        onClick={() => openEdit(a)}
+                        style={{ background: "transparent", border: "none", cursor: "pointer", color: themeColor, padding: 4 }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
                     {onDelete && (
                       <button
                         title="Excluir avaliação"
