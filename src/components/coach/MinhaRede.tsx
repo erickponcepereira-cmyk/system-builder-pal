@@ -197,7 +197,18 @@ function NodoArvore({
 
         <div className="flex items-center gap-0.5 bg-black/25 rounded-lg px-1.5 py-0.5 flex-shrink-0">
           <button onClick={() => alterarVendas(-1)} className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none">−</button>
-          <span className="text-xs font-bold text-zinc-200 w-5 text-center">{node.vendas}</span>
+          <input
+            type="number"
+            min={0}
+            value={node.vendas}
+            onChange={(e) =>
+              setNodes((prev) => ({
+                ...prev,
+                [nodeId]: { ...prev[nodeId], vendas: Math.max(0, +e.target.value || 0) },
+              }))
+            }
+            className="w-12 bg-transparent text-center text-xs font-bold text-zinc-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
           <button onClick={() => alterarVendas(+1)} className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none">+</button>
           <span className="text-xs text-zinc-500 ml-0.5">vnd</span>
         </div>
