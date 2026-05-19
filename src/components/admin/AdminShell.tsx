@@ -124,9 +124,12 @@ export function AdminShell() {
 <Logo className="h-8 w-auto object-contain" />
           <span className="font-bold text-white">FitMind Club Admin</span>
         </div>
-        <button onClick={() => setOpen(!open)} className="text-white">
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <RoleSwitcher current="admin" />
+          <button onClick={() => setOpen(!open)} className="text-white">
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </header>
 
       {/* Sidebar */}
