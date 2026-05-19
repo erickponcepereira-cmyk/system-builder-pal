@@ -57,3 +57,18 @@ Sugiro priorizar:
 - **Rodada dedicada:** Fase 6 (medalhas + lógica de comissão cruzada — precisa de cuidado pra não quebrar vendas existentes).
 
 Confirma essa ordem? Ou prefere que eu ataque tudo de uma vez mesmo?
+
+---
+
+## Status atual (Fase 6 — finalizada parcialmente)
+- ✅ Sistema de medalhas (`coach_badges`) + UI admin em Carreira
+- ✅ Flags por produto: `required_badge`, `allow_master_coach_sale`, `free_for_council`, `free_for_nutritionist`
+- ✅ Bypass FitMindShape: Conselho + Nutricionista Parceiro (helpers SQL `coach_has_fitmindshape_bypass`, `coach_gets_product_free`)
+- ✅ Filtro de loja por medalha em `listSellableProducts`
+- ✅ Comissão cruzada do Master Coach: registro em `master_coach_commissions` a cada `createCoachSale` (10% da comissão do vendedor quando `allow_master_coach_sale`)
+- ✅ Atribuição automática de Nutricionista Parceiro: `sale_nutritionist_assignments` populado via `find_nutritionist_for(coach_id)`
+
+## Próximos passos sugeridos
+- Painel "Vendas cruzadas" no perfil do Master Coach (somar `master_coach_commissions`)
+- Exibir nutricionista atribuído no detalhe do pedido + permitir override manual
+- Geolocalização para empate de nutricionistas
