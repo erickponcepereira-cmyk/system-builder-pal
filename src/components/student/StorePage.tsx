@@ -461,11 +461,12 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       {detailProduct && (
         <ProductDetailModal
           product={detailProduct}
-          onClose={() => setDetailProduct(null)}
+          onClose={() => { setDetailProduct(null); setDetailProfessional(null); }}
           onAdd={(p) => addToCart(p as StoreProduct)}
           showCommissions={coachMode}
           hasUpline={hasUpline}
           addLabel={coachMode ? "Adicionar à venda" : "Adicionar ao carrinho"}
+          professional={detailProfessional}
         />
       )}
 
