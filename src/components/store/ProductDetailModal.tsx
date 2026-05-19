@@ -1,4 +1,4 @@
-import { ShoppingBag, X, Plus, TrendingUp } from "lucide-react";
+import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon } from "lucide-react";
 
 export interface ProductDetail {
   id: string;
@@ -22,6 +22,17 @@ export interface ProductDetail {
 const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+export interface ProfessionalCard {
+  name: string;
+  avatarUrl?: string | null;
+  headline?: string | null;
+  bioLong?: string | null;
+  instagram?: string | null;
+  website?: string | null;
+  services?: string | null;
+  socialLinks?: Array<{ label?: string; url: string }> | null;
+}
+
 interface Props {
   product: ProductDetail;
   onClose: () => void;
@@ -31,6 +42,8 @@ interface Props {
   /** Se o coach tem upline (afeta o que ele ganha de níveis). */
   hasUpline?: boolean;
   addLabel?: string;
+  /** Profissional vinculado a este produto (nutricionista/profissional da saúde). */
+  professional?: ProfessionalCard | null;
 }
 
 export function ProductDetailModal({
@@ -40,6 +53,7 @@ export function ProductDetailModal({
   showCommissions,
   hasUpline,
   addLabel,
+  professional,
 }: Props) {
   const hasCommissionData =
     showCommissions &&
@@ -175,6 +189,73 @@ export function ProductDetailModal({
               </div>
             </div>
           )}
+
+          {professional && (
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Sobre o profissional
+              </p>
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10">
+                  {professional.avatarUrl ? (
+                    <img src={professional.avatarUrl} alt={professional.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <UserRound className="h-6 w-6 text-primary" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-foreground">{professional.name}</p>
+                  {professional.headline && (
+                    <p className="truncate text-xs text-muted-foreground">{professional.headline}</p>
+                  )}
+                </div>
+              </div>
+              {professional.bioLong && (
+                <p className="mt-3 whitespace-pre-line text-xs text-foreground/90">{professional.bioLong}</p>
+              )}
+              {professional.services && (
+                <div className="mt-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Serviços
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-xs text-foreground/90">{professional.services}</p>
+                </div>
+              )}
+              {(professional.instagram || professional.website || (professional.socialLinks?.length ?? 0) > 0) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {professional.instagram && (
+                    <a
+                      href={professional.instagram.startsWith("http") ? professional.instagram : `https://instagram.com/${professional.instagram.replace(/^@/, "")}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary hover:text-primary"
+                    >
+                      <Instagram className="h-3 w-3" /> Instagram
+                    </a>
+                  )}
+                  {professional.website && (
+                    <a
+                      href={professional.website.startsWith("http") ? professional.website : `https://${professional.website}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary hover:text-primary"
+                    >
+                      <Globe className="h-3 w-3" /> Site
+                    </a>
+                  )}
+                  {(professional.socialLinks || []).map((link, i) => (
+                    <a
+                      key={i}
+                      href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary hover:text-primary"
+                    >
+                      <LinkIcon className="h-3 w-3" /> {link.label || "Link"}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
 
           <button
             onClick={() => onAdd(product)}

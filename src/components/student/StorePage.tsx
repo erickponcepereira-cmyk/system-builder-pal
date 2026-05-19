@@ -6,7 +6,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
-import { ProductDetailModal, type ProductDetail } from "@/components/store/ProductDetailModal";
+import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -20,6 +20,7 @@ interface StoreProduct extends ProductDetail {
   isPriceRange?: boolean | null;
   minPrice?: number | null;
   maxPrice?: number | null;
+  creatorCoachId?: string | null;
 }
 
 type CartItem = StoreProduct & { quantity: number };
@@ -56,6 +57,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   const [checkingOut, setCheckingOut] = useState(false);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
+  const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
   const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
 
   // Coach-only state
@@ -68,11 +70,11 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active").order("sort_order"),
+      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,creator_coach_id").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee_percentage" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee_percentage,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
     ]);
 
     const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
@@ -104,6 +106,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
         appFee: p.app_fee,
+        creatorCoachId: p.creator_coach_id ?? null,
       }))),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
@@ -126,6 +129,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
         commissionCoach: it.commission_coach, commissionLevel1: it.commission_level1,
         commissionLevel2: it.commission_level2, commissionLevel3: it.commission_level3,
+        creatorCoachId: it.creator_coach_id ?? null,
       }))),
     ]);
   };
@@ -167,6 +171,43 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
 
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
+
+  useEffect(() => {
+    const coachId = detailProduct?.creatorCoachId;
+    if (!coachId) { setDetailProfessional(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: coach } = await supabase
+        .from("coaches")
+        .select("profile_id, is_professional")
+        .eq("id", coachId)
+        .maybeSingle();
+      if (!coach?.profile_id || !coach.is_professional) {
+        if (!cancelled) setDetailProfessional(null);
+        return;
+      }
+      const [{ data: profile }, { data: pub }] = await Promise.all([
+        supabase.from("profiles").select("name, avatar_url").eq("id", coach.profile_id).maybeSingle(),
+        supabase.from("professional_public_profile" as never)
+          .select("headline,bio_long,instagram,website,services,social_links" as never)
+          .eq("profile_id" as never, coach.profile_id as never)
+          .maybeSingle(),
+      ]);
+      if (cancelled || !profile) { if (!cancelled) setDetailProfessional(null); return; }
+      const p = (pub as any) || {};
+      setDetailProfessional({
+        name: (profile as any).name || "Profissional",
+        avatarUrl: (profile as any).avatar_url || null,
+        headline: p.headline ?? null,
+        bioLong: p.bio_long ?? null,
+        instagram: p.instagram ?? null,
+        website: p.website ?? null,
+        services: p.services ?? null,
+        socialLinks: Array.isArray(p.social_links) ? p.social_links : [],
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [detailProduct]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -420,11 +461,12 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       {detailProduct && (
         <ProductDetailModal
           product={detailProduct}
-          onClose={() => setDetailProduct(null)}
+          onClose={() => { setDetailProduct(null); setDetailProfessional(null); }}
           onAdd={(p) => addToCart(p as StoreProduct)}
           showCommissions={coachMode}
           hasUpline={hasUpline}
           addLabel={coachMode ? "Adicionar à venda" : "Adicionar ao carrinho"}
+          professional={detailProfessional}
         />
       )}
 
