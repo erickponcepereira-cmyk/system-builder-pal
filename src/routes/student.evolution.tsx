@@ -155,3 +155,185 @@ function mealLabel(type: string | null) {
   if (type === "snack") return "Lanche";
   return "Refeição";
 }
+
+function HealthGoalsCard({ totalCaloriesToday }: { totalCaloriesToday: number }) {
+  const fetchHealth = useServerFn(getStudentHealthData);
+  const submitGoals = useServerFn(saveStudentHealthGoals);
+  const [data, setData] = useState<StudentHealthData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [goalWeight, setGoalWeight] = useState<string>("");
+  const [dailyCalories, setDailyCalories] = useState<string>("");
+  const [activityFactor, setActivityFactor] = useState<string>("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchHealth();
+      setData(res);
+      setGoalWeight(res.goalWeight != null ? String(res.goalWeight) : "");
+      setDailyCalories(
+        res.dailyCaloriesGoal != null
+          ? String(res.dailyCaloriesGoal)
+          : res.suggestedDailyCalories != null
+          ? String(res.suggestedDailyCalories)
+          : "",
+      );
+      setActivityFactor(String(res.activityFactor || 1.4));
+    } catch (e: any) {
+      // Silent — student may not have a student row yet
+      console.error("[HealthGoalsCard] load", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await submitGoals({
+        data: {
+          goalWeight: goalWeight ? Number(goalWeight) : null,
+          dailyCaloriesGoal: dailyCalories ? Number(dailyCalories) : null,
+          activityFactor: activityFactor ? Number(activityFactor) : null,
+        },
+      });
+      toast.success("Metas de saúde atualizadas");
+      setEditing(false);
+      await load();
+    } catch (e: any) {
+      toast.error(`Não foi possível salvar: ${e?.message || "erro desconhecido"}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !data) {
+    return (
+      <div className="rounded-2xl bg-card p-4 text-xs text-muted-foreground">Carregando metas…</div>
+    );
+  }
+
+  const calorieTarget = data.dailyCaloriesGoal ?? data.suggestedDailyCalories ?? 0;
+  const calorieProgress = calorieTarget ? Math.min((totalCaloriesToday / calorieTarget) * 100, 100) : 0;
+  const sourceLabel =
+    data.lastAssessmentSource === "fitmindshape"
+      ? "FitMindShape"
+      : data.lastAssessmentSource === "students_table"
+      ? "Bioimpedância registrada"
+      : null;
+
+  return (
+    <section className="rounded-2xl bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Metas de saúde</h2>
+        </div>
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className="rounded-lg bg-white/5 p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+          title={editing ? "Cancelar" : "Editar"}
+        >
+          {editing ? <X className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {sourceLabel && data.bmr && (
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Calorias sugeridas com base em <span className="text-foreground">{Math.round(data.bmr)} kcal</span> (metabolismo basal) × <span className="text-foreground">{data.activityFactor.toFixed(2)}</span> (fator de atividade) — fonte: {sourceLabel}
+        </p>
+      )}
+
+      {editing ? (
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Meta de peso (kg)</span>
+            <input
+              type="number"
+              step="0.1"
+              value={goalWeight}
+              onChange={(e) => setGoalWeight(e.target.value)}
+              className="field-control"
+              placeholder="Ex: 70"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Calorias/dia (kcal)</span>
+            <input
+              type="number"
+              step="50"
+              value={dailyCalories}
+              onChange={(e) => setDailyCalories(e.target.value)}
+              className="field-control"
+              placeholder={data.suggestedDailyCalories ? String(data.suggestedDailyCalories) : "Ex: 2000"}
+            />
+          </label>
+          <label className="col-span-2 flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Fator de atividade ({activityFactor})
+            </span>
+            <input
+              type="range"
+              min="1.2"
+              max="2"
+              step="0.05"
+              value={activityFactor}
+              onChange={(e) => setActivityFactor(e.target.value)}
+              className="w-full"
+            />
+            <span className="text-[10px] text-muted-foreground">
+              1.2 sedentário · 1.4 leve · 1.55 moderado · 1.75 ativo · 1.9 muito ativo
+            </span>
+          </label>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="col-span-2 mt-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-60"
+          >
+            <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar metas"}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl bg-muted/30 p-2">
+              <p className="text-[10px] text-muted-foreground">Peso atual</p>
+              <p className="text-base font-bold text-foreground">{data.currentWeight != null ? `${data.currentWeight} kg` : "—"}</p>
+            </div>
+            <div className="rounded-xl bg-muted/30 p-2">
+              <p className="text-[10px] text-muted-foreground">Meta</p>
+              <p className="text-base font-bold text-primary">{data.goalWeight != null ? `${data.goalWeight} kg` : "—"}</p>
+            </div>
+            <div className="rounded-xl bg-muted/30 p-2">
+              <p className="text-[10px] text-muted-foreground">Diff.</p>
+              <p className="text-base font-bold text-foreground">
+                {data.currentWeight != null && data.goalWeight != null
+                  ? `${(data.currentWeight - data.goalWeight).toFixed(1)} kg`
+                  : "—"}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Calorias hoje</span>
+              <span className="font-bold text-foreground">
+                {totalCaloriesToday} / {calorieTarget || "—"} kcal
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "#252525" }}>
+              <div
+                className={`h-full transition-all ${calorieProgress >= 100 ? "bg-success" : "bg-primary"}`}
+                style={{ width: `${calorieProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
