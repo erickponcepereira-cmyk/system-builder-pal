@@ -1273,6 +1273,7 @@ export type Database = {
           birth_date: string | null
           coach_id: string
           created_at: string
+          current_weight: number | null
           email: string | null
           ethnicity: string
           gender: string
@@ -1291,6 +1292,7 @@ export type Database = {
           birth_date?: string | null
           coach_id: string
           created_at?: string
+          current_weight?: number | null
           email?: string | null
           ethnicity?: string
           gender?: string
@@ -1309,6 +1311,7 @@ export type Database = {
           birth_date?: string | null
           coach_id?: string
           created_at?: string
+          current_weight?: number | null
           email?: string | null
           ethnicity?: string
           gender?: string
@@ -4092,6 +4095,92 @@ export type Database = {
           },
         ]
       }
+      professional_anamnesis_external: {
+        Row: {
+          answers: Json
+          coach_id: string
+          created_at: string
+          evaluation_client_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          coach_id: string
+          created_at?: string
+          evaluation_client_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          coach_id?: string
+          created_at?: string
+          evaluation_client_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_anamnesis_external_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_anamnesis_external_evaluation_client_id_fkey"
+            columns: ["evaluation_client_id"]
+            isOneToOne: false
+            referencedRelation: "coach_evaluation_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_anamnesis_questions: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: string
+          label: string
+          options: Json
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          label: string
+          options?: Json
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          label?: string
+          options?: Json
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_anamnesis_questions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_products: {
         Row: {
           admin_notes: string | null
@@ -4165,6 +4254,50 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_public_profile: {
+        Row: {
+          bio_long: string | null
+          created_at: string
+          headline: string | null
+          instagram: string | null
+          profile_id: string
+          services: string | null
+          social_links: Json
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          bio_long?: string | null
+          created_at?: string
+          headline?: string | null
+          instagram?: string | null
+          profile_id: string
+          services?: string | null
+          social_links?: Json
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          bio_long?: string | null
+          created_at?: string
+          headline?: string | null
+          instagram?: string | null
+          profile_id?: string
+          services?: string | null
+          social_links?: Json
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_public_profile_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

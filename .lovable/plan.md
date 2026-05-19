@@ -1,74 +1,61 @@
 ## Objetivo
+Transformar o painel atual da nutricionista (`/professional`) em um workspace funcional, reaproveitando o máximo possível dos componentes já existentes do Coach.
 
-Continuar o MLM aplicando as regras combinadas:
-- Parceiros e profissionais da saúde entram na rede MLM como "coaches" da estrutura.
-- Eles viram o coach dos próprios colaboradores (alunos vinculados ao CNPJ/CPF deles).
-- Vendas dos colaboradores distribuem comissão normalmente subindo pela rede a partir do parceiro/profissional.
-- Quando o parceiro ou profissional compra individualmente (para si mesmo), a comissão "de coach" vai para o upline que o trouxe (a empresa/coach que o cadastrou).
+## 1. Aba "Meus Alunos"
+- Adicionar botão **"+ Novo Aluno"** (estilo coach).
+- Modal de cadastro pedindo: **nome, idade, telefone, altura, peso, sexo, cor da pele**.
+- Ao salvar:
+  - Cria `profile` (role `student`, sem auth — perfil "gerenciado pela nutri").
+  - Cria `students` vinculado ao `coach_id` da nutricionista (campo `coach_id` é usado como dono do aluno aqui também, já que a tabela é a mesma).
+  - Marca metadado indicando que o aluno foi criado por uma profissional (campo novo `created_by_professional_id` em `students`, via migration).
+- Lista combina:
+  - Alunos atribuídos via `transaction_professional_assignments` (já existente).
+  - Alunos criados manualmente pela nutricionista.
+- Clicar em um aluno abre o detalhe (mesmo padrão do coach: aluno selecionado dita o conteúdo das abas de Dieta/Anamnese/Avaliações).
 
-## Estado atual (já existe)
+## 2. Aba "Dieta / Protocolo"
+- Reaproveitar `ProtocolTab` do coach (copiar para `src/components/professional/ProtocolTab.tsx` ajustando imports / labels).
+- Funciona com o aluno selecionado em "Meus Alunos".
 
-- `coaches.is_professional = true` — profissionais já viram coach.
-- `partners.upline_coach_id` — parceiros já têm upline, mas NÃO têm linha em `coaches`, então a função `process_paid_transaction` não consegue subir comissões pela rede do parceiro.
-- `students.partner_id` — link de colaborador→empresa já existe; falta usar como coach default.
-- `process_paid_transaction` percorre `coaches.upline_coach_id` para níveis 1/2/3.
+## 3. Aba "Anamnese"
+- Reaproveitar a anamnese do coach (atualmente parte de Evaluate/Protocol — vou copiar o trecho específico).
+- Perguntas vêm de uma tabela nova `professional_anamnese_questions` (por profissional). Se vazia, usa o set padrão do coach.
+- CRUD das perguntas fica dentro da aba **Configurações** (item 6).
 
-## Mudanças
+## 4. Aba "Avaliações" (FitMindShape)
+- Copiar `FitMindShape.tsx` e `StudentEvaluationPanel.tsx` / `AssessmentComparison.tsx` para uso da nutri (mesma UI, mesmas tabelas `body_assessments`).
+- Já funciona apontando para o aluno selecionado.
 
-### 1. Backend / DB (migration)
+## 5. Aba "Rede"
+- Trocar o `MyNetworkPanel` resumido pelo `NetworkTreeTab` (árvore completa que o coach vê).
 
-a. **Espelhar parceiro como coach**
-- Adicionar trigger `AFTER INSERT/UPDATE` em `public.partners` que cria/atualiza uma linha em `coaches` para o mesmo `profile_id` com:
-  - `upline_coach_id = partners.upline_coach_id`
-  - `is_professional = false`, `approved_at = partners.approved_at`
-  - `referral_code` único (gerado se necessário)
-- Backfill: criar coach para todos parceiros aprovados existentes.
+## 6. Aba "Configurações" (nova)
+Sub-seções:
+- **Perfil público**: foto, bio, Instagram, outras redes sociais (array), sites, descrição "vender seu trabalho". Salvo em `profiles` + nova tabela `professional_public_profile` (instagram, website, social_links jsonb, bio_long, headline).
+- **Perguntas da anamnese**: editor (adicionar/editar/remover/reordenar perguntas).
+- Os dados de perfil ficam visíveis na ficha pública do nutricionista quando alguém clica num produto dele na loja (ajuste leve no `ProductDetailModal` para mostrar bloco "Sobre o profissional" com links).
 
-b. **Colaboradores entram com coach = parceiro/profissional**
-- Função `public.resolve_collaborator_coach(_partner_id uuid)` retorna o `coaches.id` do parceiro (cria sob demanda no backfill).
-- Quando um aluno é criado com `partner_id` setado e `coach_id` nulo, atribuir `coach_id` ao coach espelho do parceiro (trigger BEFORE INSERT em `students`).
+## 7. Migrations necessárias
+- `students.created_by_professional_id uuid null` + index.
+- `professional_anamnese_questions` (id, coach_id, label, kind, options jsonb, order, is_active, timestamps) + RLS (o dono CRUD; admin lê tudo).
+- `professional_public_profile` (id, profile_id unique, headline, bio_long, instagram, website, social_links jsonb, timestamps) + RLS (dono CRUD, leitura pública para profissionais aprovados).
+- Policy/trigger para permitir nutricionista criar `profiles` + `students` de alunos gerenciados (sem auth.users).
 
-c. **Auto-compra do parceiro/profissional**
-- Quando o próprio parceiro/profissional compra algo: ele é student dele mesmo? Hoje não. Solução: garantir linha em `students` para profile do parceiro/profissional (trigger no insert em `coaches` quando `is_professional=true` ou no trigger de parceiro→coach). Esse student tem `coach_id = upline` (quem o trouxe), para que `process_paid_transaction` distribua corretamente: nível 0 (coach) vai para o upline, e a rede sobe a partir dali.
+## 8. Arquivos a criar/editar
+**Criar**
+- `src/components/professional/NewStudentModal.tsx`
+- `src/components/professional/ProfessionalStudentsTab.tsx`
+- `src/components/professional/ProtocolTab.tsx` (cópia adaptada)
+- `src/components/professional/AnamneseTab.tsx`
+- `src/components/professional/EvaluationsTab.tsx` (reusa FitMindShape)
+- `src/components/professional/SettingsTab.tsx` (perfil público + perguntas anamnese)
 
-d. **Sem mudanças em `process_paid_transaction`** — a lógica atual já funciona se as estruturas acima existirem.
+**Editar**
+- `src/routes/professional.tsx` (wire das novas abas + aluno selecionado em contexto).
+- `src/components/store/ProductDetailModal.tsx` (bloco "Sobre o profissional" quando o produto pertence a uma nutri).
 
-### 2. Frontend
+## Escopo fora deste plano
+- Não vamos criar fluxo de convidar o aluno gerenciado a virar usuário real (pode vir depois).
+- Não vamos mexer em comissões nem na fila bloqueada da nutri — já existe.
 
-- Em `ProfessionalRegistration` e fluxo de cadastro de parceiros: nada novo de UI; trigger faz o trabalho.
-- Painel de parceiro/profissional: garantir aba "Minha rede" mostrando colaboradores (alunos com `partner_id = meu_id` ou `coach_id = meu_coach_id`) e comissões da rede pela `wallets` deles.
-
-### 3. Validação
-
-- Após migration, simular: criar profissional → comprar produto como ele mesmo → verificar que comissão coach foi para o upline dele.
-- Criar colaborador (student com partner_id) → comprar → verificar comissão sobe pela rede (parceiro recebe nível 0, upline do parceiro recebe nível 1, etc.).
-
-## Detalhe técnico
-
-```sql
--- Trigger principal: espelhar parceiro como coach
-CREATE OR REPLACE FUNCTION public.mirror_partner_as_coach()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE _coach_id uuid; _code text;
-BEGIN
-  SELECT id INTO _coach_id FROM coaches WHERE profile_id = NEW.profile_id;
-  IF _coach_id IS NULL THEN
-    _code := 'EMP' || upper(substring(md5(NEW.id::text), 1, 6));
-    INSERT INTO coaches (profile_id, referral_code, upline_coach_id, approved_at, is_professional)
-    VALUES (NEW.profile_id, _code, NEW.upline_coach_id, NEW.approved_at, false);
-  ELSE
-    UPDATE coaches SET upline_coach_id = COALESCE(upline_coach_id, NEW.upline_coach_id),
-                       approved_at = COALESCE(approved_at, NEW.approved_at)
-    WHERE id = _coach_id;
-  END IF;
-  RETURN NEW;
-END $$;
-```
-
-E backfill equivalente para parceiros existentes e students faltantes.
-
-## Fora de escopo (não mudar agora)
-
-- Layout de painéis.
-- Lógica de carteira/saque (já existente).
-- Sistema de pontos.
+Confirma esse plano ou quer ajustar alguma parte (ex.: cor da pele em lista fixa, aluno gerenciado vs convite, etc.)?
