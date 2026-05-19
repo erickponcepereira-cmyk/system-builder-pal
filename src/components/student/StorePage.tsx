@@ -106,6 +106,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
         appFee: p.app_fee,
+        creatorCoachId: p.creator_coach_id ?? null,
       }))),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
