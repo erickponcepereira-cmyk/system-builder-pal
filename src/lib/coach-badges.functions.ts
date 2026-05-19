@@ -110,3 +110,48 @@ export const getMyBadges = createServerFn({ method: "GET" })
       .eq("coach_id", coach.id);
     return (badges ?? []).map((b) => b.badge_key as BadgeKey);
   });
+
+// ─── Product badge restrictions (admin) ──────────────────────────────
+export const getProductBadgeFlags = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { productId: string }) => z.object({ productId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { data: p } = await supabaseAdmin
+      .from("products")
+      .select("required_badge, allow_master_coach_sale, free_for_council")
+      .eq("id", data.productId)
+      .maybeSingle();
+    return p ?? { required_badge: null, allow_master_coach_sale: false, free_for_council: false };
+  });
+
+export const saveProductBadgeFlags = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    productId: string;
+    required_badge: BadgeKey | null;
+    allow_master_coach_sale: boolean;
+    free_for_council: boolean;
+  }) =>
+    z
+      .object({
+        productId: z.string().uuid(),
+        required_badge: z.enum(BADGE_KEYS).nullable(),
+        allow_master_coach_sale: z.boolean(),
+        free_for_council: z.boolean(),
+      })
+      .parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { error } = await supabaseAdmin
+      .from("products")
+      .update({
+        required_badge: data.required_badge,
+        allow_master_coach_sale: data.allow_master_coach_sale,
+        free_for_council: data.free_for_council,
+      })
+      .eq("id", data.productId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
