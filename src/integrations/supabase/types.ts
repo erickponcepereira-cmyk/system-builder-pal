@@ -5137,6 +5137,7 @@ export type Database = {
       }
       students: {
         Row: {
+          activity_factor: number | null
           bioimpedance_date: string | null
           bmr: number | null
           body_fat_percentage: number | null
@@ -5148,8 +5149,10 @@ export type Database = {
           completed_coach_course: boolean | null
           created_at: string | null
           current_weight: number | null
+          daily_calories_goal: number | null
           goal_description: string | null
           goal_weight: number | null
+          health_goals_updated_at: string | null
           height: number | null
           id: string
           metabolic_age: number | null
@@ -5166,6 +5169,7 @@ export type Database = {
           visceral_fat: number | null
         }
         Insert: {
+          activity_factor?: number | null
           bioimpedance_date?: string | null
           bmr?: number | null
           body_fat_percentage?: number | null
@@ -5177,8 +5181,10 @@ export type Database = {
           completed_coach_course?: boolean | null
           created_at?: string | null
           current_weight?: number | null
+          daily_calories_goal?: number | null
           goal_description?: string | null
           goal_weight?: number | null
+          health_goals_updated_at?: string | null
           height?: number | null
           id?: string
           metabolic_age?: number | null
@@ -5195,6 +5201,7 @@ export type Database = {
           visceral_fat?: number | null
         }
         Update: {
+          activity_factor?: number | null
           bioimpedance_date?: string | null
           bmr?: number | null
           body_fat_percentage?: number | null
@@ -5206,8 +5213,10 @@ export type Database = {
           completed_coach_course?: boolean | null
           created_at?: string | null
           current_weight?: number | null
+          daily_calories_goal?: number | null
           goal_description?: string | null
           goal_weight?: number | null
+          health_goals_updated_at?: string | null
           height?: number | null
           id?: string
           metabolic_age?: number | null
