@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, Scale, ClipboardList, FileText, Calendar, HeartPulse, Package, Settings } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, HeartPulse, Package, Settings } from "lucide-react";
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
