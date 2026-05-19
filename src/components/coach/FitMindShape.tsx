@@ -2750,6 +2750,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 }
               : undefined
           }
+          onEdit={
+            onEditAssessment
+              ? async (updated) => {
+                  await onEditAssessment(updated, selectedClient);
+                  const updatedList = (selectedClient.assessments || []).map((item) =>
+                    item.id === updated.id ? updated : item,
+                  );
+                  setSelectedClient({ ...selectedClient, assessments: updatedList });
+                  setAssessment((current) => (current.id === updated.id ? updated : current));
+                }
+              : undefined
+          }
         />
       )}
     </div>
