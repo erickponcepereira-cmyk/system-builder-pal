@@ -185,6 +185,10 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
         </Field>
       </div>
 
+      <BadgeFlagsSection productId={productId} />
+
+
+
       <SectionLabel>Simulação · forma de pagamento</SectionLabel>
       <div className="mb-2 flex items-start gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-white/60">
         <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[#E24B4A] shrink-0" />
