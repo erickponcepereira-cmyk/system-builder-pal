@@ -66,6 +66,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   products: { label: "Produtos", icon: Package },
   wallet: { label: "Carteira", icon: Wallet },
   network: { label: "Rede", icon: Network },
+  settings: { label: "Configurações", icon: Settings },
 };
 
 function ProfessionalPanel() {
@@ -151,8 +152,9 @@ function ProfessionalPanel() {
     );
   }
 
-  const baseTabs = info.specialty?.default_tabs ?? ["students", "wallet", "network"];
-  const tabs = baseTabs.includes("products") ? baseTabs : [...baseTabs, "products"];
+  const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate", "network"];
+  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "settings"];
+  const tabs = Array.from(new Set([...baseTabs, ...ensureTabs]));
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
@@ -204,41 +206,43 @@ function ProfessionalPanel() {
 }
 
 function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; assignments: AssignmentRow[] }) {
-  if (tab === "products") {
-    return <ProfessionalProductsPanel coachId={info.coachId} />;
-  }
-  if (tab === "wallet" || tab === "network") {
-    return <MyNetworkPanel />;
+  if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
+  if (tab === "wallet") return <MyNetworkPanel />;
+  if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
+  if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
+  if (tab === "diet") return <ProtocolTab />;
+  if (tab === "anamnese") return <AnamneseTab coachId={info.coachId} />;
+  if (tab === "evaluate") return <EvaluateTab />;
+  if (tab === "network") {
+    const coachCtx: CoachContext = {
+      profileId: info.profileId,
+      coachId: info.coachId,
+      name: info.name,
+      email: "",
+      phone: "",
+      city: "",
+      state: "",
+      bio: "",
+      avatarUrl: info.avatarUrl,
+      patent: null,
+      referralCode: "",
+      referralLink: "",
+      uplineCoachId: null,
+      totalActiveStudents: 0,
+      totalSales: 0,
+    };
+    return <NetworkTreeTab coach={coachCtx} />;
   }
 
-  if (["students", "clients"].includes(tab)) {
-    return <AssignmentsList info={info} assignments={assignments} />;
-  }
-
-  const meta = TAB_META[tab] ?? { label: tab, icon: ClipboardList };
-  return (
-    <div className="rounded-2xl p-6" style={{ backgroundColor: "#1A1A1A" }}>
-      <div className="flex items-center gap-2 mb-3">
-        <meta.icon className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-bold text-white">{meta.label}</h2>
-      </div>
-      <p className="text-sm text-white/50">
-        Esta aba é pré-configurada para sua especialidade. Aqui você poderá gerenciar
-        {" "}{meta.label.toLowerCase()} dos alunos atribuídos a você. As funções específicas
-        serão liberadas conforme o admin habilitar.
-      </p>
-      <div className="mt-4 rounded-xl border border-dashed border-white/10 p-4">
-        <p className="text-xs text-white/40">Em construção — capacidades disponíveis para sua especialidade: <span className="text-white/70">{Object.keys(info.specialty?.capabilities || {}).filter((k) => info.specialty!.capabilities[k]).join(", ") || "padrão"}</span></p>
-      </div>
-    </div>
-  );
+  // Fallback: also show assignments for any other specialty tab
+  return <AssignmentsList info={info} assignments={assignments} />;
 }
 
 function AssignmentsList({ info, assignments }: { info: ProInfo; assignments: AssignmentRow[] }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-bold text-white">Alunos atribuídos a você</h2>
+        <h2 className="text-lg font-bold text-white">Alunos atribuídos por venda</h2>
         <span className="text-xs text-white/40">{assignments.length} registros</span>
       </div>
       {assignments.length === 0 ? (
@@ -270,14 +274,3 @@ function AssignmentsList({ info, assignments }: { info: ProInfo; assignments: As
   );
 }
 
-function PlaceholderCard({ title, hint, icon, actionLabel, actionTo }: { title: string; hint: string; icon: ReactNode; actionLabel?: string; actionTo?: string }) {
-  return (
-    <div className="rounded-2xl p-6" style={{ backgroundColor: "#1A1A1A" }}>
-      <div className="flex items-center gap-2 mb-3 text-primary">{icon}<h2 className="text-lg font-bold text-white">{title}</h2></div>
-      <p className="text-sm text-white/50">{hint}</p>
-      {actionLabel && actionTo && (
-        <Link to={actionTo} className="inline-flex mt-4 rounded-lg bg-primary/15 px-4 py-2 text-xs font-bold text-primary hover:bg-primary/25">{actionLabel}</Link>
-      )}
-    </div>
-  );
-}
