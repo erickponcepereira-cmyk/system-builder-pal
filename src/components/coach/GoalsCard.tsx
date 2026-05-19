@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Target, TrendingUp, Users, Phone, Pencil, X, Save } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getCoachGoals, saveCoachGoals } from "@/lib/coach-goals.functions";
 
 type GoalsRow = {
   new_students: number;
@@ -17,48 +18,37 @@ interface Props {
 }
 
 export function GoalsCard({ coachId }: Props) {
+  const fetchGoals = useServerFn(getCoachGoals);
+  const submitGoals = useServerFn(saveCoachGoals);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [goals, setGoals] = useState<GoalsRow>(DEFAULTS);
   // Current month progress (placeholder values for now — wire to real metrics later)
   const [progress] = useState({ new_students: 8, renewals: 12, prospections: 24, revenue: 3680 });
 
-  const monthIso = new Date().toISOString().slice(0, 7) + "-01";
-
   useEffect(() => {
-    if (!coachId) return;
-    (async () => {
-      const { data } = await supabase
-        .from("coach_goals" as never)
-        .select("new_students,renewals,prospections,revenue")
-        .eq("coach_id" as never, coachId as never)
-        .eq("reference_month" as never, monthIso as never)
-        .maybeSingle();
-      if (data) setGoals(data as GoalsRow);
-    })();
-  }, [coachId, monthIso]);
+    let cancelled = false;
+    fetchGoals({ data: coachId ? { coachId } : {} })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.goals) setGoals(r.goals as GoalsRow);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [coachId, fetchGoals]);
 
   async function save() {
-    if (!coachId) {
-      toast.error("Coach não identificado — recarregue a página e tente novamente.");
-      return;
-    }
     setSaving(true);
-    const { error } = await supabase
-      .from("coach_goals" as never)
-      .upsert({
-        coach_id: coachId,
-        reference_month: monthIso,
-        ...goals,
-      } as never, { onConflict: "coach_id,reference_month" } as never);
-    setSaving(false);
-    if (error) {
-      console.error("[GoalsCard] save error:", error);
-      toast.error(`Não foi possível salvar: ${error.message || "erro desconhecido"}`);
-      return;
+    try {
+      await submitGoals({ data: { ...goals, ...(coachId ? { coachId } : {}) } });
+      toast.success("Metas atualizadas");
+      setEditing(false);
+    } catch (e: any) {
+      console.error("[GoalsCard] save error:", e);
+      toast.error(`Não foi possível salvar: ${e?.message || "erro desconhecido"}`);
+    } finally {
+      setSaving(false);
     }
-    toast.success("Metas atualizadas");
-    setEditing(false);
   }
 
 
