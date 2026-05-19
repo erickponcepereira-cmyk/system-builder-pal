@@ -761,6 +761,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
   const [requiredBadge, setRequiredBadge] = useState<BadgeKey | "">("");
   const [allowMaster, setAllowMaster] = useState(false);
   const [freeCouncil, setFreeCouncil] = useState(false);
+  const [freeNutritionist, setFreeNutritionist] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -770,6 +771,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
         setRequiredBadge((f?.required_badge ?? "") as BadgeKey | "");
         setAllowMaster(!!f?.allow_master_coach_sale);
         setFreeCouncil(!!f?.free_for_council);
+        setFreeNutritionist(!!f?.free_for_nutritionist);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -784,6 +786,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
           required_badge: (requiredBadge || null) as BadgeKey | null,
           allow_master_coach_sale: allowMaster,
           free_for_council: freeCouncil,
+          free_for_nutritionist: freeNutritionist,
         },
       });
       toast.success("Restrições salvas");
@@ -810,7 +813,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin text-white/40" />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <label className="block">
             <span className="block text-xs text-white/60 mb-1">Medalha exigida para vender</span>
             <select
@@ -846,6 +849,18 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
             <div>
               <p className="text-xs font-semibold text-white">Gratuito para Conselho</p>
               <p className="text-[11px] text-white/50">Coaches com medalha "Conselho" não pagam</p>
+            </div>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-3 cursor-pointer hover:border-white/30">
+            <input
+              type="checkbox"
+              checked={freeNutritionist}
+              onChange={(e) => setFreeNutritionist(e.target.checked)}
+              className="mt-0.5 accent-[#E24B4A]"
+            />
+            <div>
+              <p className="text-xs font-semibold text-white">Gratuito para Nutricionista Parceiro</p>
+              <p className="text-[11px] text-white/50">Coaches com medalha "Nutricionista Parceiro" não pagam (ex.: FitMindShape)</p>
             </div>
           </label>
         </div>
