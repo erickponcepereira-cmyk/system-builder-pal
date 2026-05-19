@@ -1,8 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus, Trash2, Users, TrendingUp, Package,
-  Edit3, Check, X, Network, BarChart3, Info, ChevronDown, ChevronRight,
+  Edit3, Check, X, Network, BarChart3, Info, ChevronDown, ChevronRight, Save, Loader2,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { getNetworkProjection, saveNetworkProjection, listSimulatorProducts } from "@/lib/coach-network.functions";
+import { toast } from "sonner";
 
 // ─── CONSTANTES FIXAS ────────────────────────────────────────────────
 const TAXA_MAQ_PERC = 3.49;
@@ -143,7 +146,7 @@ function NodoArvore({
   const alterarVendas = (delta: number) => {
     setNodes((prev) => ({
       ...prev,
-      [nodeId]: { ...prev[nodeId], vendas: Math.max(1, prev[nodeId].vendas + delta) },
+      [nodeId]: { ...prev[nodeId], vendas: Math.max(0, prev[nodeId].vendas + delta) },
     }));
   };
 
@@ -197,7 +200,18 @@ function NodoArvore({
 
         <div className="flex items-center gap-0.5 bg-black/25 rounded-lg px-1.5 py-0.5 flex-shrink-0">
           <button onClick={() => alterarVendas(-1)} className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none">−</button>
-          <span className="text-xs font-bold text-zinc-200 w-5 text-center">{node.vendas}</span>
+          <input
+            type="number"
+            min={0}
+            value={node.vendas}
+            onChange={(e) =>
+              setNodes((prev) => ({
+                ...prev,
+                [nodeId]: { ...prev[nodeId], vendas: Math.max(0, +e.target.value || 0) },
+              }))
+            }
+            className="w-12 bg-transparent text-center text-xs font-bold text-zinc-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
           <button onClick={() => alterarVendas(+1)} className="text-zinc-400 hover:text-zinc-200 w-5 h-5 flex items-center justify-center text-base leading-none select-none">+</button>
           <span className="text-xs text-zinc-500 ml-0.5">vnd</span>
         </div>
@@ -607,11 +621,78 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
 // ─── COMPONENTE PRINCIPAL ───────────────────────────────────────────
 export function MinhaRede() {
   const [abaAtiva, setAbaAtiva] = useState<"produto" | "rede" | "ganhos">("rede");
-  const [produtos, setProdutos] = useState<ProdutoT[]>(PRODUTOS_BASE.map((p) => ({ ...p })));
-  const [produtoId, setProdutoId] = useState("p2");
+  const [produtos, setProdutos] = useState<ProdutoT[]>([]);
+  const [produtoId, setProdutoId] = useState<string>("");
   const [preco, setPreco] = useState(100);
   const [nodes, setNodes] = useState<NodesMap>({});
   const [vendasCoach, setVendasCoach] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchProducts = useServerFn(listSimulatorProducts);
+  const fetchProjection = useServerFn(getNetworkProjection);
+  const saveProjection = useServerFn(saveNetworkProjection);
+
+  // Carrega produtos reais
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await fetchProducts();
+        const mapped: ProdutoT[] = (list ?? []).map((p) => ({
+          id: p.id,
+          nome: p.name,
+          preco: p.price,
+        }));
+        setProdutos(mapped);
+        if (mapped.length > 0) {
+          setProdutoId(mapped[0].id);
+          setPreco(mapped[0].preco);
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("Erro ao carregar produtos");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Carrega projeção salva quando o produto muda
+  useEffect(() => {
+    if (!produtoId) return;
+    (async () => {
+      try {
+        const proj = await fetchProjection({ data: { productId: produtoId } });
+        if (proj) {
+          setNodes((proj.tree ?? {}) as NodesMap);
+          setVendasCoach(proj.vendas_coach ?? 1);
+        } else {
+          setNodes({});
+          setVendasCoach(1);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [produtoId]);
+
+  const handleSave = async () => {
+    if (!produtoId) {
+      toast.error("Selecione um produto antes de salvar");
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveProjection({
+        data: { productId: produtoId, vendasCoach, tree: nodes },
+      });
+      toast.success("Projeção salva com sucesso");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const abas = [
     { id: "produto" as const, label: "Produto", icon: Package },
@@ -621,14 +702,24 @@ export function MinhaRede() {
 
   return (
     <div className="text-zinc-100">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-          <BarChart3 size={20} className="text-emerald-400" />
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+            <BarChart3 size={20} className="text-emerald-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-zinc-100">Simulador de rede</h2>
+            <p className="text-xs text-zinc-500">Monte sua equipe e simule ganhos por upline</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-zinc-100">Simulador de rede</h2>
-          <p className="text-xs text-zinc-500">Monte sua equipe e simule ganhos por nível</p>
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-sm font-semibold disabled:opacity-50"
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          Salvar projeção
+        </button>
       </div>
 
       <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl mb-6">
