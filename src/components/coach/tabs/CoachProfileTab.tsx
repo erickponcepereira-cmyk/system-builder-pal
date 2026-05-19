@@ -105,8 +105,29 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
             <label className="text-xs text-white/50"><span className="mb-1 block">Tipo de chave PIX</span><select className="field-control" value={form.pix_key_type} onChange={(e) => setForm({ ...form, pix_key_type: e.target.value })}><option value="cpf">CPF</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Aleatória</option></select></label>
             <label className="text-xs text-white/50"><span className="mb-1 block">Chave PIX</span><input className="field-control" value={form.pix_key} onChange={(e) => setForm({ ...form, pix_key: e.target.value })} /></label>
           </div>
+          <div className="mt-5 border-t border-white/5 pt-4">
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-white/60">Redes sociais</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                { key: "instagram", label: "Instagram", icon: Instagram, placeholder: "@seuusuario" },
+                { key: "facebook", label: "Facebook", icon: Facebook, placeholder: "facebook.com/voce" },
+                { key: "youtube", label: "YouTube", icon: Youtube, placeholder: "youtube.com/@canal" },
+                { key: "tiktok", label: "TikTok", icon: Music2, placeholder: "@seuusuario" },
+                { key: "website", label: "Site / link na bio", icon: Globe, placeholder: "https://..." },
+              ].map((f) => {
+                const Icon = f.icon;
+                return (
+                  <label key={f.key} className="text-xs text-white/50">
+                    <span className="mb-1 flex items-center gap-1.5"><Icon className="h-3 w-3" />{f.label}</span>
+                    <input className="field-control" placeholder={f.placeholder} value={form[f.key as keyof typeof form]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
           <Button onClick={save} disabled={saving} className="mt-4"><Save className="mr-2 h-4 w-4" /> {saving ? "Salvando..." : "Salvar perfil"}</Button>
         </div>
+
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="relative mb-4 h-20 w-20">
             {coach?.avatarUrl ? (

@@ -420,9 +420,10 @@ export function ProtocolTab() {
                       </div>
                       <div className="space-y-1.5">
                         {[0, 1, 2].map((i) => (
-                          <input key={i} value={m.options[i as 0]} onChange={(e) => updateMealOption(idx, i as 0, e.target.value)} placeholder={`Opção ${i + 1}`} className="w-full rounded bg-black/30 px-2 py-1.5 text-xs text-white" />
+                          <textarea key={i} value={m.options[i as 0]} onChange={(e) => updateMealOption(idx, i as 0, e.target.value)} placeholder={`Opção ${i + 1} — descreva a refeição completa`} rows={3} className="w-full rounded bg-black/30 px-2 py-2 text-xs text-white outline-none resize-y" />
                         ))}
                       </div>
+
                     </div>
                   ))}
                 </div>
