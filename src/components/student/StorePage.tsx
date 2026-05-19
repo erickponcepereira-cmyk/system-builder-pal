@@ -20,6 +20,7 @@ interface StoreProduct extends ProductDetail {
   isPriceRange?: boolean | null;
   minPrice?: number | null;
   maxPrice?: number | null;
+  creatorCoachId?: string | null;
 }
 
 type CartItem = StoreProduct & { quantity: number };
