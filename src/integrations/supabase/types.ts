@@ -3998,6 +3998,7 @@ export type Database = {
           feature_weight_tracking: boolean | null
           feature_winners_forum: boolean | null
           free_for_council: boolean
+          free_for_nutritionist: boolean
           gallery: Json
           highlights: Json | null
           id: string
@@ -4078,6 +4079,7 @@ export type Database = {
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
           free_for_council?: boolean
+          free_for_nutritionist?: boolean
           gallery?: Json
           highlights?: Json | null
           id?: string
@@ -4158,6 +4160,7 @@ export type Database = {
           feature_weight_tracking?: boolean | null
           feature_winners_forum?: boolean | null
           free_for_council?: boolean
+          free_for_nutritionist?: boolean
           gallery?: Json
           highlights?: Json | null
           id?: string
@@ -5908,6 +5911,14 @@ export type Database = {
       cancel_nutritionist_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
+      }
+      coach_gets_product_free: {
+        Args: { _coach_id: string; _product_id: string }
+        Returns: boolean
+      }
+      coach_has_fitmindshape_bypass: {
+        Args: { _coach_id: string }
+        Returns: boolean
       }
       count_active_admins: { Args: never; Returns: number }
       create_coach_sale: {
