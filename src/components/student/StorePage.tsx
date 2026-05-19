@@ -57,6 +57,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   const [checkingOut, setCheckingOut] = useState(false);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
+  const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
   const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
 
   // Coach-only state
