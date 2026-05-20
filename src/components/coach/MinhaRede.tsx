@@ -700,6 +700,10 @@ export function MinhaRede() {
           commission_level1: p.commission_level1 ?? 15,
           commission_level2: p.commission_level2 ?? 5,
           commission_level3: p.commission_level3 ?? 3,
+          coach_real_commission: Number(p.coach_real_commission ?? 0),
+          network_l1_real: Number(p.network_l1_real ?? 0),
+          network_l2_real: Number(p.network_l2_real ?? 0),
+          network_l3_real: Number(p.network_l3_real ?? 0),
         }));
         setProdutos(mapped);
         if (mapped.length > 0) {
