@@ -609,7 +609,7 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
                   {grupo.map((d) => (
                     <div key={d.id} className="flex justify-between text-xs text-zinc-400">
                       <span className="truncate mr-2">{d.nome}</span>
-                      <span className="flex-shrink-0">{d.vendas} × {fmt(+(liqVenda * d.perc / 100).toFixed(2))} = <b>{fmt(d.bruto)}</b></span>
+                      <span className="flex-shrink-0">{d.vendas} × {fmt(d.perSale)} = <b>{fmt(d.bruto)}</b></span>
                     </div>
                   ))}
                 </div>
