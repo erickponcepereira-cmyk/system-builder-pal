@@ -69,6 +69,7 @@ Confirma essa ordem? Ou prefere que eu ataque tudo de uma vez mesmo?
 - ✅ Atribuição automática de Nutricionista Parceiro: `sale_nutritionist_assignments` populado via `find_nutritionist_for(coach_id)`
 
 ## Próximos passos sugeridos
-- Painel "Vendas cruzadas" no perfil do Master Coach (somar `master_coach_commissions`)
-- Exibir nutricionista atribuído no detalhe do pedido + permitir override manual
+- ✅ Painel "Vendas cruzadas" do Master Coach na Carteira (total + cruzadas + lista)
+- ✅ Exibir nutricionista atribuído no Admin > Pedidos + override manual
 - Geolocalização para empate de nutricionistas
+
