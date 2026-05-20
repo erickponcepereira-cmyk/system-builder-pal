@@ -32,6 +32,11 @@ type ProdutoT = {
   commission_level1: number;
   commission_level2: number;
   commission_level3: number;
+  // Valores reais por venda (R$) calculados pelo motor de slots
+  coach_real_commission: number;
+  network_l1_real: number;
+  network_l2_real: number;
+  network_l3_real: number;
 };
 
 // Default constants kept only as fallbacks for legacy callers (não usados se produto fornece valores reais)
