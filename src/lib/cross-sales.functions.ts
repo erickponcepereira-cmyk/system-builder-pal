@@ -85,18 +85,18 @@ export const getOrderNutritionist = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data: row } = await supabaseAdmin
       .from("sale_nutritionist_assignments")
-      .select("id, nutritionist_coach_id, assigned_at, is_manual_override")
+      .select("id, nutritionist_coach_id, created_at, assignment_method")
       .eq("order_id", data.orderId)
       .maybeSingle();
-    if (!row) return null;
+    if (!row || !row.nutritionist_coach_id) return null;
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profiles:profile_id(name, full_name, email)")
       .eq("id", row.nutritionist_coach_id).maybeSingle();
     return {
       id: row.id,
       nutritionistCoachId: row.nutritionist_coach_id,
-      assignedAt: row.assigned_at,
-      isManualOverride: !!row.is_manual_override,
+      assignedAt: row.created_at,
+      isManualOverride: row.assignment_method === "manual_override",
       name: (coach as any)?.profiles?.name || (coach as any)?.profiles?.full_name || "—",
       email: (coach as any)?.profiles?.email || null,
     };
@@ -131,17 +131,43 @@ export const overrideOrderNutritionist = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
+    const { data: existing } = await supabaseAdmin
+      .from("sale_nutritionist_assignments")
+      .select("id")
+      .eq("order_id", data.orderId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabaseAdmin
+        .from("sale_nutritionist_assignments")
+        .update({
+          nutritionist_coach_id: data.nutritionistCoachId,
+          assignment_method: "manual_override",
+        })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+
+    // No row yet: derive seller from order metadata or student
+    const { data: order } = await supabaseAdmin
+      .from("store_orders").select("metadata, student_id").eq("id", data.orderId).maybeSingle();
+    let sellerCoachId: string | null = (order?.metadata as any)?.created_by_coach_id ?? null;
+    if (!sellerCoachId && order?.student_id) {
+      const { data: student } = await supabaseAdmin
+        .from("students").select("coach_id").eq("id", order.student_id).maybeSingle();
+      sellerCoachId = student?.coach_id ?? null;
+    }
+    if (!sellerCoachId) throw new Error("Coach vendedor não identificado para este pedido");
+
     const { error } = await supabaseAdmin
       .from("sale_nutritionist_assignments")
-      .upsert(
-        {
-          order_id: data.orderId,
-          nutritionist_coach_id: data.nutritionistCoachId,
-          is_manual_override: true,
-          assigned_at: new Date().toISOString(),
-        },
-        { onConflict: "order_id" }
-      );
+      .insert({
+        order_id: data.orderId,
+        seller_coach_id: sellerCoachId,
+        nutritionist_coach_id: data.nutritionistCoachId,
+        assignment_method: "manual_override",
+      });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
