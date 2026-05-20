@@ -7,22 +7,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { getNetworkProjection, saveNetworkProjection, listSimulatorProducts } from "@/lib/coach-network.functions";
 import { toast } from "sonner";
 
-// ─── CONSTANTES FIXAS ────────────────────────────────────────────────
-const TAXA_MAQ_PERC = 3.49;
-const TAXA_IMP_EMP_PERC = 6.0;
-const TAXA_SISTEMA_R = 20;
-const TAXA_IMP_PESSOA = 6.0;
-const REDE_PERCS = [10, 5, 3]; // L1, L2, L3
-
-// ─── PRODUTOS BASE ──────────────────────────────────────────────────
-const PRODUTOS_BASE = [
-  { id: "p1", nome: "Workshop Online", preco: 85 },
-  { id: "p2", nome: "Sessão Individual", preco: 100 },
-  { id: "p3", nome: "Pacote Mensal", preco: 350 },
-  { id: "p4", nome: "Programa Trimestral", preco: 900 },
-  { id: "p5", nome: "Mentoria Anual", preco: 2400 },
-];
-
 // ─── HELPERS ────────────────────────────────────────────────────────
 const fmt = (v: number) =>
   "R$ " + Math.abs(+v).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -33,14 +17,60 @@ const uid = () => `nd_${++_uid}_${Date.now()}`;
 
 type NodeT = { id: string; nome: string; vendas: number; parentId: string | null };
 type NodesMap = Record<string, NodeT>;
-type ProdutoT = { id: string; nome: string; preco: number };
+type ProdutoT = {
+  id: string;
+  nome: string;
+  preco: number;
+  cost: number;
+  other_costs: number;
+  app_fee: number;
+  app_fee_percentage: number;
+  card_fee_percentage: number;
+  credit_fee_percentage: number;
+  tax_percentage: number;
+  commission_coach: number;
+  commission_level1: number;
+  commission_level2: number;
+  commission_level3: number;
+};
+
+// Default constants kept only as fallbacks for legacy callers (não usados se produto fornece valores reais)
+const TAXA_IMP_PESSOA = 6.0;
+
 
 // ─── ENGINE DE CÁLCULO ──────────────────────────────────────────────
-function calcVenda(preco: number) {
-  const maq = +(preco * TAXA_MAQ_PERC / 100).toFixed(2);
-  const impEmp = +(preco * TAXA_IMP_EMP_PERC / 100).toFixed(2);
-  const liquido = +(Math.max(0, preco - maq - impEmp - TAXA_SISTEMA_R)).toFixed(2);
-  return { maq, impEmp, sistema: TAXA_SISTEMA_R, liquido };
+type Fees = {
+  cardPerc: number;   // taxa de cartão/maquininha (%)
+  taxPerc: number;    // imposto empresa (%)
+  appFlat: number;    // taxa fixa da plataforma (R$)
+  appPerc: number;    // taxa percentual da plataforma (%)
+  costFlat: number;   // custo do produto + outros custos (R$)
+};
+
+function feesFromProduct(p: ProdutoT | null): Fees {
+  if (!p) return { cardPerc: 0, taxPerc: 0, appFlat: 0, appPerc: 0, costFlat: 0 };
+  return {
+    cardPerc: p.credit_fee_percentage || p.card_fee_percentage || 0,
+    taxPerc: p.tax_percentage || 0,
+    appFlat: p.app_fee || 0,
+    appPerc: p.app_fee_percentage || 0,
+    costFlat: (p.cost || 0) + (p.other_costs || 0),
+  };
+}
+
+function percsFromProduct(p: ProdutoT | null): number[] {
+  if (!p) return [0, 0, 0];
+  return [p.commission_level1 || 0, p.commission_level2 || 0, p.commission_level3 || 0];
+}
+
+function calcVenda(preco: number, fees: Fees) {
+  const maq = +(preco * fees.cardPerc / 100).toFixed(2);
+  const impEmp = +(preco * fees.taxPerc / 100).toFixed(2);
+  const appPctV = +(preco * fees.appPerc / 100).toFixed(2);
+  const sistema = +(fees.appFlat + appPctV).toFixed(2);
+  const custo = +fees.costFlat.toFixed(2);
+  const liquido = +(Math.max(0, preco - maq - impEmp - sistema - custo)).toFixed(2);
+  return { maq, impEmp, sistema, custo, liquido };
 }
 
 function calcLiqPessoa(bruto: number) {
@@ -67,14 +97,14 @@ function getN1(nodes: NodesMap) {
   return Object.values(nodes).filter((n) => n.parentId === null);
 }
 
-function calcGanhosRede(nodes: NodesMap, liquidoVenda: number) {
+function calcGanhosRede(nodes: NodesMap, liquidoVenda: number, percs: number[]) {
   let totalBruto = 0;
   const detalhes: { id: string; nome: string; nivel: number; perc: number; bruto: number; vendas: number }[] = [];
 
   Object.values(nodes).forEach((node) => {
     const nivel = getNivel(nodes, node.id);
-    if (nivel >= REDE_PERCS.length) return;
-    const perc = REDE_PERCS[nivel];
+    if (nivel >= percs.length) return;
+    const perc = percs[nivel];
     const bruto = +(liquidoVenda * perc / 100 * node.vendas).toFixed(2);
     totalBruto += bruto;
     detalhes.push({ id: node.id, nome: node.nome, nivel, perc, bruto, vendas: node.vendas });
@@ -84,7 +114,7 @@ function calcGanhosRede(nodes: NodesMap, liquidoVenda: number) {
   return { totalBruto: +totalBruto.toFixed(2), imp, liquido, detalhes };
 }
 
-function calcVendaPropria(nodes: NodesMap, liquidoVenda: number) {
+function calcVendaPropria(nodes: NodesMap, liquidoVenda: number, coachPercBase: number, percs: number[]) {
   const todos = Object.values(nodes);
   const n1Existe = todos.some((n) => n.parentId === null);
   const n2Existe = todos.some((n) => n.parentId !== null && getNivel(nodes, n.id) === 1);
@@ -92,12 +122,13 @@ function calcVendaPropria(nodes: NodesMap, liquidoVenda: number) {
 
   const existe = [n1Existe, n2Existe, n3Existe];
   let retorno = 0;
-  REDE_PERCS.forEach((p, i) => { if (!existe[i]) retorno += p; });
+  percs.forEach((p, i) => { if (!existe[i]) retorno += p; });
 
-  const coachPerc = 100 - REDE_PERCS.reduce((a, b) => a + b, 0) + retorno;
+  const coachPerc = coachPercBase + retorno;
   const bruto = +(liquidoVenda * coachPerc / 100).toFixed(2);
   return { ...calcLiqPessoa(bruto), perc: coachPerc, retorno };
 }
+
 
 // ─── CORES POR NÍVEL ────────────────────────────────────────────────
 const COR = [
@@ -266,7 +297,7 @@ function NodoArvore({
 
 // ─── ABA PRODUTO ────────────────────────────────────────────────────
 function AbaProduto({
-  produtoId, setProdutoId, preco, setPreco, produtos, setProdutos,
+  produtoId, setProdutoId, preco, setPreco, produtos, setProdutos, produtoSel,
 }: {
   produtoId: string;
   setProdutoId: (id: string) => void;
@@ -274,10 +305,12 @@ function AbaProduto({
   setPreco: (v: number) => void;
   produtos: ProdutoT[];
   setProdutos: React.Dispatch<React.SetStateAction<ProdutoT[]>>;
+  produtoSel: ProdutoT | null;
 }) {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nomeTemp, setNomeTemp] = useState("");
-  const { maq, impEmp, sistema, liquido } = calcVenda(preco);
+  const fees = feesFromProduct(produtoSel);
+  const { maq, impEmp, sistema, custo, liquido } = calcVenda(preco, fees);
 
   const selecionar = (p: ProdutoT) => { setProdutoId(p.id); setPreco(p.preco); };
 
@@ -358,9 +391,10 @@ function AbaProduto({
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">Composição por venda</p>
         {[
           { label: "Valor do produto", val: fmt(preco), neg: false },
-          { label: `(-) Maquininha ${fmtp(TAXA_MAQ_PERC)}`, val: `- ${fmt(maq)}`, neg: true },
-          { label: `(-) Imposto empresa ${fmtp(TAXA_IMP_EMP_PERC)}`, val: `- ${fmt(impEmp)}`, neg: true },
-          { label: "(-) Taxa da plataforma", val: `- ${fmt(sistema)}`, neg: true },
+          { label: `(-) Taxa cartão ${fmtp(fees.cardPerc)}`, val: `- ${fmt(maq)}`, neg: true },
+          { label: `(-) Imposto empresa ${fmtp(fees.taxPerc)}`, val: `- ${fmt(impEmp)}`, neg: true },
+          { label: `(-) Taxa da plataforma${fees.appPerc ? ` (${fmtp(fees.appPerc)}${fees.appFlat ? ` + R$ ${fees.appFlat}` : ""})` : fees.appFlat ? "" : ""}`, val: `- ${fmt(sistema)}`, neg: true },
+          { label: "(-) Custo do produto", val: `- ${fmt(custo)}`, neg: true },
         ].map((r) => (
           <div key={r.label} className="flex justify-between py-1.5 border-b border-white/5 text-sm">
             <span className="text-zinc-400">{r.label}</span>
@@ -371,11 +405,12 @@ function AbaProduto({
           <span className="text-zinc-300">Líquido distribuível</span>
           <span className="text-emerald-400">{fmt(liquido)}</span>
         </div>
-        <p className="text-xs text-zinc-600 mt-3 flex items-center gap-1.5"><Info size={11} /> Taxas fixas do sistema — não editáveis</p>
+        <p className="text-xs text-zinc-600 mt-3 flex items-center gap-1.5"><Info size={11} /> Taxas, custos e comissões puxados do cadastro do produto no admin</p>
       </div>
     </div>
   );
 }
+
 
 // ─── ABA REDE ───────────────────────────────────────────────────────
 function AbaRede({
@@ -493,10 +528,13 @@ function AbaRede({
 }
 
 // ─── ABA GANHOS ─────────────────────────────────────────────────────
-function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: number; vendasCoach: number }) {
-  const { liquido: liqVenda } = calcVenda(preco);
-  const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda), [nodes, liqVenda]);
-  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda), [nodes, liqVenda]);
+function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap; preco: number; vendasCoach: number; produtoSel: ProdutoT | null }) {
+  const fees = feesFromProduct(produtoSel);
+  const percs = percsFromProduct(produtoSel);
+  const coachBase = produtoSel?.commission_coach ?? 0;
+  const { liquido: liqVenda, maq, impEmp, sistema, custo } = calcVenda(preco, fees);
+  const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda, percs), [nodes, liqVenda, percs]);
+  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda, coachBase, percs), [nodes, liqVenda, coachBase, percs]);
   const ganhoPropr = {
     ...ganhoUnit,
     bruto: +(ganhoUnit.bruto * vendasCoach).toFixed(2),
@@ -560,7 +598,7 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
                   <div className="flex items-center gap-2">
                     <NivelBadge nivel={ni} />
                     <span className={`text-sm font-semibold ${cor.text}`}>
-                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {REDE_PERCS[ni]}%
+                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {percs[ni]}%
                     </span>
                   </div>
                   <span className={`text-sm font-bold ${cor.text}`}>{fmt(total)}</span>
@@ -600,12 +638,15 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
       )}
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Taxas fixas aplicadas</p>
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Taxas e comissões deste produto</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-zinc-500">
           {[
-            ["Maquininha", fmtp(TAXA_MAQ_PERC)],
-            ["Imposto empresa", fmtp(TAXA_IMP_EMP_PERC)],
-            ["Taxa plataforma", `R$ ${TAXA_SISTEMA_R}`],
+            ["Taxa cartão", fmtp(fees.cardPerc)],
+            ["Imposto empresa", fmtp(fees.taxPerc)],
+            ["Taxa plataforma", `${fmt(sistema)}`],
+            ["Custo do produto", `${fmt(custo)}`],
+            ["Comissão coach", fmtp(coachBase)],
+            ["Comissão L1 / L2 / L3", `${fmtp(percs[0])} / ${fmtp(percs[1])} / ${fmtp(percs[2])}`],
             ["Imposto pessoal", fmtp(TAXA_IMP_PESSOA)],
           ].map(([l, v]) => (
             <div key={l} className="flex justify-between">
@@ -617,6 +658,7 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
     </div>
   );
 }
+
 
 // ─── COMPONENTE PRINCIPAL ───────────────────────────────────────────
 export function MinhaRede() {
@@ -638,10 +680,21 @@ export function MinhaRede() {
     (async () => {
       try {
         const list = await fetchProducts();
-        const mapped: ProdutoT[] = (list ?? []).map((p) => ({
+        const mapped: ProdutoT[] = (list ?? []).map((p: any) => ({
           id: p.id,
           nome: p.name,
           preco: p.price,
+          cost: p.cost ?? 0,
+          other_costs: p.other_costs ?? 0,
+          app_fee: p.app_fee ?? 0,
+          app_fee_percentage: p.app_fee_percentage ?? 0,
+          card_fee_percentage: p.card_fee_percentage ?? 0,
+          credit_fee_percentage: p.credit_fee_percentage ?? 0,
+          tax_percentage: p.tax_percentage ?? 0,
+          commission_coach: p.commission_coach ?? 50,
+          commission_level1: p.commission_level1 ?? 15,
+          commission_level2: p.commission_level2 ?? 5,
+          commission_level3: p.commission_level3 ?? 3,
         }));
         setProdutos(mapped);
         if (mapped.length > 0) {
@@ -743,15 +796,18 @@ export function MinhaRede() {
         })}
       </div>
 
+      {(() => { const produtoSel = produtos.find((p) => p.id === produtoId) ?? null; return (<>
       {abaAtiva === "produto" && (
         <AbaProduto
           produtoId={produtoId} setProdutoId={setProdutoId}
           preco={preco} setPreco={setPreco}
           produtos={produtos} setProdutos={setProdutos}
+          produtoSel={produtoSel}
         />
       )}
       {abaAtiva === "rede" && <AbaRede nodes={nodes} setNodes={setNodes} vendasCoach={vendasCoach} setVendasCoach={setVendasCoach} />}
-      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} vendasCoach={vendasCoach} />}
+      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} vendasCoach={vendasCoach} produtoSel={produtoSel} />}
+      </>); })()}
     </div>
   );
 }
