@@ -102,7 +102,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     }
 
     setItems([
-      ...((plans.data || []).map((p: any) => ({
+      ...((plans.data || []).map((p: any) => {
+        const e = earningsById.get(p.id);
+        return ({
         id: `plan-${p.id}`, sourceId: p.id, title: p.name, subtitle: p.subtitle, description: p.description,
         price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
         category: productCategory(String(p.product_type || p.type)), kind: "challenge" as const,
@@ -111,11 +113,15 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         imageUrl: p.image_url,
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
+        commissionCoachAbsolute: e?.coachCommission ?? null,
+        commissionLevel1Absolute: e?.networkL1 ?? null,
+        commissionLevel2Absolute: e?.networkL2 ?? null,
+        commissionLevel3Absolute: e?.networkL3 ?? null,
         appFee: p.app_fee, appFeePercentage: p.app_fee_percentage,
         cardFeePercentage: p.credit_fee_percentage ?? p.card_fee_percentage,
         taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
-      }))),
+      });})),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
         price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
