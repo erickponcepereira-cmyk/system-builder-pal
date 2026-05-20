@@ -811,6 +811,3 @@ export function MinhaRede() {
     </div>
   );
 }
-    </div>
-  );
-}
