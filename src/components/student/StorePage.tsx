@@ -105,7 +105,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         imageUrl: p.image_url,
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
-        appFee: p.app_fee,
+        appFee: p.app_fee, appFeePercentage: p.app_fee_percentage,
+        cardFeePercentage: p.credit_fee_percentage ?? p.card_fee_percentage,
+        taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
       }))),
       ...((digital.data || []).map((p: any) => ({
