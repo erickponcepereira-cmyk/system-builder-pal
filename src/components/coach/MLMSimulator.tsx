@@ -123,28 +123,10 @@ export function MLMSimulator() {
 
       {/* Inputs */}
       <div className="space-y-3 mb-5">
-        <div>
-          <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
-            <span>Preço do produto</span>
-            <input
-              type="number"
-              min={1}
-              value={productPrice}
-              onChange={(e) => setProductPrice(Math.max(1, +e.target.value || 0))}
-              className="w-24 rounded-md px-2 py-1 text-xs font-bold text-white text-right outline-none focus:ring-1 focus:ring-primary"
-              style={{ backgroundColor: "#252525" }}
-            />
-          </label>
-          <input
-            type="range"
-            min={49}
-            max={9997}
-            step={10}
-            value={productPrice}
-            onChange={(e) => setProductPrice(Number(e.target.value))}
-            className="w-full accent-primary"
-          />
+        <div className="rounded-lg px-3 py-2 text-[11px] text-white/60" style={{ backgroundColor: "#0F0F0F" }}>
+          Ganho por venda direta: <b className="text-success">{fmt(perSale.coach)}</b> · Rede L1 {fmt(perSale.l1)} · L2 {fmt(perSale.l2)} · L3 {fmt(perSale.l3)}
         </div>
+
 
         <div>
           <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
