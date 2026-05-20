@@ -102,36 +102,28 @@ function getN1(nodes: NodesMap) {
   return Object.values(nodes).filter((n) => n.parentId === null);
 }
 
-function calcGanhosRede(nodes: NodesMap, liquidoVenda: number, percs: number[]) {
+/** Ganhos da rede usando valores R$ reais por venda por nível (não %). */
+function calcGanhosRede(nodes: NodesMap, perSale: number[]) {
   let totalBruto = 0;
-  const detalhes: { id: string; nome: string; nivel: number; perc: number; bruto: number; vendas: number }[] = [];
+  const detalhes: { id: string; nome: string; nivel: number; perSale: number; bruto: number; vendas: number }[] = [];
 
   Object.values(nodes).forEach((node) => {
     const nivel = getNivel(nodes, node.id);
-    if (nivel >= percs.length) return;
-    const perc = percs[nivel];
-    const bruto = +(liquidoVenda * perc / 100 * node.vendas).toFixed(2);
+    if (nivel >= perSale.length) return;
+    const valor = perSale[nivel];
+    const bruto = +(valor * node.vendas).toFixed(2);
     totalBruto += bruto;
-    detalhes.push({ id: node.id, nome: node.nome, nivel, perc, bruto, vendas: node.vendas });
+    detalhes.push({ id: node.id, nome: node.nome, nivel, perSale: valor, bruto, vendas: node.vendas });
   });
 
   const { imp, liquido } = calcLiqPessoa(totalBruto);
   return { totalBruto: +totalBruto.toFixed(2), imp, liquido, detalhes };
 }
 
-function calcVendaPropria(nodes: NodesMap, liquidoVenda: number, coachPercBase: number, percs: number[]) {
-  const todos = Object.values(nodes);
-  const n1Existe = todos.some((n) => n.parentId === null);
-  const n2Existe = todos.some((n) => n.parentId !== null && getNivel(nodes, n.id) === 1);
-  const n3Existe = todos.some((n) => getNivel(nodes, n.id) === 2);
-
-  const existe = [n1Existe, n2Existe, n3Existe];
-  let retorno = 0;
-  percs.forEach((p, i) => { if (!existe[i]) retorno += p; });
-
-  const coachPerc = coachPercBase + retorno;
-  const bruto = +(liquidoVenda * coachPerc / 100).toFixed(2);
-  return { ...calcLiqPessoa(bruto), perc: coachPerc, retorno };
+/** Ganhos do coach por venda própria usando o valor R$ real da comissão direta. */
+function calcVendaPropria(coachPerSale: number) {
+  const bruto = +coachPerSale.toFixed(2);
+  return { ...calcLiqPessoa(bruto) };
 }
 
 
