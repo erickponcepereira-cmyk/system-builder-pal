@@ -39,11 +39,38 @@ const TAXA_IMP_PESSOA = 6.0;
 
 
 // ─── ENGINE DE CÁLCULO ──────────────────────────────────────────────
-function calcVenda(preco: number) {
-  const maq = +(preco * TAXA_MAQ_PERC / 100).toFixed(2);
-  const impEmp = +(preco * TAXA_IMP_EMP_PERC / 100).toFixed(2);
-  const liquido = +(Math.max(0, preco - maq - impEmp - TAXA_SISTEMA_R)).toFixed(2);
-  return { maq, impEmp, sistema: TAXA_SISTEMA_R, liquido };
+type Fees = {
+  cardPerc: number;   // taxa de cartão/maquininha (%)
+  taxPerc: number;    // imposto empresa (%)
+  appFlat: number;    // taxa fixa da plataforma (R$)
+  appPerc: number;    // taxa percentual da plataforma (%)
+  costFlat: number;   // custo do produto + outros custos (R$)
+};
+
+function feesFromProduct(p: ProdutoT | null): Fees {
+  if (!p) return { cardPerc: 0, taxPerc: 0, appFlat: 0, appPerc: 0, costFlat: 0 };
+  return {
+    cardPerc: p.credit_fee_percentage || p.card_fee_percentage || 0,
+    taxPerc: p.tax_percentage || 0,
+    appFlat: p.app_fee || 0,
+    appPerc: p.app_fee_percentage || 0,
+    costFlat: (p.cost || 0) + (p.other_costs || 0),
+  };
+}
+
+function percsFromProduct(p: ProdutoT | null): number[] {
+  if (!p) return [0, 0, 0];
+  return [p.commission_level1 || 0, p.commission_level2 || 0, p.commission_level3 || 0];
+}
+
+function calcVenda(preco: number, fees: Fees) {
+  const maq = +(preco * fees.cardPerc / 100).toFixed(2);
+  const impEmp = +(preco * fees.taxPerc / 100).toFixed(2);
+  const appPctV = +(preco * fees.appPerc / 100).toFixed(2);
+  const sistema = +(fees.appFlat + appPctV).toFixed(2);
+  const custo = +fees.costFlat.toFixed(2);
+  const liquido = +(Math.max(0, preco - maq - impEmp - sistema - custo)).toFixed(2);
+  return { maq, impEmp, sistema, custo, liquido };
 }
 
 function calcLiqPessoa(bruto: number) {
@@ -70,14 +97,14 @@ function getN1(nodes: NodesMap) {
   return Object.values(nodes).filter((n) => n.parentId === null);
 }
 
-function calcGanhosRede(nodes: NodesMap, liquidoVenda: number) {
+function calcGanhosRede(nodes: NodesMap, liquidoVenda: number, percs: number[]) {
   let totalBruto = 0;
   const detalhes: { id: string; nome: string; nivel: number; perc: number; bruto: number; vendas: number }[] = [];
 
   Object.values(nodes).forEach((node) => {
     const nivel = getNivel(nodes, node.id);
-    if (nivel >= REDE_PERCS.length) return;
-    const perc = REDE_PERCS[nivel];
+    if (nivel >= percs.length) return;
+    const perc = percs[nivel];
     const bruto = +(liquidoVenda * perc / 100 * node.vendas).toFixed(2);
     totalBruto += bruto;
     detalhes.push({ id: node.id, nome: node.nome, nivel, perc, bruto, vendas: node.vendas });
@@ -87,7 +114,7 @@ function calcGanhosRede(nodes: NodesMap, liquidoVenda: number) {
   return { totalBruto: +totalBruto.toFixed(2), imp, liquido, detalhes };
 }
 
-function calcVendaPropria(nodes: NodesMap, liquidoVenda: number) {
+function calcVendaPropria(nodes: NodesMap, liquidoVenda: number, coachPercBase: number, percs: number[]) {
   const todos = Object.values(nodes);
   const n1Existe = todos.some((n) => n.parentId === null);
   const n2Existe = todos.some((n) => n.parentId !== null && getNivel(nodes, n.id) === 1);
@@ -95,12 +122,13 @@ function calcVendaPropria(nodes: NodesMap, liquidoVenda: number) {
 
   const existe = [n1Existe, n2Existe, n3Existe];
   let retorno = 0;
-  REDE_PERCS.forEach((p, i) => { if (!existe[i]) retorno += p; });
+  percs.forEach((p, i) => { if (!existe[i]) retorno += p; });
 
-  const coachPerc = 100 - REDE_PERCS.reduce((a, b) => a + b, 0) + retorno;
+  const coachPerc = coachPercBase + retorno;
   const bruto = +(liquidoVenda * coachPerc / 100).toFixed(2);
   return { ...calcLiqPessoa(bruto), perc: coachPerc, retorno };
 }
+
 
 // ─── CORES POR NÍVEL ────────────────────────────────────────────────
 const COR = [
