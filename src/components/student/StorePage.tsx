@@ -74,7 +74,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee_percentage,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
     ]);
 
     const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
