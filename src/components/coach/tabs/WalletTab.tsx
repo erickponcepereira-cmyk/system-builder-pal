@@ -47,7 +47,9 @@ export function WalletTab() {
       }
       setLoadingBank(false);
     })();
+    getMyMasterCoachCrossSales().then((r) => setCross(r)).catch(() => {});
   }, []);
+
 
   const hasBank = Boolean(bank.pix_key);
 
