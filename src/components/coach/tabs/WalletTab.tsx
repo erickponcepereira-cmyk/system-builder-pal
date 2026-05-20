@@ -20,6 +20,8 @@ export function WalletTab() {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
+
 
   useEffect(() => {
     (async () => {
