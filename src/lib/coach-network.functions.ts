@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
+
 
 async function resolveCoachId(userId: string): Promise<string> {
   const { data: profile } = await supabaseAdmin
@@ -30,7 +32,7 @@ const TreeSchema = z.record(
 );
 
 export const getNetworkProjection = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: { productId?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const coachId = await resolveCoachId(context.userId);
@@ -44,7 +46,7 @@ export const getNetworkProjection = createServerFn({ method: "GET" })
   });
 
 export const saveNetworkProjection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: { productId?: string | null; vendasCoach: number; tree: unknown }) =>
     z
       .object({
@@ -73,7 +75,7 @@ export const saveNetworkProjection = createServerFn({ method: "POST" })
   });
 
 export const listSimulatorProducts = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async () => {
     const { data, error } = await supabaseAdmin
       .from("products")
