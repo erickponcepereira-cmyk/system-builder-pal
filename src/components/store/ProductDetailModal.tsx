@@ -197,8 +197,7 @@ export function ProductDetailModal({
                   </>
                 )}
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  Cálculo sobre o valor líquido (preço − taxa do app). Valores podem variar conforme
-                  método de pagamento.
+                  Cálculo sobre o valor líquido (preço − taxas do app, cartão, impostos e custos do produto). Valores podem variar conforme método de pagamento.
                 </p>
               </div>
             </div>
