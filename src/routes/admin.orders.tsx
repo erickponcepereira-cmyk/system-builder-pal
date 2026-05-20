@@ -35,6 +35,11 @@ function AdminOrders() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
+  const [nutByOrder, setNutByOrder] = useState<Record<string, Awaited<ReturnType<typeof getOrderNutritionist>>>>({});
+  const [nutPartners, setNutPartners] = useState<Array<{ id: string; name: string; email: string | null }>>([]);
+  const [editingNutOrder, setEditingNutOrder] = useState<string | null>(null);
+  const [pickValue, setPickValue] = useState("");
+  const [savingNut, setSavingNut] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -44,11 +49,39 @@ function AdminOrders() {
       .order("created_at" as never, { ascending: false })
       .limit(100);
     if (error) toast.error(error.message);
-    setOrders((data as unknown as OrderRow[]) || []);
+    const rows = (data as unknown as OrderRow[]) || [];
+    setOrders(rows);
     setLoading(false);
+
+    // load nutritionist assignments in parallel
+    const entries = await Promise.all(
+      rows.map(async (o) => [o.id, await getOrderNutritionist({ data: { orderId: o.id } }).catch(() => null)] as const)
+    );
+    setNutByOrder(Object.fromEntries(entries));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    listNutritionistPartners().then(setNutPartners).catch(() => {});
+  }, []);
+
+  const saveOverride = async (orderId: string) => {
+    if (!pickValue) return;
+    setSavingNut(true);
+    try {
+      await overrideOrderNutritionist({ data: { orderId, nutritionistCoachId: pickValue } });
+      const fresh = await getOrderNutritionist({ data: { orderId } });
+      setNutByOrder((prev) => ({ ...prev, [orderId]: fresh }));
+      setEditingNutOrder(null);
+      setPickValue("");
+      toast.success("Nutricionista atualizado.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar");
+    } finally {
+      setSavingNut(false);
+    }
+  };
+
 
   const filtered = orders.filter((order) => {
     const needle = query.trim().toLowerCase();
