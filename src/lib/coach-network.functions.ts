@@ -80,15 +80,23 @@ export const listSimulatorProducts = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("products")
       .select(
-        "id, name, price, commission_coach, commission_level1, commission_level2, commission_level3"
+        "id, name, price, cost, other_costs, app_fee, app_fee_percentage, card_fee_percentage, credit_fee_percentage, pix_fee_percentage, tax_percentage, commission_coach, commission_level1, commission_level2, commission_level3"
       )
       .eq("status", "active")
       .order("price", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((p) => ({
+    return (data ?? []).map((p: any) => ({
       id: p.id,
       name: p.name,
       price: Number(p.price ?? 0),
+      cost: Number(p.cost ?? 0),
+      other_costs: Number(p.other_costs ?? 0),
+      app_fee: Number(p.app_fee ?? 0),
+      app_fee_percentage: Number(p.app_fee_percentage ?? 0),
+      card_fee_percentage: Number(p.card_fee_percentage ?? 0),
+      credit_fee_percentage: Number(p.credit_fee_percentage ?? 0),
+      pix_fee_percentage: Number(p.pix_fee_percentage ?? 0),
+      tax_percentage: Number(p.tax_percentage ?? 0),
       commission_coach: Number(p.commission_coach ?? 50),
       commission_level1: Number(p.commission_level1 ?? 15),
       commission_level2: Number(p.commission_level2 ?? 5),
