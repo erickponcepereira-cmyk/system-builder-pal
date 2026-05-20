@@ -112,11 +112,12 @@ function sumByDestination(lines: { destination: string; amount: number }[], dest
     .reduce((s, l) => s + Math.abs(l.amount), 0);
 }
 
-// ─── listSimulatorProducts (com comissões reais) ────────────────────
+// ─── listSimulatorProducts (com comissões reais PIX + Cartão) ───────
 export const listSimulatorProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async () => {
     const fee = await loadDefaultFeeConfig();
+
     const { data, error } = await supabaseAdmin
       .from("products")
       .select(
@@ -124,12 +125,19 @@ export const listSimulatorProducts = createServerFn({ method: "GET" })
       )
       .eq("status", "active")
       .order("price", { ascending: true });
+
     if (error) throw new Error(error.message);
     const rows = data ?? [];
     const ids = rows.map((p: any) => p.id);
+
     const { data: allSlots } = ids.length
-      ? await supabaseAdmin.from("product_value_slots").select("*").in("product_id", ids).order("slot_order")
+      ? await supabaseAdmin
+          .from("product_value_slots")
+          .select("*")
+          .in("product_id", ids)
+          .order("slot_order")
       : { data: [] as any[] };
+
     const slotsByProduct = new Map<string, ValueSlot[]>();
     (allSlots || []).forEach((s: any) => {
       const arr = slotsByProduct.get(s.product_id) || [];
@@ -137,36 +145,65 @@ export const listSimulatorProducts = createServerFn({ method: "GET" })
       slotsByProduct.set(s.product_id, arr);
     });
 
+    const TAX_PCT = 6;
+
     return rows.map((p: any) => {
       const price = Number(p.price ?? 0);
       const slots = slotsByProduct.get(p.id) ?? [];
-      const dist = calculateDistribution(price, "pix", fee, slots);
-      const coach_real_commission = Math.max(0, dist.remainder);
-      const network_l1_real = sumByDestination(dist.lines, "network_l1");
-      const network_l2_real = sumByDestination(dist.lines, "network_l2");
-      const network_l3_real = sumByDestination(dist.lines, "network_l3");
+
+      const distPix = calculateDistribution(price, "pix", fee, slots, TAX_PCT);
+      const coachCommPix   = Math.max(0, distPix.remainder);
+      const netL1Pix       = sumByDestination(distPix.lines, "network_l1");
+      const netL2Pix       = sumByDestination(distPix.lines, "network_l2");
+      const netL3Pix       = sumByDestination(distPix.lines, "network_l3");
+      const costSlots      = sumByDestination(distPix.lines, "product_order_pool");
+      const platformPix    = sumByDestination(distPix.lines, "admin_wallet");
+      const nutritionist   = sumByDestination(distPix.lines, "nutritionist_blocked");
+
+      const distCard = calculateDistribution(price, "credit_1x", fee, slots, TAX_PCT);
+      const coachCommCard  = Math.max(0, distCard.remainder);
+      const netL1Card      = sumByDestination(distCard.lines, "network_l1");
+      const netL2Card      = sumByDestination(distCard.lines, "network_l2");
+      const netL3Card      = sumByDestination(distCard.lines, "network_l3");
+      const platformCard   = sumByDestination(distCard.lines, "admin_wallet");
+
       return {
         id: p.id,
         name: p.name,
         price,
-        cost: Number(p.cost ?? 0),
-        other_costs: Number(p.other_costs ?? 0),
-        app_fee: Number(p.app_fee ?? 0),
-        app_fee_percentage: Number(p.app_fee_percentage ?? 0),
-        card_fee_percentage: Number(p.card_fee_percentage ?? 0),
+        pix_fee_pct:    fee.pix_fee_percentage,
+        card_fee_pct:   fee.card_fee_percentage,
+        tax_pct_real:   TAX_PCT,
+        payment_fee_amount_pix:   distPix.payment_fee_amount,
+        tax_amount_pix:           distPix.tax_amount,
+        base_distributable_pix:   distPix.base_distributable,
+        platform_fee_pix:         platformPix,
+        coach_real_commission:    coachCommPix,
+        network_l1_real:          netL1Pix,
+        network_l2_real:          netL2Pix,
+        network_l3_real:          netL3Pix,
+        payment_fee_amount_card:  distCard.payment_fee_amount,
+        tax_amount_card:          distCard.tax_amount,
+        base_distributable_card:  distCard.base_distributable,
+        platform_fee_card:        platformCard,
+        coach_real_commission_card: coachCommCard,
+        network_l1_real_card:     netL1Card,
+        network_l2_real_card:     netL2Card,
+        network_l3_real_card:     netL3Card,
+        product_cost_slots: costSlots,
+        nutritionist_fee:   nutritionist,
+        cost:                 Number(p.cost ?? 0),
+        other_costs:          Number(p.other_costs ?? 0),
+        app_fee:              Number(p.app_fee ?? 0),
+        app_fee_percentage:   Number(p.app_fee_percentage ?? 0),
+        card_fee_percentage:  Number(p.card_fee_percentage ?? 0),
         credit_fee_percentage: Number(p.credit_fee_percentage ?? 0),
-        pix_fee_percentage: Number(p.pix_fee_percentage ?? 0),
-        tax_percentage: Number(p.tax_percentage ?? 0),
-        commission_coach: Number(p.commission_coach ?? 50),
-        commission_level1: Number(p.commission_level1 ?? 15),
-        commission_level2: Number(p.commission_level2 ?? 5),
-        commission_level3: Number(p.commission_level3 ?? 3),
-        // Valores reais por venda (R$) calculados pelo motor de slots
-        coach_real_commission,
-        network_l1_real,
-        network_l2_real,
-        network_l3_real,
-        base_distributable: dist.base_distributable,
+        tax_percentage:        Number(p.tax_percentage ?? 0),
+        commission_coach:      Number(p.commission_coach ?? 50),
+        commission_level1:     Number(p.commission_level1 ?? 15),
+        commission_level2:     Number(p.commission_level2 ?? 5),
+        commission_level3:     Number(p.commission_level3 ?? 3),
+        base_distributable:    distPix.base_distributable,
       };
     });
   });
