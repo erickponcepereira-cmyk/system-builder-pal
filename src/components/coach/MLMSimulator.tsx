@@ -173,10 +173,10 @@ export function MLMSimulator() {
 
       {/* Breakdown */}
       <div className="space-y-1.5 mb-4">
-        <Row label={`Direto (${rates.coach}%) — você como coach`} value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos`} />
-        <Row label={`Upline 1 (${rates.level1}%) — indicação direta`} value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos`} />
-        <Row label={`Upline 2 (${rates.level2}%) — abaixo do Upline 1`} value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos`} />
-        <Row label={`Upline 3 (${rates.level3}%) — abaixo do Upline 2`} value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos`} />
+        <Row label="Direto — você como coach" value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos × ${fmt(perSale.coach)}`} />
+        <Row label="Upline 1 — indicação direta" value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos × ${fmt(perSale.l1)}`} />
+        <Row label="Upline 2 — abaixo do Upline 1" value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos × ${fmt(perSale.l2)}`} />
+        <Row label="Upline 3 — abaixo do Upline 2" value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos × ${fmt(perSale.l3)}`} />
       </div>
 
       {/* Total */}
