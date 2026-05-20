@@ -680,10 +680,21 @@ export function MinhaRede() {
     (async () => {
       try {
         const list = await fetchProducts();
-        const mapped: ProdutoT[] = (list ?? []).map((p) => ({
+        const mapped: ProdutoT[] = (list ?? []).map((p: any) => ({
           id: p.id,
           nome: p.name,
           preco: p.price,
+          cost: p.cost ?? 0,
+          other_costs: p.other_costs ?? 0,
+          app_fee: p.app_fee ?? 0,
+          app_fee_percentage: p.app_fee_percentage ?? 0,
+          card_fee_percentage: p.card_fee_percentage ?? 0,
+          credit_fee_percentage: p.credit_fee_percentage ?? 0,
+          tax_percentage: p.tax_percentage ?? 0,
+          commission_coach: p.commission_coach ?? 50,
+          commission_level1: p.commission_level1 ?? 15,
+          commission_level2: p.commission_level2 ?? 5,
+          commission_level3: p.commission_level3 ?? 3,
         }));
         setProdutos(mapped);
         if (mapped.length > 0) {
