@@ -600,7 +600,7 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
                   <div className="flex items-center gap-2">
                     <NivelBadge nivel={ni} />
                     <span className={`text-sm font-semibold ${cor.text}`}>
-                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {percs[ni]}%
+                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {fmt(perSaleNetwork[ni])}/venda
                     </span>
                   </div>
                   <span className={`text-sm font-bold ${cor.text}`}>{fmt(total)}</span>
