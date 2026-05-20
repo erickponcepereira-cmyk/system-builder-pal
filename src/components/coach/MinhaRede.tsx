@@ -796,15 +796,21 @@ export function MinhaRede() {
         })}
       </div>
 
+      {(() => { const produtoSel = produtos.find((p) => p.id === produtoId) ?? null; return (<>
       {abaAtiva === "produto" && (
         <AbaProduto
           produtoId={produtoId} setProdutoId={setProdutoId}
           preco={preco} setPreco={setPreco}
           produtos={produtos} setProdutos={setProdutos}
+          produtoSel={produtoSel}
         />
       )}
       {abaAtiva === "rede" && <AbaRede nodes={nodes} setNodes={setNodes} vendasCoach={vendasCoach} setVendasCoach={setVendasCoach} />}
-      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} vendasCoach={vendasCoach} />}
+      {abaAtiva === "ganhos" && <AbaGanhos nodes={nodes} preco={preco} vendasCoach={vendasCoach} produtoSel={produtoSel} />}
+      </>); })()}
+    </div>
+  );
+}
     </div>
   );
 }
