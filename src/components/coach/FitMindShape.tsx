@@ -2725,8 +2725,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               className="fm-btn-outline"
               style={{ flex: 1, minWidth: 140 }}
               onClick={() => setScreen("compare")}
-              disabled={(selectedClient?.assessments?.length ?? 0) < 2}
-              title={(selectedClient?.assessments?.length ?? 0) < 2 ? "É necessário ter pelo menos 2 avaliações" : "Comparar avaliações"}
+              disabled={(selectedClient?.assessments?.length ?? 0) < 1}
+              title={(selectedClient?.assessments?.length ?? 0) < 1 ? "Nenhuma avaliação registrada" : "Comparar / editar / excluir avaliações"}
+
             >
               Comparar avaliações
             </button>

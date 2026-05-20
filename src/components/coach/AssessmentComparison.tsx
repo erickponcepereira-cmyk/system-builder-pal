@@ -215,11 +215,12 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
         </button>
       </div>
 
-      {all.length < 2 ? (
+      {all.length === 0 ? (
         <div style={{ background: "#1A1A1A", padding: 24, borderRadius: 12, textAlign: "center", color: "#ffffff" }}>
-          É necessário ter pelo menos 2 avaliações para comparar. Este aluno tem {all.length}.
+          Nenhuma avaliação registrada ainda para este aluno.
         </div>
       ) : (
+
         <>
           {/* Seleção de avaliações */}
           <div style={{ background: "#1A1A1A", borderRadius: 12, padding: 14, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
