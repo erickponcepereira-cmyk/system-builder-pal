@@ -16,13 +16,18 @@ export interface ProductDetail {
   commissionLevel1?: number | null;
   commissionLevel2?: number | null;
   commissionLevel3?: number | null;
+  // Valores R$ absolutos calculados pelo motor de slots (preferidos quando presentes)
+  commissionCoachAbsolute?: number | null;
+  commissionLevel1Absolute?: number | null;
+  commissionLevel2Absolute?: number | null;
+  commissionLevel3Absolute?: number | null;
   // Custos / taxas para cálculo realista da comissão líquida
-  appFee?: number | null;            // taxa fixa do app (R$)
-  appFeePercentage?: number | null;  // taxa do app (%)
-  cardFeePercentage?: number | null; // taxa do cartão (%)
-  taxPercentage?: number | null;     // imposto (%)
-  cost?: number | null;              // custo do produto (R$)
-  otherCosts?: number | null;        // outros custos (R$)
+  appFee?: number | null;
+  appFeePercentage?: number | null;
+  cardFeePercentage?: number | null;
+  taxPercentage?: number | null;
+  cost?: number | null;
+  otherCosts?: number | null;
 }
 
 const fmt = (n: number) =>
