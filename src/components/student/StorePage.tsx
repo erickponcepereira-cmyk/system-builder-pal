@@ -70,11 +70,11 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,creator_coach_id").eq("status", "active").order("sort_order"),
+      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee_percentage,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
     ]);
 
     const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
@@ -105,7 +105,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         imageUrl: p.image_url,
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
-        appFee: p.app_fee,
+        appFee: p.app_fee, appFeePercentage: p.app_fee_percentage,
+        cardFeePercentage: p.credit_fee_percentage ?? p.card_fee_percentage,
+        taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
       }))),
       ...((digital.data || []).map((p: any) => ({
@@ -129,6 +131,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
         commissionCoach: it.commission_coach, commissionLevel1: it.commission_level1,
         commissionLevel2: it.commission_level2, commissionLevel3: it.commission_level3,
+        appFee: it.app_fee, appFeePercentage: it.app_fee_percentage,
+        cardFeePercentage: it.credit_fee_percentage ?? it.card_fee_percentage,
+        taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
       }))),
     ]);

@@ -16,7 +16,13 @@ export interface ProductDetail {
   commissionLevel1?: number | null;
   commissionLevel2?: number | null;
   commissionLevel3?: number | null;
-  appFee?: number | null;
+  // Custos / taxas para cálculo realista da comissão líquida
+  appFee?: number | null;            // taxa fixa do app (R$)
+  appFeePercentage?: number | null;  // taxa do app (%)
+  cardFeePercentage?: number | null; // taxa do cartão (%)
+  taxPercentage?: number | null;     // imposto (%)
+  cost?: number | null;              // custo do produto (R$)
+  otherCosts?: number | null;        // outros custos (R$)
 }
 
 const fmt = (n: number) =>
@@ -62,7 +68,15 @@ export function ProductDetailModal({
       product.commissionLevel2 != null ||
       product.commissionLevel3 != null);
 
-  const baseAmount = Math.max(0, product.price - (product.appFee || 0));
+  // Base líquida = preço − taxa fixa app − taxa % app − taxa cartão − impostos − custos
+  const price = Number(product.price || 0);
+  const appFeeFlat = Number(product.appFee || 0);
+  const appFeePerc = Number(product.appFeePercentage || 0);
+  const cardPerc = Number(product.cardFeePercentage || 0);
+  const taxPerc = Number(product.taxPercentage || 0);
+  const costFlat = Number(product.cost || 0) + Number(product.otherCosts || 0);
+  const feesValue = appFeeFlat + (price * (appFeePerc + cardPerc + taxPerc)) / 100 + costFlat;
+  const baseAmount = Math.max(0, price - feesValue);
   const coachPct = Number(product.commissionCoach || 0);
   const lvl1 = Number(product.commissionLevel1 || 0);
   const lvl2 = Number(product.commissionLevel2 || 0);
@@ -183,8 +197,7 @@ export function ProductDetailModal({
                   </>
                 )}
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  Cálculo sobre o valor líquido (preço − taxa do app). Valores podem variar conforme
-                  método de pagamento.
+                  Cálculo sobre o valor líquido (preço − taxas do app, cartão, impostos e custos do produto). Valores podem variar conforme método de pagamento.
                 </p>
               </div>
             </div>
