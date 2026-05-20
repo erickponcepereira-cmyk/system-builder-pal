@@ -528,10 +528,13 @@ function AbaRede({
 }
 
 // ─── ABA GANHOS ─────────────────────────────────────────────────────
-function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: number; vendasCoach: number }) {
-  const { liquido: liqVenda } = calcVenda(preco);
-  const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda), [nodes, liqVenda]);
-  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda), [nodes, liqVenda]);
+function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap; preco: number; vendasCoach: number; produtoSel: ProdutoT | null }) {
+  const fees = feesFromProduct(produtoSel);
+  const percs = percsFromProduct(produtoSel);
+  const coachBase = produtoSel?.commission_coach ?? 0;
+  const { liquido: liqVenda, maq, impEmp, sistema, custo } = calcVenda(preco, fees);
+  const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda, percs), [nodes, liqVenda, percs]);
+  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda, coachBase, percs), [nodes, liqVenda, coachBase, percs]);
   const ganhoPropr = {
     ...ganhoUnit,
     bruto: +(ganhoUnit.bruto * vendasCoach).toFixed(2),
@@ -595,7 +598,7 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
                   <div className="flex items-center gap-2">
                     <NivelBadge nivel={ni} />
                     <span className={`text-sm font-semibold ${cor.text}`}>
-                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {REDE_PERCS[ni]}%
+                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {percs[ni]}%
                     </span>
                   </div>
                   <span className={`text-sm font-bold ${cor.text}`}>{fmt(total)}</span>
@@ -635,12 +638,15 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
       )}
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Taxas fixas aplicadas</p>
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Taxas e comissões deste produto</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-zinc-500">
           {[
-            ["Maquininha", fmtp(TAXA_MAQ_PERC)],
-            ["Imposto empresa", fmtp(TAXA_IMP_EMP_PERC)],
-            ["Taxa plataforma", `R$ ${TAXA_SISTEMA_R}`],
+            ["Taxa cartão", fmtp(fees.cardPerc)],
+            ["Imposto empresa", fmtp(fees.taxPerc)],
+            ["Taxa plataforma", `${fmt(sistema)}`],
+            ["Custo do produto", `${fmt(custo)}`],
+            ["Comissão coach", fmtp(coachBase)],
+            ["Comissão L1 / L2 / L3", `${fmtp(percs[0])} / ${fmtp(percs[1])} / ${fmtp(percs[2])}`],
             ["Imposto pessoal", fmtp(TAXA_IMP_PESSOA)],
           ].map(([l, v]) => (
             <div key={l} className="flex justify-between">
@@ -652,6 +658,7 @@ function AbaGanhos({ nodes, preco, vendasCoach }: { nodes: NodesMap; preco: numb
     </div>
   );
 }
+
 
 // ─── COMPONENTE PRINCIPAL ───────────────────────────────────────────
 export function MinhaRede() {
