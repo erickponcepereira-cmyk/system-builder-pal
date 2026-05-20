@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { calculateDistribution, type ValueSlot, type PaymentFeeConfig } from "@/lib/financialEngine";
 import { z } from "zod";
 
 
@@ -74,9 +75,48 @@ export const saveNetworkProjection = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ─── Helpers compartilhados ──────────────────────────────────────────
+function mapSlotRow(s: any): ValueSlot {
+  return {
+    id: s.id,
+    slot_order: s.slot_order,
+    label: s.label,
+    value_type: s.value_type,
+    value_amount: Number(s.value_amount || 0),
+    destination: s.destination,
+    destination_label: s.destination_label || "",
+    is_blocked_until_delivery: !!s.is_blocked_until_delivery,
+    is_system_fee: !!s.is_system_fee,
+    applies_to_referral_sales: s.applies_to_referral_sales !== false,
+    applies_to_student_referral: !!s.applies_to_student_referral,
+    slot_group: s.slot_group ?? null,
+  };
+}
+
+async function loadDefaultFeeConfig(): Promise<PaymentFeeConfig> {
+  const { data } = await supabaseAdmin
+    .from("payment_fee_configs")
+    .select("card_fee_percentage,card_fee_3x12_percentage,pix_fee_percentage")
+    .eq("is_default", true)
+    .maybeSingle();
+  return {
+    card_fee_percentage: Number(data?.card_fee_percentage ?? 4.98),
+    card_fee_3x12_percentage: Number(data?.card_fee_3x12_percentage ?? 4.98),
+    pix_fee_percentage: Number(data?.pix_fee_percentage ?? 0.99),
+  };
+}
+
+function sumByDestination(lines: { destination: string; amount: number }[], dest: string): number {
+  return lines
+    .filter((l) => l.destination === dest)
+    .reduce((s, l) => s + Math.abs(l.amount), 0);
+}
+
+// ─── listSimulatorProducts (com comissões reais) ────────────────────
 export const listSimulatorProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async () => {
+    const fee = await loadDefaultFeeConfig();
     const { data, error } = await supabaseAdmin
       .from("products")
       .select(
@@ -85,21 +125,104 @@ export const listSimulatorProducts = createServerFn({ method: "GET" })
       .eq("status", "active")
       .order("price", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      price: Number(p.price ?? 0),
-      cost: Number(p.cost ?? 0),
-      other_costs: Number(p.other_costs ?? 0),
-      app_fee: Number(p.app_fee ?? 0),
-      app_fee_percentage: Number(p.app_fee_percentage ?? 0),
-      card_fee_percentage: Number(p.card_fee_percentage ?? 0),
-      credit_fee_percentage: Number(p.credit_fee_percentage ?? 0),
-      pix_fee_percentage: Number(p.pix_fee_percentage ?? 0),
-      tax_percentage: Number(p.tax_percentage ?? 0),
-      commission_coach: Number(p.commission_coach ?? 50),
-      commission_level1: Number(p.commission_level1 ?? 15),
-      commission_level2: Number(p.commission_level2 ?? 5),
-      commission_level3: Number(p.commission_level3 ?? 3),
-    }));
+    const rows = data ?? [];
+    const ids = rows.map((p: any) => p.id);
+    const { data: allSlots } = ids.length
+      ? await supabaseAdmin.from("product_value_slots").select("*").in("product_id", ids).order("slot_order")
+      : { data: [] as any[] };
+    const slotsByProduct = new Map<string, ValueSlot[]>();
+    (allSlots || []).forEach((s: any) => {
+      const arr = slotsByProduct.get(s.product_id) || [];
+      arr.push(mapSlotRow(s));
+      slotsByProduct.set(s.product_id, arr);
+    });
+
+    return rows.map((p: any) => {
+      const price = Number(p.price ?? 0);
+      const slots = slotsByProduct.get(p.id) ?? [];
+      const dist = calculateDistribution(price, "pix", fee, slots);
+      const coach_real_commission = Math.max(0, dist.remainder);
+      const network_l1_real = sumByDestination(dist.lines, "network_l1");
+      const network_l2_real = sumByDestination(dist.lines, "network_l2");
+      const network_l3_real = sumByDestination(dist.lines, "network_l3");
+      return {
+        id: p.id,
+        name: p.name,
+        price,
+        cost: Number(p.cost ?? 0),
+        other_costs: Number(p.other_costs ?? 0),
+        app_fee: Number(p.app_fee ?? 0),
+        app_fee_percentage: Number(p.app_fee_percentage ?? 0),
+        card_fee_percentage: Number(p.card_fee_percentage ?? 0),
+        credit_fee_percentage: Number(p.credit_fee_percentage ?? 0),
+        pix_fee_percentage: Number(p.pix_fee_percentage ?? 0),
+        tax_percentage: Number(p.tax_percentage ?? 0),
+        commission_coach: Number(p.commission_coach ?? 50),
+        commission_level1: Number(p.commission_level1 ?? 15),
+        commission_level2: Number(p.commission_level2 ?? 5),
+        commission_level3: Number(p.commission_level3 ?? 3),
+        // Valores reais por venda (R$) calculados pelo motor de slots
+        coach_real_commission,
+        network_l1_real,
+        network_l2_real,
+        network_l3_real,
+        base_distributable: dist.base_distributable,
+      };
+    });
+  });
+
+// ─── listProductsWithRealEarnings (esteira / loja) ──────────────────
+export const listProductsWithRealEarnings = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async () => {
+    const fee = await loadDefaultFeeConfig();
+    const { data: products } = await supabaseAdmin
+      .from("products")
+      .select("id,name,price,original_price,subtitle,description,is_featured,badge_label,status,image_url,sort_order")
+      .eq("status", "active")
+      .order("sort_order", { ascending: true });
+    if (!products?.length) return [];
+    const ids = products.map((p: any) => p.id);
+    const { data: allSlots } = await supabaseAdmin
+      .from("product_value_slots")
+      .select("*")
+      .in("product_id", ids)
+      .order("slot_order");
+    const slotsByProduct = new Map<string, ValueSlot[]>();
+    (allSlots || []).forEach((s: any) => {
+      const arr = slotsByProduct.get(s.product_id) || [];
+      arr.push(mapSlotRow(s));
+      slotsByProduct.set(s.product_id, arr);
+    });
+
+    return (products as any[]).map((p) => {
+      const price = Number(p.price || 0);
+      const slots = slotsByProduct.get(p.id) ?? [];
+      const dist = calculateDistribution(price, "pix", fee, slots);
+      const coachCommission = Math.max(0, dist.remainder);
+      const networkL1 = sumByDestination(dist.lines, "network_l1");
+      const networkL2 = sumByDestination(dist.lines, "network_l2");
+      const networkL3 = sumByDestination(dist.lines, "network_l3");
+      const pct = (v: number) => (price > 0 ? (v / price) * 100 : 0);
+      return {
+        id: p.id,
+        name: p.name,
+        price,
+        original_price: p.original_price ? Number(p.original_price) : null,
+        subtitle: p.subtitle,
+        description: p.description,
+        is_featured: p.is_featured,
+        badge_label: p.badge_label,
+        image_url: p.image_url,
+        coachCommission,
+        coachCommissionPct: pct(coachCommission),
+        networkL1,
+        networkL1Pct: pct(networkL1),
+        networkL2,
+        networkL2Pct: pct(networkL2),
+        networkL3,
+        networkL3Pct: pct(networkL3),
+        baseDistributable: dist.base_distributable,
+      };
+    });
   });
