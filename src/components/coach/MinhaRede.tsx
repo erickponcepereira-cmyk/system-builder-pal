@@ -7,22 +7,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { getNetworkProjection, saveNetworkProjection, listSimulatorProducts } from "@/lib/coach-network.functions";
 import { toast } from "sonner";
 
-// ─── CONSTANTES FIXAS ────────────────────────────────────────────────
-const TAXA_MAQ_PERC = 3.49;
-const TAXA_IMP_EMP_PERC = 6.0;
-const TAXA_SISTEMA_R = 20;
-const TAXA_IMP_PESSOA = 6.0;
-const REDE_PERCS = [10, 5, 3]; // L1, L2, L3
-
-// ─── PRODUTOS BASE ──────────────────────────────────────────────────
-const PRODUTOS_BASE = [
-  { id: "p1", nome: "Workshop Online", preco: 85 },
-  { id: "p2", nome: "Sessão Individual", preco: 100 },
-  { id: "p3", nome: "Pacote Mensal", preco: 350 },
-  { id: "p4", nome: "Programa Trimestral", preco: 900 },
-  { id: "p5", nome: "Mentoria Anual", preco: 2400 },
-];
-
 // ─── HELPERS ────────────────────────────────────────────────────────
 const fmt = (v: number) =>
   "R$ " + Math.abs(+v).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -33,7 +17,26 @@ const uid = () => `nd_${++_uid}_${Date.now()}`;
 
 type NodeT = { id: string; nome: string; vendas: number; parentId: string | null };
 type NodesMap = Record<string, NodeT>;
-type ProdutoT = { id: string; nome: string; preco: number };
+type ProdutoT = {
+  id: string;
+  nome: string;
+  preco: number;
+  cost: number;
+  other_costs: number;
+  app_fee: number;
+  app_fee_percentage: number;
+  card_fee_percentage: number;
+  credit_fee_percentage: number;
+  tax_percentage: number;
+  commission_coach: number;
+  commission_level1: number;
+  commission_level2: number;
+  commission_level3: number;
+};
+
+// Default constants kept only as fallbacks for legacy callers (não usados se produto fornece valores reais)
+const TAXA_IMP_PESSOA = 6.0;
+
 
 // ─── ENGINE DE CÁLCULO ──────────────────────────────────────────────
 function calcVenda(preco: number) {
