@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 
@@ -67,15 +69,19 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   const [salesHistory, setSalesHistory] = useState<CoachSaleRow[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
+
   const load = async () => {
-    const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes] = await Promise.all([
+    const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
       supabase.auth.getUser(),
       supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name" as never).eq("is_active" as never, true as never).order("sort_order" as never),
       supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      fetchRealEarnings().catch(() => [] as any[]),
     ]);
+    const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
     const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
     setStoreSections(sections);
@@ -96,7 +102,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
     }
 
     setItems([
-      ...((plans.data || []).map((p: any) => ({
+      ...((plans.data || []).map((p: any) => {
+        const e = earningsById.get(p.id);
+        return ({
         id: `plan-${p.id}`, sourceId: p.id, title: p.name, subtitle: p.subtitle, description: p.description,
         price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
         category: productCategory(String(p.product_type || p.type)), kind: "challenge" as const,
@@ -105,11 +113,15 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         imageUrl: p.image_url,
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
+        commissionCoachAbsolute: e?.coachCommission ?? null,
+        commissionLevel1Absolute: e?.networkL1 ?? null,
+        commissionLevel2Absolute: e?.networkL2 ?? null,
+        commissionLevel3Absolute: e?.networkL3 ?? null,
         appFee: p.app_fee, appFeePercentage: p.app_fee_percentage,
         cardFeePercentage: p.credit_fee_percentage ?? p.card_fee_percentage,
         taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
-      }))),
+      });})),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
         price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,

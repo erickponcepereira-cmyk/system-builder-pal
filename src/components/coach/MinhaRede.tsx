@@ -32,6 +32,11 @@ type ProdutoT = {
   commission_level1: number;
   commission_level2: number;
   commission_level3: number;
+  // Valores reais por venda (R$) calculados pelo motor de slots
+  coach_real_commission: number;
+  network_l1_real: number;
+  network_l2_real: number;
+  network_l3_real: number;
 };
 
 // Default constants kept only as fallbacks for legacy callers (não usados se produto fornece valores reais)
@@ -97,36 +102,28 @@ function getN1(nodes: NodesMap) {
   return Object.values(nodes).filter((n) => n.parentId === null);
 }
 
-function calcGanhosRede(nodes: NodesMap, liquidoVenda: number, percs: number[]) {
+/** Ganhos da rede usando valores R$ reais por venda por nível (não %). */
+function calcGanhosRede(nodes: NodesMap, perSale: number[]) {
   let totalBruto = 0;
-  const detalhes: { id: string; nome: string; nivel: number; perc: number; bruto: number; vendas: number }[] = [];
+  const detalhes: { id: string; nome: string; nivel: number; perSale: number; bruto: number; vendas: number }[] = [];
 
   Object.values(nodes).forEach((node) => {
     const nivel = getNivel(nodes, node.id);
-    if (nivel >= percs.length) return;
-    const perc = percs[nivel];
-    const bruto = +(liquidoVenda * perc / 100 * node.vendas).toFixed(2);
+    if (nivel >= perSale.length) return;
+    const valor = perSale[nivel];
+    const bruto = +(valor * node.vendas).toFixed(2);
     totalBruto += bruto;
-    detalhes.push({ id: node.id, nome: node.nome, nivel, perc, bruto, vendas: node.vendas });
+    detalhes.push({ id: node.id, nome: node.nome, nivel, perSale: valor, bruto, vendas: node.vendas });
   });
 
   const { imp, liquido } = calcLiqPessoa(totalBruto);
   return { totalBruto: +totalBruto.toFixed(2), imp, liquido, detalhes };
 }
 
-function calcVendaPropria(nodes: NodesMap, liquidoVenda: number, coachPercBase: number, percs: number[]) {
-  const todos = Object.values(nodes);
-  const n1Existe = todos.some((n) => n.parentId === null);
-  const n2Existe = todos.some((n) => n.parentId !== null && getNivel(nodes, n.id) === 1);
-  const n3Existe = todos.some((n) => getNivel(nodes, n.id) === 2);
-
-  const existe = [n1Existe, n2Existe, n3Existe];
-  let retorno = 0;
-  percs.forEach((p, i) => { if (!existe[i]) retorno += p; });
-
-  const coachPerc = coachPercBase + retorno;
-  const bruto = +(liquidoVenda * coachPerc / 100).toFixed(2);
-  return { ...calcLiqPessoa(bruto), perc: coachPerc, retorno };
+/** Ganhos do coach por venda própria usando o valor R$ real da comissão direta. */
+function calcVendaPropria(coachPerSale: number) {
+  const bruto = +coachPerSale.toFixed(2);
+  return { ...calcLiqPessoa(bruto) };
 }
 
 
@@ -531,10 +528,16 @@ function AbaRede({
 function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap; preco: number; vendasCoach: number; produtoSel: ProdutoT | null }) {
   const fees = feesFromProduct(produtoSel);
   const percs = percsFromProduct(produtoSel);
-  const coachBase = produtoSel?.commission_coach ?? 0;
   const { liquido: liqVenda, maq, impEmp, sistema, custo } = calcVenda(preco, fees);
-  const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda, percs), [nodes, liqVenda, percs]);
-  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda, coachBase, percs), [nodes, liqVenda, coachBase, percs]);
+  // Valores R$ reais por venda — vêm do motor de slots
+  const coachPerSale = produtoSel?.coach_real_commission ?? 0;
+  const perSaleNetwork = [
+    produtoSel?.network_l1_real ?? 0,
+    produtoSel?.network_l2_real ?? 0,
+    produtoSel?.network_l3_real ?? 0,
+  ];
+  const ganhoRede = useMemo(() => calcGanhosRede(nodes, perSaleNetwork), [nodes, produtoSel]);
+  const ganhoUnit = useMemo(() => calcVendaPropria(coachPerSale), [coachPerSale]);
   const ganhoPropr = {
     ...ganhoUnit,
     bruto: +(ganhoUnit.bruto * vendasCoach).toFixed(2),
@@ -567,11 +570,10 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Sua venda direta ({vendasCoach} venda{vendasCoach !== 1 ? "s" : ""})</p>
-        {([
-          { label: `Bruto (${ganhoUnit.perc}% × ${vendasCoach})`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
-          ganhoUnit.retorno > 0 ? { label: `(+) Níveis vazios devolvidos +${ganhoUnit.retorno}%`, val: fmt(+(liqVenda * ganhoUnit.retorno / 100 * vendasCoach).toFixed(2)), style: "text-emerald-400 font-medium" } : null,
+        {[
+          { label: `Bruto (${fmt(coachPerSale)} × ${vendasCoach})`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
           { label: `(-) Imposto pessoal ${fmtp(TAXA_IMP_PESSOA)}`, val: `- ${fmt(ganhoPropr.imp)}`, style: "text-red-400" },
-        ].filter(Boolean) as { label: string; val: string; style: string }[]).map((r, i) => (
+        ].map((r, i) => (
           <div key={i} className="flex justify-between py-1.5 border-b border-white/5 text-sm">
             <span className="text-zinc-400">{r.label}</span>
             <span className={r.style}>{r.val}</span>
@@ -581,7 +583,7 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
           <span className="text-zinc-300">Líquido total das suas vendas</span>
           <span className="text-violet-400">{fmt(ganhoPropr.liquido)}</span>
         </div>
-        <p className="text-xs text-zinc-600 mt-2">Líquido por unidade: <b className="text-zinc-400">{fmt(ganhoUnit.liquido)}</b></p>
+        <p className="text-xs text-zinc-600 mt-2">Líquido por unidade: <b className="text-zinc-400">{fmt(ganhoUnit.liquido)}</b> · Comissão real do produto (motor de slots)</p>
       </div>
 
       {ganhoRede.detalhes.length > 0 && (
@@ -598,7 +600,7 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
                   <div className="flex items-center gap-2">
                     <NivelBadge nivel={ni} />
                     <span className={`text-sm font-semibold ${cor.text}`}>
-                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {percs[ni]}%
+                      {grupo.length} membro{grupo.length !== 1 ? "s" : ""} · {fmt(perSaleNetwork[ni])}/venda
                     </span>
                   </div>
                   <span className={`text-sm font-bold ${cor.text}`}>{fmt(total)}</span>
@@ -607,7 +609,7 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
                   {grupo.map((d) => (
                     <div key={d.id} className="flex justify-between text-xs text-zinc-400">
                       <span className="truncate mr-2">{d.nome}</span>
-                      <span className="flex-shrink-0">{d.vendas} × {fmt(+(liqVenda * d.perc / 100).toFixed(2))} = <b>{fmt(d.bruto)}</b></span>
+                      <span className="flex-shrink-0">{d.vendas} × {fmt(d.perSale)} = <b>{fmt(d.bruto)}</b></span>
                     </div>
                   ))}
                 </div>
@@ -645,8 +647,8 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
             ["Imposto empresa", fmtp(fees.taxPerc)],
             ["Taxa plataforma", `${fmt(sistema)}`],
             ["Custo do produto", `${fmt(custo)}`],
-            ["Comissão coach", fmtp(coachBase)],
-            ["Comissão L1 / L2 / L3", `${fmtp(percs[0])} / ${fmtp(percs[1])} / ${fmtp(percs[2])}`],
+            ["Comissão coach (real)", fmt(coachPerSale)],
+            ["Rede L1 / L2 / L3 (R$/venda)", `${fmt(perSaleNetwork[0])} / ${fmt(perSaleNetwork[1])} / ${fmt(perSaleNetwork[2])}`],
             ["Imposto pessoal", fmtp(TAXA_IMP_PESSOA)],
           ].map(([l, v]) => (
             <div key={l} className="flex justify-between">
@@ -695,6 +697,10 @@ export function MinhaRede() {
           commission_level1: p.commission_level1 ?? 15,
           commission_level2: p.commission_level2 ?? 5,
           commission_level3: p.commission_level3 ?? 3,
+          coach_real_commission: Number(p.coach_real_commission ?? 0),
+          network_l1_real: Number(p.network_l1_real ?? 0),
+          network_l2_real: Number(p.network_l2_real ?? 0),
+          network_l3_real: Number(p.network_l3_real ?? 0),
         }));
         setProdutos(mapped);
         if (mapped.length > 0) {

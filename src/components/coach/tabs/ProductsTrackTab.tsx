@@ -1,26 +1,47 @@
 import { useEffect, useState } from "react";
 import { Star, Calculator } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
 import { money } from "@/routes/coach";
+import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
 
-type ProductRow = { id: string; name: string; subtitle: string | null; description: string | null; price: number | null; original_price: number | null; is_featured: boolean | null; commission_coach: number | null; commission_level1: number | null; commission_level2: number | null; commission_level3: number | null; badge_label: string | null; status: string | null };
+type ProductRow = {
+  id: string;
+  name: string;
+  price: number;
+  original_price: number | null;
+  subtitle: string | null;
+  description: string | null;
+  is_featured: boolean | null;
+  badge_label: string | null;
+  image_url: string | null;
+  coachCommission: number;
+  coachCommissionPct: number;
+  networkL1: number;
+  networkL1Pct: number;
+  networkL2: number;
+  networkL2Pct: number;
+  networkL3: number;
+  networkL3Pct: number;
+  baseDistributable: number;
+};
 
 export function ProductsTrackTab() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchProducts = useServerFn(listProductsWithRealEarnings);
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,name,subtitle,description,price,original_price,is_featured,commission_coach,commission_level1,commission_level2,commission_level3,badge_label,status")
-        .eq("status", "active")
-        .order("sort_order", { ascending: true });
-      if (error) toast.error("Erro ao carregar produtos disponíveis");
-      setProducts((data as ProductRow[]) || []);
-      setLoading(false);
+      try {
+        const data = await fetchProducts();
+        setProducts(data as ProductRow[]);
+      } catch (e) {
+        toast.error("Erro ao carregar produtos");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -30,7 +51,7 @@ export function ProductsTrackTab() {
     <>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Esteira de Produtos</h1>
-        <p className="text-sm text-white/50">Produtos disponíveis e ganhos estimados por venda</p>
+        <p className="text-sm text-white/50">Produtos disponíveis e ganhos reais por venda (calculados pelo motor de slots)</p>
       </div>
 
       {featured && (
@@ -47,9 +68,9 @@ export function ProductsTrackTab() {
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 ["Venda", money(featured.price)],
-                ["Você", `${featured.commission_coach || 0}%`],
-                ["N1", `${featured.commission_level1 || 0}%`],
-                ["N2/N3", `${featured.commission_level2 || 0}% / ${featured.commission_level3 || 0}%`],
+                ["Você", money(featured.coachCommission)],
+                ["N1", money(featured.networkL1)],
+                ["N2 / N3", `${money(featured.networkL2)} / ${money(featured.networkL3)}`],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-xl bg-black/25 p-3">
                   <p className="text-[10px] uppercase text-white/40">{label}</p>
@@ -64,27 +85,24 @@ export function ProductsTrackTab() {
       <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
         {loading ? <p className="text-sm text-white/50">Carregando produtos...</p> : products.length === 0 ? <p className="text-sm text-white/50">Nenhum produto ativo encontrado.</p> : (
           <div className="grid gap-3 md:grid-cols-2">
-            {products.map((product, index) => {
-              const coachGain = Number(product.price || 0) * Number(product.commission_coach || 0) / 100;
-              return (
-                <div key={product.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase text-white/35">Etapa {index + 1}</p>
-                      <h3 className="text-sm font-bold text-white">{product.name}</h3>
-                      <p className="mt-1 line-clamp-2 text-xs text-white/45">{product.subtitle || product.description || "Produto disponível para venda."}</p>
-                    </div>
-                    <span className="rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary">{product.badge_label || "Ativo"}</span>
+            {products.map((product, index) => (
+              <div key={product.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-white/35">Etapa {index + 1}</p>
+                    <h3 className="text-sm font-bold text-white">{product.name}</h3>
+                    <p className="mt-1 line-clamp-2 text-xs text-white/45">{product.subtitle || product.description || "Produto disponível para venda."}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Preço</span><p className="font-bold text-white">{money(product.price)}</p></div>
-                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Ganho direto</span><p className="font-bold text-success">{money(coachGain)}</p></div>
-                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Rede N1</span><p className="font-bold text-white">{product.commission_level1 || 0}%</p></div>
-                    <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Rede N2/N3</span><p className="font-bold text-white">{product.commission_level2 || 0}% / {product.commission_level3 || 0}%</p></div>
-                  </div>
+                  <span className="rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary">{product.badge_label || "Ativo"}</span>
                 </div>
-              );
-            })}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Preço</span><p className="font-bold text-white">{money(product.price)}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Ganho direto</span><p className="font-bold text-success">{money(product.coachCommission)}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Rede N1</span><p className="font-bold text-white">{money(product.networkL1)}</p></div>
+                  <div className="rounded-lg bg-white/5 p-2"><span className="text-white/40">Rede N2 / N3</span><p className="font-bold text-white">{money(product.networkL2)} / {money(product.networkL3)}</p></div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

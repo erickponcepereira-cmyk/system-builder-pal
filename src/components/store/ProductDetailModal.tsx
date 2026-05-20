@@ -16,13 +16,18 @@ export interface ProductDetail {
   commissionLevel1?: number | null;
   commissionLevel2?: number | null;
   commissionLevel3?: number | null;
+  // Valores R$ absolutos calculados pelo motor de slots (preferidos quando presentes)
+  commissionCoachAbsolute?: number | null;
+  commissionLevel1Absolute?: number | null;
+  commissionLevel2Absolute?: number | null;
+  commissionLevel3Absolute?: number | null;
   // Custos / taxas para cálculo realista da comissão líquida
-  appFee?: number | null;            // taxa fixa do app (R$)
-  appFeePercentage?: number | null;  // taxa do app (%)
-  cardFeePercentage?: number | null; // taxa do cartão (%)
-  taxPercentage?: number | null;     // imposto (%)
-  cost?: number | null;              // custo do produto (R$)
-  otherCosts?: number | null;        // outros custos (R$)
+  appFee?: number | null;
+  appFeePercentage?: number | null;
+  cardFeePercentage?: number | null;
+  taxPercentage?: number | null;
+  cost?: number | null;
+  otherCosts?: number | null;
 }
 
 const fmt = (n: number) =>
@@ -64,11 +69,11 @@ export function ProductDetailModal({
   const hasCommissionData =
     showCommissions &&
     (product.commissionCoach != null ||
+      product.commissionCoachAbsolute != null ||
       product.commissionLevel1 != null ||
       product.commissionLevel2 != null ||
       product.commissionLevel3 != null);
 
-  // Base líquida = preço − taxa fixa app − taxa % app − taxa cartão − impostos − custos
   const price = Number(product.price || 0);
   const appFeeFlat = Number(product.appFee || 0);
   const appFeePerc = Number(product.appFeePercentage || 0);
@@ -81,9 +86,14 @@ export function ProductDetailModal({
   const lvl1 = Number(product.commissionLevel1 || 0);
   const lvl2 = Number(product.commissionLevel2 || 0);
   const lvl3 = Number(product.commissionLevel3 || 0);
-  const coachGain = (baseAmount * coachPct) / 100;
-  // Sem upline: o próprio coach pode receber também os níveis (regra MLM comum)
-  const extraGain = !hasUpline ? (baseAmount * (lvl1 + lvl2 + lvl3)) / 100 : 0;
+  // Preferir valores R$ absolutos (motor de slots) quando presentes
+  const coachGain = product.commissionCoachAbsolute != null
+    ? Number(product.commissionCoachAbsolute)
+    : (baseAmount * coachPct) / 100;
+  const l1Abs = product.commissionLevel1Absolute != null ? Number(product.commissionLevel1Absolute) : (baseAmount * lvl1) / 100;
+  const l2Abs = product.commissionLevel2Absolute != null ? Number(product.commissionLevel2Absolute) : (baseAmount * lvl2) / 100;
+  const l3Abs = product.commissionLevel3Absolute != null ? Number(product.commissionLevel3Absolute) : (baseAmount * lvl3) / 100;
+  const extraGain = !hasUpline ? l1Abs + l2Abs + l3Abs : 0;
   const totalEstimated = coachGain + extraGain;
 
   return (
@@ -164,19 +174,19 @@ export function ProductDetailModal({
               <div className="grid grid-cols-4 gap-2 text-center text-xs">
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Você</p>
-                  <p className="font-bold text-foreground">{coachPct}%</p>
+                  <p className="font-bold text-foreground">{fmt(coachGain)}</p>
                 </div>
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Nível 1</p>
-                  <p className="font-bold text-foreground">{lvl1}%</p>
+                  <p className="font-bold text-foreground">{fmt(l1Abs)}</p>
                 </div>
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Nível 2</p>
-                  <p className="font-bold text-foreground">{lvl2}%</p>
+                  <p className="font-bold text-foreground">{fmt(l2Abs)}</p>
                 </div>
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Nível 3</p>
-                  <p className="font-bold text-foreground">{lvl3}%</p>
+                  <p className="font-bold text-foreground">{fmt(l3Abs)}</p>
                 </div>
               </div>
               <div className="mt-3 rounded-lg bg-card p-3">

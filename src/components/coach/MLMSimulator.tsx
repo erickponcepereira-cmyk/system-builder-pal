@@ -7,16 +7,15 @@ type Product = {
   id: string;
   name: string;
   price: number;
-  commission_coach: number;
-  commission_level1: number;
-  commission_level2: number;
-  commission_level3: number;
+  coach_real_commission: number;
+  network_l1_real: number;
+  network_l2_real: number;
+  network_l3_real: number;
 };
 
 export function MLMSimulator() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productId, setProductId] = useState<string>("");
-  const [productPrice, setProductPrice] = useState(197);
   const [directStudents, setDirectStudents] = useState(20);
   const [networkLevels, setNetworkLevels] = useState({
     level1: 10,
@@ -31,10 +30,9 @@ export function MLMSimulator() {
     (async () => {
       try {
         const list = await fetchProducts();
-        setProducts(list);
+        setProducts(list as Product[]);
         if (list.length > 0) {
           setProductId(list[0].id);
-          setProductPrice(list[0].price);
         }
       } catch (e) {
         console.error(e);
@@ -49,24 +47,24 @@ export function MLMSimulator() {
     [products, productId]
   );
 
-  const rates = useMemo(
+  const perSale = useMemo(
     () => ({
-      coach: selectedProduct?.commission_coach ?? 50,
-      level1: selectedProduct?.commission_level1 ?? 15,
-      level2: selectedProduct?.commission_level2 ?? 5,
-      level3: selectedProduct?.commission_level3 ?? 3,
+      coach: selectedProduct?.coach_real_commission ?? 0,
+      l1: selectedProduct?.network_l1_real ?? 0,
+      l2: selectedProduct?.network_l2_real ?? 0,
+      l3: selectedProduct?.network_l3_real ?? 0,
     }),
     [selectedProduct]
   );
 
   const result = useMemo(() => {
-    const directRevenue = directStudents * productPrice * (rates.coach / 100);
+    const directRevenue = directStudents * perSale.coach;
     const level1Count = directStudents * networkLevels.level1;
-    const level1Revenue = level1Count * productPrice * (rates.level1 / 100);
+    const level1Revenue = level1Count * perSale.l1;
     const level2Count = level1Count * networkLevels.level2;
-    const level2Revenue = level2Count * productPrice * (rates.level2 / 100);
+    const level2Revenue = level2Count * perSale.l2;
     const level3Count = level2Count * networkLevels.level3;
-    const level3Revenue = level3Count * productPrice * (rates.level3 / 100);
+    const level3Revenue = level3Count * perSale.l3;
 
     const totalNetwork = level1Count + level2Count + level3Count;
     const totalMonthly = directRevenue + level1Revenue + level2Revenue + level3Revenue;
@@ -83,7 +81,7 @@ export function MLMSimulator() {
       totalMonthly,
       totalAnnual: totalMonthly * 12,
     };
-  }, [productPrice, directStudents, networkLevels, rates]);
+  }, [directStudents, networkLevels, perSale]);
 
   const fmt = (n: number) =>
     n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -110,11 +108,7 @@ export function MLMSimulator() {
         ) : (
           <select
             value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value);
-              const p = products.find((pp) => pp.id === e.target.value);
-              if (p) setProductPrice(p.price);
-            }}
+            onChange={(e) => setProductId(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
             style={{ backgroundColor: "#252525" }}
           >
@@ -129,28 +123,10 @@ export function MLMSimulator() {
 
       {/* Inputs */}
       <div className="space-y-3 mb-5">
-        <div>
-          <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
-            <span>Preço do produto</span>
-            <input
-              type="number"
-              min={1}
-              value={productPrice}
-              onChange={(e) => setProductPrice(Math.max(1, +e.target.value || 0))}
-              className="w-24 rounded-md px-2 py-1 text-xs font-bold text-white text-right outline-none focus:ring-1 focus:ring-primary"
-              style={{ backgroundColor: "#252525" }}
-            />
-          </label>
-          <input
-            type="range"
-            min={49}
-            max={9997}
-            step={10}
-            value={productPrice}
-            onChange={(e) => setProductPrice(Number(e.target.value))}
-            className="w-full accent-primary"
-          />
+        <div className="rounded-lg px-3 py-2 text-[11px] text-white/60" style={{ backgroundColor: "#0F0F0F" }}>
+          Ganho por venda direta: <b className="text-success">{fmt(perSale.coach)}</b> · Rede L1 {fmt(perSale.l1)} · L2 {fmt(perSale.l2)} · L3 {fmt(perSale.l3)}
         </div>
+
 
         <div>
           <label className="flex items-center justify-between text-xs text-white/60 mb-1.5">
@@ -197,10 +173,10 @@ export function MLMSimulator() {
 
       {/* Breakdown */}
       <div className="space-y-1.5 mb-4">
-        <Row label={`Direto (${rates.coach}%) — você como coach`} value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos`} />
-        <Row label={`Upline 1 (${rates.level1}%) — indicação direta`} value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos`} />
-        <Row label={`Upline 2 (${rates.level2}%) — abaixo do Upline 1`} value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos`} />
-        <Row label={`Upline 3 (${rates.level3}%) — abaixo do Upline 2`} value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos`} />
+        <Row label="Direto — você como coach" value={fmt(result.directRevenue)} sublabel={`${directStudents} alunos × ${fmt(perSale.coach)}`} />
+        <Row label="Upline 1 — indicação direta" value={fmt(result.level1Revenue)} sublabel={`${result.level1Count} alunos × ${fmt(perSale.l1)}`} />
+        <Row label="Upline 2 — abaixo do Upline 1" value={fmt(result.level2Revenue)} sublabel={`${result.level2Count} alunos × ${fmt(perSale.l2)}`} />
+        <Row label="Upline 3 — abaixo do Upline 2" value={fmt(result.level3Revenue)} sublabel={`${result.level3Count} alunos × ${fmt(perSale.l3)}`} />
       </div>
 
       {/* Total */}
