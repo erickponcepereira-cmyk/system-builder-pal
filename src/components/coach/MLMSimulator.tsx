@@ -7,16 +7,15 @@ type Product = {
   id: string;
   name: string;
   price: number;
-  commission_coach: number;
-  commission_level1: number;
-  commission_level2: number;
-  commission_level3: number;
+  coach_real_commission: number;
+  network_l1_real: number;
+  network_l2_real: number;
+  network_l3_real: number;
 };
 
 export function MLMSimulator() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productId, setProductId] = useState<string>("");
-  const [productPrice, setProductPrice] = useState(197);
   const [directStudents, setDirectStudents] = useState(20);
   const [networkLevels, setNetworkLevels] = useState({
     level1: 10,
@@ -31,10 +30,9 @@ export function MLMSimulator() {
     (async () => {
       try {
         const list = await fetchProducts();
-        setProducts(list);
+        setProducts(list as Product[]);
         if (list.length > 0) {
           setProductId(list[0].id);
-          setProductPrice(list[0].price);
         }
       } catch (e) {
         console.error(e);
@@ -49,24 +47,24 @@ export function MLMSimulator() {
     [products, productId]
   );
 
-  const rates = useMemo(
+  const perSale = useMemo(
     () => ({
-      coach: selectedProduct?.commission_coach ?? 50,
-      level1: selectedProduct?.commission_level1 ?? 15,
-      level2: selectedProduct?.commission_level2 ?? 5,
-      level3: selectedProduct?.commission_level3 ?? 3,
+      coach: selectedProduct?.coach_real_commission ?? 0,
+      l1: selectedProduct?.network_l1_real ?? 0,
+      l2: selectedProduct?.network_l2_real ?? 0,
+      l3: selectedProduct?.network_l3_real ?? 0,
     }),
     [selectedProduct]
   );
 
   const result = useMemo(() => {
-    const directRevenue = directStudents * productPrice * (rates.coach / 100);
+    const directRevenue = directStudents * perSale.coach;
     const level1Count = directStudents * networkLevels.level1;
-    const level1Revenue = level1Count * productPrice * (rates.level1 / 100);
+    const level1Revenue = level1Count * perSale.l1;
     const level2Count = level1Count * networkLevels.level2;
-    const level2Revenue = level2Count * productPrice * (rates.level2 / 100);
+    const level2Revenue = level2Count * perSale.l2;
     const level3Count = level2Count * networkLevels.level3;
-    const level3Revenue = level3Count * productPrice * (rates.level3 / 100);
+    const level3Revenue = level3Count * perSale.l3;
 
     const totalNetwork = level1Count + level2Count + level3Count;
     const totalMonthly = directRevenue + level1Revenue + level2Revenue + level3Revenue;
@@ -83,7 +81,7 @@ export function MLMSimulator() {
       totalMonthly,
       totalAnnual: totalMonthly * 12,
     };
-  }, [productPrice, directStudents, networkLevels, rates]);
+  }, [directStudents, networkLevels, perSale]);
 
   const fmt = (n: number) =>
     n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
