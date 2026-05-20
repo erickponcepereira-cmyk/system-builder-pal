@@ -411,18 +411,25 @@ function AbaProduto({
 
 // ─── ABA REDE ───────────────────────────────────────────────────────
 function AbaRede({
-  nodes, setNodes, vendasCoach, setVendasCoach,
+  nodes, setNodes, vendasCoach, setVendasCoach, produtoSel,
 }: {
   nodes: NodesMap;
   setNodes: React.Dispatch<React.SetStateAction<NodesMap>>;
   vendasCoach: number;
   setVendasCoach: React.Dispatch<React.SetStateAction<number>>;
+  produtoSel: ProdutoT | null;
 }) {
   const todos = Object.values(nodes);
   const n1Nodes = getN1(nodes);
   const n1count = todos.filter((n) => getNivel(nodes, n.id) === 0).length;
   const n2count = todos.filter((n) => getNivel(nodes, n.id) === 1).length;
   const n3count = todos.filter((n) => getNivel(nodes, n.id) === 2).length;
+  const perSale = [
+    produtoSel?.network_l1_real ?? 0,
+    produtoSel?.network_l2_real ?? 0,
+    produtoSel?.network_l3_real ?? 0,
+  ];
+  const coachReal = produtoSel?.coach_real_commission ?? 0;
 
   const adicionarN1 = () => {
     const id = uid();
@@ -434,6 +441,15 @@ function AbaRede({
 
   return (
     <div className="space-y-5">
+      {produtoSel && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs text-zinc-400">
+          <span className="text-zinc-500">Produto: </span>
+          <b className="text-zinc-200">{produtoSel.nome}</b>
+          <span className="text-zinc-500"> · sua comissão por venda direta: </span>
+          <b className="text-emerald-400">{fmt(coachReal)}</b>
+        </div>
+      )}
+
       <div className="grid grid-cols-4 gap-2">
         {[
           { label: "Total", val: todos.length, cor: "text-zinc-200" },
@@ -450,9 +466,9 @@ function AbaRede({
 
       <div className="flex flex-wrap gap-4 text-xs">
         {[
-          { nivel: 0, label: "Linha 1 — indicação direta (10%)" },
-          { nivel: 1, label: "Linha 2 — abaixo da Linha 1 (5%)" },
-          { nivel: 2, label: "Linha 3 — abaixo da Linha 2 (3%)" },
+          { nivel: 0, label: `Linha 1 — indicação direta (${fmt(perSale[0])}/venda)` },
+          { nivel: 1, label: `Linha 2 — abaixo da Linha 1 (${fmt(perSale[1])}/venda)` },
+          { nivel: 2, label: `Linha 3 — abaixo da Linha 2 (${fmt(perSale[2])}/venda)` },
         ].map((l) => (
           <div key={l.nivel} className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${COR[l.nivel].dot}`} />
