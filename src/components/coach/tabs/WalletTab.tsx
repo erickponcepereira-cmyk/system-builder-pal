@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Wallet, X } from "lucide-react";
+import { Wallet, X, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
+
 
 export function WalletTab() {
   const [bank, setBank] = useState<{
@@ -18,6 +20,8 @@ export function WalletTab() {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
+
 
   useEffect(() => {
     (async () => {
@@ -43,7 +47,9 @@ export function WalletTab() {
       }
       setLoadingBank(false);
     })();
+    getMyMasterCoachCrossSales().then((r) => setCross(r)).catch(() => {});
   }, []);
+
 
   const hasBank = Boolean(bank.pix_key);
 
@@ -139,7 +145,42 @@ export function WalletTab() {
         </div>
       </div>
 
+      {cross && cross.rows.length > 0 && (
+        <div className="rounded-2xl p-5 mt-6" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-center gap-2">
+            <Crown className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold text-white">Vendas cruzadas (Master Coach)</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+              <p className="text-[10px] uppercase tracking-wide text-white/40">Total recebido</p>
+              <p className="text-lg font-bold text-white mt-1">R$ {cross.total.toFixed(2).replace(".", ",")}</p>
+            </div>
+            <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+              <p className="text-[10px] uppercase tracking-wide text-white/40">De vendas cruzadas</p>
+              <p className="text-lg font-bold text-white mt-1">R$ {cross.crossTotal.toFixed(2).replace(".", ",")}</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {cross.rows.slice(0, 10).map((r) => (
+              <div key={r.id} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                <div>
+                  <p className="text-xs font-medium text-white">
+                    {r.orderNumber || "Pedido"} {r.isCrossSale && <span className="ml-1 rounded bg-primary/20 px-1.5 py-0.5 text-[9px] text-primary">cruzada</span>}
+                  </p>
+                  <p className="text-[10px] text-white/40">
+                    {r.sellerCoachName ? `vendido por ${r.sellerCoachName}` : "venda direta"} · {new Date(r.createdAt).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-success">+R$ {r.amount.toFixed(2).replace(".", ",")}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {open && (
+
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !saving && setOpen(false)}>
           <div className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
