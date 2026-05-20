@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, PackageCheck, Search, Truck } from "lucide-react";
+import { Loader2, PackageCheck, Search, Truck, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  getOrderNutritionist,
+  listNutritionistPartners,
+  overrideOrderNutritionist,
+} from "@/lib/cross-sales.functions";
+
 
 export const Route = createFileRoute("/admin/orders")({ component: AdminOrders });
 
