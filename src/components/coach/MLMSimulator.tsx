@@ -108,11 +108,7 @@ export function MLMSimulator() {
         ) : (
           <select
             value={productId}
-            onChange={(e) => {
-              setProductId(e.target.value);
-              const p = products.find((pp) => pp.id === e.target.value);
-              if (p) setProductPrice(p.price);
-            }}
+            onChange={(e) => setProductId(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
             style={{ backgroundColor: "#252525" }}
           >
