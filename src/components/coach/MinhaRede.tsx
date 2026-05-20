@@ -528,10 +528,16 @@ function AbaRede({
 function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap; preco: number; vendasCoach: number; produtoSel: ProdutoT | null }) {
   const fees = feesFromProduct(produtoSel);
   const percs = percsFromProduct(produtoSel);
-  const coachBase = produtoSel?.commission_coach ?? 0;
   const { liquido: liqVenda, maq, impEmp, sistema, custo } = calcVenda(preco, fees);
-  const ganhoRede = useMemo(() => calcGanhosRede(nodes, liqVenda, percs), [nodes, liqVenda, percs]);
-  const ganhoUnit = useMemo(() => calcVendaPropria(nodes, liqVenda, coachBase, percs), [nodes, liqVenda, coachBase, percs]);
+  // Valores R$ reais por venda — vêm do motor de slots
+  const coachPerSale = produtoSel?.coach_real_commission ?? 0;
+  const perSaleNetwork = [
+    produtoSel?.network_l1_real ?? 0,
+    produtoSel?.network_l2_real ?? 0,
+    produtoSel?.network_l3_real ?? 0,
+  ];
+  const ganhoRede = useMemo(() => calcGanhosRede(nodes, perSaleNetwork), [nodes, produtoSel]);
+  const ganhoUnit = useMemo(() => calcVendaPropria(coachPerSale), [coachPerSale]);
   const ganhoPropr = {
     ...ganhoUnit,
     bruto: +(ganhoUnit.bruto * vendasCoach).toFixed(2),
@@ -564,11 +570,10 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Sua venda direta ({vendasCoach} venda{vendasCoach !== 1 ? "s" : ""})</p>
-        {([
-          { label: `Bruto (${ganhoUnit.perc}% × ${vendasCoach})`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
-          ganhoUnit.retorno > 0 ? { label: `(+) Níveis vazios devolvidos +${ganhoUnit.retorno}%`, val: fmt(+(liqVenda * ganhoUnit.retorno / 100 * vendasCoach).toFixed(2)), style: "text-emerald-400 font-medium" } : null,
+        {[
+          { label: `Bruto (${fmt(coachPerSale)} × ${vendasCoach})`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
           { label: `(-) Imposto pessoal ${fmtp(TAXA_IMP_PESSOA)}`, val: `- ${fmt(ganhoPropr.imp)}`, style: "text-red-400" },
-        ].filter(Boolean) as { label: string; val: string; style: string }[]).map((r, i) => (
+        ].map((r, i) => (
           <div key={i} className="flex justify-between py-1.5 border-b border-white/5 text-sm">
             <span className="text-zinc-400">{r.label}</span>
             <span className={r.style}>{r.val}</span>
@@ -578,7 +583,7 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
           <span className="text-zinc-300">Líquido total das suas vendas</span>
           <span className="text-violet-400">{fmt(ganhoPropr.liquido)}</span>
         </div>
-        <p className="text-xs text-zinc-600 mt-2">Líquido por unidade: <b className="text-zinc-400">{fmt(ganhoUnit.liquido)}</b></p>
+        <p className="text-xs text-zinc-600 mt-2">Líquido por unidade: <b className="text-zinc-400">{fmt(ganhoUnit.liquido)}</b> · Comissão real do produto (motor de slots)</p>
       </div>
 
       {ganhoRede.detalhes.length > 0 && (
