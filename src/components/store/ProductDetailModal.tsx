@@ -16,7 +16,13 @@ export interface ProductDetail {
   commissionLevel1?: number | null;
   commissionLevel2?: number | null;
   commissionLevel3?: number | null;
-  appFee?: number | null;
+  // Custos / taxas para cálculo realista da comissão líquida
+  appFee?: number | null;            // taxa fixa do app (R$)
+  appFeePercentage?: number | null;  // taxa do app (%)
+  cardFeePercentage?: number | null; // taxa do cartão (%)
+  taxPercentage?: number | null;     // imposto (%)
+  cost?: number | null;              // custo do produto (R$)
+  otherCosts?: number | null;        // outros custos (R$)
 }
 
 const fmt = (n: number) =>
