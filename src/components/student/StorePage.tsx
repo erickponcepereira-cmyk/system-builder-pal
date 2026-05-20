@@ -131,6 +131,9 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
         commissionCoach: it.commission_coach, commissionLevel1: it.commission_level1,
         commissionLevel2: it.commission_level2, commissionLevel3: it.commission_level3,
+        appFee: it.app_fee, appFeePercentage: it.app_fee_percentage,
+        cardFeePercentage: it.credit_fee_percentage ?? it.card_fee_percentage,
+        taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
       }))),
     ]);
