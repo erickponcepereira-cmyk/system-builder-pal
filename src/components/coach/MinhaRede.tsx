@@ -297,7 +297,7 @@ function NodoArvore({
 
 // ─── ABA PRODUTO ────────────────────────────────────────────────────
 function AbaProduto({
-  produtoId, setProdutoId, preco, setPreco, produtos, setProdutos,
+  produtoId, setProdutoId, preco, setPreco, produtos, setProdutos, produtoSel,
 }: {
   produtoId: string;
   setProdutoId: (id: string) => void;
@@ -305,10 +305,12 @@ function AbaProduto({
   setPreco: (v: number) => void;
   produtos: ProdutoT[];
   setProdutos: React.Dispatch<React.SetStateAction<ProdutoT[]>>;
+  produtoSel: ProdutoT | null;
 }) {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nomeTemp, setNomeTemp] = useState("");
-  const { maq, impEmp, sistema, liquido } = calcVenda(preco);
+  const fees = feesFromProduct(produtoSel);
+  const { maq, impEmp, sistema, custo, liquido } = calcVenda(preco, fees);
 
   const selecionar = (p: ProdutoT) => { setProdutoId(p.id); setPreco(p.preco); };
 
@@ -389,9 +391,10 @@ function AbaProduto({
         <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">Composição por venda</p>
         {[
           { label: "Valor do produto", val: fmt(preco), neg: false },
-          { label: `(-) Maquininha ${fmtp(TAXA_MAQ_PERC)}`, val: `- ${fmt(maq)}`, neg: true },
-          { label: `(-) Imposto empresa ${fmtp(TAXA_IMP_EMP_PERC)}`, val: `- ${fmt(impEmp)}`, neg: true },
-          { label: "(-) Taxa da plataforma", val: `- ${fmt(sistema)}`, neg: true },
+          { label: `(-) Taxa cartão ${fmtp(fees.cardPerc)}`, val: `- ${fmt(maq)}`, neg: true },
+          { label: `(-) Imposto empresa ${fmtp(fees.taxPerc)}`, val: `- ${fmt(impEmp)}`, neg: true },
+          { label: `(-) Taxa da plataforma${fees.appPerc ? ` (${fmtp(fees.appPerc)}${fees.appFlat ? ` + R$ ${fees.appFlat}` : ""})` : fees.appFlat ? "" : ""}`, val: `- ${fmt(sistema)}`, neg: true },
+          { label: "(-) Custo do produto", val: `- ${fmt(custo)}`, neg: true },
         ].map((r) => (
           <div key={r.label} className="flex justify-between py-1.5 border-b border-white/5 text-sm">
             <span className="text-zinc-400">{r.label}</span>
@@ -402,11 +405,12 @@ function AbaProduto({
           <span className="text-zinc-300">Líquido distribuível</span>
           <span className="text-emerald-400">{fmt(liquido)}</span>
         </div>
-        <p className="text-xs text-zinc-600 mt-3 flex items-center gap-1.5"><Info size={11} /> Taxas fixas do sistema — não editáveis</p>
+        <p className="text-xs text-zinc-600 mt-3 flex items-center gap-1.5"><Info size={11} /> Taxas, custos e comissões puxados do cadastro do produto no admin</p>
       </div>
     </div>
   );
 }
+
 
 // ─── ABA REDE ───────────────────────────────────────────────────────
 function AbaRede({
