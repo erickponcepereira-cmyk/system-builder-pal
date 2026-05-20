@@ -647,8 +647,8 @@ function AbaGanhos({ nodes, preco, vendasCoach, produtoSel }: { nodes: NodesMap;
             ["Imposto empresa", fmtp(fees.taxPerc)],
             ["Taxa plataforma", `${fmt(sistema)}`],
             ["Custo do produto", `${fmt(custo)}`],
-            ["Comissão coach", fmtp(coachBase)],
-            ["Comissão L1 / L2 / L3", `${fmtp(percs[0])} / ${fmtp(percs[1])} / ${fmtp(percs[2])}`],
+            ["Comissão coach (real)", fmt(coachPerSale)],
+            ["Rede L1 / L2 / L3 (R$/venda)", `${fmt(perSaleNetwork[0])} / ${fmt(perSaleNetwork[1])} / ${fmt(perSaleNetwork[2])}`],
             ["Imposto pessoal", fmtp(TAXA_IMP_PESSOA)],
           ].map(([l, v]) => (
             <div key={l} className="flex justify-between">
