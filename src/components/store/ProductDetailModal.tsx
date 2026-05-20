@@ -69,11 +69,11 @@ export function ProductDetailModal({
   const hasCommissionData =
     showCommissions &&
     (product.commissionCoach != null ||
+      product.commissionCoachAbsolute != null ||
       product.commissionLevel1 != null ||
       product.commissionLevel2 != null ||
       product.commissionLevel3 != null);
 
-  // Base líquida = preço − taxa fixa app − taxa % app − taxa cartão − impostos − custos
   const price = Number(product.price || 0);
   const appFeeFlat = Number(product.appFee || 0);
   const appFeePerc = Number(product.appFeePercentage || 0);
@@ -86,9 +86,14 @@ export function ProductDetailModal({
   const lvl1 = Number(product.commissionLevel1 || 0);
   const lvl2 = Number(product.commissionLevel2 || 0);
   const lvl3 = Number(product.commissionLevel3 || 0);
-  const coachGain = (baseAmount * coachPct) / 100;
-  // Sem upline: o próprio coach pode receber também os níveis (regra MLM comum)
-  const extraGain = !hasUpline ? (baseAmount * (lvl1 + lvl2 + lvl3)) / 100 : 0;
+  // Preferir valores R$ absolutos (motor de slots) quando presentes
+  const coachGain = product.commissionCoachAbsolute != null
+    ? Number(product.commissionCoachAbsolute)
+    : (baseAmount * coachPct) / 100;
+  const l1Abs = product.commissionLevel1Absolute != null ? Number(product.commissionLevel1Absolute) : (baseAmount * lvl1) / 100;
+  const l2Abs = product.commissionLevel2Absolute != null ? Number(product.commissionLevel2Absolute) : (baseAmount * lvl2) / 100;
+  const l3Abs = product.commissionLevel3Absolute != null ? Number(product.commissionLevel3Absolute) : (baseAmount * lvl3) / 100;
+  const extraGain = !hasUpline ? l1Abs + l2Abs + l3Abs : 0;
   const totalEstimated = coachGain + extraGain;
 
   return (
