@@ -174,19 +174,19 @@ export function ProductDetailModal({
               <div className="grid grid-cols-4 gap-2 text-center text-xs">
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Você</p>
-                  <p className="font-bold text-foreground">{coachPct}%</p>
+                  <p className="font-bold text-foreground">{fmt(coachGain)}</p>
                 </div>
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Nível 1</p>
-                  <p className="font-bold text-foreground">{lvl1}%</p>
+                  <p className="font-bold text-foreground">{fmt(l1Abs)}</p>
                 </div>
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Nível 2</p>
-                  <p className="font-bold text-foreground">{lvl2}%</p>
+                  <p className="font-bold text-foreground">{fmt(l2Abs)}</p>
                 </div>
                 <div className="rounded-lg bg-card p-2">
                   <p className="text-muted-foreground">Nível 3</p>
-                  <p className="font-bold text-foreground">{lvl3}%</p>
+                  <p className="font-bold text-foreground">{fmt(l3Abs)}</p>
                 </div>
               </div>
               <div className="mt-3 rounded-lg bg-card p-3">
