@@ -3228,6 +3228,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       {screen === "home" && HomeScreen()}
       {screen === "select-client" && SelectClientScreen()}
       {screen === "new-client" && NewClientScreen()}
+      {screen === "edit-client" && EditClientScreen()}
       {screen === "assessment" && AssessmentScreen()}
       {screen === "result" && selectedClient && ResultScreen()}
       {screen === "compare" && selectedClient && (
