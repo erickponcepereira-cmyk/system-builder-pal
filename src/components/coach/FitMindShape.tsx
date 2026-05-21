@@ -486,7 +486,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       outline: none;
       background: var(--background);
       color: var(--foreground);
+      color-scheme: dark;
     }
+    .fm-input::-webkit-calendar-picker-indicator,
+    .fm-input::-webkit-clear-button { filter: invert(0.85); cursor: pointer; }
+    .fm-input::-webkit-datetime-edit,
+    .fm-input::-webkit-datetime-edit-fields-wrapper,
+    .fm-input::-webkit-datetime-edit-text,
+    .fm-input::-webkit-datetime-edit-month-field,
+    .fm-input::-webkit-datetime-edit-day-field,
+    .fm-input::-webkit-datetime-edit-year-field,
+    .fm-input::-webkit-datetime-edit-hour-field,
+    .fm-input::-webkit-datetime-edit-minute-field { color: var(--foreground); }
     .fm-input:focus { border-color: var(--fm-primary); }
     .fm-label {
       font-size: 12px;
