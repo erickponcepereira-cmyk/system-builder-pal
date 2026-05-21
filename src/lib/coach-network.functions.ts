@@ -236,10 +236,15 @@ export const listProductsWithRealEarnings = createServerFn({ method: "GET" })
       const price = Number(p.price || 0);
       const slots = slotsByProduct.get(p.id) ?? [];
       const dist = calculateDistribution(price, "pix", fee, slots);
+      const distCard = calculateDistribution(price, "credit_1x", fee, slots);
       const coachCommission = Math.max(0, dist.remainder);
       const networkL1 = sumByDestination(dist.lines, "network_l1");
       const networkL2 = sumByDestination(dist.lines, "network_l2");
       const networkL3 = sumByDestination(dist.lines, "network_l3");
+      const coachCommissionCard = Math.max(0, distCard.remainder);
+      const networkL1Card = sumByDestination(distCard.lines, "network_l1");
+      const networkL2Card = sumByDestination(distCard.lines, "network_l2");
+      const networkL3Card = sumByDestination(distCard.lines, "network_l3");
       const pct = (v: number) => (price > 0 ? (v / price) * 100 : 0);
       return {
         id: p.id,
@@ -259,7 +264,13 @@ export const listProductsWithRealEarnings = createServerFn({ method: "GET" })
         networkL2Pct: pct(networkL2),
         networkL3,
         networkL3Pct: pct(networkL3),
+        coachCommissionCard,
+        networkL1Card,
+        networkL2Card,
+        networkL3Card,
         baseDistributable: dist.base_distributable,
+        baseDistributableCard: distCard.base_distributable,
       };
     });
   });
+
