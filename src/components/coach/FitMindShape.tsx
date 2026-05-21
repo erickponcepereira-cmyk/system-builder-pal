@@ -224,6 +224,9 @@ export interface FitMindShapeProps {
   onCreateClient?: (
     client: Omit<FitMindClient, "id">,
   ) => Promise<FitMindClient>;
+  onUpdateClient?: (
+    client: FitMindClient,
+  ) => Promise<FitMindClient | void>;
   onSearchClients?: (query: string) => Promise<FitMindClient[]>;
   onCreateGoogleCalendarEvent?: (
     date: string,
