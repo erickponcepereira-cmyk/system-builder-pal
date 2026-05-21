@@ -49,7 +49,11 @@ export function WalletTab() {
       }
       setLoadingBank(false);
     })();
-    getMyMasterCoachCrossSales().then((r) => setCross(r)).catch(() => {});
+    fetchCrossSales()
+      .then((r) => setCross(r))
+      .catch((err) => {
+        console.error("getMyMasterCoachCrossSales failed:", err);
+      });
   }, []);
 
 
