@@ -716,9 +716,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     ];
     const assessmentHeader = [
       "aluno_id", "aluno_nome", "avaliação_id", "data", "peso_kg", "altura_cm",
-      "imc", "gordura_%", "massa_magra_kg", "água_%", "músculo_kg", "osso_kg",
-      "idade_metabólica", "tmb", "pressão_sistólica", "pressão_diastólica",
-      "frequência_cardíaca", "método_aferição", "anotações",
+      "imc", "gordura_%", "músculo_esquelético_%", "água_%", "massa_muscular_%",
+      "massa_óssea_%", "idade_corporal", "metabolismo_basal", "pressão_sistólica",
+      "pressão_diastólica", "frequência_cardíaca", "método_aferição",
+      "anotações_cliente", "anotações_profissional",
     ];
 
     const clientRows: (string | number | null | undefined)[][] = [clientHeader];
