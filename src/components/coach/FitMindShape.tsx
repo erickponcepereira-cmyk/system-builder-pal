@@ -63,6 +63,7 @@ import {
   Search,
   Filter,
   Upload,
+  Download,
 } from "lucide-react";
 import poseFrente from "@/assets/photo-pose-frente.png";
 import poseCostas from "@/assets/photo-pose-costas.png";
@@ -686,6 +687,64 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setNewClientData((current) => ({ ...current, [key]: value }));
   };
 
+  // ─── Exportação CSV de alunos + avaliações ────────────────
+  const csvEscape = (v: unknown): string => {
+    const s = v === null || v === undefined ? "" : String(v);
+    if (/[",;\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+
+  const downloadCSV = (filename: string, rows: (string | number | null | undefined)[][]) => {
+    const csv = rows.map((r) => r.map(csvEscape).join(";")).join("\r\n");
+    // BOM para Excel reconhecer UTF-8
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportClientsCSV = () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const clientHeader = [
+      "id", "nome", "email", "whatsapp", "gênero", "etnia", "idioma",
+      "data_nascimento", "altura_cm", "grupos", "anotações", "qtd_avaliações",
+    ];
+    const assessmentHeader = [
+      "aluno_id", "aluno_nome", "avaliação_id", "data", "peso_kg", "altura_cm",
+      "imc", "gordura_%", "músculo_esquelético_%", "água_%", "massa_muscular_%",
+      "massa_óssea_%", "idade_corporal", "metabolismo_basal", "pressão_sistólica",
+      "pressão_diastólica", "frequência_cardíaca", "método_aferição",
+      "anotações_cliente", "anotações_profissional",
+    ];
+
+    const clientRows: (string | number | null | undefined)[][] = [clientHeader];
+    const assessmentRows: (string | number | null | undefined)[][] = [assessmentHeader];
+
+    clients.forEach((c) => {
+      clientRows.push([
+        c.id, c.name, c.email, c.whatsapp, c.gender, c.ethnicity, c.language,
+        c.birthDate, c.height, (c.groups || []).join("|"), c.notes,
+        c.assessments?.length ?? 0,
+      ]);
+      (c.assessments || []).forEach((a) => {
+        assessmentRows.push([
+          c.id, c.name, a.id, a.date, a.weight, a.height, a.bmi,
+          a.bodyFat, a.skeletalMuscle, a.bodyWater, a.muscleMass, a.boneMass,
+          a.bodyAge, a.basalMetabolism, a.systolicBP, a.diastolicBP, a.heartRate,
+          a.measurementMethod, a.clientNotes, a.professionalNotes,
+        ]);
+      });
+    });
+
+    downloadCSV(`fitmind-alunos-${stamp}.csv`, clientRows);
+    downloadCSV(`fitmind-avaliacoes-${stamp}.csv`, assessmentRows);
+  };
+
   const formatBrazilWhatsapp = (value: string) => {
     const digits = value.replace(/\D/g, "").replace(/^55/, "").slice(0, 11);
     const ddd = digits.slice(0, 2);
@@ -977,20 +1036,39 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
 
-        <button
-          className="fm-btn-primary"
-          style={{
-            width: "100%",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-          onClick={() => setScreen("new-client")}
-        >
-          <Plus size={18} /> Adicionar Novo Aluno
-        </button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <button
+            className="fm-btn-primary"
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+            onClick={() => setScreen("new-client")}
+          >
+            <Plus size={18} /> Adicionar Novo Aluno
+          </button>
+          <button
+            onClick={exportClientsCSV}
+            title="Exportar alunos e avaliações (CSV)"
+            style={{
+              padding: "0 14px",
+              background: "var(--card)",
+              color: "var(--foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 600,
+            }}
+          >
+            <Download size={16} /> CSV
+          </button>
+        </div>
 
         <div
           style={{
