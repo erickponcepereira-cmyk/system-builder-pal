@@ -507,22 +507,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-step-dot.active { background: var(--fm-primary); }
     @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
-    /* Dark theme overrides for result screen */
-    .fm-result-screen { color: #ffffff; }
-    .fm-result-screen .fm-card { background: #0f172a; color: #ffffff; border-color: #1e293b; box-shadow: 0 2px 16px rgba(0,0,0,.5); }
-    .fm-result-screen .fm-section-title { color: #ffffff !important; }
-    .fm-result-screen table, .fm-result-screen th, .fm-result-screen td { color: #ffffff !important; }
-    .fm-result-screen [style*="color: #1e293b"], .fm-result-screen [style*="color:#1e293b"] { color: #ffffff !important; }
-    .fm-result-screen [style*="color: #64748b"], .fm-result-screen [style*="color:#64748b"] { color: #e2e8f0 !important; }
-    .fm-result-screen [style*="color: #94a3b8"], .fm-result-screen [style*="color:#94a3b8"] { color: #cbd5e1 !important; }
-    .fm-result-screen [style*="background: #f0fdf4"] { background: rgba(34,197,94,0.12) !important; }
-    .fm-result-screen [style*="background: #fef2f2"] { background: rgba(239,68,68,0.12) !important; }
-    .fm-result-screen [style*="background: #f8fafc"] { background: #1e293b !important; }
-    .fm-result-screen [style*="background: #ffffff"], .fm-result-screen [style*="background:#ffffff"], .fm-result-screen [style*="background: #fff"] { background: #1e293b !important; }
-    .fm-result-screen [style*="background: #eff6ff"] { background: rgba(96,165,250,0.12) !important; }
-    .fm-result-screen [style*="background: #f5f3ff"] { background: rgba(167,139,250,0.12) !important; }
-    .fm-result-screen [style*="border-top: 1px solid #f1f5f9"] { border-top-color: #1e293b !important; }
-    .fm-result-screen [style*="border: 1px solid #e2e8f0"] { border-color: #334155 !important; }
+    /* Result screen — theme-aware via tokens */
+    .fm-result-screen { color: var(--foreground); }
+    .fm-result-screen .fm-card {
+      background: var(--card); color: var(--card-foreground);
+      border-color: var(--border); box-shadow: 0 2px 16px rgba(0,0,0,.25);
+    }
+    .fm-result-screen .fm-section-title { color: var(--foreground); }
+    .fm-result-screen table, .fm-result-screen th, .fm-result-screen td { color: var(--foreground); }
     .fm-result-row {
       display: grid; grid-template-columns: 1fr auto auto;
       align-items: center; padding: 12px 0;
@@ -547,29 +539,31 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .fm-eval-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .fm-coach-footer {
-      background: var(--fm-primary); color: #fff; border-radius: 16px;
+      background: var(--fm-primary); color: var(--primary-foreground); border-radius: 16px;
       padding: 20px; display: flex; align-items: center; gap: 16px; margin-top: 24px;
     }
-    /* === Dark mode global do FitMindShape === */
-    .fm-app.fm-dark, .fm-app.fm-dark > .fm-animate { background: #0A0A0A !important; color: #ffffff; }
-    .fm-app.fm-dark [style*="background: #f8fafc"], .fm-app.fm-dark [style*="background:#f8fafc"] { background: #0A0A0A !important; }
-    .fm-app.fm-dark [style*="background: #ffffff"], .fm-app.fm-dark [style*="background:#ffffff"], .fm-app.fm-dark [style*="background: #fff"], .fm-app.fm-dark [style*="background:#fff"], .fm-app.fm-dark [style*="background: white"], .fm-app.fm-dark [style*="background:white"] { background: #1A1A1A !important; }
-    .fm-app.fm-dark [style*="background: #f1f5f9"], .fm-app.fm-dark [style*="background:#f1f5f9"] { background: #1f2937 !important; }
-    .fm-app.fm-dark [style*="background: #f5f5f5"], .fm-app.fm-dark [style*="background:#f5f5f5"] { background: #1f2937 !important; }
-    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #0f172a"], .fm-app.fm-dark [style*="color:#0f172a"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #334155"], .fm-app.fm-dark [style*="color:#334155"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #ffffff !important; }
-    .fm-app.fm-dark .fm-card { background: #1A1A1A; color: #ffffff; border-color: rgba(255,255,255,0.08); box-shadow: 0 2px 16px rgba(0,0,0,0.4); }
-    .fm-app.fm-dark .fm-input, .fm-app.fm-dark .fm-select { background: #0F0F0F; color: #ffffff; border-color: rgba(255,255,255,0.1); }
-    .fm-app.fm-dark .fm-input::placeholder { color: rgba(255,255,255,0.72); }
-    .fm-app.fm-dark .fm-label { color: #ffffff; }
-    .fm-app.fm-dark .fm-photo-box { background: #0F0F0F; border-color: rgba(255,255,255,0.15); color: #ffffff; }
-    .fm-app.fm-dark .fm-step-dot { background: rgba(255,255,255,0.1); }
-    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #ffffff !important; }
+    /* App container — uses theme tokens; no per-style hex overrides needed */
+    .fm-app.fm-dark, .fm-app.fm-dark > .fm-animate {
+      background: var(--background);
+      color: var(--foreground);
+    }
+    .fm-app.fm-dark .fm-card {
+      background: var(--card); color: var(--card-foreground);
+      border-color: var(--border); box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+    }
+    .fm-app.fm-dark .fm-input,
+    .fm-app.fm-dark .fm-select {
+      background: var(--input, var(--background));
+      color: var(--foreground);
+      border-color: var(--border);
+    }
+    .fm-app.fm-dark .fm-input::placeholder { color: var(--muted-foreground); }
+    .fm-app.fm-dark .fm-label { color: var(--muted-foreground); }
+    .fm-app.fm-dark .fm-photo-box {
+      background: var(--muted); border-color: var(--border); color: var(--foreground);
+    }
+    .fm-app.fm-dark .fm-step-dot { background: var(--muted); }
+
   `;
 
   // ────────────────────────────────────────────────────────
@@ -579,7 +573,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     <span className="fm-tooltip" style={{ marginLeft: 4 }}>
       <HelpCircle
         size={13}
-        color="#94a3b8"
+        color="var(--muted-foreground)"
         style={{ cursor: "pointer" }}
         onMouseEnter={() => setActiveTooltip(id)}
         onMouseLeave={() => setActiveTooltip(null)}
@@ -615,7 +609,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <span
           style={{
             fontSize: 9,
-            color: active ? "var(--fm-primary)" : "#94a3b8",
+            color: active ? "var(--fm-primary)" : "var(--muted-foreground)",
             fontWeight: active ? 700 : 400,
             textAlign: "center",
             maxWidth: "100%",
@@ -702,8 +696,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       style={{
         padding: 24,
         minHeight: "100vh",
-        background: "#0A0A0A",
-        color: "#ffffff",
+        background: "var(--background)",
+        color: "var(--card)",
       }}
     >
       <div
@@ -737,7 +731,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               justifyContent: "center",
             }}
           >
-            <Zap size={22} color="#fff" />
+            <Zap size={22} color="var(--card)" />
           </div>
         )}
         <div>
@@ -745,13 +739,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             style={{
               fontSize: 18,
               fontWeight: 800,
-              color: "#1e293b",
+              color: "var(--foreground)",
               letterSpacing: "-0.02em",
             }}
           >
             FitMind Shape
           </div>
-          <div style={{ fontSize: 12, color: "#64748b" }}>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
             Olá, {coach.name} 👋
           </div>
         </div>
@@ -779,10 +773,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               justifyContent: "center",
             }}
           >
-            <Activity size={24} color="#fff" />
+            <Activity size={24} color="var(--card)" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
+            <div style={{ color: "var(--card)", fontWeight: 700, fontSize: 16 }}>
               Nova Avaliação
             </div>
             <div style={{ color: "#ffffff99", fontSize: 13 }}>
@@ -813,14 +807,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <Users size={24} color="var(--fm-primary)" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#1e293b", fontWeight: 700, fontSize: 16 }}>
+            <div style={{ color: "var(--foreground)", fontWeight: 700, fontSize: 16 }}>
               Meus Alunos
             </div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>
+            <div style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
               {clients.length} alunos cadastrados
             </div>
           </div>
-          <ChevronRight color="#94a3b8" />
+          <ChevronRight color="var(--muted-foreground)" />
         </div>
       </div>
 
@@ -829,7 +823,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: "#94a3b8",
+            color: "var(--muted-foreground)",
             marginBottom: 12,
             textTransform: "uppercase",
             letterSpacing: ".06em",
@@ -873,16 +867,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               </div>
               <div style={{ flex: 1 }}>
                 <div
-                  style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}
+                  style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)" }}
                 >
                   {c.name}
                 </div>
-                <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                   {c.assessments?.length ?? 0} avaliação(ões) ·{" "}
                   {c.gender === "male" ? "Masc." : "Fem."}
                 </div>
               </div>
-              <ChevronRight size={16} color="#cbd5e1" />
+              <ChevronRight size={16} color="var(--border)" />
             </div>
           </div>
         ))}
@@ -902,7 +896,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return (
       <div
         className="fm-animate"
-        style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}
+        style={{ padding: 24, minHeight: "100vh", background: "var(--muted)" }}
       >
         <div
           style={{
@@ -916,9 +910,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             onClick={() => setScreen("home")}
             style={{ background: "none", border: "none", cursor: "pointer" }}
           >
-            <ChevronLeft size={22} color="#64748b" />
+            <ChevronLeft size={22} color="var(--muted-foreground)" />
           </button>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)" }}>
             Selecionar Aluno
           </div>
         </div>
@@ -927,7 +921,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <div style={{ flex: 1, position: "relative" }}>
             <Search
               size={16}
-              color="#94a3b8"
+              color="var(--muted-foreground)"
               style={{
                 position: "absolute",
                 left: 12,
@@ -964,7 +958,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: "#94a3b8",
+            color: "var(--muted-foreground)",
             marginBottom: 10,
             textTransform: "uppercase",
           }}
@@ -1022,11 +1016,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               </div>
               <div style={{ flex: 1 }}>
                 <div
-                  style={{ fontWeight: 600, fontSize: 14, color: "#1e293b" }}
+                  style={{ fontWeight: 600, fontSize: 14, color: "var(--foreground)" }}
                 >
                   {c.name}
                 </div>
-                <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                   {c.email} · {c.groups?.join(", ")}
                 </div>
               </div>
@@ -1053,7 +1047,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <Phone size={14} />
                 </a>
               )}
-              <ChevronRight size={16} color="#cbd5e1" />
+              <ChevronRight size={16} color="var(--border)" />
 
             </div>
           </div>
@@ -1061,9 +1055,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
         {filtered.length === 0 && (
           <div
-            style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}
+            style={{ textAlign: "center", padding: "40px 0", color: "var(--muted-foreground)" }}
           >
-            <User size={40} color="#e2e8f0" />
+            <User size={40} color="var(--border)" />
             <div style={{ marginTop: 8, fontSize: 14 }}>
               Nenhum aluno encontrado
             </div>
@@ -1080,7 +1074,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return (
       <div
         className="fm-animate"
-        style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}
+        style={{ padding: 24, minHeight: "100vh", background: "var(--muted)" }}
       >
         <div
           style={{
@@ -1094,9 +1088,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             onClick={() => setScreen("select-client")}
             style={{ background: "none", border: "none", cursor: "pointer" }}
           >
-            <ChevronLeft size={22} color="#64748b" />
+            <ChevronLeft size={22} color="var(--muted-foreground)" />
           </button>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1e293b" }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)" }}>
             Novo Aluno
           </div>
         </div>
@@ -1376,7 +1370,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         >
           <Scale size={20} color="var(--fm-primary)" />
           <div>
-            <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontWeight: 600 }}>
               IMC Calculado <Tooltip id="bmi" />
             </div>
             <div
@@ -1394,7 +1388,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     marginLeft: 8,
                     fontSize: 11,
                     background: getBMICategory(computedBMI).color,
-                    color: "#fff",
+                    color: "var(--card)",
                   }}
                 >
                   {getBMICategory(computedBMI).label}
@@ -1422,9 +1416,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 padding: "2px 6px",
                 borderRadius: 6,
                 border: "1px solid",
-                borderColor: current === u ? "var(--fm-primary)" : "#cbd5e1",
+                borderColor: current === u ? "var(--fm-primary)" : "var(--border)",
                 background: current === u ? "var(--fm-primary)" : "transparent",
-                color: current === u ? "#fff" : "#64748b",
+                color: current === u ? "var(--card)" : "var(--muted-foreground)",
                 cursor: "pointer",
                 fontWeight: 700,
               }}
@@ -1450,7 +1444,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const StepBioimpedancia = () => (
       <div>
         <div className="fm-section-title">Bioimpedância</div>
-        <p style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
+        <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
           Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
           preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
         </p>
@@ -1750,7 +1744,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                       background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 11, fontWeight: 600 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--card)", fontSize: 11, fontWeight: 600 }}>
                       <Camera size={14} /> Toque para adicionar
                     </div>
                   </div>
@@ -1782,7 +1776,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }}
           >
             <Calendar size={20} color="var(--fm-primary)" />
-            <span style={{ fontWeight: 600, color: "#1e293b" }}>
+            <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
               Agendar no Google Agenda
             </span>
           </div>
@@ -1874,7 +1868,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return (
       <div
         className="fm-animate"
-        style={{ padding: 24, minHeight: "100vh", background: "#f8fafc" }}
+        style={{ padding: 24, minHeight: "100vh", background: "var(--muted)" }}
       >
         <div
           style={{
@@ -1890,13 +1884,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }
             style={{ background: "none", border: "none", cursor: "pointer" }}
           >
-            <ChevronLeft size={22} color="#64748b" />
+            <ChevronLeft size={22} color="var(--muted-foreground)" />
           </button>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1e293b" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--foreground)" }}>
               Nova Avaliação
             </div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
               {selectedClient?.name} · {STEPS[step]}
             </div>
           </div>
@@ -1942,7 +1936,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div
           style={{
             fontSize: 11,
-            color: "#94a3b8",
+            color: "var(--muted-foreground)",
             textAlign: "center",
             marginTop: 8,
           }}
@@ -2062,7 +2056,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
     // Peso ideal eval
     const weightEval = (() => {
-      if (!a.weight || !idealWeightMax) return { c: "#94a3b8", t: "—" };
+      if (!a.weight || !idealWeightMax) return { c: "var(--muted-foreground)", t: "—" };
       if (a.weight < idealWeightMin) return { c: "#facc15", t: "Abaixo" };
       if (a.weight <= idealWeightMax) return { c: "#22c55e", t: "Normal" };
       const over = a.weight - idealWeightMax;
@@ -2074,7 +2068,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const skMin = client.gender === "male" ? 33 : 24;
     const skMax = client.gender === "male" ? 39 : 30;
     const skEval = (() => {
-      if (!a.skeletalMuscle) return { c: "#94a3b8", t: "—" };
+      if (!a.skeletalMuscle) return { c: "var(--muted-foreground)", t: "—" };
       if (a.skeletalMuscle < skMin - 3) return { c: "#dc2626", t: "Muito baixo" };
       if (a.skeletalMuscle < skMin) return { c: "#facc15", t: "Abaixo" };
       if (a.skeletalMuscle <= skMax) return { c: "#22c55e", t: "Normal" };
@@ -2085,7 +2079,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const bodyAgeYears = a.bodyAge ? Math.round(a.bodyAge) : 0;
     const bodyAgeDelta = bodyAgeYears - (a.age || 0);
     const bodyAgeEval = (() => {
-      if (!bodyAgeYears) return { c: "#94a3b8", t: "—" };
+      if (!bodyAgeYears) return { c: "var(--muted-foreground)", t: "—" };
       if (bodyAgeDelta <= 0) return { c: "#22c55e", t: bodyAgeDelta === 0 ? "Igual à idade real" : `${bodyAgeDelta} anos (excelente)` };
       if (bodyAgeDelta <= 3) return { c: "#facc15", t: `+${bodyAgeDelta} anos` };
       if (bodyAgeDelta <= 7) return { c: "#fb923c", t: `+${bodyAgeDelta} anos` };
@@ -2116,7 +2110,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
     // Metabolismo eval
     const basalEval = (() => {
-      if (!basalKcal || !harrisBenedict) return { c: "#94a3b8", t: "—" };
+      if (!basalKcal || !harrisBenedict) return { c: "var(--muted-foreground)", t: "—" };
       const ratio = basalKcal / harrisBenedict;
       if (ratio < 0.9) return { c: "#fb923c", t: "Baixo" };
       if (ratio <= 1.1) return { c: "#22c55e", t: "Normal" };
@@ -2148,7 +2142,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             >
               <ChevronLeft size={22} color="#ffffffaa" />
             </button>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--card)" }}>
               Resultado da Avaliação
             </div>
           </div>
@@ -2164,10 +2158,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 justifyContent: "center",
               }}
             >
-              <User size={26} color="#fff" />
+              <User size={26} color="var(--card)" />
             </div>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--card)" }}>
                 {client.name}
               </div>
               <div style={{ fontSize: 13, color: "#ffffff99" }}>
@@ -2186,7 +2180,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
-                  <tr style={{ color: "#64748b", textAlign: "left" }}>
+                  <tr style={{ color: "var(--muted-foreground)", textAlign: "left" }}>
                     <th style={{ padding: "6px 4px", fontWeight: 700 }}>Indicador</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Primeira</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>
@@ -2194,7 +2188,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     </th>
                   </tr>
                 </thead>
-                <tbody style={{ color: "#1e293b" }}>
+                <tbody style={{ color: "var(--foreground)" }}>
                   {[
                     { l: "Tempo de acompanhamento", first: dateLabel(firstA.date), latest: N >= 3 ? `${dateLabel(previousA.date)} · ${followLabel}` : followLabel },
                     { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(previousA.weight, firstA.weight, " kg") },
@@ -2221,7 +2215,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: "#64748b",
+                color: "var(--muted-foreground)",
                 marginBottom: 8,
                 textAlign: "center",
               }}
@@ -2250,7 +2244,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                         ? "warning"
                         : "danger",
                   ),
-                  color: "#fff",
+                  color: "var(--card)",
                   fontSize: 12,
                 }}
               >
@@ -2282,8 +2276,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     padding: "10px 14px",
                     borderRadius: 10,
                     border: "1px solid #e2e8f0",
-                    background: count > 0 ? "var(--fm-primary)" : "#f1f5f9",
-                    color: count > 0 ? "#fff" : "#94a3b8",
+                    background: count > 0 ? "var(--fm-primary)" : "var(--muted)",
+                    color: count > 0 ? "var(--card)" : "var(--muted-foreground)",
                     fontWeight: 700,
                     fontSize: 13,
                     cursor: count > 0 ? "pointer" : "not-allowed",
@@ -2306,13 +2300,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ color: "#64748b", textAlign: "left", fontSize: 11 }}>
+                  <tr style={{ color: "var(--muted-foreground)", textAlign: "left", fontSize: 11 }}>
                     <th style={{ padding: "6px 4px", fontWeight: 700 }}>Descrição</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Resultado</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Avaliação</th>
                   </tr>
                 </thead>
-                <tbody style={{ color: "#1e293b" }}>
+                <tbody style={{ color: "var(--foreground)" }}>
                   {[
                     {
                       l: "Peso",
@@ -2339,11 +2333,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
                       <td style={{ padding: "10px 4px" }}>
                         <div style={{ fontWeight: 600 }}>{r.l}</div>
-                        <div style={{ fontSize: 10.5, color: "#94a3b8", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
+                        <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
                       </td>
                       <td style={{ padding: "10px 4px", textAlign: "right", fontWeight: 800 }}>{r.result}</td>
                       <td style={{ padding: "10px 4px", textAlign: "right" }}>
-                        <span className="fm-badge" style={{ background: r.color, color: "#fff", fontSize: 10.5 }}>{r.tag}</span>
+                        <span className="fm-badge" style={{ background: r.color, color: "var(--card)", fontSize: 10.5 }}>{r.tag}</span>
                       </td>
                     </tr>
                   ))}
@@ -2358,13 +2352,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ color: "#64748b", textAlign: "left", fontSize: 11 }}>
+                  <tr style={{ color: "var(--muted-foreground)", textAlign: "left", fontSize: 11 }}>
                     <th style={{ padding: "6px 4px", fontWeight: 700 }}>Descrição</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Resultado</th>
                     <th style={{ padding: "6px 4px", fontWeight: 700, textAlign: "right" }}>Avaliação</th>
                   </tr>
                 </thead>
-                <tbody style={{ color: "#1e293b" }}>
+                <tbody style={{ color: "var(--foreground)" }}>
                   {[
                     {
                       l: "IMC",
@@ -2398,11 +2392,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
                       <td style={{ padding: "10px 4px" }}>
                         <div style={{ fontWeight: 600 }}>{r.l}</div>
-                        <div style={{ fontSize: 10.5, color: "#94a3b8", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
+                        <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 2 }}>{r.ref}</div>
                       </td>
                       <td style={{ padding: "10px 4px", textAlign: "right", fontWeight: 800 }}>{r.result}</td>
                       <td style={{ padding: "10px 4px", textAlign: "right" }}>
-                        <span className="fm-badge" style={{ background: r.color, color: "#fff", fontSize: 10.5 }}>{r.tag}</span>
+                        <span className="fm-badge" style={{ background: r.color, color: "var(--card)", fontSize: 10.5 }}>{r.tag}</span>
                       </td>
                     </tr>
                   ))}
@@ -2449,7 +2443,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <div
                     style={{
                       fontSize: 11,
-                      color: "#64748b",
+                      color: "var(--muted-foreground)",
                       fontWeight: 600,
                       marginTop: 4,
                     }}
@@ -2457,7 +2451,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     {item.label} <Tooltip id={item.tooltip} />
                   </div>
                   <div
-                    style={{ fontSize: 20, fontWeight: 800, color: "#1e293b" }}
+                    style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)" }}
                   >
                     {item.value}
                   </div>
@@ -2488,14 +2482,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   >
                     <Heart size={16} color="#ef4444" />
                     <div
-                      style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}
+                      style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}
                     >
                       PA Sistólica
                     </div>
                     <div style={{ fontSize: 18, fontWeight: 800 }}>
                       {a.systolicBP}
                     </div>
-                    <div style={{ fontSize: 10, color: "#94a3b8" }}>mmHg</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>mmHg</div>
                   </div>
                 )}
                 {a.diastolicBP && (
@@ -2509,14 +2503,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   >
                     <Heart size={16} color="#f87171" />
                     <div
-                      style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}
+                      style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}
                     >
                       PA Diastólica
                     </div>
                     <div style={{ fontSize: 18, fontWeight: 800 }}>
                       {a.diastolicBP}
                     </div>
-                    <div style={{ fontSize: 10, color: "#94a3b8" }}>mmHg</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>mmHg</div>
                   </div>
                 )}
                 {a.heartRate && (
@@ -2530,14 +2524,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   >
                     <Activity size={16} color="#fb923c" />
                     <div
-                      style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}
+                      style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}
                     >
                       Freq. Cardíaca
                     </div>
                     <div style={{ fontSize: 18, fontWeight: 800 }}>
                       {a.heartRate}
                     </div>
-                    <div style={{ fontSize: 10, color: "#94a3b8" }}>bpm</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>bpm</div>
                   </div>
                 )}
               </div>
@@ -2549,7 +2543,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div className="fm-section-title">Histórico — Peso Corporal</div>
             <ResponsiveContainer width="100%" height={160}>
               <LineChart data={histWeight}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--muted)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} domain={["auto", "auto"]} />
                 <RechartsTooltip />
@@ -2608,7 +2602,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                         style={{
                           fontSize: 12,
                           fontWeight: 600,
-                          color: "#1e293b",
+                          color: "var(--foreground)",
                         }}
                       >
                         {d.name}
@@ -2617,7 +2611,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                         style={{
                           fontSize: 16,
                           fontWeight: 800,
-                          color: "#1e293b",
+                          color: "var(--foreground)",
                         }}
                       >
                         {d.value}%
@@ -2635,7 +2629,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={histGordura}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--muted)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <RechartsTooltip />
@@ -2676,22 +2670,22 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 }}
               >
                 <div
-                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
+                  style={{ fontSize: 12, color: "var(--muted-foreground)", fontWeight: 600 }}
                 >
                   Referência
                 </div>
                 <div
-                  style={{ fontSize: 36, fontWeight: 900, color: "#1e293b" }}
+                  style={{ fontSize: 36, fontWeight: 900, color: "var(--foreground)" }}
                 >
                   {a.age}
                 </div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>anos</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>anos</div>
               </div>
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  color: "#94a3b8",
+                  color: "var(--muted-foreground)",
                   fontSize: 20,
                 }}
               >
@@ -2707,7 +2701,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 }}
               >
                 <div
-                  style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}
+                  style={{ fontSize: 12, color: "var(--muted-foreground)", fontWeight: 600 }}
                 >
                   Idade Corporal
                 </div>
@@ -2739,7 +2733,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Fontes de Referência</div>
-            <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
               {CLINICAL_SOURCES}
             </div>
           </div>
@@ -2849,7 +2843,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   return (
     <div
       className="fm-app fm-dark"
-      style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily, background: "#0A0A0A", minHeight: "100vh" }}
+      style={{ maxWidth: 480, margin: "0 auto", fontFamily: themeFontFamily, background: "var(--background)", minHeight: "100vh" }}
     >
       <style>{css}</style>
       {screen === "home" && HomeScreen()}
