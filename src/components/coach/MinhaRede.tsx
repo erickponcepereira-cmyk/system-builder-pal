@@ -610,10 +610,9 @@ function AbaGanhos({ nodes, vendasCoach, produtoSel, payMethod, setPayMethod }: 
           <div className="space-y-1 mt-3 pt-3 border-t border-white/10">
             {[
               { label: "Total bruto da rede", val: fmt(ganhoRede.totalBruto), style: "text-zinc-200" },
-              { label: `(-) Imposto pessoal ${fmtp(TAXA_IMP_PESSOA)}`, val: `- ${fmt(ganhoRede.imp)}`, style: "text-red-400" },
               { label: "Líquido real da rede", val: fmt(ganhoRede.liquido), style: "text-red-400 font-bold" },
             ].map((r, i) => (
-              <div key={i} className={`flex justify-between py-1 text-sm ${i === 2 ? "pt-2 border-t border-white/10 font-bold" : ""}`}>
+              <div key={i} className={`flex justify-between py-1 text-sm ${i === 1 ? "pt-2 border-t border-white/10 font-bold" : ""}`}>
                 <span className="text-zinc-400">{r.label}</span>
                 <span className={r.style}>{r.val}</span>
               </div>
