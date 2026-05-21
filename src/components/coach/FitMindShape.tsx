@@ -2425,7 +2425,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const isMeasurements = assessment.method === "measurements";
     const stepComponents = [
       StepDados,
-      isMeasurements ? StepMedidas : StepBioimpedancia,
+      StepMedidas,
       StepOutros,
       StepAnotacoes,
       StepFotos,
