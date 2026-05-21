@@ -64,6 +64,7 @@ import {
   Filter,
   Upload,
   Download,
+  Edit3,
 } from "lucide-react";
 import poseFrente from "@/assets/photo-pose-frente.png";
 import poseCostas from "@/assets/photo-pose-costas.png";
