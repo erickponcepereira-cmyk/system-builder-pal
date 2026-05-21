@@ -130,7 +130,7 @@ export interface FitMindAssessment {
   bodyAge: number; // % idade corporal sobre idade real
   bodyWater: number; // % água corporal
   boneMass: number; // % massa óssea
-  // Segmentos
+  // Segmentos (massa/gordura)
   segmentAnalysis?: {
     leftArm: number;
     rightArm: number;
@@ -138,6 +138,31 @@ export interface FitMindAssessment {
     leftLeg: number;
     rightLeg: number;
   };
+  // Circunferências (cm)
+  circumferences?: {
+    neck?: number;
+    chest?: number;
+    waist?: number;
+    abdomen?: number;
+    hip?: number;
+    leftArm?: number;
+    rightArm?: number;
+    leftThigh?: number;
+    rightThigh?: number;
+    leftCalf?: number;
+    rightCalf?: number;
+  };
+  // Diâmetros ósseos (cm)
+  boneDiameters?: {
+    wrist?: number;
+    elbow?: number;
+    ankle?: number;
+    knee?: number;
+    humerus?: number;
+    femur?: number;
+  };
+  // Método de aferição usado
+  measurementMethod?: "fita_metrica" | "paquimetro" | "adipometro" | "bioimpedancia" | "dexa" | "ultrassom";
   // Outros dados
   systolicBP?: number;
   diastolicBP?: number;
