@@ -80,21 +80,36 @@ export function ProductDetailModal({
   const cardPerc = Number(product.cardFeePercentage || 0);
   const taxPerc = Number(product.taxPercentage || 0);
   const costFlat = Number(product.cost || 0) + Number(product.otherCosts || 0);
-  const feesValue = appFeeFlat + (price * (appFeePerc + cardPerc + taxPerc)) / 100 + costFlat;
-  const baseAmount = Math.max(0, price - feesValue);
+  const feesValueCard = appFeeFlat + (price * (appFeePerc + cardPerc + taxPerc)) / 100 + costFlat;
+  const feesValuePix = appFeeFlat + (price * (appFeePerc + taxPerc)) / 100 + costFlat;
+  const baseAmountCard = Math.max(0, price - feesValueCard);
+  const baseAmountPix = Math.max(0, price - feesValuePix);
   const coachPct = Number(product.commissionCoach || 0);
   const lvl1 = Number(product.commissionLevel1 || 0);
   const lvl2 = Number(product.commissionLevel2 || 0);
   const lvl3 = Number(product.commissionLevel3 || 0);
-  // Preferir valores R$ absolutos (motor de slots) quando presentes
-  const coachGain = product.commissionCoachAbsolute != null
-    ? Number(product.commissionCoachAbsolute)
-    : (baseAmount * coachPct) / 100;
-  const l1Abs = product.commissionLevel1Absolute != null ? Number(product.commissionLevel1Absolute) : (baseAmount * lvl1) / 100;
-  const l2Abs = product.commissionLevel2Absolute != null ? Number(product.commissionLevel2Absolute) : (baseAmount * lvl2) / 100;
-  const l3Abs = product.commissionLevel3Absolute != null ? Number(product.commissionLevel3Absolute) : (baseAmount * lvl3) / 100;
-  const extraGain = !hasUpline ? l1Abs + l2Abs + l3Abs : 0;
-  const totalEstimated = coachGain + extraGain;
+  // Escala para converter valores absolutos (calculados sobre base cartão) em base pix
+  const pixScale = baseAmountCard > 0 ? baseAmountPix / baseAmountCard : 1;
+  const calc = (abs: number | null | undefined, pct: number, base: number, scale = 1) =>
+    abs != null ? Number(abs) * scale : (base * pct) / 100;
+  const coachGainCard = calc(product.commissionCoachAbsolute, coachPct, baseAmountCard);
+  const coachGainPix = calc(product.commissionCoachAbsolute, coachPct, baseAmountPix, pixScale);
+  const l1Card = calc(product.commissionLevel1Absolute, lvl1, baseAmountCard);
+  const l2Card = calc(product.commissionLevel2Absolute, lvl2, baseAmountCard);
+  const l3Card = calc(product.commissionLevel3Absolute, lvl3, baseAmountCard);
+  const l1Pix = calc(product.commissionLevel1Absolute, lvl1, baseAmountPix, pixScale);
+  const l2Pix = calc(product.commissionLevel2Absolute, lvl2, baseAmountPix, pixScale);
+  const l3Pix = calc(product.commissionLevel3Absolute, lvl3, baseAmountPix, pixScale);
+  // Defaults para os cards de níveis (mostra cartão como referência)
+  const coachGain = coachGainCard;
+  const l1Abs = l1Card;
+  const l2Abs = l2Card;
+  const l3Abs = l3Card;
+  const extraGainCard = !hasUpline ? l1Card + l2Card + l3Card : 0;
+  const extraGainPix = !hasUpline ? l1Pix + l2Pix + l3Pix : 0;
+  const extraGain = extraGainCard;
+  const totalEstimatedCard = coachGainCard + extraGainCard;
+  const totalEstimatedPix = coachGainPix + extraGainPix;
 
   return (
     <div
@@ -189,27 +204,49 @@ export function ProductDetailModal({
                   <p className="font-bold text-foreground">{fmt(l3Abs)}</p>
                 </div>
               </div>
-              <div className="mt-3 rounded-lg bg-card p-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Sua comissão estimada</span>
-                  <span className="font-bold text-primary">{fmt(coachGain)}</span>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-card p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">PIX</p>
+                  <div className="mt-1 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Você</span>
+                    <span className="font-bold text-primary">{fmt(coachGainPix)}</span>
+                  </div>
+                  {!hasUpline && extraGainPix > 0 && (
+                    <>
+                      <div className="mt-1 flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">+ Níveis</span>
+                        <span className="font-bold text-foreground">{fmt(extraGainPix)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between border-t border-border pt-1 text-sm">
+                        <span className="text-foreground">Total</span>
+                        <span className="font-bold text-primary">{fmt(totalEstimatedPix)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
-                {!hasUpline && extraGain > 0 && (
-                  <>
-                    <div className="mt-1 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">+ Níveis (sem upline)</span>
-                      <span className="font-bold text-foreground">{fmt(extraGain)}</span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
-                      <span className="text-foreground">Total estimado</span>
-                      <span className="font-bold text-primary">{fmt(totalEstimated)}</span>
-                    </div>
-                  </>
-                )}
-                <p className="mt-2 text-[10px] text-muted-foreground">
-                  Cálculo sobre o valor líquido (preço − taxas do app, cartão, impostos e custos do produto). Valores podem variar conforme método de pagamento.
-                </p>
+                <div className="rounded-lg bg-card p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cartão</p>
+                  <div className="mt-1 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Você</span>
+                    <span className="font-bold text-primary">{fmt(coachGainCard)}</span>
+                  </div>
+                  {!hasUpline && extraGainCard > 0 && (
+                    <>
+                      <div className="mt-1 flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">+ Níveis</span>
+                        <span className="font-bold text-foreground">{fmt(extraGainCard)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between border-t border-border pt-1 text-sm">
+                        <span className="text-foreground">Total</span>
+                        <span className="font-bold text-primary">{fmt(totalEstimatedCard)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, impostos e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
+              </p>
             </div>
           )}
 
