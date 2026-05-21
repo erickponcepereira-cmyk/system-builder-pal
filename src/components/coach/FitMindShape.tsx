@@ -734,9 +734,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       (c.assessments || []).forEach((a) => {
         assessmentRows.push([
           c.id, c.name, a.id, a.date, a.weight, a.height, a.bmi,
-          a.bodyFat, a.leanMass, a.water, a.muscleMass, a.boneMass,
-          a.metabolicAge, a.bmr, a.systolic, a.diastolic, a.heartRate,
-          a.measurementMethod, a.notes,
+          a.bodyFat, a.skeletalMuscle, a.bodyWater, a.muscleMass, a.boneMass,
+          a.bodyAge, a.basalMetabolism, a.systolicBP, a.diastolicBP, a.heartRate,
+          a.measurementMethod, a.clientNotes, a.professionalNotes,
         ]);
       });
     });
