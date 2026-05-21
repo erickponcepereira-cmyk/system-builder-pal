@@ -1530,19 +1530,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             />
           </div>
         </div>
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Grupo do Aluno
-        </div>
-        <select className="fm-select">
-          <option value="">Sem grupo (opcional)</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
       </div>
     );
+
 
     const StepAnotacoes = () => (
       <div>
