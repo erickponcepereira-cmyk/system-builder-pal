@@ -1365,7 +1365,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 color: "var(--fm-primary)",
               }}
             >
-              {computedBMI > 0 ? `${bmiPercent}%` : "—"}
+              {computedBMI > 0 ? `${computedBMI} kg/m²` : "—"}
               {computedBMI > 0 && (
                 <span
                   className="fm-badge"
