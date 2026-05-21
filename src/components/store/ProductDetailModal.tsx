@@ -17,10 +17,15 @@ export interface ProductDetail {
   commissionLevel2?: number | null;
   commissionLevel3?: number | null;
   // Valores R$ absolutos calculados pelo motor de slots (preferidos quando presentes)
-  commissionCoachAbsolute?: number | null;
-  commissionLevel1Absolute?: number | null;
-  commissionLevel2Absolute?: number | null;
-  commissionLevel3Absolute?: number | null;
+  commissionCoachAbsolute?: number | null;       // PIX — sobra real do coach
+  commissionLevel1Absolute?: number | null;      // PIX
+  commissionLevel2Absolute?: number | null;      // PIX
+  commissionLevel3Absolute?: number | null;      // PIX
+  commissionCoachAbsoluteCard?: number | null;   // Cartão — sobra real do coach
+  commissionLevel1AbsoluteCard?: number | null;
+  commissionLevel2AbsoluteCard?: number | null;
+  commissionLevel3AbsoluteCard?: number | null;
+
   // Custos / taxas para cálculo realista da comissão líquida
   appFee?: number | null;
   appFeePercentage?: number | null;
