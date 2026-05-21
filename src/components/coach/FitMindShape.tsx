@@ -311,13 +311,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onDeleteAssessment,
   onEditAssessment,
   onCreateClient,
+  onUpdateClient,
   onSearchClients,
   onCreateGoogleCalendarEvent,
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
 }) => {
   const [screen, setScreen] = useState<
-    "home" | "select-client" | "new-client" | "assessment" | "result" | "compare"
+    "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
   >("home");
   // "new" = forçar abrir nova avaliação; "browse" = abrir resultado existente se houver
   const [entryIntent, setEntryIntent] = useState<"new" | "browse">("browse");
