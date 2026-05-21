@@ -73,8 +73,8 @@ function getBreakdown(p: ProdutoT, method: PayMethod) {
 }
 
 function calcLiqPessoa(bruto: number) {
-  const imp = +(bruto * TAXA_IMP_PESSOA / 100).toFixed(2);
-  return { bruto, imp, liquido: +(bruto - imp).toFixed(2) };
+  // Imposto já foi descontado no valor distribuível do produto (não duplicar)
+  return { bruto, imp: 0, liquido: +bruto.toFixed(2) };
 }
 
 function getNivel(nodes: NodesMap, id: string): number {
