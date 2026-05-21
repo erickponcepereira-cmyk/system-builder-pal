@@ -187,66 +187,60 @@ export function ProductDetailModal({
                 </p>
               </div>
               <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                <div className="rounded-lg bg-card p-2">
-                  <p className="text-muted-foreground">Você</p>
-                  <p className="font-bold text-foreground">{fmt(coachGain)}</p>
-                </div>
-                <div className="rounded-lg bg-card p-2">
-                  <p className="text-muted-foreground">Nível 1</p>
-                  <p className="font-bold text-foreground">{fmt(l1Abs)}</p>
-                </div>
-                <div className="rounded-lg bg-card p-2">
-                  <p className="text-muted-foreground">Nível 2</p>
-                  <p className="font-bold text-foreground">{fmt(l2Abs)}</p>
-                </div>
-                <div className="rounded-lg bg-card p-2">
-                  <p className="text-muted-foreground">Nível 3</p>
-                  <p className="font-bold text-foreground">{fmt(l3Abs)}</p>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-card p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">PIX</p>
-                  <div className="mt-1 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Você</span>
-                    <span className="font-bold text-primary">{fmt(coachGainPix)}</span>
+                {[
+                  { label: "Você", pix: coachGainPix, card: coachGainCard },
+                  { label: "Nível 1", pix: l1Pix, card: l1Card },
+                  { label: "Nível 2", pix: l2Pix, card: l2Card },
+                  { label: "Nível 3", pix: l3Pix, card: l3Card },
+                ].map((c) => (
+                  <div key={c.label} className="rounded-lg bg-card p-2">
+                    <p className="text-muted-foreground">{c.label}</p>
+                    <div className="mt-1 space-y-0.5">
+                      <p className="flex items-center justify-between gap-1 text-[10px]">
+                        <span className="text-muted-foreground">PIX</span>
+                        <span className="font-bold text-foreground">{fmt(c.pix)}</span>
+                      </p>
+                      <p className="flex items-center justify-between gap-1 text-[10px]">
+                        <span className="text-muted-foreground">Cartão</span>
+                        <span className="font-bold text-foreground">{fmt(c.card)}</span>
+                      </p>
+                    </div>
                   </div>
-                  {!hasUpline && extraGainPix > 0 && (
-                    <>
-                      <div className="mt-1 flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">+ Níveis</span>
-                        <span className="font-bold text-foreground">{fmt(extraGainPix)}</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between border-t border-border pt-1 text-sm">
-                        <span className="text-foreground">Total</span>
-                        <span className="font-bold text-primary">{fmt(totalEstimatedPix)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="rounded-lg bg-card p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cartão</p>
-                  <div className="mt-1 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Você</span>
-                    <span className="font-bold text-primary">{fmt(coachGainCard)}</span>
-                  </div>
-                  {!hasUpline && extraGainCard > 0 && (
-                    <>
-                      <div className="mt-1 flex items-center justify-between text-[11px]">
-                        <span className="text-muted-foreground">+ Níveis</span>
-                        <span className="font-bold text-foreground">{fmt(extraGainCard)}</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between border-t border-border pt-1 text-sm">
-                        <span className="text-foreground">Total</span>
-                        <span className="font-bold text-primary">{fmt(totalEstimatedCard)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                ))}
               </div>
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, impostos e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
-              </p>
+              <div className="mt-3 rounded-lg bg-card p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Sua comissão estimada (PIX)</span>
+                  <span className="font-bold text-primary">{fmt(coachGainPix)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Sua comissão estimada (Cartão)</span>
+                  <span className="font-bold text-primary">{fmt(coachGainCard)}</span>
+                </div>
+                {!hasUpline && (extraGainPix > 0 || extraGainCard > 0) && (
+                  <>
+                    <div className="mt-2 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">+ Níveis (sem upline) — PIX</span>
+                      <span className="font-bold text-foreground">{fmt(extraGainPix)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">+ Níveis (sem upline) — Cartão</span>
+                      <span className="font-bold text-foreground">{fmt(extraGainCard)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm">
+                      <span className="text-foreground">Total estimado (PIX)</span>
+                      <span className="font-bold text-primary">{fmt(totalEstimatedPix)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-sm">
+                      <span className="text-foreground">Total estimado (Cartão)</span>
+                      <span className="font-bold text-primary">{fmt(totalEstimatedCard)}</span>
+                    </div>
+                  </>
+                )}
+                <p className="mt-2 text-[10px] text-muted-foreground">
+                  Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, impostos e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
+                </p>
+              </div>
             </div>
           )}
 
