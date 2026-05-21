@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Wallet, X, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales
 
 
 export function WalletTab() {
+  const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
   const [bank, setBank] = useState<{
     coachId: string | null;
     pix_key: string;
@@ -47,7 +49,11 @@ export function WalletTab() {
       }
       setLoadingBank(false);
     })();
-    getMyMasterCoachCrossSales().then((r) => setCross(r)).catch(() => {});
+    fetchCrossSales()
+      .then((r) => setCross(r))
+      .catch((err) => {
+        console.error("getMyMasterCoachCrossSales failed:", err);
+      });
   }, []);
 
 
