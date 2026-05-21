@@ -339,6 +339,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     email: "",
     notes: "",
   });
+  const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
 
   // ── Cálculo automático do IMC ────────────────────────────
   const computedBMI = useMemo(() => {
