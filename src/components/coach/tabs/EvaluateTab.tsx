@@ -185,6 +185,51 @@ export function EvaluateTab() {
         coach={coachInfo}
         clients={clients}
         onCreateClient={createClient}
+        onUpdateClient={async (client) => {
+          if (!coachInfo.id) throw new Error("Coach não encontrado");
+          if (!client.name?.trim()) throw new Error("Informe o nome do aluno");
+          const { data, error } = await supabase
+            .from("coach_evaluation_clients" as never)
+            .update({
+              name: client.name.trim().slice(0, 120),
+              gender: client.gender,
+              ethnicity: client.ethnicity,
+              height: client.height || null,
+              height_unit: client.heightUnit || "cm",
+              birth_date: client.birthDate || null,
+              language: client.language || "pt",
+              whatsapp: client.whatsapp?.slice(0, 24) || null,
+              email: client.email?.trim().slice(0, 255) || null,
+              notes: client.notes?.slice(0, 1000) || null,
+              groups: client.groups || [],
+              avatar_url: client.avatar || null,
+            } as never)
+            .eq("id" as never, client.id as never)
+            .eq("coach_id" as never, coachInfo.id as never)
+            .select("*" as never)
+            .single();
+          if (error) { toast.error("Erro ao atualizar aluno"); throw error; }
+          toast.success("Aluno atualizado");
+          const updated = data as any;
+          const mapped: FitMindClient = {
+            id: updated.id,
+            name: updated.name,
+            gender: updated.gender,
+            ethnicity: updated.ethnicity,
+            height: Number(updated.height || 0),
+            heightUnit: updated.height_unit,
+            birthDate: updated.birth_date || "",
+            language: updated.language,
+            whatsapp: updated.whatsapp || "",
+            email: updated.email || "",
+            notes: updated.notes || "",
+            groups: updated.groups || [],
+            avatar: updated.avatar_url || undefined,
+            assessments: client.assessments || [],
+          };
+          setClients((current) => current.map((it) => (it.id === mapped.id ? mapped : it)));
+          return mapped;
+        }}
         onSaveAssessment={saveAssessment}
         onDeleteAssessment={async (assessmentId, reason, client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
