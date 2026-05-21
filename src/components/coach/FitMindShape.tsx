@@ -347,6 +347,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   });
   const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
 
   // ── Cálculo automático do IMC ────────────────────────────
   const computedBMI = useMemo(() => {
