@@ -142,7 +142,8 @@ export interface FitMindAssessment {
   };
   // Circunferências (cm)
   circumferences?: {
-    neck?: number;
+    leftForearm?: number;
+    rightForearm?: number;
     chest?: number;
     waist?: number;
     abdomen?: number;
@@ -1891,7 +1892,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div className="fm-grid-2">
           {(
             [
-              ["Pescoço", "neck"],
+              ["Antebraço Esq.", "leftForearm"],
+              ["Antebraço Dir.", "rightForearm"],
               ["Tórax", "chest"],
               ["Cintura", "waist"],
               ["Abdômen", "abdomen"],
