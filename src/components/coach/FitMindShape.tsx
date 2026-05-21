@@ -507,22 +507,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-step-dot.active { background: var(--fm-primary); }
     @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
-    /* Dark theme overrides for result screen */
-    .fm-result-screen { color: #ffffff; }
-    .fm-result-screen .fm-card { background: #0f172a; color: #ffffff; border-color: #1e293b; box-shadow: 0 2px 16px rgba(0,0,0,.5); }
-    .fm-result-screen .fm-section-title { color: #ffffff !important; }
-    .fm-result-screen table, .fm-result-screen th, .fm-result-screen td { color: #ffffff !important; }
-    .fm-result-screen [style*="color: #1e293b"], .fm-result-screen [style*="color:#1e293b"] { color: #ffffff !important; }
-    .fm-result-screen [style*="color: #64748b"], .fm-result-screen [style*="color:#64748b"] { color: #e2e8f0 !important; }
-    .fm-result-screen [style*="color: #94a3b8"], .fm-result-screen [style*="color:#94a3b8"] { color: #cbd5e1 !important; }
-    .fm-result-screen [style*="background: #f0fdf4"] { background: rgba(34,197,94,0.12) !important; }
-    .fm-result-screen [style*="background: #fef2f2"] { background: rgba(239,68,68,0.12) !important; }
-    .fm-result-screen [style*="background: #f8fafc"] { background: #1e293b !important; }
-    .fm-result-screen [style*="background: #ffffff"], .fm-result-screen [style*="background:#ffffff"], .fm-result-screen [style*="background: #fff"] { background: #1e293b !important; }
-    .fm-result-screen [style*="background: #eff6ff"] { background: rgba(96,165,250,0.12) !important; }
-    .fm-result-screen [style*="background: #f5f3ff"] { background: rgba(167,139,250,0.12) !important; }
-    .fm-result-screen [style*="border-top: 1px solid #f1f5f9"] { border-top-color: #1e293b !important; }
-    .fm-result-screen [style*="border: 1px solid #e2e8f0"] { border-color: #334155 !important; }
+    /* Result screen — theme-aware via tokens */
+    .fm-result-screen { color: var(--foreground); }
+    .fm-result-screen .fm-card {
+      background: var(--card); color: var(--card-foreground);
+      border-color: var(--border); box-shadow: 0 2px 16px rgba(0,0,0,.25);
+    }
+    .fm-result-screen .fm-section-title { color: var(--foreground); }
+    .fm-result-screen table, .fm-result-screen th, .fm-result-screen td { color: var(--foreground); }
     .fm-result-row {
       display: grid; grid-template-columns: 1fr auto auto;
       align-items: center; padding: 12px 0;
@@ -547,29 +539,31 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     .fm-eval-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .fm-coach-footer {
-      background: var(--fm-primary); color: #fff; border-radius: 16px;
+      background: var(--fm-primary); color: var(--primary-foreground); border-radius: 16px;
       padding: 20px; display: flex; align-items: center; gap: 16px; margin-top: 24px;
     }
-    /* === Dark mode global do FitMindShape === */
-    .fm-app.fm-dark, .fm-app.fm-dark > .fm-animate { background: #0A0A0A !important; color: #ffffff; }
-    .fm-app.fm-dark [style*="background: #f8fafc"], .fm-app.fm-dark [style*="background:#f8fafc"] { background: #0A0A0A !important; }
-    .fm-app.fm-dark [style*="background: #ffffff"], .fm-app.fm-dark [style*="background:#ffffff"], .fm-app.fm-dark [style*="background: #fff"], .fm-app.fm-dark [style*="background:#fff"], .fm-app.fm-dark [style*="background: white"], .fm-app.fm-dark [style*="background:white"] { background: #1A1A1A !important; }
-    .fm-app.fm-dark [style*="background: #f1f5f9"], .fm-app.fm-dark [style*="background:#f1f5f9"] { background: #1f2937 !important; }
-    .fm-app.fm-dark [style*="background: #f5f5f5"], .fm-app.fm-dark [style*="background:#f5f5f5"] { background: #1f2937 !important; }
-    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #0f172a"], .fm-app.fm-dark [style*="color:#0f172a"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #334155"], .fm-app.fm-dark [style*="color:#334155"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #ffffff !important; }
-    .fm-app.fm-dark .fm-card { background: #1A1A1A; color: #ffffff; border-color: rgba(255,255,255,0.08); box-shadow: 0 2px 16px rgba(0,0,0,0.4); }
-    .fm-app.fm-dark .fm-input, .fm-app.fm-dark .fm-select { background: #0F0F0F; color: #ffffff; border-color: rgba(255,255,255,0.1); }
-    .fm-app.fm-dark .fm-input::placeholder { color: rgba(255,255,255,0.72); }
-    .fm-app.fm-dark .fm-label { color: #ffffff; }
-    .fm-app.fm-dark .fm-photo-box { background: #0F0F0F; border-color: rgba(255,255,255,0.15); color: #ffffff; }
-    .fm-app.fm-dark .fm-step-dot { background: rgba(255,255,255,0.1); }
-    .fm-app.fm-dark [style*="color: #1e293b"], .fm-app.fm-dark [style*="color:#1e293b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #64748b"], .fm-app.fm-dark [style*="color:#64748b"] { color: #ffffff !important; }
-    .fm-app.fm-dark [style*="color: #94a3b8"], .fm-app.fm-dark [style*="color:#94a3b8"] { color: #ffffff !important; }
+    /* App container — uses theme tokens; no per-style hex overrides needed */
+    .fm-app.fm-dark, .fm-app.fm-dark > .fm-animate {
+      background: var(--background);
+      color: var(--foreground);
+    }
+    .fm-app.fm-dark .fm-card {
+      background: var(--card); color: var(--card-foreground);
+      border-color: var(--border); box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+    }
+    .fm-app.fm-dark .fm-input,
+    .fm-app.fm-dark .fm-select {
+      background: var(--input, var(--background));
+      color: var(--foreground);
+      border-color: var(--border);
+    }
+    .fm-app.fm-dark .fm-input::placeholder { color: var(--muted-foreground); }
+    .fm-app.fm-dark .fm-label { color: var(--muted-foreground); }
+    .fm-app.fm-dark .fm-photo-box {
+      background: var(--muted); border-color: var(--border); color: var(--foreground);
+    }
+    .fm-app.fm-dark .fm-step-dot { background: var(--muted); }
+
   `;
 
   // ────────────────────────────────────────────────────────
