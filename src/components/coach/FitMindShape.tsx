@@ -339,6 +339,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     email: "",
     notes: "",
   });
+  const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
 
   // ── Cálculo automático do IMC ────────────────────────────
   const computedBMI = useMemo(() => {
@@ -1247,25 +1249,75 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
           <div style={{ marginBottom: 12 }}>
             <label className="fm-label">Grupo(s) *</label>
-            <select
-              className="fm-select"
-              value={newClientData.groups?.[0] || ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === "__new__") {
-                  const name = window.prompt("Nome do novo grupo:");
-                  if (name?.trim()) updateNewClient("groups", [name.trim()]);
-                } else {
-                  updateNewClient("groups", v ? [v] : []);
-                }
-              }}
-            >
-              <option value="">Selecione um grupo *</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-              <option value="__new__">+ Criar novo grupo...</option>
-            </select>
+            {!isCreatingNewGroup ? (
+              <select
+                className="fm-select"
+                value={newClientData.groups?.[0] || ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "__new__") {
+                    setIsCreatingNewGroup(true);
+                    setNewGroupName("");
+                  } else {
+                    updateNewClient("groups", v ? [v] : []);
+                  }
+                }}
+              >
+                <option value="">Selecione um grupo *</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+                <option value="__new__">+ Criar novo grupo...</option>
+              </select>
+            ) : (
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  className="fm-input"
+                  autoFocus
+                  placeholder="Nome do novo grupo"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newGroupName.trim()) {
+                      updateNewClient("groups", [newGroupName.trim()]);
+                      setIsCreatingNewGroup(false);
+                    } else if (e.key === "Escape") {
+                      setIsCreatingNewGroup(false);
+                      setNewGroupName("");
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="fm-btn-primary"
+                  style={{ padding: "0 14px" }}
+                  onClick={() => {
+                    if (newGroupName.trim()) {
+                      updateNewClient("groups", [newGroupName.trim()]);
+                      setIsCreatingNewGroup(false);
+                    }
+                  }}
+                >
+                  OK
+                </button>
+                <button
+                  style={{
+                    padding: "0 14px",
+                    background: "var(--muted)",
+                    color: "var(--foreground)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    setIsCreatingNewGroup(false);
+                    setNewGroupName("");
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
           </div>
           <div>
             <label className="fm-label">Anotações</label>
