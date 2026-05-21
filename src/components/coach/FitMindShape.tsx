@@ -322,10 +322,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return +(assessment.weight / (hm * hm)).toFixed(1);
   }, [assessment.weight, assessment.height]);
 
-  const bmiPercent = useMemo(() => {
-    if (!computedBMI) return 0;
-    return +((computedBMI / 24.9) * 100).toFixed(1);
-  }, [computedBMI]);
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
@@ -1365,7 +1361,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 color: "var(--fm-primary)",
               }}
             >
-              {computedBMI > 0 ? `${bmiPercent}%` : "—"}
+              {computedBMI > 0 ? `${computedBMI} kg/m²` : "—"}
               {computedBMI > 0 && (
                 <span
                   className="fm-badge"
@@ -2154,7 +2150,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   fontSize: 12,
                 }}
               >
-                {bmiCat.label} · IMC {formatPercent(bmiPercent)}
+                {bmiCat.label} · IMC {(a.bmi || computedBMI) ? `${(a.bmi || computedBMI).toFixed(1)} kg/m²` : "—"}
               </span>
             </div>
             {(() => {
