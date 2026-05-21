@@ -72,7 +72,7 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-xl border border-white/10 bg-neutral-900 shadow-xl">
+          <div className="absolute right-0 top-full z-50 mt-1 w-48 max-h-[70vh] overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-neutral-900 shadow-xl">
             <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-white/40">Trocar painel</p>
             {available.map((r) => {
               const Icon = r.icon;
