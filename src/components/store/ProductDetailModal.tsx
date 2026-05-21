@@ -17,10 +17,15 @@ export interface ProductDetail {
   commissionLevel2?: number | null;
   commissionLevel3?: number | null;
   // Valores R$ absolutos calculados pelo motor de slots (preferidos quando presentes)
-  commissionCoachAbsolute?: number | null;
-  commissionLevel1Absolute?: number | null;
-  commissionLevel2Absolute?: number | null;
-  commissionLevel3Absolute?: number | null;
+  commissionCoachAbsolute?: number | null;       // PIX — sobra real do coach
+  commissionLevel1Absolute?: number | null;      // PIX
+  commissionLevel2Absolute?: number | null;      // PIX
+  commissionLevel3Absolute?: number | null;      // PIX
+  commissionCoachAbsoluteCard?: number | null;   // Cartão — sobra real do coach
+  commissionLevel1AbsoluteCard?: number | null;
+  commissionLevel2AbsoluteCard?: number | null;
+  commissionLevel3AbsoluteCard?: number | null;
+
   // Custos / taxas para cálculo realista da comissão líquida
   appFee?: number | null;
   appFeePercentage?: number | null;
@@ -88,28 +93,23 @@ export function ProductDetailModal({
   const lvl1 = Number(product.commissionLevel1 || 0);
   const lvl2 = Number(product.commissionLevel2 || 0);
   const lvl3 = Number(product.commissionLevel3 || 0);
-  // Escala para converter valores absolutos (calculados sobre base cartão) em base pix
-  const pixScale = baseAmountCard > 0 ? baseAmountPix / baseAmountCard : 1;
-  const calc = (abs: number | null | undefined, pct: number, base: number, scale = 1) =>
-    abs != null ? Number(abs) * scale : (base * pct) / 100;
-  const coachGainCard = calc(product.commissionCoachAbsolute, coachPct, baseAmountCard);
-  const coachGainPix = calc(product.commissionCoachAbsolute, coachPct, baseAmountPix, pixScale);
-  const l1Card = calc(product.commissionLevel1Absolute, lvl1, baseAmountCard);
-  const l2Card = calc(product.commissionLevel2Absolute, lvl2, baseAmountCard);
-  const l3Card = calc(product.commissionLevel3Absolute, lvl3, baseAmountCard);
-  const l1Pix = calc(product.commissionLevel1Absolute, lvl1, baseAmountPix, pixScale);
-  const l2Pix = calc(product.commissionLevel2Absolute, lvl2, baseAmountPix, pixScale);
-  const l3Pix = calc(product.commissionLevel3Absolute, lvl3, baseAmountPix, pixScale);
-  // Defaults para os cards de níveis (mostra cartão como referência)
-  const coachGain = coachGainCard;
-  const l1Abs = l1Card;
-  const l2Abs = l2Card;
-  const l3Abs = l3Card;
+  // Quando o motor de slots fornecer os valores absolutos (sobra real),
+  // usamos diretamente os valores PIX e Cartão; caso contrário, caímos no fallback por %.
+  const pickAbs = (abs: number | null | undefined, pct: number, base: number) =>
+    abs != null ? Number(abs) : (base * pct) / 100;
+  const coachGainPix = pickAbs(product.commissionCoachAbsolute, coachPct, baseAmountPix);
+  const coachGainCard = pickAbs(product.commissionCoachAbsoluteCard, coachPct, baseAmountCard);
+  const l1Pix = pickAbs(product.commissionLevel1Absolute, lvl1, baseAmountPix);
+  const l2Pix = pickAbs(product.commissionLevel2Absolute, lvl2, baseAmountPix);
+  const l3Pix = pickAbs(product.commissionLevel3Absolute, lvl3, baseAmountPix);
+  const l1Card = pickAbs(product.commissionLevel1AbsoluteCard, lvl1, baseAmountCard);
+  const l2Card = pickAbs(product.commissionLevel2AbsoluteCard, lvl2, baseAmountCard);
+  const l3Card = pickAbs(product.commissionLevel3AbsoluteCard, lvl3, baseAmountCard);
   const extraGainCard = !hasUpline ? l1Card + l2Card + l3Card : 0;
   const extraGainPix = !hasUpline ? l1Pix + l2Pix + l3Pix : 0;
-  const extraGain = extraGainCard;
   const totalEstimatedCard = coachGainCard + extraGainCard;
   const totalEstimatedPix = coachGainPix + extraGainPix;
+
 
   return (
     <div
