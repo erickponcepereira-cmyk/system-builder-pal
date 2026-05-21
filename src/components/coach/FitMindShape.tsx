@@ -130,7 +130,7 @@ export interface FitMindAssessment {
   bodyAge: number; // % idade corporal sobre idade real
   bodyWater: number; // % água corporal
   boneMass: number; // % massa óssea
-  // Segmentos
+  // Segmentos (massa/gordura)
   segmentAnalysis?: {
     leftArm: number;
     rightArm: number;
@@ -138,6 +138,31 @@ export interface FitMindAssessment {
     leftLeg: number;
     rightLeg: number;
   };
+  // Circunferências (cm)
+  circumferences?: {
+    neck?: number;
+    chest?: number;
+    waist?: number;
+    abdomen?: number;
+    hip?: number;
+    leftArm?: number;
+    rightArm?: number;
+    leftThigh?: number;
+    rightThigh?: number;
+    leftCalf?: number;
+    rightCalf?: number;
+  };
+  // Diâmetros ósseos (cm)
+  boneDiameters?: {
+    wrist?: number;
+    elbow?: number;
+    ankle?: number;
+    knee?: number;
+    humerus?: number;
+    femur?: number;
+  };
+  // Método de aferição usado
+  measurementMethod?: "fita_metrica" | "paquimetro" | "adipometro" | "bioimpedancia" | "dexa" | "ultrassom";
   // Outros dados
   systolicBP?: number;
   diastolicBP?: number;
@@ -1486,8 +1511,97 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             );
           })}
         </div>
+
+        <div className="fm-section-title" style={{ marginTop: 16 }}>
+          Circunferências (cm)
+        </div>
+        <div className="fm-grid-2">
+          {(
+            [
+              ["Pescoço", "neck"],
+              ["Tórax", "chest"],
+              ["Cintura", "waist"],
+              ["Abdômen", "abdomen"],
+              ["Quadril", "hip"],
+              ["Braço Esq.", "leftArm"],
+              ["Braço Dir.", "rightArm"],
+              ["Coxa Esq.", "leftThigh"],
+              ["Coxa Dir.", "rightThigh"],
+              ["Panturrilha Esq.", "leftCalf"],
+              ["Panturrilha Dir.", "rightCalf"],
+            ] as const
+          ).map(([label, key]) => (
+            <div key={`circ_${key}`}>
+              <label className="fm-label">{label} (cm)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="fm-input"
+                placeholder="Ex: 90.0"
+                value={(assessment.circumferences as any)?.[key] ?? ""}
+                onChange={(e) =>
+                  upd("circumferences" as any, {
+                    ...(assessment.circumferences || {}),
+                    [key]: e.target.value === "" ? undefined : +e.target.value,
+                  })
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="fm-section-title" style={{ marginTop: 16 }}>
+          Diâmetros Ósseos (cm)
+        </div>
+        <div className="fm-grid-2">
+          {(
+            [
+              ["Punho", "wrist"],
+              ["Cotovelo / Úmero", "elbow"],
+              ["Tornozelo", "ankle"],
+              ["Joelho", "knee"],
+              ["Úmero (biepicondiliano)", "humerus"],
+              ["Fêmur (biepicondiliano)", "femur"],
+            ] as const
+          ).map(([label, key]) => (
+            <div key={`bone_${key}`}>
+              <label className="fm-label">{label} (cm)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="fm-input"
+                placeholder="Ex: 6.5"
+                value={(assessment.boneDiameters as any)?.[key] ?? ""}
+                onChange={(e) =>
+                  upd("boneDiameters" as any, {
+                    ...(assessment.boneDiameters || {}),
+                    [key]: e.target.value === "" ? undefined : +e.target.value,
+                  })
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="fm-section-title" style={{ marginTop: 16 }}>
+          Método de aferição
+        </div>
+        <select
+          className="fm-select"
+          value={(assessment as any).measurementMethod ?? ""}
+          onChange={(e) => upd("measurementMethod" as any, e.target.value || undefined)}
+        >
+          <option value="">Selecione o método utilizado</option>
+          <option value="fita_metrica">Fita métrica</option>
+          <option value="paquimetro">Paquímetro</option>
+          <option value="adipometro">Adipômetro / plicometria</option>
+          <option value="bioimpedancia">Bioimpedância</option>
+          <option value="dexa">DEXA</option>
+          <option value="ultrassom">Ultrassom</option>
+        </select>
       </div>
     );
+
 
     const StepOutros = () => (
       <div>
@@ -1530,19 +1644,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             />
           </div>
         </div>
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Grupo do Aluno
-        </div>
-        <select className="fm-select">
-          <option value="">Sem grupo (opcional)</option>
-          {groups.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
       </div>
     );
+
 
     const StepAnotacoes = () => (
       <div>
