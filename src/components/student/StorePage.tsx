@@ -117,6 +117,11 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         commissionLevel1Absolute: e?.networkL1 ?? null,
         commissionLevel2Absolute: e?.networkL2 ?? null,
         commissionLevel3Absolute: e?.networkL3 ?? null,
+        commissionCoachAbsoluteCard: e?.coachCommissionCard ?? null,
+        commissionLevel1AbsoluteCard: e?.networkL1Card ?? null,
+        commissionLevel2AbsoluteCard: e?.networkL2Card ?? null,
+        commissionLevel3AbsoluteCard: e?.networkL3Card ?? null,
+
         appFee: p.app_fee, appFeePercentage: p.app_fee_percentage,
         cardFeePercentage: p.credit_fee_percentage ?? p.card_fee_percentage,
         taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
