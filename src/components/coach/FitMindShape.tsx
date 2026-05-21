@@ -790,6 +790,35 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     }
   };
 
+  const updateEditingClient = (key: keyof FitMindClient, value: unknown) => {
+    setEditingClientData((current) => (current ? { ...current, [key]: value } : current));
+  };
+
+  const saveEditedClient = async () => {
+    if (!editingClientData || !onUpdateClient) return;
+    if (!editingClientData.name?.trim()) return alert("Informe o nome do aluno");
+    setIsSaving(true);
+    try {
+      const updated = await onUpdateClient({
+        ...editingClientData,
+        name: editingClientData.name.trim(),
+        whatsapp: formatBrazilWhatsapp(editingClientData.whatsapp || ""),
+      });
+      const merged = (updated as FitMindClient) || editingClientData;
+      if (selectedClient?.id === merged.id) setSelectedClient(merged);
+      setEditingClientData(null);
+      setScreen("select-client");
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o aluno",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // ────────────────────────────────────────────────────────
   // TELA: HOME
   // ────────────────────────────────────────────────────────
