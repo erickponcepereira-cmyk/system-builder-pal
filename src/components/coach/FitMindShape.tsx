@@ -1881,7 +1881,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     };
 
     const StepMedidas = () => (
+      <>
       <div>
+
         <div className="fm-section-title">Circunferências por Medição (cm)</div>
         <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 14 }}>
           Informe as medidas com a fita métrica. Após preencher, clique em{" "}
@@ -2156,7 +2158,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           <option value="ultrassom">Ultrassom</option>
         </select>
       </div>
+      </>
     );
+
 
 
     const StepOutros = () => (
