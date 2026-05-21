@@ -17,7 +17,7 @@
 // - date-fns
 // ============================================================
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import AssessmentComparison from "./AssessmentComparison";
 import {
   LineChart,
@@ -347,6 +347,31 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return +(assessment.weight / (hm * hm)).toFixed(1);
   }, [assessment.weight, assessment.height]);
 
+  // ── Pré-preenche dados de "Próxima Avaliação" ao entrar no step Agendamento ──
+  useEffect(() => {
+    if (screen !== "assessment") return;
+    if (step !== 5) return; // index do step "Agendamento" em STEPS
+    setAssessment((prev) => {
+      const next: Partial<FitMindAssessment> = { ...prev };
+      let changed = false;
+      if (!next.nextAssessmentDate) {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        next.nextAssessmentDate = d.toISOString().slice(0, 10);
+        changed = true;
+      }
+      if (!next.nextAssessmentTime) {
+        next.nextAssessmentTime = "09:00";
+        changed = true;
+      }
+      if (!(next as any).nextAssessmentTitle) {
+        (next as any).nextAssessmentTitle = `Avaliação — ${selectedClient?.name ?? "Aluno"}`;
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [screen, step, selectedClient]);
+
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
@@ -461,7 +486,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       outline: none;
       background: var(--background);
       color: var(--foreground);
+      color-scheme: dark;
     }
+    .fm-input::-webkit-calendar-picker-indicator,
+    .fm-input::-webkit-clear-button { filter: invert(0.85); cursor: pointer; }
+    .fm-input::-webkit-datetime-edit,
+    .fm-input::-webkit-datetime-edit-fields-wrapper,
+    .fm-input::-webkit-datetime-edit-text,
+    .fm-input::-webkit-datetime-edit-month-field,
+    .fm-input::-webkit-datetime-edit-day-field,
+    .fm-input::-webkit-datetime-edit-year-field,
+    .fm-input::-webkit-datetime-edit-hour-field,
+    .fm-input::-webkit-datetime-edit-minute-field { color: var(--foreground); }
     .fm-input:focus { border-color: var(--fm-primary); }
     .fm-label {
       font-size: 12px;
