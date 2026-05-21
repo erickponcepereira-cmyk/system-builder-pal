@@ -80,21 +80,36 @@ export function ProductDetailModal({
   const cardPerc = Number(product.cardFeePercentage || 0);
   const taxPerc = Number(product.taxPercentage || 0);
   const costFlat = Number(product.cost || 0) + Number(product.otherCosts || 0);
-  const feesValue = appFeeFlat + (price * (appFeePerc + cardPerc + taxPerc)) / 100 + costFlat;
-  const baseAmount = Math.max(0, price - feesValue);
+  const feesValueCard = appFeeFlat + (price * (appFeePerc + cardPerc + taxPerc)) / 100 + costFlat;
+  const feesValuePix = appFeeFlat + (price * (appFeePerc + taxPerc)) / 100 + costFlat;
+  const baseAmountCard = Math.max(0, price - feesValueCard);
+  const baseAmountPix = Math.max(0, price - feesValuePix);
   const coachPct = Number(product.commissionCoach || 0);
   const lvl1 = Number(product.commissionLevel1 || 0);
   const lvl2 = Number(product.commissionLevel2 || 0);
   const lvl3 = Number(product.commissionLevel3 || 0);
-  // Preferir valores R$ absolutos (motor de slots) quando presentes
-  const coachGain = product.commissionCoachAbsolute != null
-    ? Number(product.commissionCoachAbsolute)
-    : (baseAmount * coachPct) / 100;
-  const l1Abs = product.commissionLevel1Absolute != null ? Number(product.commissionLevel1Absolute) : (baseAmount * lvl1) / 100;
-  const l2Abs = product.commissionLevel2Absolute != null ? Number(product.commissionLevel2Absolute) : (baseAmount * lvl2) / 100;
-  const l3Abs = product.commissionLevel3Absolute != null ? Number(product.commissionLevel3Absolute) : (baseAmount * lvl3) / 100;
-  const extraGain = !hasUpline ? l1Abs + l2Abs + l3Abs : 0;
-  const totalEstimated = coachGain + extraGain;
+  // Escala para converter valores absolutos (calculados sobre base cartão) em base pix
+  const pixScale = baseAmountCard > 0 ? baseAmountPix / baseAmountCard : 1;
+  const calc = (abs: number | null | undefined, pct: number, base: number, scale = 1) =>
+    abs != null ? Number(abs) * scale : (base * pct) / 100;
+  const coachGainCard = calc(product.commissionCoachAbsolute, coachPct, baseAmountCard);
+  const coachGainPix = calc(product.commissionCoachAbsolute, coachPct, baseAmountPix, pixScale);
+  const l1Card = calc(product.commissionLevel1Absolute, lvl1, baseAmountCard);
+  const l2Card = calc(product.commissionLevel2Absolute, lvl2, baseAmountCard);
+  const l3Card = calc(product.commissionLevel3Absolute, lvl3, baseAmountCard);
+  const l1Pix = calc(product.commissionLevel1Absolute, lvl1, baseAmountPix, pixScale);
+  const l2Pix = calc(product.commissionLevel2Absolute, lvl2, baseAmountPix, pixScale);
+  const l3Pix = calc(product.commissionLevel3Absolute, lvl3, baseAmountPix, pixScale);
+  // Defaults para os cards de níveis (mostra cartão como referência)
+  const coachGain = coachGainCard;
+  const l1Abs = l1Card;
+  const l2Abs = l2Card;
+  const l3Abs = l3Card;
+  const extraGainCard = !hasUpline ? l1Card + l2Card + l3Card : 0;
+  const extraGainPix = !hasUpline ? l1Pix + l2Pix + l3Pix : 0;
+  const extraGain = extraGainCard;
+  const totalEstimatedCard = coachGainCard + extraGainCard;
+  const totalEstimatedPix = coachGainPix + extraGainPix;
 
   return (
     <div
