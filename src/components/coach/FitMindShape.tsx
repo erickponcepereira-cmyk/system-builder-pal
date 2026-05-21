@@ -322,10 +322,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     return +(assessment.weight / (hm * hm)).toFixed(1);
   }, [assessment.weight, assessment.height]);
 
-  const bmiPercent = useMemo(() => {
-    if (!computedBMI) return 0;
-    return +((computedBMI / 24.9) * 100).toFixed(1);
-  }, [computedBMI]);
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
