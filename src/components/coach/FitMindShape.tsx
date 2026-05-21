@@ -1892,7 +1892,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <div className="fm-grid-2">
           {(
             [
-              ["Pescoço", "neck"],
+              ["Antebraço Esq.", "leftForearm"],
+              ["Antebraço Dir.", "rightForearm"],
               ["Tórax", "chest"],
               ["Cintura", "waist"],
               ["Abdômen", "abdomen"],
