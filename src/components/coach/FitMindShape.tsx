@@ -2001,8 +2001,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <option value="adipometro">Adipômetro / plicometria</option>
           </select>
         </div>
-        <div style={{ marginTop: 16 }}>
-        <div className="fm-section-title">Bioimpedância</div>
+      </div>
+      <div>
+
 
         <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
           Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
