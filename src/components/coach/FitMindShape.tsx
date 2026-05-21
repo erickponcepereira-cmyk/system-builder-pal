@@ -1198,6 +1198,31 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <Phone size={14} />
                 </a>
               )}
+              {onUpdateClient && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingClientData(c);
+                    setScreen("edit-client");
+                  }}
+                  title="Editar dados do aluno"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: "var(--muted)",
+                    color: "var(--foreground)",
+                    border: "1px solid var(--border)",
+                    cursor: "pointer",
+                    marginRight: 6,
+                  }}
+                >
+                  <Edit3 size={14} />
+                </button>
+              )}
               <ChevronRight size={16} color="var(--border)" />
 
             </div>
