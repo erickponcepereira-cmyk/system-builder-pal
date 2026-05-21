@@ -66,6 +66,12 @@ import {
   Download,
   Edit3,
 } from "lucide-react";
+import {
+  calculateBodyComposition,
+  getAvatarFromBodyFat,
+  AVATAR_LABELS_8,
+  type MeasurementInput,
+} from "@/lib/body-composition-calculator";
 import poseFrente from "@/assets/photo-pose-frente.png";
 import poseCostas from "@/assets/photo-pose-costas.png";
 import poseLateralDir from "@/assets/photo-pose-lateral-direita.png";
@@ -244,15 +250,29 @@ export interface FitMindShapeProps {
 // CONSTANTES DE REFERÊNCIA CLÍNICA
 // ============================================================
 
+// ── 8 níveis de IMC alinhados com os 8 avatares (body-abaixo…body-alto-3) ──
 const BMI_RANGES = [
   { max: 18.5, label: "Abaixo do peso", color: "#60a5fa", avatar: 0 },
-  { max: 24.9, label: "Normal", color: "#22c55e", avatar: 1 },
-  { max: 27.5, label: "Acima do peso I", color: "#facc15", avatar: 2 },
-  { max: 29.9, label: "Acima do peso II", color: "#fb923c", avatar: 3 },
-  { max: 34.9, label: "Obesidade I", color: "#f87171", avatar: 4 },
-  { max: 39.9, label: "Obesidade II", color: "#ef4444", avatar: 5 },
-  { max: 100, label: "Obesidade III", color: "#b91c1c", avatar: 6 },
+  { max: 24.9, label: "Normal",         color: "#22c55e", avatar: 1 },
+  { max: 27.4, label: "Acima 1",        color: "#a3e635", avatar: 2 },
+  { max: 29.9, label: "Acima 2",        color: "#facc15", avatar: 3 },
+  { max: 34.9, label: "Acima 3",        color: "#fb923c", avatar: 4 },
+  { max: 39.9, label: "Alto 1",         color: "#f87171", avatar: 5 },
+  { max: 44.9, label: "Alto 2",         color: "#ef4444", avatar: 6 },
+  { max: 100,  label: "Alto 3",         color: "#b91c1c", avatar: 7 },
 ];
+
+// ── RCQ (WHO 2000) ────────────────────────────────────────────────────────────
+const RCQ_RISK = {
+  male:   { low: 0.90, mod: 0.95 },
+  female: { low: 0.80, mod: 0.85 },
+};
+function classifyRCQ(rcq: number, gender: string) {
+  const limits = gender === "male" ? RCQ_RISK.male : RCQ_RISK.female;
+  if (rcq < limits.low)  return { label: "Baixo risco",     color: "#22c55e", eval: "normal" };
+  if (rcq <= limits.mod) return { label: "Risco moderado",  color: "#facc15", eval: "warning" };
+  return                        { label: "Alto risco",       color: "#ef4444", eval: "danger" };
+}
 
 const BODY_FAT_RANGES = {
   male: [
@@ -298,7 +318,7 @@ const TOOLTIPS: Record<string, string> = {
 };
 
 const CLINICAL_SOURCES =
-  "Fontes: (1) OMS - Organização Mundial da Saúde; (2) Omron Healthcare; (8) diretrizes NIH/OMS para IMC; (9) Omron Healthcare e Tanita; (10) Método Harris-Benedict.";
+  "Fontes: (1) OMS - Organização Mundial da Saúde; (2) Omron Healthcare; (8) diretrizes NIH/OMS para IMC; (9) Omron Healthcare e Tanita; (10) Harris-Benedict revisado (Roza & Shizgal, 1984); (11) Lee RC et al. (2000) — músculo esquelético por antropometria; (12) Weltman A et al. (1988) — % gordura por circunferências; (13) WHO (2000) — Relação Cintura-Quadril.";
 
 // ============================================================
 // COMPONENTE PRINCIPAL
@@ -668,22 +688,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     );
   };
 
-  const AvatarLabels = [
-    "Abaixo",
-    "Normal",
-    "Acima 1",
-    "Acima 2",
-    "Acima 3",
-    "Alto 1",
-    "Alto 2",
-  ];
+  // Usa os 8 labels sincronizados com as 8 imagens de avatar
+  const AvatarLabels = AVATAR_LABELS_8;
 
   // ────────────────────────────────────────────────────────
   // AVALIAÇÃO — STEPS LABELS
   // ────────────────────────────────────────────────────────
   const STEPS = [
     "Dados Básicos",
-    "Bioimpedância",
+    "Composição Corporal",
     "Outros Dados",
     "Anotações",
     "Fotos",
@@ -1681,11 +1694,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <label className="fm-label">Método</label>
             <select
               className="fm-select"
-              onChange={(e) => upd("method", e.target.value)}
-              defaultValue="bioimpedance"
+              value={assessment.method || "bioimpedance"}
+              onChange={(e) => {
+                const method = e.target.value as "bioimpedance" | "measurements";
+                upd("method", method);
+              }}
             >
               <option value="bioimpedance">Bioimpedância</option>
-              <option value="measurements">Medidas (Virtual)</option>
+              <option value="measurements">Medidas (fita métrica)</option>
             </select>
           </div>
         </div>
@@ -1821,7 +1837,172 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       { key: "boneMass", label: "Massa Óssea", tip: "boneMass", placeholder: "Ex: 4.2", defaultUnit: "%", units: ["%", "kg", "num"] },
     ];
 
-    const StepBioimpedancia = () => (
+    // ── Estado para cálculo por medidas ──────────────────
+    const [calcWarnings, setCalcWarnings] = useState<string[]>([]);
+    const [calcDone, setCalcDone] = useState(false);
+
+    const handleCalculateFromMeasurements = () => {
+      if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) {
+        alert("Preencha Peso, Altura e Idade antes de calcular.");
+        return;
+      }
+      const input: MeasurementInput = {
+        weight: assessment.weight,
+        height: assessment.height,
+        age: assessment.age,
+        gender: selectedClient.gender === "other" ? "female" : selectedClient.gender,
+        ethnicity: (selectedClient.ethnicity as MeasurementInput["ethnicity"]) ?? "white",
+        waist: assessment.circumferences?.waist,
+        abdomen: assessment.circumferences?.abdomen,
+        hip: assessment.circumferences?.hip,
+        leftArm: assessment.circumferences?.leftArm,
+        rightArm: assessment.circumferences?.rightArm,
+        leftForearm: assessment.circumferences?.leftForearm,
+        rightForearm: assessment.circumferences?.rightForearm,
+        leftThigh: assessment.circumferences?.leftThigh,
+        rightThigh: assessment.circumferences?.rightThigh,
+        leftCalf: assessment.circumferences?.leftCalf,
+        rightCalf: assessment.circumferences?.rightCalf,
+      };
+      const r = calculateBodyComposition(input);
+      setAssessment((prev) => ({
+        ...prev,
+        bodyFat: r.bodyFat,
+        skeletalMuscle: r.skeletalMuscle,
+        muscleMass: r.muscleMass,
+        basalMetabolism: r.basalMetabolism,
+        bodyAge: r.bodyAge,
+        bodyWater: r.bodyWater,
+        boneMass: r.boneMass,
+        visceralFat: prev.visceralFat || 0, // não calculável sem BIA
+      }));
+      setCalcWarnings(r.warnings);
+      setCalcDone(true);
+    };
+
+    const StepMedidas = () => (
+      <div>
+        <div className="fm-section-title">Circunferências por Medição (cm)</div>
+        <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 14 }}>
+          Informe as medidas com a fita métrica. Após preencher, clique em{" "}
+          <strong>Calcular Composição Corporal</strong> para gerar automaticamente
+          gordura, músculo, metabolismo e demais indicadores.
+        </p>
+
+        {/* Circunferências */}
+        <div className="fm-grid-2">
+          {(
+            [
+              ["Cintura (cm)", "waist"],
+              ["Abdômen (cm)", "abdomen"],
+              ["Quadril (cm)", "hip"],
+              ["Tórax (cm)", "chest"],
+              ["Braço Esq. (cm)", "leftArm"],
+              ["Braço Dir. (cm)", "rightArm"],
+              ["Antebraço Esq. (cm)", "leftForearm"],
+              ["Antebraço Dir. (cm)", "rightForearm"],
+              ["Coxa Esq. (cm)", "leftThigh"],
+              ["Coxa Dir. (cm)", "rightThigh"],
+              ["Panturrilha Esq. (cm)", "leftCalf"],
+              ["Panturrilha Dir. (cm)", "rightCalf"],
+            ] as const
+          ).map(([label, key]) => (
+            <div key={`circ_${key}`}>
+              <label className="fm-label">{label}</label>
+              <input
+                type="number"
+                step="0.1"
+                className="fm-input"
+                placeholder="Ex: 80.5"
+                value={(assessment.circumferences as any)?.[key] ?? ""}
+                onChange={(e) =>
+                  upd("circumferences" as keyof FitMindAssessment, {
+                    ...(assessment.circumferences || {}),
+                    [key]: e.target.value === "" ? undefined : +e.target.value,
+                  })
+                }
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Botão de cálculo */}
+        <button
+          className="fm-btn-primary"
+          style={{ width: "100%", marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          type="button"
+          onClick={handleCalculateFromMeasurements}
+        >
+          <Activity size={16} />
+          {calcDone ? "Recalcular Composição Corporal" : "Calcular Composição Corporal"}
+        </button>
+
+        {/* Avisos de precisão */}
+        {calcWarnings.length > 0 && (
+          <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--fm-primary-light)", borderRadius: 10, fontSize: 12, color: "var(--foreground)" }}>
+            <strong>⚠️ Atenção:</strong>
+            <ul style={{ margin: "4px 0 0 0", paddingLeft: 16 }}>
+              {calcWarnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {/* Preview dos valores calculados */}
+        {calcDone && (
+          <div style={{ marginTop: 16, padding: "14px", background: "rgba(34,197,94,0.08)", border: "1.5px solid #22c55e33", borderRadius: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#16a34a", marginBottom: 10 }}>
+              ✓ Valores calculados automaticamente
+            </div>
+            <div className="fm-grid-2" style={{ gap: 8 }}>
+              {[
+                ["% Gordura", assessment.bodyFat, "%"],
+                ["% Músculo Esq.", assessment.skeletalMuscle, "%"],
+                ["% Massa Muscular", assessment.muscleMass, "%"],
+                ["Metabolismo Basal", assessment.basalMetabolism, "kcal"],
+                ["% Água Corporal", assessment.bodyWater, "%"],
+                ["% Massa Óssea", assessment.boneMass, "%"],
+                ["Idade Corporal", assessment.bodyAge, "anos"],
+              ].map(([label, value, unit]) => (
+                <div key={label as string} style={{ fontSize: 12 }}>
+                  <span style={{ color: "var(--muted-foreground)" }}>{label}:</span>{" "}
+                  <strong>{value != null && Number.isFinite(+value!) ? `${value} ${unit}` : "—"}</strong>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 10, marginBottom: 0 }}>
+              💡 A Gordura Visceral não pode ser calculada sem bioimpedância — deixe em branco ou insira manualmente se disponível.
+            </p>
+          </div>
+        )}
+
+        {/* Gordura Visceral manual (opcional) */}
+        <div style={{ marginTop: 16 }}>
+          <label className="fm-label">Gordura Visceral (opcional — inserir manualmente se disponível)</label>
+          <input
+            type="number"
+            step="0.5"
+            className="fm-input"
+            placeholder="Ex: 8 (somente se disponível)"
+            value={assessment.visceralFat || ""}
+            onChange={(e) => upd("visceralFat", e.target.value ? +e.target.value : 0)}
+          />
+        </div>
+
+        {/* Método de aferição */}
+        <div style={{ marginTop: 16 }}>
+          <label className="fm-label">Método de aferição</label>
+          <select
+            className="fm-select"
+            value={(assessment as any).measurementMethod ?? "fita_metrica"}
+            onChange={(e) => upd("measurementMethod" as any, e.target.value || undefined)}
+          >
+            <option value="fita_metrica">Fita métrica</option>
+            <option value="paquimetro">Paquímetro</option>
+            <option value="adipometro">Adipômetro / plicometria</option>
+          </select>
+        </div>
+      </div>
+    );
       <div>
         <div className="fm-section-title">Bioimpedância</div>
         <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
@@ -2236,9 +2417,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       </div>
     );
 
+    // Usa StepMedidas quando o método é por medição, StepBioimpedância para BIA
+    const isMeasurements = assessment.method === "measurements";
     const stepComponents = [
       StepDados,
-      StepBioimpedancia,
+      isMeasurements ? StepMedidas : StepBioimpedancia,
       StepOutros,
       StepAnotacoes,
       StepFotos,
@@ -2273,6 +2456,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
               {selectedClient?.name} · {STEPS[step]}
+              {step === 1 && (
+                <span style={{ marginLeft: 6, fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                  background: assessment.method === "measurements" ? "#f0fdf4" : "#eff6ff",
+                  color: assessment.method === "measurements" ? "#16a34a" : "#2563eb",
+                  fontWeight: 700 }}>
+                  {assessment.method === "measurements" ? "📏 Fita métrica" : "⚡ Bioimpedância"}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -2335,7 +2526,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const client = selectedClient!;
     const a = assessment as FitMindAssessment;
     const bmiCat = getBMICategory(a.bmi || computedBMI);
-    const avatarIndex = bmiCat.avatar;
+    // Se temos % de gordura, usamos ela para o avatar (mais preciso que IMC).
+    // Se não, usa o avatar do IMC como fallback.
+    const avatarEntry = a.bodyFat
+      ? getAvatarFromBodyFat(a.bodyFat, client.gender === "other" ? "female" : client.gender)
+      : { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
+    const avatarIndex = avatarEntry.index;
     const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
     const viscCat = getVisceralCategory(a.visceralFat);
     const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
@@ -2419,8 +2615,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
     const refSkeletal = client.gender === "male" ? "33–39%" : "24–30%";
     const refBMI = "18,5–24,9 kg/m²";
-    const refBodyFat = client.gender === "male" ? "10–17%" : "18–24%";
+    const refBodyFat = client.gender === "male" ? "5–15%" : "13–22%";
     const refVisceral = "1–9";
+
+    // ── RCQ ─────────────────────────────────────────────────
+    const waistRef = a.circumferences?.waist ?? a.circumferences?.abdomen;
+    const hipRef = a.circumferences?.hip;
+    const rcq = waistRef && hipRef ? +(waistRef / hipRef).toFixed(2) : null;
+    const rcqCat = rcq ? classifyRCQ(rcq, client.gender) : null;
+    const refRcq = client.gender === "male" ? "< 0,90" : "< 0,80";
     const harrisBenedict = (() => {
       if (!a.weight || !a.height || !a.age) return 0;
       return Math.round(
@@ -2619,9 +2822,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 className="fm-badge"
                 style={{
                   background: evalColor(
-                    bmiCat.avatar <= 1
+                    avatarEntry.index <= 1
                       ? "normal"
-                      : bmiCat.avatar <= 3
+                      : avatarEntry.index <= 3
                         ? "warning"
                         : "danger",
                   ),
@@ -2629,7 +2832,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   fontSize: 12,
                 }}
               >
-                {bmiCat.label} · IMC {(a.bmi || computedBMI) ? `${(a.bmi || computedBMI).toFixed(1)} kg/m²` : "—"}
+                {avatarEntry.label} · IMC {(a.bmi || computedBMI) ? `${(a.bmi || computedBMI).toFixed(1)} kg/m²` : "—"}
+                {a.bodyFat ? ` · ${a.bodyFat}% gordura` : ""}
               </span>
             </div>
             {(() => {
@@ -2769,6 +2973,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                       color: basalEval.c,
                       tag: basalEval.t,
                     },
+                    ...(rcq !== null
+                      ? [{
+                          l: "Rel. Cintura-Quadril (RCQ)",
+                          ref: `Referência: ${refRcq} (baixo risco — WHO 2000)`,
+                          result: `${rcq}`,
+                          color: rcqCat?.color ?? "#94a3b8",
+                          tag: rcqCat?.label ?? "—",
+                        }]
+                      : []),
                   ].map((r) => (
                     <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
                       <td style={{ padding: "10px 4px" }}>
@@ -3111,6 +3324,34 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Circunferências registradas (exibidas apenas quando há dados) */}
+          {a.circumferences && Object.values(a.circumferences).some(Boolean) && (
+            <div className="fm-card" style={{ marginBottom: 12 }}>
+              <div className="fm-section-title">Circunferências Registradas (cm)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, fontSize: 12 }}>
+                {[
+                  ["Cintura", a.circumferences?.waist],
+                  ["Abdômen", a.circumferences?.abdomen],
+                  ["Quadril", a.circumferences?.hip],
+                  ["Tórax", a.circumferences?.chest],
+                  ["Braço Esq.", a.circumferences?.leftArm],
+                  ["Braço Dir.", a.circumferences?.rightArm],
+                  ["Antebraço Esq.", a.circumferences?.leftForearm],
+                  ["Antebraço Dir.", a.circumferences?.rightForearm],
+                  ["Coxa Esq.", a.circumferences?.leftThigh],
+                  ["Coxa Dir.", a.circumferences?.rightThigh],
+                  ["Panturrilha Esq.", a.circumferences?.leftCalf],
+                  ["Panturrilha Dir.", a.circumferences?.rightCalf],
+                ].filter(([, v]) => v != null).map(([label, value]) => (
+                  <div key={label as string} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ color: "var(--muted-foreground)" }}>{label}</span>
+                    <strong>{value} cm</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="fm-card" style={{ marginBottom: 12 }}>
             <div className="fm-section-title">Fontes de Referência</div>
