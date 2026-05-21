@@ -564,7 +564,6 @@ function AbaGanhos({ nodes, vendasCoach, produtoSel, payMethod, setPayMethod }: 
         </p>
         {[
           { label: `Bruto (${fmt(coachPerSale)} × ${vendasCoach})`, val: fmt(ganhoPropr.bruto), style: "text-zinc-200" },
-          { label: `(-) Imposto pessoal ${fmtp(TAXA_IMP_PESSOA)}`, val: `- ${fmt(ganhoPropr.imp)}`, style: "text-red-400" },
         ].map((r, i) => (
           <div key={i} className="flex justify-between py-1.5 border-b border-white/5 text-sm">
             <span className="text-zinc-400">{r.label}</span>
