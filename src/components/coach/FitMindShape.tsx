@@ -2154,7 +2154,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   fontSize: 12,
                 }}
               >
-                {bmiCat.label} · IMC {formatPercent(bmiPercent)}
+                {bmiCat.label} · IMC {(a.bmi || computedBMI) ? `${(a.bmi || computedBMI).toFixed(1)} kg/m²` : "—"}
               </span>
             </div>
             {(() => {
