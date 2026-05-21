@@ -134,7 +134,7 @@ export function AdminShell() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-30 h-screen w-64 flex-col border-r border-white/5 p-4 transition-transform lg:flex lg:translate-x-0 ${
+        className={`fixed lg:sticky top-0 left-0 z-30 h-screen w-64 flex-col overflow-y-auto overscroll-contain border-r border-white/5 p-4 transition-transform lg:flex lg:translate-x-0 ${
           open ? "flex translate-x-0" : "hidden -translate-x-full"
         }`}
         style={{ backgroundColor: "#0F0F0F" }}
