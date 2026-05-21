@@ -1036,20 +1036,39 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
 
-        <button
-          className="fm-btn-primary"
-          style={{
-            width: "100%",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-          onClick={() => setScreen("new-client")}
-        >
-          <Plus size={18} /> Adicionar Novo Aluno
-        </button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <button
+            className="fm-btn-primary"
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+            onClick={() => setScreen("new-client")}
+          >
+            <Plus size={18} /> Adicionar Novo Aluno
+          </button>
+          <button
+            onClick={exportClientsCSV}
+            title="Exportar alunos e avaliações (CSV)"
+            style={{
+              padding: "0 14px",
+              background: "var(--card)",
+              color: "var(--foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontWeight: 600,
+            }}
+          >
+            <Download size={16} /> CSV
+          </button>
+        </div>
 
         <div
           style={{
