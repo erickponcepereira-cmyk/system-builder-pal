@@ -142,7 +142,8 @@ export interface FitMindAssessment {
   };
   // Circunferências (cm)
   circumferences?: {
-    neck?: number;
+    leftForearm?: number;
+    rightForearm?: number;
     chest?: number;
     waist?: number;
     abdomen?: number;
