@@ -1487,6 +1487,159 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   };
 
   // ────────────────────────────────────────────────────────
+  // TELA: EDITAR DADOS DO ALUNO
+  // ────────────────────────────────────────────────────────
+  const EditClientScreen = () => {
+    if (!editingClientData) return null;
+    const c = editingClientData;
+    return (
+      <div
+        className="fm-animate"
+        style={{ padding: 24, minHeight: "100vh", background: "var(--muted)" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <button
+            onClick={() => { setEditingClientData(null); setScreen("select-client"); }}
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
+            <ChevronLeft size={22} color="var(--muted-foreground)" />
+          </button>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)" }}>
+            Editar Aluno
+          </div>
+        </div>
+
+        <div className="fm-card" style={{ marginBottom: 16 }}>
+          <div className="fm-section-title">Dados Pessoais</div>
+          <div style={{ marginBottom: 12 }}>
+            <label className="fm-label">Nome completo *</label>
+            <input
+              className="fm-input"
+              value={c.name || ""}
+              onChange={(e) => updateEditingClient("name", e.target.value)}
+            />
+          </div>
+          <div className="fm-grid-2" style={{ marginBottom: 12 }}>
+            <div>
+              <label className="fm-label">Gênero</label>
+              <select
+                className="fm-select"
+                value={c.gender || "female"}
+                onChange={(e) => updateEditingClient("gender", e.target.value)}
+              >
+                <option value="female">Feminino</option>
+                <option value="male">Masculino</option>
+              </select>
+            </div>
+            <div>
+              <label className="fm-label">Etnia</label>
+              <select
+                className="fm-select"
+                value={c.ethnicity || "white"}
+                onChange={(e) => updateEditingClient("ethnicity", e.target.value)}
+              >
+                <option value="white">Branca</option>
+                <option value="black">Negra</option>
+                <option value="brown">Parda</option>
+                <option value="asian">Amarela</option>
+                <option value="indigenous">Indígena</option>
+              </select>
+            </div>
+          </div>
+          <div className="fm-grid-2" style={{ marginBottom: 12 }}>
+            <div>
+              <label className="fm-label">Data de nascimento</label>
+              <input
+                type="date"
+                className="fm-input"
+                value={c.birthDate || ""}
+                onChange={(e) => updateEditingClient("birthDate", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="fm-label">Altura</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type="number"
+                  className="fm-input"
+                  value={c.height || ""}
+                  onChange={(e) => updateEditingClient("height", +e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <select
+                  className="fm-select"
+                  style={{ width: 64 }}
+                  value={c.heightUnit || "cm"}
+                  onChange={(e) => updateEditingClient("heightUnit", e.target.value)}
+                >
+                  <option value="cm">cm</option>
+                  <option value="ft">ft</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="fm-grid-2" style={{ marginBottom: 12 }}>
+            <div>
+              <label className="fm-label">WhatsApp</label>
+              <input
+                className="fm-input"
+                inputMode="numeric"
+                value={c.whatsapp || "+55 "}
+                onChange={(e) => updateEditingClient("whatsapp", formatBrazilWhatsapp(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="fm-label">E-mail</label>
+              <input
+                type="email"
+                className="fm-input"
+                value={c.email || ""}
+                onChange={(e) => updateEditingClient("email", e.target.value)}
+              />
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label className="fm-label">Grupo</label>
+            <select
+              className="fm-select"
+              value={c.groups?.[0] || ""}
+              onChange={(e) => updateEditingClient("groups", e.target.value ? [e.target.value] : [])}
+            >
+              <option value="">Sem grupo</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+              {(c.groups || []).filter((g) => !groups.find((x) => x.id === g)).map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="fm-label">Anotações</label>
+            <textarea
+              className="fm-input"
+              rows={3}
+              style={{ resize: "none" }}
+              value={c.notes || ""}
+              onChange={(e) => updateEditingClient("notes", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <button
+          className="fm-btn-primary"
+          style={{ width: "100%" }}
+          onClick={saveEditedClient}
+          disabled={isSaving}
+        >
+          {isSaving ? "Salvando..." : "Salvar Alterações"}
+        </button>
+      </div>
+    );
+  };
+
+
+  // ────────────────────────────────────────────────────────
   // TELA: AVALIAÇÃO — FORMULÁRIO MULTI-STEP
   // ────────────────────────────────────────────────────────
   const AssessmentScreen = () => {
