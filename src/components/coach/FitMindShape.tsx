@@ -352,6 +352,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
+  const [calcWarnings, setCalcWarnings] = useState<string[]>([]);
+  const [calcDone, setCalcDone] = useState(false);
   const setBioUnit = (key: string, unit: "%" | "kg" | "cm" | "num") =>
     setBioUnits((prev) => ({ ...prev, [key]: unit }));
   const [newClientData, setNewClientData] = useState<Partial<FitMindClient>>({
