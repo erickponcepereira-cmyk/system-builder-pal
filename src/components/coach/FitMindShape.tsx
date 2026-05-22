@@ -352,6 +352,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
+  const [calcWarnings, setCalcWarnings] = useState<string[]>([]);
+  const [calcDone, setCalcDone] = useState(false);
   const setBioUnit = (key: string, unit: "%" | "kg" | "cm" | "num") =>
     setBioUnits((prev) => ({ ...prev, [key]: unit }));
   const [newClientData, setNewClientData] = useState<Partial<FitMindClient>>({
@@ -1837,9 +1839,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       { key: "boneMass", label: "Massa Óssea", tip: "boneMass", placeholder: "Ex: 4.2", defaultUnit: "%", units: ["%", "kg", "num"] },
     ];
 
-    // ── Estado para cálculo por medidas ──────────────────
-    const [calcWarnings, setCalcWarnings] = useState<string[]>([]);
-    const [calcDone, setCalcDone] = useState(false);
+    // Estado de cálculo agora vive no componente pai (regras de hooks)
+
 
     const handleCalculateFromMeasurements = () => {
       if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) {
