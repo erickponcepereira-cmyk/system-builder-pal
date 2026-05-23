@@ -1678,10 +1678,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         if (!selectedClient?.birthDate) return null;
         const b = new Date(selectedClient.birthDate);
         if (isNaN(b.getTime())) return null;
-        const now = new Date();
-        let a = now.getFullYear() - b.getFullYear();
-        const m = now.getMonth() - b.getMonth();
-        if (m < 0 || (m === 0 && now.getDate() < b.getDate())) a--;
+        const refDate = assessment.date
+          ? new Date(assessment.date.length === 10 ? assessment.date + "T12:00:00" : assessment.date)
+          : new Date();
+        const ref = isNaN(refDate.getTime()) ? new Date() : refDate;
+        let a = ref.getFullYear() - b.getFullYear();
+        const m = ref.getMonth() - b.getMonth();
+        if (m < 0 || (m === 0 && ref.getDate() < b.getDate())) a--;
         return a;
       })();
       const ageLocked = autoAge !== null;
