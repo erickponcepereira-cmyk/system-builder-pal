@@ -263,7 +263,7 @@ export interface FitMindShapeProps {
 // ── 8 níveis de IMC alinhados com os 8 avatares (body-abaixo…body-alto-3) ──
 const BMI_RANGES = [
   { max: 18.5, label: "Abaixo do peso", color: "#60a5fa", avatar: 0 },
-  { max: 24.9, label: "Normal",         color: "#22c55e", avatar: 1 },
+  { max: 24.9, label: "Saudável",       color: "#22c55e", avatar: 1 },
   { max: 27.4, label: "Acima 1",        color: "#a3e635", avatar: 2 },
   { max: 29.9, label: "Acima 2",        color: "#facc15", avatar: 3 },
   { max: 34.9, label: "Acima 3",        color: "#fb923c", avatar: 4 },
