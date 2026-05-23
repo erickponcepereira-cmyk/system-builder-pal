@@ -68,7 +68,6 @@ import {
 } from "lucide-react";
 import {
   calculateBodyComposition,
-  getAvatarFromBodyFat,
   getBodyFatCategoryACSM,
   getBodyFatReference,
   getBodyFatHealthyRange,
