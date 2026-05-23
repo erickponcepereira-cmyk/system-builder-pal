@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Trophy, Gift, Plus, Save, Trash2, X, Loader2, Award, Check,
   Medal, Star, Shield, Gem, Crown, Settings, Plane, UtensilsCrossed,
-  RefreshCw, ImageIcon
+  RefreshCw, ImageIcon, PackageCheck, Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/admin/career")({
   component: AdminCareerPage,
 });
 
-type Tab = "plans" | "patents" | "medals" | "challenges";
+type Tab = "plans" | "patents" | "medals" | "challenges" | "deliveries";
 
 function AdminCareerPage() {
   const [tab, setTab] = useState<Tab>("plans");
@@ -30,18 +30,20 @@ function AdminCareerPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-white">Carreira</h1>
-        <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas e desafios dos coaches.</p>
+        <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas, desafios e entregas de recompensas.</p>
       </div>
       <div className="flex flex-wrap gap-1 border-b border-white/10">
-        <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}   label="Planos de Carreira" />
-        <TabBtn active={tab === "patents"}    onClick={() => setTab("patents")}    icon={Award}   label="Patentes" />
-        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}   label="Medalhas" />
-        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy}  label="Desafios" />
+        <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}        label="Planos de Carreira" />
+        <TabBtn active={tab === "patents"}    onClick={() => setTab("patents")}    icon={Award}        label="Patentes" />
+        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}        label="Medalhas" />
+        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy}       label="Desafios" />
+        <TabBtn active={tab === "deliveries"} onClick={() => setTab("deliveries")} icon={PackageCheck} label="Entregas" />
       </div>
       {tab === "plans"      && <PlansTab />}
       {tab === "patents"    && <PatentsTab />}
       {tab === "medals"     && <MedalsTab />}
       {tab === "challenges" && <ChallengesTab />}
+      {tab === "deliveries" && <DeliveriesTab />}
     </div>
   );
 }
@@ -739,5 +741,211 @@ function FInput({ label, value, onChange, type = "text", className = "" }: {
         className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white outline-none focus:border-[#E24B4A]"
       />
     </label>
+  );
+}
+
+// ====================== DELIVERIES TAB ======================
+
+type DeliveryRow = {
+  id: string;
+  coach_id: string;
+  career_plan_id: string;
+  accumulated_points: number | null;
+  reward_earned_at: string | null;
+  reward_delivered: boolean;
+  reward_delivered_at: string | null;
+  delivery_notes: string | null;
+  coach_name: string;
+  plan_name: string;
+  reward_description: string | null;
+  reward_value: number | null;
+};
+
+function DeliveriesTab() {
+  const [rows, setRows] = useState<DeliveryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"pending" | "delivered" | "all">("pending");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [notesById, setNotesById] = useState<Record<string, string>>({});
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("career_plan_progress")
+      .select("id, coach_id, career_plan_id, accumulated_points, reward_earned_at, reward_delivered, reward_delivered_at, delivery_notes")
+      .eq("reward_earned", true)
+      .order("reward_earned_at", { ascending: false });
+
+    if (error) { toast.error("Erro ao carregar entregas"); setLoading(false); return; }
+    const list = data ?? [];
+    const coachIds = Array.from(new Set(list.map((r) => r.coach_id)));
+    const planIds = Array.from(new Set(list.map((r) => r.career_plan_id)));
+
+    const [{ data: coaches }, { data: plans }] = await Promise.all([
+      coachIds.length
+        ? supabase.from("profiles").select("user_id, name").in("user_id", coachIds)
+        : Promise.resolve({ data: [] as { user_id: string; name: string }[] }),
+      planIds.length
+        ? supabase.from("career_plan_config").select("id, name, reward_description, reward_value").in("id", planIds)
+        : Promise.resolve({ data: [] as { id: string; name: string; reward_description: string | null; reward_value: number | null }[] }),
+    ]);
+
+    const coachMap = new Map((coaches ?? []).map((c) => [c.user_id, c.name]));
+    const planMap = new Map((plans ?? []).map((p) => [p.id, p]));
+
+    setRows(list.map((r) => {
+      const plan = planMap.get(r.career_plan_id);
+      return {
+        ...r,
+        coach_name: coachMap.get(r.coach_id) ?? "Coach",
+        plan_name: plan?.name ?? "—",
+        reward_description: plan?.reward_description ?? null,
+        reward_value: plan?.reward_value ?? null,
+      };
+    }));
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function markDelivered(id: string) {
+    setBusyId(id);
+    const { data: userRes } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("career_plan_progress")
+      .update({
+        reward_delivered: true,
+        reward_delivered_at: new Date().toISOString(),
+        reward_delivered_by: userRes.user?.id ?? null,
+        delivery_notes: notesById[id] ?? null,
+      })
+      .eq("id", id);
+    setBusyId(null);
+    if (error) { toast.error("Erro ao marcar como entregue"); return; }
+    toast.success("Recompensa marcada como entregue");
+    await load();
+  }
+
+  async function undoDelivered(id: string) {
+    setBusyId(id);
+    const { error } = await supabase
+      .from("career_plan_progress")
+      .update({ reward_delivered: false, reward_delivered_at: null, reward_delivered_by: null })
+      .eq("id", id);
+    setBusyId(null);
+    if (error) { toast.error("Erro ao reverter entrega"); return; }
+    toast.success("Entrega revertida");
+    await load();
+  }
+
+  const filtered = rows.filter((r) =>
+    filter === "all" ? true : filter === "pending" ? !r.reward_delivered : r.reward_delivered,
+  );
+
+  const pendingCount = rows.filter((r) => !r.reward_delivered).length;
+  const deliveredCount = rows.length - pendingCount;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterChip active={filter === "pending"} onClick={() => setFilter("pending")} icon={Clock}
+          label={`Pendentes (${pendingCount})`} />
+        <FilterChip active={filter === "delivered"} onClick={() => setFilter("delivered")} icon={PackageCheck}
+          label={`Entregues (${deliveredCount})`} />
+        <FilterChip active={filter === "all"} onClick={() => setFilter("all")} icon={Gift}
+          label={`Todas (${rows.length})`} />
+        <button onClick={load} className="ml-auto flex items-center gap-1 text-xs text-white/60 hover:text-white">
+          <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/50" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-8 text-center text-sm text-white/50">
+          Nenhuma recompensa nessa categoria.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((r) => (
+            <div key={r.id} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-white">{r.coach_name}</span>
+                    <span className="text-xs text-white/40">·</span>
+                    <span className="text-xs text-white/60">{r.plan_name}</span>
+                    {r.reward_delivered ? (
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+                        <PackageCheck className="h-3 w-3" /> Entregue
+                      </span>
+                    ) : (
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                        <Clock className="h-3 w-3" /> Pendente
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs text-white/50">
+                    {r.reward_description ?? "—"}
+                    {r.reward_value ? <span className="ml-2 text-white/40">R$ {Number(r.reward_value).toLocaleString("pt-BR")}</span> : null}
+                  </div>
+                  <div className="mt-1 text-[11px] text-white/40">
+                    Conquistada em {r.reward_earned_at ? new Date(r.reward_earned_at).toLocaleDateString("pt-BR") : "—"}
+                    {r.reward_delivered_at && <> · Entregue em {new Date(r.reward_delivered_at).toLocaleDateString("pt-BR")}</>}
+                  </div>
+                  {r.delivery_notes && (
+                    <div className="mt-2 rounded bg-white/5 px-2 py-1 text-xs text-white/70">
+                      Notas: {r.delivery_notes}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-stretch gap-2 sm:w-72">
+                  {!r.reward_delivered && (
+                    <input
+                      placeholder="Notas (rastreio, comprovante...)"
+                      value={notesById[r.id] ?? ""}
+                      onChange={(e) => setNotesById((p) => ({ ...p, [r.id]: e.target.value }))}
+                      className="rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-xs text-white outline-none focus:border-[#E24B4A]"
+                    />
+                  )}
+                  {r.reward_delivered ? (
+                    <button
+                      onClick={() => undoDelivered(r.id)}
+                      disabled={busyId === r.id}
+                      className="flex items-center justify-center gap-1 rounded-md border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/5 disabled:opacity-50"
+                    >
+                      {busyId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                      Reverter entrega
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => markDelivered(r.id)}
+                      disabled={busyId === r.id}
+                      className="flex items-center justify-center gap-1 rounded-md bg-[#E24B4A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#c83d3c] disabled:opacity-50"
+                    >
+                      {busyId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      Marcar como entregue
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, icon: Icon, label }: {
+  active: boolean; onClick: () => void; icon: typeof Trophy; label: string;
+}) {
+  return (
+    <button onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+        active ? "bg-[#E24B4A] text-white" : "bg-white/5 text-white/60 hover:text-white"
+      }`}>
+      <Icon className="h-3.5 w-3.5" /> {label}
+    </button>
   );
 }
