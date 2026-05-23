@@ -68,7 +68,9 @@ import {
 } from "lucide-react";
 import {
   calculateBodyComposition,
-  getAvatarFromBodyFat,
+  getBodyFatCategoryACSM,
+  getBodyFatReference,
+  getBodyFatHealthyRange,
   AVATAR_LABELS_8,
   type MeasurementInput,
 } from "@/lib/body-composition-calculator";
@@ -456,10 +458,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
-  const getBodyFatCategory = (pct: number, gender: string) => {
-    const ranges =
-      gender === "male" ? BODY_FAT_RANGES.male : BODY_FAT_RANGES.female;
-    return ranges.find((r) => pct <= r.max) ?? ranges[ranges.length - 1];
+  const getBodyFatCategory = (pct: number, gender: string, age = 30) => {
+    const g = gender === "male" ? "male" : "female";
+    return getBodyFatCategoryACSM(pct || 0, g, age);
   };
   const getVisceralCategory = (v: number) =>
     VISCERAL_FAT_RANGES.find((r) => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
@@ -2609,13 +2610,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const client = selectedClient!;
     const a = assessment as FitMindAssessment;
     const bmiCat = getBMICategory(a.bmi || computedBMI);
-    // Se temos % de gordura, usamos ela para o avatar (mais preciso que IMC).
-    // Se não, usa o avatar do IMC como fallback.
-    const avatarEntry = a.bodyFat
-      ? getAvatarFromBodyFat(a.bodyFat, client.gender === "other" ? "female" : client.gender)
-      : { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
+    // Avatar e nível de obesidade derivam APENAS do IMC.
+    // % gordura é exibida como métrica informativa.
+    const avatarEntry = { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
     const avatarIndex = avatarEntry.index;
-    const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
+    const clientGenderBin: "male" | "female" = client.gender === "male" ? "male" : "female";
+    const fatCat = getBodyFatCategory(a.bodyFat, client.gender, a.age || 30);
     const viscCat = getVisceralCategory(a.visceralFat);
     const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
 
@@ -2698,7 +2698,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
     const refSkeletal = client.gender === "male" ? "33–39%" : "24–30%";
     const refBMI = "18,5–24,9 kg/m²";
-    const refBodyFat = client.gender === "male" ? "5–15%" : "13–22%";
+    const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
     const refVisceral = "1–9";
 
     // ── RCQ ─────────────────────────────────────────────────
@@ -2767,8 +2767,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     // Quantos kg de gordura para chegar ao recomendado
     const fatDelta = (() => {
       if (!a.bodyFat || !a.weight) return null as null | string;
-      const idealMaxPct = client.gender === "male" ? 17 : 24;
-      const idealMinPct = client.gender === "male" ? 10 : 18;
+      const { min: idealMinPct, max: idealMaxPct } = getBodyFatHealthyRange(clientGenderBin, a.age || 30);
       if (a.bodyFat < idealMinPct) return `Faltam ${(+((idealMinPct - a.bodyFat) * a.weight / 100).toFixed(1))} kg de gordura para o mínimo`;
       if (a.bodyFat <= idealMaxPct) return "Dentro do recomendado";
       const kgToLose = +((a.bodyFat - idealMaxPct) * a.weight / 100).toFixed(1);

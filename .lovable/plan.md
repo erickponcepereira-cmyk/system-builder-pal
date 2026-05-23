@@ -1,103 +1,47 @@
+## Objetivo
+1. Avatar e nível de obesidade no FitMind Shape passam a usar **apenas o IMC** (gordura corporal vira métrica informativa).
+2. Tabela de % gordura alinhada ao **FineShape (ACSM por idade e sexo)** — corrige a divergência (13–22% atual vs 20–25% mostrado no FineShape).
 
-# Ajustar `body-composition-calculator.ts` para casar com o FineShape
+## Tabela de referência ACSM (FineShape) que será adotada
 
-## Diagnóstico (caso Milena — F, 22a, 165cm, 62kg)
+**Mulheres**
+| Idade | Saudável | Sobrepeso | Obesa |
+|-------|----------|-----------|-------|
+| 20–39 | 21–32%   | 33–38%    | ≥ 39% |
+| 40–59 | 23–33%   | 34–39%    | ≥ 40% |
+| 60–79 | 24–35%   | 36–41%    | ≥ 42% |
 
-Comparando o painel da nossa app com o relatório do FineShape:
+**Homens**
+| Idade | Saudável | Sobrepeso | Obeso |
+|-------|----------|-----------|-------|
+| 20–39 | 8–19%    | 20–24%    | ≥ 25% |
+| 40–59 | 11–21%   | 22–27%    | ≥ 28% |
+| 60–79 | 13–24%   | 25–29%    | ≥ 30% |
 
-| Indicador            | FineShape   | App atual | Esperado |
-|----------------------|-------------|-----------|----------|
-| IMC                  | 22,8        | 22,8 ✓    | ok       |
-| % Gordura            | **24,3 %** / 15,1 kg | 38,4 % | corrigir |
-| Met. Basal           | 1455 kcal   | 1435 kcal ✓ (HB revisado) | ok |
-| RCQ                  | 0,74        | 0,74 ✓    | ok       |
-| Músculo Esquelético  | **50,9 %** / 31,6 kg | 36,3 % | corrigir |
-| Massa Muscular       | **71,8 %** / 44,5 kg | 47,1 % | corrigir |
-| Massa Óssea          | —           | 3,4 %     | reduzir levemente |
+Sub-faixas internas para granularidade no painel: Muito baixo / Atlético / Saudável / Aceitável / Sobrepeso / Obesidade.
 
-Causas:
+## Mudanças
 
-1. **% Gordura está vindo de `SMM/0.55`**, que é uma aproximação ruim para mulheres não-obesas. O FineShape usa **Tran & Weltman (1988)** (densidade corporal + Siri) — equação validada para mulheres em qualquer faixa.
-2. **Músculo Esquelético (Lee 2000)** está caindo no *fallback* (sem membros) em algum caminho — o resultado 22,5 kg corresponde exatamente à fórmula simplificada. A fórmula antropométrica completa, com os valores informados, dá ≈ 30,8 kg / 49,6 % (bem próximo de FineShape).
-3. **Massa Muscular** está sendo derivada de `SMM/0.77`. O FineShape calcula como **Massa Magra − Massa Óssea** (≈ LBM × 0,95), que dá 44,8 kg / 72,3 % — bate com 71,8 %.
-4. **Massa Óssea**: usar **~4,5 %** do peso total (referência populacional Heyward) — fica mais perto dos valores do FineShape.
+### `src/lib/body-composition-calculator.ts`
+- Substituir `FAT_AVATAR_MALE` / `FAT_AVATAR_FEMALE` por uma função **`getBodyFatCategoryACSM(bodyFat, gender, age)`** que retorna `{ label, color, eval }` baseada na tabela ACSM acima.
+- `getBodyFatReference(gender, age)` retorna a faixa "Saudável" correspondente à idade (ex.: mulher 25a → `"21–32%"`).
+- Manter `getAvatarFromBodyFat` exportado para compatibilidade, mas **não usado mais** para escolher avatar (marcar como deprecated).
+- Em `calculateBodyComposition`, derivar `avatarIndex/Label/Color` **a partir do IMC** usando a tabela `BMI_RANGES` (8 níveis já existentes em `FitMindShape.tsx`, replicar a mesma escala aqui).
 
-## Correções a aplicar em `src/lib/body-composition-calculator.ts`
+### `src/components/coach/FitMindShape.tsx`
+- Substituir `BODY_FAT_RANGES` por chamadas a `getBodyFatCategoryACSM(pct, gender, age)`.
+- Em `getBodyFatCategory`, passar `client.age` (calculado de `birth_date`) além de gênero.
+- No bloco do avatar (linhas ~2614-2617): remover o ramo `a.bodyFat ? getAvatarFromBodyFat(...)` — usar **sempre** `bmiCat` (`BMI_RANGES`) para `avatarEntry`.
+- Linha 2918: label do avatar passa a mostrar `${bmiCat.label} · IMC ${bmi}` (sem fallback de gordura).
+- Atualizar `idealMinPct/idealMaxPct` (linhas 2770-2774) para usar os limites da faixa **Saudável ACSM** por idade (ex.: mulher 20-39 → 21–32, homem 20-39 → 8–19).
+- Linha 2701 `refBodyFat`: usar `getBodyFatReference(gender, age)` em vez de string fixa `"13–22%"`.
+- Preview de medidas (linha 2024) continua mostrando `% Gordura` como métrica informativa, sem influenciar avatar.
 
-### 1. % Gordura — usar Tran-Weltman 1988
+### Sem mudanças
+- Lógica de cálculo de `bodyFat` em si (Tran-Weltman / Penrose-Nelson-Fisher) permanece.
+- IMC, SMM (Lee), Massa Magra, Massa Óssea, RCQ — inalterados.
+- `FAT_AVATAR_*` constantes podem ser removidas após a refatoração (não há outro consumidor).
 
-- **Mulher** (precisa `abdomen` ou `waist`, `hip`, `height`, `age`):
-  ```
-  BD = 1.168297
-       − 0.002824 · abdomen
-       + 0.0000122098 · abdomen²
-       − 0.000733128 · hip
-       + 0.000510477 · height(cm)
-       − 0.000216161 · age
-  %BF = 495 / BD − 450
-  ```
-- **Homem** (Penrose-Nelson-Fisher 1985 simplificada, ou Wilmore-Behnke):
-  ```
-  LBM = 98.42 + 1.082·weight − 4.15·waist(in)
-  %BF = (weight − LBM) / weight × 100
-  ```
-  (converter cintura cm → in dividindo por 2,54)
-- **Fallbacks** (ordem):
-  1. Tran-Weltman / Penrose se medidas suficientes.
-  2. Weltman obeso atual (mantido para casos sem quadril).
-  3. Deurenberg por IMC como último recurso.
-- **Remover** o caminho atual `bodyFat = (weight − SMM/0.55)/weight`.
-
-### 2. Músculo Esquelético — manter Lee 2000, garantir execução
-
-A fórmula já está correta; o problema é o estado/efeito. Não mexer na fórmula, mas:
-- Adicionar log claro nos *warnings* quando a fórmula completa for usada vs. fallback (para inspeção).
-- Garantir no `useEffect` de `FitMindShape.tsx` que `circs.leftArm/rightArm/leftThigh/rightThigh/leftCalf/rightCalf` chegam como `number`. Já chegam (`+e.target.value`), então sem mudança funcional além da fórmula nova de gordura.
-
-### 3. Massa Muscular total — redefinir
-
-Substituir:
-```
-muscleMassKg = skeletalMuscleKg / 0.77
-```
-por:
-```
-muscleMassKg = leanMassKg − boneMassKg
-muscleMass   = muscleMassKg / weight × 100
-```
-
-### 4. Massa Óssea — referência populacional
-
-Substituir:
-```
-boneMassKg = leanMassKg * 0.056
-```
-por:
-```
-boneMassKg = weight * 0.045    // ~4–5% do peso total (Heyward & Stolarczyk)
-boneMass   = boneMassKg / weight * 100   // ≈ 4,5 %
-```
-
-### 5. Avatar / classificação — sem mudança
-
-A tabela `FAT_AVATAR_FEMALE/MALE` continua válida; com %fat corrigido para 24,3 % a Milena passa a cair em "Acima 1" (verde-claro), coerente com FineShape ("Normal" — limítrofe).
-
-## Validação manual com o caso da Milena (esperado após o ajuste)
-
-| Indicador            | Calculado pós-fix |
-|----------------------|-------------------|
-| IMC                  | 22,8              |
-| % Gordura (Tran-Weltman) | **24,7 %** / 15,3 kg |
-| SMM (Lee)            | **30,8 kg / 49,6 %** |
-| Massa Magra          | 46,7 kg           |
-| Massa Óssea          | 2,79 kg / 4,5 %   |
-| Massa Muscular       | 43,9 kg / **70,8 %** |
-| Met. Basal           | 1435 kcal         |
-| RCQ                  | 0,74              |
-
-Diferenças vs. FineShape ficam dentro de ±1 ponto percentual em todos os indicadores principais.
-
-## Arquivos tocados
-
-- `src/lib/body-composition-calculator.ts` — substituir os blocos **3**, **4**, **7** e **8** descritos acima.
-- Nenhuma mudança em `FitMindShape.tsx` (mantém o `useEffect` de auto-cálculo e o botão "Recalcular Composição Corporal").
+## Resultado esperado
+- Caso Milena (F, 22a, bodyFat ≈ 24.7%) → classificação **"Saudável"** (21–32%), avatar continua sendo escolhido pelo IMC (62/1.65² = 22.8 → "Normal").
+- Tooltip/legenda da gordura mostra `21–32%` (igual ao FineShape) em vez de `13–22%`.
