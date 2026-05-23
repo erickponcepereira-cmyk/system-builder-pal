@@ -284,11 +284,11 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const boneMass = round((boneMassKg / weight) * 100);
 
   // ── 9. IDADE CORPORAL ESTIMADA ───────────────────────────
-  // Baseada no percentual de gordura em relação à faixa ideal para a idade.
-  // Abordagem: delta de gordura vs. ideal é convertido em anos de envelhecimento.
-  const idealFatMid = gender === "male" ? 12.5 : 21;  // ponto médio do ideal
+  // Baseada no % gordura vs. ponto médio da faixa saudável ACSM por sexo+idade.
+  const acsmForAge = getAcsmBand(gender, age);
+  const idealFatMid = (acsmForAge.healthyMin + acsmForAge.healthyMax) / 2;
   const fatDelta = bodyFat - idealFatMid;
-  // Cada 1% além do ideal ≈ +0.5 anos de idade corporal (conservador)
+  // Cada 1% além do ideal ≈ +0.5 anos de idade corporal (Tanita-like, conservador)
   const bodyAge = Math.round(Math.max(age - 10, Math.min(age + 25, age + fatDelta * 0.5)));
 
   // ── 10. CLASSIFICAÇÃO AVATAR ─────────────────────────────
