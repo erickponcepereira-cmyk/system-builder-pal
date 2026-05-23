@@ -404,6 +404,55 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     });
   }, [screen, step, selectedClient]);
 
+  // Auto-cálculo em tempo real quando método = medidas
+  useEffect(() => {
+    if (assessment.method !== "measurements") return;
+    if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) return;
+    const circs = assessment.circumferences || {};
+    const hasAny = Object.values(circs).some((v) => v != null && (v as number) > 0);
+    if (!hasAny) return;
+    const input: MeasurementInput = {
+      weight: assessment.weight,
+      height: assessment.height,
+      age: assessment.age,
+      gender: selectedClient.gender === "other" ? "female" : selectedClient.gender,
+      ethnicity: (selectedClient.ethnicity as MeasurementInput["ethnicity"]) ?? "white",
+      waist: circs.waist,
+      abdomen: circs.abdomen,
+      hip: circs.hip,
+      leftArm: circs.leftArm,
+      rightArm: circs.rightArm,
+      leftForearm: circs.leftForearm,
+      rightForearm: circs.rightForearm,
+      leftThigh: circs.leftThigh,
+      rightThigh: circs.rightThigh,
+      leftCalf: circs.leftCalf,
+      rightCalf: circs.rightCalf,
+    };
+    const r = calculateBodyComposition(input);
+    setAssessment((prev) => ({
+      ...prev,
+      bodyFat: r.bodyFat,
+      skeletalMuscle: r.skeletalMuscle,
+      muscleMass: r.muscleMass,
+      basalMetabolism: r.basalMetabolism,
+      bodyAge: r.bodyAge,
+      bodyWater: r.bodyWater,
+      boneMass: r.boneMass,
+    }));
+    setCalcWarnings(r.warnings);
+    setCalcDone(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    assessment.method,
+    assessment.weight,
+    assessment.height,
+    assessment.age,
+    assessment.circumferences,
+    selectedClient?.gender,
+    selectedClient?.ethnicity,
+  ]);
+
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
