@@ -783,14 +783,14 @@ function DeliveriesTab() {
 
     const [{ data: coaches }, { data: plans }] = await Promise.all([
       coachIds.length
-        ? supabase.from("profiles").select("user_id, display_name").in("user_id", coachIds)
-        : Promise.resolve({ data: [] as { user_id: string; display_name: string }[] }),
+        ? supabase.from("profiles").select("user_id, name").in("user_id", coachIds)
+        : Promise.resolve({ data: [] as { user_id: string; name: string }[] }),
       planIds.length
         ? supabase.from("career_plan_config").select("id, name, reward_description, reward_value").in("id", planIds)
         : Promise.resolve({ data: [] as { id: string; name: string; reward_description: string | null; reward_value: number | null }[] }),
     ]);
 
-    const coachMap = new Map((coaches ?? []).map((c) => [c.user_id, c.display_name]));
+    const coachMap = new Map((coaches ?? []).map((c) => [c.user_id, c.name]));
     const planMap = new Map((plans ?? []).map((p) => [p.id, p]));
 
     setRows(list.map((r) => {
