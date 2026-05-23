@@ -2845,7 +2845,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     { l: "Peso", first: metric(firstA.weight, " kg"), latest: diff(previousA.weight, firstA.weight, " kg") },
                     { l: "Gordura", first: metric(firstA.bodyFat, " %"), latest: diff(previousA.bodyFat, firstA.bodyFat, " %") },
                     { l: "Músculo Esquelético", first: metric(firstA.skeletalMuscle, " %"), latest: diff(previousA.skeletalMuscle, firstA.skeletalMuscle, " %") },
-                    { l: "Massa Muscular", first: metric(firstA.muscleMass, " kg"), latest: diff(previousA.muscleMass, firstA.muscleMass, " kg") },
+                    { l: "Massa Muscular", first: metric(firstA.muscleMass && firstA.weight ? Number(((firstA.weight * firstA.muscleMass) / 100).toFixed(1)) : undefined, " kg"), latest: diff(previousA.muscleMass && previousA.weight ? Number(((previousA.weight * previousA.muscleMass) / 100).toFixed(1)) : undefined, firstA.muscleMass && firstA.weight ? Number(((firstA.weight * firstA.muscleMass) / 100).toFixed(1)) : undefined, " kg") },
                     { l: "Gordura Visceral", first: metric(firstA.visceralFat, ""), latest: diff(previousA.visceralFat, firstA.visceralFat, "") },
                     { l: "Idade Corporal", first: metric(firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos"), latest: diff(previousA.bodyAge ? Math.round(previousA.bodyAge) : undefined, firstA.bodyAge ? Math.round(firstA.bodyAge) : undefined, " anos") },
                   ].map((r) => (
