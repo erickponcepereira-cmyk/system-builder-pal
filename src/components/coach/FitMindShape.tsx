@@ -2738,14 +2738,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return { c: "#dc2626", t: "Risco alto" };
     })();
     // Músculo esquelético eval
-    const skMin = client.gender === "male" ? 33 : 24;
-    const skMax = client.gender === "male" ? 39 : 30;
     const skEval = (() => {
       if (!a.skeletalMuscle) return { c: "var(--muted-foreground)", t: "—" };
-      if (a.skeletalMuscle < skMin - 3) return { c: "#dc2626", t: "Muito baixo" };
-      if (a.skeletalMuscle < skMin) return { c: "#facc15", t: "Abaixo" };
-      if (a.skeletalMuscle <= skMax) return { c: "#22c55e", t: "Normal" };
-      return { c: "#22c55e", t: "Acima (atleta)" };
+      const cat = getSkeletalMuscleCategoryJanssen(a.skeletalMuscle, clientGenderBin, a.age || 30);
+      return { c: cat.color, t: cat.label };
     })();
     const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
     // Idade corporal: comparar com idade real
