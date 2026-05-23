@@ -1,47 +1,92 @@
 ## Objetivo
-1. Avatar e nível de obesidade no FitMind Shape passam a usar **apenas o IMC** (gordura corporal vira métrica informativa).
-2. Tabela de % gordura alinhada ao **FineShape (ACSM por idade e sexo)** — corrige a divergência (13–22% atual vs 20–25% mostrado no FineShape).
+Alinhar **todas** as faixas de referência exibidas no FitMind Shape ao padrão FineShape (OMS / ACSM / Tanita / Janssen / Watson / Heyward). Sem mudar fórmulas de cálculo já corrigidas (Tran-Weltman, Penrose-Nelson-Fisher, Lee 2000, Harris-Benedict revisado).
 
-## Tabela de referência ACSM (FineShape) que será adotada
+## Tabelas que serão adotadas
+
+### 1. IMC — OMS (já alinhado)
+Mantém 8 níveis atuais: <18,5 / 18,5–24,9 / 25–27,4 / 27,5–29,9 / 30–34,9 / 35–39,9 / 40–44,9 / ≥45.
+Label "Saudável" para 18,5–24,9 (renomear "Normal" → "Saudável" para casar com FineShape).
+
+### 2. % Gordura — ACSM por idade ✅ (já feito)
+
+### 3. Gordura Visceral — Tanita (padrão FineShape)
+| Faixa | Classificação | Cor |
+|-------|---------------|-----|
+| 1–9   | Saudável      | verde |
+| 10–14 | Alto          | amarelo |
+| ≥ 15  | Muito alto    | vermelho |
+
+### 4. RCQ — OMS (já alinhado, manter)
+- Homem: <0,90 baixo | 0,90–0,99 moderado | ≥1,00 alto
+- Mulher: <0,80 baixo | 0,80–0,84 moderado | ≥0,85 alto
+
+### 5. Músculo Esquelético — Janssen et al. (2002) por sexo+idade
+**Homens** (% do peso corporal)
+| Idade | Baixo | Normal | Alto |
+|-------|-------|--------|------|
+| 18–39 | <37   | 37–43  | >43  |
+| 40–59 | <34   | 34–39  | >39  |
+| 60+   | <31   | 31–35  | >35  |
 
 **Mulheres**
-| Idade | Saudável | Sobrepeso | Obesa |
-|-------|----------|-----------|-------|
-| 20–39 | 21–32%   | 33–38%    | ≥ 39% |
-| 40–59 | 23–33%   | 34–39%    | ≥ 40% |
-| 60–79 | 24–35%   | 36–41%    | ≥ 42% |
+| Idade | Baixo | Normal | Alto |
+|-------|-------|--------|------|
+| 18–39 | <28   | 28–33  | >33  |
+| 40–59 | <26   | 26–30  | >30  |
+| 60+   | <24   | 24–27  | >27  |
 
-**Homens**
-| Idade | Saudável | Sobrepeso | Obeso |
-|-------|----------|-----------|-------|
-| 20–39 | 8–19%    | 20–24%    | ≥ 25% |
-| 40–59 | 11–21%   | 22–27%    | ≥ 28% |
-| 60–79 | 13–24%   | 25–29%    | ≥ 30% |
+### 6. Massa Muscular Total — referência FineShape
+- Homem: 33–39% saudável (mesma escala de "Músculo" da bioimpedância FineShape)
+- Mulher: 24–30% saudável
 
-Sub-faixas internas para granularidade no painel: Muito baixo / Atlético / Saudável / Aceitável / Sobrepeso / Obesidade.
+### 7. Água Corporal — Watson et al.
+- Homem adulto: 50–65% (ideal ~60%)
+- Mulher adulta: 45–60% (ideal ~55%)
 
-## Mudanças
+### 8. Massa Óssea — Heyward & Stolarczyk (faixa por peso)
+| Peso | Homem | Mulher |
+|------|-------|--------|
+| <60 kg | ≥2,5 kg | ≥1,8 kg |
+| 60–75 kg | ≥2,9 kg | ≥2,2 kg |
+| >75 kg | ≥3,2 kg | ≥2,5 kg |
+
+### 9. Metabolismo Basal — Harris-Benedict revisado (já é a fórmula). Classificação:
+- < 0,90× HB → Baixo
+- 0,90–1,10× HB → Normal
+- > 1,10× HB → Acima
+
+### 10. Idade Corporal — modelo Tanita-like
+`idadeCorporal = idade + (bodyFat − idealMid) × 0.5`, limitado a `[idade−10, idade+25]`. Já implementado; manter mas atualizar `idealMid` para o ponto médio da faixa ACSM por idade (em vez de constante 12,5/21).
+
+### 11. Peso Ideal — IMC 18,5–24,9 (mantém)
+
+## Mudanças em código
 
 ### `src/lib/body-composition-calculator.ts`
-- Substituir `FAT_AVATAR_MALE` / `FAT_AVATAR_FEMALE` por uma função **`getBodyFatCategoryACSM(bodyFat, gender, age)`** que retorna `{ label, color, eval }` baseada na tabela ACSM acima.
-- `getBodyFatReference(gender, age)` retorna a faixa "Saudável" correspondente à idade (ex.: mulher 25a → `"21–32%"`).
-- Manter `getAvatarFromBodyFat` exportado para compatibilidade, mas **não usado mais** para escolher avatar (marcar como deprecated).
-- Em `calculateBodyComposition`, derivar `avatarIndex/Label/Color` **a partir do IMC** usando a tabela `BMI_RANGES` (8 níveis já existentes em `FitMindShape.tsx`, replicar a mesma escala aqui).
+- `getSkeletalMuscleReference(gender, age)` → tabela Janssen por faixa etária; retorna `"<min>–<max>%"`.
+- Adicionar `getSkeletalMuscleCategoryJanssen(pct, gender, age)` → `{ label, eval, color }` (Baixo / Normal / Alto).
+- Adicionar `getMuscleMassReference(gender)` → `"33–39%"` / `"24–30%"`.
+- Adicionar `getBodyWaterReference(gender)` → `"50–65%"` / `"45–60%"`.
+- Adicionar `getBoneMassReference(gender, weight)` → string da faixa Heyward.
+- Adicionar `getBoneMassCategory(boneKg, gender, weight)` → eval normal/baixo.
+- Adicionar `getVisceralFatCategory(v)` → `{ label, eval, color }` (substitui `VISCERAL_FAT_RANGES` local).
+- Atualizar bodyAge no cálculo: `idealMid = (healthyMin + healthyMax)/2` da banda ACSM.
 
 ### `src/components/coach/FitMindShape.tsx`
-- Substituir `BODY_FAT_RANGES` por chamadas a `getBodyFatCategoryACSM(pct, gender, age)`.
-- Em `getBodyFatCategory`, passar `client.age` (calculado de `birth_date`) além de gênero.
-- No bloco do avatar (linhas ~2614-2617): remover o ramo `a.bodyFat ? getAvatarFromBodyFat(...)` — usar **sempre** `bmiCat` (`BMI_RANGES`) para `avatarEntry`.
-- Linha 2918: label do avatar passa a mostrar `${bmiCat.label} · IMC ${bmi}` (sem fallback de gordura).
-- Atualizar `idealMinPct/idealMaxPct` (linhas 2770-2774) para usar os limites da faixa **Saudável ACSM** por idade (ex.: mulher 20-39 → 21–32, homem 20-39 → 8–19).
-- Linha 2701 `refBodyFat`: usar `getBodyFatReference(gender, age)` em vez de string fixa `"13–22%"`.
-- Preview de medidas (linha 2024) continua mostrando `% Gordura` como métrica informativa, sem influenciar avatar.
+- `BMI_RANGES`: renomear label do nível 1 de **"Normal" → "Saudável"** (8 níveis preservados).
+- `VISCERAL_FAT_RANGES`: substituir pela função `getVisceralFatCategory` do calculator.
+- `refSkeletal` (linha ~2699): `getSkeletalMuscleReference(gender, a.age)`.
+- Adicionar variáveis e linhas de referência nos cards:
+  - `refMuscleMass = getMuscleMassReference(gender)`
+  - `refWater = getBodyWaterReference(gender)`
+  - `refBone = getBoneMassReference(gender, a.weight)`
+- `refVisceral`: `"1–9 (saudável)"`.
+- Classificação textual "Saudável" / "Sobrepeso" / "Obesidade" passa a vir do `bmiCat` renomeado (sem mudar avatar — IMC continua sendo a fonte).
 
 ### Sem mudanças
-- Lógica de cálculo de `bodyFat` em si (Tran-Weltman / Penrose-Nelson-Fisher) permanece.
-- IMC, SMM (Lee), Massa Magra, Massa Óssea, RCQ — inalterados.
-- `FAT_AVATAR_*` constantes podem ser removidas após a refatoração (não há outro consumidor).
+- Fórmulas de cálculo (gordura, SMM Lee, basal Harris-Benedict, RCQ).
+- Avatar continua sendo escolhido pelo IMC (decisão da rodada anterior).
+- Estrutura visual / layout dos cards.
 
 ## Resultado esperado
-- Caso Milena (F, 22a, bodyFat ≈ 24.7%) → classificação **"Saudável"** (21–32%), avatar continua sendo escolhido pelo IMC (62/1.65² = 22.8 → "Normal").
-- Tooltip/legenda da gordura mostra `21–32%` (igual ao FineShape) em vez de `13–22%`.
+Todos os cards do resultado mostrarão a faixa de referência no formato e nos valores idênticos aos do laudo FineShape (mulher 22a, 62kg → Gordura 21–32%, Músculo 28–33%, Água 45–60%, Visceral 1–9, RCQ <0,80, IMC 18,5–24,9).
