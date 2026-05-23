@@ -69,6 +69,9 @@ import {
 import {
   calculateBodyComposition,
   getAvatarFromBodyFat,
+  getBodyFatCategoryACSM,
+  getBodyFatReference,
+  getBodyFatHealthyRange,
   AVATAR_LABELS_8,
   type MeasurementInput,
 } from "@/lib/body-composition-calculator";
