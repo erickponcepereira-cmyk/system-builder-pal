@@ -466,8 +466,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const g = gender === "male" ? "male" : "female";
     return getBodyFatCategoryACSM(pct || 0, g, age);
   };
-  const getVisceralCategory = (v: number) =>
-    VISCERAL_FAT_RANGES.find((r) => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
+  const getVisceralCategory = (v: number) => getVisceralFatCategory(v || 0);
   const formatPercent = (value?: number) =>
     Number.isFinite(value) ? `${value}%` : "—";
 
