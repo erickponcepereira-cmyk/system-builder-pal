@@ -578,9 +578,13 @@ export type Database = {
           consecutive_months_qualified: number | null
           created_at: string | null
           current_streak_active: boolean | null
+          delivery_notes: string | null
           id: string
           period_end: string | null
           period_start: string | null
+          reward_delivered: boolean
+          reward_delivered_at: string | null
+          reward_delivered_by: string | null
           reward_earned: boolean | null
           reward_earned_at: string | null
           start_month: string | null
@@ -594,9 +598,13 @@ export type Database = {
           consecutive_months_qualified?: number | null
           created_at?: string | null
           current_streak_active?: boolean | null
+          delivery_notes?: string | null
           id?: string
           period_end?: string | null
           period_start?: string | null
+          reward_delivered?: boolean
+          reward_delivered_at?: string | null
+          reward_delivered_by?: string | null
           reward_earned?: boolean | null
           reward_earned_at?: string | null
           start_month?: string | null
@@ -610,9 +618,13 @@ export type Database = {
           consecutive_months_qualified?: number | null
           created_at?: string | null
           current_streak_active?: boolean | null
+          delivery_notes?: string | null
           id?: string
           period_end?: string | null
           period_start?: string | null
+          reward_delivered?: boolean
+          reward_delivered_at?: string | null
+          reward_delivered_by?: string | null
           reward_earned?: boolean | null
           reward_earned_at?: string | null
           start_month?: string | null
