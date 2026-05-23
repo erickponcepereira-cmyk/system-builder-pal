@@ -149,68 +149,75 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   // ── 1. IMC ──────────────────────────────────────────────
   const bmi = round(weight / (heightM * heightM));
 
-  // ── 2. % GORDURA CORPORAL (Weltman et al., 1988/1989) ───
-  //    Usa a média das circunferências de cintura e abdômen.
-  //    Se apenas uma delas existir, usa ela como proxy.
-  let bodyFat = 0;
+  // Médias bilaterais (em cm)
+  const armCm = avg(leftArm, rightArm);
+  const thighCm = avg(leftThigh, rightThigh);
+  const calfCm = avg(leftCalf, rightCalf);
   const abdoAvg = avg(waist, abdomen);
 
-  if (abdoAvg !== undefined) {
+  // ── 2. MÚSCULO ESQUELÉTICO — Lee et al. (2000), versão antropométrica ──
+  //   SMM(kg) = Altura(m) × (0.00744·CB² + 0.00088·CC² + 0.00441·CP²)
+  //             + 2.4·sexo − 0.048·idade + etnia + 7.8
+  //   CB/CC/CP em cm. Fallback: equação simplificada por peso/altura.
+  const sexScore = gender === "male" ? 1 : 0;
+  const ethScore = ETHNICITY_FACTOR[ethnicity] ?? 0;
+
+  let skeletalMuscleKg: number;
+  if (armCm !== undefined && thighCm !== undefined && calfCm !== undefined) {
+    skeletalMuscleKg =
+      heightM *
+        (0.00744 * armCm * armCm +
+          0.00088 * thighCm * thighCm +
+          0.00441 * calfCm * calfCm) +
+      2.4 * sexScore -
+      0.048 * age +
+      ethScore +
+      7.8;
+  } else {
+    // Fallback geral (Lee, versão por massa corporal)
+    skeletalMuscleKg =
+      0.244 * weight + 7.8 * heightM + 6.6 * sexScore - 0.098 * age + ethScore - 3.3;
+    warnings.push(
+      "Informe braço, coxa e panturrilha para cálculo de músculo esquelético mais preciso.",
+    );
+  }
+  skeletalMuscleKg = Math.max(5, round(skeletalMuscleKg));
+  const skeletalMuscle = round((skeletalMuscleKg / weight) * 100);
+
+  // ── 3. % GORDURA CORPORAL ───────────────────────────────
+  // Estratégia:
+  //  (a) Se temos circunferências de membros (SMM via Lee confiável),
+  //      derivamos a gordura via massa magra estimada
+  //      (massa magra ≈ SMM / 0.55, conforme Wang/Heyward).
+  //  (b) Caso só tenhamos cintura/abdômen E o sujeito esteja em faixa
+  //      obesa (Weltman foi validado em obesos), usamos Weltman.
+  //  (c) Senão, fallback Deurenberg (1991) por IMC.
+  let bodyFat = 0;
+  const hasLimbs = armCm !== undefined && thighCm !== undefined && calfCm !== undefined;
+  const isObeseWaist =
+    abdoAvg !== undefined &&
+    ((gender === "female" && abdoAvg >= 80) || (gender === "male" && abdoAvg >= 90));
+
+  if (hasLimbs) {
+    // Massa magra estimada a partir do músculo esquelético (~55% da MM em adultos)
+    const leanFromSMM = skeletalMuscleKg / 0.55;
+    bodyFat = ((weight - leanFromSMM) / weight) * 100;
+  } else if (abdoAvg !== undefined && isObeseWaist) {
     if (gender === "male") {
-      // Homens (24–68 anos):
-      // %GC = 0.31457 × MédiaCintAbdômen − 0.10969 × Peso + 10.8336
       bodyFat = 0.31457 * abdoAvg - 0.10969 * weight + 10.8336;
     } else {
-      // Mulheres (20–60 anos):
-      // %GC = 0.11077 × MédiaCintAbdômen − 0.17666 × Altura(cm) + 0.14354 × Peso + 51.03301
       bodyFat = 0.11077 * abdoAvg - 0.17666 * height + 0.14354 * weight + 51.03301;
     }
-    bodyFat = Math.max(3, Math.min(bodyFat, 60)); // limites fisiológicos
-    bodyFat = round(bodyFat);
   } else {
-    // Fallback: estimativa por IMC (Deurenberg et al., 1991)
-    // %GC = 1.20 × IMC + 0.23 × Idade − 10.8 × Sexo − 5.4
     const sexFactor = gender === "male" ? 1 : 0;
-    bodyFat = round(1.2 * bmi + 0.23 * age - 10.8 * sexFactor - 5.4);
-    bodyFat = Math.max(3, Math.min(bodyFat, 60));
+    bodyFat = 1.2 * bmi + 0.23 * age - 10.8 * sexFactor - 5.4;
     warnings.push("Cintura/abdômen não informados — % gordura estimada pelo IMC (Deurenberg et al.).");
   }
+  bodyFat = round(Math.max(3, Math.min(bodyFat, 60)));
 
   const fatMassKg = round((bodyFat / 100) * weight);
   const leanMassKg = round(weight - fatMassKg);
 
-  // ── 3. MÚSCULO ESQUELÉTICO — Lee et al. (2000) ──────────
-  //    MME(kg) = 0.244×MC + 7.8×EST(m) + 6.6×SEXO − 0.098×IDADE + ETNIA − 3.3
-  //    SEXO: 1=masculino, 0=feminino
-  //    ETNIA: ver tabela ETHNICITY_FACTOR
-  const sexScore = gender === "male" ? 1 : 0;
-  const ethScore = ETHNICITY_FACTOR[ethnicity] ?? 0;
-  let skeletalMuscleKg = 0.244 * weight + 7.8 * heightM + 6.6 * sexScore - 0.098 * age + ethScore - 3.3;
-  skeletalMuscleKg = Math.max(5, skeletalMuscleKg);
-  skeletalMuscleKg = round(skeletalMuscleKg);
-  const skeletalMuscle = round((skeletalMuscleKg / weight) * 100);
-
-  // Quando temos circunferências dos membros, podemos refinar com
-  // a equação volumétrica de Lee (versão com perímetros):
-  //   MME = Altura × (0.0553×CB² + 0.0987×CC² + 0.0331×CP²) − 2.7
-  // onde CB, CC, CP são em metros (circunferências brutas sem correção de DC).
-  const armCm = avg(leftArm, rightArm);
-  const thighCm = avg(leftThigh, rightThigh);
-  const calfCm = avg(leftCalf, rightCalf);
-
-  if (armCm !== undefined && thighCm !== undefined && calfCm !== undefined) {
-    const CB = armCm / 100;
-    const CC = thighCm / 100;
-    const CP = calfCm / 100;
-    const mmeCirc = heightM * (0.0553 * CB * CB + 0.0987 * CC * CC + 0.0331 * CP * CP) - 2.7;
-    if (mmeCirc > 5) {
-      // Média ponderada: volumétrica (mais precisa com circunferências) 60% / Lee geral 40%
-      const mmeBlended = round(0.6 * mmeCirc + 0.4 * skeletalMuscleKg);
-      skeletalMuscleKg = mmeBlended;
-    }
-  } else if (armCm === undefined || calfCm === undefined) {
-    warnings.push("Informe braço, coxa e panturrilha para cálculo de músculo esquelético mais preciso.");
-  }
 
   // ── 4. MASSA MUSCULAR TOTAL ──────────────────────────────
   // O músculo esquelético representa ~75–80% da massa muscular total
