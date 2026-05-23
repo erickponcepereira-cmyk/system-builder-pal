@@ -2699,7 +2699,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
     const refSkeletal = client.gender === "male" ? "33–39%" : "24–30%";
     const refBMI = "18,5–24,9 kg/m²";
-    const refBodyFat = client.gender === "male" ? "5–15%" : "13–22%";
+    const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
     const refVisceral = "1–9";
 
     // ── RCQ ─────────────────────────────────────────────────
