@@ -2768,8 +2768,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     // Quantos kg de gordura para chegar ao recomendado
     const fatDelta = (() => {
       if (!a.bodyFat || !a.weight) return null as null | string;
-      const idealMaxPct = client.gender === "male" ? 17 : 24;
-      const idealMinPct = client.gender === "male" ? 10 : 18;
+      const { min: idealMinPct, max: idealMaxPct } = getBodyFatHealthyRange(clientGenderBin, a.age || 30);
       if (a.bodyFat < idealMinPct) return `Faltam ${(+((idealMinPct - a.bodyFat) * a.weight / 100).toFixed(1))} kg de gordura para o mínimo`;
       if (a.bodyFat <= idealMaxPct) return "Dentro do recomendado";
       const kgToLose = +((a.bodyFat - idealMaxPct) * a.weight / 100).toFixed(1);
