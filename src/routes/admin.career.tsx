@@ -22,7 +22,7 @@ export const Route = createFileRoute("/admin/career")({
   component: AdminCareerPage,
 });
 
-type Tab = "plans" | "patents" | "medals" | "challenges";
+type Tab = "plans" | "patents" | "medals" | "challenges" | "deliveries";
 
 function AdminCareerPage() {
   const [tab, setTab] = useState<Tab>("plans");
@@ -30,18 +30,20 @@ function AdminCareerPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-white">Carreira</h1>
-        <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas e desafios dos coaches.</p>
+        <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas, desafios e entregas de recompensas.</p>
       </div>
       <div className="flex flex-wrap gap-1 border-b border-white/10">
-        <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}   label="Planos de Carreira" />
-        <TabBtn active={tab === "patents"}    onClick={() => setTab("patents")}    icon={Award}   label="Patentes" />
-        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}   label="Medalhas" />
-        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy}  label="Desafios" />
+        <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}        label="Planos de Carreira" />
+        <TabBtn active={tab === "patents"}    onClick={() => setTab("patents")}    icon={Award}        label="Patentes" />
+        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}        label="Medalhas" />
+        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy}       label="Desafios" />
+        <TabBtn active={tab === "deliveries"} onClick={() => setTab("deliveries")} icon={PackageCheck} label="Entregas" />
       </div>
       {tab === "plans"      && <PlansTab />}
       {tab === "patents"    && <PatentsTab />}
       {tab === "medals"     && <MedalsTab />}
       {tab === "challenges" && <ChallengesTab />}
+      {tab === "deliveries" && <DeliveriesTab />}
     </div>
   );
 }
