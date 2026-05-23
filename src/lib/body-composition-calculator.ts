@@ -279,10 +279,8 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const bodyWaterKg = leanMassKg * 0.73;
   const bodyWater = round((bodyWaterKg / weight) * 100);
 
-  // ── 8. MASSA ÓSSEA (estimativa populacional) ─────────────
-  // Heyward & Stolarczyk: ~3.0–5.0% do peso corporal.
-  // Estima com base na massa magra: ~5–6% da massa magra.
-  const boneMassKg = round(leanMassKg * 0.056);
+  // ── 8. MASSA ÓSSEA (já calculada acima, ~4.5% do peso) ───
+  const boneMassKg = boneMassKgEarly;
   const boneMass = round((boneMassKg / weight) * 100);
 
   // ── 9. IDADE CORPORAL ESTIMADA ───────────────────────────
