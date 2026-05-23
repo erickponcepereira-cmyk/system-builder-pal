@@ -365,8 +365,143 @@ export function getBodyFatCategoryACSM(
   return { label: "Obesidade", eval: "danger", color: "#ef4444" };
 }
 
-export function getSkeletalMuscleReference(gender: "male" | "female"): string {
+// ============================================================
+// MÚSCULO ESQUELÉTICO — Janssen et al. (2002) por sexo+idade
+// % do peso corporal (FineShape adota a mesma referência)
+// ============================================================
+type SmmBand = { min: number; max: number };
+
+function getJanssenBand(gender: "male" | "female", age: number): SmmBand {
+  if (gender === "male") {
+    if (age < 40) return { min: 37, max: 43 };
+    if (age < 60) return { min: 34, max: 39 };
+    return            { min: 31, max: 35 };
+  }
+  if (age < 40) return { min: 28, max: 33 };
+  if (age < 60) return { min: 26, max: 30 };
+  return            { min: 24, max: 27 };
+}
+
+export function getSkeletalMuscleReference(gender: "male" | "female", age = 30): string {
+  const b = getJanssenBand(gender, age);
+  return `${b.min}–${b.max}%`;
+}
+
+export function getSkeletalMuscleCategoryJanssen(
+  pct: number,
+  gender: "male" | "female",
+  age = 30,
+): { label: string; eval: "good" | "normal" | "warning" | "danger"; color: string } {
+  const b = getJanssenBand(gender, age);
+  if (pct < b.min) return { label: "Baixo",  eval: "warning", color: "#facc15" };
+  if (pct <= b.max) return { label: "Normal", eval: "good",    color: "#22c55e" };
+  return                   { label: "Alto",   eval: "good",    color: "#16a34a" };
+}
+
+// ============================================================
+// MASSA MUSCULAR TOTAL — referência FineShape
+// ============================================================
+export function getMuscleMassReference(gender: "male" | "female"): string {
   return gender === "male" ? "33–39%" : "24–30%";
+}
+
+export function getMuscleMassCategory(
+  pct: number,
+  gender: "male" | "female",
+): { label: string; eval: "good" | "warning" | "danger"; color: string } {
+  const min = gender === "male" ? 33 : 24;
+  const max = gender === "male" ? 39 : 30;
+  if (pct < min) return { label: "Baixo",  eval: "warning", color: "#facc15" };
+  if (pct <= max) return { label: "Normal", eval: "good",    color: "#22c55e" };
+  return                  { label: "Alto",   eval: "good",    color: "#16a34a" };
+}
+
+// ============================================================
+// ÁGUA CORPORAL — Watson et al. (1980), adulto
+// ============================================================
+export function getBodyWaterReference(gender: "male" | "female"): string {
+  return gender === "male" ? "50–65%" : "45–60%";
+}
+
+export function getBodyWaterCategory(
+  pct: number,
+  gender: "male" | "female",
+): { label: string; eval: "good" | "warning"; color: string } {
+  const min = gender === "male" ? 50 : 45;
+  const max = gender === "male" ? 65 : 60;
+  if (pct < min) return { label: "Baixa",  eval: "warning", color: "#facc15" };
+  if (pct <= max) return { label: "Normal", eval: "good",    color: "#22c55e" };
+  return                  { label: "Alta",   eval: "warning", color: "#facc15" };
+}
+
+// ============================================================
+// MASSA ÓSSEA — Heyward & Stolarczyk (faixa por peso e sexo)
+// ============================================================
+function getBoneTarget(gender: "male" | "female", weightKg: number): number {
+  if (gender === "male") {
+    if (weightKg < 60) return 2.5;
+    if (weightKg <= 75) return 2.9;
+    return 3.2;
+  }
+  if (weightKg < 60) return 1.8;
+  if (weightKg <= 75) return 2.2;
+  return 2.5;
+}
+
+export function getBoneMassReference(gender: "male" | "female", weightKg: number): string {
+  return `≥ ${getBoneTarget(gender, weightKg).toFixed(1).replace(".", ",")} kg`;
+}
+
+export function getBoneMassCategory(
+  boneKg: number,
+  gender: "male" | "female",
+  weightKg: number,
+): { label: string; eval: "good" | "warning"; color: string } {
+  const target = getBoneTarget(gender, weightKg);
+  if (boneKg >= target) return { label: "Normal", eval: "good", color: "#22c55e" };
+  return { label: "Baixa", eval: "warning", color: "#facc15" };
+}
+
+// ============================================================
+// GORDURA VISCERAL — Tanita (padrão FineShape)
+// ============================================================
+export function getVisceralFatCategory(
+  v: number,
+): { label: string; eval: "good" | "warning" | "danger"; color: string } {
+  if (v <= 9)  return { label: "Saudável",  eval: "good",    color: "#22c55e" };
+  if (v <= 14) return { label: "Alto",      eval: "warning", color: "#fb923c" };
+  return                { label: "Muito alto", eval: "danger",  color: "#ef4444" };
+}
+
+export function getVisceralFatReference(): string {
+  return "1–9 (saudável)";
+}
+
+// ============================================================
+// METABOLISMO BASAL — Harris-Benedict revisado (Roza-Shizgal)
+// ============================================================
+export function calculateHarrisBenedict(
+  gender: "male" | "female",
+  weightKg: number,
+  heightCm: number,
+  age: number,
+): number {
+  return Math.round(
+    gender === "male"
+      ? 88.36 + 13.4 * weightKg + 4.8 * heightCm - 5.7 * age
+      : 447.6 + 9.2 * weightKg + 3.1 * heightCm - 4.3 * age,
+  );
+}
+
+export function getBasalMetabolismCategory(
+  kcal: number,
+  reference: number,
+): { label: string; eval: "good" | "warning"; color: string } {
+  if (!reference) return { label: "—", eval: "warning", color: "#94a3b8" };
+  const ratio = kcal / reference;
+  if (ratio < 0.9) return { label: "Baixo",  eval: "warning", color: "#fb923c" };
+  if (ratio <= 1.1) return { label: "Normal", eval: "good",    color: "#22c55e" };
+  return                    { label: "Acima",  eval: "warning", color: "#facc15" };
 }
 
 export function getWaistHipReference(gender: "male" | "female"): string {
