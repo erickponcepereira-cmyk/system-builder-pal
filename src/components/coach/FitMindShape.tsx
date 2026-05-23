@@ -404,6 +404,55 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     });
   }, [screen, step, selectedClient]);
 
+  // Auto-cálculo em tempo real quando método = medidas
+  useEffect(() => {
+    if (assessment.method !== "measurements") return;
+    if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) return;
+    const circs = assessment.circumferences || {};
+    const hasAny = Object.values(circs).some((v) => v != null && (v as number) > 0);
+    if (!hasAny) return;
+    const input: MeasurementInput = {
+      weight: assessment.weight,
+      height: assessment.height,
+      age: assessment.age,
+      gender: selectedClient.gender === "other" ? "female" : selectedClient.gender,
+      ethnicity: (selectedClient.ethnicity as MeasurementInput["ethnicity"]) ?? "white",
+      waist: circs.waist,
+      abdomen: circs.abdomen,
+      hip: circs.hip,
+      leftArm: circs.leftArm,
+      rightArm: circs.rightArm,
+      leftForearm: circs.leftForearm,
+      rightForearm: circs.rightForearm,
+      leftThigh: circs.leftThigh,
+      rightThigh: circs.rightThigh,
+      leftCalf: circs.leftCalf,
+      rightCalf: circs.rightCalf,
+    };
+    const r = calculateBodyComposition(input);
+    setAssessment((prev) => ({
+      ...prev,
+      bodyFat: r.bodyFat,
+      skeletalMuscle: r.skeletalMuscle,
+      muscleMass: r.muscleMass,
+      basalMetabolism: r.basalMetabolism,
+      bodyAge: r.bodyAge,
+      bodyWater: r.bodyWater,
+      boneMass: r.boneMass,
+    }));
+    setCalcWarnings(r.warnings);
+    setCalcDone(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    assessment.method,
+    assessment.weight,
+    assessment.height,
+    assessment.age,
+    assessment.circumferences,
+    selectedClient?.gender,
+    selectedClient?.ethnicity,
+  ]);
+
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
@@ -441,11 +490,22 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     if (!selectedClient || !onSaveAssessment) return;
     setIsSaving(true);
     try {
+      const assessmentDate = (() => {
+        if (assessment.date) {
+          const d = new Date(
+            assessment.date.length === 10
+              ? assessment.date + "T12:00:00"
+              : assessment.date
+          );
+          return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+        }
+        return new Date().toISOString();
+      })();
       const full: FitMindAssessment = {
         ...(assessment as FitMindAssessment),
         id: Date.now().toString(),
         clientId: selectedClient.id,
-        date: new Date().toISOString(),
+        date: assessmentDate,
         bmi: computedBMI,
       };
       await onSaveAssessment(full, selectedClient);
@@ -1667,10 +1727,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         if (!selectedClient?.birthDate) return null;
         const b = new Date(selectedClient.birthDate);
         if (isNaN(b.getTime())) return null;
-        const now = new Date();
-        let a = now.getFullYear() - b.getFullYear();
-        const m = now.getMonth() - b.getMonth();
-        if (m < 0 || (m === 0 && now.getDate() < b.getDate())) a--;
+        const refDate = assessment.date
+          ? new Date(assessment.date.length === 10 ? assessment.date + "T12:00:00" : assessment.date)
+          : new Date();
+        const ref = isNaN(refDate.getTime()) ? new Date() : refDate;
+        let a = ref.getFullYear() - b.getFullYear();
+        const m = ref.getMonth() - b.getMonth();
+        if (m < 0 || (m === 0 && ref.getDate() < b.getDate())) a--;
         return a;
       })();
       const ageLocked = autoAge !== null;
@@ -1688,7 +1751,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <input
               type="date"
               className="fm-input"
-              defaultValue={new Date().toISOString().split("T")[0]}
+              value={assessment.date ?? new Date().toISOString().split("T")[0]}
               onChange={(e) => upd("date", e.target.value)}
             />
           </div>
@@ -1965,6 +2028,21 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 ["% Água Corporal", assessment.bodyWater, "%"],
                 ["% Massa Óssea", assessment.boneMass, "%"],
                 ["Idade Corporal", assessment.bodyAge, "anos"],
+                ...((() => {
+                  const w = assessment.circumferences?.waist ?? assessment.circumferences?.abdomen;
+                  const h = assessment.circumferences?.hip;
+                  if (!w || !h || h === 0) return [] as Array<[string, any, string]>;
+                  const rcqVal = +(w / h).toFixed(2);
+                  const limits = selectedClient?.gender === "male"
+                    ? { low: 0.90, mod: 0.95 }
+                    : { low: 0.80, mod: 0.85 };
+                  const rcqLabel = rcqVal < limits.low
+                    ? "Baixo risco"
+                    : rcqVal <= limits.mod
+                      ? "Risco moderado"
+                      : "Alto risco";
+                  return [["RCQ (cintura/quadril)", `${rcqVal} — ${rcqLabel}`, ""]] as Array<[string, any, string]>;
+                })()),
               ].map(([label, value, unit]) => (
                 <div key={label as string} style={{ fontSize: 12 }}>
                   <span style={{ color: "var(--muted-foreground)" }}>{label}:</span>{" "}
