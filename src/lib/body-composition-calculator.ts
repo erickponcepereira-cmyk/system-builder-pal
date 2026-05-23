@@ -185,33 +185,46 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const skeletalMuscle = round((skeletalMuscleKg / weight) * 100);
 
   // ── 3. % GORDURA CORPORAL ───────────────────────────────
-  // Estratégia:
-  //  (a) Se temos circunferências de membros (SMM via Lee confiável),
-  //      derivamos a gordura via massa magra estimada
-  //      (massa magra ≈ SMM / 0.55, conforme Wang/Heyward).
-  //  (b) Caso só tenhamos cintura/abdômen E o sujeito esteja em faixa
-  //      obesa (Weltman foi validado em obesos), usamos Weltman.
-  //  (c) Senão, fallback Deurenberg (1991) por IMC.
+  // Estratégia (alinhada ao FineShape):
+  //  (a) Mulher → Tran & Weltman (1988): densidade corporal a partir de
+  //      abdômen, quadril, altura e idade; %BF via Siri (495/BD − 450).
+  //  (b) Homem  → Penrose-Nelson-Fisher (1985): LBM a partir de peso e
+  //      cintura (polegadas).
+  //  (c) Fallback Weltman obeso quando faltar quadril/cintura adequados.
+  //  (d) Último recurso: Deurenberg (1991) por IMC.
   let bodyFat = 0;
-  const hasLimbs = armCm !== undefined && thighCm !== undefined && calfCm !== undefined;
+  const waistOrAbd = waist ?? abdomen;
   const isObeseWaist =
-    abdoAvg !== undefined &&
-    ((gender === "female" && abdoAvg >= 80) || (gender === "male" && abdoAvg >= 90));
+    waistOrAbd !== undefined &&
+    ((gender === "female" && waistOrAbd >= 80) || (gender === "male" && waistOrAbd >= 90));
 
-  if (hasLimbs) {
-    // Massa magra estimada a partir do músculo esquelético (~55% da MM em adultos)
-    const leanFromSMM = skeletalMuscleKg / 0.55;
-    bodyFat = ((weight - leanFromSMM) / weight) * 100;
-  } else if (abdoAvg !== undefined && isObeseWaist) {
+  if (gender === "female" && abdoAvg !== undefined && hip !== undefined && hip > 0) {
+    // Tran-Weltman 1988 (mulheres)
+    const BD =
+      1.168297
+      - 0.002824 * abdoAvg
+      + 0.0000122098 * abdoAvg * abdoAvg
+      - 0.000733128 * hip
+      + 0.000510477 * height
+      - 0.000216161 * age;
+    bodyFat = 495 / BD - 450;
+  } else if (gender === "male" && waistOrAbd !== undefined) {
+    // Penrose-Nelson-Fisher 1985 (homens) — cintura em polegadas, peso em libras
+    const waistIn = waistOrAbd / 2.54;
+    const weightLb = weight * 2.20462;
+    const lbmLb = 98.42 + 1.082 * weightLb - 4.15 * waistIn;
+    const lbmKg = lbmLb / 2.20462;
+    bodyFat = ((weight - lbmKg) / weight) * 100;
+  } else if (waistOrAbd !== undefined && isObeseWaist) {
     if (gender === "male") {
-      bodyFat = 0.31457 * abdoAvg - 0.10969 * weight + 10.8336;
+      bodyFat = 0.31457 * waistOrAbd - 0.10969 * weight + 10.8336;
     } else {
-      bodyFat = 0.11077 * abdoAvg - 0.17666 * height + 0.14354 * weight + 51.03301;
+      bodyFat = 0.11077 * waistOrAbd - 0.17666 * height + 0.14354 * weight + 51.03301;
     }
   } else {
     const sexFactor = gender === "male" ? 1 : 0;
     bodyFat = 1.2 * bmi + 0.23 * age - 10.8 * sexFactor - 5.4;
-    warnings.push("Cintura/abdômen não informados — % gordura estimada pelo IMC (Deurenberg et al.).");
+    warnings.push("Cintura/quadril não informados — % gordura estimada pelo IMC (Deurenberg et al.).");
   }
   bodyFat = round(Math.max(3, Math.min(bodyFat, 60)));
 
@@ -219,10 +232,13 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const leanMassKg = round(weight - fatMassKg);
 
 
-  // ── 4. MASSA MUSCULAR TOTAL ──────────────────────────────
-  // O músculo esquelético representa ~75–80% da massa muscular total
-  // nos adultos (Heyward & Stolarczyk, 2000).
-  const muscleMassKg = round(skeletalMuscleKg / 0.77);
+  // ── 4. MASSA ÓSSEA (estimativa populacional) ─────────────
+  // Heyward & Stolarczyk: ~4–5% do peso corporal total.
+  const boneMassKgEarly = round(weight * 0.045);
+
+  // ── 5. MASSA MUSCULAR TOTAL ──────────────────────────────
+  // Massa magra menos massa óssea (modelo FineShape).
+  const muscleMassKg = round(Math.max(0, leanMassKg - boneMassKgEarly));
   const muscleMass = round((muscleMassKg / weight) * 100);
 
   // ── 5. METABOLISMO BASAL — Harris-Benedict revisado ─────
@@ -263,10 +279,8 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const bodyWaterKg = leanMassKg * 0.73;
   const bodyWater = round((bodyWaterKg / weight) * 100);
 
-  // ── 8. MASSA ÓSSEA (estimativa populacional) ─────────────
-  // Heyward & Stolarczyk: ~3.0–5.0% do peso corporal.
-  // Estima com base na massa magra: ~5–6% da massa magra.
-  const boneMassKg = round(leanMassKg * 0.056);
+  // ── 8. MASSA ÓSSEA (já calculada acima, ~4.5% do peso) ───
+  const boneMassKg = boneMassKgEarly;
   const boneMass = round((boneMassKg / weight) * 100);
 
   // ── 9. IDADE CORPORAL ESTIMADA ───────────────────────────
