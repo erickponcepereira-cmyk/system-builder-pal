@@ -2688,7 +2688,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const refBMI = "18,5–24,9 kg/m²";
     const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
     const refVisceral = getVisceralFatReference();
-    const refMuscleMass = getMuscleMassReference(clientGenderBin);
+    void getMuscleMassReference(clientGenderBin); // reservado para futuro card de Massa Muscular
     const refWater = getBodyWaterReference(clientGenderBin);
     const refBone = a.weight ? getBoneMassReference(clientGenderBin, a.weight) : "—";
 
