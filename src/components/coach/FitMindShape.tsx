@@ -3096,6 +3096,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   label: "Água Corporal",
                   tooltip: "bodyWater",
                   value: `${a.bodyWater}%`,
+                  ref: `Ideal: ${refWater}`,
                   bg: "#eff6ff",
                 },
                 {
@@ -3103,6 +3104,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   label: "Massa Óssea",
                   tooltip: "boneMass",
                   value: `${a.boneMass}%`,
+                  ref: `Ideal: ${refBone}`,
                   bg: "#f5f3ff",
                 },
               ].map((item) => (
@@ -3130,6 +3132,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)" }}
                   >
                     {item.value}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 2 }}>
+                    {item.ref}
                   </div>
                 </div>
               ))}
