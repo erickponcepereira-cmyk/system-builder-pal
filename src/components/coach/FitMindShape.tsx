@@ -441,11 +441,22 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     if (!selectedClient || !onSaveAssessment) return;
     setIsSaving(true);
     try {
+      const assessmentDate = (() => {
+        if (assessment.date) {
+          const d = new Date(
+            assessment.date.length === 10
+              ? assessment.date + "T12:00:00"
+              : assessment.date
+          );
+          return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+        }
+        return new Date().toISOString();
+      })();
       const full: FitMindAssessment = {
         ...(assessment as FitMindAssessment),
         id: Date.now().toString(),
         clientId: selectedClient.id,
-        date: new Date().toISOString(),
+        date: assessmentDate,
         bmi: computedBMI,
       };
       await onSaveAssessment(full, selectedClient);
