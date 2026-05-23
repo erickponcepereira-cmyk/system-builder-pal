@@ -505,9 +505,14 @@ export type Database = {
           min_monthly_students: number | null
           must_be_top_seller: boolean | null
           name: string
+          plan_type: string
+          product_id: string | null
+          required_period_points: number
           reward_description: string | null
           reward_details: string | null
+          reward_image_url: string | null
           reward_value: number | null
+          updated_at: string
         }
         Insert: {
           created_at?: string | null
@@ -519,9 +524,14 @@ export type Database = {
           min_monthly_students?: number | null
           must_be_top_seller?: boolean | null
           name: string
+          plan_type?: string
+          product_id?: string | null
+          required_period_points?: number
           reward_description?: string | null
           reward_details?: string | null
+          reward_image_url?: string | null
           reward_value?: number | null
+          updated_at?: string
         }
         Update: {
           created_at?: string | null
@@ -533,14 +543,35 @@ export type Database = {
           min_monthly_students?: number | null
           must_be_top_seller?: boolean | null
           name?: string
+          plan_type?: string
+          product_id?: string | null
+          required_period_points?: number
           reward_description?: string | null
           reward_details?: string | null
+          reward_image_url?: string | null
           reward_value?: number | null
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "career_plan_config_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "career_plan_config_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       career_plan_progress: {
         Row: {
+          accumulated_points: number
           best_streak: number | null
           career_plan_id: string
           coach_id: string
@@ -548,11 +579,15 @@ export type Database = {
           created_at: string | null
           current_streak_active: boolean | null
           id: string
+          period_end: string | null
+          period_start: string | null
           reward_earned: boolean | null
           reward_earned_at: string | null
           start_month: string | null
+          updated_at: string
         }
         Insert: {
+          accumulated_points?: number
           best_streak?: number | null
           career_plan_id: string
           coach_id: string
@@ -560,11 +595,15 @@ export type Database = {
           created_at?: string | null
           current_streak_active?: boolean | null
           id?: string
+          period_end?: string | null
+          period_start?: string | null
           reward_earned?: boolean | null
           reward_earned_at?: string | null
           start_month?: string | null
+          updated_at?: string
         }
         Update: {
+          accumulated_points?: number
           best_streak?: number | null
           career_plan_id?: string
           coach_id?: string
@@ -572,9 +611,12 @@ export type Database = {
           created_at?: string | null
           current_streak_active?: boolean | null
           id?: string
+          period_end?: string | null
+          period_start?: string | null
           reward_earned?: boolean | null
           reward_earned_at?: string | null
           start_month?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -6169,6 +6211,7 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      reset_expired_career_period_plans: { Args: never; Returns: undefined }
       review_coach_application: {
         Args: {
           _admin_notes?: string
@@ -6212,6 +6255,14 @@ export type Database = {
         Returns: Json
       }
       unblock_coach: { Args: { _coach_id: string }; Returns: undefined }
+      update_career_challenge_progress: {
+        Args: { _coach_id: string; _points: number }
+        Returns: undefined
+      }
+      update_career_period_plans: {
+        Args: { _coach_id: string; _points: number }
+        Returns: undefined
+      }
       update_coach_withdrawal_status: {
         Args: {
           _notes?: string
@@ -6225,6 +6276,15 @@ export type Database = {
           _notes?: string
           _status: Database["public"]["Enums"]["withdrawal_status"]
           _withdrawal_id: string
+        }
+        Returns: undefined
+      }
+      upsert_monthly_ranking_on_sale: {
+        Args: {
+          _coach_id: string
+          _month: string
+          _points: number
+          _revenue: number
         }
         Returns: undefined
       }
