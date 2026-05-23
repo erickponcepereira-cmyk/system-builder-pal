@@ -2776,13 +2776,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return `Precisa perder ${kgToLose} kg de gordura para entrar no recomendado`;
     })();
 
-    // Metabolismo eval
+    // Metabolismo eval (faixa 0,9–1,1 × HB revisado)
     const basalEval = (() => {
       if (!basalKcal || !harrisBenedict) return { c: "var(--muted-foreground)", t: "—" };
-      const ratio = basalKcal / harrisBenedict;
-      if (ratio < 0.9) return { c: "#fb923c", t: "Baixo" };
-      if (ratio <= 1.1) return { c: "#22c55e", t: "Normal" };
-      return { c: "#facc15", t: "Acima" };
+      const cat = getBasalMetabolismCategory(basalKcal, harrisBenedict);
+      return { c: cat.color, t: cat.label };
     })();
 
     const histGordura = histWeight;
