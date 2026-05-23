@@ -319,10 +319,50 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
 }
 
 // ============================================================
-// FAIXAS DE REFERÊNCIA PARA RESULTADO (por sexo)
+// FAIXAS DE REFERÊNCIA — ACSM (padrão FineShape) por idade e sexo
 // ============================================================
-export function getBodyFatReference(gender: "male" | "female"): string {
-  return gender === "male" ? "5–15%" : "13–22%";
+// Fonte: American College of Sports Medicine — Guidelines, tabela de
+// composição corporal por faixa etária. Mesma tabela usada pelo FineShape.
+
+type AcsmBand = { healthyMin: number; healthyMax: number; overweightMax: number };
+
+function getAcsmBand(gender: "male" | "female", age: number): AcsmBand {
+  if (gender === "male") {
+    if (age < 40) return { healthyMin: 8,  healthyMax: 19, overweightMax: 24 };
+    if (age < 60) return { healthyMin: 11, healthyMax: 21, overweightMax: 27 };
+    return            { healthyMin: 13, healthyMax: 24, overweightMax: 29 };
+  }
+  if (age < 40) return { healthyMin: 21, healthyMax: 32, overweightMax: 38 };
+  if (age < 60) return { healthyMin: 23, healthyMax: 33, overweightMax: 39 };
+  return            { healthyMin: 24, healthyMax: 35, overweightMax: 41 };
+}
+
+export function getBodyFatReference(gender: "male" | "female", age = 30): string {
+  const b = getAcsmBand(gender, age);
+  return `${b.healthyMin}–${b.healthyMax}%`;
+}
+
+export function getBodyFatHealthyRange(
+  gender: "male" | "female",
+  age = 30,
+): { min: number; max: number } {
+  const b = getAcsmBand(gender, age);
+  return { min: b.healthyMin, max: b.healthyMax };
+}
+
+export function getBodyFatCategoryACSM(
+  bodyFat: number,
+  gender: "male" | "female",
+  age = 30,
+): { label: string; eval: "good" | "normal" | "warning" | "danger"; color: string } {
+  const b = getAcsmBand(gender, age);
+  if (bodyFat < b.healthyMin)
+    return { label: "Abaixo do saudável", eval: "warning", color: "#60a5fa" };
+  if (bodyFat <= b.healthyMax)
+    return { label: "Saudável", eval: "good", color: "#22c55e" };
+  if (bodyFat <= b.overweightMax)
+    return { label: "Sobrepeso", eval: "warning", color: "#facc15" };
+  return { label: "Obesidade", eval: "danger", color: "#ef4444" };
 }
 
 export function getSkeletalMuscleReference(gender: "male" | "female"): string {
@@ -334,7 +374,8 @@ export function getWaistHipReference(gender: "male" | "female"): string {
 }
 
 // ============================================================
-// CLASSIFICAÇÃO DO AVATAR POR % GORDURA (reutilizável)
+// DEPRECATED — mantido por compatibilidade. Avatar agora é
+// derivado do IMC, não da % de gordura.
 // ============================================================
 export function getAvatarFromBodyFat(
   bodyFat: number,
