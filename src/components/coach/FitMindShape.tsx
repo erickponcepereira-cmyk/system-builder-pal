@@ -2028,6 +2028,21 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 ["% Água Corporal", assessment.bodyWater, "%"],
                 ["% Massa Óssea", assessment.boneMass, "%"],
                 ["Idade Corporal", assessment.bodyAge, "anos"],
+                ...((() => {
+                  const w = assessment.circumferences?.waist ?? assessment.circumferences?.abdomen;
+                  const h = assessment.circumferences?.hip;
+                  if (!w || !h || h === 0) return [] as Array<[string, any, string]>;
+                  const rcqVal = +(w / h).toFixed(2);
+                  const limits = selectedClient?.gender === "male"
+                    ? { low: 0.90, mod: 0.95 }
+                    : { low: 0.80, mod: 0.85 };
+                  const rcqLabel = rcqVal < limits.low
+                    ? "Baixo risco"
+                    : rcqVal <= limits.mod
+                      ? "Risco moderado"
+                      : "Alto risco";
+                  return [["RCQ (cintura/quadril)", `${rcqVal} — ${rcqLabel}`, ""]] as Array<[string, any, string]>;
+                })()),
               ].map(([label, value, unit]) => (
                 <div key={label as string} style={{ fontSize: 12 }}>
                   <span style={{ color: "var(--muted-foreground)" }}>{label}:</span>{" "}
