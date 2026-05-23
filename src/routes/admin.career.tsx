@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Trophy, Gift, Plus, Save, Trash2, X, Loader2, Award, Check,
   Medal, Star, Shield, Gem, Crown, Settings, Plane, UtensilsCrossed,
-  RefreshCw, ImageIcon
+  RefreshCw, ImageIcon, PackageCheck, Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
