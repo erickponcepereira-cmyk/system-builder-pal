@@ -1702,7 +1702,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <input
               type="date"
               className="fm-input"
-              defaultValue={new Date().toISOString().split("T")[0]}
+              value={assessment.date ?? new Date().toISOString().split("T")[0]}
               onChange={(e) => upd("date", e.target.value)}
             />
           </div>
