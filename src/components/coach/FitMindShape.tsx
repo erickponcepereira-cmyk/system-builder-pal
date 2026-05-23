@@ -301,11 +301,7 @@ const BODY_FAT_RANGES = {
   ],
 };
 
-const VISCERAL_FAT_RANGES = [
-  { max: 9, label: "Normal", eval: "normal", color: "#22c55e" },
-  { max: 14, label: "Alto", eval: "warning", color: "#fb923c" },
-  { max: 30, label: "Muito Alto", eval: "danger", color: "#ef4444" },
-];
+// Gordura visceral agora vem de getVisceralFatCategory (Tanita/FineShape)
 
 const TOOLTIPS: Record<string, string> = {
   bmi: "IMC = Peso ÷ Altura². Classificação baseada nas diretrizes NIH/OMS para IMC. Fonte: (8).",
