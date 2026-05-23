@@ -71,6 +71,14 @@ import {
   getBodyFatCategoryACSM,
   getBodyFatReference,
   getBodyFatHealthyRange,
+  getSkeletalMuscleReference,
+  getSkeletalMuscleCategoryJanssen,
+  getMuscleMassReference,
+  getBodyWaterReference,
+  getBoneMassReference,
+  getVisceralFatCategory,
+  getVisceralFatReference,
+  getBasalMetabolismCategory,
   AVATAR_LABELS_8,
   type MeasurementInput,
 } from "@/lib/body-composition-calculator";
@@ -255,7 +263,7 @@ export interface FitMindShapeProps {
 // ── 8 níveis de IMC alinhados com os 8 avatares (body-abaixo…body-alto-3) ──
 const BMI_RANGES = [
   { max: 18.5, label: "Abaixo do peso", color: "#60a5fa", avatar: 0 },
-  { max: 24.9, label: "Normal",         color: "#22c55e", avatar: 1 },
+  { max: 24.9, label: "Saudável",       color: "#22c55e", avatar: 1 },
   { max: 27.4, label: "Acima 1",        color: "#a3e635", avatar: 2 },
   { max: 29.9, label: "Acima 2",        color: "#facc15", avatar: 3 },
   { max: 34.9, label: "Acima 3",        color: "#fb923c", avatar: 4 },
@@ -276,28 +284,9 @@ function classifyRCQ(rcq: number, gender: string) {
   return                        { label: "Alto risco",       color: "#ef4444", eval: "danger" };
 }
 
-const BODY_FAT_RANGES = {
-  male: [
-    { max: 6, label: "Atleta", eval: "excellent" },
-    { max: 13, label: "Fitness", eval: "good" },
-    { max: 17, label: "Aceitável", eval: "normal" },
-    { max: 25, label: "Acima", eval: "warning" },
-    { max: 100, label: "Obeso", eval: "danger" },
-  ],
-  female: [
-    { max: 14, label: "Atleta", eval: "excellent" },
-    { max: 20, label: "Fitness", eval: "good" },
-    { max: 24, label: "Aceitável", eval: "normal" },
-    { max: 31, label: "Acima", eval: "warning" },
-    { max: 100, label: "Obeso", eval: "danger" },
-  ],
-};
+// Faixas de % gordura corporal agora vêm de getBodyFatCategoryACSM (ACSM/FineShape)
 
-const VISCERAL_FAT_RANGES = [
-  { max: 9, label: "Normal", eval: "normal", color: "#22c55e" },
-  { max: 14, label: "Alto", eval: "warning", color: "#fb923c" },
-  { max: 30, label: "Muito Alto", eval: "danger", color: "#ef4444" },
-];
+// Gordura visceral agora vem de getVisceralFatCategory (Tanita/FineShape)
 
 const TOOLTIPS: Record<string, string> = {
   bmi: "IMC = Peso ÷ Altura². Classificação baseada nas diretrizes NIH/OMS para IMC. Fonte: (8).",
@@ -462,8 +451,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const g = gender === "male" ? "male" : "female";
     return getBodyFatCategoryACSM(pct || 0, g, age);
   };
-  const getVisceralCategory = (v: number) =>
-    VISCERAL_FAT_RANGES.find((r) => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
+  const getVisceralCategory = (v: number) => getVisceralFatCategory(v || 0);
   const formatPercent = (value?: number) =>
     Number.isFinite(value) ? `${value}%` : "—";
 
@@ -2696,10 +2684,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const idealWeightMin = heightM ? +(18.5 * heightM * heightM).toFixed(1) : 0;
     const idealWeightMax = heightM ? +(24.9 * heightM * heightM).toFixed(1) : 0;
     const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
-    const refSkeletal = client.gender === "male" ? "33–39%" : "24–30%";
+    const refSkeletal = getSkeletalMuscleReference(clientGenderBin, a.age || 30);
     const refBMI = "18,5–24,9 kg/m²";
     const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
-    const refVisceral = "1–9";
+    const refVisceral = getVisceralFatReference();
+    void getMuscleMassReference(clientGenderBin); // reservado para futuro card de Massa Muscular
+    const refWater = getBodyWaterReference(clientGenderBin);
+    const refBone = a.weight ? getBoneMassReference(clientGenderBin, a.weight) : "—";
 
     // ── RCQ ─────────────────────────────────────────────────
     const waistRef = a.circumferences?.waist ?? a.circumferences?.abdomen;
@@ -2732,14 +2723,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return { c: "#dc2626", t: "Risco alto" };
     })();
     // Músculo esquelético eval
-    const skMin = client.gender === "male" ? 33 : 24;
-    const skMax = client.gender === "male" ? 39 : 30;
     const skEval = (() => {
       if (!a.skeletalMuscle) return { c: "var(--muted-foreground)", t: "—" };
-      if (a.skeletalMuscle < skMin - 3) return { c: "#dc2626", t: "Muito baixo" };
-      if (a.skeletalMuscle < skMin) return { c: "#facc15", t: "Abaixo" };
-      if (a.skeletalMuscle <= skMax) return { c: "#22c55e", t: "Normal" };
-      return { c: "#22c55e", t: "Acima (atleta)" };
+      const cat = getSkeletalMuscleCategoryJanssen(a.skeletalMuscle, clientGenderBin, a.age || 30);
+      return { c: cat.color, t: cat.label };
     })();
     const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
     // Idade corporal: comparar com idade real
@@ -2774,13 +2761,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       return `Precisa perder ${kgToLose} kg de gordura para entrar no recomendado`;
     })();
 
-    // Metabolismo eval
+    // Metabolismo eval (faixa 0,9–1,1 × HB revisado)
     const basalEval = (() => {
       if (!basalKcal || !harrisBenedict) return { c: "var(--muted-foreground)", t: "—" };
-      const ratio = basalKcal / harrisBenedict;
-      if (ratio < 0.9) return { c: "#fb923c", t: "Baixo" };
-      if (ratio <= 1.1) return { c: "#22c55e", t: "Normal" };
-      return { c: "#facc15", t: "Acima" };
+      const cat = getBasalMetabolismCategory(basalKcal, harrisBenedict);
+      return { c: cat.color, t: cat.label };
     })();
 
     const histGordura = histWeight;
@@ -3096,6 +3081,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   label: "Água Corporal",
                   tooltip: "bodyWater",
                   value: `${a.bodyWater}%`,
+                  ref: `Ideal: ${refWater}`,
                   bg: "#eff6ff",
                 },
                 {
@@ -3103,6 +3089,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   label: "Massa Óssea",
                   tooltip: "boneMass",
                   value: `${a.boneMass}%`,
+                  ref: `Ideal: ${refBone}`,
                   bg: "#f5f3ff",
                 },
               ].map((item) => (
@@ -3130,6 +3117,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)" }}
                   >
                     {item.value}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", fontStyle: "italic", marginTop: 2 }}>
+                    {item.ref}
                   </div>
                 </div>
               ))}
