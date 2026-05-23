@@ -459,10 +459,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
   const getBMICategory = (bmi: number) =>
     BMI_RANGES.find((r) => bmi <= r.max) ?? BMI_RANGES[BMI_RANGES.length - 1];
-  const getBodyFatCategory = (pct: number, gender: string) => {
-    const ranges =
-      gender === "male" ? BODY_FAT_RANGES.male : BODY_FAT_RANGES.female;
-    return ranges.find((r) => pct <= r.max) ?? ranges[ranges.length - 1];
+  const getBodyFatCategory = (pct: number, gender: string, age = 30) => {
+    const g = gender === "male" ? "male" : "female";
+    return getBodyFatCategoryACSM(pct || 0, g, age);
   };
   const getVisceralCategory = (v: number) =>
     VISCERAL_FAT_RANGES.find((r) => v <= r.max) ?? VISCERAL_FAT_RANGES[2];
