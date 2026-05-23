@@ -2611,13 +2611,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const client = selectedClient!;
     const a = assessment as FitMindAssessment;
     const bmiCat = getBMICategory(a.bmi || computedBMI);
-    // Se temos % de gordura, usamos ela para o avatar (mais preciso que IMC).
-    // Se não, usa o avatar do IMC como fallback.
-    const avatarEntry = a.bodyFat
-      ? getAvatarFromBodyFat(a.bodyFat, client.gender === "other" ? "female" : client.gender)
-      : { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
+    // Avatar e nível de obesidade derivam APENAS do IMC.
+    // % gordura é exibida como métrica informativa.
+    const avatarEntry = { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
     const avatarIndex = avatarEntry.index;
-    const fatCat = getBodyFatCategory(a.bodyFat, client.gender);
+    const clientGenderBin: "male" | "female" = client.gender === "male" ? "male" : "female";
+    const fatCat = getBodyFatCategory(a.bodyFat, client.gender, a.age || 30);
     const viscCat = getVisceralCategory(a.visceralFat);
     const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
 
