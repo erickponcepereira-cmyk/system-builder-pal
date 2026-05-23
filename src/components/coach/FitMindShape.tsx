@@ -284,22 +284,7 @@ function classifyRCQ(rcq: number, gender: string) {
   return                        { label: "Alto risco",       color: "#ef4444", eval: "danger" };
 }
 
-const BODY_FAT_RANGES = {
-  male: [
-    { max: 6, label: "Atleta", eval: "excellent" },
-    { max: 13, label: "Fitness", eval: "good" },
-    { max: 17, label: "Aceitável", eval: "normal" },
-    { max: 25, label: "Acima", eval: "warning" },
-    { max: 100, label: "Obeso", eval: "danger" },
-  ],
-  female: [
-    { max: 14, label: "Atleta", eval: "excellent" },
-    { max: 20, label: "Fitness", eval: "good" },
-    { max: 24, label: "Aceitável", eval: "normal" },
-    { max: 31, label: "Acima", eval: "warning" },
-    { max: 100, label: "Obeso", eval: "danger" },
-  ],
-};
+// Faixas de % gordura corporal agora vêm de getBodyFatCategoryACSM (ACSM/FineShape)
 
 // Gordura visceral agora vem de getVisceralFatCategory (Tanita/FineShape)
 
