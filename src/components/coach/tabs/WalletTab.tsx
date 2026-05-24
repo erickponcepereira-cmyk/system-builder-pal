@@ -146,8 +146,8 @@ export function WalletTab() {
         <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">
           Saldo disponível
         </p>
-        <p className="text-4xl font-bold text-primary-foreground mt-2">R$ 2.450,00</p>
-        <p className="text-xs text-primary-foreground/70 mt-1">+ R$ 654,00 pendente</p>
+        <p className="text-4xl font-bold text-primary-foreground mt-2">{brl(wallet.available)}</p>
+        <p className="text-xs text-primary-foreground/70 mt-1">+ {brl(wallet.pending)} pendente</p>
         <Button
           variant="outline"
           onClick={() => setOpen(true)}
@@ -161,38 +161,37 @@ export function WalletTab() {
       <div className="grid gap-3 grid-cols-2 mb-6">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-xs text-white/50">Total ganho</p>
-          <p className="text-xl font-bold text-white mt-1">R$ 12.840</p>
+          <p className="text-xl font-bold text-white mt-1">{brl(wallet.total)}</p>
         </div>
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-xs text-white/50">Total sacado</p>
-          <p className="text-xl font-bold text-white mt-1">R$ 9.736</p>
+          <p className="text-xl font-bold text-white mt-1">{brl(wallet.withdrawn)}</p>
         </div>
       </div>
 
       <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
         <h3 className="text-sm font-bold text-white mb-3">Histórico recente</h3>
-        <div className="space-y-2">
-          {[
-            { who: "Carlos S. (direto)", value: 98.5, type: "Comissão direta 50%" },
-            { who: "Ana L. (nível 1)", value: 29.55, type: "Comissão nível 1 - 15%" },
-            { who: "Pedro M. (nível 2)", value: 9.85, type: "Comissão nível 2 - 5%" },
-            { who: "Saque PIX", value: -800, type: "Aprovado em 10/04" },
-          ].map((t, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between rounded-lg p-3"
-              style={{ backgroundColor: "#0F0F0F" }}
-            >
-              <div>
-                <p className="text-xs font-medium text-white">{t.who}</p>
-                <p className="text-[10px] text-white/40">{t.type}</p>
+        {history.length === 0 ? (
+          <p className="text-xs text-white/40">Sem movimentações ainda. Quando houver comissões ou saques, aparecem aqui.</p>
+        ) : (
+          <div className="space-y-2">
+            {history.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between rounded-lg p-3"
+                style={{ backgroundColor: "#0F0F0F" }}
+              >
+                <div>
+                  <p className="text-xs font-medium text-white">{t.who}</p>
+                  <p className="text-[10px] text-white/40">{t.type}</p>
+                </div>
+                <span className={`text-sm font-bold ${t.value > 0 ? "text-success" : "text-white/70"}`}>
+                  {t.value > 0 ? "+" : "-"}{brl(Math.abs(t.value))}
+                </span>
               </div>
-              <span className={`text-sm font-bold ${t.value > 0 ? "text-success" : "text-white/70"}`}>
-                {t.value > 0 ? "+" : ""}R$ {Math.abs(t.value).toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {cross && cross.rows.length > 0 && (
