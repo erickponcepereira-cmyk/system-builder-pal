@@ -94,14 +94,14 @@ import bodyAcima3 from "@/assets/body-acima-3.png";
 import bodyAlto1 from "@/assets/body-alto-1.png";
 import bodyAlto2 from "@/assets/body-alto-2.png";
 import bodyAlto3 from "@/assets/body-alto-3.png";
-import bodyFAbaixo from "@/assets/body-f-abaixo.jpeg";
-import bodyFNormal from "@/assets/body-f-normal.jpeg";
+import bodyFAbaixo from "@/assets/body-f-abaixo.png";
+import bodyFNormal from "@/assets/body-f-normal.png";
 import bodyFAcima1 from "@/assets/body-f-acima-1.png";
-import bodyFAcima2 from "@/assets/body-f-acima-2.jpeg";
-import bodyFAcima3 from "@/assets/body-f-acima-3.jpeg";
-import bodyFAlto1 from "@/assets/body-f-alto-1.jpeg";
-import bodyFAlto2 from "@/assets/body-f-alto-2.jpeg";
-import bodyFAlto3 from "@/assets/body-f-alto-3.jpeg";
+import bodyFAcima2 from "@/assets/body-f-acima-2.png";
+import bodyFAcima3 from "@/assets/body-f-acima-3.png";
+import bodyFAlto1 from "@/assets/body-f-alto-1.png";
+import bodyFAlto2 from "@/assets/body-f-alto-2.png";
+import bodyFAlto3 from "@/assets/body-f-alto-3.png";
 
 const BODY_AVATAR_IMAGES = [
   bodyAbaixo,
