@@ -1,5 +1,6 @@
 // Public Key do Mercado Pago (segura para client-side).
-export const MP_PUBLIC_KEY = "APP_USR-a3fc7b0a-3992-40d4-9163-446776a206cd";
+// TESTE — trocar para APP_USR-... ao voltar para produção.
+export const MP_PUBLIC_KEY = "TEST-1e0c9ae2-00fe-4225-aaae-c7dc9609c2cc";
 
 let mpScriptPromise: Promise<void> | null = null;
 
