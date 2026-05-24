@@ -26,11 +26,39 @@ type Tab = "plans" | "patents" | "medals" | "challenges" | "deliveries";
 
 function AdminCareerPage() {
   const [tab, setTab] = useState<Tab>("plans");
+  const [backfilling, setBackfilling] = useState(false);
+
+  async function handleBackfill() {
+    if (!confirm("Recalcular TODO o histórico de pontos a partir das vendas pagas?\n\nIsso vai zerar pontos atuais, rankings mensais e progresso de carreira, e reprocessar tudo. Pode levar alguns segundos.")) return;
+    setBackfilling(true);
+    try {
+      const { data, error } = await supabase.rpc("backfill_career_points" as any);
+      if (error) throw error;
+      const d = data as { processed?: number; skipped?: number } | null;
+      toast.success(`Backfill concluído: ${d?.processed ?? 0} vendas processadas, ${d?.skipped ?? 0} ignoradas.`);
+    } catch (e: any) {
+      toast.error(e.message || "Falha no backfill");
+    } finally {
+      setBackfilling(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-white">Carreira</h1>
-        <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas, desafios e entregas de recompensas.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-white">Carreira</h1>
+          <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas, desafios e entregas de recompensas.</p>
+        </div>
+        <button
+          onClick={handleBackfill}
+          disabled={backfilling}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white disabled:opacity-50"
+          title="Recalcula pontos, rankings e progresso a partir das vendas pagas existentes"
+        >
+          {backfilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Recalcular histórico
+        </button>
       </div>
       <div className="flex flex-wrap gap-1 border-b border-white/10">
         <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}        label="Planos de Carreira" />
