@@ -7,6 +7,10 @@ import { toast } from "sonner";
 import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 
 
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string };
+
 export function WalletTab() {
   const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
   const [bank, setBank] = useState<{
@@ -23,6 +27,8 @@ export function WalletTab() {
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
+  const [wallet, setWallet] = useState({ available: 0, pending: 0, total: 0, withdrawn: 0 });
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
 
   useEffect(() => {
@@ -48,6 +54,44 @@ export function WalletTab() {
         });
       }
       setLoadingBank(false);
+
+      const [walletRes, paidWithdrawsRes, commRes, recentWithdrawsRes] = await Promise.all([
+        supabase.from("wallets").select("available_balance,pending_balance,total_earned,total_withdrawn").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("withdrawal_requests").select("amount,status").eq("profile_id", profile.id).eq("status", "paid"),
+        supabase.from("commissions").select("id,amount,level,created_at").eq("beneficiary_profile_id", profile.id).order("created_at", { ascending: false }).limit(10),
+        supabase.from("withdrawal_requests").select("id,amount,status,requested_at,paid_at").eq("profile_id", profile.id).order("requested_at", { ascending: false }).limit(10),
+      ]);
+
+      const w = walletRes.data as { available_balance?: number; pending_balance?: number; total_earned?: number; total_withdrawn?: number } | null;
+      const paidSum = ((paidWithdrawsRes.data as Array<{ amount: number }>) || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+      setWallet({
+        available: Number(w?.available_balance ?? 0),
+        pending: Number(w?.pending_balance ?? 0),
+        total: Number(w?.total_earned ?? 0),
+        withdrawn: Number(w?.total_withdrawn ?? 0) || paidSum,
+      });
+
+      const items: HistoryItem[] = [];
+      ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string }>) || []).forEach((cm) => {
+        items.push({
+          id: `c-${cm.id}`,
+          who: cm.level === 0 ? "Comissão direta" : `Comissão nível ${cm.level}`,
+          type: cm.level === 0 ? "Venda direta" : `Rede MLM nível ${cm.level}`,
+          value: Number(cm.amount),
+          created_at: cm.created_at,
+        });
+      });
+      ((recentWithdrawsRes.data as Array<{ id: string; amount: number; status: string; requested_at: string; paid_at: string | null }>) || []).forEach((wr) => {
+        items.push({
+          id: `w-${wr.id}`,
+          who: "Saque PIX",
+          type: wr.status === "paid" ? `Aprovado em ${new Date(wr.paid_at || wr.requested_at).toLocaleDateString("pt-BR")}` : `Status: ${wr.status}`,
+          value: -Number(wr.amount),
+          created_at: wr.paid_at || wr.requested_at,
+        });
+      });
+      items.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      setHistory(items.slice(0, 12));
     })();
     fetchCrossSales()
       .then((r) => setCross(r))
@@ -102,8 +146,8 @@ export function WalletTab() {
         <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">
           Saldo disponível
         </p>
-        <p className="text-4xl font-bold text-primary-foreground mt-2">R$ 2.450,00</p>
-        <p className="text-xs text-primary-foreground/70 mt-1">+ R$ 654,00 pendente</p>
+        <p className="text-4xl font-bold text-primary-foreground mt-2">{brl(wallet.available)}</p>
+        <p className="text-xs text-primary-foreground/70 mt-1">+ {brl(wallet.pending)} pendente</p>
         <Button
           variant="outline"
           onClick={() => setOpen(true)}
@@ -117,38 +161,37 @@ export function WalletTab() {
       <div className="grid gap-3 grid-cols-2 mb-6">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-xs text-white/50">Total ganho</p>
-          <p className="text-xl font-bold text-white mt-1">R$ 12.840</p>
+          <p className="text-xl font-bold text-white mt-1">{brl(wallet.total)}</p>
         </div>
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-xs text-white/50">Total sacado</p>
-          <p className="text-xl font-bold text-white mt-1">R$ 9.736</p>
+          <p className="text-xl font-bold text-white mt-1">{brl(wallet.withdrawn)}</p>
         </div>
       </div>
 
       <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
         <h3 className="text-sm font-bold text-white mb-3">Histórico recente</h3>
-        <div className="space-y-2">
-          {[
-            { who: "Carlos S. (direto)", value: 98.5, type: "Comissão direta 50%" },
-            { who: "Ana L. (nível 1)", value: 29.55, type: "Comissão nível 1 - 15%" },
-            { who: "Pedro M. (nível 2)", value: 9.85, type: "Comissão nível 2 - 5%" },
-            { who: "Saque PIX", value: -800, type: "Aprovado em 10/04" },
-          ].map((t, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between rounded-lg p-3"
-              style={{ backgroundColor: "#0F0F0F" }}
-            >
-              <div>
-                <p className="text-xs font-medium text-white">{t.who}</p>
-                <p className="text-[10px] text-white/40">{t.type}</p>
+        {history.length === 0 ? (
+          <p className="text-xs text-white/40">Sem movimentações ainda. Quando houver comissões ou saques, aparecem aqui.</p>
+        ) : (
+          <div className="space-y-2">
+            {history.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between rounded-lg p-3"
+                style={{ backgroundColor: "#0F0F0F" }}
+              >
+                <div>
+                  <p className="text-xs font-medium text-white">{t.who}</p>
+                  <p className="text-[10px] text-white/40">{t.type}</p>
+                </div>
+                <span className={`text-sm font-bold ${t.value > 0 ? "text-success" : "text-white/70"}`}>
+                  {t.value > 0 ? "+" : "-"}{brl(Math.abs(t.value))}
+                </span>
               </div>
-              <span className={`text-sm font-bold ${t.value > 0 ? "text-success" : "text-white/70"}`}>
-                {t.value > 0 ? "+" : ""}R$ {Math.abs(t.value).toFixed(2).replace(".", ",")}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {cross && cross.rows.length > 0 && (

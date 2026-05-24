@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Users, TrendingUp, Wallet, Plus, BarChart3, Copy, Share2 } from "lucide-react";
 import { GoalsCard } from "@/components/coach/GoalsCard";
 import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
+import { supabase } from "@/integrations/supabase/client";
+
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export function OverviewTab({
   coachName,
@@ -17,12 +20,64 @@ export function OverviewTab({
   onCopy: () => void;
   coachId: string;
 }) {
+  const [data, setData] = useState({ students: 0, salesMonth: 0, commissionsMonth: 0, balance: 0 });
+
+  useEffect(() => {
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
+      if (!profile?.id) return;
+
+      const startMonth = new Date();
+      startMonth.setDate(1);
+      startMonth.setHours(0, 0, 0, 0);
+      const startIso = startMonth.toISOString();
+
+      const studentsQ = coachId
+        ? supabase.from("students").select("id", { count: "exact", head: true }).eq("coach_id", coachId)
+        : Promise.resolve({ count: 0 } as { count: number });
+
+      const [studentsRes, commMonthRes, walletRes] = await Promise.all([
+        studentsQ,
+        supabase.from("commissions").select("amount").eq("beneficiary_profile_id", profile.id).gte("created_at", startIso),
+        supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
+      ]);
+
+      const commMonth = ((commMonthRes.data as Array<{ amount: number }>) || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+
+      // Sales of the month: transactions paid this month tied to students of this coach
+      let salesMonth = 0;
+      if (coachId) {
+        const { data: stIds } = await supabase.from("students").select("id").eq("coach_id", coachId);
+        const ids = ((stIds as Array<{ id: string }>) || []).map((s) => s.id);
+        if (ids.length > 0) {
+          const { data: tx } = await supabase
+            .from("transactions")
+            .select("gross_amount")
+            .in("student_id", ids)
+            .eq("status", "paid")
+            .gte("paid_at", startIso);
+          salesMonth = ((tx as Array<{ gross_amount: number }>) || []).reduce((s, r) => s + Number(r.gross_amount || 0), 0);
+        }
+      }
+
+      setData({
+        students: (studentsRes as { count: number | null }).count ?? 0,
+        salesMonth,
+        commissionsMonth: commMonth,
+        balance: Number((walletRes.data as { available_balance?: number } | null)?.available_balance ?? 0),
+      });
+    })();
+  }, [coachId]);
+
   const stats = [
-    { label: "Alunos ativos", value: "24", change: "+3", icon: Users },
-    { label: "Vendas/mês", value: "R$ 3.680", change: "+18%", icon: TrendingUp },
-    { label: "Comissões", value: "R$ 1.104", change: "+22%", icon: BarChart3 },
-    { label: "Saldo", value: "R$ 2.450", change: "Disponível", icon: Wallet },
+    { label: "Alunos ativos", value: String(data.students), change: "", icon: Users },
+    { label: "Vendas/mês", value: brl(data.salesMonth), change: "", icon: TrendingUp },
+    { label: "Comissões/mês", value: brl(data.commissionsMonth), change: "", icon: BarChart3 },
+    { label: "Saldo", value: brl(data.balance), change: "Disponível", icon: Wallet },
   ];
+
   const [saleOpen, setSaleOpen] = useState(false);
 
   return (
