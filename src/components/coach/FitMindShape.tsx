@@ -94,6 +94,14 @@ import bodyAcima3 from "@/assets/body-acima-3.png";
 import bodyAlto1 from "@/assets/body-alto-1.png";
 import bodyAlto2 from "@/assets/body-alto-2.png";
 import bodyAlto3 from "@/assets/body-alto-3.png";
+import bodyFAbaixo from "@/assets/body-f-abaixo.jpeg";
+import bodyFNormal from "@/assets/body-f-normal.jpeg";
+import bodyFAcima1 from "@/assets/body-f-acima-1.png";
+import bodyFAcima2 from "@/assets/body-f-acima-2.jpeg";
+import bodyFAcima3 from "@/assets/body-f-acima-3.jpeg";
+import bodyFAlto1 from "@/assets/body-f-alto-1.jpeg";
+import bodyFAlto2 from "@/assets/body-f-alto-2.jpeg";
+import bodyFAlto3 from "@/assets/body-f-alto-3.jpeg";
 
 const BODY_AVATAR_IMAGES = [
   bodyAbaixo,
@@ -105,6 +113,23 @@ const BODY_AVATAR_IMAGES = [
   bodyAlto2,
   bodyAlto3,
 ];
+
+const BODY_AVATAR_IMAGES_FEMALE = [
+  bodyFAbaixo,
+  bodyFNormal,
+  bodyFAcima1,
+  bodyFAcima2,
+  bodyFAcima3,
+  bodyFAlto1,
+  bodyFAlto2,
+  bodyFAlto3,
+];
+
+function isFemaleGender(gender?: string) {
+  if (!gender) return false;
+  const g = gender.toLowerCase().trim();
+  return g === "f" || g === "feminino" || g === "female" || g === "mulher";
+}
 
 // ============================================================
 // TIPOS E INTERFACES
@@ -709,7 +734,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     active?: boolean;
     label: string;
     gender?: string;
-  }> = ({ level, active, label }) => {
+  }> = ({ level, active, label, gender }) => {
+    const images = isFemaleGender(gender) ? BODY_AVATAR_IMAGES_FEMALE : BODY_AVATAR_IMAGES;
     return (
       <div
         className={`fm-avatar-item ${active ? "fm-avatar-active" : ""}`}
@@ -717,7 +743,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       >
         <img
           className="fm-avatar-img"
-          src={BODY_AVATAR_IMAGES[level] ?? BODY_AVATAR_IMAGES[1]}
+          src={images[level] ?? images[1]}
           alt={label}
           style={{
             filter: active ? "none" : "grayscale(0.4)",
