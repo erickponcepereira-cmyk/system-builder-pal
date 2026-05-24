@@ -6065,6 +6065,7 @@ export type Database = {
         Args: { _transaction_id: string }
         Returns: number
       }
+      backfill_career_points: { Args: never; Returns: Json }
       block_inactive_coach: {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
