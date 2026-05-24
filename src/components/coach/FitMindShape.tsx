@@ -734,7 +734,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     active?: boolean;
     label: string;
     gender?: string;
-  }> = ({ level, active, label }) => {
+  }> = ({ level, active, label, gender }) => {
+    const images = isFemaleGender(gender) ? BODY_AVATAR_IMAGES_FEMALE : BODY_AVATAR_IMAGES;
     return (
       <div
         className={`fm-avatar-item ${active ? "fm-avatar-active" : ""}`}
@@ -742,7 +743,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       >
         <img
           className="fm-avatar-img"
-          src={BODY_AVATAR_IMAGES[level] ?? BODY_AVATAR_IMAGES[1]}
+          src={images[level] ?? images[1]}
           alt={label}
           style={{
             filter: active ? "none" : "grayscale(0.4)",
