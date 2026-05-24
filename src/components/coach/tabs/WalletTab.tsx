@@ -7,6 +7,10 @@ import { toast } from "sonner";
 import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 
 
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string };
+
 export function WalletTab() {
   const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
   const [bank, setBank] = useState<{
@@ -23,6 +27,8 @@ export function WalletTab() {
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
+  const [wallet, setWallet] = useState({ available: 0, pending: 0, total: 0, withdrawn: 0 });
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
 
   useEffect(() => {
@@ -48,6 +54,44 @@ export function WalletTab() {
         });
       }
       setLoadingBank(false);
+
+      const [walletRes, paidWithdrawsRes, commRes, recentWithdrawsRes] = await Promise.all([
+        supabase.from("wallets").select("available_balance,pending_balance,total_earned,total_withdrawn").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("withdrawal_requests").select("amount,status").eq("profile_id", profile.id).eq("status", "paid"),
+        supabase.from("commissions").select("id,amount,level,created_at").eq("beneficiary_profile_id", profile.id).order("created_at", { ascending: false }).limit(10),
+        supabase.from("withdrawal_requests").select("id,amount,status,requested_at,paid_at").eq("profile_id", profile.id).order("requested_at", { ascending: false }).limit(10),
+      ]);
+
+      const w = walletRes.data as { available_balance?: number; pending_balance?: number; total_earned?: number; total_withdrawn?: number } | null;
+      const paidSum = ((paidWithdrawsRes.data as Array<{ amount: number }>) || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+      setWallet({
+        available: Number(w?.available_balance ?? 0),
+        pending: Number(w?.pending_balance ?? 0),
+        total: Number(w?.total_earned ?? 0),
+        withdrawn: Number(w?.total_withdrawn ?? 0) || paidSum,
+      });
+
+      const items: HistoryItem[] = [];
+      ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string }>) || []).forEach((cm) => {
+        items.push({
+          id: `c-${cm.id}`,
+          who: cm.level === 0 ? "Comissão direta" : `Comissão nível ${cm.level}`,
+          type: cm.level === 0 ? "Venda direta" : `Rede MLM nível ${cm.level}`,
+          value: Number(cm.amount),
+          created_at: cm.created_at,
+        });
+      });
+      ((recentWithdrawsRes.data as Array<{ id: string; amount: number; status: string; requested_at: string; paid_at: string | null }>) || []).forEach((wr) => {
+        items.push({
+          id: `w-${wr.id}`,
+          who: "Saque PIX",
+          type: wr.status === "paid" ? `Aprovado em ${new Date(wr.paid_at || wr.requested_at).toLocaleDateString("pt-BR")}` : `Status: ${wr.status}`,
+          value: -Number(wr.amount),
+          created_at: wr.paid_at || wr.requested_at,
+        });
+      });
+      items.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      setHistory(items.slice(0, 12));
     })();
     fetchCrossSales()
       .then((r) => setCross(r))
