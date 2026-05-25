@@ -38,6 +38,7 @@ import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-c
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 import { Route as StudentCardRouteImport } from './routes/student.card'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
+import { Route as ResultadoTokenRouteImport } from './routes/resultado.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-checkin.$partnerId'
@@ -219,6 +220,11 @@ const StudentBenefitsRoute = StudentBenefitsRouteImport.update({
   id: '/benefits',
   path: '/benefits',
   getParentRoute: () => StudentRoute,
+} as any)
+const ResultadoTokenRoute = ResultadoTokenRouteImport.update({
+  id: '/resultado/$token',
+  path: '/resultado/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
@@ -444,6 +450,7 @@ export interface FileRoutesByFullPath {
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
+  '/resultado/$token': typeof ResultadoTokenRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -509,6 +516,7 @@ export interface FileRoutesByTo {
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
+  '/resultado/$token': typeof ResultadoTokenRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -577,6 +585,7 @@ export interface FileRoutesById {
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
+  '/resultado/$token': typeof ResultadoTokenRoute
   '/student/benefits': typeof StudentBenefitsRoute
   '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
@@ -646,6 +655,7 @@ export interface FileRouteTypes {
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
     | '/r/$code'
+    | '/resultado/$token'
     | '/student/benefits'
     | '/student/card'
     | '/student/challenge'
@@ -711,6 +721,7 @@ export interface FileRouteTypes {
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
     | '/r/$code'
+    | '/resultado/$token'
     | '/student/benefits'
     | '/student/card'
     | '/student/challenge'
@@ -778,6 +789,7 @@ export interface FileRouteTypes {
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
     | '/r/$code'
+    | '/resultado/$token'
     | '/student/benefits'
     | '/student/card'
     | '/student/challenge'
@@ -824,6 +836,7 @@ export interface RootRouteChildren {
   PartnerCheckinPartnerIdRoute: typeof PartnerCheckinPartnerIdRoute
   PayOrderNumberRoute: typeof PayOrderNumberRoute
   RCodeRoute: typeof RCodeRoute
+  ResultadoTokenRoute: typeof ResultadoTokenRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
@@ -1036,6 +1049,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/student/benefits'
       preLoaderRoute: typeof StudentBenefitsRouteImport
       parentRoute: typeof StudentRoute
+    }
+    '/resultado/$token': {
+      id: '/resultado/$token'
+      path: '/resultado/$token'
+      fullPath: '/resultado/$token'
+      preLoaderRoute: typeof ResultadoTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/r/$code': {
       id: '/r/$code'
@@ -1441,6 +1461,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerCheckinPartnerIdRoute: PartnerCheckinPartnerIdRoute,
   PayOrderNumberRoute: PayOrderNumberRoute,
   RCodeRoute: RCodeRoute,
+  ResultadoTokenRoute: ResultadoTokenRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
