@@ -469,9 +469,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
               <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
               {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
             </div>
-            {coachMode && item.commissionCoach != null && (
-              <p className="mt-1 text-[10px] font-bold text-primary">Comissão: {item.commissionCoach}%</p>
-            )}
+            {/* Comissão exibida apenas dentro do ProductDetailModal (com olho mágico) */}
             {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
               <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
             )}
