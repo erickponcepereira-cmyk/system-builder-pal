@@ -2623,6 +2623,39 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   // TELA: RESULTADO
   // ────────────────────────────────────────────────────────
+  const createShareFn = useServerFn(createAssessmentShare);
+  const [sharingResult, setSharingResult] = useState(false);
+
+  const handleShareResult = async (client: FitMindClient, a: FitMindAssessment) => {
+    if (!a?.id) {
+      const { toast } = await import("sonner");
+      toast.error("Salve a avaliação antes de compartilhar.");
+      return;
+    }
+    setSharingResult(true);
+    try {
+      const { token } = await createShareFn({ data: { assessmentId: a.id, clientName: client.name } });
+      const url = `${window.location.origin}/resultado/${token}`;
+      const { toast } = await import("sonner");
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: `Resultado — ${client.name}`, url });
+          toast.success("Link compartilhado");
+        } catch {
+          /* user cancelled */
+        }
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copiado: " + url);
+      }
+    } catch (e: any) {
+      const { toast } = await import("sonner");
+      toast.error(e?.message || "Não foi possível gerar o link");
+    } finally {
+      setSharingResult(false);
+    }
+  };
+
   const ResultScreen = () => {
     const client = selectedClient!;
     const a = assessment as FitMindAssessment;
