@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Wallet, X, Crown } from "lucide-react";
+import { Wallet, X, Crown, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
@@ -29,6 +29,7 @@ export function WalletTab() {
   const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
   const [wallet, setWallet] = useState({ available: 0, pending: 0, total: 0, withdrawn: 0 });
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [walletVisible, setWalletVisible] = useState(false);
 
 
   useEffect(() => {
@@ -143,11 +144,24 @@ export function WalletTab() {
       </div>
 
       <div className="rounded-2xl p-6 mb-6" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.6))" }}>
-        <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">
-          Saldo disponível
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-wider text-primary-foreground/80 font-bold">
+            Saldo disponível
+          </p>
+          <button
+            onClick={() => setWalletVisible((v) => !v)}
+            className="rounded-full bg-primary-foreground/15 p-1.5 text-primary-foreground/80 hover:bg-primary-foreground/25"
+            title={walletVisible ? "Ocultar saldo" : "Mostrar saldo"}
+          >
+            {walletVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </button>
+        </div>
+        <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">
+          {walletVisible ? brl(wallet.available) : "R$ ••••••"}
         </p>
-        <p className="text-4xl font-bold text-primary-foreground mt-2">{brl(wallet.available)}</p>
-        <p className="text-xs text-primary-foreground/70 mt-1">+ {brl(wallet.pending)} pendente</p>
+        <p className="text-xs text-primary-foreground/70 mt-1">
+          {walletVisible ? `+ ${brl(wallet.pending)} pendente` : "+ R$ •••• pendente"}
+        </p>
         <Button
           variant="outline"
           onClick={() => setOpen(true)}
@@ -161,11 +175,15 @@ export function WalletTab() {
       <div className="grid gap-3 grid-cols-2 mb-6">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-xs text-white/50">Total ganho</p>
-          <p className="text-xl font-bold text-white mt-1">{brl(wallet.total)}</p>
+          <p className="text-xl font-bold text-white mt-1 font-mono">
+            {walletVisible ? brl(wallet.total) : "R$ ••••"}
+          </p>
         </div>
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-xs text-white/50">Total sacado</p>
-          <p className="text-xl font-bold text-white mt-1">{brl(wallet.withdrawn)}</p>
+          <p className="text-xl font-bold text-white mt-1 font-mono">
+            {walletVisible ? brl(wallet.withdrawn) : "R$ ••••"}
+          </p>
         </div>
       </div>
 

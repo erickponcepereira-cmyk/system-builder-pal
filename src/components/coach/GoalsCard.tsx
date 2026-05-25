@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Target, TrendingUp, Users, Phone, Pencil, X, Save } from "lucide-react";
+import { Target, TrendingUp, Users, Phone, Pencil, X, Save, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { getCoachGoals, saveCoachGoals } from "@/lib/coach-goals.functions";
 
@@ -11,20 +11,23 @@ type GoalsRow = {
   revenue: number;
 };
 
-const DEFAULTS: GoalsRow = { new_students: 15, renewals: 18, prospections: 50, revenue: 6000 };
+const DEFAULTS: GoalsRow = { new_students: 0, renewals: 0, prospections: 0, revenue: 0 };
 
 interface Props {
   coachId?: string;
+  /** Progresso real passado pelo pai (OverviewTab). Se omitido, mostra zero. */
+  progress?: GoalsRow;
 }
 
-export function GoalsCard({ coachId }: Props) {
+export function GoalsCard({ coachId, progress }: Props) {
   const fetchGoals = useServerFn(getCoachGoals);
   const submitGoals = useServerFn(saveCoachGoals);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [goals, setGoals] = useState<GoalsRow>(DEFAULTS);
-  // Current month progress (placeholder values for now — wire to real metrics later)
-  const [progress] = useState({ new_students: 8, renewals: 12, prospections: 24, revenue: 3680 });
+  const [visible, setVisible] = useState(false);
+
+  const currentProgress: GoalsRow = progress ?? { new_students: 0, renewals: 0, prospections: 0, revenue: 0 };
 
   useEffect(() => {
     let cancelled = false;
@@ -51,17 +54,23 @@ export function GoalsCard({ coachId }: Props) {
     }
   }
 
-
   const items = [
-    { key: "new_students" as const, label: "Novos alunos", current: progress.new_students, target: goals.new_students, icon: Users },
-    { key: "renewals" as const, label: "Renovações", current: progress.renewals, target: goals.renewals, icon: TrendingUp },
-    { key: "prospections" as const, label: "Prospecções", current: progress.prospections, target: goals.prospections, icon: Phone },
-    { key: "revenue" as const, label: "Receita (R$)", current: progress.revenue, target: goals.revenue, icon: Target, money: true },
+    { key: "new_students" as const, label: "Novos alunos", current: currentProgress.new_students, target: goals.new_students, icon: Users },
+    { key: "renewals" as const, label: "Renovações", current: currentProgress.renewals, target: goals.renewals, icon: TrendingUp },
+    { key: "prospections" as const, label: "Prospecções", current: currentProgress.prospections, target: goals.prospections, icon: Phone },
+    { key: "revenue" as const, label: "Receita (R$)", current: currentProgress.revenue, target: goals.revenue, icon: Target, money: true },
   ];
 
   const overallPercent = Math.round(
     (items.reduce((s, g) => s + Math.min(g.current / Math.max(1, g.target), 1), 0) / items.length) * 100,
   );
+
+  const mask = (val: number, money?: boolean) => {
+    if (!visible) return "••••";
+    return money
+      ? val.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+      : val.toString();
+  };
 
   return (
     <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
@@ -74,8 +83,15 @@ export function GoalsCard({ coachId }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-bold text-primary">
-            {overallPercent}% concluído
+            {visible ? `${overallPercent}% concluído` : "••% concluído"}
           </span>
+          <button
+            onClick={() => setVisible((v) => !v)}
+            className="rounded-lg bg-white/5 p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+            title={visible ? "Ocultar valores" : "Mostrar valores"}
+          >
+            {visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          </button>
           <button
             onClick={() => setEditing((v) => !v)}
             className="rounded-lg bg-white/5 p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
@@ -90,10 +106,6 @@ export function GoalsCard({ coachId }: Props) {
         {items.map((g) => {
           const percent = Math.min((g.current / Math.max(1, g.target)) * 100, 100);
           const Icon = g.icon;
-          const fmt = (n: number) =>
-            g.money
-              ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
-              : n.toString();
           return (
             <div key={g.label}>
               <div className="flex items-center justify-between mb-1.5">
@@ -112,8 +124,8 @@ export function GoalsCard({ coachId }: Props) {
                     className="w-24 rounded bg-black/40 border border-white/10 px-2 py-0.5 text-right text-xs font-bold text-white"
                   />
                 ) : (
-                  <span className="text-xs font-bold text-white">
-                    {fmt(g.current)} <span className="text-white/40">/ {fmt(g.target)}</span>
+                  <span className="text-xs font-bold text-white font-mono">
+                    {mask(g.current, g.money)} <span className="text-white/40">/ {mask(g.target, g.money)}</span>
                   </span>
                 )}
               </div>
