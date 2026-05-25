@@ -4905,6 +4905,7 @@ export type Database = {
           created_at: string
           icon: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           name: string
           section_id: string
@@ -4916,6 +4917,7 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name: string
           section_id: string
@@ -4927,6 +4929,7 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name?: string
           section_id?: string
@@ -5134,6 +5137,7 @@ export type Database = {
           created_at: string
           icon: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           name: string
           slug: string
@@ -5144,6 +5148,7 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name: string
           slug: string
@@ -5154,6 +5159,7 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name?: string
           slug?: string
