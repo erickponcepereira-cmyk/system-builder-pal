@@ -564,13 +564,24 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
             )}
             <div className="mb-4 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
               <div className="flex justify-between"><span>Subtotal</span><b className="text-foreground">{fmt(subtotal)}</b></div>
-              <div className="flex justify-between"><span>Taxas</span><b className="text-foreground">{fmt(paymentFee + taxAmount)}</b></div>
-              <div className="mt-2 flex justify-between border-t border-border pt-2 text-sm"><span>Total</span><b className="text-primary">{fmt(total)}</b></div>
+              <div className="mt-2 flex justify-between border-t border-border pt-2 text-sm font-bold"><span>Total</span><b className="text-primary">{fmt(total)}</b></div>
+              <p className="mt-1 text-[10px] text-muted-foreground">* Taxas de cartão são aplicadas diretamente no checkout/maquininha.</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setCartOpen(false)} className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground">Fechar</button>
-              <button onClick={checkout} disabled={checkingOut || cart.length === 0 || (coachMode && !selectedClient)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">
-                <CheckCircle2 className="h-4 w-4" /> {checkingOut ? "Processando..." : "Finalizar"}
+              <button
+                onClick={() => {
+                  if (coachMode && !selectedClient) {
+                    setCartOpen(false);
+                    setClientPickerOpen(true);
+                  } else {
+                    checkout();
+                  }
+                }}
+                disabled={checkingOut || cart.length === 0}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+              >
+                <CheckCircle2 className="h-4 w-4" /> {checkingOut ? "Processando..." : (coachMode && !selectedClient ? "Selecionar Aluno →" : "Finalizar")}
               </button>
             </div>
           </div>
