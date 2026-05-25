@@ -238,9 +238,8 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   }, [activeCategory, items, query]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const paymentFee = subtotal * (paymentMethod === "pix" ? 0.01 : paymentMethod === "debit_card" ? 0.0169 : 0.0299);
-  const taxAmount = subtotal * 0.06;
-  const total = subtotal + paymentFee + taxAmount;
+  // Sem taxas — total = subtotal. Taxas de cartão são cobradas no checkout/maquininha.
+  const total = subtotal;
   const requiresShipping = !coachMode && cart.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const priceLabel = (item: StoreProduct) => item.isPriceRange && item.minPrice && item.maxPrice ? `${fmt(item.minPrice)} - ${fmt(item.maxPrice)}` : fmt(item.price);
