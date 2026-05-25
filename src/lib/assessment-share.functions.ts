@@ -30,7 +30,7 @@ export interface PublicShareData {
   bodyAge: number | null;
   bodyWater: number | null;
   boneMass: number | null;
-  segmentAnalysis: Record<string, unknown> | null;
+  segmentAnalysis: Record<string, any> | null;
   systolicBP: number | null;
   diastolicBP: number | null;
   heartRate: number | null;
@@ -200,7 +200,7 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
       bodyAge: (a.body_age as number | null) ?? null,
       bodyWater: num(a.body_water),
       boneMass: num(a.bone_mass),
-      segmentAnalysis: (a.segment_analysis as Record<string, unknown> | null) ?? null,
+      segmentAnalysis: (a.segment_analysis as Record<string, any> | null) ?? null,
       systolicBP: (a.systolic_bp as number | null) ?? null,
       diastolicBP: (a.diastolic_bp as number | null) ?? null,
       heartRate: (a.heart_rate as number | null) ?? null,
