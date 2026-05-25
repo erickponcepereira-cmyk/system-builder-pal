@@ -19,6 +19,8 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import AssessmentComparison from "./AssessmentComparison";
+import { useServerFn } from "@tanstack/react-start";
+import { createAssessmentShare } from "@/lib/assessment-share.functions";
 import {
   LineChart,
   Line,
@@ -65,6 +67,7 @@ import {
   Upload,
   Download,
   Edit3,
+  Share2,
 } from "lucide-react";
 import {
   calculateBodyComposition,
@@ -2620,6 +2623,39 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   // TELA: RESULTADO
   // ────────────────────────────────────────────────────────
+  const createShareFn = useServerFn(createAssessmentShare);
+  const [sharingResult, setSharingResult] = useState(false);
+
+  const handleShareResult = async (client: FitMindClient, a: FitMindAssessment) => {
+    if (!a?.id) {
+      const { toast } = await import("sonner");
+      toast.error("Salve a avaliação antes de compartilhar.");
+      return;
+    }
+    setSharingResult(true);
+    try {
+      const { token } = await createShareFn({ data: { assessmentId: a.id, clientName: client.name } });
+      const url = `${window.location.origin}/resultado/${token}`;
+      const { toast } = await import("sonner");
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: `Resultado — ${client.name}`, url });
+          toast.success("Link compartilhado");
+        } catch {
+          /* user cancelled */
+        }
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copiado: " + url);
+      }
+    } catch (e: any) {
+      const { toast } = await import("sonner");
+      toast.error(e?.message || "Não foi possível gerar o link");
+    } finally {
+      setSharingResult(false);
+    }
+  };
+
   const ResultScreen = () => {
     const client = selectedClient!;
     const a = assessment as FitMindAssessment;
@@ -2822,6 +2858,29 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ fontSize: 16, fontWeight: 800, color: "var(--card)" }}>
               Resultado da Avaliação
             </div>
+            <button
+              onClick={() => handleShareResult(client, a)}
+              disabled={sharingResult || !a?.id}
+              title="Compartilhar resultado com o aluno"
+              style={{
+                marginLeft: "auto",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "#ffffff22",
+                border: "1px solid #ffffff33",
+                borderRadius: 999,
+                padding: "6px 12px",
+                color: "var(--card)",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: sharingResult || !a?.id ? "not-allowed" : "pointer",
+                opacity: sharingResult || !a?.id ? 0.6 : 1,
+              }}
+            >
+              <Share2 size={14} />
+              {sharingResult ? "Gerando..." : "Compartilhar"}
+            </button>
           </div>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <div
