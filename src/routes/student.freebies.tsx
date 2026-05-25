@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { FreebieDetailModal, type FreebieDetail } from "@/components/student/FreebieDetailModal";
 
 export const Route = createFileRoute("/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
@@ -19,6 +20,16 @@ type Freebie = {
   per_student_limit: number;
   valid_until: string | null;
   condition_note: string | null;
+  location: string | null;
+  address: string | null;
+  event_date: string | null;
+  event_time: string | null;
+  sponsor_name: string | null;
+  sponsor_bio: string | null;
+  sponsor_avatar: string | null;
+  sponsor_whatsapp: string | null;
+  sponsor_instagram: string | null;
+  sponsor_website: string | null;
 };
 
 type Redemption = {
