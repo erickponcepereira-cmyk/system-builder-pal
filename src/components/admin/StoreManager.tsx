@@ -196,6 +196,7 @@ export function StoreManager() {
                           <>
                             <input className="input-dark flex-1" value={draftCategory.name ?? c.name} onChange={(e) => setDraftCategory({ ...draftCategory, name: e.target.value })} />
                             <input className="input-dark w-32" value={draftCategory.slug ?? c.slug} onChange={(e) => setDraftCategory({ ...draftCategory, slug: e.target.value })} />
+                            <input className="input-dark w-48" placeholder="URL imagem" value={draftCategory.image_url ?? c.image_url ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, image_url: e.target.value })} />
                             <input type="number" className="input-dark w-20" value={draftCategory.sort_order ?? c.sort_order} onChange={(e) => setDraftCategory({ ...draftCategory, sort_order: Number(e.target.value) })} />
                             <label className="flex items-center gap-1.5 text-xs text-white/70"><input type="checkbox" checked={draftCategory.is_active ?? c.is_active} onChange={(e) => setDraftCategory({ ...draftCategory, is_active: e.target.checked })} />Ativa</label>
                             <button onClick={() => saveCategory(c.id)} className="rounded-md bg-primary p-1.5 text-primary-foreground"><Save className="h-3.5 w-3.5" /></button>
@@ -203,6 +204,11 @@ export function StoreManager() {
                           </>
                         ) : (
                           <>
+                            {c.image_url ? (
+                              <img src={c.image_url} alt="" className="h-8 w-8 rounded-md object-cover border border-white/10" />
+                            ) : (
+                              <div className="h-8 w-8 rounded-md bg-white/5 border border-white/10" />
+                            )}
                             <div className="flex-1 text-sm text-white">{c.name} <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"}</span></div>
                             <button onClick={() => { setEditingCategory(c.id); setDraftCategory(c); }} className="rounded-md bg-white/5 p-1.5 text-white/70 hover:text-white"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => deleteCategory(c.id)} className="rounded-md bg-red-500/10 p-1.5 text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -213,9 +219,10 @@ export function StoreManager() {
                   })}
 
                   {newCategoryFor === s.id ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-black/30 px-3 py-2">
-                      <input autoFocus className="input-dark flex-1" placeholder="Nome da categoria" value={newCategoryDraft.name || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, name: e.target.value })} />
+                    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-black/30 px-3 py-2">
+                      <input autoFocus className="input-dark flex-1 min-w-[150px]" placeholder="Nome da categoria" value={newCategoryDraft.name || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, name: e.target.value })} />
                       <input className="input-dark w-32" placeholder="slug" value={newCategoryDraft.slug || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, slug: e.target.value })} />
+                      <input className="input-dark w-48" placeholder="URL imagem (opcional)" value={newCategoryDraft.image_url || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, image_url: e.target.value })} />
                       <input type="number" className="input-dark w-20" placeholder="ordem" value={newCategoryDraft.sort_order ?? cats.length} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, sort_order: Number(e.target.value) })} />
                       <button onClick={() => createCategory(s.id)} className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">Salvar</button>
                       <button onClick={() => { setNewCategoryFor(null); setNewCategoryDraft({}); }} className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-white/60">Cancelar</button>
