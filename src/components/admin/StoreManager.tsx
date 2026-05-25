@@ -94,6 +94,7 @@ export function StoreManager() {
       name: newCategoryDraft.name,
       slug: newCategoryDraft.slug || slugify(newCategoryDraft.name),
       icon: newCategoryDraft.icon || null,
+      image_url: newCategoryDraft.image_url || null,
       sort_order: newCategoryDraft.sort_order ?? 0,
       is_active: newCategoryDraft.is_active ?? true,
     });
