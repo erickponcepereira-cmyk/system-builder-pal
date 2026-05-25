@@ -54,9 +54,6 @@ type PartnerFreeProduct = {
 function StudentFreebies() {
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
-function StudentFreebies() {
-  const [items, setItems] = useState<Freebie[]>([]);
-  const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
