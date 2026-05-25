@@ -71,11 +71,15 @@ export function OverviewTab({
     })();
   }, [coachId]);
 
+  const [statsVisible, setStatsVisible] = useState(false);
+  const maskMoney = (v: number) => (statsVisible ? brl(v) : "R$ ••••");
+  const maskNum = (v: number) => (statsVisible ? String(v) : "••");
+
   const stats = [
-    { label: "Alunos ativos", value: String(data.students), change: "", icon: Users },
-    { label: "Vendas/mês", value: brl(data.salesMonth), change: "", icon: TrendingUp },
-    { label: "Comissões/mês", value: brl(data.commissionsMonth), change: "", icon: BarChart3 },
-    { label: "Saldo", value: brl(data.balance), change: "Disponível", icon: Wallet },
+    { label: "Alunos ativos", value: maskNum(data.students), change: "", icon: Users },
+    { label: "Vendas/mês", value: maskMoney(data.salesMonth), change: "", icon: TrendingUp },
+    { label: "Comissões/mês", value: maskMoney(data.commissionsMonth), change: "", icon: BarChart3 },
+    { label: "Saldo", value: maskMoney(data.balance), change: "Disponível", icon: Wallet },
   ];
 
   const [saleOpen, setSaleOpen] = useState(false);
@@ -88,9 +92,18 @@ export function OverviewTab({
           <h1 className="text-2xl font-bold text-white">Olá, {coachName}! 💪</h1>
           <p className="text-sm text-white/50">Resumo do seu mês</p>
         </div>
-        <Button size="sm" onClick={() => setSaleOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Nova venda
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setStatsVisible((v) => !v)}
+            className="rounded-lg bg-white/5 p-2 text-white/60 hover:bg-white/10 hover:text-white"
+            title={statsVisible ? "Ocultar valores" : "Mostrar valores"}
+          >
+            {statsVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </button>
+          <Button size="sm" onClick={() => setSaleOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Nova venda
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -103,7 +116,7 @@ export function OverviewTab({
                 <Icon className="h-4 w-4 text-primary" />
                 <p className="text-xs text-white/50">{s.label}</p>
               </div>
-              <p className="text-xl font-bold text-white">{s.value}</p>
+              <p className="text-xl font-bold text-white font-mono">{s.value}</p>
               <p className="text-[10px] text-success mt-0.5">{s.change}</p>
             </div>
           );
