@@ -296,7 +296,7 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
   };
 
   const checkoutAsCoach = async () => {
-    if (!selectedClient) { toast.error("Selecione o aluno comprador."); return; }
+    if (!selectedClient) { setCartOpen(false); setClientPickerOpen(true); return; }
     if (cart.length === 0) return;
     setCheckingOut(true);
     try {
