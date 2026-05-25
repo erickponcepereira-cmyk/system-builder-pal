@@ -241,6 +241,47 @@ export type Database = {
           },
         ]
       }
+      assessment_shares: {
+        Row: {
+          assessment_id: string
+          client_name: string
+          coach_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          token: string
+          view_count: number
+        }
+        Insert: {
+          assessment_id: string
+          client_name: string
+          coach_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          token?: string
+          view_count?: number
+        }
+        Update: {
+          assessment_id?: string
+          client_name?: string
+          coach_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          token?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_shares_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_logs: {
         Row: {
           activity_type: string | null
@@ -6171,6 +6212,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_share_view: { Args: { p_token: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_coach: { Args: { _user_id: string }; Returns: boolean }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
