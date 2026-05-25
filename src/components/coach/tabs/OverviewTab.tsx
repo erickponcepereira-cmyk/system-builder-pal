@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, Wallet, Plus, BarChart3, Copy, Share2 } from "lucide-react";
+import { Users, TrendingUp, Wallet, Plus, BarChart3, Copy, Share2, Eye, EyeOff } from "lucide-react";
 import { GoalsCard } from "@/components/coach/GoalsCard";
 import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { NewSaleModal } from "@/components/coach/NewSaleModal";
