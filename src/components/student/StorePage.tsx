@@ -510,7 +510,23 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
             {coachMode && (
               <div className="mb-3 rounded-xl bg-muted p-3">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Cliente</p>
-                <p className="text-sm font-bold text-foreground">{selectedClient?.name || "—"}</p>
+                {selectedClient ? (
+                  <button
+                    onClick={() => { setCartOpen(false); setClientPickerOpen(true); }}
+                    className="mt-1 flex w-full items-center justify-between text-left"
+                  >
+                    <p className="text-sm font-bold text-foreground">{selectedClient.name}</p>
+                    <span className="text-[10px] font-bold text-primary">Trocar</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setCartOpen(false); setClientPickerOpen(true); }}
+                    className="mt-1 flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2"
+                  >
+                    <UserRound className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-primary">Selecionar aluno →</span>
+                  </button>
+                )}
               </div>
             )}
             {cart.length === 0 ? (
