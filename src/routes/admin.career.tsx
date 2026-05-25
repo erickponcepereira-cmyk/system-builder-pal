@@ -528,6 +528,7 @@ const BADGE_META: Record<BadgeKey, { label: string; color: string; description: 
 
 function MedalsTab() {
   const [rows, setRows]   = useState<{ id: string; name: string; email: string; badges: { badge_key: string }[] }[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const fetchAll = useServerFn(listCoachesWithBadges);
   const grant    = useServerFn(assignBadge);
@@ -535,11 +536,14 @@ function MedalsTab() {
 
   const load = async () => {
     setRows(null);
+    setError(null);
     try {
       const data = await fetchAll();
       setRows(data as any);
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao carregar");
+      const msg = e?.message || "Erro ao carregar coaches";
+      toast.error(msg);
+      setError(msg);
       setRows([]);
     }
   };
@@ -560,7 +564,20 @@ function MedalsTab() {
     }
   };
 
-  if (!rows) return <Loader2 className="h-5 w-5 animate-spin text-white/50" />;
+  if (!rows && !error) return (
+    <div className="flex items-center gap-2 text-white/50">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-sm">Carregando coaches...</span>
+    </div>
+  );
+
+  if (error) return (
+    <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4">
+      <p className="text-sm text-red-300 font-bold">Erro ao carregar</p>
+      <p className="text-xs text-red-300/70 mt-1">{error}</p>
+      <button onClick={load} className="mt-3 text-xs text-red-300 underline">Tentar novamente</button>
+    </div>
+  );
 
   const filtered = rows.filter((r) => {
     const q = filter.toLowerCase().trim();
