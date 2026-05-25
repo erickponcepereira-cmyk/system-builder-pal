@@ -2406,48 +2406,78 @@ export type Database = {
       }
       freebies: {
         Row: {
+          address: string | null
           condition_note: string | null
           created_at: string
           description: string | null
+          event_date: string | null
+          event_time: string | null
           id: string
           image_url: string | null
           is_active: boolean
           kind: string
+          location: string | null
           name: string
           per_student_limit: number
           sort_order: number
+          sponsor_avatar: string | null
+          sponsor_bio: string | null
+          sponsor_instagram: string | null
+          sponsor_name: string | null
+          sponsor_website: string | null
+          sponsor_whatsapp: string | null
           stock: number | null
           updated_at: string
           valid_from: string | null
           valid_until: string | null
         }
         Insert: {
+          address?: string | null
           condition_note?: string | null
           created_at?: string
           description?: string | null
+          event_date?: string | null
+          event_time?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           kind?: string
+          location?: string | null
           name: string
           per_student_limit?: number
           sort_order?: number
+          sponsor_avatar?: string | null
+          sponsor_bio?: string | null
+          sponsor_instagram?: string | null
+          sponsor_name?: string | null
+          sponsor_website?: string | null
+          sponsor_whatsapp?: string | null
           stock?: number | null
           updated_at?: string
           valid_from?: string | null
           valid_until?: string | null
         }
         Update: {
+          address?: string | null
           condition_note?: string | null
           created_at?: string
           description?: string | null
+          event_date?: string | null
+          event_time?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           kind?: string
+          location?: string | null
           name?: string
           per_student_limit?: number
           sort_order?: number
+          sponsor_avatar?: string | null
+          sponsor_bio?: string | null
+          sponsor_instagram?: string | null
+          sponsor_name?: string | null
+          sponsor_website?: string | null
+          sponsor_whatsapp?: string | null
           stock?: number | null
           updated_at?: string
           valid_from?: string | null

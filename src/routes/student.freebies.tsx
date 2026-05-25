@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { FreebieDetailModal, type FreebieDetail } from "@/components/student/FreebieDetailModal";
 
 export const Route = createFileRoute("/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
@@ -19,6 +20,16 @@ type Freebie = {
   per_student_limit: number;
   valid_until: string | null;
   condition_note: string | null;
+  location: string | null;
+  address: string | null;
+  event_date: string | null;
+  event_time: string | null;
+  sponsor_name: string | null;
+  sponsor_bio: string | null;
+  sponsor_avatar: string | null;
+  sponsor_whatsapp: string | null;
+  sponsor_instagram: string | null;
+  sponsor_website: string | null;
 };
 
 type Redemption = {
@@ -46,6 +57,7 @@ function StudentFreebies() {
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
+  const [selected, setSelected] = useState<FreebieDetail | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -130,14 +142,26 @@ function StudentFreebies() {
                 const expired = it.valid_until && new Date(it.valid_until) < new Date();
                 const disabled = limitReached || outOfStock || !!expired || redeeming === it.id;
                 return (
-                  <div key={it.id} className="rounded-2xl overflow-hidden border border-white/5" style={{ backgroundColor: "#1A1A1A" }}>
+                  <div
+                    key={it.id}
+                    className="rounded-2xl overflow-hidden border border-white/5 cursor-pointer transition hover:border-primary/40"
+                    style={{ backgroundColor: "#1A1A1A" }}
+                    onClick={() => setSelected({
+                      id: it.id, title: it.name, description: it.description,
+                      image_url: it.image_url, location: it.location, address: it.address,
+                      event_date: it.event_date, event_time: it.event_time,
+                      sponsor_name: it.sponsor_name, sponsor_bio: it.sponsor_bio,
+                      sponsor_avatar: it.sponsor_avatar, sponsor_whatsapp: it.sponsor_whatsapp,
+                      sponsor_instagram: it.sponsor_instagram, sponsor_website: it.sponsor_website,
+                    })}
+                  >
                     {it.image_url && <img src={it.image_url} alt={it.name} className="h-40 w-full object-cover" />}
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-bold text-white">{it.name}</h3>
                         <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">{it.kind === "digital" ? "Digital" : "Físico"}</span>
                       </div>
-                      {it.description && <p className="mt-1 text-xs text-white/60">{it.description}</p>}
+                      {it.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{it.description}</p>}
                       {it.condition_note && <p className="mt-2 text-[11px] text-yellow-400/80">⚠ {it.condition_note}</p>}
                       <div className="mt-2 flex items-center gap-3 text-[10px] text-white/40">
                         {it.stock !== null && <span>Estoque: {it.stock}</span>}
@@ -146,7 +170,7 @@ function StudentFreebies() {
                       </div>
                       <button
                         disabled={disabled}
-                        onClick={() => redeem(it.id)}
+                        onClick={(e) => { e.stopPropagation(); redeem(it.id); }}
                         className="mt-3 w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {redeeming === it.id ? "Resgatando..." :
@@ -182,6 +206,15 @@ function StudentFreebies() {
           </>
         )}
       </div>
+
+      {selected && (
+        <FreebieDetailModal
+          freebie={selected}
+          onClose={() => setSelected(null)}
+          onAttend={() => { redeem(selected.id); setSelected(null); }}
+          attendLabel="Resgatar grátis"
+        />
+      )}
     </div>
   );
 }

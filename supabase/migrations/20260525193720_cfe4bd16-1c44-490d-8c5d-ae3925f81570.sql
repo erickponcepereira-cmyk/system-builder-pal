@@ -1,0 +1,11 @@
+ALTER TABLE public.freebies
+  ADD COLUMN IF NOT EXISTS location TEXT,
+  ADD COLUMN IF NOT EXISTS address TEXT,
+  ADD COLUMN IF NOT EXISTS event_date DATE,
+  ADD COLUMN IF NOT EXISTS event_time TEXT,
+  ADD COLUMN IF NOT EXISTS sponsor_name TEXT,
+  ADD COLUMN IF NOT EXISTS sponsor_bio TEXT,
+  ADD COLUMN IF NOT EXISTS sponsor_avatar TEXT,
+  ADD COLUMN IF NOT EXISTS sponsor_whatsapp TEXT,
+  ADD COLUMN IF NOT EXISTS sponsor_instagram TEXT,
+  ADD COLUMN IF NOT EXISTS sponsor_website TEXT;

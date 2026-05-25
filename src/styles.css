@@ -237,3 +237,23 @@
     color: var(--color-muted-foreground);
   }
 }
+
+/* ── Fix selects — texto sempre visível ── */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.select-dark {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.select-dark option {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
