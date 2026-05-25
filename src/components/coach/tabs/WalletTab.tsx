@@ -29,6 +29,7 @@ export function WalletTab() {
   const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
   const [wallet, setWallet] = useState({ available: 0, pending: 0, total: 0, withdrawn: 0 });
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [walletVisible, setWalletVisible] = useState(false);
 
 
   useEffect(() => {
