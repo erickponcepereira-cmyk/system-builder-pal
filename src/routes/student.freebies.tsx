@@ -206,6 +206,15 @@ function StudentFreebies() {
           </>
         )}
       </div>
+
+      {selected && (
+        <FreebieDetailModal
+          freebie={selected}
+          onClose={() => setSelected(null)}
+          onAttend={() => { redeem(selected.id); setSelected(null); }}
+          attendLabel="Resgatar grátis"
+        />
+      )}
     </div>
   );
 }
