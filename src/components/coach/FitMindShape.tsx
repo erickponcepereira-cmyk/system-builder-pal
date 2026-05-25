@@ -2858,6 +2858,29 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <div style={{ fontSize: 16, fontWeight: 800, color: "var(--card)" }}>
               Resultado da Avaliação
             </div>
+            <button
+              onClick={() => handleShareResult(client, a)}
+              disabled={sharingResult || !a?.id}
+              title="Compartilhar resultado com o aluno"
+              style={{
+                marginLeft: "auto",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "#ffffff22",
+                border: "1px solid #ffffff33",
+                borderRadius: 999,
+                padding: "6px 12px",
+                color: "var(--card)",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: sharingResult || !a?.id ? "not-allowed" : "pointer",
+                opacity: sharingResult || !a?.id ? 0.6 : 1,
+              }}
+            >
+              <Share2 size={14} />
+              {sharingResult ? "Gerando..." : "Compartilhar"}
+            </button>
           </div>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <div
