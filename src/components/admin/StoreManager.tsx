@@ -7,6 +7,7 @@ interface Section {
   name: string;
   slug: string;
   icon: string | null;
+  image_url: string | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -16,6 +17,7 @@ interface Category {
   name: string;
   slug: string;
   icon: string | null;
+  image_url: string | null;
   sort_order: number;
   is_active: boolean;
 }
