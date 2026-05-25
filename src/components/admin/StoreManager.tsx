@@ -163,6 +163,7 @@ export function StoreManager() {
                   <>
                     <input className="input-dark flex-1" value={draftSection.name ?? s.name} onChange={(e) => setDraftSection({ ...draftSection, name: e.target.value })} />
                     <input className="input-dark w-32" value={draftSection.slug ?? s.slug} onChange={(e) => setDraftSection({ ...draftSection, slug: e.target.value })} />
+                    <input className="input-dark w-56" placeholder="URL da imagem" value={draftSection.image_url ?? s.image_url ?? ""} onChange={(e) => setDraftSection({ ...draftSection, image_url: e.target.value })} />
                     <input type="number" className="input-dark w-20" value={draftSection.sort_order ?? s.sort_order} onChange={(e) => setDraftSection({ ...draftSection, sort_order: Number(e.target.value) })} />
                     <label className="flex items-center gap-2 text-xs text-white/70"><input type="checkbox" checked={draftSection.is_active ?? s.is_active} onChange={(e) => setDraftSection({ ...draftSection, is_active: e.target.checked })} />Ativo</label>
                     <button onClick={() => saveSection(s.id)} className="rounded-lg bg-primary p-2 text-primary-foreground"><Save className="h-4 w-4" /></button>
@@ -170,6 +171,11 @@ export function StoreManager() {
                   </>
                 ) : (
                   <>
+                    {s.image_url ? (
+                      <img src={s.image_url} alt="" className="h-10 w-10 rounded-lg object-cover border border-white/10" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10" />
+                    )}
                     <div className="flex-1">
                       <div className="font-semibold text-white">{s.name}</div>
                       <div className="text-xs text-white/40">/{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s)</div>
