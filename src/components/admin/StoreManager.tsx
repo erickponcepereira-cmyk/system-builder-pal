@@ -65,6 +65,7 @@ export function StoreManager() {
       name: newSection.name,
       slug: newSection.slug || slugify(newSection.name),
       icon: newSection.icon || null,
+      image_url: newSection.image_url || null,
       sort_order: newSection.sort_order ?? sections.length,
       is_active: newSection.is_active ?? true,
     };
