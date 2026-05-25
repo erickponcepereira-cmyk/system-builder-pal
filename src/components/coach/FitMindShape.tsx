@@ -19,6 +19,8 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import AssessmentComparison from "./AssessmentComparison";
+import { useServerFn } from "@tanstack/react-start";
+import { createAssessmentShare } from "@/lib/assessment-share.functions";
 import {
   LineChart,
   Line,
@@ -65,6 +67,7 @@ import {
   Upload,
   Download,
   Edit3,
+  Share2,
 } from "lucide-react";
 import {
   calculateBodyComposition,
