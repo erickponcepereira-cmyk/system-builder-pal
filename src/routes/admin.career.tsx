@@ -579,7 +579,7 @@ function MedalsTab() {
     </div>
   );
 
-  const filtered = rows.filter((r) => {
+  const filtered = (rows ?? []).filter((r) => {
     const q = filter.toLowerCase().trim();
     if (!q) return true;
     return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
