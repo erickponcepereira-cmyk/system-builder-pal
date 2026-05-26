@@ -9,19 +9,23 @@ function getToken(): string {
 }
 
 async function mpFetch(path: string, init: RequestInit & { idempotencyKey?: string } = {}) {
+  const token = getToken();
   const headers: Record<string, string> = {
-    "Authorization": `Bearer ${getToken()}`,
+    "Authorization": `Bearer ${token}`,
     "Content-Type": "application/json",
     ...(init.headers as Record<string, string> | undefined),
   };
   if (init.idempotencyKey) headers["X-Idempotency-Key"] = init.idempotencyKey;
+  const tokenMask = `${token.slice(0, 14)}…${token.slice(-6)} (len=${token.length})`;
+  console.log("[MP REQ]", init.method || "GET", path, "token:", tokenMask, "idem:", init.idempotencyKey || "-");
+  if (init.body) console.log("[MP REQ BODY]", typeof init.body === "string" ? init.body : "[non-string body]");
   const res = await fetch(`${MP_BASE}${path}`, { ...init, headers });
   const text = await res.text();
   let json: any = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
   if (!res.ok) {
     const msg = json?.message || json?.error || res.statusText;
-    console.error("[MP API ERROR]", res.status, msg, "body:", text?.slice(0, 800));
+    console.error("[MP API ERROR]", res.status, msg, "token:", tokenMask, "response:", text?.slice(0, 1200));
     throw new Error(`Mercado Pago ${res.status}: ${msg}`);
   }
   return json;
