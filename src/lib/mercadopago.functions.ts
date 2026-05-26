@@ -18,8 +18,13 @@ export const createPixCheckout = createServerFn({ method: "POST" })
     z.object({ source: SourceSchema, payer: PayerSchema }).parse(input)
   )
   .handler(async ({ data }) => {
-    const { handleCreatePix } = await import("./mercadopago-impl.server");
-    return handleCreatePix(data);
+    try {
+      const { handleCreatePix } = await import("./mercadopago-impl.server");
+      return await handleCreatePix(data);
+    } catch (e: any) {
+      console.error("[PIX HANDLER ERROR]", e?.message, e?.stack);
+      throw new Error(`PIX_ERR: ${e?.message || String(e)}`);
+    }
   });
 
 /** Cria pagamento com cartão (token gerado no frontend). */
