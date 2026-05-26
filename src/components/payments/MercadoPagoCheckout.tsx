@@ -160,10 +160,15 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
           },
         },
       });
+      } catch (initErr: any) {
+        console.error("[MP Checkout] Erro ao inicializar Brick:", initErr);
+        setPaymentError("Falha ao carregar formulário de cartão. Tente recarregar a página.");
+      }
     })();
     return () => {
       mounted = false;
       try { cardBrickRef.current?.unmount?.(); } catch { /* ignore */ }
+      cardBrickRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, amount]);
