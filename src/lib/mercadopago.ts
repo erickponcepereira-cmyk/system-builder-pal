@@ -1,8 +1,8 @@
 // Public Key do Mercado Pago — lida da variável de ambiente VITE_MP_PUBLIC_KEY.
-// Fallback para a chave de teste atual se a env var não estiver definida.
+// Fallback para a chave de teste da conta sandbox FitMindClub.
 export const MP_PUBLIC_KEY: string =
   (import.meta.env.VITE_MP_PUBLIC_KEY as string) ||
-  "TEST-1e0c9ae2-00fe-4225-aaae-c7dc9609c2cc";
+  "APP_USR-b279acc6-2899-4739-ae37-207740834f30";
 
 if (!MP_PUBLIC_KEY) {
   console.error("[MercadoPago] VITE_MP_PUBLIC_KEY não está definida. Pagamentos com cartão não vão funcionar.");
