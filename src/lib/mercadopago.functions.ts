@@ -14,16 +14,23 @@ const SourceSchema = z.object({
 
 /** Cria pagamento PIX no Mercado Pago e retorna QR code + texto copia-e-cola. */
 export const createPixCheckout = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ source: SourceSchema, payer: PayerSchema }).parse(input)
-  )
+  .inputValidator((input: unknown) => {
+    try {
+      return {
+        ok: true as const,
+        data: z.object({ source: SourceSchema, payer: PayerSchema }).parse(input),
+      };
+    } catch (e: any) {
+      return { ok: false as const, error: `VALIDATION: ${e?.message || String(e)}` };
+    }
+  })
   .handler(async ({ data }) => {
+    if (!data.ok) return { _error: data.error } as any;
     try {
       const { handleCreatePix } = await import("./mercadopago-impl.server");
-      return await handleCreatePix(data);
+      return await handleCreatePix(data.data);
     } catch (e: any) {
-      console.error("[PIX HANDLER ERROR]", e?.message, e?.stack);
-      throw new Error(`PIX_ERR: ${e?.message || String(e)}`);
+      return { _error: `HANDLER: ${e?.message || String(e)}\n${e?.stack || ""}` } as any;
     }
   });
 
