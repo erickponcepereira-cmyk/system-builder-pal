@@ -71,28 +71,48 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   useEffect(() => {
     if (tab !== "card") return;
     let mounted = true;
+
     (async () => {
-      await loadMercadoPagoSDK();
-      if (!mounted) return;
-      const mp = getMP();
-      const bricksBuilder = mp.bricks();
-      // Limpa brick anterior
-      try { cardBrickRef.current?.unmount?.(); } catch { /* ignore */ }
-      cardBrickRef.current = await bricksBuilder.create("cardPayment", "mp-card-form-container", {
-        initialization: { amount, payer: payer.email ? { email: payer.email } : undefined },
-        customization: { paymentMethods: { maxInstallments: 12 } },
-        callbacks: {
-          onReady: () => { /* noop */ },
-          onError: (err: any) => {
-            // Log COMPLETO para diagnóstico
-            console.error("[MP Brick error - full]", err);
-            try { console.error("[MP Brick error - JSON]", JSON.stringify(err, Object.getOwnPropertyNames(err))); } catch {}
-            const causes = Array.isArray(err?.cause) ? err.cause.map((c: any) => c?.description || c?.code || JSON.stringify(c)).join(" | ") : null;
-            const msg = causes || err?.message || err?.cause?.[0]?.description || "Erro no formulário do cartão";
-            setPaymentError(`[${err?.type || "erro"}] ${msg}`);
-            toast.error(msg, { duration: 8000 });
-          },
-          onSubmit: (cardFormData: any) => {
+      try {
+        await loadMercadoPagoSDK();
+        if (!mounted) return;
+
+        const mp = getMP();
+        console.log("[MP Checkout] Inicializando Brick com public key:", (window as any).MercadoPago ? "SDK OK" : "SDK NÃO CARREGADO");
+
+        const bricksBuilder = mp.bricks();
+
+        const container = document.getElementById("mp-card-form-container");
+        if (!container) {
+          console.error("[MP Checkout] Container #mp-card-form-container não encontrado");
+          return;
+        }
+
+        try {
+          if (cardBrickRef.current) {
+            await cardBrickRef.current.unmount?.();
+            cardBrickRef.current = null;
+          }
+        } catch {
+          cardBrickRef.current = null;
+        }
+
+        if (!mounted) return;
+
+        cardBrickRef.current = await bricksBuilder.create("cardPayment", "mp-card-form-container", {
+          initialization: { amount, payer: payer.email ? { email: payer.email } : undefined },
+          customization: { paymentMethods: { maxInstallments: 12 }, visual: { hideFormTitle: true } },
+          callbacks: {
+            onReady: () => { console.log("[MP Checkout] Brick pronto"); },
+            onError: (err: any) => {
+              console.error("[MP Brick error - full]", err);
+              try { console.error("[MP Brick error - JSON]", JSON.stringify(err, Object.getOwnPropertyNames(err))); } catch {}
+              const causes = Array.isArray(err?.cause) ? err.cause.map((c: any) => c?.description || c?.code || JSON.stringify(c)).join(" | ") : null;
+              const msg = causes || err?.message || err?.cause?.[0]?.description || "Erro no formulário do cartão";
+              setPaymentError(`[${err?.type || "erro"}] ${msg}`);
+              toast.error(msg, { duration: 8000 });
+            },
+            onSubmit: (cardFormData: any) => {
             // O Brick exige uma Promise; resolva sempre para liberar o loading do botão
             return new Promise<void>((resolve) => {
               (async () => {
