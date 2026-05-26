@@ -84,10 +84,13 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
         callbacks: {
           onReady: () => { /* noop */ },
           onError: (err: any) => {
-            console.error("[MP Brick error]", err);
-            const msg = err?.message || err?.cause?.[0]?.description || "Erro no formulário do cartão";
-            setPaymentError(msg);
-            toast.error(msg);
+            // Log COMPLETO para diagnóstico
+            console.error("[MP Brick error - full]", err);
+            try { console.error("[MP Brick error - JSON]", JSON.stringify(err, Object.getOwnPropertyNames(err))); } catch {}
+            const causes = Array.isArray(err?.cause) ? err.cause.map((c: any) => c?.description || c?.code || JSON.stringify(c)).join(" | ") : null;
+            const msg = causes || err?.message || err?.cause?.[0]?.description || "Erro no formulário do cartão";
+            setPaymentError(`[${err?.type || "erro"}] ${msg}`);
+            toast.error(msg, { duration: 8000 });
           },
           onSubmit: (cardFormData: any) => {
             // O Brick exige uma Promise; resolva sempre para liberar o loading do botão
