@@ -21,6 +21,7 @@ async function mpFetch(path: string, init: RequestInit & { idempotencyKey?: stri
   try { json = text ? JSON.parse(text) : null; } catch { /* ignore */ }
   if (!res.ok) {
     const msg = json?.message || json?.error || res.statusText;
+    console.error("[MP API ERROR]", res.status, msg, "body:", text?.slice(0, 800));
     throw new Error(`Mercado Pago ${res.status}: ${msg}`);
   }
   return json;

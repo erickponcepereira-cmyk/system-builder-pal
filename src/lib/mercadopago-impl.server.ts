@@ -83,18 +83,23 @@ export async function handleCreatePix(data: PixInput) {
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
   const idempotencyKey = `pix-${data.source.id}-${Date.now()}`;
 
-  const mpResp = await createPixPayment(
-    {
-      amount: src.amount,
-      description: src.description,
-      payerEmail: data.payer.email,
-      payerName: data.payer.name,
-      payerDoc: data.payer.doc,
-      externalReference: externalRef,
-      notificationUrl,
-    },
-    idempotencyKey
-  );
+  let mpResp: any;
+  try {
+    mpResp = await createPixPayment(
+      {
+        amount: src.amount,
+        description: src.description,
+        payerEmail: data.payer.email,
+        payerName: data.payer.name,
+        payerDoc: data.payer.doc,
+        externalReference: externalRef,
+        notificationUrl,
+      },
+      idempotencyKey
+    );
+  } catch (e: any) {
+    throw new Error(`[DIAG] ${e?.message || String(e)}`);
+  }
 
   const poi = mpResp?.point_of_interaction?.transaction_data || {};
 
