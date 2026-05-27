@@ -59,6 +59,7 @@ function AdminReports() {
       header,
       ...sales.map((s) => [
         s.paidAt ? new Date(s.paidAt).toLocaleString("pt-BR") : new Date(s.createdAt).toLocaleString("pt-BR"),
+        s.saleChannelLabel,
         s.studentName || "—",
         s.sellerCoachName || "—",
         s.upline1Name || "—",
