@@ -19,6 +19,9 @@ export type OrderPoolEntry = {
   transaction_id: string | null;
   student_id: string | null;
   student_name: string | null;
+  coach_id: string | null;
+  coach_name: string | null;
+  hbl_fulfiller_name: string | null;
   product_id: string | null;
   product_name: string | null;
   slot_label: string | null;
@@ -52,34 +55,86 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
       studentIds.length
         ? supabaseAdmin
             .from("students")
-            .select("id, profile_id, profiles!inner(name)")
+            .select("id, profile_id, coach_id, profiles!inner(name)")
             .in("id", studentIds)
         : Promise.resolve({ data: [] as any[] }),
       productIds.length
         ? supabaseAdmin.from("products").select("id, name").in("id", productIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
-    const sMap = new Map<string, string>();
-    (students || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+    const sNameMap = new Map<string, string>();
+    const sCoachMap = new Map<string, string | null>();
+    (students || []).forEach((s: any) => {
+      sNameMap.set(s.id, s.profiles?.name || "");
+      sCoachMap.set(s.id, s.coach_id || null);
+    });
     const pMap = new Map<string, string>();
     (products || []).forEach((p: any) => pMap.set(p.id, p.name));
 
-    return rows.map((r: any) => ({
-      id: r.id,
-      transaction_id: r.transaction_id,
-      student_id: r.student_id,
-      student_name: r.student_id ? sMap.get(r.student_id) || null : null,
-      product_id: r.product_id,
-      product_name: r.product_id ? pMap.get(r.product_id) || null : null,
-      slot_label: r.slot_label,
-      amount: Number(r.amount || 0),
-      status: r.status,
-      tracking_code: r.tracking_code,
-      notes: r.notes,
-      created_at: r.created_at,
-      shipped_at: r.shipped_at,
-      delivered_at: r.delivered_at,
-    }));
+    // Resolve coach names from coach_id → profile.name
+    const coachIds = Array.from(new Set(Array.from(sCoachMap.values()).filter(Boolean) as string[]));
+    const cNameMap = new Map<string, { id: string; name: string }>();
+    if (coachIds.length) {
+      const { data: coaches } = await supabaseAdmin
+        .from("coaches")
+        .select("id, profile_id, fantasy_name, profiles(name)")
+        .in("id", coachIds);
+      (coaches || []).forEach((c: any) =>
+        cNameMap.set(c.id, { id: c.id, name: c.fantasy_name || c.profiles?.name || "—" }),
+      );
+    }
+
+    return rows.map((r: any) => {
+      const coachId = r.student_id ? sCoachMap.get(r.student_id) ?? null : null;
+      return {
+        id: r.id,
+        transaction_id: r.transaction_id,
+        student_id: r.student_id,
+        student_name: r.student_id ? sNameMap.get(r.student_id) || null : null,
+        coach_id: coachId,
+        coach_name: coachId ? cNameMap.get(coachId)?.name ?? null : null,
+        // Placeholder: coach HBL responsável pelo envio (badge 42% ou 50%)
+        // será preenchido quando a funcionalidade de fulfillment HBL existir.
+        hbl_fulfiller_name: null,
+        product_id: r.product_id,
+        product_name: r.product_id ? pMap.get(r.product_id) || null : null,
+        slot_label: r.slot_label,
+        amount: Number(r.amount || 0),
+        status: r.status,
+        tracking_code: r.tracking_code,
+        notes: r.notes,
+        created_at: r.created_at,
+        shipped_at: r.shipped_at,
+        delivered_at: r.delivered_at,
+      };
+    });
+  });
+
+// Atualiza o status de TODOS os entries vinculados à mesma venda (transação)
+// — produtos de uma mesma venda são enviados juntos.
+export const updateTransactionOrderStatus = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: unknown) =>
+      d as { transactionId: string; status: OrderPoolStatus; tracking?: string; notes?: string },
+  )
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    await ensureAdmin(context.userId);
+    const { data: entries, error: selErr } = await supabaseAdmin
+      .from("product_order_pool_entries")
+      .select("id")
+      .eq("transaction_id", data.transactionId);
+    if (selErr) throw new Error(selErr.message);
+    for (const e of entries || []) {
+      const { error } = await supabaseAdmin.rpc("mark_order_pool_entry_status", {
+        _entry_id: (e as any).id,
+        _status: data.status,
+        _tracking: data.tracking ?? undefined,
+        _notes: data.notes ?? undefined,
+      });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, count: (entries || []).length };
   });
 
 export const updateOrderPoolEntry = createServerFn({ method: "POST" })

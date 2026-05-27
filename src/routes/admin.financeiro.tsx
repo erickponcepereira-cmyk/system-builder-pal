@@ -1,15 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight } from "lucide-react";
+import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   getAdminFinancialOverview,
   listPayoutHistory,
+  listBucketCommissions,
   type AdminFinancialOverview,
   type PayoutHistoryItem,
   type RecipientTotal,
+  type BucketKind,
+  type BucketCommissionRow,
 } from "@/lib/admin-financial.functions";
 
 export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
@@ -17,11 +20,17 @@ export const Route = createFileRoute("/admin/financeiro")({ component: AdminFina
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function AdminFinanceiro() {
+  const navigate = useNavigate();
   const fetchOverview = useServerFn(getAdminFinancialOverview);
   const fetchHistory = useServerFn(listPayoutHistory);
+  const fetchBucket = useServerFn(listBucketCommissions);
   const [data, setData] = useState<AdminFinancialOverview | null>(null);
   const [history, setHistory] = useState<PayoutHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal state for bucket drilldown
+  const [bucketOpen, setBucketOpen] = useState<{ kind: BucketKind; title: string } | null>(null);
+  const [bucketRows, setBucketRows] = useState<BucketCommissionRow[] | null>(null);
 
   useEffect(() => {
     Promise.all([fetchOverview(), fetchHistory()])
@@ -29,6 +38,20 @@ function AdminFinanceiro() {
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));
   }, []);
+
+  const openBucket = (kind: BucketKind, title: string) => {
+    // System bucket: por enquanto direciona ao relatório administrativo
+    // (carteira do admin ainda não existe).
+    if (kind === "system") {
+      navigate({ to: "/admin/reports" });
+      return;
+    }
+    setBucketOpen({ kind, title });
+    setBucketRows(null);
+    fetchBucket({ data: { bucket: kind } })
+      .then(setBucketRows)
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"));
+  };
 
   if (loading || !data) {
     return (
@@ -44,6 +67,7 @@ function AdminFinanceiro() {
         <h1 className="text-2xl font-bold text-white">Financeiro</h1>
         <p className="text-sm text-white/50">
           Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
+          Clique em um bucket para ver as vendas que originaram os valores.
         </p>
       </div>
 
@@ -56,6 +80,7 @@ function AdminFinanceiro() {
           available={data.coaches.available}
           paid={data.coaches.paid}
           accent="#E24B4A"
+          onClick={() => openBucket("coaches", "Coaches a pagar")}
         />
         <BucketCard
           title="Rede (uplines)"
@@ -65,6 +90,7 @@ function AdminFinanceiro() {
           available={data.network.available}
           paid={data.network.paid}
           accent="#F09595"
+          onClick={() => openBucket("network", "Rede (uplines) a pagar")}
         />
         <BucketCard
           title="Nutricionistas"
@@ -74,15 +100,17 @@ function AdminFinanceiro() {
           available={data.nutritionists.available}
           paid={data.nutritionists.paid}
           accent="#A78BFA"
+          onClick={() => navigate({ to: "/admin/nutritionist-wallet" })}
         />
         <BucketCard
           title="Sistema (Admin)"
-          subtitle="Taxas do sistema e fundo administrativo"
+          subtitle="Taxas do sistema — abre o relatório de vendas"
           icon={Shield}
           pending={data.system.pending}
           available={data.system.available}
           paid={data.system.paid}
           accent="#888780"
+          onClick={() => openBucket("system", "Sistema")}
         />
       </div>
 
@@ -164,16 +192,86 @@ function AdminFinanceiro() {
           Gerenciar solicitações de saque <ArrowRight className="h-3 w-3" />
         </Link>
       </section>
+
+      {bucketOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setBucketOpen(null)}
+        >
+          <div
+            className="w-full max-w-4xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">{bucketOpen.title}</h2>
+                <p className="text-xs text-white/50">Vendas que originaram comissões pendentes/disponíveis neste bucket.</p>
+              </div>
+              <button onClick={() => setBucketOpen(null)} className="rounded p-1 text-white/60 hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {bucketRows === null ? (
+              <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : bucketRows.length === 0 ? (
+              <p className="text-sm text-white/50">Nenhuma comissão pendente neste bucket.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] uppercase text-white/40">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Data</th>
+                      <th className="px-2 py-1 text-left">Cliente</th>
+                      <th className="px-2 py-1 text-left">Produto</th>
+                      <th className="px-2 py-1 text-left">Coach beneficiário</th>
+                      <th className="px-2 py-1 text-left">Slot</th>
+                      <th className="px-2 py-1 text-center">Nível</th>
+                      <th className="px-2 py-1 text-right">Valor</th>
+                      <th className="px-2 py-1 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bucketRows.map((r) => (
+                      <tr key={r.commissionId} className="border-t border-white/5">
+                        <td className="px-2 py-1.5 text-white/70">{r.createdAt ? new Date(r.createdAt).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
+                        <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
+                        <td className="px-2 py-1.5 text-white">{r.beneficiaryName}<span className="ml-1 text-white/30">{r.beneficiaryEmail}</span></td>
+                        <td className="px-2 py-1.5 text-white/60">{r.slotLabel || "—"}</td>
+                        <td className="px-2 py-1.5 text-center text-white/60">{r.level}</td>
+                        <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.amount)}</td>
+                        <td className="px-2 py-1.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            r.status === "available" ? "bg-sky-500/15 text-sky-300" : "bg-amber-500/15 text-amber-300"
+                          }`}>{r.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-3 flex justify-end gap-4 text-xs text-white/60">
+                  <span>Total: <strong className="text-primary">{money(bucketRows.reduce((s, r) => s + r.amount, 0))}</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 function BucketCard({
-  title, subtitle, icon: Icon, pending, available, paid, accent,
-}: { title: string; subtitle: string; icon: typeof Wallet; pending: number; available: number; paid: number; accent: string }) {
+  title, subtitle, icon: Icon, pending, available, paid, accent, onClick,
+}: { title: string; subtitle: string; icon: typeof Wallet; pending: number; available: number; paid: number; accent: string; onClick?: () => void }) {
   const aPagar = pending + available;
   return (
-    <div className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left rounded-2xl border border-white/5 p-4 transition hover:border-white/20 hover:bg-white/[0.03]"
+      style={{ backgroundColor: "#1A1A1A" }}
+    >
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-xs font-bold uppercase text-white/50">{title}</p>
@@ -190,7 +288,7 @@ function BucketCard({
         <Mini label="Disponível" value={money(available)} />
         <Mini label="Pago" value={money(paid)} />
       </div>
-    </div>
+    </button>
   );
 }
 
