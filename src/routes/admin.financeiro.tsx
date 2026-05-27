@@ -502,8 +502,8 @@ function ShortcutLink({ to, label }: { to: string; label: string }) {
 function RecipientsTable({ title, rows, kind, onPay }: {
   title: string;
   rows: RecipientTotal[];
-  kind?: "coach" | "network" | "nutritionist";
-  onPay?: (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => void;
+  kind?: "coach" | "network" | "nutritionist" | "system";
+  onPay?: (profileId: string, kind: "coach" | "network" | "nutritionist" | "system", name: string) => void;
 }) {
   if (!rows.length) return null;
   const showPay = !!kind && !!onPay;
