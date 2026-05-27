@@ -466,7 +466,7 @@ export const payRecipientAvailable = createServerFn({ method: "POST" })
     if (data.kind === "nutritionist") {
       const { data: out, error } = await supabaseAdmin.rpc("pay_nutritionist_available", {
         _profile_id: data.profileId,
-        _notes: data.notes ?? null,
+        _notes: data.notes ?? undefined,
       });
       if (error) throw new Error(error.message);
       return { ok: true, amount: Number(out || 0) };
@@ -475,7 +475,7 @@ export const payRecipientAvailable = createServerFn({ method: "POST" })
     const { data: out, error } = await supabaseAdmin.rpc("pay_coach_available", {
       _profile_id: data.profileId,
       _kind: data.kind,
-      _notes: data.notes ?? null,
+      _notes: data.notes ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { ok: true, amount: Number(out || 0) };
