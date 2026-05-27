@@ -19,6 +19,8 @@ function AdminReports() {
   const [sales, setSales] = useState<DetailedSale[]>([]);
   const [salesLoading, setSalesLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "refunded">("all");
+  const [salesOpen, setSalesOpen] = useState(false);
   const fetchSales = useServerFn(listDetailedSales);
 
   const load = async () => {
