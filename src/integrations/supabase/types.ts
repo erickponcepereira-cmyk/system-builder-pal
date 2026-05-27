@@ -68,6 +68,68 @@ export type Database = {
           },
         ]
       }
+      admin_system_wallet: {
+        Row: {
+          available_balance: number
+          id: boolean
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string
+        }
+        Insert: {
+          available_balance?: number
+          id?: boolean
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Update: {
+          available_balance?: number
+          id?: boolean
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_system_wallet_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          kind: string
+          notes: string | null
+          slot_label: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          slot_label?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          slot_label?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_system_wallet_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnesis_forms: {
         Row: {
           additional_observations: string | null
@@ -4151,6 +4213,7 @@ export type Database = {
           app_fee_percentage: number | null
           badge_color: string | null
           badge_label: string | null
+          card_access_days: number | null
           card_fee_percentage: number | null
           category_id: string | null
           commission_coach: number | null
@@ -4232,6 +4295,7 @@ export type Database = {
           app_fee_percentage?: number | null
           badge_color?: string | null
           badge_label?: string | null
+          card_access_days?: number | null
           card_fee_percentage?: number | null
           category_id?: string | null
           commission_coach?: number | null
@@ -4313,6 +4377,7 @@ export type Database = {
           app_fee_percentage?: number | null
           badge_color?: string | null
           badge_label?: string | null
+          card_access_days?: number | null
           card_fee_percentage?: number | null
           category_id?: string | null
           commission_coach?: number | null
@@ -5490,6 +5555,7 @@ export type Database = {
           body_fat_percentage: number | null
           body_water_percentage: number | null
           bone_mass: number | null
+          card_valid_until: string | null
           coach_account_created_at: string | null
           coach_course_completed_at: string | null
           coach_id: string
@@ -5522,6 +5588,7 @@ export type Database = {
           body_fat_percentage?: number | null
           body_water_percentage?: number | null
           bone_mass?: number | null
+          card_valid_until?: string | null
           coach_account_created_at?: string | null
           coach_course_completed_at?: string | null
           coach_id: string
@@ -5554,6 +5621,7 @@ export type Database = {
           body_fat_percentage?: number | null
           body_water_percentage?: number | null
           bone_mass?: number | null
+          card_valid_until?: string | null
           coach_account_created_at?: string | null
           coach_course_completed_at?: string | null
           coach_id?: string
@@ -6192,6 +6260,10 @@ export type Database = {
       enqueue_daily_student_reminders: { Args: never; Returns: number }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
+        Returns: undefined
+      }
+      extend_student_card_access: {
+        Args: { _days: number; _student_id: string }
         Returns: undefined
       }
       find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
