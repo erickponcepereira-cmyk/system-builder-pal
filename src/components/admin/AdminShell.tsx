@@ -21,6 +21,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/digital-products", label: "Cursos", icon: Library, perm: "digital_products" },
   { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap, perm: "coach_applications" },
   { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
+  { to: "/admin/financeiro", label: "Financeiro", icon: DollarSign, perm: "financeiro" },
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
   { to: "/admin/patents", label: "Patentes", icon: Award, perm: "patents" },
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
