@@ -152,10 +152,12 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
           productId,
           points_per_sale: data.product.points_per_sale,
           points_auto_calculated: false,
+          card_access_days: Number((data.product as any).card_access_days || 0),
           slots: data.slots.map(({ id: _id, ...rest }) => rest),
           referralRule: data.referralRule,
         },
       });
+
       toast.success("Configuração financeira salva");
       onSaved?.();
     } catch (e: any) {
@@ -263,6 +265,23 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
               </div>
             </div>
           </div>
+
+          <div className="mt-4">
+            <SectionLabel>Validade da carteirinha (dias)</SectionLabel>
+            <div className="rounded-lg p-3 space-y-2" style={{ backgroundColor: "#161616" }}>
+              <p className="text-[11px] text-white/50">
+                Quantos dias de acesso à carteirinha do aluno este produto concede após o pagamento. Use 0 para não estender.
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-32">
+                  <NumberInput value={Number((data.product as any).card_access_days || 0)}
+                    onChange={(v) => setData({ ...data, product: { ...data.product, card_access_days: Math.max(0, parseInt(v) || 0) } as any })} />
+                </div>
+                <span className="text-xs text-white/50">dias de acesso</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div>
