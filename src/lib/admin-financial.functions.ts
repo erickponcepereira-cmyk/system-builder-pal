@@ -45,8 +45,8 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
 
     const coachesMap = new Map<string, RecipientTotal>();
     const networkMap = new Map<string, RecipientTotal>();
-    const systemMap = new Map<string, RecipientTotal>();
     let networkPending = 0, networkAvailable = 0, networkPaid = 0;
+
 
     for (const c of commissions || []) {
       const pid = (c as any).beneficiary_profile_id as string | null;
