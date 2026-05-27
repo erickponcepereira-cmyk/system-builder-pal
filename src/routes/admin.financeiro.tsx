@@ -55,7 +55,6 @@ function AdminFinanceiro() {
   useEffect(() => { reload(); }, []);
 
   const openBucket = (kind: BucketKind, title: string) => {
-    if (kind === "system") { navigate({ to: "/admin/reports" }); return; }
     setBucketOpen({ kind, title });
     setBucketRows(null);
     fetchBucket({ data: { bucket: kind } })
