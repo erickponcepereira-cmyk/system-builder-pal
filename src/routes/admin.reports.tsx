@@ -150,7 +150,7 @@ function AdminReports() {
           <p className="p-6 text-center text-sm text-white/40">Nenhuma venda no período.</p>
         ) : (
           <div className="space-y-2">
-            {sales.map((s) => {
+            {sales.filter((s) => statusFilter === "all" || s.status === statusFilter).map((s) => {
               const isOpen = expanded.has(s.transactionId);
               return (
                 <div key={s.transactionId} className="rounded-xl border border-white/5 bg-white/[0.02]">
@@ -164,7 +164,7 @@ function AdminReports() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.saleChannel === "store" ? "bg-sky-500/15 text-sky-300" : "bg-violet-500/15 text-violet-300"}`}>{s.saleChannelLabel}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.status === "paid" ? "bg-emerald-500/15 text-emerald-300" : s.status === "refunded" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.status === "paid" ? "bg-emerald-500/15 text-emerald-300" : s.status === "refunded" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status === "paid" ? "Paga" : s.status === "refunded" ? "Recusada" : "Pendente"}</span>
                       <span className="text-sm font-bold text-primary">{fmt(s.grossAmount)}</span>
                     </div>
                   </button>
@@ -213,6 +213,8 @@ function AdminReports() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </section>
     </>}
