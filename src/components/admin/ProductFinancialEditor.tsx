@@ -152,10 +152,12 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
           productId,
           points_per_sale: data.product.points_per_sale,
           points_auto_calculated: false,
+          card_access_days: Number((data.product as any).card_access_days || 0),
           slots: data.slots.map(({ id: _id, ...rest }) => rest),
           referralRule: data.referralRule,
         },
       });
+
       toast.success("Configuração financeira salva");
       onSaved?.();
     } catch (e: any) {
