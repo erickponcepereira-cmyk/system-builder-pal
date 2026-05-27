@@ -54,7 +54,7 @@ function AdminReports() {
   };
 
   const exportSalesCsv = () => {
-    const header = ["Data", "Cliente", "Vendedor", "Upline 1", "Upline 2", "Upline 3", "Produto", "Bruto", "Taxa MP", "Imposto", "App fee", "Líquido", "Status", "Pontos"];
+    const header = ["Data", "Canal", "Cliente", "Vendedor", "Upline 1", "Upline 2", "Upline 3", "Produto", "Bruto", "Taxa MP", "Imposto", "App fee", "Líquido", "Status", "Pontos"];
     const lines = [
       header,
       ...sales.map((s) => [
