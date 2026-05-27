@@ -114,20 +114,34 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     const networkAgg = sumGroup(networkList);
     const systemAgg = sumGroup(systemList);
 
-    // Nutricionistas
-    const { data: nutriWallets } = await supabaseAdmin
+    // Nutricionistas: não usa join embutido aqui porque a carteira pode não
+    // ter FK exposta no Data API; busca perfis separadamente para não zerar o bucket.
+    const { data: nutriWallets, error: nutriErr } = await supabaseAdmin
       .from("nutritionist_wallets")
-      .select("profile_id, available_balance, blocked_balance, total_earned, total_withdrawn, profiles(name,email,role)");
-    const nutriList: RecipientTotal[] = (nutriWallets || []).map((w: any) => ({
-      profileId: w.profile_id,
-      name: w.profiles?.name || "—",
-      email: w.profiles?.email || null,
-      role: w.profiles?.role || "nutritionist",
-      pending: Number(w.blocked_balance || 0),
-      available: Number(w.available_balance || 0),
-      paid: Number(w.total_withdrawn || 0),
-      total: Number(w.total_earned || 0),
-    }));
+      .select("profile_id, available_balance, blocked_balance, total_earned, total_withdrawn");
+    if (nutriErr) throw new Error(nutriErr.message);
+    const nutriProfileIds = Array.from(new Set((nutriWallets || []).map((w: any) => w.profile_id).filter(Boolean)));
+    const { data: nutriProfiles } = nutriProfileIds.length
+      ? await supabaseAdmin.from("profiles").select("id,name,email,role").in("id", nutriProfileIds)
+      : { data: [] as any[] };
+    const nutriProfileMap = new Map<string, { name?: string; email?: string; role?: string }>();
+    (nutriProfiles || []).forEach((p: any) => nutriProfileMap.set(p.id, p));
+    const nutriList: RecipientTotal[] = (nutriWallets || []).map((w: any) => {
+      const prof = nutriProfileMap.get(w.profile_id);
+      const pending = Number(w.blocked_balance || 0);
+      const available = Number(w.available_balance || 0);
+      const paid = Number(w.total_withdrawn || 0);
+      return {
+        profileId: w.profile_id,
+        name: prof?.name || "—",
+        email: prof?.email || null,
+        role: prof?.role || "nutritionist",
+        pending,
+        available,
+        paid,
+        total: pending + available + paid,
+      };
+    });
     const nutriAgg = sumGroup(nutriList);
 
     // Custos / pool de produtos
