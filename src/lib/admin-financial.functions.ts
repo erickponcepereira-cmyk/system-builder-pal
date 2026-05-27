@@ -229,16 +229,17 @@ export interface BucketCommissionRow {
 
 export const listBucketCommissions = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => d as { bucket: BucketKind })
+  .inputValidator((d: unknown) => d as { bucket: BucketKind; statuses?: Array<"pending" | "available" | "paid"> })
   .handler(async ({ context, data }): Promise<BucketCommissionRow[]> => {
     await assertAdmin(context.userId);
+    const statuses = data.statuses?.length ? data.statuses : ["pending", "available"];
 
     const { data: rows, error } = await supabaseAdmin
       .from("commissions")
       .select(
         "id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
       )
-      .in("status", ["pending", "available"])
+      .in("status", statuses)
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw new Error(error.message);
@@ -476,7 +477,7 @@ export const payManualSystemFee = createServerFn({ method: "POST" })
 
 export const payRecipientAvailable = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => d as { profileId: string; kind: "coach" | "network" | "nutritionist"; notes?: string })
+  .inputValidator((d: unknown) => d as { profileId: string; kind: "coach" | "network" | "nutritionist" | "system"; notes?: string })
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
 
