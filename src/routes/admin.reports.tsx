@@ -19,6 +19,8 @@ function AdminReports() {
   const [sales, setSales] = useState<DetailedSale[]>([]);
   const [salesLoading, setSalesLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "refunded">("all");
+  const [salesOpen, setSalesOpen] = useState(false);
   const fetchSales = useServerFn(listDetailedSales);
 
   const load = async () => {
@@ -118,22 +120,37 @@ function AdminReports() {
       <div className="grid gap-5 lg:grid-cols-2"><section className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}><h2 className="mb-3 font-bold text-white">Frequência dos alunos</h2><div className="space-y-2">{studentSummary.slice(0, 12).map((row) => <div key={row.email} className="rounded-xl bg-white/5 p-3"><div className="flex items-center justify-between"><div className="min-w-0"><p className="truncate text-sm font-medium text-white">{row.name}</p><p className="truncate text-[10px] text-white/40">{row.email}</p></div><span className="text-sm font-bold text-primary">{Math.round((row.count / 30) * 100)}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.round((row.count / 30) * 100))}%` }} /></div></div>)}</div></section><section className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}><h2 className="mb-3 font-bold text-white">Resumo de pedidos</h2><div className="mb-3 grid grid-cols-2 gap-2"><Metric label="Pagos/em separação" value={String(paidOrders)} /><Metric label="Pendentes" value={String(orders.length - paidOrders)} /></div><div className="space-y-2">{orders.slice(0, 10).map((order) => <div key={order.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-xs"><div><p className="font-bold text-white">{order.order_number}</p><p className="text-white/40">{order.students?.profiles?.name || "Aluno"} · {order.status}</p></div><b className="text-primary">{fmt(Number(order.total_amount || 0))}</b></div>)}</div></section></div>
 
       <section className="mt-5 rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-white">Detalhamento de vendas</h2>
-            <p className="text-xs text-white/40">Clique numa venda para ver a distribuição completa de cada slot.</p>
-          </div>
-          <Button size="sm" onClick={exportSalesCsv} variant="outline" className="border-white/10 text-white/70 gap-2">
-            <Download className="h-3 w-3" /> CSV
-          </Button>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <button onClick={() => setSalesOpen((v) => !v)} className="flex items-center gap-2 text-left">
+            {salesOpen ? <ChevronDown className="h-4 w-4 text-white/60" /> : <ChevronRight className="h-4 w-4 text-white/60" />}
+            <div>
+              <h2 className="font-bold text-white">Detalhamento de vendas <span className="ml-2 text-xs font-normal text-white/40">({sales.length})</span></h2>
+              <p className="text-xs text-white/40">Clique para expandir o histórico. Cada venda pode ser aberta para ver a distribuição.</p>
+            </div>
+          </button>
+          {salesOpen && (
+            <div className="flex items-center gap-2">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs text-white">
+                <option value="all">Todos os status</option>
+                <option value="paid">Pagas</option>
+                <option value="pending">Pendentes</option>
+                <option value="refunded">Recusadas/Estornadas</option>
+              </select>
+              <Button size="sm" onClick={exportSalesCsv} variant="outline" className="border-white/10 text-white/70 gap-2">
+                <Download className="h-3 w-3" /> CSV
+              </Button>
+            </div>
+          )}
         </div>
+        {salesOpen && (
+          <>
         {salesLoading ? (
           <div className="p-8 text-center text-white/40"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div>
         ) : sales.length === 0 ? (
           <p className="p-6 text-center text-sm text-white/40">Nenhuma venda no período.</p>
         ) : (
           <div className="space-y-2">
-            {sales.map((s) => {
+            {sales.filter((s) => statusFilter === "all" || s.status === statusFilter).map((s) => {
               const isOpen = expanded.has(s.transactionId);
               return (
                 <div key={s.transactionId} className="rounded-xl border border-white/5 bg-white/[0.02]">
@@ -147,7 +164,7 @@ function AdminReports() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.saleChannel === "store" ? "bg-sky-500/15 text-sky-300" : "bg-violet-500/15 text-violet-300"}`}>{s.saleChannelLabel}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.status === "paid" ? "bg-emerald-500/15 text-emerald-300" : s.status === "refunded" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.status === "paid" ? "bg-emerald-500/15 text-emerald-300" : s.status === "refunded" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status === "paid" ? "Paga" : s.status === "refunded" ? "Recusada" : "Pendente"}</span>
                       <span className="text-sm font-bold text-primary">{fmt(s.grossAmount)}</span>
                     </div>
                   </button>
@@ -196,6 +213,8 @@ function AdminReports() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </section>
     </>}
