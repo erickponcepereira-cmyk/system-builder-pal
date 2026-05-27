@@ -1,18 +1,24 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X } from "lucide-react";
+import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X, Receipt, CreditCard, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   getAdminFinancialOverview,
   listPayoutHistory,
   listBucketCommissions,
+  getFeesAndTaxesBreakdown,
+  listPendingSystemFees,
+  payManualSystemFee,
+  payRecipientAvailable,
   type AdminFinancialOverview,
   type PayoutHistoryItem,
   type RecipientTotal,
   type BucketKind,
   type BucketCommissionRow,
+  type FeesAndTaxesOverview,
+  type PendingFeeRow,
 } from "@/lib/admin-financial.functions";
 
 export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
@@ -24,34 +30,68 @@ function AdminFinanceiro() {
   const fetchOverview = useServerFn(getAdminFinancialOverview);
   const fetchHistory = useServerFn(listPayoutHistory);
   const fetchBucket = useServerFn(listBucketCommissions);
+  const fetchFees = useServerFn(getFeesAndTaxesBreakdown);
+  const fetchPendingFees = useServerFn(listPendingSystemFees);
+  const callPayFee = useServerFn(payManualSystemFee);
+  const callPayRecipient = useServerFn(payRecipientAvailable);
+
   const [data, setData] = useState<AdminFinancialOverview | null>(null);
   const [history, setHistory] = useState<PayoutHistoryItem[]>([]);
+  const [fees, setFees] = useState<FeesAndTaxesOverview | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal state for bucket drilldown
   const [bucketOpen, setBucketOpen] = useState<{ kind: BucketKind; title: string } | null>(null);
   const [bucketRows, setBucketRows] = useState<BucketCommissionRow[] | null>(null);
+  const [feesOpen, setFeesOpen] = useState<"tax" | "payment_fee" | null>(null);
+  const [feesRows, setFeesRows] = useState<PendingFeeRow[] | null>(null);
 
-  useEffect(() => {
-    Promise.all([fetchOverview(), fetchHistory()])
-      .then(([ov, hi]) => { setData(ov); setHistory(hi); })
+  const reload = () => {
+    Promise.all([fetchOverview(), fetchHistory(), fetchFees()])
+      .then(([ov, hi, fe]) => { setData(ov); setHistory(hi); setFees(fe); })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { reload(); }, []);
 
   const openBucket = (kind: BucketKind, title: string) => {
-    // System bucket: por enquanto direciona ao relatório administrativo
-    // (carteira do admin ainda não existe).
-    if (kind === "system") {
-      navigate({ to: "/admin/reports" });
-      return;
-    }
+    if (kind === "system") { navigate({ to: "/admin/reports" }); return; }
     setBucketOpen({ kind, title });
     setBucketRows(null);
     fetchBucket({ data: { bucket: kind } })
       .then(setBucketRows)
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"));
   };
+
+  const openFees = (kind: "tax" | "payment_fee") => {
+    setFeesOpen(kind);
+    setFeesRows(null);
+    fetchPendingFees().then(setFeesRows).catch((e) => toast.error(e instanceof Error ? e.message : "Erro"));
+  };
+
+  const handlePayFee = async (transactionId: string, kind: "tax" | "payment_fee") => {
+    try {
+      await callPayFee({ data: { transactionId, kind } });
+      toast.success("Baixa registrada");
+      fetchPendingFees().then(setFeesRows);
+      fetchFees().then(setFees);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao dar baixa");
+    }
+  };
+
+  const handlePayRecipient = async (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => {
+    if (!confirm(`Pagar saldo disponível de ${name}?`)) return;
+    try {
+      const r = await callPayRecipient({ data: { profileId, kind } });
+      if (r.amount > 0) toast.success(`Baixa de ${money(r.amount)} registrada`);
+      else toast.info("Nada disponível para pagar");
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    }
+  };
+
 
   if (loading || !data) {
     return (
