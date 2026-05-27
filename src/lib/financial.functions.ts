@@ -127,7 +127,7 @@ export const getProductFinancial = createServerFn({ method: "GET" })
     const [{ data: product }, { data: slots }, { data: rule }] = await Promise.all([
       supabaseAdmin
         .from("products")
-        .select("id,name,price,points_per_sale,points_auto_calculated")
+        .select("id,name,price,points_per_sale,points_auto_calculated,card_access_days")
         .eq("id", data.productId)
         .single(),
       supabaseAdmin
@@ -150,6 +150,7 @@ export const getProductFinancial = createServerFn({ method: "GET" })
         price: Number(product.price || 0),
         points_per_sale: product.points_per_sale || 0,
         points_auto_calculated: !!product.points_auto_calculated,
+        card_access_days: Number((product as any).card_access_days || 0),
       },
       slots: (slots || []).map((s: any) => ({
         id: s.id,
