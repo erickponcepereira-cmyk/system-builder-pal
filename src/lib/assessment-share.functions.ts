@@ -156,6 +156,18 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
     if (aErr || !assessment) throw new Error("Avaliação não encontrada");
     const a = assessment as Record<string, unknown>;
 
+    // Lookup client phone from coach_evaluation_clients
+    const clientId = a.client_id as string | undefined;
+    let clientPhone: string | null = null;
+    if (clientId) {
+      const { data: clientRow } = await supabaseAdmin
+        .from("coach_evaluation_clients")
+        .select("whatsapp")
+        .eq("id", clientId)
+        .maybeSingle();
+      clientPhone = (clientRow?.whatsapp as string | null) ?? null;
+    }
+
     const { data: coachRow } = await supabaseAdmin
       .from("coaches")
       .select("id,profile_id,fantasy_name,description,photo_url,whatsapp,instagram,referral_code")
@@ -185,6 +197,7 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
     const result: PublicShareData = {
       token: s.token,
       clientName: s.client_name,
+      clientPhone,
       createdAt: s.created_at,
       viewCount: s.view_count + 1,
       method: (a.method as string) || "bioimpedance",
