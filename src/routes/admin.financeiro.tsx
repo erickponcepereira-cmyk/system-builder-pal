@@ -185,9 +185,49 @@ function AdminFinanceiro() {
         </section>
       </div>
 
-      <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} />
+      {fees && (
+        <section className="rounded-2xl border border-white/5 p-5 mb-6" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-white">Impostos & Taxas</h2>
+              <p className="text-xs text-white/50">
+                Cartão é abatido automaticamente na liquidação. PIX/Boleto entram em "Pendente manual" — clique para dar baixa por transação.
+              </p>
+            </div>
+            <Receipt className="h-5 w-5 text-primary" />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FeeBlock
+              title="Imposto (Simples Nacional)"
+              icon={Receipt}
+              total={fees.tax.total}
+              autoCard={fees.tax.autoPaidCard}
+              manualPaid={fees.tax.manualPaid}
+              manualPending={fees.tax.manualPending}
+              onOpen={() => openFees("tax")}
+            />
+            <FeeBlock
+              title="Taxa de pagamento (gateway)"
+              icon={CreditCard}
+              total={fees.paymentFee.total}
+              autoCard={fees.paymentFee.autoPaidCard}
+              manualPaid={fees.paymentFee.manualPaid}
+              manualPending={fees.paymentFee.manualPending}
+              onOpen={() => openFees("payment_fee")}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] sm:grid-cols-4">
+            <Stat label="Vendas Cartão" value={money(fees.sales.card)} />
+            <Stat label="Vendas PIX" value={money(fees.sales.pix)} />
+            <Stat label="Vendas Boleto" value={money(fees.sales.boleto)} />
+            <Stat label="Vendas Outros" value={money(fees.sales.other)} />
+          </div>
+        </section>
+      )}
+
+      <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} kind="coach" onPay={handlePayRecipient} />
       <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} />
-      <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} />
+      <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} kind="nutritionist" onPay={handlePayRecipient} />
 
       <section className="rounded-2xl border border-white/5 p-5 mt-5" style={{ backgroundColor: "#1A1A1A" }}>
         <h2 className="mb-3 font-bold text-white">Histórico de pagamentos</h2>
