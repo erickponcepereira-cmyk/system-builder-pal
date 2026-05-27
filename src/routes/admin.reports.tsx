@@ -145,6 +145,7 @@ function AdminReports() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.saleChannel === "store" ? "bg-sky-500/15 text-sky-300" : "bg-violet-500/15 text-violet-300"}`}>{s.saleChannelLabel}</span>
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${s.status === "paid" ? "bg-emerald-500/15 text-emerald-300" : s.status === "refunded" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>{s.status}</span>
                       <span className="text-sm font-bold text-primary">{fmt(s.grossAmount)}</span>
                     </div>
