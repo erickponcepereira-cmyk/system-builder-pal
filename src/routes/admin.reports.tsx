@@ -36,6 +36,54 @@ function AdminReports() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    setSalesLoading(true);
+    fetchSales({ data: { limit: 100 } })
+      .then((rows) => setSales(rows))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar vendas"))
+      .finally(() => setSalesLoading(false));
+  }, []);
+
+  const toggle = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exportSalesCsv = () => {
+    const header = ["Data", "Cliente", "Vendedor", "Upline 1", "Upline 2", "Upline 3", "Produto", "Bruto", "Taxa MP", "Imposto", "App fee", "Líquido", "Status", "Pontos"];
+    const lines = [
+      header,
+      ...sales.map((s) => [
+        s.paidAt ? new Date(s.paidAt).toLocaleString("pt-BR") : new Date(s.createdAt).toLocaleString("pt-BR"),
+        s.studentName || "—",
+        s.sellerCoachName || "—",
+        s.upline1Name || "—",
+        s.upline2Name || "—",
+        s.upline3Name || "—",
+        s.productName || "—",
+        fmt(s.grossAmount),
+        fmt(s.paymentFee),
+        fmt(s.taxAmount),
+        fmt(s.appFee),
+        fmt(s.netAmount),
+        s.status,
+        String(s.pointsGenerated),
+      ]),
+    ];
+    const csv = lines.map((line) => line.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vendas-detalhadas-fitmind.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+
   const studentSummary = useMemo(() => {
     const map = new Map<string, { name: string; email: string; count: number; last: string }>();
     attendance.filter((row) => row.attended).forEach((row) => {
