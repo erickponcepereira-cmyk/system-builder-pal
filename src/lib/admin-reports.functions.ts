@@ -273,6 +273,9 @@ export const listDetailedSales = createServerFn({ method: "POST" })
         commissions: commissionRows,
         distributedTotal,
         surplusToSeller: surplus,
+        saleChannel: t.purchase_type === "store_order" ? "store" : "coach",
+        saleChannelLabel: t.purchase_type === "store_order" ? "Loja (auto)" : "Coach (venda direta)",
+        purchaseType: (t.purchase_type as string | null) ?? null,
       };
     });
   });
