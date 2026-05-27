@@ -210,6 +210,7 @@ function ProductFinancialDrawer({
           productId,
           points_per_sale: data.product.points_per_sale,
           points_auto_calculated: false,
+          card_access_days: data.product.card_access_days,
           slots: data.slots.map(({ id: _id, ...rest }) => rest),
           referralRule: data.referralRule,
         },
