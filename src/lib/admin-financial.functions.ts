@@ -26,7 +26,7 @@ export interface RecipientTotal {
 
 export interface AdminFinancialOverview {
   coaches: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
-  network: { total: number; pending: number; available: number; paid: number };
+  network: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   nutritionists: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   system: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   productCosts: { total: number; pending: number; preparing: number; shipped: number; delivered: number; cancelled: number };
@@ -44,6 +44,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     if (cErr) throw new Error(cErr.message);
 
     const coachesMap = new Map<string, RecipientTotal>();
+    const networkMap = new Map<string, RecipientTotal>();
     const systemMap = new Map<string, RecipientTotal>();
     let networkPending = 0, networkAvailable = 0, networkPaid = 0;
 
@@ -62,6 +63,19 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         if (status === "pending") networkPending += amt;
         else if (status === "available") networkAvailable += amt;
         else if (status === "paid") networkPaid += amt;
+
+        const cur = networkMap.get(pid) || {
+          profileId: pid,
+          name: prof?.name || "—",
+          email: prof?.email || null,
+          role: prof?.role || null,
+          pending: 0, available: 0, paid: 0, total: 0,
+        };
+        if (status === "pending") cur.pending += amt;
+        else if (status === "available") cur.available += amt;
+        else if (status === "paid") cur.paid += amt;
+        cur.total = cur.pending + cur.available + cur.paid;
+        networkMap.set(pid, cur);
       }
 
       // Classifica APENAS pelo slot/contexto da comissão (nunca pelo role do usuário).
@@ -70,7 +84,8 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         slotLabel.includes("sistema") ||
         slotLabel.includes("admin") ||
         (!benefCoachId && !slotLabel);
-      const target = isSystem ? systemMap : coachesMap;
+      const target = isSystem ? systemMap : level > 0 ? null : coachesMap;
+      if (!target) continue;
       const cur = target.get(pid) || {
         profileId: pid,
         name: prof?.name || "—",
@@ -93,8 +108,10 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     });
 
     const coachesList = Array.from(coachesMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
+    const networkList = Array.from(networkMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
     const systemList = Array.from(systemMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
     const coachesAgg = sumGroup(coachesList);
+    const networkAgg = sumGroup(networkList);
     const systemAgg = sumGroup(systemList);
 
     // Nutricionistas
@@ -127,7 +144,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
 
     const overview: AdminFinancialOverview = {
       coaches: { ...coachesAgg, recipients: coachesList },
-      network: { pending: networkPending, available: networkAvailable, paid: networkPaid, total: networkPending + networkAvailable + networkPaid },
+      network: { ...networkAgg, pending: networkPending, available: networkAvailable, paid: networkPaid, total: networkPending + networkAvailable + networkPaid, recipients: networkList },
       nutritionists: { ...nutriAgg, recipients: nutriList },
       system: { ...systemAgg, recipients: systemList },
       productCosts: buckets,
