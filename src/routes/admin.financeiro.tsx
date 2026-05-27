@@ -185,9 +185,49 @@ function AdminFinanceiro() {
         </section>
       </div>
 
-      <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} />
+      {fees && (
+        <section className="rounded-2xl border border-white/5 p-5 mb-6" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-bold text-white">Impostos & Taxas</h2>
+              <p className="text-xs text-white/50">
+                Cartão é abatido automaticamente na liquidação. PIX/Boleto entram em "Pendente manual" — clique para dar baixa por transação.
+              </p>
+            </div>
+            <Receipt className="h-5 w-5 text-primary" />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FeeBlock
+              title="Imposto (Simples Nacional)"
+              icon={Receipt}
+              total={fees.tax.total}
+              autoCard={fees.tax.autoPaidCard}
+              manualPaid={fees.tax.manualPaid}
+              manualPending={fees.tax.manualPending}
+              onOpen={() => openFees("tax")}
+            />
+            <FeeBlock
+              title="Taxa de pagamento (gateway)"
+              icon={CreditCard}
+              total={fees.paymentFee.total}
+              autoCard={fees.paymentFee.autoPaidCard}
+              manualPaid={fees.paymentFee.manualPaid}
+              manualPending={fees.paymentFee.manualPending}
+              onOpen={() => openFees("payment_fee")}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] sm:grid-cols-4">
+            <Stat label="Vendas Cartão" value={money(fees.sales.card)} />
+            <Stat label="Vendas PIX" value={money(fees.sales.pix)} />
+            <Stat label="Vendas Boleto" value={money(fees.sales.boleto)} />
+            <Stat label="Vendas Outros" value={money(fees.sales.other)} />
+          </div>
+        </section>
+      )}
+
+      <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} kind="coach" onPay={handlePayRecipient} />
       <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} />
-      <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} />
+      <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} kind="nutritionist" onPay={handlePayRecipient} />
 
       <section className="rounded-2xl border border-white/5 p-5 mt-5" style={{ backgroundColor: "#1A1A1A" }}>
         <h2 className="mb-3 font-bold text-white">Histórico de pagamentos</h2>
@@ -297,7 +337,103 @@ function AdminFinanceiro() {
           </div>
         </div>
       )}
+      {feesOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setFeesOpen(null)}
+        >
+          <div
+            className="w-full max-w-4xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Pendências de {feesOpen === "tax" ? "imposto" : "taxa de pagamento"}
+                </h2>
+                <p className="text-xs text-white/50">PIX e Boleto exigem baixa manual. Clique em "Pagar" para registrar a quitação.</p>
+              </div>
+              <button onClick={() => setFeesOpen(null)} className="rounded p-1 text-white/60 hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {feesRows === null ? (
+              <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : (() => {
+              const rows = feesRows.filter((r) =>
+                feesOpen === "tax" ? !r.taxPaid && r.taxAmount > 0 : !r.feePaid && r.feeAmount > 0
+              );
+              if (rows.length === 0) return <p className="text-sm text-white/50">Nenhuma pendência.</p>;
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-[10px] uppercase text-white/40">
+                      <tr>
+                        <th className="px-2 py-1 text-left">Data</th>
+                        <th className="px-2 py-1 text-left">Cliente</th>
+                        <th className="px-2 py-1 text-left">Produto</th>
+                        <th className="px-2 py-1 text-left">Método</th>
+                        <th className="px-2 py-1 text-right">Valor</th>
+                        <th className="px-2 py-1 text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r) => (
+                        <tr key={r.transactionId} className="border-t border-white/5">
+                          <td className="px-2 py-1.5 text-white/70">{r.date ? new Date(r.date).toLocaleDateString("pt-BR") : "—"}</td>
+                          <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
+                          <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
+                          <td className="px-2 py-1.5 text-white/60 uppercase">{r.paymentMethod || "—"}</td>
+                          <td className="px-2 py-1.5 text-right font-bold text-primary">
+                            {money(feesOpen === "tax" ? r.taxAmount : r.feeAmount)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            <button
+                              onClick={() => handlePayFee(r.transactionId, feesOpen)}
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/25"
+                            >
+                              <CheckCircle2 className="h-3 w-3" /> Pagar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+function FeeBlock({
+  title, icon: Icon, total, autoCard, manualPaid, manualPending, onOpen,
+}: { title: string; icon: typeof Receipt; total: number; autoCard: number; manualPaid: number; manualPending: number; onOpen: () => void }) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-primary" />
+          <p className="text-sm font-bold text-white">{title}</p>
+        </div>
+        <p className="text-xs text-white/40">Total: <strong className="text-white">{money(total)}</strong></p>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+        <Mini label="Auto (cartão)" value={money(autoCard)} />
+        <Mini label="Pago manual" value={money(manualPaid)} />
+        <Mini label="Pendente manual" value={money(manualPending)} />
+      </div>
+      <button
+        onClick={onOpen}
+        disabled={manualPending <= 0}
+        className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline disabled:opacity-40 disabled:no-underline"
+      >
+        Ver pendências <ArrowRight className="h-3 w-3" />
+      </button>
+    </div>
   );
 }
 
@@ -359,8 +495,14 @@ function ShortcutLink({ to, label }: { to: string; label: string }) {
   );
 }
 
-function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[] }) {
+function RecipientsTable({ title, rows, kind, onPay }: {
+  title: string;
+  rows: RecipientTotal[];
+  kind?: "coach" | "network" | "nutritionist";
+  onPay?: (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => void;
+}) {
   if (!rows.length) return null;
+  const showPay = !!kind && !!onPay;
   return (
     <section className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
       <h2 className="mb-3 font-bold text-white">{title}</h2>
@@ -373,6 +515,7 @@ function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[
               <th className="px-2 py-1 text-right">Disponível</th>
               <th className="px-2 py-1 text-right">Pago</th>
               <th className="px-2 py-1 text-right">Acumulado</th>
+              {showPay && <th className="px-2 py-1 text-right">Ação</th>}
             </tr>
           </thead>
           <tbody>
@@ -385,6 +528,17 @@ function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[
                 <td className="px-2 py-1.5 text-right text-sky-300">{money(r.available)}</td>
                 <td className="px-2 py-1.5 text-right text-emerald-300">{money(r.paid)}</td>
                 <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.total)}</td>
+                {showPay && (
+                  <td className="px-2 py-1.5 text-right">
+                    <button
+                      disabled={r.available <= 0}
+                      onClick={() => onPay!(r.profileId, kind!, r.name)}
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <CheckCircle2 className="h-3 w-3" /> Pagar disponível
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
