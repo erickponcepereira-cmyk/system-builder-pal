@@ -22,6 +22,7 @@ type CardData = {
   coachName: string | null;
   since: string | null;
   avatarUrl: string | null;
+  validUntil: string | null;
 };
 
 type ScanEntry = {
@@ -54,7 +55,7 @@ function StudentCardPage() {
       }
       const { data: student } = await supabase
         .from("students")
-        .select("id, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
+        .select("id, card_valid_until, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
         .eq("profile_id", profile.id)
         .maybeSingle();
       if (!student) {
@@ -82,6 +83,7 @@ function StudentCardPage() {
         coachName,
         since: profile.created_at,
         avatarUrl: profile.avatar_url,
+        validUntil: (student as unknown as { card_valid_until?: string | null })?.card_valid_until ?? null,
       });
 
       const { data: scanData } = await supabase
@@ -108,6 +110,11 @@ function StudentCardPage() {
   }
 
   const checkinUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}`;
+  const validUntilDate = card.validUntil ? new Date(card.validUntil) : null;
+  const isActive = !!(validUntilDate && validUntilDate.getTime() > Date.now());
+  const formattedValidUntil = validUntilDate
+    ? validUntilDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : null;
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
@@ -129,8 +136,8 @@ function StudentCardPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">FitMind Club</p>
             <p className="text-[10px] text-white/50">Carteirinha do aluno</p>
           </div>
-          <div className="flex items-center gap-1 rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary">
-            <ShieldCheck className="h-3 w-3" /> Ativa
+          <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${isActive ? "bg-primary/20 text-primary" : "bg-white/10 text-white/50"}`}>
+            <ShieldCheck className="h-3 w-3" /> {isActive ? "Ativa" : "Inativa"}
           </div>
         </div>
 
@@ -152,17 +159,35 @@ function StudentCardPage() {
           </div>
         </div>
 
-        <div className="relative mt-5 flex flex-col items-center justify-center rounded-2xl bg-white p-4">
-          <QRCodeSVG value={checkinUrl} size={180} level="H" includeMargin={false} />
-          <p className="mt-3 text-center text-[10px] font-semibold uppercase tracking-wider text-black/60">
-            ID: {card.studentId.slice(0, 8).toUpperCase()}
-          </p>
-        </div>
-
-        <p className="relative mt-3 text-center text-[11px] text-white/50">
-          Apresente este QR para o seu coach registrar sua presença.
-        </p>
+        {isActive ? (
+          <>
+            <div className="relative mt-5 flex flex-col items-center justify-center rounded-2xl bg-white p-4">
+              <QRCodeSVG value={checkinUrl} size={180} level="H" includeMargin={false} />
+              <p className="mt-3 text-center text-[10px] font-semibold uppercase tracking-wider text-black/60">
+                ID: {card.studentId.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
+            <p className="relative mt-3 text-center text-[11px] text-white/50">
+              Apresente este QR para o seu coach registrar sua presença.
+            </p>
+            {formattedValidUntil && (
+              <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
+                Válida até {formattedValidUntil}
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="relative mt-5 rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
+            <p className="text-sm font-bold text-white">Sua carteirinha está inativa</p>
+            <p className="mt-1 text-[11px] text-white/55">
+              {formattedValidUntil
+                ? `Expirou em ${formattedValidUntil}. Adquira um produto com acesso à carteirinha para reativar.`
+                : "Adquira um produto com acesso à carteirinha para ativar seu QR code."}
+            </p>
+          </div>
+        )}
       </div>
+
 
       {/* Histórico de scans */}
       <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
