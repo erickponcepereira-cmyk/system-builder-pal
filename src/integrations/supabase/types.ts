@@ -3971,6 +3971,7 @@ export type Database = {
           cancelled_at: string | null
           created_at: string
           delivered_at: string | null
+          hbl_fulfiller_coach_id: string | null
           id: string
           notes: string | null
           preparing_at: string | null
@@ -3988,6 +3989,7 @@ export type Database = {
           cancelled_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          hbl_fulfiller_coach_id?: string | null
           id?: string
           notes?: string | null
           preparing_at?: string | null
@@ -4005,6 +4007,7 @@ export type Database = {
           cancelled_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          hbl_fulfiller_coach_id?: string | null
           id?: string
           notes?: string | null
           preparing_at?: string | null
@@ -4017,7 +4020,15 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_order_pool_entries_hbl_fulfiller_coach_id_fkey"
+            columns: ["hbl_fulfiller_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_professional_requirements: {
         Row: {
@@ -6317,6 +6328,7 @@ export type Database = {
         Args: { _days: number; _student_id: string }
         Returns: undefined
       }
+      find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_nutritionist_for: { Args: { _coach_id: string }; Returns: string }
       find_upline_with_badge: {
