@@ -16,6 +16,10 @@ function AdminReports() {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sales, setSales] = useState<DetailedSale[]>([]);
+  const [salesLoading, setSalesLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const fetchSales = useServerFn(listDetailedSales);
 
   const load = async () => {
     setLoading(true);
