@@ -55,7 +55,7 @@ function StudentCardPage() {
       }
       const { data: student } = await supabase
         .from("students")
-        .select("id, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
+        .select("id, card_valid_until, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
         .eq("profile_id", profile.id)
         .maybeSingle();
       if (!student) {
@@ -83,6 +83,7 @@ function StudentCardPage() {
         coachName,
         since: profile.created_at,
         avatarUrl: profile.avatar_url,
+        validUntil: (student as unknown as { card_valid_until?: string | null })?.card_valid_until ?? null,
       });
 
       const { data: scanData } = await supabase
