@@ -192,16 +192,86 @@ function AdminFinanceiro() {
           Gerenciar solicitações de saque <ArrowRight className="h-3 w-3" />
         </Link>
       </section>
+
+      {bucketOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setBucketOpen(null)}
+        >
+          <div
+            className="w-full max-w-4xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">{bucketOpen.title}</h2>
+                <p className="text-xs text-white/50">Vendas que originaram comissões pendentes/disponíveis neste bucket.</p>
+              </div>
+              <button onClick={() => setBucketOpen(null)} className="rounded p-1 text-white/60 hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {bucketRows === null ? (
+              <div className="flex justify-center p-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : bucketRows.length === 0 ? (
+              <p className="text-sm text-white/50">Nenhuma comissão pendente neste bucket.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] uppercase text-white/40">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Data</th>
+                      <th className="px-2 py-1 text-left">Cliente</th>
+                      <th className="px-2 py-1 text-left">Produto</th>
+                      <th className="px-2 py-1 text-left">Coach beneficiário</th>
+                      <th className="px-2 py-1 text-left">Slot</th>
+                      <th className="px-2 py-1 text-center">Nível</th>
+                      <th className="px-2 py-1 text-right">Valor</th>
+                      <th className="px-2 py-1 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bucketRows.map((r) => (
+                      <tr key={r.commissionId} className="border-t border-white/5">
+                        <td className="px-2 py-1.5 text-white/70">{r.createdAt ? new Date(r.createdAt).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
+                        <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
+                        <td className="px-2 py-1.5 text-white">{r.beneficiaryName}<span className="ml-1 text-white/30">{r.beneficiaryEmail}</span></td>
+                        <td className="px-2 py-1.5 text-white/60">{r.slotLabel || "—"}</td>
+                        <td className="px-2 py-1.5 text-center text-white/60">{r.level}</td>
+                        <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.amount)}</td>
+                        <td className="px-2 py-1.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            r.status === "available" ? "bg-sky-500/15 text-sky-300" : "bg-amber-500/15 text-amber-300"
+                          }`}>{r.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-3 flex justify-end gap-4 text-xs text-white/60">
+                  <span>Total: <strong className="text-primary">{money(bucketRows.reduce((s, r) => s + r.amount, 0))}</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 function BucketCard({
-  title, subtitle, icon: Icon, pending, available, paid, accent,
-}: { title: string; subtitle: string; icon: typeof Wallet; pending: number; available: number; paid: number; accent: string }) {
+  title, subtitle, icon: Icon, pending, available, paid, accent, onClick,
+}: { title: string; subtitle: string; icon: typeof Wallet; pending: number; available: number; paid: number; accent: string; onClick?: () => void }) {
   const aPagar = pending + available;
   return (
-    <div className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left rounded-2xl border border-white/5 p-4 transition hover:border-white/20 hover:bg-white/[0.03]"
+      style={{ backgroundColor: "#1A1A1A" }}
+    >
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-xs font-bold uppercase text-white/50">{title}</p>
@@ -218,7 +288,7 @@ function BucketCard({
         <Mini label="Disponível" value={money(available)} />
         <Mini label="Pago" value={money(paid)} />
       </div>
-    </div>
+    </button>
   );
 }
 
