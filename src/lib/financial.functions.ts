@@ -107,6 +107,7 @@ export type ProductFinancial = {
     price: number;
     points_per_sale: number;
     points_auto_calculated: boolean;
+    card_access_days: number;
   };
   slots: ValueSlot[];
   referralRule: {
