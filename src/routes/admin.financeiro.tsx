@@ -55,7 +55,6 @@ function AdminFinanceiro() {
   useEffect(() => { reload(); }, []);
 
   const openBucket = (kind: BucketKind, title: string) => {
-    if (kind === "system") { navigate({ to: "/admin/reports" }); return; }
     setBucketOpen({ kind, title });
     setBucketRows(null);
     fetchBucket({ data: { bucket: kind } })
@@ -80,8 +79,12 @@ function AdminFinanceiro() {
     }
   };
 
-  const handlePayRecipient = async (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => {
-    if (!confirm(`Pagar saldo disponível de ${name}?`)) return;
+  const handlePayRecipient = async (
+    profileId: string,
+    kind: "coach" | "network" | "nutritionist" | "system",
+    name: string,
+  ) => {
+    if (!confirm(`Dar baixa do saldo disponível de ${name}?`)) return;
     try {
       const r = await callPayRecipient({ data: { profileId, kind } });
       if (r.amount > 0) toast.success(`Baixa de ${money(r.amount)} registrada`);
@@ -226,7 +229,8 @@ function AdminFinanceiro() {
       )}
 
       <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} kind="coach" onPay={handlePayRecipient} />
-      <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} />
+      <RecipientsTable title="Rede (uplines) — saldos por destinatário" rows={data.network.recipients} kind="network" onPay={handlePayRecipient} />
+      <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} kind="system" onPay={handlePayRecipient} />
       <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} kind="nutritionist" onPay={handlePayRecipient} />
 
       <section className="rounded-2xl border border-white/5 p-5 mt-5" style={{ backgroundColor: "#1A1A1A" }}>
@@ -498,8 +502,8 @@ function ShortcutLink({ to, label }: { to: string; label: string }) {
 function RecipientsTable({ title, rows, kind, onPay }: {
   title: string;
   rows: RecipientTotal[];
-  kind?: "coach" | "network" | "nutritionist";
-  onPay?: (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => void;
+  kind?: "coach" | "network" | "nutritionist" | "system";
+  onPay?: (profileId: string, kind: "coach" | "network" | "nutritionist" | "system", name: string) => void;
 }) {
   if (!rows.length) return null;
   const showPay = !!kind && !!onPay;
