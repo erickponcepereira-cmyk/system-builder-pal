@@ -73,11 +73,27 @@ export function WalletTab() {
       });
 
       const items: HistoryItem[] = [];
-      ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string }>) || []).forEach((cm) => {
+      const commRows = ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string; transaction_id: string; slot_label: string | null }>) || []);
+      // Fetch related transactions to get purchase_type → distinguishes Loja vs Venda direta
+      const txIds = Array.from(new Set(commRows.map((c) => c.transaction_id).filter(Boolean)));
+      const txTypeMap = new Map<string, string>();
+      if (txIds.length) {
+        const { data: txs } = await supabase
+          .from("transactions" as never)
+          .select("id,purchase_type" as never)
+          .in("id" as never, txIds as never);
+        ((txs as Array<{ id: string; purchase_type: string | null }>) || []).forEach((t) => {
+          txTypeMap.set(t.id, t.purchase_type || "");
+        });
+      }
+      commRows.forEach((cm) => {
+        const ptype = txTypeMap.get(cm.transaction_id) || "";
+        const channel = ptype === "store_order" ? "🛒 Loja (auto)" : "🤝 Venda direta";
+        const baseWho = cm.level === 0 ? "Comissão direta" : `Comissão nível ${cm.level}`;
         items.push({
           id: `c-${cm.id}`,
-          who: cm.level === 0 ? "Comissão direta" : `Comissão nível ${cm.level}`,
-          type: cm.level === 0 ? "Venda direta" : `Rede MLM nível ${cm.level}`,
+          who: `${baseWho} · ${channel}`,
+          type: cm.slot_label || (cm.level === 0 ? "Venda direta" : `Rede MLM nível ${cm.level}`),
           value: Number(cm.amount),
           created_at: cm.created_at,
         });
