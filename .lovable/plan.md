@@ -1,90 +1,87 @@
-## Visão geral
+## Objetivo
 
-Plano dividido em **7 fases** focadas em uma área por vez para facilitar teste e rollback. Itens já resolvidos (sobra de slots indo pro vendedor, fallback de upline vazio e mínimo de 1 ponto por venda) **já estão aplicados na migração anterior** — não repito aqui.
+Estender `/admin/financeiro` para:
 
----
-
-### Fase 1 — Carteirinha do aluno (validade + QR condicional)
-
-- **Migration:** adicionar `card_access_days INTEGER` em `products`.
-- **Admin → Produtos:** novo campo "Dias de acesso à carteirinha" no editor de produto.
-- **`process_paid_transaction`:** ao processar pagamento, gravar `card_valid_until = now() + card_access_days` em `students` (ou nova tabela `student_card_access` se houver múltiplas compras — uso a maior data ativa).
-- **Tela da carteirinha (`/student/card`):**
-  - QR aparece **somente** se `card_valid_until > now()`.
-  - Abaixo do QR: "Válido até DD/MM/AAAA" + dias restantes.
-  - Se expirado: mensagem "Carteirinha inativa — adquira um produto para reativar".
+1. Mostrar **Impostos** (Simples Nacional / outros) e **Taxas de pagamento** separados por método.
+2. **Cartão** → baixa automática (sem botão), pois já é descontado no recebimento.
+3. **PIX/boleto/outros** → botão "Pagar" que dá baixa no sistema.
+4. Botões "Pagar" também nas carteiras de **Coach** e **Nutricionista**, com sincronização cruzada (pagar pelo financeiro reflete em `withdrawal_requests` e vice-versa).
 
 ---
 
-### Fase 2 — Loja do aluno (bug + comissão)
+## Mudanças de banco
 
-- **Bug imediato:** `column "kind" of relation "store_order_items" does not exist`. Investigar `store_order_items` e ajustar a função/insert que usa `kind` (provavelmente é `product_kind`).
-- Garantir que ao finalizar compra na loja, a `transaction` resultante dispare `process_paid_transaction` normalmente — o coach vinculado ao aluno recebe comissão automaticamente (já está coberto pela função atual; só validar que `student.coach_id` é respeitado).
+### 1. Nova tabela `system_fee_payouts`
+Registro de baixas manuais de taxas/impostos não-cartão.
 
----
+```
+id, transaction_id, kind ('tax' | 'payment_fee'),
+amount, payment_method, paid_at, paid_by (admin profile), notes
+```
+RLS: somente admin.
 
-### Fase 3 — Carteira do Admin (sistema)
+### 2. Enum `nutri_block_status` ganha valor `'paid'`
+Permite marcar entradas pagas sem perder histórico, mantendo carteira separada.
 
-- **Migration:** criar `admin_system_wallet` (singleton, sem `profile_id`) com `available_balance`, `total_earned`, `total_withdrawn`.
-- Slots com `destination = 'admin_wallet'` continuam alimentando a carteira do admin master (compatibilidade), **mas** criar uma view/agregação que mostre o saldo unificado para ambos admins.
-- **Admin → nova aba "Carteira do Sistema":** visível para qualquer profile com `role='admin'`, mostra entradas (taxas, slots admin), saídas, saldo. Saque manual com aprovação.
+### 3. Função `pay_nutritionist_available(_profile_id, _admin_id, _notes)`
+- Marca entradas `released` como `paid`
+- Incrementa `total_withdrawn`, zera `available_balance`
+- Cria registro em `withdrawal_requests` (kind=nutritionist) já como `paid` para aparecer no histórico unificado.
 
----
+### 4. Função `pay_coach_available(_profile_id, _admin_id, _notes)`
+- Marca comissões `available` (excluindo slot sistema/admin/nutri) como `paid`
+- Cria `withdrawal_requests` `paid` para esse profile
+- Recalcula `wallets` via `recalc_wallet_for_profile`
 
-### Fase 4 — Nutricionista (medalha + seletor)
-
-- **4a — Bug da medalha:** investigar painel `admin.career.tsx` / patentes e função que atribui badge de nutricionista. Provavelmente falta a regra/UI para marcar um coach como nutricionista. Corrigir e permitir admin atribuir manualmente.
-- **4b — Seletor de nutricionista:**
-  - Tornar `find_nutritionist_for(coach_id)` mais inteligente: lista candidatos por prioridade (próprio coach se for nutri → indicados diretos → upline → rede ampla).
-  - Se houver **mais de 1**, em vez de auto-escolher, gravar entrada `nutritionist_blocked` com `status='awaiting_selection'` e o coach escolhe no painel dele.
-  - Se só houver 1, atribui automático (comportamento atual).
-
----
-
-### Fase 5 — Relatórios completos do Admin
-
-- **Nova rota `/admin/reports`** (ou expandir existente) com detalhamento por venda:
-  - Cliente, vendedor, upline 1/2/3, master coach
-  - Produto, preço bruto, taxa do MP, impostos, **distribuição completa de cada slot** (quem recebeu, quanto, %), sobra → vendedor, pontos gerados
-  - Status: pago / estornado / pendente
-- Filtros: período, coach, produto, método de pagamento.
-- Export CSV.
+### 5. Função `pay_network_available(_profile_id, _admin_id)` — mesma lógica, mas filtra `level > 0`
 
 ---
 
-### Fase 6 — Pedidos físicos vinculados à venda
+## Server functions novas em `src/lib/admin-financial.functions.ts`
 
-- Quando uma venda tem slot `product_order_pool`, criar registro em `product_orders` (ou tabela equivalente) vinculado à `transaction_id`.
-- **Admin → /admin/product-orders:** listar pedidos pendentes com botão "Dar baixa / Marcar como enviado" + campo de tracking opcional.
-- Aluno vê status do pedido na sua área.
-
----
-
-### Fase 7 — Histórico de pedidos colapsável + Compartilhar FitMindShape
-
-**7a — Histórico (aluno e coach):**
-- Substituir tabela longa por **cards colapsáveis** agrupados por pedido.
-- Badge de status colorido: Aprovado (verde), Recusado (vermelho), Pendente (amarelo).
-- Click expande detalhes; recusados ficam fechados por padrão.
-
-**7b — Compartilhar FitMindShape:**
-- A página de compartilhamento (`/resultado/$token`) deve ser **cópia visual idêntica** da página de resultado: avatar, valores de referência, classificação de risco, gráficos — tudo. Hoje está renderizando layout simplificado.
-- Botão "Compartilhar":
-  - Se `student.phone` existe → abrir `https://wa.me/<telefone>?text=...` direto.
-  - Se não → manter fluxo atual (copiar link / share API).
+- `getFeesAndTaxesBreakdown()` → 
+  ```
+  { 
+    tax: { total, autoPaidCard, manualPaid, manualPending },
+    paymentFee: { total, autoPaidCard, manualPaid, manualPending, byMethod: [...] },
+    sales: { card, pix, boleto, other }
+  }
+  ```
+  Auto-paid = soma de transações `paid` com `payment_method='card'`. Manual paid = soma de `system_fee_payouts`. Manual pending = restante.
+  
+- `payManualSystemFee({ transactionId, kind })` → insere em `system_fee_payouts`.
+- `payNutritionistAvailable({ profileId })`
+- `payCoachAvailable({ profileId, kind: 'coach'|'network' })`
 
 ---
 
-### Detalhes técnicos
+## UI em `/admin/financeiro`
 
-- Toda mudança em `process_paid_transaction` mantém a estrutura atual (idempotente, deleta e recria por `transaction_id`).
-- Migrations seguem padrão: `ALTER TABLE` + GRANT já existentes preservados; novas tabelas com RLS + GRANT explícito.
-- Sobre o **ranking**: confirmar que está consumindo `coach_points_log` (pontos de carreira) e não `total_revenue` em `monthly_rankings`. Hoje `refresh_monthly_rankings` já ordena por `total_points`, mas vou auditar a UI do ranking pra garantir que mostra pontos, não R$.
+Novo bloco **Impostos & Taxas** acima de "Custos de produtos":
+
+```
+[ Impostos (Simples, etc) ]   [ Taxas de pagamento ]
+  Cartão (auto-baixa) ✓         Cartão (auto-baixa) ✓
+  PIX/outros: pendente          PIX/outros: pendente
+  [Listar pendentes →]          [Listar pendentes →]
+```
+
+Modal de listagem por venda com botão **"Dar baixa"** que chama `payManualSystemFee`.
+
+Nas tabelas **Coaches** e **Nutricionistas**: nova coluna "Ações" com botão **"Pagar disponível"** (desabilitado se `available=0`). Confirma e chama a server fn correspondente.
 
 ---
 
-### Ordem sugerida de execução
+## Detalhes técnicos
 
-Fases 1, 2 e 3 são as mais impactantes pro usuário final — começo por elas. Fases 4–7 são iterações em cima do que já funciona.
+- Pagar pelo painel `/admin/payments` (saques) continua funcionando — a função `pay_coach_available` é idempotente e re-executável.
+- Histórico de pagamentos (já existente) passa a mostrar todas as baixas, incluindo nutricionista.
+- `payment_method` de transação já existe; novo card lê `payment_fee` direto da tabela `transactions` agrupado por método.
 
-Posso implementar fase por fase, te chamando pra testar entre cada uma. Confirma se a ordem está boa ou quer priorizar diferente?
+---
+
+## Arquivos afetados
+
+- `supabase/migrations/<novo>.sql` (tabela, enum, 3 funções RPC)
+- `src/lib/admin-financial.functions.ts` (4 server fns novas)
+- `src/routes/admin.financeiro.tsx` (bloco Impostos/Taxas, ações de pagar, modais)

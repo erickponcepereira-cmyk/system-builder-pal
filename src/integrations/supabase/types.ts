@@ -5745,6 +5745,57 @@ export type Database = {
           },
         ]
       }
+      system_fee_payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          kind: string
+          notes: string | null
+          paid_at: string
+          paid_by: string | null
+          payment_method: string | null
+          transaction_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          kind: string
+          notes?: string | null
+          paid_at?: string
+          paid_by?: string | null
+          payment_method?: string | null
+          transaction_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          paid_at?: string
+          paid_by?: string | null
+          payment_method?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_fee_payouts_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_fee_payouts_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_professional_assignments: {
         Row: {
           assigned_coach_id: string | null
@@ -6330,6 +6381,14 @@ export type Database = {
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
       partner_scan_student: { Args: { _student_id: string }; Returns: Json }
+      pay_coach_available: {
+        Args: { _kind?: string; _notes?: string; _profile_id: string }
+        Returns: number
+      }
+      pay_nutritionist_available: {
+        Args: { _notes?: string; _profile_id: string }
+        Returns: number
+      }
       pick_professional_for_sale: {
         Args: {
           _preferred_coach_id?: string
@@ -6487,7 +6546,7 @@ export type Database = {
         | "nutritionist_partner"
         | "council"
       commission_status: "pending" | "available" | "withdrawn" | "cancelled"
-      nutri_block_status: "blocked" | "released" | "cancelled"
+      nutri_block_status: "blocked" | "released" | "cancelled" | "paid"
       order_pool_status:
         | "pending"
         | "preparing"
@@ -6697,7 +6756,7 @@ export const Constants = {
         "council",
       ],
       commission_status: ["pending", "available", "withdrawn", "cancelled"],
-      nutri_block_status: ["blocked", "released", "cancelled"],
+      nutri_block_status: ["blocked", "released", "cancelled", "paid"],
       order_pool_status: [
         "pending",
         "preparing",
