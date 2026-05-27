@@ -48,12 +48,11 @@ export interface DetailedSale {
 
 async function assertAdmin(userId: string) {
   const { data } = await supabaseAdmin
-    .from("user_roles" as never)
-    .select("role" as never)
-    .eq("user_id" as never, userId as never)
-    .eq("role" as never, "admin" as never)
+    .from("profiles")
+    .select("role")
+    .eq("user_id", userId)
     .maybeSingle();
-  if (!data) throw new Error("Acesso negado");
+  if (!data || (data as any).role !== "admin") throw new Error("Acesso negado");
 }
 
 export const listDetailedSales = createServerFn({ method: "POST" })
