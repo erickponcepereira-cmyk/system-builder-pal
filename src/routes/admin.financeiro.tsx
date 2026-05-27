@@ -495,8 +495,14 @@ function ShortcutLink({ to, label }: { to: string; label: string }) {
   );
 }
 
-function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[] }) {
+function RecipientsTable({ title, rows, kind, onPay }: {
+  title: string;
+  rows: RecipientTotal[];
+  kind?: "coach" | "network" | "nutritionist";
+  onPay?: (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => void;
+}) {
   if (!rows.length) return null;
+  const showPay = !!kind && !!onPay;
   return (
     <section className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
       <h2 className="mb-3 font-bold text-white">{title}</h2>
@@ -509,6 +515,7 @@ function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[
               <th className="px-2 py-1 text-right">Disponível</th>
               <th className="px-2 py-1 text-right">Pago</th>
               <th className="px-2 py-1 text-right">Acumulado</th>
+              {showPay && <th className="px-2 py-1 text-right">Ação</th>}
             </tr>
           </thead>
           <tbody>
@@ -521,6 +528,17 @@ function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[
                 <td className="px-2 py-1.5 text-right text-sky-300">{money(r.available)}</td>
                 <td className="px-2 py-1.5 text-right text-emerald-300">{money(r.paid)}</td>
                 <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.total)}</td>
+                {showPay && (
+                  <td className="px-2 py-1.5 text-right">
+                    <button
+                      disabled={r.available <= 0}
+                      onClick={() => onPay!(r.profileId, kind!, r.name)}
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <CheckCircle2 className="h-3 w-3" /> Pagar disponível
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
