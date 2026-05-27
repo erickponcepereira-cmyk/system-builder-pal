@@ -590,3 +590,129 @@ export const payRecipientAvailable = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, amount: Number(out || 0) };
   });
+
+// ───── Admin Wallet (carteira compartilhada das taxas do sistema) ─────
+
+export type AdminWalletEntry = {
+  id: string;
+  transactionId: string | null;
+  description: string;
+  amount: number;
+  kind: "credit" | "debit";
+  studentName: string | null;
+  productName: string | null;
+  createdAt: string | null;
+};
+
+export type AdminWalletSummary = {
+  available: number;
+  totalEarned: number;
+  totalWithdrawn: number;
+  masters: Array<{ id: string; name: string; email: string | null }>;
+  isMaster: boolean;
+};
+
+async function assertMasterAdmin(userId: string) {
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("role, is_master_admin")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data || data.role !== "admin" || !(data as any).is_master_admin) {
+    throw new Error("Acesso negado: apenas master admins");
+  }
+}
+
+export const getAdminWallet = createServerFn({ method: "GET" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminWalletSummary> => {
+    await assertAdmin(context.userId);
+    const { data: wallet } = await supabaseAdmin
+      .from("admin_system_wallet")
+      .select("available_balance, total_earned, total_withdrawn")
+      .eq("id", true)
+      .maybeSingle();
+    const { data: masters } = await supabaseAdmin
+      .from("profiles")
+      .select("id, name, email")
+      .eq("role", "admin")
+      .eq("is_master_admin", true);
+    const { data: me } = await supabaseAdmin
+      .from("profiles")
+      .select("is_master_admin")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    return {
+      available: Number(wallet?.available_balance || 0),
+      totalEarned: Number(wallet?.total_earned || 0),
+      totalWithdrawn: Number(wallet?.total_withdrawn || 0),
+      masters: (masters || []).map((p: any) => ({ id: p.id, name: p.name || "—", email: p.email || null })),
+      isMaster: !!(me as any)?.is_master_admin,
+    };
+  });
+
+export const listAdminWalletEntries = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: unknown) => d as { filter?: "all" | "credit" | "debit" })
+  .handler(async ({ context, data }): Promise<AdminWalletEntry[]> => {
+    await assertAdmin(context.userId);
+    let q = supabaseAdmin
+      .from("admin_system_wallet_entries")
+      .select("id, transaction_id, slot_label, amount, kind, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (data.filter === "credit" || data.filter === "debit") {
+      q = q.eq("kind", data.filter);
+    }
+    const { data: entries, error } = await q;
+    if (error) throw new Error(error.message);
+    const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
+    const txMap = new Map<string, { studentName: string | null; productName: string | null }>();
+    if (txIds.length) {
+      const { data: txs } = await supabaseAdmin
+        .from("transactions")
+        .select("id, product_id, student_id")
+        .in("id", txIds);
+      const sIds = Array.from(new Set((txs || []).map((t: any) => t.student_id).filter(Boolean)));
+      const pIds = Array.from(new Set((txs || []).map((t: any) => t.product_id).filter(Boolean)));
+      const [{ data: students }, { data: products }] = await Promise.all([
+        sIds.length ? supabaseAdmin.from("students").select("id, profiles(name)").in("id", sIds) : Promise.resolve({ data: [] as any[] }),
+        pIds.length ? supabaseAdmin.from("products").select("id, name").in("id", pIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const sMap = new Map<string, string>();
+      (students || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+      const pMap = new Map<string, string>();
+      (products || []).forEach((p: any) => pMap.set(p.id, p.name));
+      (txs || []).forEach((t: any) => txMap.set(t.id, {
+        studentName: t.student_id ? sMap.get(t.student_id) || null : null,
+        productName: t.product_id ? pMap.get(t.product_id) || null : null,
+      }));
+    }
+    return (entries || []).map((e: any) => {
+      const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
+      return {
+        id: e.id,
+        transactionId: e.transaction_id,
+        description: e.slot_label || (e.kind === "debit" ? "Saque/Repasse" : "Crédito"),
+        amount: Number(e.amount || 0),
+        kind: e.kind as "credit" | "debit",
+        studentName: tx?.studentName ?? null,
+        productName: tx?.productName ?? null,
+        createdAt: e.created_at,
+      };
+    });
+  });
+
+export const registerAdminWalletDebit = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: unknown) => d as { amount: number; description: string })
+  .handler(async ({ context, data }) => {
+    await assertMasterAdmin(context.userId);
+    if (!data.amount || data.amount <= 0) throw new Error("Valor inválido");
+    const { data: out, error } = await context.supabase.rpc("register_admin_wallet_debit", {
+      p_amount: data.amount,
+      p_description: data.description || "Saque/Repasse",
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, entryId: out as string };
+  });
