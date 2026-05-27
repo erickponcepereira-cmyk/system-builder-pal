@@ -67,6 +67,7 @@ import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach
 import { Route as AdminCareerRouteImport } from './routes/admin.career'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminAssessmentDeletionsRouteImport } from './routes/admin.assessment-deletions'
+import { Route as AdminAdminWalletRouteImport } from './routes/admin.admin-wallet'
 import { Route as StudentProfileEditRouteImport } from './routes/student.profile.edit'
 import { Route as StudentPartnersPartnerIdRouteImport } from './routes/student.partners.$partnerId'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
@@ -368,6 +369,11 @@ const AdminAssessmentDeletionsRoute =
     path: '/assessment-deletions',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminAdminWalletRoute = AdminAdminWalletRouteImport.update({
+  id: '/admin-wallet',
+  path: '/admin-wallet',
+  getParentRoute: () => AdminRoute,
+} as any)
 const StudentProfileEditRoute = StudentProfileEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -429,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/career': typeof AdminCareerRoute
@@ -496,6 +503,7 @@ export interface FileRoutesByTo {
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/career': typeof AdminCareerRoute
@@ -566,6 +574,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
   '/admin/career': typeof AdminCareerRoute
@@ -637,6 +646,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
     | '/admin/career'
@@ -704,6 +714,7 @@ export interface FileRouteTypes {
     | '/professional'
     | '/register'
     | '/reset-password'
+    | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
     | '/admin/career'
@@ -773,6 +784,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
     | '/admin/career'
@@ -1265,6 +1277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAssessmentDeletionsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/admin-wallet': {
+      id: '/admin/admin-wallet'
+      path: '/admin-wallet'
+      fullPath: '/admin/admin-wallet'
+      preLoaderRoute: typeof AdminAdminWalletRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/student/profile/edit': {
       id: '/student/profile/edit'
       path: '/edit'
@@ -1344,6 +1363,7 @@ const AdminCoachesRouteWithChildren = AdminCoachesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAdminWalletRoute: typeof AdminAdminWalletRoute
   AdminAssessmentDeletionsRoute: typeof AdminAssessmentDeletionsRoute
   AdminCalendarsRoute: typeof AdminCalendarsRoute
   AdminCareerRoute: typeof AdminCareerRoute
@@ -1371,6 +1391,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminWalletRoute: AdminAdminWalletRoute,
   AdminAssessmentDeletionsRoute: AdminAssessmentDeletionsRoute,
   AdminCalendarsRoute: AdminCalendarsRoute,
   AdminCareerRoute: AdminCareerRoute,

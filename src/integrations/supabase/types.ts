@@ -6447,6 +6447,10 @@ export type Database = {
         Args: { _reference_month?: string }
         Returns: undefined
       }
+      register_admin_wallet_debit: {
+        Args: { p_amount: number; p_description: string }
+        Returns: string
+      }
       register_checkin_via_qr: {
         Args: { _location?: string; _notes?: string; _student_id: string }
         Returns: Json
