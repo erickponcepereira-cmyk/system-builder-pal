@@ -113,10 +113,35 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
 
     const coachesList = Array.from(coachesMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
     const networkList = Array.from(networkMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
-    const systemList = Array.from(systemMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
     const coachesAgg = sumGroup(coachesList);
     const networkAgg = sumGroup(networkList);
-    const systemAgg = sumGroup(systemList);
+
+    // Carteira compartilhada do admin (taxas de sistema). Administrada pelos master admins.
+    const { data: adminWallet } = await supabaseAdmin
+      .from("admin_system_wallet")
+      .select("available_balance, total_earned, total_withdrawn")
+      .eq("id", true)
+      .maybeSingle();
+    const { data: masterAdmins } = await supabaseAdmin
+      .from("profiles")
+      .select("id, name, email, role")
+      .eq("role", "admin")
+      .eq("is_master_admin", true);
+    const sysAvailable = Number(adminWallet?.available_balance || 0);
+    const sysPaid = Number(adminWallet?.total_withdrawn || 0);
+    const sysTotal = Number(adminWallet?.total_earned || 0) + sysPaid;
+    const systemList: RecipientTotal[] = (masterAdmins || []).map((p: any) => ({
+      profileId: p.id,
+      name: p.name || "—",
+      email: p.email || null,
+      role: p.role || "admin",
+      pending: 0,
+      available: sysAvailable,
+      paid: sysPaid,
+      total: sysTotal,
+    }));
+    const systemAgg = { pending: 0, available: sysAvailable, paid: sysPaid, total: sysTotal };
+
 
     // Nutricionistas: não usa join embutido aqui porque a carteira pode não
     // ter FK exposta no Data API; busca perfis separadamente para não zerar o bucket.
