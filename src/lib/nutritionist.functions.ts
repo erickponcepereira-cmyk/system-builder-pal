@@ -127,7 +127,7 @@ export const releaseNutritionistEntry = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await ensureAdmin(context.userId);
-    const { error } = await supabaseAdmin.rpc("release_nutritionist_blocked_entry", {
+    const { error } = await context.supabase.rpc("release_nutritionist_blocked_entry", {
       _entry_id: data.entryId,
       _notes: data.notes ?? undefined,
     });
@@ -140,7 +140,7 @@ export const cancelNutritionistEntry = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await ensureAdmin(context.userId);
-    const { error } = await supabaseAdmin.rpc("cancel_nutritionist_blocked_entry", {
+    const { error } = await context.supabase.rpc("cancel_nutritionist_blocked_entry", {
       _entry_id: data.entryId,
       _notes: data.notes ?? undefined,
     });
