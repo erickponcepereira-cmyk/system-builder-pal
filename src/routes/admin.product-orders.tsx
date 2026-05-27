@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Package, Truck, CheckCircle2, X, Clock } from "lucide-react";
+import { Loader2, Package, Truck, CheckCircle2, X, Clock, ChevronRight } from "lucide-react";
 import {
   listOrderPoolEntries,
-  updateOrderPoolEntry,
+  updateTransactionOrderStatus,
   type OrderPoolEntry,
   type OrderPoolStatus,
 } from "@/lib/orderpool.functions";
@@ -26,12 +26,53 @@ const STATUS_META: Record<OrderPoolStatus, { label: string; color: string; icon:
 const money = (v: number) =>
   `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+type SaleGroup = {
+  transactionId: string;
+  studentName: string | null;
+  coachName: string | null;
+  hblFulfillerName: string | null;
+  productName: string | null;
+  totalAmount: number;
+  createdAt: string;
+  status: OrderPoolStatus; // status agregado (= status do primeiro entry; produtos vão juntos)
+  trackingCode: string | null;
+  notes: string | null;
+  entries: OrderPoolEntry[];
+};
+
+function groupByTransaction(rows: OrderPoolEntry[]): SaleGroup[] {
+  const map = new Map<string, SaleGroup>();
+  for (const r of rows) {
+    const key = r.transaction_id || `entry-${r.id}`;
+    const g = map.get(key);
+    if (g) {
+      g.entries.push(r);
+      g.totalAmount += r.amount;
+    } else {
+      map.set(key, {
+        transactionId: key,
+        studentName: r.student_name,
+        coachName: r.coach_name,
+        hblFulfillerName: r.hbl_fulfiller_name,
+        productName: r.product_name,
+        totalAmount: r.amount,
+        createdAt: r.created_at,
+        status: r.status,
+        trackingCode: r.tracking_code,
+        notes: r.notes,
+        entries: [r],
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+}
+
 function AdminProductOrdersPage() {
   const fetchList = useServerFn(listOrderPoolEntries);
-  const updateFn = useServerFn(updateOrderPoolEntry);
+  const updateTx = useServerFn(updateTransactionOrderStatus);
   const [rows, setRows] = useState<OrderPoolEntry[] | null>(null);
   const [filter, setFilter] = useState<OrderPoolStatus | "all">("all");
-  const [editing, setEditing] = useState<OrderPoolEntry | null>(null);
+  const [editing, setEditing] = useState<SaleGroup | null>(null);
   const [tracking, setTracking] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -43,22 +84,30 @@ function AdminProductOrdersPage() {
 
   useEffect(() => {
     reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  const openEdit = (e: OrderPoolEntry) => {
-    setEditing(e);
-    setTracking(e.tracking_code || "");
-    setNotes(e.notes || "");
+  const sales = useMemo(() => (rows ? groupByTransaction(rows) : []), [rows]);
+
+  const openEdit = (g: SaleGroup) => {
+    setEditing(g);
+    setTracking(g.trackingCode || "");
+    setNotes(g.notes || "");
   };
 
   const save = async (newStatus: OrderPoolStatus) => {
     if (!editing) return;
     setBusy(true);
     try {
-      await updateFn({
-        data: { entryId: editing.id, status: newStatus, tracking, notes },
+      await updateTx({
+        data: {
+          transactionId: editing.transactionId,
+          status: newStatus,
+          tracking,
+          notes,
+        },
       });
-      toast.success("Pedido atualizado");
+      toast.success("Venda atualizada");
       setEditing(null);
       reload();
     } catch (err: any) {
@@ -73,8 +122,9 @@ function AdminProductOrdersPage() {
       <div>
         <h1 className="text-xl font-bold text-white">Painel de Pedidos</h1>
         <p className="text-xs text-white/50">
-          Itens cuja parte do valor foi direcionada à pool de "Painel de Pedidos" (custos de produto físico).
-          Atualize o status conforme separa, envia e entrega.
+          Vendas com produtos físicos a enviar. Cada linha é uma venda completa
+          — os produtos da mesma venda são enviados juntos, então o status é
+          aplicado à venda inteira. Clique para ver os produtos.
         </p>
       </div>
 
@@ -89,7 +139,7 @@ function AdminProductOrdersPage() {
                 : "bg-white/5 text-white/60 hover:bg-white/10"
             }`}
           >
-            {s === "all" ? "Todos" : STATUS_META[s as OrderPoolStatus].label}
+            {s === "all" ? "Todas" : STATUS_META[s as OrderPoolStatus].label}
           </button>
         ))}
       </div>
@@ -98,51 +148,56 @@ function AdminProductOrdersPage() {
         <div className="flex justify-center p-12">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
-      ) : rows.length === 0 ? (
+      ) : sales.length === 0 ? (
         <div className="rounded-lg border border-white/5 bg-white/5 p-8 text-center text-sm text-white/50">
-          Nenhum pedido neste filtro.
+          Nenhuma venda neste filtro.
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/5">
           <table className="w-full text-sm">
             <thead className="bg-white/5 text-xs uppercase text-white/50">
               <tr>
-                <th className="p-3 text-left">Aluno</th>
-                <th className="p-3 text-left">Produto</th>
-                <th className="p-3 text-left">Slot</th>
+                <th className="p-3 text-left">Cliente</th>
+                <th className="p-3 text-left">Coach</th>
+                <th className="p-3 text-left">Venda</th>
+                <th className="p-3 text-left">Coach HBL (envio)</th>
+                <th className="p-3 text-center">Itens</th>
                 <th className="p-3 text-right">Valor</th>
-                <th className="p-3 text-left">Rastreio</th>
                 <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Criado</th>
                 <th className="p-3"></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
-                const meta = STATUS_META[r.status];
+              {sales.map((g) => {
+                const meta = STATUS_META[g.status];
                 const Icon = meta.icon;
                 return (
-                  <tr key={r.id} className="border-t border-white/5">
-                    <td className="p-3 text-white">{r.student_name || "—"}</td>
-                    <td className="p-3 text-white/80">{r.product_name || "—"}</td>
-                    <td className="p-3 text-white/60">{r.slot_label || "—"}</td>
-                    <td className="p-3 text-right text-white">{money(r.amount)}</td>
-                    <td className="p-3 text-white/60">{r.tracking_code || "—"}</td>
+                  <tr
+                    key={g.transactionId}
+                    className="border-t border-white/5 cursor-pointer hover:bg-white/5"
+                    onClick={() => openEdit(g)}
+                  >
+                    <td className="p-3 text-white">{g.studentName || "—"}</td>
+                    <td className="p-3 text-white/80">{g.coachName || "—"}</td>
+                    <td className="p-3 font-mono text-[11px] text-white/50">
+                      {g.transactionId.startsWith("entry-") ? "—" : g.transactionId.slice(0, 8)}
+                    </td>
+                    <td className="p-3 text-white/50 italic">
+                      {g.hblFulfillerName || "— (aguardando HBL 42%/50%)"}
+                    </td>
+                    <td className="p-3 text-center text-white/70">{g.entries.length}</td>
+                    <td className="p-3 text-right text-white">{money(g.totalAmount)}</td>
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${meta.color}`}>
                         <Icon className="h-3 w-3" /> {meta.label}
                       </span>
                     </td>
                     <td className="p-3 text-xs text-white/40">
-                      {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                      {new Date(g.createdAt).toLocaleDateString("pt-BR")}
                     </td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => openEdit(r)}
-                        className="rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/20"
-                      >
-                        Atualizar
-                      </button>
+                      <ChevronRight className="inline h-4 w-4 text-white/30" />
                     </td>
                   </tr>
                 );
@@ -153,18 +208,46 @@ function AdminProductOrdersPage() {
       )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setEditing(null)}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setEditing(null)}
+        >
           <div
-            className="w-full max-w-lg space-y-4 rounded-xl border border-white/10 bg-[#0F0F0F] p-6"
+            className="w-full max-w-2xl space-y-4 rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold text-white">Atualizar pedido</h2>
-            <div className="text-xs text-white/60">
-              {editing.student_name || "—"} • {editing.product_name || editing.slot_label}
-              <div className="text-white">{money(editing.amount)}</div>
-            </div>
             <div>
-              <label className="text-xs text-white/60">Código de rastreio</label>
+              <h2 className="text-lg font-bold text-white">Venda — produtos a enviar</h2>
+              <div className="text-xs text-white/60 mt-1">
+                Cliente: <span className="text-white">{editing.studentName || "—"}</span> • Coach:{" "}
+                <span className="text-white">{editing.coachName || "—"}</span>
+              </div>
+              <div className="text-xs text-white/60">
+                Coach HBL responsável pelo envio:{" "}
+                <span className="text-white/50 italic">
+                  {editing.hblFulfillerName || "— (aguardando funcionalidade HBL 42%/50%)"}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-white/5 bg-white/5 p-3">
+              <p className="text-[10px] uppercase text-white/40 mb-2">Produtos desta venda</p>
+              <div className="space-y-1.5">
+                {editing.entries.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between text-xs">
+                    <span className="text-white">{e.product_name || e.slot_label || "—"}</span>
+                    <span className="text-white/70">{money(e.amount)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-white/10 pt-1.5 text-xs font-bold">
+                  <span className="text-white">Total</span>
+                  <span className="text-primary">{money(editing.totalAmount)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-white/60">Código de rastreio (aplicado à venda)</label>
               <input
                 value={tracking}
                 onChange={(e) => setTracking(e.target.value)}
@@ -181,6 +264,7 @@ function AdminProductOrdersPage() {
                 rows={2}
               />
             </div>
+
             <div className="grid grid-cols-2 gap-2">
               {(["preparing", "shipped", "delivered", "cancelled"] as OrderPoolStatus[]).map((s) => {
                 const meta = STATUS_META[s];
@@ -191,12 +275,15 @@ function AdminProductOrdersPage() {
                     onClick={() => save(s)}
                     className={`rounded-lg px-3 py-2 text-xs font-medium ${meta.color} hover:opacity-80 disabled:opacity-50`}
                   >
-                    Marcar como {meta.label}
+                    Marcar venda como {meta.label}
                   </button>
                 );
               })}
             </div>
-            <button onClick={() => setEditing(null)} className="w-full rounded bg-white/5 px-3 py-2 text-xs text-white/60">
+            <button
+              onClick={() => setEditing(null)}
+              className="w-full rounded bg-white/5 px-3 py-2 text-xs text-white/60"
+            >
               Cancelar
             </button>
           </div>
