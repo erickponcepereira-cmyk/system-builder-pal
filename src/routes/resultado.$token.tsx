@@ -102,6 +102,15 @@ function ResultadoPage() {
 
   const share = async () => {
     const url = window.location.href;
+    const message = `Olá ${data.clientName}! Aqui está o resultado da sua avaliação corporal completa: ${url}`;
+    // If client has phone, open WhatsApp directly to them
+    if (data.clientPhone) {
+      const cleanPhone = data.clientPhone.replace(/\D/g, "");
+      const phoneWithCountry = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+      window.open(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(message)}`, "_blank");
+      return;
+    }
+    // Fallback to native share / clipboard
     if (navigator.share) {
       await navigator.share({ title: "Meu Resultado Corporal — FitMind Club", url });
     } else {
