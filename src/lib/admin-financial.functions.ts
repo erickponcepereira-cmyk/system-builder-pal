@@ -78,13 +78,16 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         networkMap.set(pid, cur);
       }
 
-      // Classifica APENAS pelo slot/contexto da comissão (nunca pelo role do usuário).
-      // Um admin pode atuar como coach e suas comissões de venda vão para "Coaches".
+      // Network já tratado acima. Comissões de "sistema" agora vão para
+      // a carteira compartilhada admin_system_wallet (tratada abaixo) e
+      // não devem aparecer mais aqui — caso restem registros antigos,
+      // são ignorados pelo bucket "system".
       const isSystem =
         slotLabel.includes("sistema") ||
         slotLabel.includes("admin") ||
         (!benefCoachId && !slotLabel);
-      const target = isSystem ? systemMap : level > 0 ? null : coachesMap;
+      if (isSystem) continue;
+      const target = level > 0 ? null : coachesMap;
       if (!target) continue;
       const cur = target.get(pid) || {
         profileId: pid,
@@ -99,6 +102,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       cur.total = cur.pending + cur.available + cur.paid;
       target.set(pid, cur);
     }
+
 
     const sumGroup = (rs: RecipientTotal[]) => ({
       pending: rs.reduce((s, r) => s + r.pending, 0),
