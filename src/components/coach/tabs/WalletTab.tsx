@@ -59,7 +59,7 @@ export function WalletTab() {
       const [walletRes, paidWithdrawsRes, commRes, recentWithdrawsRes] = await Promise.all([
         supabase.from("wallets").select("available_balance,pending_balance,total_earned,total_withdrawn").eq("profile_id", profile.id).maybeSingle(),
         supabase.from("withdrawal_requests").select("amount,status").eq("profile_id", profile.id).eq("status", "paid"),
-        supabase.from("commissions").select("id,amount,level,created_at").eq("beneficiary_profile_id", profile.id).order("created_at", { ascending: false }).limit(10),
+        supabase.from("commissions").select("id,amount,level,created_at,transaction_id,slot_label").eq("beneficiary_profile_id", profile.id).order("created_at", { ascending: false }).limit(10),
         supabase.from("withdrawal_requests").select("id,amount,status,requested_at,paid_at").eq("profile_id", profile.id).order("requested_at", { ascending: false }).limit(10),
       ]);
 
