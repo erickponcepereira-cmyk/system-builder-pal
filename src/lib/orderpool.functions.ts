@@ -19,6 +19,9 @@ export type OrderPoolEntry = {
   transaction_id: string | null;
   student_id: string | null;
   student_name: string | null;
+  coach_id: string | null;
+  coach_name: string | null;
+  hbl_fulfiller_name: string | null;
   product_id: string | null;
   product_name: string | null;
   slot_label: string | null;
