@@ -1929,6 +1929,7 @@ export type Database = {
           master_coach_id: string | null
           percentage: number
           referred_by_student_id: string | null
+          slot_label: string | null
           status: Database["public"]["Enums"]["commission_status"] | null
           transaction_id: string
         }
@@ -1945,6 +1946,7 @@ export type Database = {
           master_coach_id?: string | null
           percentage: number
           referred_by_student_id?: string | null
+          slot_label?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
           transaction_id: string
         }
@@ -1961,6 +1963,7 @@ export type Database = {
           master_coach_id?: string | null
           percentage?: number
           referred_by_student_id?: string | null
+          slot_label?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
           transaction_id?: string
         }
