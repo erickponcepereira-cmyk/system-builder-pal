@@ -126,7 +126,7 @@ export const updateTransactionOrderStatus = createServerFn({ method: "POST" })
       .eq("transaction_id", data.transactionId);
     if (selErr) throw new Error(selErr.message);
     for (const e of entries || []) {
-      const { error } = await supabaseAdmin.rpc("mark_order_pool_entry_status", {
+      const { error } = await context.supabase.rpc("mark_order_pool_entry_status", {
         _entry_id: (e as any).id,
         _status: data.status,
         _tracking: data.tracking ?? undefined,
@@ -145,7 +145,7 @@ export const updateOrderPoolEntry = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await ensureAdmin(context.userId);
-    const { error } = await supabaseAdmin.rpc("mark_order_pool_entry_status", {
+    const { error } = await context.supabase.rpc("mark_order_pool_entry_status", {
       _entry_id: data.entryId,
       _status: data.status,
       _tracking: data.tracking ?? undefined,
