@@ -60,6 +60,7 @@ import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
+import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
@@ -331,6 +332,11 @@ const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
   path: '/freebies',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFinanceiroRoute = AdminFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDigitalProductsRoute = AdminDigitalProductsRouteImport.update({
   id: '/digital-products',
   path: '/digital-products',
@@ -429,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
@@ -495,6 +502,7 @@ export interface FileRoutesByTo {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
@@ -564,6 +572,7 @@ export interface FileRoutesById {
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
+  '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
@@ -634,6 +643,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/financeiro'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/nutritionist-wallet'
@@ -700,6 +710,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/financeiro'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/nutritionist-wallet'
@@ -768,6 +779,7 @@ export interface FileRouteTypes {
     | '/admin/coach-applications'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/financeiro'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/nutritionist-wallet'
@@ -1204,6 +1216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFreebiesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/financeiro': {
+      id: '/admin/financeiro'
+      path: '/financeiro'
+      fullPath: '/admin/financeiro'
+      preLoaderRoute: typeof AdminFinanceiroRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/digital-products': {
       id: '/admin/digital-products'
       path: '/digital-products'
@@ -1331,6 +1350,7 @@ interface AdminRouteChildren {
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
+  AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
@@ -1357,6 +1377,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
+  AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminFreebiesRoute: AdminFreebiesRoute,
   AdminLibraryRoute: AdminLibraryRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
