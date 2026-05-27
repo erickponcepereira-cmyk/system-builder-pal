@@ -229,7 +229,8 @@ function AdminFinanceiro() {
       )}
 
       <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} kind="coach" onPay={handlePayRecipient} />
-      <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} />
+      <RecipientsTable title="Rede (uplines) — saldos por destinatário" rows={data.network.recipients} kind="network" onPay={handlePayRecipient} />
+      <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} kind="system" onPay={handlePayRecipient} />
       <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} kind="nutritionist" onPay={handlePayRecipient} />
 
       <section className="rounded-2xl border border-white/5 p-5 mt-5" style={{ backgroundColor: "#1A1A1A" }}>
