@@ -249,7 +249,8 @@ export const saveProductFinancial = createServerFn({ method: "POST" })
       .update({
         points_per_sale: data.points_per_sale,
         points_auto_calculated: data.points_auto_calculated,
-      })
+        card_access_days: data.card_access_days,
+      } as never)
       .eq("id", data.productId);
     if (prodErr) throw new Error(prodErr.message);
 
