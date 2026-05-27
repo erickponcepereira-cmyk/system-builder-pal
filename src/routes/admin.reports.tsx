@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, CalendarCheck, Download, Loader2, ShoppingBag, Users } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { BarChart3, CalendarCheck, ChevronDown, ChevronRight, Download, Loader2, ShoppingBag, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { listDetailedSales, type DetailedSale } from "@/lib/admin-reports.functions";
 
 export const Route = createFileRoute("/admin/reports")({ component: AdminReports });
 
