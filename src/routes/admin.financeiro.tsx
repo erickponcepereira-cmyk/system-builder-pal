@@ -1,15 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight } from "lucide-react";
+import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   getAdminFinancialOverview,
   listPayoutHistory,
+  listBucketCommissions,
   type AdminFinancialOverview,
   type PayoutHistoryItem,
   type RecipientTotal,
+  type BucketKind,
+  type BucketCommissionRow,
 } from "@/lib/admin-financial.functions";
 
 export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
