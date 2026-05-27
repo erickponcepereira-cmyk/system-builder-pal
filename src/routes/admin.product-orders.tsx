@@ -235,7 +235,7 @@ function AdminProductOrdersPage() {
               <div className="space-y-1.5">
                 {editing.entries.map((e) => (
                   <div key={e.id} className="flex items-center justify-between text-xs">
-                    <span className="text-white">{e.product_name || e.slot_label || "—"}</span>
+                    <span className="text-white">{e.slot_label || e.product_name || "—"}</span>
                     <span className="text-white/70">{money(e.amount)}</span>
                   </div>
                 ))}
