@@ -189,6 +189,7 @@ export type SaveProductFinancialInput = {
   productId: string;
   points_per_sale: number;
   points_auto_calculated: boolean;
+  card_access_days: number;
   slots: Array<Omit<ValueSlot, "id"> & { id?: string }>;
   referralRule: {
     enabled: boolean;
