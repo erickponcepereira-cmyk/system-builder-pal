@@ -79,8 +79,12 @@ function AdminFinanceiro() {
     }
   };
 
-  const handlePayRecipient = async (profileId: string, kind: "coach" | "network" | "nutritionist", name: string) => {
-    if (!confirm(`Pagar saldo disponível de ${name}?`)) return;
+  const handlePayRecipient = async (
+    profileId: string,
+    kind: "coach" | "network" | "nutritionist" | "system",
+    name: string,
+  ) => {
+    if (!confirm(`Dar baixa do saldo disponível de ${name}?`)) return;
     try {
       const r = await callPayRecipient({ data: { profileId, kind } });
       if (r.amount > 0) toast.success(`Baixa de ${money(r.amount)} registrada`);
