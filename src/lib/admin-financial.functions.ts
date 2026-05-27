@@ -275,6 +275,55 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => d as { bucket: BucketKind; statuses?: Array<"pending" | "available" | "paid"> })
   .handler(async ({ context, data }): Promise<BucketCommissionRow[]> => {
     await assertAdmin(context.userId);
+
+    // Bucket "system" = carteira compartilhada do admin (admin_system_wallet)
+    if (data.bucket === "system") {
+      const { data: entries, error } = await supabaseAdmin
+        .from("admin_system_wallet_entries")
+        .select("id, transaction_id, slot_label, amount, kind, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw new Error(error.message);
+      const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
+      let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
+      if (txIds.length) {
+        const { data: txs } = await supabaseAdmin
+          .from("transactions")
+          .select("id, product_id, student_id")
+          .in("id", txIds);
+        const sIds = Array.from(new Set((txs || []).map((t: any) => t.student_id).filter(Boolean)));
+        const pIds = Array.from(new Set((txs || []).map((t: any) => t.product_id).filter(Boolean)));
+        const [{ data: students }, { data: products }] = await Promise.all([
+          sIds.length ? supabaseAdmin.from("students").select("id, profiles(name)").in("id", sIds) : Promise.resolve({ data: [] as any[] }),
+          pIds.length ? supabaseAdmin.from("products").select("id, name").in("id", pIds) : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const sMap = new Map<string, string>();
+        (students || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+        const pMap = new Map<string, string>();
+        (products || []).forEach((p: any) => pMap.set(p.id, p.name));
+        (txs || []).forEach((t: any) => txMap.set(t.id, {
+          studentName: t.student_id ? sMap.get(t.student_id) || null : null,
+          productName: t.product_id ? pMap.get(t.product_id) || null : null,
+        }));
+      }
+      return (entries || []).map((e: any) => {
+        const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
+        return {
+          commissionId: e.id,
+          transactionId: e.transaction_id,
+          beneficiaryName: "Carteira do Admin",
+          beneficiaryEmail: null,
+          clientName: tx?.studentName ?? null,
+          productName: tx?.productName ?? null,
+          slotLabel: e.slot_label,
+          level: 0,
+          amount: Number(e.amount || 0) * (e.kind === "debit" ? -1 : 1),
+          status: e.kind === "debit" ? "paid" : "available",
+          createdAt: e.created_at,
+        };
+      });
+    }
+
     const statuses = (data.statuses?.length ? data.statuses : ["pending", "available"]) as Array<"pending" | "available">;
 
     const { data: rows, error } = await supabaseAdmin
@@ -291,7 +340,6 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       const slot = String(c.slot_label || "").toLowerCase();
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
       const isNetwork = Number(c.level || 0) > 0;
-      if (data.bucket === "system") return isSystem;
       if (data.bucket === "network") return isNetwork && !isSystem;
       // coaches
       return !isSystem && !isNetwork;
@@ -344,6 +392,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       };
     });
   });
+
 
 // ---------------------------------------------------------------------------
 // Impostos e taxas de pagamento
