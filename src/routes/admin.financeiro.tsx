@@ -20,11 +20,17 @@ export const Route = createFileRoute("/admin/financeiro")({ component: AdminFina
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function AdminFinanceiro() {
+  const navigate = useNavigate();
   const fetchOverview = useServerFn(getAdminFinancialOverview);
   const fetchHistory = useServerFn(listPayoutHistory);
+  const fetchBucket = useServerFn(listBucketCommissions);
   const [data, setData] = useState<AdminFinancialOverview | null>(null);
   const [history, setHistory] = useState<PayoutHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal state for bucket drilldown
+  const [bucketOpen, setBucketOpen] = useState<{ kind: BucketKind; title: string } | null>(null);
+  const [bucketRows, setBucketRows] = useState<BucketCommissionRow[] | null>(null);
 
   useEffect(() => {
     Promise.all([fetchOverview(), fetchHistory()])
@@ -32,6 +38,20 @@ function AdminFinanceiro() {
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));
   }, []);
+
+  const openBucket = (kind: BucketKind, title: string) => {
+    // System bucket: por enquanto direciona ao relatório administrativo
+    // (carteira do admin ainda não existe).
+    if (kind === "system") {
+      navigate({ to: "/admin/reports" });
+      return;
+    }
+    setBucketOpen({ kind, title });
+    setBucketRows(null);
+    fetchBucket({ data: { bucket: kind } })
+      .then(setBucketRows)
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"));
+  };
 
   if (loading || !data) {
     return (
@@ -47,6 +67,7 @@ function AdminFinanceiro() {
         <h1 className="text-2xl font-bold text-white">Financeiro</h1>
         <p className="text-sm text-white/50">
           Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
+          Clique em um bucket para ver as vendas que originaram os valores.
         </p>
       </div>
 
@@ -59,6 +80,7 @@ function AdminFinanceiro() {
           available={data.coaches.available}
           paid={data.coaches.paid}
           accent="#E24B4A"
+          onClick={() => openBucket("coaches", "Coaches a pagar")}
         />
         <BucketCard
           title="Rede (uplines)"
@@ -68,6 +90,7 @@ function AdminFinanceiro() {
           available={data.network.available}
           paid={data.network.paid}
           accent="#F09595"
+          onClick={() => openBucket("network", "Rede (uplines) a pagar")}
         />
         <BucketCard
           title="Nutricionistas"
@@ -77,15 +100,17 @@ function AdminFinanceiro() {
           available={data.nutritionists.available}
           paid={data.nutritionists.paid}
           accent="#A78BFA"
+          onClick={() => navigate({ to: "/admin/nutritionist-wallet" })}
         />
         <BucketCard
           title="Sistema (Admin)"
-          subtitle="Taxas do sistema e fundo administrativo"
+          subtitle="Taxas do sistema — abre o relatório de vendas"
           icon={Shield}
           pending={data.system.pending}
           available={data.system.available}
           paid={data.system.paid}
           accent="#888780"
+          onClick={() => openBucket("system", "Sistema")}
         />
       </div>
 
