@@ -1989,7 +1989,7 @@ export type Database = {
           is_referral: boolean | null
           level: number
           master_coach_id: string | null
-          percentage: number
+          percentage: number | null
           referred_by_student_id: string | null
           slot_label: string | null
           status: Database["public"]["Enums"]["commission_status"] | null
@@ -2006,7 +2006,7 @@ export type Database = {
           is_referral?: boolean | null
           level: number
           master_coach_id?: string | null
-          percentage: number
+          percentage?: number | null
           referred_by_student_id?: string | null
           slot_label?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
@@ -2023,7 +2023,7 @@ export type Database = {
           is_referral?: boolean | null
           level?: number
           master_coach_id?: string | null
-          percentage?: number
+          percentage?: number | null
           referred_by_student_id?: string | null
           slot_label?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null

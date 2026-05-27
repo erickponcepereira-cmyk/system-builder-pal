@@ -40,6 +40,10 @@ export interface DetailedSale {
   commissions: SaleCommissionRow[];
   distributedTotal: number;
   surplusToSeller: number;
+  /** Canal: "store" (aluno comprou sozinho na loja) ou "coach" (coach vendeu / outro). */
+  saleChannel: "store" | "coach";
+  saleChannelLabel: string;
+  purchaseType: string | null;
 }
 
 async function assertAdmin(userId: string) {
@@ -70,7 +74,7 @@ export const listDetailedSales = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("transactions" as never)
       .select(
-        "id,created_at,paid_at,status,payment_method,installments,gross_amount,app_fee,payment_fee,tax_amount,net_amount,product_id,student_id" as never,
+        "id,created_at,paid_at,status,payment_method,installments,gross_amount,app_fee,payment_fee,tax_amount,net_amount,product_id,student_id,purchase_type" as never,
       )
       .order("created_at" as never, { ascending: false })
       .limit(data.limit);
@@ -269,6 +273,9 @@ export const listDetailedSales = createServerFn({ method: "POST" })
         commissions: commissionRows,
         distributedTotal,
         surplusToSeller: surplus,
+        saleChannel: t.purchase_type === "store_order" ? "store" : "coach",
+        saleChannelLabel: t.purchase_type === "store_order" ? "Loja (auto)" : "Coach (venda direta)",
+        purchaseType: (t.purchase_type as string | null) ?? null,
       };
     });
   });
