@@ -40,6 +40,10 @@ export interface DetailedSale {
   commissions: SaleCommissionRow[];
   distributedTotal: number;
   surplusToSeller: number;
+  /** Canal: "store" (aluno comprou sozinho na loja) ou "coach" (coach vendeu / outro). */
+  saleChannel: "store" | "coach";
+  saleChannelLabel: string;
+  purchaseType: string | null;
 }
 
 async function assertAdmin(userId: string) {
