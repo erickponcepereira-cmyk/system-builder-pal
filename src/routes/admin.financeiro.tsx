@@ -93,21 +93,6 @@ function AdminFinanceiro() {
   };
 
 
-
-  const openBucket = (kind: BucketKind, title: string) => {
-    // System bucket: por enquanto direciona ao relatório administrativo
-    // (carteira do admin ainda não existe).
-    if (kind === "system") {
-      navigate({ to: "/admin/reports" });
-      return;
-    }
-    setBucketOpen({ kind, title });
-    setBucketRows(null);
-    fetchBucket({ data: { bucket: kind } })
-      .then(setBucketRows)
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"));
-  };
-
   if (loading || !data) {
     return (
       <div className="flex items-center justify-center py-24">
