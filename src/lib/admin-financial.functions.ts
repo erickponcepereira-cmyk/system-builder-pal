@@ -40,7 +40,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     // Commissions grouped by beneficiary
     const { data: commissions, error: cErr } = await supabaseAdmin
       .from("commissions")
-      .select("amount, status, slot_label, level, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
+      .select("amount, status, slot_label, level, beneficiary_profile_id, beneficiary_coach_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
     if (cErr) throw new Error(cErr.message);
 
     const coachesMap = new Map<string, RecipientTotal>();
@@ -55,16 +55,21 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       const status = String((c as any).status || "pending");
       const level = Number((c as any).level || 0);
       const slotLabel = String((c as any).slot_label || "").toLowerCase();
+      const benefCoachId = (c as any).beneficiary_coach_id as string | null;
 
-      // Network (level 1/2/3) também conta como coach payouts; mantemos métrica separada
+      // Network (level 1/2/3)
       if (level > 0) {
         if (status === "pending") networkPending += amt;
         else if (status === "available") networkAvailable += amt;
         else if (status === "paid") networkPaid += amt;
       }
 
-      // Classifica destinatário: admin/system vs coach
-      const isSystem = prof?.role === "admin" || slotLabel.includes("sistema") || slotLabel.includes("admin");
+      // Classifica APENAS pelo slot/contexto da comissão (nunca pelo role do usuário).
+      // Um admin pode atuar como coach e suas comissões de venda vão para "Coaches".
+      const isSystem =
+        slotLabel.includes("sistema") ||
+        slotLabel.includes("admin") ||
+        (!benefCoachId && !slotLabel);
       const target = isSystem ? systemMap : coachesMap;
       const cur = target.get(pid) || {
         profileId: pid,
