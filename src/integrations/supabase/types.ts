@@ -6361,6 +6361,14 @@ export type Database = {
         Args: { _product_id: string }
         Returns: undefined
       }
+      recalc_student_wallet_for_referral: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
+      recalc_wallet_for_profile: {
+        Args: { _profile_id: string }
+        Returns: undefined
+      }
       redeem_freebie: { Args: { _freebie_id: string }; Returns: string }
       refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
