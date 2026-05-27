@@ -247,7 +247,7 @@ function ProductFinancialDrawer({
 
             {/* Produto e impostos */}
             <SectionLabel>Produto e impostos</SectionLabel>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mb-6">
               <Field label="Nome do produto"><InputBox value={data.product.name} disabled /></Field>
               <Field label="Valor bruto (R$)">
                 <InputBox type="number" value={data.product.price} step="0.01" min="0"
@@ -257,7 +257,15 @@ function ProductFinancialDrawer({
                 <InputBox type="number" value={taxPct} step="0.01" min="0" max="100"
                   onChange={(v: string) => setTaxPct(Number(v) || 0)} />
               </Field>
+              <Field label="Validade da carteirinha (dias)">
+                <InputBox type="number" value={data.product.card_access_days} step="1" min="0"
+                  onChange={(v: string) => setData({ ...data, product: { ...data.product, card_access_days: Math.max(0, Math.floor(Number(v) || 0)) } })} />
+              </Field>
             </div>
+            <p className="-mt-4 mb-6 text-[11px] text-white/40">
+              Quando o aluno comprar este produto, o QR code da carteirinha fica ativo por esta quantidade de dias. <code>0</code> = não estende a carteirinha.
+            </p>
+
 
             {/* Forma de pagamento */}
             <SectionLabel>Forma de pagamento</SectionLabel>
