@@ -45,8 +45,8 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
 
     const coachesMap = new Map<string, RecipientTotal>();
     const networkMap = new Map<string, RecipientTotal>();
-    const systemMap = new Map<string, RecipientTotal>();
     let networkPending = 0, networkAvailable = 0, networkPaid = 0;
+
 
     for (const c of commissions || []) {
       const pid = (c as any).beneficiary_profile_id as string | null;
@@ -78,13 +78,16 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         networkMap.set(pid, cur);
       }
 
-      // Classifica APENAS pelo slot/contexto da comissão (nunca pelo role do usuário).
-      // Um admin pode atuar como coach e suas comissões de venda vão para "Coaches".
+      // Network já tratado acima. Comissões de "sistema" agora vão para
+      // a carteira compartilhada admin_system_wallet (tratada abaixo) e
+      // não devem aparecer mais aqui — caso restem registros antigos,
+      // são ignorados pelo bucket "system".
       const isSystem =
         slotLabel.includes("sistema") ||
         slotLabel.includes("admin") ||
         (!benefCoachId && !slotLabel);
-      const target = isSystem ? systemMap : level > 0 ? null : coachesMap;
+      if (isSystem) continue;
+      const target = level > 0 ? null : coachesMap;
       if (!target) continue;
       const cur = target.get(pid) || {
         profileId: pid,
@@ -100,6 +103,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       target.set(pid, cur);
     }
 
+
     const sumGroup = (rs: RecipientTotal[]) => ({
       pending: rs.reduce((s, r) => s + r.pending, 0),
       available: rs.reduce((s, r) => s + r.available, 0),
@@ -109,10 +113,35 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
 
     const coachesList = Array.from(coachesMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
     const networkList = Array.from(networkMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
-    const systemList = Array.from(systemMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
     const coachesAgg = sumGroup(coachesList);
     const networkAgg = sumGroup(networkList);
-    const systemAgg = sumGroup(systemList);
+
+    // Carteira compartilhada do admin (taxas de sistema). Administrada pelos master admins.
+    const { data: adminWallet } = await supabaseAdmin
+      .from("admin_system_wallet")
+      .select("available_balance, total_earned, total_withdrawn")
+      .eq("id", true)
+      .maybeSingle();
+    const { data: masterAdmins } = await supabaseAdmin
+      .from("profiles")
+      .select("id, name, email, role")
+      .eq("role", "admin")
+      .eq("is_master_admin", true);
+    const sysAvailable = Number(adminWallet?.available_balance || 0);
+    const sysPaid = Number(adminWallet?.total_withdrawn || 0);
+    const sysTotal = Number(adminWallet?.total_earned || 0) + sysPaid;
+    const systemList: RecipientTotal[] = (masterAdmins || []).map((p: any) => ({
+      profileId: p.id,
+      name: p.name || "—",
+      email: p.email || null,
+      role: p.role || "admin",
+      pending: 0,
+      available: sysAvailable,
+      paid: sysPaid,
+      total: sysTotal,
+    }));
+    const systemAgg = { pending: 0, available: sysAvailable, paid: sysPaid, total: sysTotal };
+
 
     // Nutricionistas: não usa join embutido aqui porque a carteira pode não
     // ter FK exposta no Data API; busca perfis separadamente para não zerar o bucket.
@@ -246,6 +275,55 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => d as { bucket: BucketKind; statuses?: Array<"pending" | "available" | "paid"> })
   .handler(async ({ context, data }): Promise<BucketCommissionRow[]> => {
     await assertAdmin(context.userId);
+
+    // Bucket "system" = carteira compartilhada do admin (admin_system_wallet)
+    if (data.bucket === "system") {
+      const { data: entries, error } = await supabaseAdmin
+        .from("admin_system_wallet_entries")
+        .select("id, transaction_id, slot_label, amount, kind, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw new Error(error.message);
+      const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
+      let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
+      if (txIds.length) {
+        const { data: txs } = await supabaseAdmin
+          .from("transactions")
+          .select("id, product_id, student_id")
+          .in("id", txIds);
+        const sIds = Array.from(new Set((txs || []).map((t: any) => t.student_id).filter(Boolean)));
+        const pIds = Array.from(new Set((txs || []).map((t: any) => t.product_id).filter(Boolean)));
+        const [{ data: students }, { data: products }] = await Promise.all([
+          sIds.length ? supabaseAdmin.from("students").select("id, profiles(name)").in("id", sIds) : Promise.resolve({ data: [] as any[] }),
+          pIds.length ? supabaseAdmin.from("products").select("id, name").in("id", pIds) : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const sMap = new Map<string, string>();
+        (students || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+        const pMap = new Map<string, string>();
+        (products || []).forEach((p: any) => pMap.set(p.id, p.name));
+        (txs || []).forEach((t: any) => txMap.set(t.id, {
+          studentName: t.student_id ? sMap.get(t.student_id) || null : null,
+          productName: t.product_id ? pMap.get(t.product_id) || null : null,
+        }));
+      }
+      return (entries || []).map((e: any) => {
+        const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
+        return {
+          commissionId: e.id,
+          transactionId: e.transaction_id,
+          beneficiaryName: "Carteira do Admin",
+          beneficiaryEmail: null,
+          clientName: tx?.studentName ?? null,
+          productName: tx?.productName ?? null,
+          slotLabel: e.slot_label,
+          level: 0,
+          amount: Number(e.amount || 0) * (e.kind === "debit" ? -1 : 1),
+          status: e.kind === "debit" ? "paid" : "available",
+          createdAt: e.created_at,
+        };
+      });
+    }
+
     const statuses = (data.statuses?.length ? data.statuses : ["pending", "available"]) as Array<"pending" | "available">;
 
     const { data: rows, error } = await supabaseAdmin
@@ -262,7 +340,6 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       const slot = String(c.slot_label || "").toLowerCase();
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
       const isNetwork = Number(c.level || 0) > 0;
-      if (data.bucket === "system") return isSystem;
       if (data.bucket === "network") return isNetwork && !isSystem;
       // coaches
       return !isSystem && !isNetwork;
@@ -315,6 +392,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       };
     });
   });
+
 
 // ---------------------------------------------------------------------------
 // Impostos e taxas de pagamento
