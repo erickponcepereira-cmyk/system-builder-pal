@@ -74,7 +74,7 @@ export const listDetailedSales = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("transactions" as never)
       .select(
-        "id,created_at,paid_at,status,payment_method,installments,gross_amount,app_fee,payment_fee,tax_amount,net_amount,product_id,student_id" as never,
+        "id,created_at,paid_at,status,payment_method,installments,gross_amount,app_fee,payment_fee,tax_amount,net_amount,product_id,student_id,purchase_type" as never,
       )
       .order("created_at" as never, { ascending: false })
       .limit(data.limit);
