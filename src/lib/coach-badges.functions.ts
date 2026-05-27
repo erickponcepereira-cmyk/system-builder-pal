@@ -28,7 +28,7 @@ export const listCoachesWithBadges = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data: coaches } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, profiles!coaches_profile_id_fkey(full_name, email)")
+      .select("id, profile_id, profiles!coaches_profile_id_fkey(name, email)")
       .order("created_at", { ascending: false })
       .limit(500);
     const { data: badges } = await supabaseAdmin
@@ -40,7 +40,7 @@ export const listCoachesWithBadges = createServerFn({ method: "GET" })
     });
     return (coaches ?? []).map((c: any) => ({
       id: c.id,
-      name: c.profiles?.full_name ?? "—",
+      name: c.profiles?.name ?? "—",
       email: c.profiles?.email ?? "",
       badges: byCoach[c.id] ?? [],
     }));

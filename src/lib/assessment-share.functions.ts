@@ -14,6 +14,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export interface PublicShareData {
   token: string;
   clientName: string;
+  clientPhone: string | null;
   createdAt: string;
   viewCount: number;
   method: string;
