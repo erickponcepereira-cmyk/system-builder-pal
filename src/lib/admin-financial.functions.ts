@@ -62,7 +62,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       if (level > 0) {
         if (status === "pending") networkPending += amt;
         else if (status === "available") networkAvailable += amt;
-        else if (status === "paid") networkPaid += amt;
+        else if (status === "paid" || status === "withdrawn") networkPaid += amt;
 
         const cur = networkMap.get(pid) || {
           profileId: pid,
@@ -73,7 +73,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         };
         if (status === "pending") cur.pending += amt;
         else if (status === "available") cur.available += amt;
-        else if (status === "paid") cur.paid += amt;
+        else if (status === "paid" || status === "withdrawn") cur.paid += amt;
         cur.total = cur.pending + cur.available + cur.paid;
         networkMap.set(pid, cur);
       }
@@ -95,7 +95,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       };
       if (status === "pending") cur.pending += amt;
       else if (status === "available") cur.available += amt;
-      else if (status === "paid") cur.paid += amt;
+      else if (status === "paid" || status === "withdrawn") cur.paid += amt;
       cur.total = cur.pending + cur.available + cur.paid;
       target.set(pid, cur);
     }
