@@ -154,7 +154,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
 
 export interface PayoutHistoryItem {
   id: string;
-  kind: "coach" | "student" | "nutritionist";
+  kind: "coach" | "student" | "nutritionist" | "system";
   profileId: string;
   name: string;
   email: string | null;
@@ -232,7 +232,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => d as { bucket: BucketKind; statuses?: Array<"pending" | "available" | "paid"> })
   .handler(async ({ context, data }): Promise<BucketCommissionRow[]> => {
     await assertAdmin(context.userId);
-    const statuses = data.statuses?.length ? data.statuses : ["pending", "available"];
+    const statuses = (data.statuses?.length ? data.statuses : ["pending", "available"]) as Array<"pending" | "available">;
 
     const { data: rows, error } = await supabaseAdmin
       .from("commissions")
@@ -251,7 +251,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       if (data.bucket === "system") return isSystem;
       if (data.bucket === "network") return isNetwork && !isSystem;
       // coaches
-      return !isSystem;
+      return !isSystem && !isNetwork;
     });
 
     // Resolve transactions → student + product names
@@ -482,7 +482,7 @@ export const payRecipientAvailable = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
 
     if (data.kind === "nutritionist") {
-      const { data: out, error } = await supabaseAdmin.rpc("pay_nutritionist_available", {
+      const { data: out, error } = await context.supabase.rpc("pay_nutritionist_available", {
         _profile_id: data.profileId,
         _notes: data.notes ?? undefined,
       });
@@ -490,7 +490,7 @@ export const payRecipientAvailable = createServerFn({ method: "POST" })
       return { ok: true, amount: Number(out || 0) };
     }
 
-    const { data: out, error } = await supabaseAdmin.rpc("pay_coach_available", {
+    const { data: out, error } = await context.supabase.rpc("pay_coach_available", {
       _profile_id: data.profileId,
       _kind: data.kind,
       _notes: data.notes ?? undefined,
