@@ -22,6 +22,7 @@ type CardData = {
   coachName: string | null;
   since: string | null;
   avatarUrl: string | null;
+  validUntil: string | null;
 };
 
 type ScanEntry = {
