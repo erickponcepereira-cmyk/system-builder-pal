@@ -1,0 +1,257 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
+import {
+  getAdminFinancialOverview,
+  listPayoutHistory,
+  type AdminFinancialOverview,
+  type PayoutHistoryItem,
+  type RecipientTotal,
+} from "@/lib/admin-financial.functions";
+
+export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
+
+const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function AdminFinanceiro() {
+  const fetchOverview = useServerFn(getAdminFinancialOverview);
+  const fetchHistory = useServerFn(listPayoutHistory);
+  const [data, setData] = useState<AdminFinancialOverview | null>(null);
+  const [history, setHistory] = useState<PayoutHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchOverview(), fetchHistory()])
+      .then(([ov, hi]) => { setData(ov); setHistory(hi); })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Financeiro</h1>
+        <p className="text-sm text-white/50">
+          Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
+        </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4 mb-6">
+        <BucketCard
+          title="Coaches a pagar"
+          subtitle="Comissões diretas dos vendedores"
+          icon={Wallet}
+          pending={data.coaches.pending}
+          available={data.coaches.available}
+          paid={data.coaches.paid}
+          accent="#E24B4A"
+        />
+        <BucketCard
+          title="Rede (uplines)"
+          subtitle="Comissões de níveis 1/2/3 — pagas como coach"
+          icon={Network}
+          pending={data.network.pending}
+          available={data.network.available}
+          paid={data.network.paid}
+          accent="#F09595"
+        />
+        <BucketCard
+          title="Nutricionistas"
+          subtitle="Saldo bloqueado/liberado dos nutris"
+          icon={Stethoscope}
+          pending={data.nutritionists.pending}
+          available={data.nutritionists.available}
+          paid={data.nutritionists.paid}
+          accent="#A78BFA"
+        />
+        <BucketCard
+          title="Sistema (Admin)"
+          subtitle="Taxas do sistema e fundo administrativo"
+          icon={Shield}
+          pending={data.system.pending}
+          available={data.system.available}
+          paid={data.system.paid}
+          accent="#888780"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2 mb-6">
+        <section className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-bold text-white">Custos de produtos (pool)</h2>
+            <Package className="h-5 w-5 text-primary" />
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+            <Stat label="Pendente" value={money(data.productCosts.pending)} />
+            <Stat label="Em preparo" value={money(data.productCosts.preparing)} />
+            <Stat label="Enviado" value={money(data.productCosts.shipped)} />
+            <Stat label="Entregue" value={money(data.productCosts.delivered)} />
+            <Stat label="Cancelado" value={money(data.productCosts.cancelled)} />
+            <Stat label="Total" value={money(data.productCosts.total)} highlight />
+          </div>
+          <Link to="/admin/product-orders" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">
+            Abrir painel de pedidos <ArrowRight className="h-3 w-3" />
+          </Link>
+        </section>
+
+        <section className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-bold text-white">Atalhos de pagamento</h2>
+          </div>
+          <div className="space-y-2 text-sm">
+            <ShortcutLink to="/admin/payments" label="Solicitações de saque (coaches + alunos)" />
+            <ShortcutLink to="/admin/nutritionist-wallet" label="Carteira do nutricionista" />
+            <ShortcutLink to="/admin/product-orders" label="Painel de pedidos / custos" />
+          </div>
+        </section>
+      </div>
+
+      <RecipientsTable title="Coaches — saldos por destinatário" rows={data.coaches.recipients} />
+      <RecipientsTable title="Sistema (Admin) — taxas acumuladas" rows={data.system.recipients} />
+      <RecipientsTable title="Nutricionistas — saldos por destinatário" rows={data.nutritionists.recipients} />
+
+      <section className="rounded-2xl border border-white/5 p-5 mt-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <h2 className="mb-3 font-bold text-white">Histórico de pagamentos</h2>
+        {history.length === 0 ? (
+          <p className="text-sm text-white/40">Nenhum pagamento registrado.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase text-white/40">
+                <tr>
+                  <th className="px-2 py-1 text-left">Data</th>
+                  <th className="px-2 py-1 text-left">Tipo</th>
+                  <th className="px-2 py-1 text-left">Destinatário</th>
+                  <th className="px-2 py-1 text-right">Valor</th>
+                  <th className="px-2 py-1 text-left">Status</th>
+                  <th className="px-2 py-1 text-left">Pago em</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.slice(0, 100).map((h) => (
+                  <tr key={`${h.kind}-${h.id}`} className="border-t border-white/5">
+                    <td className="px-2 py-1.5 text-white/70">{h.requestedAt ? new Date(h.requestedAt).toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="px-2 py-1.5 text-white/60">{h.kind === "coach" ? "Coach" : h.kind === "student" ? "Aluno" : "Nutri"}</td>
+                    <td className="px-2 py-1.5 text-white">{h.name}<span className="text-white/30 ml-1">{h.email}</span></td>
+                    <td className="px-2 py-1.5 text-right font-bold text-primary">{money(h.amount)}</td>
+                    <td className="px-2 py-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        h.status === "paid" ? "bg-emerald-500/15 text-emerald-300" :
+                        h.status === "rejected" ? "bg-red-500/15 text-red-300" :
+                        h.status === "approved" || h.status === "processing" ? "bg-sky-500/15 text-sky-300" :
+                        "bg-amber-500/15 text-amber-300"
+                      }`}>{h.status}</span>
+                    </td>
+                    <td className="px-2 py-1.5 text-white/50">{h.paidAt ? new Date(h.paidAt).toLocaleDateString("pt-BR") : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Link to="/admin/payments" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">
+          Gerenciar solicitações de saque <ArrowRight className="h-3 w-3" />
+        </Link>
+      </section>
+    </>
+  );
+}
+
+function BucketCard({
+  title, subtitle, icon: Icon, pending, available, paid, accent,
+}: { title: string; subtitle: string; icon: typeof Wallet; pending: number; available: number; paid: number; accent: string }) {
+  const aPagar = pending + available;
+  return (
+    <div className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase text-white/50">{title}</p>
+          <p className="text-[10px] text-white/40">{subtitle}</p>
+        </div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}22`, color: accent }}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="text-2xl font-bold" style={{ color: accent }}>{money(aPagar)}</p>
+      <p className="text-[10px] text-white/40 mb-3">Total a pagar (pendente + disponível)</p>
+      <div className="grid grid-cols-3 gap-1 text-[10px]">
+        <Mini label="Pendente" value={money(pending)} />
+        <Mini label="Disponível" value={money(available)} />
+        <Mini label="Pago" value={money(paid)} />
+      </div>
+    </div>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-white/5 px-2 py-1.5">
+      <p className="text-white/40">{label}</p>
+      <p className="font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-lg p-3 ${highlight ? "bg-primary/15" : "bg-white/5"}`}>
+      <p className="text-[10px] text-white/40">{label}</p>
+      <p className={`text-sm font-bold ${highlight ? "text-primary" : "text-white"}`}>{value}</p>
+    </div>
+  );
+}
+
+function ShortcutLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link to={to} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2.5 text-white/80 hover:bg-white/10">
+      <span>{label}</span>
+      <ArrowRight className="h-4 w-4" />
+    </Link>
+  );
+}
+
+function RecipientsTable({ title, rows }: { title: string; rows: RecipientTotal[] }) {
+  if (!rows.length) return null;
+  return (
+    <section className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
+      <h2 className="mb-3 font-bold text-white">{title}</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="text-[10px] uppercase text-white/40">
+            <tr>
+              <th className="px-2 py-1 text-left">Beneficiário</th>
+              <th className="px-2 py-1 text-right">Pendente</th>
+              <th className="px-2 py-1 text-right">Disponível</th>
+              <th className="px-2 py-1 text-right">Pago</th>
+              <th className="px-2 py-1 text-right">Acumulado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.profileId} className="border-t border-white/5">
+                <td className="px-2 py-1.5 text-white">
+                  {r.name} <span className="text-white/30">{r.email}</span>
+                </td>
+                <td className="px-2 py-1.5 text-right text-amber-300">{money(r.pending)}</td>
+                <td className="px-2 py-1.5 text-right text-sky-300">{money(r.available)}</td>
+                <td className="px-2 py-1.5 text-right text-emerald-300">{money(r.paid)}</td>
+                <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
