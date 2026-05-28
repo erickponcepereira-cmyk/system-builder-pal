@@ -91,6 +91,16 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
+
+    // Produtos de parceiros (profissionais) — apenas aprovados e ativos
+    const { data: partnerRows } = await supabase
+      .from("professional_products" as never)
+      .select(
+        "id,name,description,image_url,price,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+      )
+      .eq("status" as never, "approved" as never)
+      .eq("is_active_by_professional" as never, true as never)
+      .order("created_at" as never, { ascending: false });
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
     const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
