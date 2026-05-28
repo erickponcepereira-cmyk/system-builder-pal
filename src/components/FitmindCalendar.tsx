@@ -324,13 +324,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         {loading ? (
           <div className="py-16 text-center text-sm text-white/40">Carregando eventos...</div>
         ) : (
-          <div className="grid grid-cols-7">
             {gridDays.map((day, i) => {
               if (!day) return <div key={`empty-${i}`} className="h-20 sm:h-24 border-b border-r border-white/5 bg-black/20" />;
 
-              const dateKey     = day.toISOString().slice(0, 10);
-              const isToday     = dateKey === today.toISOString().slice(0, 10);
-              const isSelected  = dateKey === selectedDateKey;
+              const dateKey     = ymdKey(year, month, day);
+              const isToday     = dateKey === todayKey;
+              const isSelected  = dateKey === selectedDayKey;
               const dayEvents   = eventsByDate.get(dateKey) || [];
               const dayHighlight= highlightByDate.get(dateKey);
               const hasImportant= dayEvents.some((ev) => ev.is_important);
@@ -338,7 +337,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
               return (
                 <button
                   key={dateKey}
-                  onClick={() => setSelectedDay(isSelected ? null : day)}
+                  onClick={() => setSelectedDayKey(isSelected ? null : dateKey)}
                   className={`relative h-20 sm:h-24 p-1 sm:p-2 text-left border-b border-r border-white/5 transition hover:bg-white/5 ${
                     isSelected ? "bg-primary/10 ring-1 ring-inset ring-primary/30" : ""
                   }`}
@@ -352,8 +351,9 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
                         ? "bg-primary/30 text-primary"
                         : "text-white/70"
                   }`}>
-                    {day.getDate()}
+                    {day}
                   </div>
+
 
                   {/* Badge "Importante" */}
                   {hasImportant && (
