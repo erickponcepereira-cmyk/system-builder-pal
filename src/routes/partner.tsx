@@ -361,11 +361,65 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; onChange: (patch: Partial<Product>) => void }) {
   const mode = (product.price_input_mode || "charge") as PartnerPriceMode;
   const pct = (product.coach_commission_percentage || 10) as CoachCommissionPct;
-  const charge = product.price || 0;
-  const receive = product.partner_net_amount || 0;
+  const [method, setMethod] = useState<"pix" | "card">("card");
+
+  const [chargeStr, setChargeStr] = useState<string>(() => String(product.price ?? ""));
+  const [receiveStr, setReceiveStr] = useState<string>(() => String(product.partner_net_amount ?? ""));
+
+  useEffect(() => {
+    setChargeStr(product.price != null ? String(product.price) : "");
+    setReceiveStr(product.partner_net_amount != null ? String(product.partner_net_amount) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
+  const charge = Number(chargeStr.replace(",", ".")) || 0;
+  const receive = Number(receiveStr.replace(",", ".")) || 0;
+
   const breakdown = mode === "receive"
-    ? computeFromReceive(receive, pct)
-    : computeFromCharge(charge, pct);
+    ? computeFromReceive(receive, pct, method)
+    : computeFromCharge(charge, pct, method);
+
+  const updateCharge = (v: string) => {
+    setChargeStr(v);
+    const n = Number(v.replace(",", ".")) || 0;
+    onChange({ price: n });
+  };
+  const updateReceive = (v: string) => {
+    setReceiveStr(v);
+    const n = Number(v.replace(",", ".")) || 0;
+    const inv = computeFromReceive(n, pct, method);
+    onChange({ partner_net_amount: n, price: inv.gross });
+  };
+
+  const switchMode = (next: PartnerPriceMode) => {
+    if (next === "receive") {
+      const b = computeFromCharge(charge, pct, method);
+      setReceiveStr(b.partnerNet > 0 ? String(b.partnerNet) : "");
+      onChange({ price_input_mode: next, partner_net_amount: Math.max(0, b.partnerNet) });
+    } else {
+      setChargeStr(breakdown.gross > 0 ? String(breakdown.gross) : "");
+      onChange({ price_input_mode: next, price: breakdown.gross });
+    }
+  };
+
+  const changePct = (next: CoachCommissionPct) => {
+    if (mode === "receive") {
+      const inv = computeFromReceive(receive, next, method);
+      setChargeStr(inv.gross > 0 ? String(inv.gross) : "");
+      onChange({ coach_commission_percentage: next, price: inv.gross });
+    } else {
+      onChange({ coach_commission_percentage: next });
+    }
+  };
+
+  const changeMethod = (m: "pix" | "card") => {
+    setMethod(m);
+    if (mode === "receive") {
+      const inv = computeFromReceive(receive, pct, m);
+      setChargeStr(inv.gross > 0 ? String(inv.gross) : "");
+      onChange({ price: inv.gross });
+    }
+  };
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
@@ -373,38 +427,60 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
         <DollarSign className="h-3.5 w-3.5" /> Financeiro do produto
       </div>
 
-      {/* Tabs Cobrar / Receber */}
       <div className="flex rounded-lg bg-black/40 p-0.5">
-        <button type="button" onClick={() => onChange({ price_input_mode: "charge" })} className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${mode === "charge" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>Quanto cobrar</button>
-        <button type="button" onClick={() => onChange({ price_input_mode: "receive" })} className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${mode === "receive" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>Quanto receber</button>
+        <button type="button" onClick={() => switchMode("charge")}
+          className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${mode === "charge" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+          Quanto cobrar
+        </button>
+        <button type="button" onClick={() => switchMode("receive")}
+          className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${mode === "receive" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+          Quanto receber
+        </button>
       </div>
 
       {mode === "charge" ? (
         <Field label="Preço cobrado do cliente (R$)">
-          <input type="number" step="0.01" min="0" value={charge} onChange={e => onChange({ price: Number(e.target.value) })} className="field-input" />
+          <input type="text" inputMode="decimal" value={chargeStr} onChange={e => updateCharge(e.target.value)} placeholder="0,00" className="field-input" />
         </Field>
       ) : (
         <Field label="Quanto você quer receber líquido (R$)">
-          <input type="number" step="0.01" min="0" value={receive} onChange={e => onChange({ partner_net_amount: Number(e.target.value) })} className="field-input" />
+          <input type="text" inputMode="decimal" value={receiveStr} onChange={e => updateReceive(e.target.value)} placeholder="0,00" className="field-input" />
+          <p className="mt-1 text-[10px] text-white/40">Vamos calcular automaticamente quanto cobrar do cliente.</p>
         </Field>
       )}
 
-      {/* Comissão coach */}
       <div>
-        <label className="text-xs text-white/60">Comissão para o coach vendedor</label>
-        <div className="mt-1 grid grid-cols-3 gap-1.5">
-          {COACH_COMMISSION_OPTIONS.map(opt => (
-            <button key={opt} type="button" onClick={() => onChange({ coach_commission_percentage: opt })} className={`rounded-lg py-1.5 text-xs font-bold transition ${pct === opt ? "bg-primary text-primary-foreground" : "bg-black/40 text-white/60 hover:text-white"}`}>{opt}%</button>
-          ))}
+        <label className="text-xs text-white/60">Forma de pagamento simulada</label>
+        <div className="mt-1 flex rounded-lg bg-black/40 p-0.5">
+          <button type="button" onClick={() => changeMethod("pix")}
+            className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${method === "pix" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+            PIX 0,99%
+          </button>
+          <button type="button" onClick={() => changeMethod("card")}
+            className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${method === "card" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+            Cartão 4,98%
+          </button>
         </div>
       </div>
 
-      {/* Breakdown */}
+      <div>
+        <label className="text-xs text-white/60">Comissão para o coach vendedor (10% a 50%)</label>
+        <div className="mt-1 grid grid-cols-5 gap-1.5">
+          {COACH_COMMISSION_OPTIONS.map(opt => (
+            <button key={opt} type="button" onClick={() => changePct(opt)}
+              className={`rounded-lg py-1.5 text-xs font-bold transition ${pct === opt ? "bg-primary text-primary-foreground" : "bg-black/40 text-white/60 hover:text-white"}`}>
+              {opt}%
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-[10px] text-white/40">Essa % é o que vai para o coach que vender o produto. O restante (após taxas) fica com você.</p>
+      </div>
+
       <div className="rounded-lg bg-black/40 p-2.5 text-[11px] space-y-1">
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
-        <BreakdownLine label="− Taxa cartão (4,98%)*" value={-breakdown.paymentFee} muted />
+        <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
         <BreakdownLine label="− Imposto (6%)" value={-breakdown.tax} muted />
-        <BreakdownLine label="− Taxa do sistema" value={-breakdown.systemFee} muted />
+        <BreakdownLine label="− Taxa do sistema (R$ 20)" value={-breakdown.systemFee} muted />
         <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
         <div className="my-1 border-t border-white/10" />
         <BreakdownLine label="✓ Líquido para você" value={breakdown.partnerNet} highlight />
@@ -415,7 +491,6 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
           <BreakdownLine label="Rede L2 (2%)" value={breakdown.networkL2} muted />
           <BreakdownLine label="Rede L3 (1%)" value={breakdown.networkL3} muted />
         </div>
-        <p className="mt-2 text-[10px] text-white/40">* Considerado pior cenário (cartão). PIX cobra 0,99%.</p>
       </div>
     </div>
   );
@@ -429,6 +504,7 @@ function BreakdownLine({ label, value, bold, muted, highlight }: { label: string
     </div>
   );
 }
+
 
 
 function statusColor(s: string) {
