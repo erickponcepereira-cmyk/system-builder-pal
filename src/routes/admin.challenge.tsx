@@ -373,21 +373,37 @@ export default function AdminChallengePage() {
                                 </span>
                               </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.initial_weight ? `${enroll.initial_weight} kg` : (
-                                  <button onClick={() => setWeightModal({ enrollId: enroll.id, type: "initial", studentName: (enroll.student as any)?.profile?.name })}
+                                {enroll.initial_weight != null ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>{enroll.initial_weight} kg</span>
+                                    <button title="Editar" onClick={() => { setWeightValue(String(enroll.initial_weight)); setWeightDate(enroll.initial_date || new Date().toISOString().slice(0,10)); setWeightModal({ enrollId: enroll.id, type: "initial", studentName: (enroll.student as any)?.profile?.name }); }}
+                                      className="text-xs text-blue-400 hover:underline">✎</button>
+                                    <button title="Excluir" onClick={() => deleteWeighing(enroll.id, "initial")}
+                                      className="text-xs text-red-400 hover:underline">✕</button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => { setWeightValue(""); setWeightDate(new Date().toISOString().slice(0,10)); setWeightModal({ enrollId: enroll.id, type: "initial", studentName: (enroll.student as any)?.profile?.name }); }}
                                     className="text-primary underline">Registrar</button>
                                 )}
                               </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.final_weight ? `${enroll.final_weight} kg` : enroll.initial_weight ? (
-                                  <button onClick={() => setWeightModal({ enrollId: enroll.id, type: "final", studentName: (enroll.student as any)?.profile?.name })}
+                                {enroll.final_weight != null ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>{enroll.final_weight} kg</span>
+                                    <button title="Editar" onClick={() => { setWeightValue(String(enroll.final_weight)); setWeightModal({ enrollId: enroll.id, type: "final", studentName: (enroll.student as any)?.profile?.name }); }}
+                                      className="text-xs text-blue-400 hover:underline">✎</button>
+                                    <button title="Excluir" onClick={() => deleteWeighing(enroll.id, "final")}
+                                      className="text-xs text-red-400 hover:underline">✕</button>
+                                  </div>
+                                ) : enroll.initial_weight != null ? (
+                                  <button onClick={() => { setWeightValue(""); setWeightModal({ enrollId: enroll.id, type: "final", studentName: (enroll.student as any)?.profile?.name }); }}
                                     className="text-primary underline">Registrar</button>
                                 ) : "—"}
                               </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.result_pct != null ? (
-                                  <span className="font-bold text-green-400">
-                                    -{enroll.result_kg} kg ({enroll.result_pct}%)
+                                {enroll.result_kg != null ? (
+                                  <span className={`font-bold ${enroll.result_kg > 0 ? "text-green-400" : enroll.result_kg < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                                    {enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_kg)} kg ({enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_pct || 0)}%)
                                   </span>
                                 ) : "—"}
                               </td>
@@ -399,6 +415,7 @@ export default function AdminChallengePage() {
                                   </button>
                                 )}
                               </td>
+
                             </tr>
                           ))}
                         </tbody>
