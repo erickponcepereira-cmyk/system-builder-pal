@@ -72,13 +72,8 @@ export default function StudentChallengePage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [coachId, setCoachId] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return;
 
-      const { data: profile } = await supabase
+
   const load = async () => {
     setLoading(true);
     try {
