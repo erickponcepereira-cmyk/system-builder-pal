@@ -26,6 +26,7 @@ type Enrollment = {
   final_weight: number | null;
   result_kg: number | null;
   result_pct: number | null;
+  competition_id: string;
   group: {
     group_number: number;
     initial_start_date: string;
@@ -35,6 +36,9 @@ type Enrollment = {
   };
   competition: { month: number; year: number; prize_amount: number };
 };
+
+type HallWinner = { student_id: string; gender: string };
+
 
 
 
