@@ -449,6 +449,8 @@ export default function AdminChallengePage() {
                                     {enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_kg)} kg ({enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_pct || 0)}%)
                                   </span>
                                 ) : "—"}
+                              </td>
+
                               <td className="px-4 py-2 text-center">
                                 <div className="flex items-center justify-center gap-2">
                                   {enroll.status === "weighed_final" && (
