@@ -62,7 +62,6 @@ export default function StudentChallengePage() {
   const [hasAccess, setHasAccess] = useState(false);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [hallOfFame, setHallOfFame] = useState<HallEntry[]>([]);
   const [activeTab, setActiveTab] = useState<"challenge" | "hall">("challenge");
   // Scheduling
   const [scheduleModal, setScheduleModal] = useState<"initial" | "final" | null>(null);
