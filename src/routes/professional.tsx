@@ -70,6 +70,8 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   wallet: { label: "Carteira", icon: Wallet },
   network: { label: "Rede", icon: Network },
   settings: { label: "Configurações", icon: Settings },
+  fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
+
 };
 
 function ProfessionalPanel() {
