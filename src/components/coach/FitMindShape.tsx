@@ -19,8 +19,10 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import AssessmentComparison from "./AssessmentComparison";
+import FitMindShapeResultView from "./FitMindShapeResultView";
 import { useServerFn } from "@tanstack/react-start";
 import { createAssessmentShare } from "@/lib/assessment-share.functions";
+
 import {
   LineChart,
   Line,
