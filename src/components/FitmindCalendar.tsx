@@ -10,6 +10,11 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  TZ, tzDateKey, tzToday, tzCurrentYearMonth, ymdKey,
+  tzStartOfMonth, shiftYearMonth, yearMonthLabel,
+} from "@/lib/timezone";
+
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -92,20 +97,26 @@ interface FitmindCalendarProps {
 }
 
 export function FitmindCalendar({ compact = false, onlyHighlighted = false }: FitmindCalendarProps) {
+
   const [events, setEvents] = useState<FitmindEvent[]>([]);
   const [highlightedDays, setHighlightedDays] = useState<HighlightedDay[]>([]);
   const [loading, setLoading] = useState(true);
-  const [today] = useState(() => new Date());
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [todayKey] = useState(() => tzToday());
+  const [currentYM, setCurrentYM] = useState(() => {
+    const { year, month } = tzCurrentYearMonth();
+    return `${year}-${String(month + 1).padStart(2, "0")}`;
+  });
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<FitmindEvent | null>(null);
 
-  // ── Load events for the visible month range ─────────────────────────────
+  const [yearStr, monthStr] = currentYM.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr) - 1;
+
+  // ── Load events for the visible month range (Cuiabá timezone) ───────────
   useEffect(() => {
-    const from = new Date(currentMonth);
-    from.setDate(1);
-    const to = new Date(currentMonth);
-    to.setMonth(to.getMonth() + 1);
+    const from = tzStartOfMonth(currentYM);
+    const to   = tzStartOfMonth(shiftYearMonth(currentYM, 1));
 
     setLoading(true);
     Promise.all([
@@ -120,8 +131,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .from("fitmind_highlighted_days" as never)
         .select("id,date,label,description,color,icon" as never)
         .eq("is_active" as never, true as never)
-        .gte("date" as never, from.toISOString().slice(0, 10) as never)
-        .lt("date" as never, to.toISOString().slice(0, 10) as never),
+        .gte("date" as never, tzDateKey(from) as never)
+        .lt("date" as never, tzDateKey(to) as never),
     ]).then(([evRes, dayRes]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
@@ -129,29 +140,26 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
-  }, [currentMonth]);
+  }, [currentYM]);
 
   // ── Calendar grid ────────────────────────────────────────────────────────
 
   const { gridDays, monthLabel } = useMemo(() => {
-    const year  = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
     const firstWeekday = new Date(year, month, 1).getDay(); // 0 = Sun
     const daysInMonth  = new Date(year, month + 1, 0).getDate();
-    const label = currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const label = yearMonthLabel(currentYM);
 
-    // Pad with nulls for days before the 1st
-    const prefix = Array.from({ length: firstWeekday }, () => null);
-    const days   = Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1));
+    const prefix = Array.from({ length: firstWeekday }, () => null as number | null);
+    const days   = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return { gridDays: [...prefix, ...days], monthLabel: label };
-  }, [currentMonth]);
+  }, [currentYM, year, month]);
 
-  // ── Events indexed by date string ────────────────────────────────────────
+  // ── Events indexed by date string (Cuiabá date) ──────────────────────────
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, FitmindEvent[]>();
     for (const ev of events) {
-      const key = ev.starts_at.slice(0, 10);
+      const key = tzDateKey(ev.starts_at);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
     }
@@ -166,18 +174,16 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
 
   // ── Day events panel ──────────────────────────────────────────────────────
 
-  const selectedDateKey = selectedDay?.toISOString().slice(0, 10);
-  const selectedDayEvents = selectedDateKey ? (eventsByDate.get(selectedDateKey) || []) : [];
-  const selectedDayHighlight = selectedDateKey ? highlightByDate.get(selectedDateKey) : undefined;
+  const selectedDayEvents = selectedDayKey ? (eventsByDate.get(selectedDayKey) || []) : [];
+  const selectedDayHighlight = selectedDayKey ? highlightByDate.get(selectedDayKey) : undefined;
 
   // ── Highlighted/upcoming events list (for compact mode) ──────────────────
 
   const upcomingEvents = useMemo(() => {
-    const todayStr = today.toISOString().slice(0, 10);
     return events
-      .filter((ev) => ev.starts_at.slice(0, 10) >= todayStr && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
+      .filter((ev) => tzDateKey(ev.starts_at) >= todayKey && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
       .slice(0, 5);
-  }, [events, today, onlyHighlighted]);
+  }, [events, todayKey, onlyHighlighted]);
 
   // ─── Compact widget mode ─────────────────────────────────────────────────
   if (compact) {
@@ -248,15 +254,16 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           <p className="text-xs text-white/45 mt-0.5">Eventos gratuitos para toda a comunidade</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+          <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, -1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="text-sm font-bold text-white capitalize min-w-36 text-center">{monthLabel}</span>
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+          <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, 1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronRight className="h-4 w-4" />
           </button>
+
         </div>
       </div>
 
@@ -319,11 +326,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         ) : (
           <div className="grid grid-cols-7">
             {gridDays.map((day, i) => {
+
               if (!day) return <div key={`empty-${i}`} className="h-20 sm:h-24 border-b border-r border-white/5 bg-black/20" />;
 
-              const dateKey     = day.toISOString().slice(0, 10);
-              const isToday     = dateKey === today.toISOString().slice(0, 10);
-              const isSelected  = dateKey === selectedDateKey;
+              const dateKey     = ymdKey(year, month, day);
+              const isToday     = dateKey === todayKey;
+              const isSelected  = dateKey === selectedDayKey;
               const dayEvents   = eventsByDate.get(dateKey) || [];
               const dayHighlight= highlightByDate.get(dateKey);
               const hasImportant= dayEvents.some((ev) => ev.is_important);
@@ -331,7 +339,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
               return (
                 <button
                   key={dateKey}
-                  onClick={() => setSelectedDay(isSelected ? null : day)}
+                  onClick={() => setSelectedDayKey(isSelected ? null : dateKey)}
                   className={`relative h-20 sm:h-24 p-1 sm:p-2 text-left border-b border-r border-white/5 transition hover:bg-white/5 ${
                     isSelected ? "bg-primary/10 ring-1 ring-inset ring-primary/30" : ""
                   }`}
@@ -345,8 +353,9 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
                         ? "bg-primary/30 text-primary"
                         : "text-white/70"
                   }`}>
-                    {day.getDate()}
+                    {day}
                   </div>
+
 
                   {/* Badge "Importante" */}
                   {hasImportant && (
@@ -384,17 +393,18 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       </div>
 
       {/* Painel do dia selecionado */}
-      {selectedDay && (
+      {selectedDayKey && (
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-xs text-white/40 uppercase tracking-wider">Eventos do dia</p>
               <h3 className="text-base font-bold text-white capitalize">
-                {selectedDay.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+                {new Date(`${selectedDayKey}T12:00:00${"-04:00"}`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: TZ })}
               </h3>
             </div>
-            <button onClick={() => setSelectedDay(null)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/50"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSelectedDayKey(null)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/50"><X className="h-4 w-4" /></button>
           </div>
+
 
           {/* Destaque do dia */}
           {selectedDayHighlight && (

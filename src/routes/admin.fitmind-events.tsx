@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  tzToday, tzDateTimeLocal, tzLocalToISO, tzStartOfMonth,
+  shiftYearMonth, yearMonthLabel,
+} from "@/lib/timezone";
+
 
 export const Route = createFileRoute("/admin/fitmind-events")({
   head: () => ({ meta: [{ title: "Calendário de Eventos — Admin FitMind" }] }),
@@ -76,7 +81,6 @@ const VISIBILITY_META: Record<EventVisibility, { label: string; icon: typeof Glo
   parceiros:    { label: "Parceiros",     icon: Building2 },
   profissionais:{ label: "Profissionais", icon: Stethoscope },
 };
-
 const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   title: "",
   subtitle: null,
@@ -87,8 +91,8 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   category: "aula",
   visibility: "todos",
   tags: [],
-  starts_at: new Date().toISOString().slice(0, 16),
-  ends_at: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+  starts_at: tzDateTimeLocal(new Date()),
+  ends_at: tzDateTimeLocal(new Date(Date.now() + 3600000)),
   all_day: false,
   is_highlighted: false,
   is_important: false,
@@ -100,13 +104,15 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
 };
 
 const EMPTY_DAY: Omit<HighlightedDay, "id"> = {
-  date: new Date().toISOString().slice(0, 10),
+  date: tzToday(),
   label: "",
   description: null,
   color: "#f59e0b",
   icon: "star",
   is_active: true,
 };
+
+
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
@@ -160,37 +166,35 @@ function EventsTab() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<FitmindEvent> | null>(null);
   const [saving, setSaving] = useState(false);
-  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [filterMonth, setFilterMonth] = useState(() => tzToday().slice(0, 7));
+
   const [showInactive, setShowInactive] = useState(false);
   const [tagInput, setTagInput] = useState("");
-
   const load = async () => {
     setLoading(true);
-    const from = new Date(filterMonth + "-01").toISOString();
-    const to   = new Date(filterMonth + "-01");
-    to.setMonth(to.getMonth() + 1);
+    const from = tzStartOfMonth(filterMonth).toISOString();
+    const to   = tzStartOfMonth(shiftYearMonth(filterMonth, 1)).toISOString();
     const { data, error } = await supabase
       .from("fitmind_events" as never)
       .select("*" as never)
       .gte("starts_at" as never, from as never)
-      .lt("starts_at" as never, to.toISOString() as never)
+      .lt("starts_at" as never, to as never)
       .order("starts_at" as never, { ascending: true });
     if (error) toast.error(error.message);
     setEvents((data as unknown as FitmindEvent[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [filterMonth]);
 
   const openNew = () => {
-    const base = new Date(filterMonth + "-01");
-    base.setDate(15);
-    base.setHours(9, 0, 0, 0);
-    const end = new Date(base.getTime() + 3600000);
+    // 15º dia do mês filtrado, às 09:00 (hora de Cuiabá)
+    const startLocal = `${filterMonth}-15T09:00`;
+    const startISO = tzLocalToISO(startLocal);
+    const endISO = new Date(new Date(startISO).getTime() + 3600000).toISOString();
     setEditing({
       ...EMPTY_EVENT,
-      starts_at: base.toISOString().slice(0, 16),
-      ends_at: end.toISOString().slice(0, 16),
+      starts_at: tzDateTimeLocal(startISO),
+      ends_at: tzDateTimeLocal(endISO),
     });
     setTagInput("");
   };
@@ -198,11 +202,13 @@ function EventsTab() {
   const openEdit = (ev: FitmindEvent) => {
     setEditing({
       ...ev,
-      starts_at: ev.starts_at.slice(0, 16),
-      ends_at: ev.ends_at.slice(0, 16),
+      starts_at: tzDateTimeLocal(ev.starts_at),
+      ends_at: tzDateTimeLocal(ev.ends_at),
     });
     setTagInput("");
   };
+
+
 
   const save = async () => {
     if (!editing) return;
@@ -221,8 +227,9 @@ function EventsTab() {
         category: editing.category || "aula",
         visibility: editing.visibility || "todos",
         tags: (editing.tags || []).filter(Boolean),
-        starts_at: new Date(editing.starts_at).toISOString(),
-        ends_at: new Date(editing.ends_at).toISOString(),
+        starts_at: tzLocalToISO(editing.starts_at),
+        ends_at: tzLocalToISO(editing.ends_at),
+
         all_day: !!editing.all_day,
         is_highlighted: !!editing.is_highlighted,
         is_important: !!editing.is_important,
@@ -277,18 +284,11 @@ function EventsTab() {
   const filtered = events.filter((ev) => showInactive || ev.is_active);
 
   // Navegação de mês
-  const prevMonth = () => {
-    const d = new Date(filterMonth + "-01");
-    d.setMonth(d.getMonth() - 1);
-    setFilterMonth(d.toISOString().slice(0, 7));
-  };
-  const nextMonth = () => {
-    const d = new Date(filterMonth + "-01");
-    d.setMonth(d.getMonth() + 1);
-    setFilterMonth(d.toISOString().slice(0, 7));
-  };
+  const prevMonth = () => setFilterMonth(shiftYearMonth(filterMonth, -1));
+  const nextMonth = () => setFilterMonth(shiftYearMonth(filterMonth, 1));
 
-  const monthLabel = new Date(filterMonth + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const monthLabel = yearMonthLabel(filterMonth);
+
 
   return (
     <div className="space-y-4">
