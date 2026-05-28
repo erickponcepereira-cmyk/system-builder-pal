@@ -254,15 +254,16 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           <p className="text-xs text-white/45 mt-0.5">Eventos gratuitos para toda a comunidade</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+          <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, -1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <span className="text-sm font-bold text-white capitalize min-w-36 text-center">{monthLabel}</span>
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+          <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, 1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronRight className="h-4 w-4" />
           </button>
+
         </div>
       </div>
 
