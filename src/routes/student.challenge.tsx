@@ -26,6 +26,7 @@ type Enrollment = {
   final_weight: number | null;
   result_kg: number | null;
   result_pct: number | null;
+  competition_id: string;
   group: {
     group_number: number;
     initial_start_date: string;
@@ -35,6 +36,9 @@ type Enrollment = {
   };
   competition: { month: number; year: number; prize_amount: number };
 };
+
+type HallWinner = { student_id: string; gender: string };
+
 
 
 
@@ -56,9 +60,11 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
   scheduled_final:    { label: "Pesagem final agendada",                   color: "text-orange-400", icon: Calendar },
   weighed_final:      { label: "Pesagem final realizada — Aguardando resultado", color: "text-primary", icon: Trophy },
 };
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [winners, setWinners] = useState<HallWinner[]>([]);
+  const [activeTab, setActiveTab] = useState<"challenge" | "hall">("challenge");
 
-export default function StudentChallengePage() {
-  const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -117,7 +123,7 @@ export default function StudentChallengePage() {
         .from("competition_enrollments" as never)
         .select(`
           id, status, gender, initial_date, initial_weight,
-          final_date, final_weight, result_kg, result_pct,
+          final_date, final_weight, result_kg, result_pct, competition_id,
           group:group_id (
             group_number, initial_start_date, initial_end_date,
             final_weigh_in_date, award_date
@@ -128,6 +134,7 @@ export default function StudentChallengePage() {
         .order("enrolled_at" as never, { ascending: false })
         .limit(1)
         .maybeSingle();
+
 
       if (enrollErr) console.warn("enroll fetch error", enrollErr);
       if (enroll && (enroll as any).group && (enroll as any).competition) {
@@ -142,10 +149,20 @@ export default function StudentChallengePage() {
             .order("created_at" as never, { ascending: false });
           setAppointments((appts as any[]) || []);
         } catch (e) { console.warn("appts fetch failed", e); setAppointments([]); }
+        // Winners do Hall da Fama para esta competição
+        try {
+          const { data: hof } = await supabase
+            .from("competition_hall_of_fame" as never)
+            .select("student_id, gender")
+            .eq("competition_id" as never, (enroll as any).competition_id);
+          setWinners(((hof as any[]) || []) as HallWinner[]);
+        } catch (e) { console.warn("hof fetch failed", e); setWinners([]); }
       } else {
         setEnrollment(null);
         setAppointments([]);
+        setWinners([]);
       }
+
       setHasAccess(access);
     } catch (e) {
       console.error("Erro ao carregar desafio:", e);
@@ -293,6 +310,26 @@ export default function StudentChallengePage() {
 
                 {/* Status */}
                 {(() => {
+                  const isWinner = !!studentId && winners.some(w => w.student_id === studentId);
+                  const hasAnyWinner = winners.length > 0;
+                  if (isWinner) {
+                    return (
+                      <div className="flex items-center gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/40 px-3 py-2">
+                        <Trophy className="h-4 w-4 text-yellow-400" />
+                        <span className="text-sm font-bold text-yellow-400">🏆 Você foi consagrado vencedor desta edição!</span>
+                      </div>
+                    );
+                  }
+                  if (hasAnyWinner && enrollment.status === "weighed_final") {
+                    return (
+                      <div className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border px-3 py-2">
+                        <Trophy className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-bold text-muted-foreground">
+                          Não foi dessa vez. Confira o Hall da Fama para conhecer o vencedor.
+                        </span>
+                      </div>
+                    );
+                  }
                   const info = statusInfo[enrollment.status] || { label: enrollment.status, color: "text-muted-foreground", icon: Clock };
                   const Icon = info.icon;
                   return (
@@ -302,6 +339,7 @@ export default function StudentChallengePage() {
                     </div>
                   );
                 })()}
+
 
                 {/* Alerta de pesagem final próxima */}
                 {daysUntilFinal !== null && daysUntilFinal <= 7 && daysUntilFinal > 0 && (
