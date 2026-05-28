@@ -303,13 +303,19 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
       circumferences,
       clientNotes: (a.client_notes as string | null) ?? null,
       history,
-      coachName: c?.fantasy_name || coachProfile?.name || "Coach FitMind",
-      coachSpecialty: c?.description || "Especialista em Saúde e Bem-estar",
-      coachAvatar: c?.photo_url || coachProfile?.avatar_url || null,
+      coachName: coachProfile?.name || "Coach FitMind",
+      coachSpecialty:
+        specialtyLabel ||
+        c?.specialty_custom_description ||
+        coachProfile?.profession ||
+        coachProfile?.bio ||
+        "Especialista em Saúde e Bem-estar",
+      coachAvatar: coachProfile?.avatar_url || coachProfile?.photo_url || null,
       coachEmail: (coachProfile?.email as string | null) ?? null,
-      coachWhatsapp: c?.whatsapp ?? null,
-      coachInstagram: c?.instagram ?? null,
+      coachWhatsapp: coachProfile?.phone ?? null,
+      coachInstagram: c?.instagram || coachProfile?.instagram || null,
       coachReferralCode: c?.referral_code ?? null,
+
     };
 
     return result;
