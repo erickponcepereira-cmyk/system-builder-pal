@@ -247,10 +247,11 @@ export default function StudentChallengePage() {
               <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
               <p className="font-bold text-foreground">Desafio Indisponível</p>
               <p className="text-sm text-muted-foreground">
-                O Desafio de Emagrecimento está disponível para alunos com planos específicos.
+                O Desafio FitMind está disponível para alunos com planos específicos.
                 Fale com seu coach para participar!
               </p>
             </div>
+
           ) : !enrollment ? (
             /* Tem acesso mas não está inscrito */
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center space-y-3">
