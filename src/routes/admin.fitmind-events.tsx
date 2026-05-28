@@ -166,7 +166,8 @@ function EventsTab() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<FitmindEvent> | null>(null);
   const [saving, setSaving] = useState(false);
-  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [filterMonth, setFilterMonth] = useState(() => tzToday().slice(0, 7));
+
   const [showInactive, setShowInactive] = useState(false);
   const [tagInput, setTagInput] = useState("");
 
