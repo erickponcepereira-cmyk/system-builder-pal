@@ -159,7 +159,7 @@ export default function StudentChallengePage() {
     }
   };
 
-  };
+
 
   useEffect(() => { load(); }, []);
 
