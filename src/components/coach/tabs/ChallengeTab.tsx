@@ -150,13 +150,107 @@ export function ChallengeTab({ coachId }: Props) {
   };
 
   const cancelAppointment = async (apptId: string) => {
+    const appt = pending.find(a => a.id === apptId);
     await supabase
       .from("competition_appointments" as never)
       .update({ status: "cancelled" } as never)
       .eq("id" as never, apptId);
-    toast.success("Agendamento cancelado.");
+    // Reverte status da inscrição para o aluno poder solicitar novamente
+    if (appt) {
+      const enroll = appt.enrollment as any;
+      const revertStatus = appt.type === "initial" ? "enrolled" : "weighed_initial";
+      if (enroll?.id && (enroll.status === "scheduled_initial" || enroll.status === "scheduled_final")) {
+        await supabase
+          .from("competition_enrollments" as never)
+          .update({ status: revertStatus } as never)
+          .eq("id" as never, enroll.id);
+      }
+      // Notifica o aluno
+      try {
+        const { data: sp } = await supabase
+          .from("students" as never)
+          .select("profile_id")
+          .eq("id" as never, (appt.student as any).id)
+          .maybeSingle();
+        if (sp) {
+          await supabase.from("notifications" as never).insert({
+            profile_id: (sp as any).profile_id,
+            type: "competition_appointment_cancelled",
+            title: `❌ Pesagem ${appt.type === "initial" ? "Inicial" : "Final"} Cancelada`,
+            message: `Seu coach cancelou o agendamento de ${fmt(appt.requested_date)}. Você pode solicitar outra data.`,
+            action_url: "/student/challenge",
+          } as never);
+        }
+      } catch (e) { console.warn(e); }
+    }
+    toast.success("Agendamento cancelado. O aluno poderá solicitar outra data.");
     load();
   };
+
+  const openReschedule = (appt: Appointment) => {
+    setReschedDate(appt.requested_date);
+    setReschedTime(appt.requested_time?.slice(0, 5) || "09:00");
+    setReschedModal({
+      enrollId: (appt.enrollment as any)?.id,
+      studentId: (appt.student as any)?.id,
+      studentName: (appt.student as any)?.profile?.name || "Aluno",
+      type: appt.type,
+    });
+  };
+
+  const saveReschedule = async () => {
+    if (!reschedModal || !reschedDate || !reschedTime || !coachId) return;
+    setReschedSaving(true);
+    try {
+      // Cancela outros agendamentos pendentes/confirmados desta inscrição+tipo
+      await supabase
+        .from("competition_appointments" as never)
+        .update({ status: "cancelled" } as never)
+        .eq("enrollment_id" as never, reschedModal.enrollId)
+        .eq("type" as never, reschedModal.type)
+        .in("status" as never, ["pending", "confirmed"]);
+      // Cria nova proposta já confirmada pelo coach
+      const { error } = await supabase.from("competition_appointments" as never).insert({
+        enrollment_id: reschedModal.enrollId,
+        student_id: reschedModal.studentId,
+        coach_id: coachId,
+        type: reschedModal.type,
+        requested_date: reschedDate,
+        requested_time: reschedTime,
+        status: "confirmed",
+        notes: "Reagendado pelo coach",
+      } as never);
+      if (error) throw error;
+      const newStatus = reschedModal.type === "initial" ? "scheduled_initial" : "scheduled_final";
+      await supabase
+        .from("competition_enrollments" as never)
+        .update({ status: newStatus } as never)
+        .eq("id" as never, reschedModal.enrollId);
+      // Notifica aluno
+      try {
+        const { data: sp } = await supabase
+          .from("students" as never)
+          .select("profile_id")
+          .eq("id" as never, reschedModal.studentId)
+          .maybeSingle();
+        if (sp) {
+          await supabase.from("notifications" as never).insert({
+            profile_id: (sp as any).profile_id,
+            type: "competition_appointment_rescheduled",
+            title: `📅 Pesagem ${reschedModal.type === "initial" ? "Inicial" : "Final"} Reagendada`,
+            message: `Seu coach propôs ${fmt(reschedDate)} às ${reschedTime} para sua pesagem.`,
+            action_url: "/student/challenge",
+          } as never);
+        }
+      } catch (e) { console.warn(e); }
+      toast.success("Nova data agendada e aluno notificado!");
+      setReschedModal(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao reagendar");
+    } finally { setReschedSaving(false); }
+  };
+
 
   const saveWeight = async () => {
     if (!weightModal || !weightValue) return;
