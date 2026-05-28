@@ -431,60 +431,8 @@ export default function StudentChallengePage() {
       )}
 
       {/* ── TAB: Hall da Fama ── */}
-      {activeTab === "hall" && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 py-2">
-            <Star className="h-5 w-5 text-yellow-400" />
-            <h2 className="font-bold text-foreground">Campeões FitMind</h2>
-          </div>
-          {hallOfFame.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <Trophy className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground text-sm">Nenhum campeão ainda. Seja o primeiro!</p>
-            </div>
-          ) : hallOfFame.map((entry, i) => (
-            <div key={entry.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-lg ${
-                  i === 0 ? "bg-yellow-400/20 text-yellow-400" :
-                  i === 1 ? "bg-gray-400/20 text-gray-400" :
-                  "bg-orange-400/20 text-orange-400"
-                }`}>
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-foreground">{(entry.student as any)?.profile?.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Coach: {(entry.coach as any)?.profile?.name || "—"} · {MONTHS[(entry.competition as any)?.month]} {(entry.competition as any)?.year}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${entry.result_kg > 0 ? "text-green-400" : "text-red-400"}`}>
-                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_pct)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_kg)} kg
-                  </p>
-                </div>
+      {activeTab === "hall" && <HallOfFame />}
 
-              </div>
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
-                <span className="text-xs text-muted-foreground">
-                  {entry.initial_weight} kg → {entry.final_weight} kg
-                </span>
-                <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${
-                  entry.gender === "M" ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"
-                }`}>
-                  {entry.gender === "M" ? "Masculino" : "Feminino"}
-                </span>
-                <span className={`text-xs font-bold ${entry.prize_paid ? "text-green-400" : "text-yellow-400"}`}>
-                  {money(entry.prize_amount)} {entry.prize_paid ? "✓ Pago" : "Pendente"}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Modal: Agendar Pesagem */}
       {scheduleModal && enrollment && (
