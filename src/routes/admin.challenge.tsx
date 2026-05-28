@@ -255,6 +255,22 @@ export default function AdminChallengePage() {
     }
   };
 
+  const removeEnrollment = async (enrollId: string, studentName: string) => {
+    if (!confirm(`Remover ${studentName} desta competição? Agendamentos e prêmios relacionados também serão removidos.`)) return;
+    try {
+      const { error } = await supabase
+        .from("competition_enrollments" as never)
+        .delete()
+        .eq("id" as never, enrollId);
+      if (error) throw error;
+      toast.success("Aluno removido da competição.");
+      if (expandedComp) loadGroups(expandedComp);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover aluno");
+    }
+  };
+
+
 
 
 
@@ -434,13 +450,22 @@ export default function AdminChallengePage() {
                                   </span>
                                 ) : "—"}
                               </td>
+
                               <td className="px-4 py-2 text-center">
-                                {enroll.status === "weighed_final" && (
-                                  <button onClick={() => declareWinner(enroll, comp)}
-                                    className="flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-1 text-xs font-bold text-yellow-400 hover:bg-yellow-500/20">
-                                    <Award className="h-3 w-3" /> Vencedor
+                                <div className="flex items-center justify-center gap-2">
+                                  {enroll.status === "weighed_final" && (
+                                    <button onClick={() => declareWinner(enroll, comp)}
+                                      className="flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-1 text-xs font-bold text-yellow-400 hover:bg-yellow-500/20">
+                                      <Award className="h-3 w-3" /> Vencedor
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => removeEnrollment(enroll.id, (enroll.student as any)?.profile?.name || "Aluno")}
+                                    title="Remover aluno da competição"
+                                    className="flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive hover:bg-destructive/20">
+                                    <Trash2 className="h-3 w-3" /> Remover
                                   </button>
-                                )}
+                                </div>
                               </td>
 
                             </tr>
