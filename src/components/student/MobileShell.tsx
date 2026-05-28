@@ -18,7 +18,7 @@ const navItems = [
   { to: "/student/profile", label: "Perfil", icon: User },
 ] as const;
 
-] as const;
+
 
 export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
