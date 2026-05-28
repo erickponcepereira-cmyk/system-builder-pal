@@ -236,8 +236,22 @@ export default function AdminChallengePage() {
       .from("competition_hall_of_fame" as never)
       .update({ prize_paid: true, prize_paid_at: new Date().toISOString() } as never)
       .eq("id" as never, winnerId);
-    toast.success("Prêmio marcado como pago!");
+  const deleteCompetition = async (comp: Competition) => {
+    if (!confirm(`Excluir a competição de ${MONTHS[comp.month]}/${comp.year}? Isso removerá turmas, inscrições, agendamentos e entradas do Hall da Fama desta competição.`)) return;
+    try {
+      const { error } = await supabase
+        .from("competitions" as never)
+        .delete()
+        .eq("id" as never, comp.id);
+      if (error) throw error;
+      toast.success("Competição excluída.");
+      setExpandedComp(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao excluir competição");
+    }
   };
+
 
 
   const statusLabel: Record<string, string> = {
