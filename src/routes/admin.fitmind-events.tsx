@@ -185,7 +185,6 @@ function EventsTab() {
     setLoading(false);
   };
 
-  };
 
   const openNew = () => {
     // 15º dia do mês filtrado, às 09:00 (hora de Cuiabá)
