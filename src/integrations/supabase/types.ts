@@ -3513,6 +3513,194 @@ export type Database = {
           },
         ]
       }
+      partner_product_order_status_log: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          order_id: string
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id: string
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_product_order_status_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_order_status_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_product_orders: {
+        Row: {
+          cancelled_at: string | null
+          coach_commission_amount: number
+          coach_commission_pct: number
+          coach_net_amount: number
+          created_at: string
+          gross_amount: number
+          id: string
+          metadata: Json
+          network_l1_amount: number
+          network_l2_amount: number
+          network_l3_amount: number
+          notes: string | null
+          order_number: string
+          paid_at: string | null
+          partner_net_amount: number
+          payment_fee: number
+          payment_method: string
+          professional_coach_id: string
+          professional_product_id: string
+          selling_coach_id: string | null
+          status: string
+          student_id: string
+          system_fee: number
+          tax_amount: number
+          updated_at: string
+          upline_l1_coach_id: string | null
+          upline_l2_coach_id: string | null
+          upline_l3_coach_id: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          coach_commission_amount?: number
+          coach_commission_pct?: number
+          coach_net_amount?: number
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          metadata?: Json
+          network_l1_amount?: number
+          network_l2_amount?: number
+          network_l3_amount?: number
+          notes?: string | null
+          order_number?: string
+          paid_at?: string | null
+          partner_net_amount?: number
+          payment_fee?: number
+          payment_method?: string
+          professional_coach_id: string
+          professional_product_id: string
+          selling_coach_id?: string | null
+          status?: string
+          student_id: string
+          system_fee?: number
+          tax_amount?: number
+          updated_at?: string
+          upline_l1_coach_id?: string | null
+          upline_l2_coach_id?: string | null
+          upline_l3_coach_id?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          coach_commission_amount?: number
+          coach_commission_pct?: number
+          coach_net_amount?: number
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          metadata?: Json
+          network_l1_amount?: number
+          network_l2_amount?: number
+          network_l3_amount?: number
+          notes?: string | null
+          order_number?: string
+          paid_at?: string | null
+          partner_net_amount?: number
+          payment_fee?: number
+          payment_method?: string
+          professional_coach_id?: string
+          professional_product_id?: string
+          selling_coach_id?: string | null
+          status?: string
+          student_id?: string
+          system_fee?: number
+          tax_amount?: number
+          updated_at?: string
+          upline_l1_coach_id?: string | null
+          upline_l2_coach_id?: string | null
+          upline_l3_coach_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_product_orders_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_professional_product_id_fkey"
+            columns: ["professional_product_id"]
+            isOneToOne: false
+            referencedRelation: "professional_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_selling_coach_id_fkey"
+            columns: ["selling_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_upline_l1_coach_id_fkey"
+            columns: ["upline_l1_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_upline_l2_coach_id_fkey"
+            columns: ["upline_l2_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_upline_l3_coach_id_fkey"
+            columns: ["upline_l3_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_products: {
         Row: {
           admin_notes: string | null
@@ -6306,6 +6494,10 @@ export type Database = {
           total: number
         }[]
       }
+      create_partner_product_order: {
+        Args: { _payment_method?: string; _professional_product_id: string }
+        Returns: string
+      }
       create_store_order: {
         Args: {
           _items: Json
@@ -6416,6 +6608,10 @@ export type Database = {
         Args: { _transaction_id: string }
         Returns: undefined
       }
+      process_partner_product_order_paid: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       profile_has_approved_coach: {
         Args: { _profile_id: string }
         Returns: boolean
@@ -6518,6 +6714,10 @@ export type Database = {
           _status: Database["public"]["Enums"]["withdrawal_status"]
           _withdrawal_id: string
         }
+        Returns: undefined
+      }
+      update_partner_product_order_status: {
+        Args: { _note?: string; _order_id: string; _status: string }
         Returns: undefined
       }
       update_student_withdrawal_status: {
