@@ -82,13 +82,24 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
     setLog([]);
     try {
       // load existing clients of this coach to dedupe by normalized name
-      const { data: existing } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .select("id,name" as never)
-        .eq("coach_id" as never, coachId as never);
+      // Paginate to bypass Supabase's default 1000-row limit (support unlimited clients)
       const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
       const byName = new Map<string, string>();
-      ((existing as any[]) || []).forEach((c) => byName.set(norm(c.name), c.id));
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error: pageErr } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .select("id,name" as never)
+          .eq("coach_id" as never, coachId as never)
+          .range(from, from + PAGE - 1);
+        if (pageErr) { addLog(`Erro ao carregar existentes: ${pageErr.message}`); break; }
+        const rowsPage = (page as any[]) || [];
+        rowsPage.forEach((c) => byName.set(norm(c.name), c.id));
+        if (rowsPage.length < PAGE) break;
+        from += PAGE;
+      }
+      addLog(`Clientes existentes carregados: ${byName.size}`);
 
       // --- Clients ---
       if (clientsFile) {
@@ -219,17 +230,23 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
 
         // Garante que TODOS os clientes que receberam avaliações tenham a tag "Importados Fineshape"
         if (touchedClientIds.size > 0) {
-          const { data: existingForTag } = await supabase
-            .from("coach_evaluation_clients" as never)
-            .select("id,groups" as never)
-            .in("id" as never, Array.from(touchedClientIds) as never);
-          for (const row of ((existingForTag as any[]) || [])) {
-            const groups: string[] = Array.isArray(row.groups) ? row.groups : [];
-            if (!groups.includes("Importados Fineshape")) {
-              await supabase
-                .from("coach_evaluation_clients" as never)
-                .update({ groups: [...groups, "Importados Fineshape"] } as never)
-                .eq("id" as never, row.id as never);
+          const ids = Array.from(touchedClientIds);
+          const IN_CHUNK = 500;
+          for (let i = 0; i < ids.length; i += IN_CHUNK) {
+            const slice = ids.slice(i, i + IN_CHUNK);
+            const { data: existingForTag } = await supabase
+              .from("coach_evaluation_clients" as never)
+              .select("id,groups" as never)
+              .in("id" as never, slice as never)
+              .range(0, IN_CHUNK - 1);
+            for (const row of ((existingForTag as any[]) || [])) {
+              const groups: string[] = Array.isArray(row.groups) ? row.groups : [];
+              if (!groups.includes("Importados Fineshape")) {
+                await supabase
+                  .from("coach_evaluation_clients" as never)
+                  .update({ groups: [...groups, "Importados Fineshape"] } as never)
+                  .eq("id" as never, row.id as never);
+              }
             }
           }
         }
