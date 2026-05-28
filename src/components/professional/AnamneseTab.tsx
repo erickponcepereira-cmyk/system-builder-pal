@@ -31,12 +31,23 @@ export function AnamneseTab({ coachId }: Props) {
   useEffect(() => {
     if (!coachId) return;
     (async () => {
-      const { data: cli } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .select("id,name,whatsapp,email" as never)
-        .eq("coach_id" as never, coachId as never)
-        .order("name" as never);
-      setClients((cli as unknown as Client[]) || []);
+      // Paginate to bypass Supabase's default 1000-row limit
+      const PAGE = 1000;
+      let from = 0;
+      const all: Client[] = [];
+      while (true) {
+        const { data: cli } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .select("id,name,whatsapp,email" as never)
+          .eq("coach_id" as never, coachId as never)
+          .order("name" as never)
+          .range(from, from + PAGE - 1);
+        const rowsCli = (cli as unknown as Client[]) || [];
+        all.push(...rowsCli);
+        if (rowsCli.length < PAGE) break;
+        from += PAGE;
+      }
+      setClients(all);
 
       const { data: qs } = await supabase
         .from("professional_anamnesis_questions" as never)
