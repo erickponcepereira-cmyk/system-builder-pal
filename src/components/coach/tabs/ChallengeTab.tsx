@@ -303,8 +303,11 @@ export function ChallengeTab({ coachId }: Props) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {isUrgent && <span className="text-xs font-bold text-red-400">{days}d</span>}
                     {s.result_pct != null && (
-                      <span className="text-sm font-bold text-green-400">-{s.result_pct}%</span>
+                      <span className={`text-sm font-bold ${s.result_pct > 0 ? "text-green-400" : "text-red-400"}`}>
+                        {s.result_pct > 0 ? "−" : "+"}{Math.abs(s.result_pct)}%
+                      </span>
                     )}
+
                     <span className={`text-xs rounded-full px-1.5 py-0.5 ${
                       s.status === "weighed_final" ? "bg-green-500/10 text-green-400" :
                       s.status.includes("weighed") ? "bg-yellow-500/10 text-yellow-400" :
