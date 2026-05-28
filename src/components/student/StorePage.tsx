@@ -181,6 +181,24 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
       }))),
+      ...(((partnerRows as unknown as any[]) || []).map((pp) => {
+        const specKey = pp.coach?.specialty_key as string | null;
+        const specLabel = specKey ? (SPECIALTY_LABEL[specKey] || specKey) : "Profissional";
+        return {
+          id: `partner-${pp.id}`,
+          sourceId: pp.id,
+          title: pp.name,
+          subtitle: pp.coach?.profile?.name ? `por ${pp.coach.profile.name}` : null,
+          description: pp.description,
+          price: Number(pp.price || 0),
+          originalPrice: null,
+          category: `Produtos de Parceiros · ${specLabel}`,
+          kind: "partner" as const,
+          tag: specLabel,
+          imageUrl: pp.image_url,
+          creatorCoachId: pp.coach?.id ?? null,
+        };
+      })),
     ]);
   };
 
