@@ -36,19 +36,7 @@ type Enrollment = {
   competition: { month: number; year: number; prize_amount: number };
 };
 
-type HallEntry = {
-  id: string;
-  gender: string;
-  initial_weight: number;
-  final_weight: number;
-  result_kg: number;
-  result_pct: number;
-  prize_amount: number;
-  created_at: string;
-  student: { profile: { name: string; photo_url: string | null; avatar_url: string | null } };
-  coach: { profile: { name: string } };
-  competition: { month: number; year: number };
-};
+
 
 
 type Appointment = {
