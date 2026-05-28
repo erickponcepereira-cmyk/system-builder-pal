@@ -1,8 +1,9 @@
 export type AdminPermKey =
   | "dashboard" | "coaches" | "inactivity" | "students" | "users"
   | "orders" | "digital_products" | "coach_applications"
-  | "payments" | "financeiro" | "reports" | "patents" | "settings" | "calendars" | "store" | "freebies" | "store_reports" | "products"
-  | "product_orders" | "nutritionist_wallet" | "admin_wallet" | "career" | "library" | "partners" | "professionals" | "assessment_deletions";
+  | "payments" | "financeiro" | "financial_summary" | "reports" | "patents" | "settings" | "calendars" | "store" | "freebies" | "store_reports" | "products"
+  | "product_orders" | "partner_orders" | "nutritionist_wallet" | "admin_wallet" | "career" | "library" | "partners" | "professionals" | "assessment_deletions";
+
 
 export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
@@ -16,6 +17,8 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "coach_applications", label: "Formação Coach" },
   { key: "payments", label: "Pagamentos" },
   { key: "financeiro", label: "Financeiro" },
+  { key: "financial_summary", label: "Resumo Financeiro" },
+
   { key: "reports", label: "Relatórios" },
   { key: "patents", label: "Patentes" },
   { key: "calendars", label: "Agendas" },
@@ -24,7 +27,9 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "store_reports", label: "Relatórios da Loja" },
   { key: "products", label: "Motor Financeiro" },
   { key: "product_orders", label: "Painel de Pedidos" },
-  { key: "nutritionist_wallet", label: "Carteira Nutricionista" },
+  { key: "product_orders", label: "Painel de Pedidos" },
+  { key: "partner_orders", label: "Pedidos de Parceiros" },
+
   { key: "admin_wallet", label: "Carteira do Admin" },
   { key: "career", label: "Carreira" },
   { key: "library", label: "Biblioteca" },

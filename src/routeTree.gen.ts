@@ -56,10 +56,12 @@ import { Route as AdminProductOrdersRouteImport } from './routes/admin.product-o
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminPatentsRouteImport } from './routes/admin.patents'
 import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
+import { Route as AdminPartnerOrdersRouteImport } from './routes/admin.partner-orders'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
+import { Route as AdminFinancialSummaryRouteImport } from './routes/admin.financial-summary'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
@@ -313,6 +315,11 @@ const AdminPartnersRoute = AdminPartnersRouteImport.update({
   path: '/partners',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPartnerOrdersRoute = AdminPartnerOrdersRouteImport.update({
+  id: '/partner-orders',
+  path: '/partner-orders',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
@@ -331,6 +338,11 @@ const AdminLibraryRoute = AdminLibraryRouteImport.update({
 const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
   id: '/freebies',
   path: '/freebies',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFinancialSummaryRoute = AdminFinancialSummaryRouteImport.update({
+  id: '/financial-summary',
+  path: '/financial-summary',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFinanceiroRoute = AdminFinanceiroRouteImport.update({
@@ -443,10 +455,12 @@ export interface FileRoutesByFullPath {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
+  '/admin/financial-summary': typeof AdminFinancialSummaryRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partner-orders': typeof AdminPartnerOrdersRoute
   '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -511,10 +525,12 @@ export interface FileRoutesByTo {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
+  '/admin/financial-summary': typeof AdminFinancialSummaryRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partner-orders': typeof AdminPartnerOrdersRoute
   '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -582,10 +598,12 @@ export interface FileRoutesById {
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
+  '/admin/financial-summary': typeof AdminFinancialSummaryRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
+  '/admin/partner-orders': typeof AdminPartnerOrdersRoute
   '/admin/partners': typeof AdminPartnersRoute
   '/admin/patents': typeof AdminPatentsRoute
   '/admin/payments': typeof AdminPaymentsRoute
@@ -654,10 +672,12 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/financeiro'
+    | '/admin/financial-summary'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partner-orders'
     | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
@@ -722,10 +742,12 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/financeiro'
+    | '/admin/financial-summary'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partner-orders'
     | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
@@ -792,10 +814,12 @@ export interface FileRouteTypes {
     | '/admin/coaches'
     | '/admin/digital-products'
     | '/admin/financeiro'
+    | '/admin/financial-summary'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/partner-orders'
     | '/admin/partners'
     | '/admin/patents'
     | '/admin/payments'
@@ -1200,6 +1224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPartnersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/partner-orders': {
+      id: '/admin/partner-orders'
+      path: '/partner-orders'
+      fullPath: '/admin/partner-orders'
+      preLoaderRoute: typeof AdminPartnerOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/orders': {
       id: '/admin/orders'
       path: '/orders'
@@ -1226,6 +1257,13 @@ declare module '@tanstack/react-router' {
       path: '/freebies'
       fullPath: '/admin/freebies'
       preLoaderRoute: typeof AdminFreebiesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/financial-summary': {
+      id: '/admin/financial-summary'
+      path: '/financial-summary'
+      fullPath: '/admin/financial-summary'
+      preLoaderRoute: typeof AdminFinancialSummaryRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/financeiro': {
@@ -1371,10 +1409,12 @@ interface AdminRouteChildren {
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
+  AdminFinancialSummaryRoute: typeof AdminFinancialSummaryRoute
   AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminPartnerOrdersRoute: typeof AdminPartnerOrdersRoute
   AdminPartnersRoute: typeof AdminPartnersRoute
   AdminPatentsRoute: typeof AdminPatentsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
@@ -1399,10 +1439,12 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
+  AdminFinancialSummaryRoute: AdminFinancialSummaryRoute,
   AdminFreebiesRoute: AdminFreebiesRoute,
   AdminLibraryRoute: AdminLibraryRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
+  AdminPartnerOrdersRoute: AdminPartnerOrdersRoute,
   AdminPartnersRoute: AdminPartnersRoute,
   AdminPatentsRoute: AdminPatentsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
