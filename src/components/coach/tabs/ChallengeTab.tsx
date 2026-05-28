@@ -482,6 +482,46 @@ export function ChallengeTab({ coachId }: Props) {
           </div>
         </div>
       )}
+
+      {/* Modal: Reagendar */}
+      {reschedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5 text-blue-400" />
+              <h3 className="font-bold text-foreground">
+                Reagendar Pesagem {reschedModal.type === "initial" ? "Inicial" : "Final"}
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground">{reschedModal.studentName}</p>
+            <p className="text-xs text-muted-foreground rounded-lg bg-blue-500/10 px-3 py-2">
+              Propor uma nova data para o aluno. O agendamento anterior será cancelado e o aluno será notificado.
+            </p>
+            <div>
+              <label className="text-xs text-muted-foreground">Nova Data</label>
+              <input type="date" value={reschedDate} onChange={e => setReschedDate(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Horário</label>
+              <input type="time" value={reschedTime} onChange={e => setReschedTime(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setReschedModal(null)}
+                className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">
+                Cancelar
+              </button>
+              <button onClick={saveReschedule} disabled={reschedSaving || !reschedDate || !reschedTime}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground disabled:opacity-60">
+                {reschedSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
