@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart3, User, LogOut,
-  Menu, X, Trophy, ClipboardList, CalendarCheck,
+  Menu, X, Trophy, ClipboardList, CalendarCheck, CalendarDays,
   ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils, ClipboardCheck,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PatentBadge } from "@/components/coach/PatentBadge";
@@ -24,6 +25,8 @@ import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
+import { FitmindCalendar } from "@/components/FitmindCalendar";
+
 
 // Link "/" usage to satisfy unused import warnings (not required)
 void Link;
@@ -37,7 +40,8 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals";
+type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar";
+
 
 export const money = (value: number | null | undefined) =>
   `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -231,7 +235,9 @@ function CoachDashboard() {
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
-    { id: "career", label: "Carreira", icon: Trophy },
+    { id: "reports", label: "Relatórios", icon: BarChart3 },
+    { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
+
     { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "profile", label: "Meu Perfil", icon: User },
@@ -414,7 +420,9 @@ function CoachDashboard() {
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "protocol" && <ProtocolTab />}
           {activeTab === "attendance" && <AttendanceTab />}
-          {activeTab === "wallet" && <WalletTab />}
+          {activeTab === "reports" && <CoachReports />}
+          {activeTab === "fitmind_calendar" && <div className="p-4"><FitmindCalendar /></div>}
+
           {activeTab === "career" && <CareerTab />}
           {activeTab === "reports" && <CoachReports />}
           </div>

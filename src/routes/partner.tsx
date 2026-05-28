@@ -3,7 +3,8 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays } from "lucide-react";
+
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
@@ -11,13 +12,16 @@ import { maskPhone } from "@/lib/masks";
 import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
+import { FitmindCalendar } from "@/components/FitmindCalendar";
+
 
 export const Route = createFileRoute("/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "profile";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "profile" | "fitmind_calendar";
+
 
 interface Partner {
   id: string; profile_id: string; fantasy_name: string; description: string | null;
@@ -107,7 +111,9 @@ function PartnerPanel() {
     ...baseTabs,
     ...benefitTabs,
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
-    { key: "collaborators" as Tab, label: "Equipe", icon: Users },
+    { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
+    { key: "profile" as Tab, label: "Perfil", icon: UserCog },
+
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
@@ -140,7 +146,9 @@ function PartnerPanel() {
         {tab === "qrcode" && <QrCodePanel partner={partner} />}
         {tab === "freebies" && hasActiveFree && <CoachBenefitsTab />}
         {tab === "store" && hasActiveFree && <StorePage />}
-        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
+        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
+        {tab === "fitmind_calendar" && <FitmindCalendar />}
+
         {tab === "network" && <MyNetworkPanel />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>

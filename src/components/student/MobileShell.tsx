@@ -1,21 +1,24 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User, ShieldCheck, Store } from "lucide-react";
+import { BookOpen, CalendarDays, Gift, Home, MessageCircle, Repeat, ShoppingBag, Trophy, User, ShieldCheck, Store } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 interface MobileShellProps {
   children: ReactNode;
 }
-
 const navItems = [
   { to: "/student", label: "Home", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
+  { to: "/student/calendar", label: "Agenda", icon: CalendarDays },
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/freebies", label: "Gratuitos", icon: Gift },
   { to: "/student/profile", label: "Perfil", icon: User },
 ] as const;
+
+
 
 export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();

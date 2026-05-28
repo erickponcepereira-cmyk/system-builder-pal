@@ -37,6 +37,7 @@ import { Route as StudentEvolutionRouteImport } from './routes/student.evolution
 import { Route as StudentCoachCourseRouteImport } from './routes/student.coach-course'
 import { Route as StudentChallengeRouteImport } from './routes/student.challenge'
 import { Route as StudentCardRouteImport } from './routes/student.card'
+import { Route as StudentCalendarRouteImport } from './routes/student.calendar'
 import { Route as StudentBenefitsRouteImport } from './routes/student.benefits'
 import { Route as ResultadoTokenRouteImport } from './routes/resultado.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
@@ -219,6 +220,11 @@ const StudentChallengeRoute = StudentChallengeRouteImport.update({
 const StudentCardRoute = StudentCardRouteImport.update({
   id: '/card',
   path: '/card',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentCalendarRoute = StudentCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentBenefitsRoute = StudentBenefitsRouteImport.update({
@@ -487,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
   '/student/benefits': typeof StudentBenefitsRoute
+  '/student/calendar': typeof StudentCalendarRoute
   '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
@@ -558,6 +565,7 @@ export interface FileRoutesByTo {
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
   '/student/benefits': typeof StudentBenefitsRoute
+  '/student/calendar': typeof StudentCalendarRoute
   '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
@@ -632,6 +640,7 @@ export interface FileRoutesById {
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
   '/student/benefits': typeof StudentBenefitsRoute
+  '/student/calendar': typeof StudentCalendarRoute
   '/student/card': typeof StudentCardRoute
   '/student/challenge': typeof StudentChallengeRoute
   '/student/coach-course': typeof StudentCoachCourseRoute
@@ -707,6 +716,7 @@ export interface FileRouteTypes {
     | '/r/$code'
     | '/resultado/$token'
     | '/student/benefits'
+    | '/student/calendar'
     | '/student/card'
     | '/student/challenge'
     | '/student/coach-course'
@@ -778,6 +788,7 @@ export interface FileRouteTypes {
     | '/r/$code'
     | '/resultado/$token'
     | '/student/benefits'
+    | '/student/calendar'
     | '/student/card'
     | '/student/challenge'
     | '/student/coach-course'
@@ -851,6 +862,7 @@ export interface FileRouteTypes {
     | '/r/$code'
     | '/resultado/$token'
     | '/student/benefits'
+    | '/student/calendar'
     | '/student/card'
     | '/student/challenge'
     | '/student/coach-course'
@@ -1101,6 +1113,13 @@ declare module '@tanstack/react-router' {
       path: '/card'
       fullPath: '/student/card'
       preLoaderRoute: typeof StudentCardRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/calendar': {
+      id: '/student/calendar'
+      path: '/calendar'
+      fullPath: '/student/calendar'
+      preLoaderRoute: typeof StudentCalendarRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/benefits': {
@@ -1509,6 +1528,7 @@ const StudentProfileRouteWithChildren = StudentProfileRoute._addFileChildren(
 
 interface StudentRouteChildren {
   StudentBenefitsRoute: typeof StudentBenefitsRoute
+  StudentCalendarRoute: typeof StudentCalendarRoute
   StudentCardRoute: typeof StudentCardRoute
   StudentChallengeRoute: typeof StudentChallengeRoute
   StudentCoachCourseRoute: typeof StudentCoachCourseRoute
@@ -1528,6 +1548,7 @@ interface StudentRouteChildren {
 
 const StudentRouteChildren: StudentRouteChildren = {
   StudentBenefitsRoute: StudentBenefitsRoute,
+  StudentCalendarRoute: StudentCalendarRoute,
   StudentCardRoute: StudentCardRoute,
   StudentChallengeRoute: StudentChallengeRoute,
   StudentCoachCourseRoute: StudentCoachCourseRoute,
