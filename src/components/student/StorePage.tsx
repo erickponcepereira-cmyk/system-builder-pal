@@ -57,7 +57,7 @@ interface StorePageProps {
   hasUpline?: boolean;
 }
 
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
+export function StorePage({ coachMode = false, hasUpline = false }: StorePageProps = {}) {
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeCategory, setActiveCategory] = useState("Todos");
@@ -67,7 +67,8 @@ interface StorePageProps {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
+
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
   const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
@@ -181,8 +182,26 @@ interface StorePageProps {
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
       }))),
+      ...(((partnerRows as any[]) || []).map((pp: any) => {
+        const specKey = pp.coach?.specialty_key || "other";
+        const specLabel = SPECIALTY_LABEL[specKey] || "Outro";
+        return {
+          id: `partner-${pp.id}`,
+          sourceId: pp.id,
+          title: pp.name,
+          description: pp.description,
+          price: Number(pp.price || 0),
+          originalPrice: null,
+          category: `Parceiros · ${specLabel}`,
+          kind: "partner" as const,
+          tag: specLabel,
+          imageUrl: pp.image_url,
+          creatorCoachId: pp.coach?.id ?? null,
+        };
+      })),
     ]);
   };
+
 
 
 
@@ -294,12 +313,47 @@ interface StorePageProps {
 
   const checkoutAsStudent = async () => {
     if (cart.length === 0) return;
+    const partnerItems = cart.filter((c) => c.kind === "partner");
+    if (partnerItems.length > 0 && cart.length > 1) {
+      toast.error("Produtos de parceiros devem ser comprados separadamente.");
+      return;
+    }
     if (requiresShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
       toast.error("Preencha os dados de entrega.");
       return;
     }
     setCheckingOut(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+
+      // Caminho exclusivo: produto de parceiro (1 item por pedido)
+      if (partnerItems.length === 1) {
+        const pp = partnerItems[0];
+        const { data: ppId, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
+          _professional_product_id: pp.sourceId,
+          _payment_method: paymentMethod,
+        } as never);
+        if (ppErr) throw new Error(ppErr.message);
+        if (!ppId) throw new Error("Pedido não retornado");
+        const { data: orderData } = await supabase
+          .from("partner_product_orders" as never)
+          .select("id,order_number,gross_amount" as never)
+          .eq("id" as never, ppId as never)
+          .maybeSingle();
+        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
+        setCart([]); setCartOpen(false);
+        setPayOrder({
+          id: od?.id || String(ppId),
+          total: Number(od?.gross_amount || pp.price),
+          number: od?.order_number || "pedido",
+          email: userData.user?.email || "",
+          name: userData.user?.user_metadata?.name || "",
+          sourceKind: "partner_product_order",
+        });
+        await load();
+        return;
+      }
+
       const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
       const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
       if (error) throw new Error(error.message);
@@ -309,13 +363,13 @@ interface StorePageProps {
         .select("id,order_number,total_amount" as never)
         .eq("id" as never, orderId as never)
         .maybeSingle();
-      const { data: userData } = await supabase.auth.getUser();
       const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
       setCart([]); setCartOpen(false); setShipping(initialShipping);
       setPayOrder({
         id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
+        sourceKind: "store_order",
       });
       await load();
     } catch (e: any) {
@@ -324,6 +378,7 @@ interface StorePageProps {
       setCheckingOut(false);
     }
   };
+
 
   const checkoutAsCoach = async () => {
     if (!selectedClient) { setCartOpen(false); setClientPickerOpen(true); return; }
@@ -356,7 +411,9 @@ interface StorePageProps {
       setPayOrder({
         id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
         email: selectedClient.email || "", name: selectedClient.name,
+        sourceKind: "store_order",
       });
+
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
     } catch (e: any) {
@@ -629,7 +686,8 @@ interface StorePageProps {
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
             </div>
             <MercadoPagoCheckout
-              source={{ kind: "store_order", id: payOrder.id }}
+              source={{ kind: payOrder.sourceKind, id: payOrder.id }}
+
               amount={payOrder.total}
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
