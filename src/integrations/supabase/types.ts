@@ -2067,6 +2067,310 @@ export type Database = {
           },
         ]
       }
+      competition_appointments: {
+        Row: {
+          coach_id: string
+          created_at: string
+          enrollment_id: string
+          id: string
+          notes: string | null
+          requested_date: string
+          requested_time: string
+          status: string
+          student_id: string
+          type: string
+          updated_at: string
+          weight_recorded: number | null
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          enrollment_id: string
+          id?: string
+          notes?: string | null
+          requested_date: string
+          requested_time: string
+          status?: string
+          student_id: string
+          type: string
+          updated_at?: string
+          weight_recorded?: number | null
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          enrollment_id?: string
+          id?: string
+          notes?: string | null
+          requested_date?: string
+          requested_time?: string
+          status?: string
+          student_id?: string
+          type?: string
+          updated_at?: string
+          weight_recorded?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_appointments_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_appointments_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "competition_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_appointments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competition_enrollments: {
+        Row: {
+          coach_id: string
+          competition_id: string
+          enrolled_at: string
+          enrolled_by: string
+          final_date: string | null
+          final_weight: number | null
+          gender: string
+          group_id: string
+          id: string
+          initial_date: string | null
+          initial_weight: number | null
+          result_kg: number | null
+          result_pct: number | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          coach_id: string
+          competition_id: string
+          enrolled_at?: string
+          enrolled_by?: string
+          final_date?: string | null
+          final_weight?: number | null
+          gender: string
+          group_id: string
+          id?: string
+          initial_date?: string | null
+          initial_weight?: number | null
+          result_kg?: number | null
+          result_pct?: number | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          coach_id?: string
+          competition_id?: string
+          enrolled_at?: string
+          enrolled_by?: string
+          final_date?: string | null
+          final_weight?: number | null
+          gender?: string
+          group_id?: string
+          id?: string
+          initial_date?: string | null
+          initial_weight?: number | null
+          result_kg?: number | null
+          result_pct?: number | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_enrollments_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_enrollments_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_enrollments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "competition_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competition_groups: {
+        Row: {
+          award_date: string | null
+          competition_id: string
+          created_at: string
+          final_weigh_in_date: string
+          group_number: number
+          id: string
+          initial_end_date: string
+          initial_start_date: string
+        }
+        Insert: {
+          award_date?: string | null
+          competition_id: string
+          created_at?: string
+          final_weigh_in_date: string
+          group_number: number
+          id?: string
+          initial_end_date: string
+          initial_start_date: string
+        }
+        Update: {
+          award_date?: string | null
+          competition_id?: string
+          created_at?: string
+          final_weigh_in_date?: string
+          group_number?: number
+          id?: string
+          initial_end_date?: string
+          initial_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_groups_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competition_hall_of_fame: {
+        Row: {
+          coach_id: string
+          competition_id: string
+          created_at: string
+          enrollment_id: string
+          final_weight: number
+          gender: string
+          id: string
+          initial_weight: number
+          prize_amount: number
+          prize_paid: boolean
+          prize_paid_at: string | null
+          result_kg: number
+          result_pct: number
+          student_id: string
+        }
+        Insert: {
+          coach_id: string
+          competition_id: string
+          created_at?: string
+          enrollment_id: string
+          final_weight: number
+          gender: string
+          id?: string
+          initial_weight: number
+          prize_amount?: number
+          prize_paid?: boolean
+          prize_paid_at?: string | null
+          result_kg: number
+          result_pct: number
+          student_id: string
+        }
+        Update: {
+          coach_id?: string
+          competition_id?: string
+          created_at?: string
+          enrollment_id?: string
+          final_weight?: number
+          gender?: string
+          id?: string
+          initial_weight?: number
+          prize_amount?: number
+          prize_paid?: boolean
+          prize_paid_at?: string | null
+          result_kg?: number
+          result_pct?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_hall_of_fame_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_hall_of_fame_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_hall_of_fame_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "competition_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_hall_of_fame_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          month: number
+          prize_amount: number
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          month: number
+          prize_amount?: number
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          month?: number
+          prize_amount?: number
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       course_teacher_commissions: {
         Row: {
           commission_percentage: number
@@ -4587,6 +4891,7 @@ export type Database = {
           free_for_council: boolean
           free_for_nutritionist: boolean
           gallery: Json
+          has_challenge_access: boolean
           highlights: Json | null
           id: string
           image_url: string | null
@@ -4669,6 +4974,7 @@ export type Database = {
           free_for_council?: boolean
           free_for_nutritionist?: boolean
           gallery?: Json
+          has_challenge_access?: boolean
           highlights?: Json | null
           id?: string
           image_url?: string | null
@@ -4751,6 +5057,7 @@ export type Database = {
           free_for_council?: boolean
           free_for_nutritionist?: boolean
           gallery?: Json
+          has_challenge_access?: boolean
           highlights?: Json | null
           id?: string
           image_url?: string | null
@@ -6651,6 +6958,10 @@ export type Database = {
       current_profile_id: { Args: never; Returns: string }
       current_student_id: { Args: never; Returns: string }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
+      enroll_student_in_competition: {
+        Args: { _gender?: string; _student_id: string }
+        Returns: string
+      }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
         Returns: undefined
@@ -6669,6 +6980,11 @@ export type Database = {
         }
         Returns: string
       }
+      generate_competition_groups: {
+        Args: { _competition_id: string; _month: number; _year: number }
+        Returns: undefined
+      }
+      generate_competition_reminders: { Args: never; Returns: number }
       get_fitmind_events: {
         Args: { _from?: string; _to?: string }
         Returns: {
