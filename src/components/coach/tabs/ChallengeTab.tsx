@@ -342,7 +342,8 @@ export function ChallengeTab({ coachId }: Props) {
 
       {/* Modal: Registrar Peso */}
       {weightModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4">
             <h3 className="font-bold text-foreground">
               Registrar Pesagem {weightModal.type === "initial" ? "Inicial" : "Final"}
