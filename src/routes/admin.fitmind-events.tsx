@@ -209,7 +209,7 @@ function EventsTab() {
     setTagInput("");
   };
 
-  };
+
 
   const save = async () => {
     if (!editing) return;
