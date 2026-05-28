@@ -2,9 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart3, User, LogOut,
-  Menu, X, Trophy, ClipboardList, CalendarCheck,
+  Menu, X, Trophy, ClipboardList, CalendarCheck, CalendarDays,
   ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils, ClipboardCheck,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PatentBadge } from "@/components/coach/PatentBadge";
