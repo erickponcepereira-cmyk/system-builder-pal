@@ -8,7 +8,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Scale, CheckCircle2, Clock, Calendar, Trophy, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Scale, CheckCircle2, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, CalendarPlus } from "lucide-react";
+import { HallOfFame } from "@/components/HallOfFame";
+
 
 type Appointment = {
   id: string;
@@ -58,11 +60,17 @@ export function ChallengeTab({ coachId }: Props) {
   const [pending, setPending] = useState<Appointment[]>([]);
   const [students, setStudents] = useState<MyStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"appointments" | "students">("appointments");
+  const [tab, setTab] = useState<"appointments" | "students" | "hall">("appointments");
   const [weightModal, setWeightModal] = useState<{ apptId: string; enrollId: string; studentName: string; type: string } | null>(null);
   const [weightValue, setWeightValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
+  // Re-schedule modal (coach propõe nova data ao aluno)
+  const [reschedModal, setReschedModal] = useState<{ enrollId: string; studentId: string; studentName: string; type: "initial" | "final" } | null>(null);
+  const [reschedDate, setReschedDate] = useState("");
+  const [reschedTime, setReschedTime] = useState("09:00");
+  const [reschedSaving, setReschedSaving] = useState(false);
+
 
   const load = async () => {
     if (!coachId) return;
@@ -142,13 +150,107 @@ export function ChallengeTab({ coachId }: Props) {
   };
 
   const cancelAppointment = async (apptId: string) => {
+    const appt = pending.find(a => a.id === apptId);
     await supabase
       .from("competition_appointments" as never)
       .update({ status: "cancelled" } as never)
       .eq("id" as never, apptId);
-    toast.success("Agendamento cancelado.");
+    // Reverte status da inscrição para o aluno poder solicitar novamente
+    if (appt) {
+      const enroll = appt.enrollment as any;
+      const revertStatus = appt.type === "initial" ? "enrolled" : "weighed_initial";
+      if (enroll?.id && (enroll.status === "scheduled_initial" || enroll.status === "scheduled_final")) {
+        await supabase
+          .from("competition_enrollments" as never)
+          .update({ status: revertStatus } as never)
+          .eq("id" as never, enroll.id);
+      }
+      // Notifica o aluno
+      try {
+        const { data: sp } = await supabase
+          .from("students" as never)
+          .select("profile_id")
+          .eq("id" as never, (appt.student as any).id)
+          .maybeSingle();
+        if (sp) {
+          await supabase.from("notifications" as never).insert({
+            profile_id: (sp as any).profile_id,
+            type: "competition_appointment_cancelled",
+            title: `❌ Pesagem ${appt.type === "initial" ? "Inicial" : "Final"} Cancelada`,
+            message: `Seu coach cancelou o agendamento de ${fmt(appt.requested_date)}. Você pode solicitar outra data.`,
+            action_url: "/student/challenge",
+          } as never);
+        }
+      } catch (e) { console.warn(e); }
+    }
+    toast.success("Agendamento cancelado. O aluno poderá solicitar outra data.");
     load();
   };
+
+  const openReschedule = (appt: Appointment) => {
+    setReschedDate(appt.requested_date);
+    setReschedTime(appt.requested_time?.slice(0, 5) || "09:00");
+    setReschedModal({
+      enrollId: (appt.enrollment as any)?.id,
+      studentId: (appt.student as any)?.id,
+      studentName: (appt.student as any)?.profile?.name || "Aluno",
+      type: appt.type,
+    });
+  };
+
+  const saveReschedule = async () => {
+    if (!reschedModal || !reschedDate || !reschedTime || !coachId) return;
+    setReschedSaving(true);
+    try {
+      // Cancela outros agendamentos pendentes/confirmados desta inscrição+tipo
+      await supabase
+        .from("competition_appointments" as never)
+        .update({ status: "cancelled" } as never)
+        .eq("enrollment_id" as never, reschedModal.enrollId)
+        .eq("type" as never, reschedModal.type)
+        .in("status" as never, ["pending", "confirmed"]);
+      // Cria nova proposta já confirmada pelo coach
+      const { error } = await supabase.from("competition_appointments" as never).insert({
+        enrollment_id: reschedModal.enrollId,
+        student_id: reschedModal.studentId,
+        coach_id: coachId,
+        type: reschedModal.type,
+        requested_date: reschedDate,
+        requested_time: reschedTime,
+        status: "confirmed",
+        notes: "Reagendado pelo coach",
+      } as never);
+      if (error) throw error;
+      const newStatus = reschedModal.type === "initial" ? "scheduled_initial" : "scheduled_final";
+      await supabase
+        .from("competition_enrollments" as never)
+        .update({ status: newStatus } as never)
+        .eq("id" as never, reschedModal.enrollId);
+      // Notifica aluno
+      try {
+        const { data: sp } = await supabase
+          .from("students" as never)
+          .select("profile_id")
+          .eq("id" as never, reschedModal.studentId)
+          .maybeSingle();
+        if (sp) {
+          await supabase.from("notifications" as never).insert({
+            profile_id: (sp as any).profile_id,
+            type: "competition_appointment_rescheduled",
+            title: `📅 Pesagem ${reschedModal.type === "initial" ? "Inicial" : "Final"} Reagendada`,
+            message: `Seu coach propôs ${fmt(reschedDate)} às ${reschedTime} para sua pesagem.`,
+            action_url: "/student/challenge",
+          } as never);
+        }
+      } catch (e) { console.warn(e); }
+      toast.success("Nova data agendada e aluno notificado!");
+      setReschedModal(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao reagendar");
+    } finally { setReschedSaving(false); }
+  };
+
 
   const saveWeight = async () => {
     if (!weightModal || !weightValue) return;
@@ -202,14 +304,20 @@ export function ChallengeTab({ coachId }: Props) {
       </div>
 
       {/* Sub-tabs */}
-      <div className="grid grid-cols-2 gap-2">
-        {(["appointments","students"] as const).map(t => (
+      <div className="grid grid-cols-3 gap-2">
+        {(["appointments","students","hall"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`rounded-lg py-2 text-sm font-bold ${tab === t ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-            {t === "appointments" ? `Agendamentos (${pending.length})` : `Meus Alunos (${students.length})`}
+            className={`rounded-lg py-2 text-xs font-bold ${tab === t ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            {t === "appointments" ? `Agendamentos (${pending.length})` :
+             t === "students" ? `Alunos (${students.length})` :
+             `Hall da Fama`}
           </button>
         ))}
       </div>
+
+      {tab === "hall" && <HallOfFame />}
+
+
 
       {/* ── Agendamentos ── */}
       {tab === "appointments" && (
@@ -246,10 +354,10 @@ export function ChallengeTab({ coachId }: Props) {
                 </span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {appt.status === "pending" && (
                   <button onClick={() => confirmAppointment(appt.id)}
-                    className="flex-1 rounded-lg bg-green-500/10 py-2 text-xs font-bold text-green-400 hover:bg-green-500/20">
+                    className="flex-1 min-w-[90px] rounded-lg bg-green-500/10 py-2 text-xs font-bold text-green-400 hover:bg-green-500/20">
                     ✓ Confirmar
                   </button>
                 )}
@@ -260,14 +368,19 @@ export function ChallengeTab({ coachId }: Props) {
                     studentName: (appt.student as any)?.profile?.name,
                     type: appt.type,
                   })}
-                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+                  className="flex-1 min-w-[110px] flex items-center justify-center gap-1 rounded-lg bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/20">
                   <Scale className="h-3 w-3" /> Registrar Peso
+                </button>
+                <button onClick={() => openReschedule(appt)}
+                  className="flex items-center gap-1 rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-400 hover:bg-blue-500/20">
+                  <CalendarPlus className="h-3 w-3" /> Reagendar
                 </button>
                 <button onClick={() => cancelAppointment(appt.id)}
                   className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive hover:bg-destructive/20">
                   ✕
                 </button>
               </div>
+
             </div>
           ))}
         </div>
@@ -369,6 +482,46 @@ export function ChallengeTab({ coachId }: Props) {
           </div>
         </div>
       )}
+
+      {/* Modal: Reagendar */}
+      {reschedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5 text-blue-400" />
+              <h3 className="font-bold text-foreground">
+                Reagendar Pesagem {reschedModal.type === "initial" ? "Inicial" : "Final"}
+              </h3>
+            </div>
+            <p className="text-sm text-muted-foreground">{reschedModal.studentName}</p>
+            <p className="text-xs text-muted-foreground rounded-lg bg-blue-500/10 px-3 py-2">
+              Propor uma nova data para o aluno. O agendamento anterior será cancelado e o aluno será notificado.
+            </p>
+            <div>
+              <label className="text-xs text-muted-foreground">Nova Data</label>
+              <input type="date" value={reschedDate} onChange={e => setReschedDate(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Horário</label>
+              <input type="time" value={reschedTime} onChange={e => setReschedTime(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setReschedModal(null)}
+                className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">
+                Cancelar
+              </button>
+              <button onClick={saveReschedule} disabled={reschedSaving || !reschedDate || !reschedTime}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground disabled:opacity-60">
+                {reschedSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -7,8 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Trophy, Scale, Calendar, AlertCircle, CheckCircle2,
-  Clock, Loader2, Lock, Star, ChevronRight
+  Clock, Loader2, Lock, ChevronRight
 } from "lucide-react";
+import { HallOfFame } from "@/components/HallOfFame";
+
 
 export const Route = createFileRoute("/student/challenge")({
   component: StudentChallengePage,
@@ -34,20 +36,8 @@ type Enrollment = {
   competition: { month: number; year: number; prize_amount: number };
 };
 
-type HallEntry = {
-  id: string;
-  gender: string;
-  initial_weight: number;
-  final_weight: number;
-  result_kg: number;
-  result_pct: number;
-  prize_amount: number;
-  prize_paid: boolean;
-  created_at: string;
-  student: { profile: { name: string } };
-  coach: { profile: { name: string } };
-  competition: { month: number; year: number };
-};
+
+
 
 type Appointment = {
   id: string; type: string; requested_date: string;
@@ -72,7 +62,6 @@ export default function StudentChallengePage() {
   const [hasAccess, setHasAccess] = useState(false);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [hallOfFame, setHallOfFame] = useState<HallEntry[]>([]);
   const [activeTab, setActiveTab] = useState<"challenge" | "hall">("challenge");
   // Scheduling
   const [scheduleModal, setScheduleModal] = useState<"initial" | "final" | null>(null);
@@ -149,19 +138,8 @@ export default function StudentChallengePage() {
         setAppointments((appts as any[]) || []);
       }
 
-      // Hall da Fama (público)
-      const { data: hall } = await supabase
-        .from("competition_hall_of_fame" as never)
-        .select(`
-          id, gender, initial_weight, final_weight, result_kg, result_pct,
-          prize_amount, prize_paid, created_at,
-          student:student_id ( profile:profile_id ( name ) ),
-          coach:coach_id ( profile:profile_id ( name ) ),
-          competition:competition_id ( month, year )
-        `)
-        .order("created_at" as never, { ascending: false })
-        .limit(20);
-      setHallOfFame((hall as any[]) || []);
+
+
     } finally {
       setLoading(false);
     }
@@ -171,10 +149,23 @@ export default function StudentChallengePage() {
 
   const scheduleAppointment = async () => {
     if (!schedDate || !schedTime || !enrollment || !studentId || !coachId) return;
+    const type = scheduleModal!;
+    // Validação de janela
+    if (type === "initial") {
+      const start = enrollment.group.initial_start_date;
+      const end = enrollment.group.initial_end_date;
+      if (schedDate < start || schedDate > end) {
+        toast.error(`A pesagem inicial só pode ser agendada entre ${fmt(start)} e ${fmt(end)}.`);
+        return;
+      }
+    }
+    if (type === "final" && enrollment.final_date && schedDate > enrollment.final_date) {
+      toast.error(`A pesagem final deve ser até ${fmt(enrollment.final_date)}.`);
+      return;
+    }
     setScheduling(true);
     try {
-      const type = scheduleModal!;
-      await supabase.from("competition_appointments" as never).insert({
+      const { error: apptErr } = await supabase.from("competition_appointments" as never).insert({
         enrollment_id: enrollment.id,
         student_id: studentId,
         coach_id: coachId,
@@ -183,31 +174,36 @@ export default function StudentChallengePage() {
         requested_time: schedTime,
         status: "pending",
       } as never);
+      if (apptErr) throw apptErr;
       // Atualiza status da inscrição
       const newStatus = type === "initial" ? "scheduled_initial" : "scheduled_final";
       await supabase
         .from("competition_enrollments" as never)
         .update({ status: newStatus } as never)
         .eq("id" as never, enrollment.id);
-      // Notifica o coach
-      const { data: coachProfile } = await supabase
-        .from("coaches" as never)
-        .select("profile_id")
-        .eq("id" as never, coachId)
-        .maybeSingle();
-      if (coachProfile) {
-        const { data: studentProfile } = await supabase
-          .from("students" as never)
-          .select("profile:profile_id(name)")
-          .eq("id" as never, studentId)
+      // Notifica o coach (best-effort)
+      try {
+        const { data: coachProfile } = await supabase
+          .from("coaches" as never)
+          .select("profile_id")
+          .eq("id" as never, coachId)
           .maybeSingle();
-        await supabase.from("notifications" as never).insert({
-          profile_id: (coachProfile as any).profile_id,
-          type: "competition_appointment_request",
-          title: `⚖️ Solicitação de Pesagem ${type === "initial" ? "Inicial" : "Final"}`,
-          message: `${(studentProfile as any)?.profile?.name || "Aluno"} quer agendar pesagem ${type === "initial" ? "inicial" : "final"} para ${fmt(schedDate)} às ${schedTime}.`,
-          action_url: "/coach",
-        } as never);
+        if (coachProfile) {
+          const { data: studentProfile } = await supabase
+            .from("students" as never)
+            .select("profile:profile_id(name)")
+            .eq("id" as never, studentId)
+            .maybeSingle();
+          await supabase.from("notifications" as never).insert({
+            profile_id: (coachProfile as any).profile_id,
+            type: "competition_appointment_request",
+            title: `⚖️ Solicitação de Pesagem ${type === "initial" ? "Inicial" : "Final"}`,
+            message: `${(studentProfile as any)?.profile?.name || "Aluno"} quer agendar pesagem ${type === "initial" ? "inicial" : "final"} para ${fmt(schedDate)} às ${schedTime}.`,
+            action_url: "/coach",
+          } as never);
+        }
+      } catch (notifErr) {
+        console.warn("Notificação não enviada:", notifErr);
       }
       toast.success("Agendamento solicitado! Aguardando confirmação do coach.");
       setScheduleModal(null);
@@ -216,6 +212,7 @@ export default function StudentChallengePage() {
       toast.error(e.message || "Erro ao agendar");
     } finally { setScheduling(false); }
   };
+
 
   // Calcula dias até a pesagem final
   const daysUntilFinal = enrollment?.initial_date
@@ -411,60 +408,8 @@ export default function StudentChallengePage() {
       )}
 
       {/* ── TAB: Hall da Fama ── */}
-      {activeTab === "hall" && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 py-2">
-            <Star className="h-5 w-5 text-yellow-400" />
-            <h2 className="font-bold text-foreground">Campeões FitMind</h2>
-          </div>
-          {hallOfFame.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <Trophy className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground text-sm">Nenhum campeão ainda. Seja o primeiro!</p>
-            </div>
-          ) : hallOfFame.map((entry, i) => (
-            <div key={entry.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-lg ${
-                  i === 0 ? "bg-yellow-400/20 text-yellow-400" :
-                  i === 1 ? "bg-gray-400/20 text-gray-400" :
-                  "bg-orange-400/20 text-orange-400"
-                }`}>
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-foreground">{(entry.student as any)?.profile?.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Coach: {(entry.coach as any)?.profile?.name || "—"} · {MONTHS[(entry.competition as any)?.month]} {(entry.competition as any)?.year}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${entry.result_kg > 0 ? "text-green-400" : "text-red-400"}`}>
-                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_pct)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_kg)} kg
-                  </p>
-                </div>
+      {activeTab === "hall" && <HallOfFame />}
 
-              </div>
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
-                <span className="text-xs text-muted-foreground">
-                  {entry.initial_weight} kg → {entry.final_weight} kg
-                </span>
-                <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${
-                  entry.gender === "M" ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"
-                }`}>
-                  {entry.gender === "M" ? "Masculino" : "Feminino"}
-                </span>
-                <span className={`text-xs font-bold ${entry.prize_paid ? "text-green-400" : "text-yellow-400"}`}>
-                  {money(entry.prize_amount)} {entry.prize_paid ? "✓ Pago" : "Pendente"}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Modal: Agendar Pesagem */}
       {scheduleModal && enrollment && (

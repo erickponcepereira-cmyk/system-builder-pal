@@ -6,7 +6,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Plus, Users, Scale, Award, ChevronDown, ChevronUp, Loader2, CheckCircle2, Gift } from "lucide-react";
+import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2 } from "lucide-react";
+
 
 export const Route = createFileRoute("/admin/challenge")({
   component: AdminChallengePage,
@@ -238,6 +239,24 @@ export default function AdminChallengePage() {
     toast.success("Prêmio marcado como pago!");
   };
 
+  const deleteCompetition = async (comp: Competition) => {
+    if (!confirm(`Excluir a competição de ${MONTHS[comp.month]}/${comp.year}? Isso removerá turmas, inscrições, agendamentos e entradas do Hall da Fama desta competição.`)) return;
+    try {
+      const { error } = await supabase
+        .from("competitions" as never)
+        .delete()
+        .eq("id" as never, comp.id);
+      if (error) throw error;
+      toast.success("Competição excluída.");
+      setExpandedComp(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao excluir competição");
+    }
+  };
+
+
+
 
   const statusLabel: Record<string, string> = {
     enrolled: "Inscrito", scheduled_initial: "Ag. Inicial", weighed_initial: "Pesagem Inicial ✓",
@@ -292,14 +311,14 @@ export default function AdminChallengePage() {
       ) : competitions.map(comp => (
         <div key={comp.id} className="rounded-2xl border border-border bg-card overflow-hidden">
           {/* Header da competição */}
-          <button
-            className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/20 transition-colors"
-            onClick={() => {
-              if (expandedComp === comp.id) { setExpandedComp(null); }
-              else { setExpandedComp(comp.id); loadGroups(comp.id); }
-            }}
-          >
-            <div className="flex items-center gap-3">
+          <div className="w-full flex items-center justify-between p-5 hover:bg-muted/20 transition-colors">
+            <button
+              className="flex items-center gap-3 text-left flex-1"
+              onClick={() => {
+                if (expandedComp === comp.id) { setExpandedComp(null); }
+                else { setExpandedComp(comp.id); loadGroups(comp.id); }
+              }}
+            >
               <Trophy className={`h-5 w-5 ${comp.status === "active" ? "text-primary" : "text-muted-foreground"}`} />
               <div>
                 <p className="font-bold text-foreground">{MONTHS[comp.month]} {comp.year}</p>
@@ -307,9 +326,17 @@ export default function AdminChallengePage() {
                   Prêmio: {money(comp.prize_amount)} por gênero · Status: <span className={comp.status === "active" ? "text-green-400" : "text-muted-foreground"}>{comp.status}</span>
                 </p>
               </div>
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteCompetition(comp); }}
+                title="Excluir competição"
+                className="flex items-center gap-1 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive hover:bg-destructive/20">
+                <Trash2 className="h-3 w-3" /> Excluir
+              </button>
+              {expandedComp === comp.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </div>
-            {expandedComp === comp.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-          </button>
+          </div>
 
           {expandedComp === comp.id && (
             <div className="border-t border-border p-5 space-y-4">
