@@ -42,12 +42,12 @@ type HallEntry = {
   result_kg: number;
   result_pct: number;
   prize_amount: number;
-  prize_paid: boolean;
   created_at: string;
-  student: { profile: { name: string } };
+  student: { profile: { name: string; photo_url: string | null; avatar_url: string | null } };
   coach: { profile: { name: string } };
   competition: { month: number; year: number };
 };
+
 
 type Appointment = {
   id: string; type: string; requested_date: string;
