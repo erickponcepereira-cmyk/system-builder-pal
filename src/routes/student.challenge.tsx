@@ -328,8 +328,6 @@ export default function StudentChallengePage() {
                     </p>
                   </div>
                 </div>
-
-                {/* Pesos */}
                 {(enrollment.initial_weight || enrollment.final_weight) && (
                   <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
                     <div className="text-center">
@@ -341,12 +339,16 @@ export default function StudentChallengePage() {
                       <p className="text-lg font-bold text-foreground">{enrollment.final_weight ?? "—"} kg</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Resultado</p>
-                      {enrollment.result_pct != null ? (
-                        <p className="text-lg font-bold text-green-400">-{enrollment.result_pct}%</p>
+                      <p className="text-xs text-muted-foreground">Variação</p>
+                      {enrollment.result_kg != null ? (
+                        <p className={`text-lg font-bold ${enrollment.result_kg > 0 ? "text-green-400" : enrollment.result_kg < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                          {enrollment.result_kg > 0 ? "−" : enrollment.result_kg < 0 ? "+" : ""}{Math.abs(enrollment.result_kg)} kg
+                        </p>
                       ) : <p className="text-lg font-bold text-muted-foreground">—</p>}
                     </div>
                   </div>
+                )}
+
                 )}
               </div>
 
