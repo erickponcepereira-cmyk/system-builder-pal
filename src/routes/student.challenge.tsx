@@ -310,6 +310,26 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
 
                 {/* Status */}
                 {(() => {
+                  const isWinner = !!studentId && winners.some(w => w.student_id === studentId);
+                  const hasAnyWinner = winners.length > 0;
+                  if (isWinner) {
+                    return (
+                      <div className="flex items-center gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/40 px-3 py-2">
+                        <Trophy className="h-4 w-4 text-yellow-400" />
+                        <span className="text-sm font-bold text-yellow-400">🏆 Você foi consagrado vencedor desta edição!</span>
+                      </div>
+                    );
+                  }
+                  if (hasAnyWinner && enrollment.status === "weighed_final") {
+                    return (
+                      <div className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border px-3 py-2">
+                        <Trophy className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-bold text-muted-foreground">
+                          Não foi dessa vez. Confira o Hall da Fama para conhecer o vencedor.
+                        </span>
+                      </div>
+                    );
+                  }
                   const info = statusInfo[enrollment.status] || { label: enrollment.status, color: "text-muted-foreground", icon: Clock };
                   const Icon = info.icon;
                   return (
@@ -319,6 +339,7 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
                     </div>
                   );
                 })()}
+
 
                 {/* Alerta de pesagem final próxima */}
                 {daysUntilFinal !== null && daysUntilFinal <= 7 && daysUntilFinal > 0 && (
