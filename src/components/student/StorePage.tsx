@@ -686,7 +686,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
             </div>
             <MercadoPagoCheckout
-              source={{ kind: "store_order", id: payOrder.id }}
+              source={{ kind: payOrder.sourceKind, id: payOrder.id }}
+
               amount={payOrder.total}
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
