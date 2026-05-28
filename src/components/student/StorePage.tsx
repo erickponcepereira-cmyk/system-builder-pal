@@ -313,12 +313,47 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
   const checkoutAsStudent = async () => {
     if (cart.length === 0) return;
+    const partnerItems = cart.filter((c) => c.kind === "partner");
+    if (partnerItems.length > 0 && cart.length > 1) {
+      toast.error("Produtos de parceiros devem ser comprados separadamente.");
+      return;
+    }
     if (requiresShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
       toast.error("Preencha os dados de entrega.");
       return;
     }
     setCheckingOut(true);
     try {
+      const { data: userData } = await supabase.auth.getUser();
+
+      // Caminho exclusivo: produto de parceiro (1 item por pedido)
+      if (partnerItems.length === 1) {
+        const pp = partnerItems[0];
+        const { data: ppId, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
+          _professional_product_id: pp.sourceId,
+          _payment_method: paymentMethod,
+        } as never);
+        if (ppErr) throw new Error(ppErr.message);
+        if (!ppId) throw new Error("Pedido não retornado");
+        const { data: orderData } = await supabase
+          .from("partner_product_orders" as never)
+          .select("id,order_number,gross_amount" as never)
+          .eq("id" as never, ppId as never)
+          .maybeSingle();
+        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
+        setCart([]); setCartOpen(false);
+        setPayOrder({
+          id: od?.id || String(ppId),
+          total: Number(od?.gross_amount || pp.price),
+          number: od?.order_number || "pedido",
+          email: userData.user?.email || "",
+          name: userData.user?.user_metadata?.name || "",
+          sourceKind: "partner_product_order",
+        });
+        await load();
+        return;
+      }
+
       const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
       const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
       if (error) throw new Error(error.message);
@@ -328,13 +363,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         .select("id,order_number,total_amount" as never)
         .eq("id" as never, orderId as never)
         .maybeSingle();
-      const { data: userData } = await supabase.auth.getUser();
       const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
       setCart([]); setCartOpen(false); setShipping(initialShipping);
       setPayOrder({
         id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
+        sourceKind: "store_order",
       });
       await load();
     } catch (e: any) {
@@ -343,6 +378,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       setCheckingOut(false);
     }
   };
+
 
   const checkoutAsCoach = async () => {
     if (!selectedClient) { setCartOpen(false); setClientPickerOpen(true); return; }
