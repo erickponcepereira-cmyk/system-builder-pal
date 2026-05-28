@@ -8,7 +8,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Scale, CheckCircle2, Clock, Calendar, Trophy, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Scale, CheckCircle2, Calendar, Trophy, Loader2, ChevronDown, ChevronUp, CalendarPlus } from "lucide-react";
+import { HallOfFame } from "@/components/HallOfFame";
+
 
 type Appointment = {
   id: string;
