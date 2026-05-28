@@ -169,7 +169,7 @@ export async function handleCreatePix(data: PixInput) {
 }
 
 export type CardInput = {
-  source: { kind: "store_order" | "transaction"; id: string };
+  source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
 };
