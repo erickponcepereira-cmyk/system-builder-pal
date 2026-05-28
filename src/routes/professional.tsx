@@ -12,7 +12,9 @@ import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalS
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
-import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
+import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
+import { FitmindCalendar } from "@/components/FitmindCalendar";
+
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
 
