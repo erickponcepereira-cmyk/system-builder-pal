@@ -101,7 +101,7 @@ export default function AdminChallengePage() {
     try {
       const { data: comp, error } = await supabase
         .from("competitions" as never)
-        .insert({ month: newMonth, year: newYear, prize_amount: newPrize })
+        .insert({ month: newMonth, year: newYear, prize_amount: newPrize } as never)
         .select("id")
         .single();
       if (error) throw error;
