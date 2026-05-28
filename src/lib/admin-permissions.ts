@@ -21,7 +21,9 @@ export const ADMIN_PERMISSIONS: { key: AdminPermKey; label: string }[] = [
   { key: "financeiro", label: "Financeiro" },
   { key: "financial_summary", label: "Resumo Financeiro" },
 
-  { key: "reports", label: "Relatórios" },
+  { key: "calendars", label: "Agendas" },
+  { key: "fitmind_events", label: "Calendário de Eventos" },
+
   { key: "patents", label: "Patentes" },
   { key: "calendars", label: "Agendas" },
   { key: "store", label: "Loja" },
