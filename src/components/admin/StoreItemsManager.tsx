@@ -20,6 +20,7 @@ interface Item {
   sku: string | null;
   is_featured: boolean;
   is_active: boolean;
+  has_challenge_access?: boolean;
   sort_order: number;
 }
 
@@ -51,7 +52,7 @@ export function StoreItemsManager() {
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,sort_order")
+        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,sort_order")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
@@ -107,6 +108,7 @@ export function StoreItemsManager() {
         sku: editing.sku || null,
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
+        has_challenge_access: !!editing.has_challenge_access,
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
       };
@@ -350,7 +352,10 @@ export function StoreItemsManager() {
                 Destaque
               </label>
               <label className="flex items-center gap-2 text-sm text-white/80">
-                <input type="checkbox" checked={editing.is_active ?? true} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} />
+                <input type="checkbox" checked={editing.is_active ?? true} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} /> Ativo
+              </label>
+              <label className="flex items-center gap-2 text-sm text-white/80">
+                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked })} /> Dá acesso ao Desafio de Emagrecimento
                 Ativo
               </label>
             </div>
