@@ -5,7 +5,7 @@ import { Loader2, Copy, CheckCircle2 } from "lucide-react";
 import { loadMercadoPagoSDK, getMP } from "@/lib/mercadopago";
 import { createPixCheckout, createCardCheckout, getPaymentStatus } from "@/lib/mercadopago.functions";
 
-type Source = { kind: "store_order" | "transaction"; id: string };
+type Source = { kind: "store_order" | "transaction" | "partner_product_order"; id: string };
 type Payer = { email: string; name?: string; doc?: string };
 
 interface Props {
