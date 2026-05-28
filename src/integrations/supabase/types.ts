@@ -2428,6 +2428,142 @@ export type Database = {
           },
         ]
       }
+      fitmind_events: {
+        Row: {
+          all_day: boolean
+          category: Database["public"]["Enums"]["event_category"]
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string
+          google_calendar_description: string | null
+          google_calendar_location: string | null
+          google_calendar_title: string | null
+          highlight_color: string | null
+          highlight_label: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_highlighted: boolean
+          is_important: boolean
+          location: string | null
+          starts_at: string
+          subtitle: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          visibility: Database["public"]["Enums"]["event_visibility"]
+        }
+        Insert: {
+          all_day?: boolean
+          category?: Database["public"]["Enums"]["event_category"]
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at: string
+          google_calendar_description?: string | null
+          google_calendar_location?: string | null
+          google_calendar_title?: string | null
+          highlight_color?: string | null
+          highlight_label?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_highlighted?: boolean
+          is_important?: boolean
+          location?: string | null
+          starts_at: string
+          subtitle?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["event_visibility"]
+        }
+        Update: {
+          all_day?: boolean
+          category?: Database["public"]["Enums"]["event_category"]
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string
+          google_calendar_description?: string | null
+          google_calendar_location?: string | null
+          google_calendar_title?: string | null
+          highlight_color?: string | null
+          highlight_label?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_highlighted?: boolean
+          is_important?: boolean
+          location?: string | null
+          starts_at?: string
+          subtitle?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["event_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitmind_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fitmind_highlighted_days: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitmind_highlighted_days_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_logs: {
         Row: {
           ai_analysis: Json | null
@@ -6533,6 +6669,31 @@ export type Database = {
         }
         Returns: string
       }
+      get_fitmind_events: {
+        Args: { _from?: string; _to?: string }
+        Returns: {
+          all_day: boolean
+          category: Database["public"]["Enums"]["event_category"]
+          color: string
+          description: string
+          ends_at: string
+          google_calendar_description: string
+          google_calendar_location: string
+          google_calendar_title: string
+          highlight_color: string
+          highlight_label: string
+          id: string
+          image_url: string
+          is_highlighted: boolean
+          is_important: boolean
+          location: string
+          starts_at: string
+          subtitle: string
+          tags: string[]
+          title: string
+          visibility: Database["public"]["Enums"]["event_visibility"]
+        }[]
+      }
       get_or_create_daily_quote: { Args: never; Returns: Json }
       get_student_attendance_summary: {
         Args: { _student_id?: string }
@@ -6765,6 +6926,21 @@ export type Database = {
         | "nutritionist_partner"
         | "council"
       commission_status: "pending" | "available" | "withdrawn" | "cancelled"
+      event_category:
+        | "aula"
+        | "workshop"
+        | "desafio"
+        | "palestra"
+        | "avaliacao"
+        | "comemorativo"
+        | "networking"
+        | "outro"
+      event_visibility:
+        | "todos"
+        | "coaches"
+        | "alunos"
+        | "parceiros"
+        | "profissionais"
       nutri_block_status: "blocked" | "released" | "cancelled" | "paid"
       order_pool_status:
         | "pending"
@@ -6975,6 +7151,23 @@ export const Constants = {
         "council",
       ],
       commission_status: ["pending", "available", "withdrawn", "cancelled"],
+      event_category: [
+        "aula",
+        "workshop",
+        "desafio",
+        "palestra",
+        "avaliacao",
+        "comemorativo",
+        "networking",
+        "outro",
+      ],
+      event_visibility: [
+        "todos",
+        "coaches",
+        "alunos",
+        "parceiros",
+        "profissionais",
+      ],
       nutri_block_status: ["blocked", "released", "cancelled", "paid"],
       order_pool_status: [
         "pending",
