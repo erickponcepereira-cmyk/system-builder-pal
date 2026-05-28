@@ -255,6 +255,22 @@ export default function AdminChallengePage() {
     }
   };
 
+  const removeEnrollment = async (enrollId: string, studentName: string) => {
+    if (!confirm(`Remover ${studentName} desta competição? Agendamentos e prêmios relacionados também serão removidos.`)) return;
+    try {
+      const { error } = await supabase
+        .from("competition_enrollments" as never)
+        .delete()
+        .eq("id" as never, enrollId);
+      if (error) throw error;
+      toast.success("Aluno removido da competição.");
+      if (expandedComp) loadGroups(expandedComp);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover aluno");
+    }
+  };
+
+
 
 
 
