@@ -439,9 +439,14 @@ export default function StudentChallengePage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-green-400">-{entry.result_pct}%</p>
-                  <p className="text-xs text-muted-foreground">-{entry.result_kg} kg</p>
+                  <p className={`text-lg font-bold ${entry.result_kg > 0 ? "text-green-400" : "text-red-400"}`}>
+                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_pct)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_kg)} kg
+                  </p>
                 </div>
+
               </div>
               <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                 <span className="text-xs text-muted-foreground">
