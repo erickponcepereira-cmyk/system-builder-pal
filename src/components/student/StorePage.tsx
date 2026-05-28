@@ -57,7 +57,7 @@ interface StorePageProps {
   hasUpline?: boolean;
 }
 
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
+export function StorePage({ coachMode = false, hasUpline = false }: StorePageProps = {}) {
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeCategory, setActiveCategory] = useState("Todos");
@@ -67,7 +67,8 @@ interface StorePageProps {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
+
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
   const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
