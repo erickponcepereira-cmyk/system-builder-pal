@@ -129,12 +129,23 @@ export function ProtocolTab() {
         external: false,
       })));
 
-      const { data: ext } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .select("id, name, email, whatsapp" as never)
-        .eq("coach_id" as never, coach.id as never)
-        .order("name" as never);
-      setExternals(((ext as any[]) || []).map((e) => ({
+      // Paginate to bypass Supabase's default 1000-row limit
+      const PAGE_EXT = 1000;
+      let fromExt = 0;
+      const extAll: any[] = [];
+      while (true) {
+        const { data: ext } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .select("id, name, email, whatsapp" as never)
+          .eq("coach_id" as never, coach.id as never)
+          .order("name" as never)
+          .range(fromExt, fromExt + PAGE_EXT - 1);
+        const rowsExt = (ext as any[]) || [];
+        extAll.push(...rowsExt);
+        if (rowsExt.length < PAGE_EXT) break;
+        fromExt += PAGE_EXT;
+      }
+      setExternals(extAll.map((e) => ({
         id: e.id,
         profile_id: null,
         name: e.name,
