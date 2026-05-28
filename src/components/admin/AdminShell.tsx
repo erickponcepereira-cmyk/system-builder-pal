@@ -22,7 +22,9 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap, perm: "coach_applications" },
   { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
   { to: "/admin/financeiro", label: "Financeiro", icon: DollarSign, perm: "financeiro" },
+  { to: "/admin/financial-summary", label: "Resumo Financeiro", icon: TrendingUp, perm: "financial_summary" },
   { to: "/admin/admin-wallet", label: "Carteira do Admin", icon: Wallet, perm: "admin_wallet" },
+
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
   { to: "/admin/patents", label: "Patentes", icon: Award, perm: "patents" },
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
@@ -30,7 +32,9 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/freebies", label: "Gratuitos", icon: Gift, perm: "freebies" },
   { to: "/admin/store-reports", label: "Relatórios da Loja", icon: TrendingUp, perm: "store_reports" },
   { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },
-  { to: "/admin/nutritionist-wallet", label: "Carteira Nutricionista", icon: Lock, perm: "nutritionist_wallet" },
+  { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },
+  { to: "/admin/partner-orders", label: "Pedidos de Parceiros", icon: Stethoscope, perm: "partner_orders" },
+
   { to: "/admin/career", label: "Carreira", icon: Trophy, perm: "career" },
   { to: "/admin/library", label: "Biblioteca", icon: Dumbbell, perm: "library" },
   { to: "/admin/partners", label: "Empresas Parceiras", icon: Store, perm: "partners" },
