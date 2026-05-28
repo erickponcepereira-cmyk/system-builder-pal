@@ -112,7 +112,7 @@ const EMPTY_DAY: Omit<HighlightedDay, "id"> = {
   is_active: true,
 };
 
-};
+
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
