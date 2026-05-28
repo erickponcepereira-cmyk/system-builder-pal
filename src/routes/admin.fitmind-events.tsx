@@ -187,17 +187,15 @@ function EventsTab() {
 
   };
 
-  useEffect(() => { load(); }, [filterMonth]);
-
   const openNew = () => {
-    const base = new Date(filterMonth + "-01");
-    base.setDate(15);
-    base.setHours(9, 0, 0, 0);
-    const end = new Date(base.getTime() + 3600000);
+    // 15º dia do mês filtrado, às 09:00 (hora de Cuiabá)
+    const startLocal = `${filterMonth}-15T09:00`;
+    const startISO = tzLocalToISO(startLocal);
+    const endISO = new Date(new Date(startISO).getTime() + 3600000).toISOString();
     setEditing({
       ...EMPTY_EVENT,
-      starts_at: base.toISOString().slice(0, 16),
-      ends_at: end.toISOString().slice(0, 16),
+      starts_at: tzDateTimeLocal(startISO),
+      ends_at: tzDateTimeLocal(endISO),
     });
     setTagInput("");
   };
@@ -205,10 +203,12 @@ function EventsTab() {
   const openEdit = (ev: FitmindEvent) => {
     setEditing({
       ...ev,
-      starts_at: ev.starts_at.slice(0, 16),
-      ends_at: ev.ends_at.slice(0, 16),
+      starts_at: tzDateTimeLocal(ev.starts_at),
+      ends_at: tzDateTimeLocal(ev.ends_at),
     });
     setTagInput("");
+  };
+
   };
 
   const save = async () => {
