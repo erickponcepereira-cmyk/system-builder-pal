@@ -324,7 +324,9 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         {loading ? (
           <div className="py-16 text-center text-sm text-white/40">Carregando eventos...</div>
         ) : (
+          <div className="grid grid-cols-7">
             {gridDays.map((day, i) => {
+
               if (!day) return <div key={`empty-${i}`} className="h-20 sm:h-24 border-b border-r border-white/5 bg-black/20" />;
 
               const dateKey     = ymdKey(year, month, day);
