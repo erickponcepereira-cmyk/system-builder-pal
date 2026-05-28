@@ -37,7 +37,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-
+type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals";
 type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports";
 
 export const money = (value: number | null | undefined) =>
