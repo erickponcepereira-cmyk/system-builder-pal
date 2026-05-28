@@ -82,13 +82,24 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
     setLog([]);
     try {
       // load existing clients of this coach to dedupe by normalized name
-      const { data: existing } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .select("id,name" as never)
-        .eq("coach_id" as never, coachId as never);
+      // Paginate to bypass Supabase's default 1000-row limit (support unlimited clients)
       const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
       const byName = new Map<string, string>();
-      ((existing as any[]) || []).forEach((c) => byName.set(norm(c.name), c.id));
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page, error: pageErr } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .select("id,name" as never)
+          .eq("coach_id" as never, coachId as never)
+          .range(from, from + PAGE - 1);
+        if (pageErr) { addLog(`Erro ao carregar existentes: ${pageErr.message}`); break; }
+        const rowsPage = (page as any[]) || [];
+        rowsPage.forEach((c) => byName.set(norm(c.name), c.id));
+        if (rowsPage.length < PAGE) break;
+        from += PAGE;
+      }
+      addLog(`Clientes existentes carregados: ${byName.size}`);
 
       // --- Clients ---
       if (clientsFile) {
