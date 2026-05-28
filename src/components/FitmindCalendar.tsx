@@ -91,26 +91,26 @@ function buildGoogleCalendarUrl(ev: FitmindEvent): string {
 
 interface FitmindCalendarProps {
   /** Modo compacto (sidebar / widget). Padrão: false (tela inteira) */
-  compact?: boolean;
-  /** Mostra apenas eventos em destaque no widget compacto */
-  onlyHighlighted?: boolean;
-}
-
 export function FitmindCalendar({ compact = false, onlyHighlighted = false }: FitmindCalendarProps) {
   const [events, setEvents] = useState<FitmindEvent[]>([]);
   const [highlightedDays, setHighlightedDays] = useState<HighlightedDay[]>([]);
   const [loading, setLoading] = useState(true);
-  const [today] = useState(() => new Date());
-  const [currentMonth, setCurrentMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [todayKey] = useState(() => tzToday());
+  const [currentYM, setCurrentYM] = useState(() => {
+    const { year, month } = tzCurrentYearMonth();
+    return `${year}-${String(month + 1).padStart(2, "0")}`;
+  });
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<FitmindEvent | null>(null);
 
-  // ── Load events for the visible month range ─────────────────────────────
+  const [yearStr, monthStr] = currentYM.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr) - 1;
+
+  // ── Load events for the visible month range (Cuiabá timezone) ───────────
   useEffect(() => {
-    const from = new Date(currentMonth);
-    from.setDate(1);
-    const to = new Date(currentMonth);
-    to.setMonth(to.getMonth() + 1);
+    const from = tzStartOfMonth(currentYM);
+    const to   = tzStartOfMonth(shiftYearMonth(currentYM, 1));
 
     setLoading(true);
     Promise.all([
@@ -125,8 +125,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .from("fitmind_highlighted_days" as never)
         .select("id,date,label,description,color,icon" as never)
         .eq("is_active" as never, true as never)
-        .gte("date" as never, from.toISOString().slice(0, 10) as never)
-        .lt("date" as never, to.toISOString().slice(0, 10) as never),
+        .gte("date" as never, tzDateKey(from) as never)
+        .lt("date" as never, tzDateKey(to) as never),
     ]).then(([evRes, dayRes]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
@@ -134,29 +134,26 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
-  }, [currentMonth]);
+  }, [currentYM]);
 
   // ── Calendar grid ────────────────────────────────────────────────────────
 
   const { gridDays, monthLabel } = useMemo(() => {
-    const year  = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
     const firstWeekday = new Date(year, month, 1).getDay(); // 0 = Sun
     const daysInMonth  = new Date(year, month + 1, 0).getDate();
-    const label = currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const label = yearMonthLabel(currentYM);
 
-    // Pad with nulls for days before the 1st
-    const prefix = Array.from({ length: firstWeekday }, () => null);
-    const days   = Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1));
+    const prefix = Array.from({ length: firstWeekday }, () => null as number | null);
+    const days   = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return { gridDays: [...prefix, ...days], monthLabel: label };
-  }, [currentMonth]);
+  }, [currentYM, year, month]);
 
-  // ── Events indexed by date string ────────────────────────────────────────
+  // ── Events indexed by date string (Cuiabá date) ──────────────────────────
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, FitmindEvent[]>();
     for (const ev of events) {
-      const key = ev.starts_at.slice(0, 10);
+      const key = tzDateKey(ev.starts_at);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
     }
@@ -171,14 +168,17 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
 
   // ── Day events panel ──────────────────────────────────────────────────────
 
-  const selectedDateKey = selectedDay?.toISOString().slice(0, 10);
-  const selectedDayEvents = selectedDateKey ? (eventsByDate.get(selectedDateKey) || []) : [];
-  const selectedDayHighlight = selectedDateKey ? highlightByDate.get(selectedDateKey) : undefined;
+  const selectedDayEvents = selectedDayKey ? (eventsByDate.get(selectedDayKey) || []) : [];
+  const selectedDayHighlight = selectedDayKey ? highlightByDate.get(selectedDayKey) : undefined;
 
   // ── Highlighted/upcoming events list (for compact mode) ──────────────────
 
   const upcomingEvents = useMemo(() => {
-    const todayStr = today.toISOString().slice(0, 10);
+    return events
+      .filter((ev) => tzDateKey(ev.starts_at) >= todayKey && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
+      .slice(0, 5);
+  }, [events, todayKey, onlyHighlighted]);
+
     return events
       .filter((ev) => ev.starts_at.slice(0, 10) >= todayStr && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
       .slice(0, 5);
