@@ -235,7 +235,9 @@ function CoachDashboard() {
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
-    { id: "career", label: "Carreira", icon: Trophy },
+    { id: "reports", label: "Relatórios", icon: BarChart3 },
+    { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
+
     { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "profile", label: "Meu Perfil", icon: User },
