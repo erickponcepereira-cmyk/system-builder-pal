@@ -57,7 +57,7 @@ interface StorePageProps {
   hasUpline?: boolean;
 }
 
-export function StorePage({ coachMode = false, hasUpline = true }: StorePageProps) {
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeCategory, setActiveCategory] = useState("Todos");
