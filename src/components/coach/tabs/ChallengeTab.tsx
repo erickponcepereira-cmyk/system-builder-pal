@@ -193,7 +193,7 @@ export function ChallengeTab({ coachId }: Props) {
     <div className="space-y-4 p-1">
       <div className="flex items-center gap-2">
         <Trophy className="h-5 w-5 text-primary" />
-        <h2 className="font-bold text-foreground">Desafio de Emagrecimento</h2>
+        <h2 className="font-bold text-foreground">Desafio FitMind</h2>
         {pending.length > 0 && (
           <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
             {pending.length}
