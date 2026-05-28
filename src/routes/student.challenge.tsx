@@ -117,6 +117,10 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
           access = ((prods as any[]) || []).length > 0;
         }
       } catch (e) { console.warn("access check failed", e); }
+
+      // Também verifica se já está inscrito (admin pode inscrever manualmente)
+      const { data: enroll, error: enrollErr } = await supabase
+        .from("competition_enrollments" as never)
         .select(`
           id, status, gender, initial_date, initial_weight,
           final_date, final_weight, result_kg, result_pct, competition_id,
@@ -131,12 +135,6 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
         .limit(1)
         .maybeSingle();
 
-          competition:competition_id ( month, year, prize_amount )
-        `)
-        .eq("student_id" as never, (student as any).id)
-        .order("enrolled_at" as never, { ascending: false })
-        .limit(1)
-        .maybeSingle();
 
       if (enrollErr) console.warn("enroll fetch error", enrollErr);
       if (enroll && (enroll as any).group && (enroll as any).competition) {
