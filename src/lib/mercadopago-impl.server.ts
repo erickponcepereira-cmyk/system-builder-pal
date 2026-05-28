@@ -98,9 +98,10 @@ export async function applyApproval(kind: SourceKind, id: string) {
 
 
 export type PixInput = {
-  source: { kind: "store_order" | "transaction"; id: string };
+  source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
 };
+
 
 export async function handleCreatePix(data: PixInput) {
   const src = await loadSource(data.source.kind, data.source.id);
