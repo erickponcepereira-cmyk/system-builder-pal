@@ -41,12 +41,23 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("coach_evaluation_clients" as never)
-      .select("id,name,whatsapp,email,current_weight,height,gender,ethnicity,birth_date,created_at" as never)
-      .eq("coach_id" as never, coachId as never)
-      .order("created_at" as never, { ascending: false });
-    setRows((data as unknown as Row[]) || []);
+    // Paginate to bypass Supabase's default 1000-row limit
+    const PAGE = 1000;
+    let from = 0;
+    const all: Row[] = [];
+    while (true) {
+      const { data } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id,name,whatsapp,email,current_weight,height,gender,ethnicity,birth_date,created_at" as never)
+        .eq("coach_id" as never, coachId as never)
+        .order("created_at" as never, { ascending: false })
+        .range(from, from + PAGE - 1);
+      const rows = (data as unknown as Row[]) || [];
+      all.push(...rows);
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
+    setRows(all);
     setLoading(false);
   };
 
