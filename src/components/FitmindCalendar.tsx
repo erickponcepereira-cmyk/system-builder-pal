@@ -185,11 +185,6 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       .slice(0, 5);
   }, [events, todayKey, onlyHighlighted]);
 
-    return events
-      .filter((ev) => ev.starts_at.slice(0, 10) >= todayStr && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
-      .slice(0, 5);
-  }, [events, today, onlyHighlighted]);
-
   // ─── Compact widget mode ─────────────────────────────────────────────────
   if (compact) {
     return (
