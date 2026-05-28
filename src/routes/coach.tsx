@@ -40,7 +40,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar";
+type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
 
 
 export const money = (value: number | null | undefined) =>
