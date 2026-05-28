@@ -215,6 +215,8 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
   if (tab === "wallet") return <MyNetworkPanel />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
+  if (tab === "fitmind_calendar") return <FitmindCalendar />;
+
   if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
   if (tab === "diet") return <ProtocolTab />;
   if (tab === "anamnese") return <AnamneseTab coachId={info.coachId} />;
