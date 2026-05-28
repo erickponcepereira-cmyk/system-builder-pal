@@ -393,17 +393,18 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       </div>
 
       {/* Painel do dia selecionado */}
-      {selectedDay && (
+      {selectedDayKey && (
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-xs text-white/40 uppercase tracking-wider">Eventos do dia</p>
               <h3 className="text-base font-bold text-white capitalize">
-                {selectedDay.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+                {new Date(`${selectedDayKey}T12:00:00${"-04:00"}`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: TZ })}
               </h3>
             </div>
-            <button onClick={() => setSelectedDay(null)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/50"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSelectedDayKey(null)} className="p-1.5 rounded-lg hover:bg-white/10 text-white/50"><X className="h-4 w-4" /></button>
           </div>
+
 
           {/* Destaque do dia */}
           {selectedDayHighlight && (
