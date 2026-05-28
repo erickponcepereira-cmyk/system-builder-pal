@@ -282,7 +282,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
                 <button
                   key={ev.id}
                   onClick={() => setDetail(ev)}
-                  className="p-4 text-left hover:scale-[1.02] transition-all flex items-center justify-center rounded-2xl gap-[30px] py-[16px] px-[30px]"
+                  className="flex items-center gap-3 rounded-2xl p-4 text-left hover:scale-[1.02] transition-all"
                   style={{
                     background: `linear-gradient(135deg, ${evColor}22, ${evColor}10)`,
                     border: `1px solid ${evColor}40`,
