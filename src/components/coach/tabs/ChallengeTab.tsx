@@ -60,11 +60,17 @@ export function ChallengeTab({ coachId }: Props) {
   const [pending, setPending] = useState<Appointment[]>([]);
   const [students, setStudents] = useState<MyStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"appointments" | "students">("appointments");
+  const [tab, setTab] = useState<"appointments" | "students" | "hall">("appointments");
   const [weightModal, setWeightModal] = useState<{ apptId: string; enrollId: string; studentName: string; type: string } | null>(null);
   const [weightValue, setWeightValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
+  // Re-schedule modal (coach propõe nova data ao aluno)
+  const [reschedModal, setReschedModal] = useState<{ enrollId: string; studentId: string; studentName: string; type: "initial" | "final" } | null>(null);
+  const [reschedDate, setReschedDate] = useState("");
+  const [reschedTime, setReschedTime] = useState("09:00");
+  const [reschedSaving, setReschedSaving] = useState(false);
+
 
   const load = async () => {
     if (!coachId) return;
