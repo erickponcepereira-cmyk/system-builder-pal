@@ -146,7 +146,9 @@ function PartnerPanel() {
         {tab === "qrcode" && <QrCodePanel partner={partner} />}
         {tab === "freebies" && hasActiveFree && <CoachBenefitsTab />}
         {tab === "store" && hasActiveFree && <StorePage />}
-        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
+        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
+        {tab === "fitmind_calendar" && <FitmindCalendar />}
+
         {tab === "network" && <MyNetworkPanel />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>
