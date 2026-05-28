@@ -8,14 +8,16 @@ import { supabase } from "@/integrations/supabase/client";
 interface MobileShellProps {
   children: ReactNode;
 }
-
 const navItems = [
   { to: "/student", label: "Home", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
+  { to: "/student/calendar", label: "Agenda", icon: CalendarDays },
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/freebies", label: "Gratuitos", icon: Gift },
   { to: "/student/profile", label: "Perfil", icon: User },
+] as const;
+
 ] as const;
 
 export function MobileShell({ children }: MobileShellProps) {
