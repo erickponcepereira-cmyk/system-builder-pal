@@ -349,7 +349,7 @@ export default function StudentChallengePage() {
                   </div>
                 )}
 
-                )}
+
               </div>
 
               {/* Botão de agendar */}
