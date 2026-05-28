@@ -23,10 +23,10 @@ import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
+import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 
-import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
 
 // Link "/" usage to satisfy unused import warnings (not required)
 void Link;
