@@ -138,19 +138,7 @@ export default function StudentChallengePage() {
         setAppointments((appts as any[]) || []);
       }
 
-      // Hall da Fama (público)
-      const { data: hall } = await supabase
-        .from("competition_hall_of_fame" as never)
-        .select(`
-          id, gender, initial_weight, final_weight, result_kg, result_pct,
-          prize_amount, created_at,
-          student:student_id ( profile:profile_id ( name, photo_url, avatar_url ) ),
-          coach:coach_id ( profile:profile_id ( name ) ),
-          competition:competition_id ( month, year )
-        `)
-        .order("created_at" as never, { ascending: false })
-        .limit(100);
-      setHallOfFame((hall as any[]) || []);
+
 
     } finally {
       setLoading(false);
