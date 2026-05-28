@@ -218,29 +218,52 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
 
     const { data: coachRow } = await supabaseAdmin
       .from("coaches")
-      .select("id,profile_id,fantasy_name,description,photo_url,whatsapp,instagram,referral_code")
+      .select(
+        "id,profile_id,referral_code,instagram,specialty_key,specialty_custom_description",
+      )
       .eq("id", s.coach_id)
       .maybeSingle();
     const c = (coachRow ?? null) as
       | {
           id: string;
           profile_id: string;
-          fantasy_name: string | null;
-          description: string | null;
-          photo_url: string | null;
-          whatsapp: string | null;
-          instagram: string | null;
           referral_code: string | null;
+          instagram: string | null;
+          specialty_key: string | null;
+          specialty_custom_description: string | null;
         }
       | null;
 
     const { data: coachProfile } = c?.profile_id
       ? await supabaseAdmin
           .from("profiles")
-          .select("name,avatar_url,email")
+          .select("name,avatar_url,photo_url,email,phone,instagram,bio,profession")
           .eq("id", c.profile_id)
           .maybeSingle()
-      : { data: null as { name: string | null; avatar_url: string | null; email: string | null } | null };
+      : {
+          data: null as {
+            name: string | null;
+            avatar_url: string | null;
+            photo_url: string | null;
+            email: string | null;
+            phone: string | null;
+            instagram: string | null;
+            bio: string | null;
+            profession: string | null;
+          } | null,
+        };
+
+    // Resolve specialty label from professional_specialties when available
+    let specialtyLabel: string | null = null;
+    if (c?.specialty_key) {
+      const { data: spec } = await supabaseAdmin
+        .from("professional_specialties")
+        .select("label")
+        .eq("key", c.specialty_key)
+        .maybeSingle();
+      specialtyLabel = (spec?.label as string | null) ?? null;
+    }
+
 
     const photosRaw = (a.photos as Record<string, string | undefined> | null) ?? null;
     const photos = photosRaw && Object.keys(photosRaw).length > 0 ? photosRaw : null;
