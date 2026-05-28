@@ -304,14 +304,20 @@ export function ChallengeTab({ coachId }: Props) {
       </div>
 
       {/* Sub-tabs */}
-      <div className="grid grid-cols-2 gap-2">
-        {(["appointments","students"] as const).map(t => (
+      <div className="grid grid-cols-3 gap-2">
+        {(["appointments","students","hall"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`rounded-lg py-2 text-sm font-bold ${tab === t ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-            {t === "appointments" ? `Agendamentos (${pending.length})` : `Meus Alunos (${students.length})`}
+            className={`rounded-lg py-2 text-xs font-bold ${tab === t ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            {t === "appointments" ? `Agendamentos (${pending.length})` :
+             t === "students" ? `Alunos (${students.length})` :
+             `Hall da Fama`}
           </button>
         ))}
       </div>
+
+      {tab === "hall" && <HallOfFame />}
+
+
 
       {/* ── Agendamentos ── */}
       {tab === "appointments" && (
