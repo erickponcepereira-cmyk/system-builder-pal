@@ -79,6 +79,13 @@ export default function StudentChallengePage() {
       if (!auth.user) return;
 
       const { data: profile } = await supabase
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+
+      const { data: profile } = await supabase
         .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
       if (!profile) return;
 
@@ -92,24 +99,26 @@ export default function StudentChallengePage() {
       setCoachId((student as any).coach_id);
 
       // Verifica se tem acesso via produto comprado com has_challenge_access
-      const { data: txs } = await supabase
-        .from("transactions" as never)
-        .select("product_id")
-        .eq("student_id" as never, (student as any).id)
-        .eq("status" as never, "paid");
-      const productIds = ((txs as any[]) || []).map((t: any) => t.product_id).filter(Boolean);
       let access = false;
-      if (productIds.length > 0) {
-        const { data: prods } = await supabase
-          .from("products" as never)
-          .select("id")
-          .in("id" as never, productIds)
-          .eq("has_challenge_access" as never, true);
-        access = ((prods as any[]) || []).length > 0;
-      }
+      try {
+        const { data: txs } = await supabase
+          .from("transactions" as never)
+          .select("product_id")
+          .eq("student_id" as never, (student as any).id)
+          .eq("status" as never, "paid");
+        const productIds = ((txs as any[]) || []).map((t: any) => t.product_id).filter(Boolean);
+        if (productIds.length > 0) {
+          const { data: prods } = await supabase
+            .from("products" as never)
+            .select("id")
+            .in("id" as never, productIds)
+            .eq("has_challenge_access" as never, true);
+          access = ((prods as any[]) || []).length > 0;
+        }
+      } catch (e) { console.warn("access check failed", e); }
 
       // Também verifica se já está inscrito (admin pode inscrever manualmente)
-      const { data: enroll } = await supabase
+      const { data: enroll, error: enrollErr } = await supabase
         .from("competition_enrollments" as never)
         .select(`
           id, status, gender, initial_date, initial_weight,
@@ -125,24 +134,31 @@ export default function StudentChallengePage() {
         .limit(1)
         .maybeSingle();
 
-      if (enroll) { access = true; setEnrollment(enroll as any); }
-      setHasAccess(access);
-
-      // Agendamentos
-      if (enroll) {
-        const { data: appts } = await supabase
-          .from("competition_appointments" as never)
-          .select("id, type, requested_date, requested_time, status")
-          .eq("enrollment_id" as never, (enroll as any).id)
-          .order("created_at" as never, { ascending: false });
-        setAppointments((appts as any[]) || []);
+      if (enrollErr) console.warn("enroll fetch error", enrollErr);
+      if (enroll && (enroll as any).group && (enroll as any).competition) {
+        access = true;
+        setEnrollment(enroll as any);
+        // Agendamentos
+        try {
+          const { data: appts } = await supabase
+            .from("competition_appointments" as never)
+            .select("id, type, requested_date, requested_time, status")
+            .eq("enrollment_id" as never, (enroll as any).id)
+            .order("created_at" as never, { ascending: false });
+          setAppointments((appts as any[]) || []);
+        } catch (e) { console.warn("appts fetch failed", e); setAppointments([]); }
+      } else {
+        setEnrollment(null);
+        setAppointments([]);
       }
-
-
-
+      setHasAccess(access);
+    } catch (e) {
+      console.error("Erro ao carregar desafio:", e);
     } finally {
       setLoading(false);
     }
+  };
+
   };
 
   useEffect(() => { load(); }, []);
