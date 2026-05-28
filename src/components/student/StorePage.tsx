@@ -13,8 +13,18 @@ import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
-type ProductKind = "challenge" | "digital" | "store" | "item";
+type ProductKind = "challenge" | "digital" | "store" | "item" | "partner";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
+
+const SPECIALTY_LABEL: Record<string, string> = {
+  personal_trainer: "Personal Trainer",
+  nutritionist: "Nutricionista",
+  doctor: "Médico(a)",
+  cardiologist: "Cardiologista",
+  esthetician: "Esteticista",
+  lawyer: "Advogado(a)",
+  other: "Outro",
+};
 
 interface StoreProduct extends ProductDetail {
   sourceId: string;
