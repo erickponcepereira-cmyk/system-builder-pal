@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart3, User, LogOut,
   Menu, X, Trophy, ClipboardList, CalendarCheck,
-  ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils,
+  ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils, ClipboardCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
+import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
 
 // Link "/" usage to satisfy unused import warnings (not required)
 void Link;
@@ -36,8 +37,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-
-type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports";
+type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals";
 
 export const money = (value: number | null | undefined) =>
   `R$ ${Number(value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -226,6 +226,7 @@ function CoachDashboard() {
     { id: "tree", label: "Árvore da Rede", icon: Network },
     { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
+    { id: "partnerApprovals", label: "Aprovar Parceiros", icon: ClipboardCheck },
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
@@ -408,6 +409,7 @@ function CoachDashboard() {
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
+          {activeTab === "partnerApprovals" && <ProfessionalProductsApprovalTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "protocol" && <ProtocolTab />}
