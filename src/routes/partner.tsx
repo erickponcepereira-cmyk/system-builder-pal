@@ -10,7 +10,9 @@ import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { MyNetworkPanel } from "@/components/MyNetworkPanel";
 import { maskPhone } from "@/lib/masks";
 import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type CoachCommissionPct, type PartnerPriceMode } from "@/lib/partnerFinance";
-import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
+import { StorePage } from "@/components/student/StorePage";
+import { FitmindCalendar } from "@/components/FitmindCalendar";
+
 import { StorePage } from "@/components/student/StorePage";
 
 export const Route = createFileRoute("/partner")({
