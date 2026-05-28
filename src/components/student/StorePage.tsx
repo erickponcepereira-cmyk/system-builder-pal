@@ -13,8 +13,18 @@ import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
-type ProductKind = "challenge" | "digital" | "store" | "item";
+type ProductKind = "challenge" | "digital" | "store" | "item" | "partner";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
+
+const SPECIALTY_LABEL: Record<string, string> = {
+  personal_trainer: "Personal Trainer",
+  nutritionist: "Nutricionista",
+  doctor: "Médico(a)",
+  cardiologist: "Cardiologista",
+  esthetician: "Esteticista",
+  lawyer: "Advogado(a)",
+  other: "Outro",
+};
 
 interface StoreProduct extends ProductDetail {
   sourceId: string;
@@ -47,7 +57,7 @@ interface StorePageProps {
   hasUpline?: boolean;
 }
 
-export function StorePage({ coachMode = false, hasUpline = true }: StorePageProps) {
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeCategory, setActiveCategory] = useState("Todos");
@@ -81,6 +91,16 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
+
+    // Produtos de parceiros (profissionais) — apenas aprovados e ativos
+    const { data: partnerRows } = await supabase
+      .from("professional_products" as never)
+      .select(
+        "id,name,description,image_url,price,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+      )
+      .eq("status" as never, "approved" as never)
+      .eq("is_active_by_professional" as never, true as never)
+      .order("created_at" as never, { ascending: false });
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
     const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
@@ -163,6 +183,8 @@ export function StorePage({ coachMode = false, hasUpline = true }: StorePageProp
       }))),
     ]);
   };
+
+
 
   const loadCoachData = async () => {
     const { data: u } = await supabase.auth.getUser();

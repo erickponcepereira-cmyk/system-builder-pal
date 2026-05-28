@@ -11,7 +11,9 @@ export function siteUrl() {
   }
 }
 
-export async function loadSource(kind: "store_order" | "transaction", id: string) {
+export type SourceKind = "store_order" | "transaction" | "partner_product_order";
+
+export async function loadSource(kind: SourceKind, id: string) {
   if (kind === "store_order") {
     const { data, error } = await supabaseAdmin
       .from("store_orders")
@@ -25,6 +27,22 @@ export async function loadSource(kind: "store_order" | "transaction", id: string
       studentId: data.student_id as string,
       alreadyPaid: data.status === "paid",
       existingPaymentId: data.mp_payment_id as string | null,
+    };
+  }
+  if (kind === "partner_product_order") {
+    const { data, error } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id, order_number, gross_amount, student_id, status, mp_payment_id" as never)
+      .eq("id" as never, id as never)
+      .maybeSingle();
+    const row = data as unknown as { id: string; order_number: string; gross_amount: number; student_id: string; status: string; mp_payment_id: string | null } | null;
+    if (error || !row) throw new Error("Pedido de parceiro não encontrado");
+    return {
+      amount: Number(row.gross_amount),
+      description: `Pedido parceiro ${row.order_number}`,
+      studentId: row.student_id,
+      alreadyPaid: row.status === "paid",
+      existingPaymentId: row.mp_payment_id,
     };
   }
   const { data, error } = await supabaseAdmin
@@ -43,18 +61,23 @@ export async function loadSource(kind: "store_order" | "transaction", id: string
 }
 
 export async function attachPaymentToSource(
-  kind: "store_order" | "transaction",
+  kind: SourceKind,
   id: string,
   mpRowId: string
 ) {
   if (kind === "store_order") {
     await supabaseAdmin.from("store_orders").update({ mp_payment_id: mpRowId }).eq("id", id);
+  } else if (kind === "partner_product_order") {
+    await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .update({ mp_payment_id: mpRowId } as never)
+      .eq("id" as never, id as never);
   } else {
     await supabaseAdmin.from("transactions").update({ mp_payment_id: mpRowId }).eq("id", id);
   }
 }
 
-export async function applyApproval(kind: "store_order" | "transaction", id: string) {
+export async function applyApproval(kind: SourceKind, id: string) {
   if (kind === "store_order") {
     await supabaseAdmin.from("store_orders").update({ status: "paid" }).eq("id", id);
     await supabaseAdmin
@@ -62,6 +85,9 @@ export async function applyApproval(kind: "store_order" | "transaction", id: str
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("purchase_type", "store_order")
       .contains("metadata", { store_order_id: id } as never);
+  } else if (kind === "partner_product_order") {
+    // Atualiza status e distribui comissões via RPC.
+    await supabaseAdmin.rpc("process_partner_product_order_paid" as never, { _order_id: id } as never);
   } else {
     await supabaseAdmin
       .from("transactions")
@@ -70,10 +96,12 @@ export async function applyApproval(kind: "store_order" | "transaction", id: str
   }
 }
 
+
 export type PixInput = {
-  source: { kind: "store_order" | "transaction"; id: string };
+  source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
 };
+
 
 export async function handleCreatePix(data: PixInput) {
   const src = await loadSource(data.source.kind, data.source.id);
@@ -141,7 +169,7 @@ export async function handleCreatePix(data: PixInput) {
 }
 
 export type CardInput = {
-  source: { kind: "store_order" | "transaction"; id: string };
+  source: { kind: SourceKind; id: string };
   payer: { email: string; name?: string; doc?: string };
   card: { token: string; installments: number; paymentMethodId: string; issuerId?: string };
 };

@@ -3568,6 +3568,7 @@ export type Database = {
           gross_amount: number
           id: string
           metadata: Json
+          mp_payment_id: string | null
           network_l1_amount: number
           network_l2_amount: number
           network_l3_amount: number
@@ -3598,6 +3599,7 @@ export type Database = {
           gross_amount?: number
           id?: string
           metadata?: Json
+          mp_payment_id?: string | null
           network_l1_amount?: number
           network_l2_amount?: number
           network_l3_amount?: number
@@ -3628,6 +3630,7 @@ export type Database = {
           gross_amount?: number
           id?: string
           metadata?: Json
+          mp_payment_id?: string | null
           network_l1_amount?: number
           network_l2_amount?: number
           network_l3_amount?: number
