@@ -227,8 +227,9 @@ function EventsTab() {
         category: editing.category || "aula",
         visibility: editing.visibility || "todos",
         tags: (editing.tags || []).filter(Boolean),
-        starts_at: new Date(editing.starts_at).toISOString(),
-        ends_at: new Date(editing.ends_at).toISOString(),
+        starts_at: tzLocalToISO(editing.starts_at),
+        ends_at: tzLocalToISO(editing.ends_at),
+
         all_day: !!editing.all_day,
         is_highlighted: !!editing.is_highlighted,
         is_important: !!editing.is_important,
