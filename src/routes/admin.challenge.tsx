@@ -182,26 +182,52 @@ export default function AdminChallengePage() {
   };
 
   const declareWinner = async (enrollment: Enrollment, competition: Competition) => {
-    if (!enrollment.initial_weight || !enrollment.final_weight) {
+    if (enrollment.initial_weight == null || enrollment.final_weight == null) {
       toast.error("Aluno não tem ambas as pesagens registradas"); return;
     }
     try {
-      await supabase.from("competition_hall_of_fame" as never).insert({
+      // Busca o coach_id da inscrição (obrigatório)
+      const { data: enrollFull, error: enrollErr } = await supabase
+        .from("competition_enrollments" as never)
+        .select("coach_id, result_kg, result_pct")
+        .eq("id" as never, enrollment.id)
+        .single();
+      if (enrollErr || !enrollFull) throw enrollErr || new Error("Inscrição não encontrada");
+
+      const { error } = await supabase.from("competition_hall_of_fame" as never).insert({
         competition_id: competition.id,
         enrollment_id: enrollment.id,
         student_id: enrollment.student.id,
-        coach_id: null, // will be filled
+        coach_id: (enrollFull as any).coach_id,
         gender: enrollment.gender,
         initial_weight: enrollment.initial_weight,
         final_weight: enrollment.final_weight,
-        result_kg: enrollment.result_kg,
-        result_pct: enrollment.result_pct,
+        result_kg: (enrollFull as any).result_kg,
+        result_pct: (enrollFull as any).result_pct,
         prize_amount: competition.prize_amount,
       } as never);
+      if (error) throw error;
       toast.success("Vencedor declarado e adicionado ao Hall da Fama! 🏆");
     } catch (e: any) {
       toast.error(e.message || "Erro ao declarar vencedor");
     }
+  };
+
+  const deleteWeighing = async (enrollId: string, which: "initial" | "final" | "both") => {
+    if (!confirm(which === "both" ? "Excluir ambas as pesagens?" : `Excluir pesagem ${which === "initial" ? "inicial" : "final"}?`)) return;
+    try {
+      const updates: Record<string, any> =
+        which === "initial" ? { initial_date: null, initial_weight: null, final_weight: null, status: "enrolled" } :
+        which === "final"   ? { final_weight: null, status: "weighed_initial" } :
+                              { initial_date: null, initial_weight: null, final_weight: null, status: "enrolled" };
+      const { error } = await supabase
+        .from("competition_enrollments" as never)
+        .update(updates as never)
+        .eq("id" as never, enrollId);
+      if (error) throw error;
+      toast.success("Pesagem excluída.");
+      if (expandedComp) loadGroups(expandedComp);
+    } catch (e: any) { toast.error(e.message || "Erro ao excluir"); }
   };
 
   const markPrizePaid = async (winnerId: string) => {
@@ -211,6 +237,7 @@ export default function AdminChallengePage() {
       .eq("id" as never, winnerId);
     toast.success("Prêmio marcado como pago!");
   };
+
 
   const statusLabel: Record<string, string> = {
     enrolled: "Inscrito", scheduled_initial: "Ag. Inicial", weighed_initial: "Pesagem Inicial ✓",
@@ -227,7 +254,7 @@ export default function AdminChallengePage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center gap-3">
         <Trophy className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold text-foreground">Desafio de Emagrecimento</h1>
+        <h1 className="text-2xl font-bold text-foreground">Desafio FitMind</h1>
       </div>
 
       {/* Criar nova competição */}
@@ -346,21 +373,37 @@ export default function AdminChallengePage() {
                                 </span>
                               </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.initial_weight ? `${enroll.initial_weight} kg` : (
-                                  <button onClick={() => setWeightModal({ enrollId: enroll.id, type: "initial", studentName: (enroll.student as any)?.profile?.name })}
+                                {enroll.initial_weight != null ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>{enroll.initial_weight} kg</span>
+                                    <button title="Editar" onClick={() => { setWeightValue(String(enroll.initial_weight)); setWeightDate(enroll.initial_date || new Date().toISOString().slice(0,10)); setWeightModal({ enrollId: enroll.id, type: "initial", studentName: (enroll.student as any)?.profile?.name }); }}
+                                      className="text-xs text-blue-400 hover:underline">✎</button>
+                                    <button title="Excluir" onClick={() => deleteWeighing(enroll.id, "initial")}
+                                      className="text-xs text-red-400 hover:underline">✕</button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => { setWeightValue(""); setWeightDate(new Date().toISOString().slice(0,10)); setWeightModal({ enrollId: enroll.id, type: "initial", studentName: (enroll.student as any)?.profile?.name }); }}
                                     className="text-primary underline">Registrar</button>
                                 )}
                               </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.final_weight ? `${enroll.final_weight} kg` : enroll.initial_weight ? (
-                                  <button onClick={() => setWeightModal({ enrollId: enroll.id, type: "final", studentName: (enroll.student as any)?.profile?.name })}
+                                {enroll.final_weight != null ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>{enroll.final_weight} kg</span>
+                                    <button title="Editar" onClick={() => { setWeightValue(String(enroll.final_weight)); setWeightModal({ enrollId: enroll.id, type: "final", studentName: (enroll.student as any)?.profile?.name }); }}
+                                      className="text-xs text-blue-400 hover:underline">✎</button>
+                                    <button title="Excluir" onClick={() => deleteWeighing(enroll.id, "final")}
+                                      className="text-xs text-red-400 hover:underline">✕</button>
+                                  </div>
+                                ) : enroll.initial_weight != null ? (
+                                  <button onClick={() => { setWeightValue(""); setWeightModal({ enrollId: enroll.id, type: "final", studentName: (enroll.student as any)?.profile?.name }); }}
                                     className="text-primary underline">Registrar</button>
                                 ) : "—"}
                               </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.result_pct != null ? (
-                                  <span className="font-bold text-green-400">
-                                    -{enroll.result_kg} kg ({enroll.result_pct}%)
+                                {enroll.result_kg != null ? (
+                                  <span className={`font-bold ${enroll.result_kg > 0 ? "text-green-400" : enroll.result_kg < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                                    {enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_kg)} kg ({enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_pct || 0)}%)
                                   </span>
                                 ) : "—"}
                               </td>
@@ -372,6 +415,7 @@ export default function AdminChallengePage() {
                                   </button>
                                 )}
                               </td>
+
                             </tr>
                           ))}
                         </tbody>

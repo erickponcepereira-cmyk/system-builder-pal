@@ -247,10 +247,11 @@ export default function StudentChallengePage() {
               <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
               <p className="font-bold text-foreground">Desafio Indisponível</p>
               <p className="text-sm text-muted-foreground">
-                O Desafio de Emagrecimento está disponível para alunos com planos específicos.
+                O Desafio FitMind está disponível para alunos com planos específicos.
                 Fale com seu coach para participar!
               </p>
             </div>
+
           ) : !enrollment ? (
             /* Tem acesso mas não está inscrito */
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center space-y-3">
@@ -327,8 +328,6 @@ export default function StudentChallengePage() {
                     </p>
                   </div>
                 </div>
-
-                {/* Pesos */}
                 {(enrollment.initial_weight || enrollment.final_weight) && (
                   <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
                     <div className="text-center">
@@ -340,13 +339,17 @@ export default function StudentChallengePage() {
                       <p className="text-lg font-bold text-foreground">{enrollment.final_weight ?? "—"} kg</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Resultado</p>
-                      {enrollment.result_pct != null ? (
-                        <p className="text-lg font-bold text-green-400">-{enrollment.result_pct}%</p>
+                      <p className="text-xs text-muted-foreground">Variação</p>
+                      {enrollment.result_kg != null ? (
+                        <p className={`text-lg font-bold ${enrollment.result_kg > 0 ? "text-green-400" : enrollment.result_kg < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                          {enrollment.result_kg > 0 ? "−" : enrollment.result_kg < 0 ? "+" : ""}{Math.abs(enrollment.result_kg)} kg
+                        </p>
                       ) : <p className="text-lg font-bold text-muted-foreground">—</p>}
                     </div>
                   </div>
                 )}
+
+
               </div>
 
               {/* Botão de agendar */}
@@ -436,9 +439,14 @@ export default function StudentChallengePage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-green-400">-{entry.result_pct}%</p>
-                  <p className="text-xs text-muted-foreground">-{entry.result_kg} kg</p>
+                  <p className={`text-lg font-bold ${entry.result_kg > 0 ? "text-green-400" : "text-red-400"}`}>
+                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_pct)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {entry.result_kg > 0 ? "−" : "+"}{Math.abs(entry.result_kg)} kg
+                  </p>
                 </div>
+
               </div>
               <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                 <span className="text-xs text-muted-foreground">
@@ -460,8 +468,8 @@ export default function StudentChallengePage() {
 
       {/* Modal: Agendar Pesagem */}
       {scheduleModal && enrollment && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-2">
               <Scale className="h-5 w-5 text-primary" />
               <h3 className="font-bold text-foreground">
@@ -502,6 +510,7 @@ export default function StudentChallengePage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

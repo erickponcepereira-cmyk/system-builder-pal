@@ -193,7 +193,7 @@ export function ChallengeTab({ coachId }: Props) {
     <div className="space-y-4 p-1">
       <div className="flex items-center gap-2">
         <Trophy className="h-5 w-5 text-primary" />
-        <h2 className="font-bold text-foreground">Desafio de Emagrecimento</h2>
+        <h2 className="font-bold text-foreground">Desafio FitMind</h2>
         {pending.length > 0 && (
           <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
             {pending.length}
@@ -273,7 +273,7 @@ export function ChallengeTab({ coachId }: Props) {
         </div>
       )}
 
-      {/* ── Meus Alunos no Desafio ── */}
+
       {tab === "students" && (
         <div className="space-y-2">
           {students.length === 0 ? (
@@ -303,8 +303,11 @@ export function ChallengeTab({ coachId }: Props) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {isUrgent && <span className="text-xs font-bold text-red-400">{days}d</span>}
                     {s.result_pct != null && (
-                      <span className="text-sm font-bold text-green-400">-{s.result_pct}%</span>
+                      <span className={`text-sm font-bold ${s.result_pct > 0 ? "text-green-400" : "text-red-400"}`}>
+                        {s.result_pct > 0 ? "−" : "+"}{Math.abs(s.result_pct)}%
+                      </span>
                     )}
+
                     <span className={`text-xs rounded-full px-1.5 py-0.5 ${
                       s.status === "weighed_final" ? "bg-green-500/10 text-green-400" :
                       s.status.includes("weighed") ? "bg-yellow-500/10 text-yellow-400" :
@@ -339,7 +342,8 @@ export function ChallengeTab({ coachId }: Props) {
 
       {/* Modal: Registrar Peso */}
       {weightModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4">
             <h3 className="font-bold text-foreground">
               Registrar Pesagem {weightModal.type === "initial" ? "Inicial" : "Final"}
