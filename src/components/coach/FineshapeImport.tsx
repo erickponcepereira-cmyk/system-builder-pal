@@ -215,7 +215,10 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
           const cid = byName.get(norm(name));
           if (!cid) { skipped++; continue; }
           touchedClientIds.add(cid);
-          const date = parseDateBR(r[I.dta] || "") || new Date().toISOString();
+          const rawDate = r[I.dta] || "";
+          const parsed = parseDateBR(rawDate);
+          if (!parsed && rawDate) addLog(`Data não reconhecida: "${rawDate}"`);
+          const date = parsed || new Date().toISOString();
           toInsert.push({
             client_id: cid,
             coach_id: coachId,
