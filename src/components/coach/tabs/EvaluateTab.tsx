@@ -73,13 +73,24 @@ export function EvaluateTab() {
       : { data: null };
     if (!coach?.id) return;
     setCoachInfo({ id: coach.id, name: profile?.name || "Coach FitMind", email: profile?.email || "", specialty: "Avaliação corporal" });
-    const { data, error } = await supabase
-      .from("coach_evaluation_clients" as never)
-      .select("*, coach_body_assessments(*)" as never)
-      .eq("coach_id" as never, coach.id as never)
-      .order("created_at" as never, { ascending: false });
-    if (error) return toast.error("Erro ao carregar alunos da avaliação");
-    setClients(((data as any[]) || []).map((row) => ({
+    // Paginate to bypass Supabase's default 1000-row limit
+    const PAGE = 1000;
+    let from = 0;
+    const all: any[] = [];
+    while (true) {
+      const { data, error } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("*, coach_body_assessments(*)" as never)
+        .eq("coach_id" as never, coach.id as never)
+        .order("created_at" as never, { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) return toast.error("Erro ao carregar alunos da avaliação");
+      const rows = (data as any[]) || [];
+      all.push(...rows);
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
+    setClients(all.map((row) => ({
       id: row.id,
       name: row.name,
       gender: row.gender,
