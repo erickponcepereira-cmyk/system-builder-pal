@@ -460,8 +460,8 @@ export default function StudentChallengePage() {
 
       {/* Modal: Agendar Pesagem */}
       {scheduleModal && enrollment && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 space-y-4 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-2">
               <Scale className="h-5 w-5 text-primary" />
               <h3 className="font-bold text-foreground">
@@ -502,6 +502,7 @@ export default function StudentChallengePage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
