@@ -185,6 +185,10 @@ function EventsTab() {
     setLoading(false);
   };
 
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [filterMonth]);
+
+
+
 
   const openNew = () => {
     // 15º dia do mês filtrado, às 09:00 (hora de Cuiabá)
