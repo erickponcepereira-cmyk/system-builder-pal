@@ -55,13 +55,27 @@ const mapMethod = (m: string): string => {
   return "bioimpedance";
 };
 
-// parse dd/mm/yyyy HH:mm -> ISO
+// parse multiple BR/ISO date formats -> ISO
 const parseDateBR = (s: string): string | null => {
   if (!s) return null;
-  const m = s.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy, hh = "00", mi = "00"] = m;
-  return new Date(`${yyyy}-${mm}-${dd}T${hh}:${mi}:00`).toISOString();
+  const str = s.trim();
+  if (!str) return null;
+  // dd/mm/yyyy [HH:mm[:ss]]  or  dd-mm-yyyy
+  let m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    let [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = m;
+    if (yyyy.length === 2) yyyy = (parseInt(yyyy) < 50 ? "20" : "19") + yyyy;
+    const dt = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh, +mi, +ss));
+    if (!isNaN(dt.getTime())) return dt.toISOString();
+  }
+  // yyyy-mm-dd [HH:mm[:ss]]
+  m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) {
+    const [, yyyy, mm, dd, hh = "00", mi = "00", ss = "00"] = m;
+    const dt = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh, +mi, +ss));
+    if (!isNaN(dt.getTime())) return dt.toISOString();
+  }
+  return null;
 };
 
 interface Props { coachId: string; onDone: () => void; }
@@ -164,7 +178,8 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
           agua: idx("Água"), oss: idx("Massa Óssea"),
           pas: idx("PAS"), pad: idx("PAD"), fc: idx("Freq. Cardíaca"), glic: idx("Glicemia"),
         };
-        addLog(`Processando ${rows.length} avaliações...`);
+        addLog(`Processando ${rows.length} avaliações... (coluna data idx=${I.dta}, header="${header[I.dta] ?? "?"}")`);
+        if (rows[0]) addLog(`Exemplo data bruta: "${rows[0][I.dta] ?? ""}"`);
 
         // Pre-create missing clients seen here
         const missing: any[] = [];
@@ -200,7 +215,10 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
           const cid = byName.get(norm(name));
           if (!cid) { skipped++; continue; }
           touchedClientIds.add(cid);
-          const date = parseDateBR(r[I.dta] || "") || new Date().toISOString();
+          const rawDate = r[I.dta] || "";
+          const parsed = parseDateBR(rawDate);
+          if (!parsed && rawDate) addLog(`Data não reconhecida: "${rawDate}"`);
+          const date = parsed || new Date().toISOString();
           toInsert.push({
             client_id: cid,
             coach_id: coachId,
