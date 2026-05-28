@@ -271,11 +271,8 @@ export function ChallengeTab({ coachId }: Props) {
             </div>
           ))}
         </div>
-                    {s.result_pct != null && (
-                      <span className={`text-sm font-bold ${s.result_pct > 0 ? "text-green-400" : "text-red-400"}`}>
-                        {s.result_pct > 0 ? "−" : "+"}{Math.abs(s.result_pct)}%
-                      </span>
-                    )}
+      )}
+
 
       {tab === "students" && (
         <div className="space-y-2">
