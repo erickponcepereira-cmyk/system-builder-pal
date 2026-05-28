@@ -170,21 +170,21 @@ function EventsTab() {
 
   const [showInactive, setShowInactive] = useState(false);
   const [tagInput, setTagInput] = useState("");
-
   const load = async () => {
     setLoading(true);
-    const from = new Date(filterMonth + "-01").toISOString();
-    const to   = new Date(filterMonth + "-01");
-    to.setMonth(to.getMonth() + 1);
+    const from = tzStartOfMonth(filterMonth).toISOString();
+    const to   = tzStartOfMonth(shiftYearMonth(filterMonth, 1)).toISOString();
     const { data, error } = await supabase
       .from("fitmind_events" as never)
       .select("*" as never)
       .gte("starts_at" as never, from as never)
-      .lt("starts_at" as never, to.toISOString() as never)
+      .lt("starts_at" as never, to as never)
       .order("starts_at" as never, { ascending: true });
     if (error) toast.error(error.message);
     setEvents((data as unknown as FitmindEvent[]) || []);
     setLoading(false);
+  };
+
   };
 
   useEffect(() => { load(); }, [filterMonth]);
