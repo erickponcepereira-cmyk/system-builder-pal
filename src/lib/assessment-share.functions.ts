@@ -11,13 +11,27 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface PublicShareHistoryItem {
+  id: string;
+  date: string;
+  weight: number | null;
+  bodyFat: number | null;
+  skeletalMuscle: number | null;
+  muscleMass: number | null;
+  visceralFat: number | null;
+  bodyAge: number | null;
+  bmi: number | null;
+}
+
 export interface PublicShareData {
   token: string;
   clientName: string;
   clientPhone: string | null;
+  clientGender: "male" | "female" | "other";
   createdAt: string;
   viewCount: number;
   method: string;
+  assessmentId: string;
   assessmentDate: string;
   age: number | null;
   height: number | null;
@@ -36,13 +50,19 @@ export interface PublicShareData {
   diastolicBP: number | null;
   heartRate: number | null;
   bloodGlucose: number | null;
+  photos: Record<string, string | undefined> | null;
+  circumferences: Record<string, number | undefined> | null;
+  clientNotes: string | null;
+  history: PublicShareHistoryItem[];
   coachName: string;
   coachSpecialty: string | null;
   coachAvatar: string | null;
+  coachEmail: string | null;
   coachWhatsapp: string | null;
   coachInstagram: string | null;
   coachReferralCode: string | null;
 }
+
 
 const num = (v: unknown): number | null => {
   if (v === null || v === undefined || v === "") return null;
@@ -156,16 +176,44 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
     if (aErr || !assessment) throw new Error("Avaliação não encontrada");
     const a = assessment as Record<string, unknown>;
 
-    // Lookup client phone from coach_evaluation_clients
+    // Lookup client (phone, gender) from coach_evaluation_clients
     const clientId = a.client_id as string | undefined;
     let clientPhone: string | null = null;
+    let clientGender: "male" | "female" | "other" = "other";
     if (clientId) {
       const { data: clientRow } = await supabaseAdmin
         .from("coach_evaluation_clients")
-        .select("whatsapp")
+        .select("whatsapp,gender")
         .eq("id", clientId)
         .maybeSingle();
       clientPhone = (clientRow?.whatsapp as string | null) ?? null;
+      const g = (clientRow?.gender as string | null) ?? "other";
+      clientGender = g === "male" || g === "female" ? g : "other";
+    }
+
+    // History: all assessments for the same client
+    let history: PublicShareHistoryItem[] = [];
+    if (clientId) {
+      const { data: histRows } = await supabaseAdmin
+        .from("coach_body_assessments" as never)
+        .select(
+          "id,assessment_date,weight,body_fat,skeletal_muscle,muscle_mass,visceral_fat,body_age,bmi" as never,
+        )
+        .eq("client_id" as never, clientId as never)
+        .order("assessment_date" as never, { ascending: true } as never)
+        .limit(50);
+      const rows = (histRows ?? []) as Array<Record<string, unknown>>;
+      history = rows.map((r) => ({
+        id: r.id as string,
+        date: r.assessment_date as string,
+        weight: num(r.weight),
+        bodyFat: num(r.body_fat),
+        skeletalMuscle: num(r.skeletal_muscle),
+        muscleMass: num(r.muscle_mass),
+        visceralFat: num(r.visceral_fat),
+        bodyAge: (r.body_age as number | null) ?? null,
+        bmi: num(r.bmi),
+      }));
     }
 
     const { data: coachRow } = await supabaseAdmin
@@ -189,18 +237,27 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
     const { data: coachProfile } = c?.profile_id
       ? await supabaseAdmin
           .from("profiles")
-          .select("name,avatar_url")
+          .select("name,avatar_url,email")
           .eq("id", c.profile_id)
           .maybeSingle()
-      : { data: null as { name: string | null; avatar_url: string | null } | null };
+      : { data: null as { name: string | null; avatar_url: string | null; email: string | null } | null };
+
+    const photosRaw = (a.photos as Record<string, string | undefined> | null) ?? null;
+    const photos = photosRaw && Object.keys(photosRaw).length > 0 ? photosRaw : null;
+    // circumferences live inside segment_analysis or separate? Check schema — it's not a column; coaches store via assessment payload. Fallback: read from segment_analysis.circumferences if present.
+    const segAny = (a.segment_analysis as Record<string, any> | null) ?? null;
+    const circumferences =
+      (segAny && (segAny.circumferences as Record<string, number> | null)) || null;
 
     const result: PublicShareData = {
       token: s.token,
       clientName: s.client_name,
       clientPhone,
+      clientGender,
       createdAt: s.created_at,
       viewCount: s.view_count + 1,
       method: (a.method as string) || "bioimpedance",
+      assessmentId: a.id as string,
       assessmentDate: a.assessment_date as string,
       age: (a.age as number | null) ?? null,
       height: num(a.height),
@@ -214,20 +271,26 @@ export const getAssessmentShareByToken = createServerFn({ method: "POST" })
       bodyAge: (a.body_age as number | null) ?? null,
       bodyWater: num(a.body_water),
       boneMass: num(a.bone_mass),
-      segmentAnalysis: (a.segment_analysis as Record<string, any> | null) ?? null,
+      segmentAnalysis: segAny,
       systolicBP: (a.systolic_bp as number | null) ?? null,
       diastolicBP: (a.diastolic_bp as number | null) ?? null,
       heartRate: (a.heart_rate as number | null) ?? null,
       bloodGlucose: num(a.blood_glucose),
+      photos,
+      circumferences,
+      clientNotes: (a.client_notes as string | null) ?? null,
+      history,
       coachName: c?.fantasy_name || coachProfile?.name || "Coach FitMind",
       coachSpecialty: c?.description || "Especialista em Saúde e Bem-estar",
       coachAvatar: c?.photo_url || coachProfile?.avatar_url || null,
+      coachEmail: (coachProfile?.email as string | null) ?? null,
       coachWhatsapp: c?.whatsapp ?? null,
       coachInstagram: c?.instagram ?? null,
       coachReferralCode: c?.referral_code ?? null,
     };
 
     return result;
+
   });
 
 // ── Delete a share (coach only) ──────────────────────────────────────────────
