@@ -411,7 +411,9 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       setPayOrder({
         id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
         email: selectedClient.email || "", name: selectedClient.name,
+        sourceKind: "store_order",
       });
+
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
     } catch (e: any) {
