@@ -149,10 +149,20 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
             .order("created_at" as never, { ascending: false });
           setAppointments((appts as any[]) || []);
         } catch (e) { console.warn("appts fetch failed", e); setAppointments([]); }
+        // Winners do Hall da Fama para esta competição
+        try {
+          const { data: hof } = await supabase
+            .from("competition_hall_of_fame" as never)
+            .select("student_id, gender")
+            .eq("competition_id" as never, (enroll as any).competition_id);
+          setWinners(((hof as any[]) || []) as HallWinner[]);
+        } catch (e) { console.warn("hof fetch failed", e); setWinners([]); }
       } else {
         setEnrollment(null);
         setAppointments([]);
+        setWinners([]);
       }
+
       setHasAccess(access);
     } catch (e) {
       console.error("Erro ao carregar desafio:", e);
