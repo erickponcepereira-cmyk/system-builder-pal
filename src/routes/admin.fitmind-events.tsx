@@ -81,7 +81,6 @@ const VISIBILITY_META: Record<EventVisibility, { label: string; icon: typeof Glo
   parceiros:    { label: "Parceiros",     icon: Building2 },
   profissionais:{ label: "Profissionais", icon: Stethoscope },
 };
-
 const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   title: "",
   subtitle: null,
@@ -92,8 +91,8 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   category: "aula",
   visibility: "todos",
   tags: [],
-  starts_at: new Date().toISOString().slice(0, 16),
-  ends_at: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+  starts_at: tzDateTimeLocal(new Date()),
+  ends_at: tzDateTimeLocal(new Date(Date.now() + 3600000)),
   all_day: false,
   is_highlighted: false,
   is_important: false,
@@ -105,12 +104,14 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
 };
 
 const EMPTY_DAY: Omit<HighlightedDay, "id"> = {
-  date: new Date().toISOString().slice(0, 10),
+  date: tzToday(),
   label: "",
   description: null,
   color: "#f59e0b",
   icon: "star",
   is_active: true,
+};
+
 };
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
