@@ -178,7 +178,8 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
           agua: idx("Água"), oss: idx("Massa Óssea"),
           pas: idx("PAS"), pad: idx("PAD"), fc: idx("Freq. Cardíaca"), glic: idx("Glicemia"),
         };
-        addLog(`Processando ${rows.length} avaliações...`);
+        addLog(`Processando ${rows.length} avaliações... (coluna data idx=${I.dta}, header="${header[I.dta] ?? "?"}")`);
+        if (rows[0]) addLog(`Exemplo data bruta: "${rows[0][I.dta] ?? ""}"`);
 
         // Pre-create missing clients seen here
         const missing: any[] = [];
