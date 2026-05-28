@@ -27,7 +27,9 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/admin-wallet", label: "Carteira do Admin", icon: Wallet, perm: "admin_wallet" },
 
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
-  { to: "/admin/patents", label: "Patentes", icon: Award, perm: "patents" },
+  { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
+  { to: "/admin/fitmind-events", label: "Eventos FitMind", icon: CalendarDays, perm: "fitmind_events" },
+
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
   { to: "/admin/store", label: "Loja", icon: Store, perm: "store" },
   { to: "/admin/freebies", label: "Gratuitos", icon: Gift, perm: "freebies" },
