@@ -1,37 +1,49 @@
 ## Objetivo
-Adicionar uma página dedicada **"Carteira do Admin"** acessível pelo menu lateral do painel admin, mostrando o saldo e extrato da carteira compartilhada das taxas do sistema (administrada pelos master admins Erick e Nathan).
+Fazer com que o link "Compartilhar resultado" exiba para o aluno EXATAMENTE a mesma tela que o coach vê em `FitMindShape → Resultado da Avaliação` — mesmo Resumo, Perfil Corporal (avatares), Composição Corporal, Diagnóstico de Obesidade, Outros Indicadores, Cardiovascular, gráficos (peso, pizza composição, gordura×músculo), Idade Corporal, Circunferências, Fontes Clínicas, Anotações e rodapé do Coach.
 
-## O que será criado
+Hoje a página pública (`/resultado/$token`) tem um layout simplificado próprio, com poucos dados. Vamos:
+1. Extrair a `ResultScreen` para um componente isolado e reutilizável.
+2. Ampliar o que a função pública de share retorna (histórico, fotos, circunferências, gênero, altura, anotações, logo do coach).
+3. Renderizar o mesmo componente na rota pública, dentro de um wrapper com o CTA de cadastro + card do coach.
 
-### 1. Nova rota
-- `src/routes/admin.admin-wallet.tsx` → `/admin/admin-wallet`
+## Implementação
 
-A página exibirá:
-- **Card de saldo** em destaque: saldo disponível (`admin_system_wallet.available_balance`), total recebido (`total_earned`) e total sacado (`total_withdrawn`).
-- **Lista de master admins** que administram a carteira (Erick + Nathan), com nome, email e badge "Master".
-- **Extrato completo** (tabela) com todas as movimentações de `admin_system_wallet_entries`: data, descrição (slot_label), aluno, produto, tipo (crédito/débito) e valor. Suporte a filtro por tipo (todos / créditos / débitos).
-- **Botão "Registrar saque/baixa"** (abre modal): permite o master admin lançar um débito na carteira informando valor + descrição (ex: "Repasse mensal", "Pagamento de despesa"). Cria uma entry `kind=debit` em `admin_system_wallet_entries` e atualiza `available_balance` / `total_withdrawn`.
+### 1) `src/components/coach/FitMindShapeResultView.tsx` (novo)
+- Move toda a renderização e helpers internos de `ResultScreen` (linhas ~2659–3617 de `FitMindShape.tsx`) para um componente que recebe props:
+  - `client` (FitMindClient), `assessment` (FitMindAssessment), `allAssessments` (lista para Resumo e histórico), `coach` (nome, logo, especialidade, email), `themeColor`, `themeFontFamily`, `mode: "coach" | "public"`.
+  - Callbacks opcionais: `onBack`, `onShare`, `sharingResult`, `onNewAssessment`, `onCompare`, `onPrint`.
+- Move helpers usados só pela tela: `AvatarFigure`, `Tooltip`, `AvatarLabels`, imports de avatares (`bodyAbaixo`...), `CLINICAL_SOURCES`, CSS `fm-result-screen` mínimo.
+- Calcula internamente `computedBMI`, `historicalData`, `harrisBenedict`, `pieData` etc. a partir das props.
+- No modo `public`: oculta botões "Nova Avaliação", "Comparar", "Gerar Relatório"; oculta botão de share; mostra apenas o conteúdo + botão "Imprimir".
 
-### 2. Entrada no menu lateral
-- `src/components/admin/AdminShell.tsx`: adicionar item `{ to: "/admin/admin-wallet", label: "Carteira do Admin", icon: Wallet, perm: "admin_wallet" }` logo abaixo de "Financeiro".
-- `src/lib/admin-permissions.ts`: adicionar a permission key `admin_wallet`.
+### 2) `src/components/coach/FitMindShape.tsx`
+- Substitui o corpo de `ResultScreen` por `<FitMindShapeResultView mode="coach" ... />` repassando estados existentes (`selectedClient`, `assessment`, `historicalData` reconstruído via allAssessments, `coach`, `themeColor`, `themeFontFamily`, `onBack=setScreen("home")`, `onShare=handleShareResult`, `sharingResult`, `onNewAssessment`, `onCompare=setScreen("compare")`, `onPrint=window.print`).
+- Remove dali os helpers já movidos (Tooltip, AvatarFigure, CLINICAL_SOURCES, imports de avatares) ou mantém via re-export do novo módulo para evitar quebra de outras telas (verificar uso).
 
-Acesso restrito: apenas master admins (Erick e Nathan) — a página fará checagem de `is_master_admin` e exibirá "Acesso restrito" caso contrário.
+### 3) `src/lib/assessment-share.functions.ts`
+- Estende `PublicShareData` com:
+  - `gender: "male" | "female"`
+  - `height: number | null` (já existe)
+  - `photos: { front, back, leftSide, rightSide } | null`
+  - `circumferences: Record<string, number | null> | null`
+  - `clientNotes: string | null`
+  - `history: Array<{ id, date, weight, bodyFat, skeletalMuscle, muscleMass, visceralFat, bodyAge, bmi }>` (todas as avaliações do mesmo `client_id`, ordenadas por data, máx 50)
+  - `coachLogo: string | null`, `coachEmail: string | null`
+- No handler `getAssessmentShareByToken` adiciona consulta a `coach_evaluation_clients` (gender), `coach_body_assessments` (irmãs) e `coaches.logo_url`/`email` para preencher tudo.
 
-### 3. Server functions (em `src/lib/admin-financial.functions.ts`)
-Reaproveitar o que já existe e adicionar:
-- `getAdminWallet()` → retorna `{ available, totalEarned, totalWithdrawn, masters: [{name,email}] }`. Usa o agregado já feito no `getFinancialOverview` mas isolado para essa página.
-- `listAdminWalletEntries({ filter })` → retorna lista completa de `admin_system_wallet_entries` (já existe lógica em `listBucketCommissions` com `bucket=system`, será extraída/reutilizada).
-- `registerAdminWalletDebit({ amount, description })` → valida que o usuário é master admin, insere entry `kind=debit` e atualiza `admin_system_wallet` (`available_balance -= amount`, `total_withdrawn += amount`). Operação envolvida em uma única chamada SQL para garantir atomicidade.
+### 4) `src/routes/resultado.$token.tsx`
+- Mantém header com Logo + botão Compartilhar (WhatsApp) e card de coach + CTA "Inscreva-se no FitMind Club" no fim.
+- Entre o header e o CTA, renderiza `<FitMindShapeResultView mode="public" client={...} assessment={...} allAssessments={history} coach={{name, logo, specialty, email}} themeColor="#dc2626" />` montado a partir de `PublicShareData`.
+- Remove as Sections/MetricRow locais.
 
-### 4. Migração
-Criar function SQL `register_admin_wallet_debit(p_amount numeric, p_description text)` (SECURITY DEFINER) que:
-1. Verifica se `auth.uid()` pertence a um master admin.
-2. Insere a entry em `admin_system_wallet_entries` com `kind='debit'`.
-3. Atualiza `admin_system_wallet` (decrementa available, incrementa withdrawn).
-4. Retorna o id da entry criada.
+## Detalhes técnicos
+- Tipos `FitMindClient` / `FitMindAssessment` ficam exportados do novo módulo (ou de um `types.ts` ao lado).
+- A função `createAssessmentShare` não muda; apenas o retorno do `getAssessmentShareByToken` cresce.
+- O modo `public` força tema escuro do wrapper (`#0A0A0A`) mas o conteúdo do `FitMindShapeResultView` mantém as cores originais (cards com fundo claro `#fff` via `.fm-card`) — assim a "cópia exata" do que o coach vê é preservada.
+- Sem mudanças de schema: tudo já está em `coach_body_assessments` e `coach_evaluation_clients`.
 
-## Resultado
-- Erick e Nathan terão "Carteira do Admin" no menu lateral, abaixo de "Financeiro".
-- Visão completa do saldo + extrato compartilhado, com possibilidade de dar baixa em saques/repasses diretamente pela interface.
-- Outros admins não veem essa entrada nem conseguem acessar a rota.
+## Arquivos tocados
+- `src/components/coach/FitMindShapeResultView.tsx` (novo, ~650 linhas)
+- `src/components/coach/FitMindShape.tsx` (substituição de `ResultScreen`)
+- `src/lib/assessment-share.functions.ts` (campos extras no retorno)
+- `src/routes/resultado.$token.tsx` (passa a renderizar o componente extraído)
