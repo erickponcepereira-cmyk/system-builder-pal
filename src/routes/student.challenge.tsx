@@ -171,10 +171,23 @@ export default function StudentChallengePage() {
 
   const scheduleAppointment = async () => {
     if (!schedDate || !schedTime || !enrollment || !studentId || !coachId) return;
+    const type = scheduleModal!;
+    // Validação de janela
+    if (type === "initial") {
+      const start = enrollment.group.initial_start_date;
+      const end = enrollment.group.initial_end_date;
+      if (schedDate < start || schedDate > end) {
+        toast.error(`A pesagem inicial só pode ser agendada entre ${fmt(start)} e ${fmt(end)}.`);
+        return;
+      }
+    }
+    if (type === "final" && enrollment.final_date && schedDate > enrollment.final_date) {
+      toast.error(`A pesagem final deve ser até ${fmt(enrollment.final_date)}.`);
+      return;
+    }
     setScheduling(true);
     try {
-      const type = scheduleModal!;
-      await supabase.from("competition_appointments" as never).insert({
+      const { error: apptErr } = await supabase.from("competition_appointments" as never).insert({
         enrollment_id: enrollment.id,
         student_id: studentId,
         coach_id: coachId,
@@ -183,31 +196,36 @@ export default function StudentChallengePage() {
         requested_time: schedTime,
         status: "pending",
       } as never);
+      if (apptErr) throw apptErr;
       // Atualiza status da inscrição
       const newStatus = type === "initial" ? "scheduled_initial" : "scheduled_final";
       await supabase
         .from("competition_enrollments" as never)
         .update({ status: newStatus } as never)
         .eq("id" as never, enrollment.id);
-      // Notifica o coach
-      const { data: coachProfile } = await supabase
-        .from("coaches" as never)
-        .select("profile_id")
-        .eq("id" as never, coachId)
-        .maybeSingle();
-      if (coachProfile) {
-        const { data: studentProfile } = await supabase
-          .from("students" as never)
-          .select("profile:profile_id(name)")
-          .eq("id" as never, studentId)
+      // Notifica o coach (best-effort)
+      try {
+        const { data: coachProfile } = await supabase
+          .from("coaches" as never)
+          .select("profile_id")
+          .eq("id" as never, coachId)
           .maybeSingle();
-        await supabase.from("notifications" as never).insert({
-          profile_id: (coachProfile as any).profile_id,
-          type: "competition_appointment_request",
-          title: `⚖️ Solicitação de Pesagem ${type === "initial" ? "Inicial" : "Final"}`,
-          message: `${(studentProfile as any)?.profile?.name || "Aluno"} quer agendar pesagem ${type === "initial" ? "inicial" : "final"} para ${fmt(schedDate)} às ${schedTime}.`,
-          action_url: "/coach",
-        } as never);
+        if (coachProfile) {
+          const { data: studentProfile } = await supabase
+            .from("students" as never)
+            .select("profile:profile_id(name)")
+            .eq("id" as never, studentId)
+            .maybeSingle();
+          await supabase.from("notifications" as never).insert({
+            profile_id: (coachProfile as any).profile_id,
+            type: "competition_appointment_request",
+            title: `⚖️ Solicitação de Pesagem ${type === "initial" ? "Inicial" : "Final"}`,
+            message: `${(studentProfile as any)?.profile?.name || "Aluno"} quer agendar pesagem ${type === "initial" ? "inicial" : "final"} para ${fmt(schedDate)} às ${schedTime}.`,
+            action_url: "/coach",
+          } as never);
+        }
+      } catch (notifErr) {
+        console.warn("Notificação não enviada:", notifErr);
       }
       toast.success("Agendamento solicitado! Aguardando confirmação do coach.");
       setScheduleModal(null);
@@ -216,6 +234,7 @@ export default function StudentChallengePage() {
       toast.error(e.message || "Erro ao agendar");
     } finally { setScheduling(false); }
   };
+
 
   // Calcula dias até a pesagem final
   const daysUntilFinal = enrollment?.initial_date
