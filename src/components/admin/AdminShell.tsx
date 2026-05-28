@@ -22,7 +22,8 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/digital-products", label: "Cursos", icon: Library, perm: "digital_products" },
   { to: "/admin/coach-applications", label: "Formação Coach", icon: GraduationCap, perm: "coach_applications" },
   { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
-  { to: "/admin/financeiro", label: "Financeiro", icon: DollarSign, perm: "financeiro" },
+  { to: "/admin/fitmind-events", label: "Eventos FitMind", icon: CalendarDays, perm: "fitmind_events" },
+  { to: "/admin/challenge", label: "Desafio Emagrecimento", icon: Trophy, perm: "challenge" },
   { to: "/admin/financial-summary", label: "Resumo Financeiro", icon: TrendingUp, perm: "financial_summary" },
   { to: "/admin/admin-wallet", label: "Carteira do Admin", icon: Wallet, perm: "admin_wallet" },
 
