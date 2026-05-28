@@ -7,8 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Trophy, Scale, Calendar, AlertCircle, CheckCircle2,
-  Clock, Loader2, Lock, Star, ChevronRight
+  Clock, Loader2, Lock, ChevronRight
 } from "lucide-react";
+import { HallOfFame } from "@/components/HallOfFame";
+
 
 export const Route = createFileRoute("/student/challenge")({
   component: StudentChallengePage,
