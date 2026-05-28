@@ -11,13 +11,27 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface PublicShareHistoryItem {
+  id: string;
+  date: string;
+  weight: number | null;
+  bodyFat: number | null;
+  skeletalMuscle: number | null;
+  muscleMass: number | null;
+  visceralFat: number | null;
+  bodyAge: number | null;
+  bmi: number | null;
+}
+
 export interface PublicShareData {
   token: string;
   clientName: string;
   clientPhone: string | null;
+  clientGender: "male" | "female" | "other";
   createdAt: string;
   viewCount: number;
   method: string;
+  assessmentId: string;
   assessmentDate: string;
   age: number | null;
   height: number | null;
@@ -36,13 +50,19 @@ export interface PublicShareData {
   diastolicBP: number | null;
   heartRate: number | null;
   bloodGlucose: number | null;
+  photos: Record<string, string | undefined> | null;
+  circumferences: Record<string, number | undefined> | null;
+  clientNotes: string | null;
+  history: PublicShareHistoryItem[];
   coachName: string;
   coachSpecialty: string | null;
   coachAvatar: string | null;
+  coachEmail: string | null;
   coachWhatsapp: string | null;
   coachInstagram: string | null;
   coachReferralCode: string | null;
 }
+
 
 const num = (v: unknown): number | null => {
   if (v === null || v === undefined || v === "") return null;
