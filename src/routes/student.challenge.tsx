@@ -154,14 +154,15 @@ export default function StudentChallengePage() {
         .from("competition_hall_of_fame" as never)
         .select(`
           id, gender, initial_weight, final_weight, result_kg, result_pct,
-          prize_amount, prize_paid, created_at,
-          student:student_id ( profile:profile_id ( name ) ),
+          prize_amount, created_at,
+          student:student_id ( profile:profile_id ( name, photo_url, avatar_url ) ),
           coach:coach_id ( profile:profile_id ( name ) ),
           competition:competition_id ( month, year )
         `)
         .order("created_at" as never, { ascending: false })
-        .limit(20);
+        .limit(100);
       setHallOfFame((hall as any[]) || []);
+
     } finally {
       setLoading(false);
     }
