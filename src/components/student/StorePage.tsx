@@ -182,8 +182,26 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
       }))),
+      ...(((partnerRows as any[]) || []).map((pp: any) => {
+        const specKey = pp.coach?.specialty_key || "other";
+        const specLabel = SPECIALTY_LABEL[specKey] || "Outro";
+        return {
+          id: `partner-${pp.id}`,
+          sourceId: pp.id,
+          title: pp.name,
+          description: pp.description,
+          price: Number(pp.price || 0),
+          originalPrice: null,
+          category: `Parceiros · ${specLabel}`,
+          kind: "partner" as const,
+          tag: specLabel,
+          imageUrl: pp.image_url,
+          creatorCoachId: pp.coach?.id ?? null,
+        };
+      })),
     ]);
   };
+
 
 
 
