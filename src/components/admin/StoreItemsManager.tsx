@@ -355,8 +355,7 @@ export function StoreItemsManager() {
                 <input type="checkbox" checked={editing.is_active ?? true} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} /> Ativo
               </label>
               <label className="flex items-center gap-2 text-sm text-white/80">
-                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked })} /> Dá acesso ao Desafio de Emagrecimento
-                Ativo
+                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked })} /> Dá acesso ao Desafio
               </label>
             </div>
 
