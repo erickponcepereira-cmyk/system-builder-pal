@@ -181,22 +181,9 @@ interface StorePageProps {
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
       }))),
-      ...(((partnerRows as unknown as any[]) || []).map((pp: any) => ({
-        id: `partner-${pp.id}`,
-        sourceId: pp.id,
-        title: pp.name as string,
-        subtitle: pp.coach?.profile?.name ? `por ${pp.coach.profile.name}` : null,
-        description: pp.description,
-        price: Number(pp.price || 0),
-        originalPrice: null,
-        category: `Produtos de Parceiros · ${pp.coach?.specialty_key ? (SPECIALTY_LABEL[pp.coach.specialty_key] || pp.coach.specialty_key) : "Profissional"}`,
-        kind: "partner" as const,
-        tag: pp.coach?.specialty_key ? (SPECIALTY_LABEL[pp.coach.specialty_key] || pp.coach.specialty_key) : "Profissional",
-        imageUrl: pp.image_url,
-        creatorCoachId: pp.coach?.id ?? null,
-      }))),
     ]);
   };
+
 
 
   const loadCoachData = async () => {
