@@ -449,14 +449,21 @@ export default function AdminChallengePage() {
                                     {enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_kg)} kg ({enroll.result_kg > 0 ? "−" : enroll.result_kg < 0 ? "+" : ""}{Math.abs(enroll.result_pct || 0)}%)
                                   </span>
                                 ) : "—"}
-                              </td>
                               <td className="px-4 py-2 text-center">
-                                {enroll.status === "weighed_final" && (
-                                  <button onClick={() => declareWinner(enroll, comp)}
-                                    className="flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-1 text-xs font-bold text-yellow-400 hover:bg-yellow-500/20">
-                                    <Award className="h-3 w-3" /> Vencedor
+                                <div className="flex items-center justify-center gap-2">
+                                  {enroll.status === "weighed_final" && (
+                                    <button onClick={() => declareWinner(enroll, comp)}
+                                      className="flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-1 text-xs font-bold text-yellow-400 hover:bg-yellow-500/20">
+                                      <Award className="h-3 w-3" /> Vencedor
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => removeEnrollment(enroll.id, (enroll.student as any)?.profile?.name || "Aluno")}
+                                    title="Remover aluno da competição"
+                                    className="flex items-center gap-1 rounded bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive hover:bg-destructive/20">
+                                    <Trash2 className="h-3 w-3" /> Remover
                                   </button>
-                                )}
+                                </div>
                               </td>
 
                             </tr>
