@@ -26,6 +26,7 @@ import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
+import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
 
 
 // Link "/" usage to satisfy unused import warnings (not required)
@@ -237,6 +238,7 @@ function CoachDashboard() {
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
+    { id: "challenge", label: "Desafio", icon: Trophy },
 
     { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "wallet", label: "Carteira", icon: Wallet },
@@ -421,7 +423,8 @@ function CoachDashboard() {
           {activeTab === "protocol" && <ProtocolTab />}
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "reports" && <CoachReports />}
-          {activeTab === "fitmind_calendar" && <div className="p-4"><FitmindCalendar /></div>}
+         {activeTab === "fitmind_calendar" && <div className="p-4"><FitmindCalendar /></div>}
+         {activeTab === "challenge" && <div className="p-4"><ChallengeTab coachId={coachContext?.coachId} /></div>}
 
           {activeTab === "career" && <CareerTab />}
           {activeTab === "reports" && <CoachReports />}
