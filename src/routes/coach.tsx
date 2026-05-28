@@ -226,6 +226,7 @@ function CoachDashboard() {
     { id: "tree", label: "Árvore da Rede", icon: Network },
     { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
+    { id: "partnerApprovals", label: "Aprovar Parceiros", icon: ClipboardCheck },
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
