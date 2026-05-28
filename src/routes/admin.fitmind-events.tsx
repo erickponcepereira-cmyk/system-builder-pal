@@ -284,18 +284,11 @@ function EventsTab() {
   const filtered = events.filter((ev) => showInactive || ev.is_active);
 
   // Navegação de mês
-  const prevMonth = () => {
-    const d = new Date(filterMonth + "-01");
-    d.setMonth(d.getMonth() - 1);
-    setFilterMonth(d.toISOString().slice(0, 7));
-  };
-  const nextMonth = () => {
-    const d = new Date(filterMonth + "-01");
-    d.setMonth(d.getMonth() + 1);
-    setFilterMonth(d.toISOString().slice(0, 7));
-  };
+  const prevMonth = () => setFilterMonth(shiftYearMonth(filterMonth, -1));
+  const nextMonth = () => setFilterMonth(shiftYearMonth(filterMonth, 1));
 
-  const monthLabel = new Date(filterMonth + "-01").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const monthLabel = yearMonthLabel(filterMonth);
+
 
   return (
     <div className="space-y-4">
