@@ -60,9 +60,11 @@ const statusInfo: Record<string, { label: string; color: string; icon: any }> = 
   scheduled_final:    { label: "Pesagem final agendada",                   color: "text-orange-400", icon: Calendar },
   weighed_final:      { label: "Pesagem final realizada — Aguardando resultado", color: "text-primary", icon: Trophy },
 };
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [winners, setWinners] = useState<HallWinner[]>([]);
+  const [activeTab, setActiveTab] = useState<"challenge" | "hall">("challenge");
 
-export default function StudentChallengePage() {
-  const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
