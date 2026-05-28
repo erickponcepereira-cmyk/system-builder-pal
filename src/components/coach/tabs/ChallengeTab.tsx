@@ -354,10 +354,10 @@ export function ChallengeTab({ coachId }: Props) {
                 </span>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {appt.status === "pending" && (
                   <button onClick={() => confirmAppointment(appt.id)}
-                    className="flex-1 rounded-lg bg-green-500/10 py-2 text-xs font-bold text-green-400 hover:bg-green-500/20">
+                    className="flex-1 min-w-[90px] rounded-lg bg-green-500/10 py-2 text-xs font-bold text-green-400 hover:bg-green-500/20">
                     ✓ Confirmar
                   </button>
                 )}
@@ -368,14 +368,19 @@ export function ChallengeTab({ coachId }: Props) {
                     studentName: (appt.student as any)?.profile?.name,
                     type: appt.type,
                   })}
-                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+                  className="flex-1 min-w-[110px] flex items-center justify-center gap-1 rounded-lg bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/20">
                   <Scale className="h-3 w-3" /> Registrar Peso
+                </button>
+                <button onClick={() => openReschedule(appt)}
+                  className="flex items-center gap-1 rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-400 hover:bg-blue-500/20">
+                  <CalendarPlus className="h-3 w-3" /> Reagendar
                 </button>
                 <button onClick={() => cancelAppointment(appt.id)}
                   className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-bold text-destructive hover:bg-destructive/20">
                   ✕
                 </button>
               </div>
+
             </div>
           ))}
         </div>
