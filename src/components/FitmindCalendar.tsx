@@ -91,7 +91,13 @@ function buildGoogleCalendarUrl(ev: FitmindEvent): string {
 
 interface FitmindCalendarProps {
   /** Modo compacto (sidebar / widget). Padrão: false (tela inteira) */
+  compact?: boolean;
+  /** Mostra apenas eventos em destaque no widget compacto */
+  onlyHighlighted?: boolean;
+}
+
 export function FitmindCalendar({ compact = false, onlyHighlighted = false }: FitmindCalendarProps) {
+
   const [events, setEvents] = useState<FitmindEvent[]>([]);
   const [highlightedDays, setHighlightedDays] = useState<HighlightedDay[]>([]);
   const [loading, setLoading] = useState(true);
