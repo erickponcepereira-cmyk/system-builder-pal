@@ -113,17 +113,13 @@ export function HallOfFame({ showAudit = false }: Props) {
   const ranked = useMemo(() => {
     const base = enrolls.filter(e => matchesFilters(e.competition?.month, e.competition?.year, e.gender));
     const sorter = (key: "result_fat_pct_lost" | "result_muscle_gain_pct" | "result_kg_lost") => {
-      const hasData = (e: Enroll) =>
-        key === "result_fat_pct_lost" ? (e.initial_body_fat != null && e.final_body_fat != null) :
-        key === "result_muscle_gain_pct" ? (e.initial_muscle_mass != null && e.final_muscle_mass != null) :
-        (e.initial_weight != null && e.final_weight != null);
-      return [...base].sort((a, b) => {
-        const ha = hasData(a), hb = hasData(b);
-        if (ha !== hb) return ha ? -1 : 1;
-        const va = (a[key] ?? -Infinity) as number;
-        const vb = (b[key] ?? -Infinity) as number;
-        return vb - va;
-      });
+      // Only positive results qualify. Negative/zero (gained weight/fat, lost muscle) and missing data are excluded.
+      return base
+        .filter(e => {
+          const v = e[key];
+          return v != null && (v as number) > 0;
+        })
+        .sort((a, b) => ((b[key] ?? 0) as number) - ((a[key] ?? 0) as number));
     };
     return {
       fat: sorter("result_fat_pct_lost"),
