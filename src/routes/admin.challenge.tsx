@@ -503,11 +503,12 @@ function AdminChallengePage() {
                                   <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${enroll.gender === "M" ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"}`}>{enroll.gender}</span>
                                 </td>
                                 <td className="px-3 py-2 text-center">
-                                  {enroll.initial_weight != null || enroll.initial_body_fat != null ? (
+                                  {enroll.initial_weight != null || enroll.initial_body_fat != null || enroll.initial_muscle_mass != null ? (
                                     <div className="flex items-center justify-center gap-1">
                                       <div className="text-[10px] leading-tight">
                                         {enroll.initial_weight != null && <div>{enroll.initial_weight}kg</div>}
                                         {enroll.initial_body_fat != null && <div className="text-orange-400">{enroll.initial_body_fat}%g</div>}
+                                        {enroll.initial_muscle_mass != null && <div className="text-blue-400">{enroll.initial_muscle_mass}%m</div>}
                                       </div>
                                       {enroll.initial_share_url && (
                                         <a href={enroll.initial_share_url} target="_blank" rel="noopener noreferrer" title="Auditoria" className="text-blue-400"><ExternalLink className="h-3 w-3" /></a>
