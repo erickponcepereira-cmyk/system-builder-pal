@@ -127,6 +127,25 @@ export function ChallengeTab({ coachId }: Props) {
 
   useEffect(() => { load(); }, [coachId]);
 
+  // Realtime: novos agendamentos / mudanças de inscrição entram automaticamente
+  useEffect(() => {
+    if (!coachId) return;
+    const channel = supabase
+      .channel(`coach-challenge-${coachId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_appointments", filter: `coach_id=eq.${coachId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "competition_enrollments", filter: `coach_id=eq.${coachId}` }, () => load())
+      .subscribe();
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coachId]);
+
   const confirmAppointment = async (apptId: string) => {
     await supabase
       .from("competition_appointments" as never)
