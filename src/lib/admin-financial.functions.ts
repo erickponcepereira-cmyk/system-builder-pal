@@ -29,6 +29,7 @@ export interface AdminFinancialOverview {
   network: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   nutritionists: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   system: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
+  referrals: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   productCosts: { total: number; pending: number; preparing: number; shipped: number; delivered: number; cancelled: number };
 }
 
@@ -185,11 +186,34 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       buckets.total += amt;
     }
 
+    // Referrals (aluno → aluno) — agregado por aluno indicador
+    const { data: refRows } = await supabaseAdmin
+      .from("commissions")
+      .select("amount, status, referred_by_student_id, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
+      .eq("is_referral", true);
+    const refMap = new Map<string, RecipientTotal>();
+    let refPending = 0, refAvailable = 0, refPaid = 0;
+    for (const r of refRows || []) {
+      const pid = (r as any).beneficiary_profile_id as string | null;
+      if (!pid) continue;
+      const amt = Number((r as any).amount || 0);
+      const status = String((r as any).status || "pending");
+      const prof = (r as any).profiles as { name?: string; email?: string } | null;
+      const cur = refMap.get(pid) || { profileId: pid, name: prof?.name || "—", email: prof?.email || null, role: "student", pending: 0, available: 0, paid: 0, total: 0 };
+      if (status === "pending" || status === "blocked") { cur.pending += amt; refPending += amt; }
+      else if (status === "available") { cur.available += amt; refAvailable += amt; }
+      else if (status === "paid" || status === "withdrawn") { cur.paid += amt; refPaid += amt; }
+      cur.total = cur.pending + cur.available + cur.paid;
+      refMap.set(pid, cur);
+    }
+    const referralsList = Array.from(refMap.values()).sort((a, b) => (b.pending + b.available) - (a.pending + a.available));
+
     const overview: AdminFinancialOverview = {
       coaches: { ...coachesAgg, recipients: coachesList },
       network: { ...networkAgg, pending: networkPending, available: networkAvailable, paid: networkPaid, total: networkPending + networkAvailable + networkPaid, recipients: networkList },
       nutritionists: { ...nutriAgg, recipients: nutriList },
       system: { ...systemAgg, recipients: systemList },
+      referrals: { pending: refPending, available: refAvailable, paid: refPaid, total: refPending + refAvailable + refPaid, recipients: referralsList },
       productCosts: buckets,
     };
     return overview;
