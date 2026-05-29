@@ -29,6 +29,7 @@ export interface AdminFinancialOverview {
   network: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   nutritionists: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   system: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
+  referrals: { total: number; pending: number; available: number; paid: number; recipients: RecipientTotal[] };
   productCosts: { total: number; pending: number; preparing: number; shipped: number; delivered: number; cancelled: number };
 }
 
