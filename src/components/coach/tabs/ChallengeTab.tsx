@@ -63,6 +63,9 @@ export function ChallengeTab({ coachId }: Props) {
   const [tab, setTab] = useState<"appointments" | "students" | "hall">("appointments");
   const [weightModal, setWeightModal] = useState<{ apptId: string; enrollId: string; studentName: string; type: string } | null>(null);
   const [weightValue, setWeightValue] = useState("");
+  const [bodyFat, setBodyFat] = useState("");
+  const [muscleMass, setMuscleMass] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
   // Re-schedule modal (coach propõe nova data ao aluno)
@@ -257,28 +260,29 @@ export function ChallengeTab({ coachId }: Props) {
     setSaving(true);
     try {
       const weight = Number(weightValue);
-      // Completa o agendamento e registra o peso
+      const bf = bodyFat ? Number(bodyFat) : null;
+      const mm = muscleMass ? Number(muscleMass) : null;
+      const url = shareUrl.trim() || null;
       await supabase
         .from("competition_appointments" as never)
         .update({ status: "completed", weight_recorded: weight, updated_at: new Date().toISOString() } as never)
         .eq("id" as never, weightModal.apptId);
 
-      // Atualiza a inscrição com o peso
       const isInitial = weightModal.type === "initial";
       const updates: Record<string, any> = isInitial
-        ? { initial_weight: weight, status: "weighed_initial" }
-        : { final_weight: weight, status: "weighed_final" };
+        ? { initial_weight: weight, initial_body_fat: bf, initial_muscle_mass: mm, initial_share_url: url, status: "weighed_initial" }
+        : { final_weight: weight, final_body_fat: bf, final_muscle_mass: mm, final_share_url: url, status: "weighed_final" };
       await supabase
         .from("competition_enrollments" as never)
         .update(updates as never)
         .eq("id" as never, weightModal.enrollId);
 
-      toast.success(`Peso ${isInitial ? "inicial" : "final"} de ${weight} kg registrado!`);
+      toast.success(`Pesagem ${isInitial ? "inicial" : "final"} registrada!`);
       setWeightModal(null);
-      setWeightValue("");
+      setWeightValue(""); setBodyFat(""); setMuscleMass(""); setShareUrl("");
       load();
     } catch (e: any) {
-      toast.error(e.message || "Erro ao registrar peso");
+      toast.error(e.message || "Erro ao registrar");
     } finally { setSaving(false); }
   };
 
