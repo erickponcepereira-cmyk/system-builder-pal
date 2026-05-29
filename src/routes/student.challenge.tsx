@@ -385,23 +385,46 @@ function StudentChallengePage() {
                     </p>
                   </div>
                 </div>
-                {(enrollment.initial_weight || enrollment.final_weight) && (
-                  <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Peso Inicial</p>
-                      <p className="text-lg font-bold text-foreground">{enrollment.initial_weight ?? "—"} kg</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Peso Final</p>
-                      <p className="text-lg font-bold text-foreground">{enrollment.final_weight ?? "—"} kg</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Variação</p>
-                      {enrollment.result_kg != null ? (
-                        <p className={`text-lg font-bold ${enrollment.result_kg > 0 ? "text-green-400" : enrollment.result_kg < 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                          {enrollment.result_kg > 0 ? "−" : enrollment.result_kg < 0 ? "+" : ""}{Math.abs(enrollment.result_kg)} kg
-                        </p>
-                      ) : <p className="text-lg font-bold text-muted-foreground">—</p>}
+                {(enrollment.initial_weight || enrollment.final_weight || enrollment.initial_body_fat || enrollment.final_body_fat || enrollment.initial_muscle_mass || enrollment.final_muscle_mass) && (
+                  <div className="pt-2 border-t border-border space-y-2">
+                    <div className="grid grid-cols-4 gap-2 text-xs text-center items-center">
+                      <div className="text-left text-muted-foreground font-bold">Métrica</div>
+                      <div className="text-muted-foreground font-bold">Inicial</div>
+                      <div className="text-muted-foreground font-bold">Final</div>
+                      <div className="text-muted-foreground font-bold">Variação</div>
+
+                      <div className="text-left text-foreground">Peso</div>
+                      <div className="font-bold text-foreground">{enrollment.initial_weight ?? "—"}{enrollment.initial_weight != null ? " kg" : ""}</div>
+                      <div className="font-bold text-foreground">{enrollment.final_weight ?? "—"}{enrollment.final_weight != null ? " kg" : ""}</div>
+                      <div>
+                        {enrollment.result_kg != null ? (
+                          <span className={`font-bold ${enrollment.result_kg > 0 ? "text-green-400" : enrollment.result_kg < 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                            {enrollment.result_kg > 0 ? "−" : enrollment.result_kg < 0 ? "+" : ""}{Math.abs(enrollment.result_kg)} kg
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </div>
+
+                      <div className="text-left text-foreground">% Gordura</div>
+                      <div className="font-bold text-orange-400">{enrollment.initial_body_fat != null ? `${enrollment.initial_body_fat}%` : "—"}</div>
+                      <div className="font-bold text-orange-400">{enrollment.final_body_fat != null ? `${enrollment.final_body_fat}%` : "—"}</div>
+                      <div>
+                        {enrollment.initial_body_fat != null && enrollment.final_body_fat != null ? (
+                          <span className={`font-bold ${enrollment.final_body_fat < enrollment.initial_body_fat ? "text-green-400" : enrollment.final_body_fat > enrollment.initial_body_fat ? "text-red-400" : "text-muted-foreground"}`}>
+                            {(enrollment.final_body_fat - enrollment.initial_body_fat).toFixed(1)}%
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </div>
+
+                      <div className="text-left text-foreground">% Músculo</div>
+                      <div className="font-bold text-blue-400">{enrollment.initial_muscle_mass != null ? `${enrollment.initial_muscle_mass}%` : "—"}</div>
+                      <div className="font-bold text-blue-400">{enrollment.final_muscle_mass != null ? `${enrollment.final_muscle_mass}%` : "—"}</div>
+                      <div>
+                        {enrollment.initial_muscle_mass != null && enrollment.final_muscle_mass != null ? (
+                          <span className={`font-bold ${enrollment.final_muscle_mass > enrollment.initial_muscle_mass ? "text-green-400" : enrollment.final_muscle_mass < enrollment.initial_muscle_mass ? "text-red-400" : "text-muted-foreground"}`}>
+                            {(enrollment.final_muscle_mass - enrollment.initial_muscle_mass).toFixed(1)}%
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </div>
                     </div>
                   </div>
                 )}
