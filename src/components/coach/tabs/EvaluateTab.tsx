@@ -221,6 +221,10 @@ export function EvaluateTab() {
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
     };
+    const int = (v: any) => {
+      const n = num(v);
+      return n === null ? null : Math.round(n);
+    };
     const payload: Record<string, any> = {
       client_id: client.id,
       coach_id: coachInfo.id,
