@@ -250,8 +250,8 @@ function StudentChallengePage() {
 
 
   // Calcula dias até a pesagem final
-  const daysUntilFinal = enrollment?.initial_date
-    ? Math.ceil((new Date(enrollment.final_date + "T12:00:00").getTime() - Date.now()) / 86400000)
+  const daysUntilFinal = enrollment?.group?.final_weigh_in_date
+    ? Math.ceil((new Date(enrollment.group.final_weigh_in_date + "T12:00:00").getTime() - Date.now()) / 86400000)
     : null;
 
   if (loading) {
