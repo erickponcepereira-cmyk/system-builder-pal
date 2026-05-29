@@ -39,6 +39,10 @@ type MyStudent = {
   status: string;
   initial_weight: number | null;
   final_weight: number | null;
+  initial_body_fat: number | null;
+  final_body_fat: number | null;
+  initial_muscle_mass: number | null;
+  final_muscle_mass: number | null;
   result_pct: number | null;
   final_date: string | null;
   comp_label: string;
@@ -102,7 +106,7 @@ export function ChallengeTab({ coachId }: Props) {
       const { data: enrolls } = await supabase
         .from("competition_enrollments" as never)
         .select(`
-          id, gender, status, initial_weight, final_weight, result_pct, final_date,
+          id, gender, status, initial_weight, final_weight, initial_body_fat, final_body_fat, initial_muscle_mass, final_muscle_mass, result_pct, final_date,
           competition:competition_id ( month, year ),
           group:group_id ( group_number ),
           student:student_id ( id, profile:profile_id ( name ) )
@@ -117,6 +121,10 @@ export function ChallengeTab({ coachId }: Props) {
         status: e.status,
         initial_weight: e.initial_weight,
         final_weight: e.final_weight,
+        initial_body_fat: e.initial_body_fat,
+        final_body_fat: e.final_body_fat,
+        initial_muscle_mass: e.initial_muscle_mass,
+        final_muscle_mass: e.final_muscle_mass,
         result_pct: e.result_pct,
         final_date: e.final_date,
         comp_label: `${MONTHS[e.competition?.month || 1]} ${e.competition?.year || ""}`,
@@ -461,23 +469,30 @@ export function ChallengeTab({ coachId }: Props) {
                   </div>
                 </button>
                 {expandedStudent === s.enrollment_id && (
-                  <div className="px-4 pb-4 border-t border-border pt-3 grid grid-cols-3 gap-3 text-center text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Peso Inicial</p>
-                      <p className="font-bold text-foreground mt-0.5">{s.initial_weight ? `${s.initial_weight} kg` : "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Peso Final</p>
-                      <p className="font-bold text-foreground mt-0.5">{s.final_weight ? `${s.final_weight} kg` : "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Pesagem Final</p>
-                      <p className={`font-bold mt-0.5 ${isUrgent ? "text-red-400" : "text-foreground"}`}>
-                        {s.final_date ? fmt(s.final_date) : "—"}
-                      </p>
+                  <div className="px-4 pb-4 border-t border-border pt-3 space-y-2 text-xs">
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="text-muted-foreground font-bold text-left">Métrica</div>
+                      <div className="text-muted-foreground font-bold">Inicial</div>
+                      <div className="text-muted-foreground font-bold">Final</div>
+                      <div className="text-muted-foreground font-bold">Pesagem Final</div>
+
+                      <div className="text-foreground text-left">Peso</div>
+                      <div className="font-bold text-foreground">{s.initial_weight != null ? `${s.initial_weight} kg` : "—"}</div>
+                      <div className="font-bold text-foreground">{s.final_weight != null ? `${s.final_weight} kg` : "—"}</div>
+                      <div className={`font-bold ${isUrgent ? "text-red-400" : "text-foreground"}`}>{s.final_date ? fmt(s.final_date) : "—"}</div>
+
+                      <div className="text-foreground text-left">% Gordura</div>
+                      <div className="font-bold text-orange-400">{s.initial_body_fat != null ? `${s.initial_body_fat}%` : "—"}</div>
+                      <div className="font-bold text-orange-400">{s.final_body_fat != null ? `${s.final_body_fat}%` : "—"}</div>
+                      <div></div>
+
+                      <div className="text-foreground text-left">% Músculo</div>
+                      <div className="font-bold text-blue-400">{s.initial_muscle_mass != null ? `${s.initial_muscle_mass}%` : "—"}</div>
+                      <div className="font-bold text-blue-400">{s.final_muscle_mass != null ? `${s.final_muscle_mass}%` : "—"}</div>
+                      <div></div>
                     </div>
                     {s.status !== "weighed_final" && s.student_id && (
-                      <div className="col-span-3 flex gap-2 pt-1">
+                      <div className="flex gap-2 pt-1">
                         <a
                           href={`/coach?tab=evaluate&studentId=${s.student_id}&challenge=${s.enrollment_id}&type=${s.status === "weighed_initial" || s.status === "scheduled_final" ? "final" : "initial"}`}
                           className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90">
