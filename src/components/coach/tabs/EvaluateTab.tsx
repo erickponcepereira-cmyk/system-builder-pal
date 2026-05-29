@@ -247,7 +247,6 @@ export function EvaluateTab() {
       diastolic_bp: int(assessment.diastolicBP),
       heart_rate: int(assessment.heartRate),
       blood_glucose: num(assessment.bloodGlucose),
-      blood_glucose: num(assessment.bloodGlucose),
       client_notes: nz(assessment.clientNotes),
       professional_notes: nz(assessment.professionalNotes),
       photos: assessment.photos || {},
