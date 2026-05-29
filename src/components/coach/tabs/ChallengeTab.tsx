@@ -106,7 +106,7 @@ export function ChallengeTab({ coachId }: Props) {
       const { data: enrolls } = await supabase
         .from("competition_enrollments" as never)
         .select(`
-          id, gender, status, initial_weight, final_weight, result_pct, final_date,
+          id, gender, status, initial_weight, final_weight, initial_body_fat, final_body_fat, initial_muscle_mass, final_muscle_mass, result_pct, final_date,
           competition:competition_id ( month, year ),
           group:group_id ( group_number ),
           student:student_id ( id, profile:profile_id ( name ) )
@@ -121,6 +121,10 @@ export function ChallengeTab({ coachId }: Props) {
         status: e.status,
         initial_weight: e.initial_weight,
         final_weight: e.final_weight,
+        initial_body_fat: e.initial_body_fat,
+        final_body_fat: e.final_body_fat,
+        initial_muscle_mass: e.initial_muscle_mass,
+        final_muscle_mass: e.final_muscle_mass,
         result_pct: e.result_pct,
         final_date: e.final_date,
         comp_label: `${MONTHS[e.competition?.month || 1]} ${e.competition?.year || ""}`,
