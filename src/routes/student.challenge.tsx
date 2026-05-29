@@ -187,9 +187,16 @@ function StudentChallengePage() {
         return;
       }
     }
-    if (type === "final" && enrollment.final_date && schedDate > enrollment.final_date) {
-      toast.error(`A pesagem final deve ser até ${fmt(enrollment.final_date)}.`);
-      return;
+    if (type === "final") {
+      const finalDay = enrollment.group.final_weigh_in_date;
+      if (!finalDay) {
+        toast.error("Data da pesagem final ainda não definida pelo desafio.");
+        return;
+      }
+      if (schedDate !== finalDay) {
+        toast.error(`A pesagem final só pode ser agendada no dia ${fmt(finalDay)}.`);
+        return;
+      }
     }
     setScheduling(true);
     try {
@@ -243,8 +250,8 @@ function StudentChallengePage() {
 
 
   // Calcula dias até a pesagem final
-  const daysUntilFinal = enrollment?.initial_date
-    ? Math.ceil((new Date(enrollment.final_date + "T12:00:00").getTime() - Date.now()) / 86400000)
+  const daysUntilFinal = enrollment?.group?.final_weigh_in_date
+    ? Math.ceil((new Date(enrollment.group.final_weigh_in_date + "T12:00:00").getTime() - Date.now()) / 86400000)
     : null;
 
   if (loading) {
@@ -413,11 +420,11 @@ function StudentChallengePage() {
               )}
 
               {enrollment.status === "weighed_initial" && (
-                <button onClick={() => { setSchedDate(""); setScheduleModal("final"); }}
+                <button onClick={() => { setSchedDate(enrollment.group.final_weigh_in_date || ""); setScheduleModal("final"); }}
                   className="w-full flex items-center justify-between rounded-2xl bg-orange-500 p-4 text-left">
                   <div>
                     <p className="font-bold text-white">Agendar Pesagem Final</p>
-                    <p className="text-xs text-white/70">Prazo: {enrollment.final_date ? fmt(enrollment.final_date) : "—"}</p>
+                    <p className="text-xs text-white/70">Dia: {enrollment.group.final_weigh_in_date ? fmt(enrollment.group.final_weigh_in_date) : "—"}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-white" />
                 </button>
@@ -475,16 +482,16 @@ function StudentChallengePage() {
                 Escolha uma data entre {fmt(enrollment.group.initial_start_date)} e {fmt(enrollment.group.initial_end_date)}.
               </p>
             )}
-            {scheduleModal === "final" && enrollment.final_date && (
+            {scheduleModal === "final" && (
               <p className="text-xs text-muted-foreground rounded-lg bg-orange-500/10 px-3 py-2">
-                Sua pesagem final deve ser até {fmt(enrollment.final_date)}.
+                A pesagem final só pode ser agendada no dia {fmt(enrollment.group.final_weigh_in_date)}.
               </p>
             )}
             <div>
               <label className="text-xs text-muted-foreground">Data</label>
               <input type="date" value={schedDate}
-                min={scheduleModal === "initial" ? enrollment.group.initial_start_date : undefined}
-                max={scheduleModal === "initial" ? enrollment.group.initial_end_date : enrollment.final_date || undefined}
+                min={scheduleModal === "initial" ? enrollment.group.initial_start_date : enrollment.group.final_weigh_in_date}
+                max={scheduleModal === "initial" ? enrollment.group.initial_end_date : enrollment.group.final_weigh_in_date}
                 onChange={e => setSchedDate(e.target.value)}
                 className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
             </div>
