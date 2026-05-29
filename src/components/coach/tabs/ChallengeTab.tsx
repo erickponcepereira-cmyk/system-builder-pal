@@ -39,6 +39,10 @@ type MyStudent = {
   status: string;
   initial_weight: number | null;
   final_weight: number | null;
+  initial_body_fat: number | null;
+  final_body_fat: number | null;
+  initial_muscle_mass: number | null;
+  final_muscle_mass: number | null;
   result_pct: number | null;
   final_date: string | null;
   comp_label: string;
