@@ -396,10 +396,14 @@ export function EvaluateTab() {
             const n = Number(v);
             return Number.isFinite(n) ? n : null;
           };
+          const int = (v: any) => {
+            const n = num(v);
+            return n === null ? null : Math.round(n);
+          };
           const nz = (v: any) => (v === "" || v === undefined ? null : v);
           const payload: Record<string, any> = {
             assessment_date: updated.date || new Date().toISOString(),
-            age: num(updated.age),
+            age: int(updated.age),
             height: num(updated.height),
             weight: num(updated.weight),
             bmi: num(updated.bmi),
@@ -407,13 +411,13 @@ export function EvaluateTab() {
             skeletal_muscle: num(updated.skeletalMuscle),
             muscle_mass: num(updated.muscleMass),
             visceral_fat: num(updated.visceralFat),
-            basal_metabolism: num(updated.basalMetabolism),
-            body_age: num(updated.bodyAge),
+            basal_metabolism: int(updated.basalMetabolism),
+            body_age: int(updated.bodyAge),
             body_water: num(updated.bodyWater),
             bone_mass: num(updated.boneMass),
-            systolic_bp: num(updated.systolicBP),
-            diastolic_bp: num(updated.diastolicBP),
-            heart_rate: num(updated.heartRate),
+            systolic_bp: int(updated.systolicBP),
+            diastolic_bp: int(updated.diastolicBP),
+            heart_rate: int(updated.heartRate),
             blood_glucose: num(updated.bloodGlucose),
             client_notes: nz(updated.clientNotes),
             professional_notes: nz(updated.professionalNotes),
