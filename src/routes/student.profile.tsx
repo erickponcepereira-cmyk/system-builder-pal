@@ -16,6 +16,7 @@ const sections = [
       { icon: Settings, label: "Editar perfil", to: "/student/profile/edit" },
       { icon: CreditCard, label: "Meus planos" },
       { icon: Award, label: "Minha evolução" },
+      { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
       { icon: ClipboardList, label: "Anamnese", to: "/student/health" },
     ],
   },
