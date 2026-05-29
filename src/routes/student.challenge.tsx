@@ -126,8 +126,8 @@ function StudentChallengePage() {
       const { data: enroll, error: enrollErr } = await supabase
         .from("competition_enrollments" as never)
         .select(`
-          id, status, gender, initial_date, initial_weight,
-          final_date, final_weight, result_kg, result_pct, competition_id,
+          id, status, gender, initial_date, initial_weight, initial_body_fat, initial_muscle_mass,
+          final_date, final_weight, final_body_fat, final_muscle_mass, result_kg, result_pct, competition_id,
           group:group_id (
             group_number, initial_start_date, initial_end_date,
             final_weigh_in_date, award_date
