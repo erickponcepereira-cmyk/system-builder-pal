@@ -1225,6 +1225,8 @@ export type Database = {
           body_fat: number | null
           body_water: number | null
           bone_mass: number | null
+          challenge_enrollment_id: string | null
+          challenge_type: string | null
           client_id: string
           client_notes: string | null
           coach_id: string
@@ -1242,6 +1244,7 @@ export type Database = {
           professional_notes: string | null
           segment_analysis: Json
           skeletal_muscle: number | null
+          student_id: string | null
           systolic_bp: number | null
           updated_at: string
           visceral_fat: number | null
@@ -1257,6 +1260,8 @@ export type Database = {
           body_fat?: number | null
           body_water?: number | null
           bone_mass?: number | null
+          challenge_enrollment_id?: string | null
+          challenge_type?: string | null
           client_id: string
           client_notes?: string | null
           coach_id: string
@@ -1274,6 +1279,7 @@ export type Database = {
           professional_notes?: string | null
           segment_analysis?: Json
           skeletal_muscle?: number | null
+          student_id?: string | null
           systolic_bp?: number | null
           updated_at?: string
           visceral_fat?: number | null
@@ -1289,6 +1295,8 @@ export type Database = {
           body_fat?: number | null
           body_water?: number | null
           bone_mass?: number | null
+          challenge_enrollment_id?: string | null
+          challenge_type?: string | null
           client_id?: string
           client_notes?: string | null
           coach_id?: string
@@ -1306,12 +1314,20 @@ export type Database = {
           professional_notes?: string | null
           segment_analysis?: Json
           skeletal_muscle?: number | null
+          student_id?: string | null
           systolic_bp?: number | null
           updated_at?: string
           visceral_fat?: number | null
           weight?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "coach_body_assessments_challenge_enrollment_id_fkey"
+            columns: ["challenge_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "competition_enrollments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coach_body_assessments_client_id_fkey"
             columns: ["client_id"]
@@ -1324,6 +1340,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_body_assessments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -1483,6 +1506,7 @@ export type Database = {
           language: string
           name: string
           notes: string | null
+          student_id: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -1502,6 +1526,7 @@ export type Database = {
           language?: string
           name: string
           notes?: string | null
+          student_id?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -1521,6 +1546,7 @@ export type Database = {
           language?: string
           name?: string
           notes?: string | null
+          student_id?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -1530,6 +1556,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_evaluation_clients_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
