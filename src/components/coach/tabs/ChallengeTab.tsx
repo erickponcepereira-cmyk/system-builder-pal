@@ -63,6 +63,9 @@ export function ChallengeTab({ coachId }: Props) {
   const [tab, setTab] = useState<"appointments" | "students" | "hall">("appointments");
   const [weightModal, setWeightModal] = useState<{ apptId: string; enrollId: string; studentName: string; type: string } | null>(null);
   const [weightValue, setWeightValue] = useState("");
+  const [bodyFat, setBodyFat] = useState("");
+  const [muscleMass, setMuscleMass] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
   // Re-schedule modal (coach propõe nova data ao aluno)
