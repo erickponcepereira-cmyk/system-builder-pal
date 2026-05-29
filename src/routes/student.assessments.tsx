@@ -66,15 +66,12 @@ function MyAssessmentsPage() {
   }, []);
 
   const toggle = (id: string) => {
-    setSelected((cur) => {
-      if (cur.includes(id)) return cur.filter((x) => x !== id);
-      if (cur.length >= 2) return [cur[1], id];
-      return [...cur, id];
-    });
+    setSelected((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
   };
 
-  const compareData = selected.length === 2
+  const compareData = selected.length >= 2
     ? selected.map((id) => rows.find((r) => r.id === id)!).filter(Boolean)
+        .sort((a, b) => new Date(a.assessment_date).getTime() - new Date(b.assessment_date).getTime())
     : [];
 
   const delta = (a: number | null, b: number | null) => {
@@ -113,40 +110,58 @@ function MyAssessmentsPage() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-muted-foreground">
-              Selecione até 2 avaliações para comparar. Selecionadas: <b>{selected.length}/2</b>
-            </p>
 
-            {compareData.length === 2 && (
-              <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 space-y-3">
-                <h3 className="font-bold text-foreground text-sm">Comparativo</h3>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="text-muted-foreground">Métrica</div>
-                  <div className="text-center text-muted-foreground">{fmt(compareData[0].assessment_date)}</div>
-                  <div className="text-center text-muted-foreground">{fmt(compareData[1].assessment_date)}</div>
-                  {[
-                    { label: "Peso (kg)", k: "weight", invert: true },
-                    { label: "IMC", k: "bmi", invert: true },
-                    { label: "% Gordura", k: "body_fat", invert: true },
-                    { label: "Massa Muscular", k: "muscle_mass", invert: false },
-                    { label: "% Músculo Esq.", k: "skeletal_muscle", invert: false },
-                    { label: "Gordura Visceral", k: "visceral_fat", invert: true },
-                    { label: "% Água", k: "body_water", invert: false },
-                    { label: "Idade Corporal", k: "body_age", invert: true },
-                  ].map(({ label, k, invert }) => {
-                    const a = (compareData[0] as any)[k];
-                    const b = (compareData[1] as any)[k];
-                    return (
-                      <div key={k} className="contents">
-                        <div className="text-foreground">{label}</div>
-                        <div className="text-center font-medium text-foreground">{a ?? "—"}</div>
-                        <div className="text-center font-medium text-foreground flex items-center justify-center gap-2">
-                          <span>{b ?? "—"}</span>
-                          <DeltaBadge value={delta(a, b)} invert={invert} />
-                        </div>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Selecione 2 ou mais avaliações para comparar. Selecionadas: <b>{selected.length}</b>
+              </p>
+              {selected.length > 0 && (
+                <button onClick={() => setSelected([])} className="text-xs text-primary hover:underline font-bold">Limpar</button>
+              )}
+            </div>
+
+            {compareData.length >= 2 && (
+              <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 space-y-3 overflow-x-auto">
+                <h3 className="font-bold text-foreground text-sm">Comparativo ({compareData.length} avaliações)</h3>
+                <div className="min-w-fit">
+                  <div
+                    className="grid gap-2 text-xs"
+                    style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${compareData.length}, minmax(90px, 1fr))` }}
+                  >
+                    <div className="text-muted-foreground font-bold">Métrica</div>
+                    {compareData.map((c, i) => (
+                      <div key={c.id} className="text-center text-muted-foreground font-bold">
+                        {fmt(c.assessment_date)}
+                        {i === 0 && <span className="block text-[10px] opacity-70">(base)</span>}
                       </div>
-                    );
-                  })}
+                    ))}
+                    {[
+                      { label: "Peso (kg)", k: "weight", invert: true },
+                      { label: "IMC", k: "bmi", invert: true },
+                      { label: "% Gordura", k: "body_fat", invert: true },
+                      { label: "Massa Muscular", k: "muscle_mass", invert: false },
+                      { label: "% Músculo Esq.", k: "skeletal_muscle", invert: false },
+                      { label: "Gordura Visceral", k: "visceral_fat", invert: true },
+                      { label: "% Água", k: "body_water", invert: false },
+                      { label: "Idade Corporal", k: "body_age", invert: true },
+                    ].map(({ label, k, invert }) => {
+                      const base = (compareData[0] as any)[k];
+                      return (
+                        <div key={k} className="contents">
+                          <div className="text-foreground">{label}</div>
+                          {compareData.map((c, i) => {
+                            const v = (c as any)[k];
+                            return (
+                              <div key={c.id} className="text-center font-medium text-foreground flex items-center justify-center gap-1">
+                                <span>{v ?? "—"}</span>
+                                {i > 0 && <DeltaBadge value={delta(base, v)} invert={invert} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
