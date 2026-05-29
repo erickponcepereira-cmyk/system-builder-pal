@@ -106,7 +106,21 @@ function useCoachContext() {
 function CoachDashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+      if (t) return t;
+    }
+    return "overview";
+  });
+  useEffect(() => {
+    const onPop = () => {
+      const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+      if (t) setActiveTab(t);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const [coachName, setCoachName] = useState("Coach");
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [isPending, setIsPending] = useState(false);

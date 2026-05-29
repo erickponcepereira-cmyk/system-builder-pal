@@ -1,13 +1,27 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import FineshapeImport from "@/components/coach/FineshapeImport";
+import { Trophy } from "lucide-react";
+
+type ChallengeLink = {
+  enrollmentId: string;
+  type: "initial" | "final";
+  studentId: string;
+  studentName: string;
+  compLabel: string;
+  preferredClientId?: string;
+};
 
 export function EvaluateTab() {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
+  const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
+
 
   // Listen for popup connect completion
   useEffect(() => {
@@ -110,6 +124,69 @@ export function EvaluateTab() {
 
   useEffect(() => { loadClients(); }, []);
 
+  // Read challenge link from URL (?challenge=<enrollmentId>&type=initial|final&studentId=<id>)
+  useEffect(() => {
+    if (!coachInfo.id) return;
+    (async () => {
+      const sp = new URLSearchParams(window.location.search);
+      const enrollmentId = sp.get("challenge");
+      const type = sp.get("type") as "initial" | "final" | null;
+      const studentId = sp.get("studentId");
+      if (!enrollmentId || !type || !studentId) return;
+      const { data: enroll } = await supabase
+        .from("competition_enrollments" as never)
+        .select("id, student:student_id ( id, profile:profile_id ( name ) ), competition:competition_id ( month, year )")
+        .eq("id" as never, enrollmentId)
+        .maybeSingle();
+      const e = enroll as any;
+      if (!e) return;
+      const studentName = e.student?.profile?.name || "Aluno";
+      const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+      const compLabel = `${months[e.competition?.month || 1]}/${e.competition?.year || ""}`;
+
+      // Find or create a coach_evaluation_clients row linked to this student
+      let preferredClientId: string | undefined;
+      const { data: existing } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id")
+        .eq("coach_id" as never, coachInfo.id as never)
+        .eq("student_id" as never, studentId as never)
+        .maybeSingle();
+      if (existing) {
+        preferredClientId = (existing as any).id;
+      } else {
+        const { data: st } = await supabase
+          .from("students" as never)
+          .select("gender, height, current_weight, profile:profile_id ( name, email, phone, avatar_url )")
+          .eq("id" as never, studentId as never)
+          .maybeSingle();
+        const s = st as any;
+        const { data: created } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .insert({
+            coach_id: coachInfo.id,
+            student_id: studentId,
+            name: s?.profile?.name || studentName,
+            gender: s?.gender === "F" ? "female" : s?.gender === "M" ? "male" : "other",
+            height: s?.height || null,
+            height_unit: "cm",
+            language: "pt",
+            whatsapp: s?.profile?.phone || null,
+            email: s?.profile?.email || null,
+            avatar_url: s?.profile?.avatar_url || null,
+            groups: ["challenge"],
+          } as never)
+          .select("id")
+          .single();
+        preferredClientId = (created as any)?.id;
+        await loadClients();
+      }
+      setChallengeLink({ enrollmentId, type, studentId, studentName, compLabel, preferredClientId });
+    })();
+  }, [coachInfo.id]);
+
+
+
   const createClient = async (client: Omit<FitMindClient, "id">) => {
     if (!coachInfo.id) throw new Error("Coach não encontrado");
     if (!client.name?.trim()) throw new Error("Informe o nome do aluno");
@@ -173,21 +250,49 @@ export function EvaluateTab() {
       next_assessment_time: nz(assessment.nextAssessmentTime),
       group_id: nz(assessment.groupId),
     };
+    if (challengeLink && client.id === challengeLink.preferredClientId) {
+      payload.student_id = challengeLink.studentId;
+      payload.challenge_enrollment_id = challengeLink.enrollmentId;
+      payload.challenge_type = challengeLink.type;
+    } else if ((client as any).studentId) {
+      payload.student_id = (client as any).studentId;
+    }
     const { error } = await supabase.from("coach_body_assessments" as never).insert(payload as never);
     if (error) {
       console.error("saveAssessment error:", error);
       toast.error(error.message || "Erro ao salvar avaliação");
       throw error;
     }
-    toast.success("Avaliação salva");
+    if (challengeLink && client.id === challengeLink.preferredClientId) {
+      toast.success(`Avaliação vinculada ao Desafio (${challengeLink.type === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`);
+      setTimeout(() => navigate({ to: "/coach", search: { tab: "challenge" } as any }), 800);
+    } else {
+      toast.success("Avaliação salva");
+    }
     await loadClients();
   };
 
+
   return (
     <>
+      {challengeLink && (
+        <div className="mb-4 rounded-2xl border border-primary/40 bg-primary/10 p-4 flex items-start gap-3">
+          <Trophy className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="font-bold text-foreground">
+              Vinculado ao Desafio FitMind · {challengeLink.compLabel} · Pesagem {challengeLink.type === "initial" ? "Inicial" : "Final"}
+            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Aluno: <b>{challengeLink.studentName}</b>. Selecione esse aluno na lista do FitMindShape e finalize a avaliação — peso, % gordura e link compartilhável serão salvos automaticamente no desafio.
+            </p>
+          </div>
+          <button onClick={() => setChallengeLink(null)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+        </div>
+      )}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+
           <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
         </div>
         {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}

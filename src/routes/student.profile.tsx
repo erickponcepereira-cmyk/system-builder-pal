@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2 } from "lucide-react";
+import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ const sections = [
       { icon: Settings, label: "Editar perfil", to: "/student/profile/edit" },
       { icon: CreditCard, label: "Meus planos" },
       { icon: Award, label: "Minha evolução" },
+      { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
       { icon: ClipboardList, label: "Anamnese", to: "/student/health" },
     ],
   },

@@ -33,6 +33,7 @@ type Appointment = {
 
 type MyStudent = {
   enrollment_id: string;
+  student_id: string;
   student_name: string;
   gender: string;
   status: string;
@@ -104,12 +105,13 @@ export function ChallengeTab({ coachId }: Props) {
           id, gender, status, initial_weight, final_weight, result_pct, final_date,
           competition:competition_id ( month, year ),
           group:group_id ( group_number ),
-          student:student_id ( profile:profile_id ( name ) )
+          student:student_id ( id, profile:profile_id ( name ) )
         `)
         .eq("coach_id" as never, coachId)
         .order("enrolled_at" as never, { ascending: false });
       setStudents(((enrolls as any[]) || []).map((e: any) => ({
         enrollment_id: e.id,
+        student_id: e.student?.id || "",
         student_name: e.student?.profile?.name || "—",
         gender: e.gender,
         status: e.status,
@@ -365,6 +367,11 @@ export function ChallengeTab({ coachId }: Props) {
                     ✓ Confirmar
                   </button>
                 )}
+                <a
+                  href={`/coach?tab=evaluate&studentId=${(appt.student as any)?.id}&challenge=${(appt.enrollment as any)?.id}&type=${appt.type}`}
+                  className="flex-1 min-w-[140px] flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90">
+                  <Scale className="h-3 w-3" /> Fazer Avaliação
+                </a>
                 <button
                   onClick={() => setWeightModal({
                     apptId: appt.id,
@@ -372,8 +379,9 @@ export function ChallengeTab({ coachId }: Props) {
                     studentName: (appt.student as any)?.profile?.name,
                     type: appt.type,
                   })}
-                  className="flex-1 min-w-[110px] flex items-center justify-center gap-1 rounded-lg bg-primary/10 py-2 text-xs font-bold text-primary hover:bg-primary/20">
-                  <Scale className="h-3 w-3" /> Registrar Peso
+                  title="Registrar peso manualmente (sem bioimpedância)"
+                  className="flex items-center justify-center gap-1 rounded-lg bg-primary/10 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/20">
+                  <Scale className="h-3 w-3" /> Manual
                 </button>
                 <button onClick={() => openReschedule(appt)}
                   className="flex items-center gap-1 rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-400 hover:bg-blue-500/20">
@@ -449,6 +457,15 @@ export function ChallengeTab({ coachId }: Props) {
                         {s.final_date ? fmt(s.final_date) : "—"}
                       </p>
                     </div>
+                    {s.status !== "weighed_final" && s.student_id && (
+                      <div className="col-span-3 flex gap-2 pt-1">
+                        <a
+                          href={`/coach?tab=evaluate&studentId=${s.student_id}&challenge=${s.enrollment_id}&type=${s.status === "weighed_initial" || s.status === "scheduled_final" ? "final" : "initial"}`}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90">
+                          <Scale className="h-3 w-3" /> Fazer Avaliação {s.status === "weighed_initial" || s.status === "scheduled_final" ? "Final" : "Inicial"}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
