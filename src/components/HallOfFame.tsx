@@ -113,17 +113,13 @@ export function HallOfFame({ showAudit = false }: Props) {
   const ranked = useMemo(() => {
     const base = enrolls.filter(e => matchesFilters(e.competition?.month, e.competition?.year, e.gender));
     const sorter = (key: "result_fat_pct_lost" | "result_muscle_gain_pct" | "result_kg_lost") => {
-      const hasData = (e: Enroll) =>
-        key === "result_fat_pct_lost" ? (e.initial_body_fat != null && e.final_body_fat != null) :
-        key === "result_muscle_gain_pct" ? (e.initial_muscle_mass != null && e.final_muscle_mass != null) :
-        (e.initial_weight != null && e.final_weight != null);
-      return [...base].sort((a, b) => {
-        const ha = hasData(a), hb = hasData(b);
-        if (ha !== hb) return ha ? -1 : 1;
-        const va = (a[key] ?? -Infinity) as number;
-        const vb = (b[key] ?? -Infinity) as number;
-        return vb - va;
-      });
+      // Only positive results qualify. Negative/zero (gained weight/fat, lost muscle) and missing data are excluded.
+      return base
+        .filter(e => {
+          const v = e[key];
+          return v != null && (v as number) > 0;
+        })
+        .sort((a, b) => ((b[key] ?? 0) as number) - ((a[key] ?? 0) as number));
     };
     return {
       fat: sorter("result_fat_pct_lost"),
@@ -237,11 +233,15 @@ function WinnersList({ items }: { items: HallEntry[] }) {
 }
 
 function RankList({ items, metric, showAudit }: { items: Enroll[]; metric: "fat" | "muscle" | "kg"; showAudit: boolean }) {
+  const emptyMsg =
+    metric === "fat" ? "Nenhum participante perdeu gordura no período." :
+    metric === "muscle" ? "Nenhum participante ganhou massa muscular no período." :
+    "Nenhum participante perdeu peso no período.";
   if (items.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-card p-8 text-center">
         <Award className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-        <p className="text-muted-foreground text-sm">Nenhum participante no período.</p>
+        <p className="text-muted-foreground text-sm">{emptyMsg}</p>
       </div>
     );
   }
@@ -250,33 +250,18 @@ function RankList({ items, metric, showAudit }: { items: Enroll[]; metric: "fat"
     if (metric === "muscle") return e.result_muscle_gain_pct;
     return e.result_kg_lost;
   };
-  const missingReason = (e: Enroll) => {
-    if (metric === "fat") {
-      if (e.initial_body_fat == null) return "Não realizou pesagem inicial";
-      if (e.final_body_fat == null) return "Não realizou pesagem final";
-    } else if (metric === "muscle") {
-      if (e.initial_muscle_mass == null) return "Não realizou pesagem inicial";
-      if (e.final_muscle_mass == null) return "Não realizou pesagem final";
-    } else {
-      if (e.initial_weight == null) return "Não realizou pesagem inicial";
-      if (e.final_weight == null) return "Não realizou pesagem final";
-    }
-    return null;
-  };
   const unit = metric === "kg" ? "kg" : "%";
-  const fmtVal = (v: number | null) => v == null ? "—" : `${v > 0 ? "" : "+"}${Math.abs(v).toFixed(metric === "kg" ? 1 : 2)}${unit}`;
+  const fmtVal = (v: number | null) => v == null ? "—" : `${v.toFixed(metric === "kg" ? 1 : 2)}${unit}`;
 
   return (
     <div className="space-y-2">
       {items.map((e, i) => {
-        const miss = missingReason(e);
         const val = valueOf(e);
-        const positive = val != null && val > 0;
         return (
-          <div key={e.id} className={`rounded-2xl border bg-card p-3 ${miss ? "border-border opacity-70" : "border-border"}`}>
+          <div key={e.id} className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-center gap-3">
               <div className="w-6 text-center text-xs font-bold text-muted-foreground flex-shrink-0">
-                {miss ? "—" : `${i + 1}º`}
+                {`${i + 1}º`}
               </div>
               <Avatar url={e.student?.profile?.avatar_url} name={e.student?.profile?.name || "?"} />
               <div className="flex-1 min-w-0">
@@ -284,16 +269,9 @@ function RankList({ items, metric, showAudit }: { items: Enroll[]; metric: "fat"
                 <p className="text-[11px] text-muted-foreground truncate">
                   {e.coach?.profile?.name || "—"} · {MONTHS[e.competition?.month || 0]} {e.competition?.year || ""}
                 </p>
-                {miss && <p className="text-[10px] text-yellow-500/80 mt-0.5">{miss}</p>}
               </div>
               <div className="text-right flex-shrink-0">
-                {miss ? (
-                  <span className="text-xs text-muted-foreground">Sem resultado</span>
-                ) : (
-                  <p className={`text-base font-bold ${positive ? "text-green-400" : "text-red-400"}`}>
-                    {fmtVal(val)}
-                  </p>
-                )}
+                <p className="text-base font-bold text-green-400">{fmtVal(val)}</p>
                 <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 ${e.gender === "M" ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"}`}>
                   {e.gender}
                 </span>
