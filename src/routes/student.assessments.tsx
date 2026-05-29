@@ -74,7 +74,42 @@ function MyAssessmentsPage() {
         .sort((a, b) => new Date(a.assessment_date).getTime() - new Date(b.assessment_date).getTime())
     : [];
 
-...
+  const delta = (a: number | null, b: number | null) => {
+    if (a == null || b == null) return null;
+    return Number((b - a).toFixed(2));
+  };
+  const DeltaBadge = ({ value, invert }: { value: number | null; invert?: boolean }) => {
+    if (value == null) return <Minus className="h-3 w-3 text-muted-foreground" />;
+    const good = invert ? value < 0 : value > 0;
+    if (value === 0) return <span className="text-xs text-muted-foreground">0</span>;
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-xs font-bold ${good ? "text-green-400" : "text-red-400"}`}>
+        {value > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+        {value > 0 ? "+" : ""}{value}
+      </span>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 backdrop-blur p-4">
+        <Link to="/student/profile" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-foreground">Minhas Avaliações</h1>
+          <p className="text-xs text-muted-foreground">Bioimpedâncias realizadas pelo seu coach</p>
+        </div>
+      </header>
+
+      <div className="p-4 space-y-3">
+        {loading ? (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">Carregando…</div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center">
+            <Activity className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Você ainda não possui avaliações registradas. Peça ao seu coach para realizar a bioimpedância no FitMindShape.</p>
+          </div>
+        ) : (
+          <>
 
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">
