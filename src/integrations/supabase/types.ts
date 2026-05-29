@@ -2140,14 +2140,23 @@ export type Database = {
           competition_id: string
           enrolled_at: string
           enrolled_by: string
+          final_body_fat: number | null
           final_date: string | null
+          final_muscle_mass: number | null
+          final_share_url: string | null
           final_weight: number | null
           gender: string
           group_id: string
           id: string
+          initial_body_fat: number | null
           initial_date: string | null
+          initial_muscle_mass: number | null
+          initial_share_url: string | null
           initial_weight: number | null
+          result_fat_pct_lost: number | null
           result_kg: number | null
+          result_kg_lost: number | null
+          result_muscle_gain_pct: number | null
           result_pct: number | null
           status: string
           student_id: string
@@ -2157,14 +2166,23 @@ export type Database = {
           competition_id: string
           enrolled_at?: string
           enrolled_by?: string
+          final_body_fat?: number | null
           final_date?: string | null
+          final_muscle_mass?: number | null
+          final_share_url?: string | null
           final_weight?: number | null
           gender: string
           group_id: string
           id?: string
+          initial_body_fat?: number | null
           initial_date?: string | null
+          initial_muscle_mass?: number | null
+          initial_share_url?: string | null
           initial_weight?: number | null
+          result_fat_pct_lost?: number | null
           result_kg?: number | null
+          result_kg_lost?: number | null
+          result_muscle_gain_pct?: number | null
           result_pct?: number | null
           status?: string
           student_id: string
@@ -2174,14 +2192,23 @@ export type Database = {
           competition_id?: string
           enrolled_at?: string
           enrolled_by?: string
+          final_body_fat?: number | null
           final_date?: string | null
+          final_muscle_mass?: number | null
+          final_share_url?: string | null
           final_weight?: number | null
           gender?: string
           group_id?: string
           id?: string
+          initial_body_fat?: number | null
           initial_date?: string | null
+          initial_muscle_mass?: number | null
+          initial_share_url?: string | null
           initial_weight?: number | null
+          result_fat_pct_lost?: number | null
           result_kg?: number | null
+          result_kg_lost?: number | null
+          result_muscle_gain_pct?: number | null
           result_pct?: number | null
           status?: string
           student_id?: string
@@ -2222,31 +2249,37 @@ export type Database = {
           award_date: string | null
           competition_id: string
           created_at: string
-          final_weigh_in_date: string
-          group_number: number
+          end_date: string | null
+          final_weigh_in_date: string | null
+          group_number: number | null
           id: string
-          initial_end_date: string
-          initial_start_date: string
+          initial_end_date: string | null
+          initial_start_date: string | null
+          start_date: string | null
         }
         Insert: {
           award_date?: string | null
           competition_id: string
           created_at?: string
-          final_weigh_in_date: string
-          group_number: number
+          end_date?: string | null
+          final_weigh_in_date?: string | null
+          group_number?: number | null
           id?: string
-          initial_end_date: string
-          initial_start_date: string
+          initial_end_date?: string | null
+          initial_start_date?: string | null
+          start_date?: string | null
         }
         Update: {
           award_date?: string | null
           competition_id?: string
           created_at?: string
-          final_weigh_in_date?: string
-          group_number?: number
+          end_date?: string | null
+          final_weigh_in_date?: string | null
+          group_number?: number | null
           id?: string
-          initial_end_date?: string
-          initial_start_date?: string
+          initial_end_date?: string | null
+          initial_start_date?: string | null
+          start_date?: string | null
         }
         Relationships: [
           {
