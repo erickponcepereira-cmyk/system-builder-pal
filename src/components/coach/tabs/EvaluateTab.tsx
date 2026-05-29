@@ -124,6 +124,69 @@ export function EvaluateTab() {
 
   useEffect(() => { loadClients(); }, []);
 
+  // Read challenge link from URL (?challenge=<enrollmentId>&type=initial|final&studentId=<id>)
+  useEffect(() => {
+    if (!coachInfo.id) return;
+    (async () => {
+      const sp = new URLSearchParams(window.location.search);
+      const enrollmentId = sp.get("challenge");
+      const type = sp.get("type") as "initial" | "final" | null;
+      const studentId = sp.get("studentId");
+      if (!enrollmentId || !type || !studentId) return;
+      const { data: enroll } = await supabase
+        .from("competition_enrollments" as never)
+        .select("id, student:student_id ( id, profile:profile_id ( name ) ), competition:competition_id ( month, year )")
+        .eq("id" as never, enrollmentId)
+        .maybeSingle();
+      const e = enroll as any;
+      if (!e) return;
+      const studentName = e.student?.profile?.name || "Aluno";
+      const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+      const compLabel = `${months[e.competition?.month || 1]}/${e.competition?.year || ""}`;
+
+      // Find or create a coach_evaluation_clients row linked to this student
+      let preferredClientId: string | undefined;
+      const { data: existing } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id")
+        .eq("coach_id" as never, coachInfo.id as never)
+        .eq("student_id" as never, studentId as never)
+        .maybeSingle();
+      if (existing) {
+        preferredClientId = (existing as any).id;
+      } else {
+        const { data: st } = await supabase
+          .from("students" as never)
+          .select("gender, height, current_weight, profile:profile_id ( name, email, phone, avatar_url )")
+          .eq("id" as never, studentId as never)
+          .maybeSingle();
+        const s = st as any;
+        const { data: created } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .insert({
+            coach_id: coachInfo.id,
+            student_id: studentId,
+            name: s?.profile?.name || studentName,
+            gender: s?.gender === "F" ? "female" : s?.gender === "M" ? "male" : "other",
+            height: s?.height || null,
+            height_unit: "cm",
+            language: "pt",
+            whatsapp: s?.profile?.phone || null,
+            email: s?.profile?.email || null,
+            avatar_url: s?.profile?.avatar_url || null,
+            groups: ["challenge"],
+          } as never)
+          .select("id")
+          .single();
+        preferredClientId = (created as any)?.id;
+        await loadClients();
+      }
+      setChallengeLink({ enrollmentId, type, studentId, studentName, compLabel, preferredClientId });
+    })();
+  }, [coachInfo.id]);
+
+
+
   const createClient = async (client: Omit<FitMindClient, "id">) => {
     if (!coachInfo.id) throw new Error("Coach não encontrado");
     if (!client.name?.trim()) throw new Error("Informe o nome do aluno");
