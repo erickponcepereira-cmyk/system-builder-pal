@@ -503,9 +503,29 @@ export function ChallengeTab({ coachId }: Props) {
             </h3>
             <p className="text-sm text-muted-foreground">{weightModal.studentName}</p>
             <div>
-              <label className="text-xs text-muted-foreground">Peso (kg)</label>
+              <label className="text-xs text-muted-foreground">Peso (kg) *</label>
               <input type="number" step="0.1" placeholder="Ex: 82.5" value={weightValue}
                 onChange={e => setWeightValue(e.target.value)} autoFocus
+                className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">% Gordura</label>
+                <input type="number" step="0.1" placeholder="Ex: 22.5" value={bodyFat}
+                  onChange={e => setBodyFat(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">% Músculo</label>
+                <input type="number" step="0.1" placeholder="Ex: 38.0" value={muscleMass}
+                  onChange={e => setMuscleMass(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Link do resultado FitMindShape (opcional)</label>
+              <input type="url" placeholder="https://..." value={shareUrl}
+                onChange={e => setShareUrl(e.target.value)}
                 className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
             </div>
             <div className="flex gap-3">
