@@ -420,11 +420,11 @@ function StudentChallengePage() {
               )}
 
               {enrollment.status === "weighed_initial" && (
-                <button onClick={() => { setSchedDate(""); setScheduleModal("final"); }}
+                <button onClick={() => { setSchedDate(enrollment.group.final_weigh_in_date || ""); setScheduleModal("final"); }}
                   className="w-full flex items-center justify-between rounded-2xl bg-orange-500 p-4 text-left">
                   <div>
                     <p className="font-bold text-white">Agendar Pesagem Final</p>
-                    <p className="text-xs text-white/70">Prazo: {enrollment.final_date ? fmt(enrollment.final_date) : "—"}</p>
+                    <p className="text-xs text-white/70">Dia: {enrollment.group.final_weigh_in_date ? fmt(enrollment.group.final_weigh_in_date) : "—"}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-white" />
                 </button>
