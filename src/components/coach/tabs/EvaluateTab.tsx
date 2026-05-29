@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
+import { useSearch, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
 import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
 import FineshapeImport from "@/components/coach/FineshapeImport";
+import { Trophy } from "lucide-react";
+
+type ChallengeLink = {
+  enrollmentId: string;
+  type: "initial" | "final";
+  studentId: string;
+  studentName: string;
+  compLabel: string;
+  preferredClientId?: string;
+};
 
 export function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
