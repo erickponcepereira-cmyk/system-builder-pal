@@ -105,12 +105,13 @@ export function ChallengeTab({ coachId }: Props) {
           id, gender, status, initial_weight, final_weight, result_pct, final_date,
           competition:competition_id ( month, year ),
           group:group_id ( group_number ),
-          student:student_id ( profile:profile_id ( name ) )
+          student:student_id ( id, profile:profile_id ( name ) )
         `)
         .eq("coach_id" as never, coachId)
         .order("enrolled_at" as never, { ascending: false });
       setStudents(((enrolls as any[]) || []).map((e: any) => ({
         enrollment_id: e.id,
+        student_id: e.student?.id || "",
         student_name: e.student?.profile?.name || "—",
         gender: e.gender,
         status: e.status,
