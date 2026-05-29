@@ -22,8 +22,12 @@ type Enrollment = {
   gender: string;
   initial_date: string | null;
   initial_weight: number | null;
+  initial_body_fat: number | null;
+  initial_muscle_mass: number | null;
   final_date: string | null;
   final_weight: number | null;
+  final_body_fat: number | null;
+  final_muscle_mass: number | null;
   result_kg: number | null;
   result_pct: number | null;
   competition_id: string;
