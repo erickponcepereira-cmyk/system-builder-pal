@@ -250,15 +250,28 @@ export function EvaluateTab() {
       next_assessment_time: nz(assessment.nextAssessmentTime),
       group_id: nz(assessment.groupId),
     };
+    if (challengeLink && client.id === challengeLink.preferredClientId) {
+      payload.student_id = challengeLink.studentId;
+      payload.challenge_enrollment_id = challengeLink.enrollmentId;
+      payload.challenge_type = challengeLink.type;
+    } else if ((client as any).studentId) {
+      payload.student_id = (client as any).studentId;
+    }
     const { error } = await supabase.from("coach_body_assessments" as never).insert(payload as never);
     if (error) {
       console.error("saveAssessment error:", error);
       toast.error(error.message || "Erro ao salvar avaliação");
       throw error;
     }
-    toast.success("Avaliação salva");
+    if (challengeLink && client.id === challengeLink.preferredClientId) {
+      toast.success(`Avaliação vinculada ao Desafio (${challengeLink.type === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`);
+      setTimeout(() => navigate({ to: "/coach", search: { tab: "challenge" } as any }), 800);
+    } else {
+      toast.success("Avaliação salva");
+    }
     await loadClients();
   };
+
 
   return (
     <>
