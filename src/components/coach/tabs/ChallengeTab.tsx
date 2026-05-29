@@ -457,6 +457,15 @@ export function ChallengeTab({ coachId }: Props) {
                         {s.final_date ? fmt(s.final_date) : "—"}
                       </p>
                     </div>
+                    {s.status !== "weighed_final" && s.student_id && (
+                      <div className="col-span-3 flex gap-2 pt-1">
+                        <a
+                          href={`/coach?tab=evaluate&studentId=${s.student_id}&challenge=${s.enrollment_id}&type=${s.status === "weighed_initial" || s.status === "scheduled_final" ? "final" : "initial"}`}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90">
+                          <Scale className="h-3 w-3" /> Fazer Avaliação {s.status === "weighed_initial" || s.status === "scheduled_final" ? "Final" : "Inicial"}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
