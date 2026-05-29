@@ -521,11 +521,12 @@ function AdminChallengePage() {
                                   )}
                                 </td>
                                 <td className="px-3 py-2 text-center">
-                                  {enroll.final_weight != null || enroll.final_body_fat != null ? (
+                                  {enroll.final_weight != null || enroll.final_body_fat != null || enroll.final_muscle_mass != null ? (
                                     <div className="flex items-center justify-center gap-1">
                                       <div className="text-[10px] leading-tight">
                                         {enroll.final_weight != null && <div>{enroll.final_weight}kg</div>}
                                         {enroll.final_body_fat != null && <div className="text-orange-400">{enroll.final_body_fat}%g</div>}
+                                        {enroll.final_muscle_mass != null && <div className="text-blue-400">{enroll.final_muscle_mass}%m</div>}
                                       </div>
                                       {enroll.final_share_url && (
                                         <a href={enroll.final_share_url} target="_blank" rel="noopener noreferrer" title="Auditoria" className="text-green-400"><ExternalLink className="h-3 w-3" /></a>
