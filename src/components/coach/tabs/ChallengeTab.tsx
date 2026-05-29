@@ -469,23 +469,30 @@ export function ChallengeTab({ coachId }: Props) {
                   </div>
                 </button>
                 {expandedStudent === s.enrollment_id && (
-                  <div className="px-4 pb-4 border-t border-border pt-3 grid grid-cols-3 gap-3 text-center text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Peso Inicial</p>
-                      <p className="font-bold text-foreground mt-0.5">{s.initial_weight ? `${s.initial_weight} kg` : "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Peso Final</p>
-                      <p className="font-bold text-foreground mt-0.5">{s.final_weight ? `${s.final_weight} kg` : "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Pesagem Final</p>
-                      <p className={`font-bold mt-0.5 ${isUrgent ? "text-red-400" : "text-foreground"}`}>
-                        {s.final_date ? fmt(s.final_date) : "—"}
-                      </p>
+                  <div className="px-4 pb-4 border-t border-border pt-3 space-y-2 text-xs">
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div className="text-muted-foreground font-bold text-left">Métrica</div>
+                      <div className="text-muted-foreground font-bold">Inicial</div>
+                      <div className="text-muted-foreground font-bold">Final</div>
+                      <div className="text-muted-foreground font-bold">Pesagem Final</div>
+
+                      <div className="text-foreground text-left">Peso</div>
+                      <div className="font-bold text-foreground">{s.initial_weight != null ? `${s.initial_weight} kg` : "—"}</div>
+                      <div className="font-bold text-foreground">{s.final_weight != null ? `${s.final_weight} kg` : "—"}</div>
+                      <div className={`font-bold ${isUrgent ? "text-red-400" : "text-foreground"}`}>{s.final_date ? fmt(s.final_date) : "—"}</div>
+
+                      <div className="text-foreground text-left">% Gordura</div>
+                      <div className="font-bold text-orange-400">{s.initial_body_fat != null ? `${s.initial_body_fat}%` : "—"}</div>
+                      <div className="font-bold text-orange-400">{s.final_body_fat != null ? `${s.final_body_fat}%` : "—"}</div>
+                      <div></div>
+
+                      <div className="text-foreground text-left">% Músculo</div>
+                      <div className="font-bold text-blue-400">{s.initial_muscle_mass != null ? `${s.initial_muscle_mass}%` : "—"}</div>
+                      <div className="font-bold text-blue-400">{s.final_muscle_mass != null ? `${s.final_muscle_mass}%` : "—"}</div>
+                      <div></div>
                     </div>
                     {s.status !== "weighed_final" && s.student_id && (
-                      <div className="col-span-3 flex gap-2 pt-1">
+                      <div className="flex gap-2 pt-1">
                         <a
                           href={`/coach?tab=evaluate&studentId=${s.student_id}&challenge=${s.enrollment_id}&type=${s.status === "weighed_initial" || s.status === "scheduled_final" ? "final" : "initial"}`}
                           className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90">
