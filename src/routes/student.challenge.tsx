@@ -187,9 +187,16 @@ function StudentChallengePage() {
         return;
       }
     }
-    if (type === "final" && enrollment.final_date && schedDate > enrollment.final_date) {
-      toast.error(`A pesagem final deve ser até ${fmt(enrollment.final_date)}.`);
-      return;
+    if (type === "final") {
+      const finalDay = enrollment.group.final_weigh_in_date;
+      if (!finalDay) {
+        toast.error("Data da pesagem final ainda não definida pelo desafio.");
+        return;
+      }
+      if (schedDate !== finalDay) {
+        toast.error(`A pesagem final só pode ser agendada no dia ${fmt(finalDay)}.`);
+        return;
+      }
     }
     setScheduling(true);
     try {
