@@ -482,16 +482,16 @@ function StudentChallengePage() {
                 Escolha uma data entre {fmt(enrollment.group.initial_start_date)} e {fmt(enrollment.group.initial_end_date)}.
               </p>
             )}
-            {scheduleModal === "final" && enrollment.final_date && (
+            {scheduleModal === "final" && (
               <p className="text-xs text-muted-foreground rounded-lg bg-orange-500/10 px-3 py-2">
-                Sua pesagem final deve ser até {fmt(enrollment.final_date)}.
+                A pesagem final só pode ser agendada no dia {fmt(enrollment.group.final_weigh_in_date)}.
               </p>
             )}
             <div>
               <label className="text-xs text-muted-foreground">Data</label>
               <input type="date" value={schedDate}
-                min={scheduleModal === "initial" ? enrollment.group.initial_start_date : undefined}
-                max={scheduleModal === "initial" ? enrollment.group.initial_end_date : enrollment.final_date || undefined}
+                min={scheduleModal === "initial" ? enrollment.group.initial_start_date : enrollment.group.final_weigh_in_date}
+                max={scheduleModal === "initial" ? enrollment.group.initial_end_date : enrollment.group.final_weigh_in_date}
                 onChange={e => setSchedDate(e.target.value)}
                 className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />
             </div>
