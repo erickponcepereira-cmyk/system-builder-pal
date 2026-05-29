@@ -1,49 +1,70 @@
-## Objetivo
-Fazer com que o link "Compartilhar resultado" exiba para o aluno EXATAMENTE a mesma tela que o coach vê em `FitMindShape → Resultado da Avaliação` — mesmo Resumo, Perfil Corporal (avatares), Composição Corporal, Diagnóstico de Obesidade, Outros Indicadores, Cardiovascular, gráficos (peso, pizza composição, gordura×músculo), Idade Corporal, Circunferências, Fontes Clínicas, Anotações e rodapé do Coach.
 
-Hoje a página pública (`/resultado/$token`) tem um layout simplificado próprio, com poucos dados. Vamos:
-1. Extrair a `ResultScreen` para um componente isolado e reutilizável.
-2. Ampliar o que a função pública de share retorna (histórico, fotos, circunferências, gênero, altura, anotações, logo do coach).
-3. Renderizar o mesmo componente na rota pública, dentro de um wrapper com o CTA de cadastro + card do coach.
+## Mudanças no banco (migration única)
 
-## Implementação
+**competition_groups** — turmas agora têm datas totalmente manuais:
+- adicionar `start_date date` e `end_date date` (janela total da turma, pode cruzar meses)
+- manter `initial_start_date`/`initial_end_date` (janela de pesagem inicial)
+- manter `final_weigh_in_date` (data alvo da pesagem final, agora editável)
+- admin pode criar/editar/excluir turmas individualmente; remover geração automática obrigatória (manter `generate_competition_groups` opcional)
 
-### 1) `src/components/coach/FitMindShapeResultView.tsx` (novo)
-- Move toda a renderização e helpers internos de `ResultScreen` (linhas ~2659–3617 de `FitMindShape.tsx`) para um componente que recebe props:
-  - `client` (FitMindClient), `assessment` (FitMindAssessment), `allAssessments` (lista para Resumo e histórico), `coach` (nome, logo, especialidade, email), `themeColor`, `themeFontFamily`, `mode: "coach" | "public"`.
-  - Callbacks opcionais: `onBack`, `onShare`, `sharingResult`, `onNewAssessment`, `onCompare`, `onPrint`.
-- Move helpers usados só pela tela: `AvatarFigure`, `Tooltip`, `AvatarLabels`, imports de avatares (`bodyAbaixo`...), `CLINICAL_SOURCES`, CSS `fm-result-screen` mínimo.
-- Calcula internamente `computedBMI`, `historicalData`, `harrisBenedict`, `pieData` etc. a partir das props.
-- No modo `public`: oculta botões "Nova Avaliação", "Comparar", "Gerar Relatório"; oculta botão de share; mostra apenas o conteúdo + botão "Imprimir".
+**competition_enrollments** — adicionar colunas de resultado por bioimpedância:
+- `initial_body_fat numeric` / `final_body_fat numeric` — % de gordura
+- `initial_muscle_mass numeric` / `final_muscle_mass numeric` — massa muscular
+- `initial_assessment_id uuid` / `final_assessment_id uuid` — FK para `coach_body_assessments`
+- `initial_share_url text` / `final_share_url text` — link público do FitMindShape para auditoria
+- `result_fat_pct_lost numeric` — % de gordura perdida (critério principal)
+- `result_muscle_gain_pct numeric` — % de massa muscular ganha
+- `result_kg_lost numeric` — kg perdidos (peso)
 
-### 2) `src/components/coach/FitMindShape.tsx`
-- Substitui o corpo de `ResultScreen` por `<FitMindShapeResultView mode="coach" ... />` repassando estados existentes (`selectedClient`, `assessment`, `historicalData` reconstruído via allAssessments, `coach`, `themeColor`, `themeFontFamily`, `onBack=setScreen("home")`, `onShare=handleShareResult`, `sharingResult`, `onNewAssessment`, `onCompare=setScreen("compare")`, `onPrint=window.print`).
-- Remove dali os helpers já movidos (Tooltip, AvatarFigure, CLINICAL_SOURCES, imports de avatares) ou mantém via re-export do novo módulo para evitar quebra de outras telas (verificar uso).
+**coach_body_assessments** — vincular ao desafio:
+- `challenge_enrollment_id uuid` (FK opcional)
+- `challenge_type text` check ('initial'|'final')
+- trigger: ao inserir/atualizar com `challenge_enrollment_id`, copia weight/body_fat/muscle_mass para a coluna correspondente em `competition_enrollments` e calcula resultados
 
-### 3) `src/lib/assessment-share.functions.ts`
-- Estende `PublicShareData` com:
-  - `gender: "male" | "female"`
-  - `height: number | null` (já existe)
-  - `photos: { front, back, leftSide, rightSide } | null`
-  - `circumferences: Record<string, number | null> | null`
-  - `clientNotes: string | null`
-  - `history: Array<{ id, date, weight, bodyFat, skeletalMuscle, muscleMass, visceralFat, bodyAge, bmi }>` (todas as avaliações do mesmo `client_id`, ordenadas por data, máx 50)
-  - `coachLogo: string | null`, `coachEmail: string | null`
-- No handler `getAssessmentShareByToken` adiciona consulta a `coach_evaluation_clients` (gender), `coach_body_assessments` (irmãs) e `coaches.logo_url`/`email` para preencher tudo.
+## Admin (`/admin/challenge`)
 
-### 4) `src/routes/resultado.$token.tsx`
-- Mantém header com Logo + botão Compartilhar (WhatsApp) e card de coach + CTA "Inscreva-se no FitMind Club" no fim.
-- Entre o header e o CTA, renderiza `<FitMindShapeResultView mode="public" client={...} assessment={...} allAssessments={history} coach={{name, logo, specialty, email}} themeColor="#dc2626" />` montado a partir de `PublicShareData`.
-- Remove as Sections/MetricRow locais.
+- **Criar competição**: mês/ano/prêmio (apenas para agrupar no hall). Não gera turmas automaticamente.
+- **Gerenciar turmas**: dentro de cada competição expandida — botão "Adicionar turma" com seletores de data início/fim/janela pesagem inicial/data pesagem final (todas dd/mm/yyyy livres). Botão "Excluir turma" com confirmação.
+- **Editar turma**: clicar abre o mesmo modal preenchido.
 
-## Detalhes técnicos
-- Tipos `FitMindClient` / `FitMindAssessment` ficam exportados do novo módulo (ou de um `types.ts` ao lado).
-- A função `createAssessmentShare` não muda; apenas o retorno do `getAssessmentShareByToken` cresce.
-- O modo `public` força tema escuro do wrapper (`#0A0A0A`) mas o conteúdo do `FitMindShapeResultView` mantém as cores originais (cards com fundo claro `#fff` via `.fm-card`) — assim a "cópia exata" do que o coach vê é preservada.
-- Sem mudanças de schema: tudo já está em `coach_body_assessments` e `coach_evaluation_clients`.
+## FitMindShape — vínculo com desafio
 
-## Arquivos tocados
-- `src/components/coach/FitMindShapeResultView.tsx` (novo, ~650 linhas)
-- `src/components/coach/FitMindShape.tsx` (substituição de `ResultScreen`)
-- `src/lib/assessment-share.functions.ts` (campos extras no retorno)
-- `src/routes/resultado.$token.tsx` (passa a renderizar o componente extraído)
+- No formulário de avaliação (FitMindShape), adicionar checkbox: "Vincular ao Desafio FitMind" → ao marcar, dropdown mostra inscrições ativas do aluno (pesagem inicial pendente OU final pendente) e seleciona automaticamente o tipo.
+- Ao salvar a avaliação, o trigger atualiza `competition_enrollments`.
+- O `share_url` (link público de resultado) é capturado e salvo em `initial_share_url`/`final_share_url`.
+
+## Botão "Fazer pesagem" no card do aluno
+
+- No coach (`ChallengeTab` → aba Alunos) e admin: botão "Fazer pesagem inicial/final" deixa de abrir modal de peso e navega para `/coach?tab=evaluate&clientId=<id>&challenge=<enrollmentId>&type=<initial|final>` — pré-marca o checkbox de desafio.
+
+## Hall da Fama (4 abas)
+
+Componente `HallOfFame` refeito com 4 abas:
+
+1. **Vencedores** — apenas entradas em `competition_hall_of_fame` (consagrados). Filtro por mês.
+2. **Classificação geral (% gordura perdida)** — TODOS os participantes, ordenados por `result_fat_pct_lost desc`. Filtro: mês + gênero (Todos / Masculino / Feminino). Sem pesagem inicial OU final = vão para o fim com label "Não realizou pesagem".
+3. **% Massa muscular ganha** — mesma estrutura, ordenado por `result_muscle_gain_pct desc`.
+4. **Kg perdidos** — mesma estrutura, ordenado por `result_kg_lost desc`.
+
+Em cada linha de aluno: foto, nome, coach, valor; ícone 🔗 (apenas admin/coach) abre `share_url` em nova aba para auditoria.
+
+## Aluno
+
+- Mesma reformulação do hall (4 abas, filtros).
+- Mensagem "campeão" continua via `competition_hall_of_fame`.
+
+## Arquivos a editar/criar
+
+- `supabase/migrations/<new>_challenge_bioimpedance.sql` (migration)
+- `src/routes/admin.challenge.tsx` — CRUD manual de turmas, remover botão de peso manual
+- `src/components/coach/tabs/ChallengeTab.tsx` — botão "Fazer pesagem" navega para avaliação
+- `src/components/coach/FitMindShape.tsx` (ou form de avaliação) — checkbox + dropdown de desafio, captura `share_url`
+- `src/components/HallOfFame.tsx` — 4 abas + filtros gênero
+- `src/routes/student.challenge.tsx` — usar novo HallOfFame
+
+## Premissas (ainda preciso confirmar uma)
+
+- **Onde está o "share_url" do FitMindShape hoje?** Vou inspecionar `FitMindShape.tsx` e `assessment-share.functions.ts` para entender o link de compartilhamento e como capturá-lo automaticamente ao salvar a avaliação.
+- A premiação continua sendo declarada manualmente pelo admin (botão "Consagrar Vencedor"), agora baseada no ranking da aba "Classificação geral" — o admin escolhe quem consagrar.
+
+Após aprovação, implemento na ordem: migration → admin (CRUD turmas) → FitMindShape (vínculo) → HallOfFame (4 abas) → ajustar ChallengeTab e student.challenge.
