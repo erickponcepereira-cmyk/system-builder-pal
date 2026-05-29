@@ -33,6 +33,7 @@ type Appointment = {
 
 type MyStudent = {
   enrollment_id: string;
+  student_id: string;
   student_name: string;
   gender: string;
   status: string;
