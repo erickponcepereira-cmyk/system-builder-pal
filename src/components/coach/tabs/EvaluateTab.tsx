@@ -275,9 +275,24 @@ export function EvaluateTab() {
 
   return (
     <>
+      {challengeLink && (
+        <div className="mb-4 rounded-2xl border border-primary/40 bg-primary/10 p-4 flex items-start gap-3">
+          <Trophy className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="font-bold text-foreground">
+              Vinculado ao Desafio FitMind · {challengeLink.compLabel} · Pesagem {challengeLink.type === "initial" ? "Inicial" : "Final"}
+            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              Aluno: <b>{challengeLink.studentName}</b>. Selecione esse aluno na lista do FitMindShape e finalize a avaliação — peso, % gordura e link compartilhável serão salvos automaticamente no desafio.
+            </p>
+          </div>
+          <button onClick={() => setChallengeLink(null)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
+        </div>
+      )}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+
           <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
         </div>
         {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}
