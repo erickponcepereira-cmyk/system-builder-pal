@@ -81,7 +81,7 @@ function AdminFinanceiro() {
 
   const handlePayRecipient = async (
     profileId: string,
-    kind: "coach" | "network" | "nutritionist" | "system",
+    kind: "coach" | "network" | "nutritionist" | "system" | "student",
     name: string,
   ) => {
     if (!confirm(`Dar baixa do saldo disponível de ${name}?`)) return;
