@@ -105,14 +105,7 @@ export function ProtocolTab() {
         : { data: null };
       if (!coach?.id) return;
       setCoachId(coach.id);
-      const { data: badges } = await supabase
-        .from("coach_badges" as never)
-        .select("badge_key" as never)
-        .eq("coach_id" as never, coach.id as never)
-        .eq("badge_key" as never, "nutritionist_partner" as never);
-      const isNut = ((badges as any[]) || []).length > 0;
-      setIsNutritionist(isNut);
-      if (!isNut) setSection("workout");
+      setIsNutritionist(true);
 
 
       const { data: studs } = await supabase
