@@ -593,7 +593,7 @@ export const payManualSystemFee = createServerFn({ method: "POST" })
 
 export const payRecipientAvailable = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => d as { profileId: string; kind: "coach" | "network" | "nutritionist" | "system"; notes?: string })
+  .inputValidator((d: unknown) => d as { profileId: string; kind: "coach" | "network" | "nutritionist" | "system" | "student"; notes?: string })
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
 
@@ -606,9 +606,10 @@ export const payRecipientAvailable = createServerFn({ method: "POST" })
       return { ok: true, amount: Number(out || 0) };
     }
 
+    const rpcKind = data.kind === "student" ? "student_referral" : data.kind;
     const { data: out, error } = await context.supabase.rpc("pay_coach_available", {
       _profile_id: data.profileId,
-      _kind: data.kind,
+      _kind: rpcKind,
       _notes: data.notes ?? undefined,
     });
     if (error) throw new Error(error.message);
