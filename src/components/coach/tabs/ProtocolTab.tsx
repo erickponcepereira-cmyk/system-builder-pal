@@ -419,6 +419,7 @@ export function ProtocolTab() {
 
           {/* Tabs */}
           <div className="mb-4 flex gap-2 overflow-x-auto">
+            <TabBtn active={section === "windows"} onClick={() => setSection("windows")} icon={ClipboardList} label="Janelas" />
             <TabBtn active={section === "health"} onClick={() => setSection("health")} icon={Heart} label="Saúde & metas" />
             <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "templates"} onClick={() => setSection("templates")} icon={BookOpen} label="Treinos prontos" />
