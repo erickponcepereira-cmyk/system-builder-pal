@@ -6198,6 +6198,38 @@ export type Database = {
           },
         ]
       }
+      student_water_logs: {
+        Row: {
+          amount_ml: number
+          created_at: string
+          id: string
+          log_date: string
+          student_id: string
+        }
+        Insert: {
+          amount_ml: number
+          created_at?: string
+          id?: string
+          log_date?: string
+          student_id: string
+        }
+        Update: {
+          amount_ml?: number
+          created_at?: string
+          id?: string
+          log_date?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_water_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_withdrawal_requests: {
         Row: {
           amount: number
@@ -6289,6 +6321,7 @@ export type Database = {
           created_at: string | null
           current_weight: number | null
           daily_calories_goal: number | null
+          food_restrictions: string[]
           goal_description: string | null
           goal_weight: number | null
           health_goals_updated_at: string | null
@@ -6306,6 +6339,7 @@ export type Database = {
           target_muscle_mass: number | null
           updated_at: string | null
           visceral_fat: number | null
+          water_goal_ml: number | null
         }
         Insert: {
           activity_factor?: number | null
@@ -6322,6 +6356,7 @@ export type Database = {
           created_at?: string | null
           current_weight?: number | null
           daily_calories_goal?: number | null
+          food_restrictions?: string[]
           goal_description?: string | null
           goal_weight?: number | null
           health_goals_updated_at?: string | null
@@ -6339,6 +6374,7 @@ export type Database = {
           target_muscle_mass?: number | null
           updated_at?: string | null
           visceral_fat?: number | null
+          water_goal_ml?: number | null
         }
         Update: {
           activity_factor?: number | null
@@ -6355,6 +6391,7 @@ export type Database = {
           created_at?: string | null
           current_weight?: number | null
           daily_calories_goal?: number | null
+          food_restrictions?: string[]
           goal_description?: string | null
           goal_weight?: number | null
           health_goals_updated_at?: string | null
@@ -6372,6 +6409,7 @@ export type Database = {
           target_muscle_mass?: number | null
           updated_at?: string | null
           visceral_fat?: number | null
+          water_goal_ml?: number | null
         }
         Relationships: [
           {
