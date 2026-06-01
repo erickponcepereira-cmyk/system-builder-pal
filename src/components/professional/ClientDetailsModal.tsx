@@ -142,7 +142,7 @@ export default function ClientDetailsModal({ clientId, onClose }: Props) {
                     <Mini label="Peso" value={a.weight ? `${a.weight}kg` : "—"} />
                     <Mini label="IMC" value={a.bmi ? Number(a.bmi).toFixed(1) : "—"} />
                     <Mini label="% Gord" value={a.body_fat ? `${a.body_fat}%` : "—"} />
-                    <Mini label="Músc" value={a.muscle_mass ? `${a.muscle_mass}kg` : "—"} />
+                    <Mini label="Músc. Esq." value={a.skeletal_muscle != null ? `${a.skeletal_muscle}%` : (a.muscle_mass ? `${a.muscle_mass}kg` : "—")} />
                   </div>
                 </div>
               ))}
