@@ -275,9 +275,12 @@ function AdminCoaches() {
                     )}
                   </div>
                   {c.approved_at && (
-                    <div className="mt-3 flex gap-4 text-xs">
+                    <div className="mt-3 flex flex-wrap gap-4 text-xs">
                       <span className="text-white/50">Alunos: <span className="font-bold text-white">{c.total_active_students || 0}</span></span>
                       <span className="text-white/50">Vendas: <span className="font-bold text-white">R$ {Number(c.total_sales || 0).toLocaleString("pt-BR")}</span></span>
+                      <span className="text-white/50">Carteirinha: {c.card_valid_until && new Date(c.card_valid_until) > new Date()
+                        ? <span className="font-bold text-success">ativa até {new Date(c.card_valid_until).toLocaleDateString("pt-BR")}</span>
+                        : <span className="font-bold text-red-400">inativa</span>}</span>
                     </div>
                   )}
                 </div>
