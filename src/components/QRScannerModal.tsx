@@ -11,7 +11,7 @@ type Props = {
 const SCANNER_ID = "qr-scanner-region";
 
 export function QRScannerModal({ onClose, onScan, title = "Ler QR Code" }: Props) {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<any>(null);
   const startedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,12 +19,14 @@ export function QRScannerModal({ onClose, onScan, title = "Ler QR Code" }: Props
     let cancelled = false;
     (async () => {
       try {
-        const inst = new Html5Qrcode(SCANNER_ID, { verbose: false });
+        const mod = await import("html5-qrcode");
+        const Html5Qrcode = mod.Html5Qrcode;
+        const inst = new Html5Qrcode(SCANNER_ID, { verbose: false } as any);
         scannerRef.current = inst;
         await inst.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 240, height: 240 } },
-          (decoded) => {
+          (decoded: string) => {
             if (cancelled) return;
             cancelled = true;
             onScan(decoded);
@@ -45,6 +47,7 @@ export function QRScannerModal({ onClose, onScan, title = "Ler QR Code" }: Props
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={onClose}>
