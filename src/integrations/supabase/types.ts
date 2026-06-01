@@ -6844,21 +6844,27 @@ export type Database = {
           id: string
           log_date: string
           meal_1_carb: boolean
+          meal_1_exercise: boolean
           meal_1_fiber: boolean
           meal_1_protein: boolean
           meal_2_carb: boolean
+          meal_2_exercise: boolean
           meal_2_fiber: boolean
           meal_2_protein: boolean
           meal_3_carb: boolean
+          meal_3_exercise: boolean
           meal_3_fiber: boolean
           meal_3_protein: boolean
           meal_4_carb: boolean
+          meal_4_exercise: boolean
           meal_4_fiber: boolean
           meal_4_protein: boolean
           meal_5_carb: boolean
+          meal_5_exercise: boolean
           meal_5_fiber: boolean
           meal_5_protein: boolean
           meal_6_carb: boolean
+          meal_6_exercise: boolean
           meal_6_fiber: boolean
           meal_6_protein: boolean
           student_id: string
@@ -6870,21 +6876,27 @@ export type Database = {
           id?: string
           log_date?: string
           meal_1_carb?: boolean
+          meal_1_exercise?: boolean
           meal_1_fiber?: boolean
           meal_1_protein?: boolean
           meal_2_carb?: boolean
+          meal_2_exercise?: boolean
           meal_2_fiber?: boolean
           meal_2_protein?: boolean
           meal_3_carb?: boolean
+          meal_3_exercise?: boolean
           meal_3_fiber?: boolean
           meal_3_protein?: boolean
           meal_4_carb?: boolean
+          meal_4_exercise?: boolean
           meal_4_fiber?: boolean
           meal_4_protein?: boolean
           meal_5_carb?: boolean
+          meal_5_exercise?: boolean
           meal_5_fiber?: boolean
           meal_5_protein?: boolean
           meal_6_carb?: boolean
+          meal_6_exercise?: boolean
           meal_6_fiber?: boolean
           meal_6_protein?: boolean
           student_id: string
@@ -6896,21 +6908,27 @@ export type Database = {
           id?: string
           log_date?: string
           meal_1_carb?: boolean
+          meal_1_exercise?: boolean
           meal_1_fiber?: boolean
           meal_1_protein?: boolean
           meal_2_carb?: boolean
+          meal_2_exercise?: boolean
           meal_2_fiber?: boolean
           meal_2_protein?: boolean
           meal_3_carb?: boolean
+          meal_3_exercise?: boolean
           meal_3_fiber?: boolean
           meal_3_protein?: boolean
           meal_4_carb?: boolean
+          meal_4_exercise?: boolean
           meal_4_fiber?: boolean
           meal_4_protein?: boolean
           meal_5_carb?: boolean
+          meal_5_exercise?: boolean
           meal_5_fiber?: boolean
           meal_5_protein?: boolean
           meal_6_carb?: boolean
+          meal_6_exercise?: boolean
           meal_6_fiber?: boolean
           meal_6_protein?: boolean
           student_id?: string
