@@ -42,7 +42,7 @@ export default function ClientDetailsModal({ clientId, onClose }: Props) {
       setLoading(true);
       const [cRes, aRes, anRes] = await Promise.all([
         supabase.from("coach_evaluation_clients" as never).select("id,name,email,whatsapp,birth_date" as never).eq("id" as never, clientId as never).maybeSingle(),
-        supabase.from("coach_body_assessments" as never).select("id,assessment_date,weight,body_fat,muscle_mass,bmi" as never).eq("client_id" as never, clientId as never).order("assessment_date" as never, { ascending: false }),
+        supabase.from("coach_body_assessments" as never).select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,bmi" as never).eq("client_id" as never, clientId as never).order("assessment_date" as never, { ascending: false }),
         supabase.from("professional_anamnesis_external" as never).select("id,updated_at,answers" as never).eq("evaluation_client_id" as never, clientId as never).maybeSingle(),
       ]);
       setClient(((cRes.data as unknown) as Client) || null);
