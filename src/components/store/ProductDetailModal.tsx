@@ -257,6 +257,8 @@ export function ProductDetailModal({
                   Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, impostos e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
                 </p>
               </div>
+              </>
+              )}
             </div>
           )}
 
