@@ -2,41 +2,48 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   X, Loader2, CheckCircle2, XCircle, Ban, Instagram, Facebook, Globe,
-  MessageCircle, MapPin, Eye, Users as UsersIcon, Package, ImageIcon,
+  MessageCircle, MapPin, Eye, Users as UsersIcon, Package, ImageIcon, Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getPartnerDetails,
+  getPartnerPublicProfile,
   reviewPartnerStatus,
   reviewPartnerProduct,
 } from "@/lib/partner-approvals.functions";
 
-type Tab = "overview" | "products" | "collaborators";
+type Tab = "overview" | "products" | "timeline" | "collaborators";
 
 export function PartnerDetailsModal({
   partnerId,
   onClose,
   onChanged,
+  readOnly = false,
 }: {
   partnerId: string;
   onClose: () => void;
   onChanged?: () => void;
+  /** When true, hides admin actions (approve/block) and uses the public partner endpoint. */
+  readOnly?: boolean;
 }) {
-  const fetchDetails = useServerFn(getPartnerDetails);
+  const fetchAdmin = useServerFn(getPartnerDetails);
+  const fetchPublic = useServerFn(getPartnerPublicProfile);
   const setStatus = useServerFn(reviewPartnerStatus);
   const reviewProduct = useServerFn(reviewPartnerProduct);
 
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchDetails>> | null>(null);
+  const [data, setData] = useState<any | null>(null);
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetchDetails({ data: { partnerId } });
+      const res = readOnly
+        ? await fetchPublic({ data: { partnerId } })
+        : await fetchAdmin({ data: { partnerId } });
       setData(res);
     } catch (e: any) {
       toast.error(e?.message || "Erro ao carregar parceiro");
@@ -45,7 +52,7 @@ export function PartnerDetailsModal({
     }
   };
 
-  useEffect(() => { load(); }, [partnerId]);
+  useEffect(() => { load(); }, [partnerId, readOnly]);
 
   const handleStatus = async (status: "approved" | "blocked" | "pending", rsn?: string) => {
     setActing(true);
@@ -79,6 +86,11 @@ export function PartnerDetailsModal({
       setActing(false);
     }
   };
+
+  const posts: Array<{ id: string; image_url: string; caption: string | null; created_at: string }> =
+    data?.posts ?? [];
+
+  const waUrl = data?.partner?.whatsapp ? `https://wa.me/${String(data.partner.whatsapp).replace(/\D/g, "")}` : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4" onClick={onClose}>
@@ -133,42 +145,77 @@ export function PartnerDetailsModal({
                 <Stat icon={UsersIcon} label="Colaboradores" value={data.collaborators.length} />
               </div>
 
-              {/* Actions */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {data.partner.status !== "approved" && (
-                  <button onClick={() => handleStatus("approved")} disabled={acting}
-                    className="flex items-center gap-1.5 rounded-lg bg-green-500/90 hover:bg-green-500 px-3 py-2 text-xs font-bold disabled:opacity-50">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar parceiro
-                  </button>
-                )}
-                {data.partner.status !== "blocked" && (
-                  <button
-                    onClick={() => {
-                      const r = window.prompt("Motivo do bloqueio (opcional):") ?? undefined;
-                      handleStatus("blocked", r || undefined);
-                    }}
-                    disabled={acting}
-                    className="flex items-center gap-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 px-3 py-2 text-xs font-bold disabled:opacity-50">
-                    <Ban className="h-3.5 w-3.5" /> Bloquear
-                  </button>
-                )}
-                {data.partner.status !== "pending" && (
-                  <button onClick={() => handleStatus("pending")} disabled={acting}
-                    className="flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-2 text-xs font-bold disabled:opacity-50">
-                    Retornar para pendente
-                  </button>
-                )}
-              </div>
+              {/* Quick contact (read-only mode) */}
+              {readOnly && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {waUrl && (
+                    <a href={waUrl} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-green-500/20 text-green-400 text-xs font-semibold px-3 py-1.5">
+                      <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                    </a>
+                  )}
+                  {data.partner.instagram && (
+                    <a href={data.partner.instagram.startsWith("http") ? data.partner.instagram : `https://instagram.com/${String(data.partner.instagram).replace("@", "")}`} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-pink-500/20 text-pink-400 text-xs font-semibold px-3 py-1.5">
+                      <Instagram className="h-3.5 w-3.5" /> Instagram
+                    </a>
+                  )}
+                  {data.partner.facebook && (
+                    <a href={data.partner.facebook} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-semibold px-3 py-1.5">
+                      <Facebook className="h-3.5 w-3.5" /> Facebook
+                    </a>
+                  )}
+                  {data.partner.website && (
+                    <a href={data.partner.website} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/10 text-white text-xs font-semibold px-3 py-1.5">
+                      <Globe className="h-3.5 w-3.5" /> Site
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Admin actions */}
+              {!readOnly && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {data.partner.status !== "approved" && (
+                    <button onClick={() => handleStatus("approved")} disabled={acting}
+                      className="flex items-center gap-1.5 rounded-lg bg-green-500/90 hover:bg-green-500 px-3 py-2 text-xs font-bold disabled:opacity-50">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar parceiro
+                    </button>
+                  )}
+                  {data.partner.status !== "blocked" && (
+                    <button
+                      onClick={() => {
+                        const r = window.prompt("Motivo do bloqueio (opcional):") ?? undefined;
+                        handleStatus("blocked", r || undefined);
+                      }}
+                      disabled={acting}
+                      className="flex items-center gap-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 px-3 py-2 text-xs font-bold disabled:opacity-50">
+                      <Ban className="h-3.5 w-3.5" /> Bloquear
+                    </button>
+                  )}
+                  {data.partner.status !== "pending" && (
+                    <button onClick={() => handleStatus("pending")} disabled={acting}
+                      className="flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/20 px-3 py-2 text-xs font-bold disabled:opacity-50">
+                      Retornar para pendente
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Tabs */}
-              <div className="mt-5 flex gap-1 border-b border-white/10">
-                {(["overview", "products", "collaborators"] as Tab[]).map((t) => (
+              <div className="mt-5 flex gap-1 border-b border-white/10 overflow-x-auto">
+                {(["overview", "products", "timeline", "collaborators"] as Tab[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
-                    className={`px-3 py-2 text-xs font-semibold border-b-2 ${tab === t ? "border-primary text-primary" : "border-transparent text-white/50"}`}
+                    className={`px-3 py-2 text-xs font-semibold border-b-2 whitespace-nowrap ${tab === t ? "border-primary text-primary" : "border-transparent text-white/50"}`}
                   >
-                    {t === "overview" ? "Visão geral" : t === "products" ? `Produtos (${data.products.length})` : `Colaboradores (${data.collaborators.length})`}
+                    {t === "overview" ? "Visão geral" :
+                     t === "products" ? `Produtos (${data.products.length})` :
+                     t === "timeline" ? `Timeline (${posts.length})` :
+                     `Colaboradores (${data.collaborators.length})`}
                   </button>
                 ))}
               </div>
@@ -181,17 +228,17 @@ export function PartnerDetailsModal({
                     </Block>
                   )}
                   <Block title="Documento & contato">
-                    <KV k="CNPJ/CPF" v={data.partner.document || "—"} />
+                    {!readOnly && <KV k="CNPJ/CPF" v={data.partner.document || "—"} />}
                     <KV k="WhatsApp" v={data.partner.whatsapp || "—"} />
                     <KV k="Endereço" v={data.partner.address || "—"} />
                     <KV k="Cidade" v={`${data.partner.city || "—"}${data.partner.state ? "/" + data.partner.state : ""}`} />
                   </Block>
                   <Block title="Redes sociais">
                     <div className="flex flex-wrap gap-2">
-                      <Social icon={Instagram} label={data.partner.instagram} href={data.partner.instagram ? `https://instagram.com/${data.partner.instagram.replace("@", "")}` : null} />
+                      <Social icon={Instagram} label={data.partner.instagram} href={data.partner.instagram ? (String(data.partner.instagram).startsWith("http") ? data.partner.instagram : `https://instagram.com/${String(data.partner.instagram).replace("@", "")}`) : null} />
                       <Social icon={Facebook} label={data.partner.facebook} href={data.partner.facebook} />
                       <Social icon={Globe} label={data.partner.website} href={data.partner.website} />
-                      <Social icon={MessageCircle} label={data.partner.whatsapp} href={data.partner.whatsapp ? `https://wa.me/${data.partner.whatsapp.replace(/\D/g, "")}` : null} />
+                      <Social icon={MessageCircle} label={data.partner.whatsapp} href={waUrl} />
                     </div>
                   </Block>
                 </div>
@@ -217,16 +264,16 @@ export function PartnerDetailsModal({
                           <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase ${
                             p.kind === "free" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
                           }`}>{p.kind === "free" ? "gratuito" : "pago"}</span>
-                          <StatusPill status={p.status} small />
+                          {!readOnly && <StatusPill status={p.status} small />}
                         </div>
                         <p className="text-[11px] text-white/60 mt-0.5">
                           {p.kind === "free" ? "Brinde" : `R$ ${Number(p.price || 0).toFixed(2)}`}
                         </p>
                         {p.description && <p className="text-[11px] text-white/50 mt-1 line-clamp-2">{p.description}</p>}
-                        {p.admin_notes && p.status === "rejected" && (
+                        {!readOnly && p.admin_notes && p.status === "rejected" && (
                           <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>
                         )}
-                        {p.status === "pending" && (
+                        {!readOnly && p.status === "pending" && (
                           <div className="mt-2 flex gap-2">
                             <button onClick={() => handleProduct(p.id, "approved")} disabled={acting}
                               className="flex items-center gap-1 rounded bg-green-500 px-2.5 py-1 text-[11px] font-bold disabled:opacity-50">
@@ -244,6 +291,30 @@ export function PartnerDetailsModal({
                 </div>
               )}
 
+              {tab === "timeline" && (
+                <div className="mt-4">
+                  {posts.length === 0 ? (
+                    <p className="text-xs text-white/40 py-8 text-center flex flex-col items-center gap-2">
+                      <Camera className="h-5 w-5 text-white/30" />
+                      Nenhuma foto publicada na timeline.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1">
+                      {posts.map((post) => (
+                        <div key={post.id} className="relative aspect-square group">
+                          <img src={post.image_url} alt={post.caption || ""} className="h-full w-full object-cover rounded" />
+                          {post.caption && (
+                            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition flex items-center justify-center p-2 rounded">
+                              <p className="text-[10px] text-white text-center line-clamp-4">{post.caption}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {tab === "collaborators" && (
                 <div className="mt-4 space-y-2">
                   {data.collaborators.length === 0 && (
@@ -258,7 +329,9 @@ export function PartnerDetailsModal({
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate">{c.profiles?.name || "—"}</p>
-                        <p className="text-[10px] text-white/40 truncate">{c.profiles?.email || c.profiles?.phone || ""}</p>
+                        {!readOnly && (
+                          <p className="text-[10px] text-white/40 truncate">{c.profiles?.email || c.profiles?.phone || ""}</p>
+                        )}
                       </div>
                       <span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold">Colab.</span>
                     </div>
@@ -269,7 +342,7 @@ export function PartnerDetailsModal({
           </>
         )}
 
-        {rejectFor && (
+        {rejectFor && !readOnly && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-3" onClick={() => setRejectFor(null)}>
             <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
               <h3 className="text-sm font-bold mb-3">Motivo da rejeição</h3>
