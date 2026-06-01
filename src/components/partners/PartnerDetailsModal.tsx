@@ -13,6 +13,8 @@ import {
 } from "@/lib/partner-approvals.functions";
 
 type Tab = "overview" | "products" | "timeline" | "collaborators";
+const allTabs: Tab[] = ["overview", "products", "timeline", "collaborators"];
+
 
 export function PartnerDetailsModal({
   partnerId,
@@ -31,6 +33,9 @@ export function PartnerDetailsModal({
   const setStatus = useServerFn(reviewPartnerStatus);
   const reviewProduct = useServerFn(reviewPartnerProduct);
 
+  const visibleTabs: Tab[] = readOnly
+    ? ["overview", "products", "timeline"]
+    : allTabs;
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
@@ -53,6 +58,10 @@ export function PartnerDetailsModal({
   };
 
   useEffect(() => { load(); }, [partnerId, readOnly]);
+
+  useEffect(() => {
+    if (readOnly && tab === "collaborators") setTab("overview");
+  }, [readOnly, tab]);
 
   const handleStatus = async (status: "approved" | "blocked" | "pending", rsn?: string) => {
     setActing(true);
@@ -139,10 +148,10 @@ export function PartnerDetailsModal({
               </div>
 
               {/* Stats */}
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className={`mt-4 grid gap-2 ${readOnly ? "grid-cols-2" : "grid-cols-3"}`}>
                 <Stat icon={Eye} label="Visitas" value={data.visits} />
                 <Stat icon={Package} label="Produtos" value={data.products.length} />
-                <Stat icon={UsersIcon} label="Colaboradores" value={data.collaborators.length} />
+                {!readOnly && <Stat icon={UsersIcon} label="Colaboradores" value={data.collaborators.length} />}
               </div>
 
               {/* Quick contact (read-only mode) */}
@@ -206,7 +215,7 @@ export function PartnerDetailsModal({
 
               {/* Tabs */}
               <div className="mt-5 flex gap-1 border-b border-white/10 overflow-x-auto">
-                {(["overview", "products", "timeline", "collaborators"] as Tab[]).map((t) => (
+                {visibleTabs.map((t) => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
