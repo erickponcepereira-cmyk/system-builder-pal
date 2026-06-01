@@ -411,12 +411,13 @@ export function ProtocolTab() {
 
           {/* Tabs */}
           <div className="mb-4 flex gap-2 overflow-x-auto">
-            {isNutritionist && <TabBtn active={section === "meal"} onClick={() => setSection("meal")} icon={Utensils} label="Alimentação" />}
-            <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "health"} onClick={() => setSection("health")} icon={Heart} label="Saúde & metas" />
-            <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "templates"} onClick={() => setSection("templates")} icon={BookOpen} label="Treinos prontos" />
+            <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            {isNutritionist && <TabBtn active={section === "meal"} onClick={() => setSection("meal")} icon={Utensils} label="Alimentação" />}
           </div>
+
 
           {loading && <p className="text-sm text-white/40">Carregando...</p>}
 
