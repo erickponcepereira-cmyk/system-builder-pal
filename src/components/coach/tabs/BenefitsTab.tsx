@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2 } from "lucide-react";
+import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 
 type PartnerFreeProduct = {
   id: string;
@@ -9,17 +10,19 @@ type PartnerFreeProduct = {
   image_url: string | null;
   redemption_instructions: string | null;
   stock: number | null;
+  partner_id: string;
   partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
 };
 
 export function CoachBenefitsTab() {
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openPartner, setOpenPartner] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -41,7 +44,12 @@ export function CoachBenefitsTab() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {partnerFreebies.map((p) => (
-              <div key={p.id} className="rounded-xl border border-white/5 overflow-hidden" style={{ backgroundColor: "#0F0F0F" }}>
+              <button
+                key={p.id}
+                onClick={() => setOpenPartner(p.partner_id)}
+                className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40"
+                style={{ backgroundColor: "#0F0F0F" }}
+              >
                 {p.image_url && <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />}
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
@@ -52,12 +60,21 @@ export function CoachBenefitsTab() {
                   {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
                   {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                   {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                  <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-xs font-semibold text-primary">Ver empresa</div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {openPartner && (
+        <PartnerDetailsModal
+          partnerId={openPartner}
+          onClose={() => setOpenPartner(null)}
+          readOnly
+        />
+      )}
     </>
   );
 }
