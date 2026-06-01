@@ -48,7 +48,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
           .from("subscriptions")
           .select("student_id,status,products!subscriptions_product_id_fkey(name,price)")
           .in("student_id", ids)
-          .in("status", ["active", "paid"]),
+          .eq("status", "active"),
         supabase
           .from("coach_body_assessments")
           .select("student_id,assessment_date")
