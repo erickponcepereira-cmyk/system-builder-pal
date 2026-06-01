@@ -1,4 +1,5 @@
-import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon } from "lucide-react";
+import { useState } from "react";
+import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 
 export interface ProductDetail {
   id: string;
