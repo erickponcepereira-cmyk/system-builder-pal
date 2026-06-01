@@ -235,9 +235,11 @@ export function StoreManager() {
                   {newCategoryFor === s.id ? (
                     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-black/30 px-3 py-2">
                       <input autoFocus className="input-dark flex-1 min-w-[150px]" placeholder="Nome da categoria" value={newCategoryDraft.name || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, name: e.target.value })} />
-                      <input className="input-dark w-32" placeholder="slug" value={newCategoryDraft.slug || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, slug: e.target.value })} />
-                      <input className="input-dark w-48" placeholder="URL imagem (opcional)" value={newCategoryDraft.image_url || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, image_url: e.target.value })} />
-                      <input type="number" className="input-dark w-20" placeholder="ordem" value={newCategoryDraft.sort_order ?? cats.length} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, sort_order: Number(e.target.value) })} />
+                      <input className="input-dark w-28" placeholder="slug" value={newCategoryDraft.slug || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, slug: e.target.value })} />
+                      <input className="input-dark w-40" placeholder="URL imagem (opcional)" value={newCategoryDraft.image_url || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, image_url: e.target.value })} />
+                      <input type="number" className="input-dark w-16" placeholder="larg" value={newCategoryDraft.card_width ?? ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, card_width: e.target.value ? Number(e.target.value) : null })} />
+                      <input type="number" className="input-dark w-16" placeholder="alt" value={newCategoryDraft.card_height ?? ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, card_height: e.target.value ? Number(e.target.value) : null })} />
+                      <input type="number" className="input-dark w-16" placeholder="ordem" value={newCategoryDraft.sort_order ?? cats.length} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, sort_order: Number(e.target.value) })} />
                       <button onClick={() => createCategory(s.id)} className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">Salvar</button>
                       <button onClick={() => { setNewCategoryFor(null); setNewCategoryDraft({}); }} className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-white/60">Cancelar</button>
                     </div>
