@@ -79,7 +79,8 @@ export function ProtocolTab() {
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("health");
+  const [section, setSection] = useState<"windows" | "meal" | "workout" | "health" | "library" | "templates">("windows");
+  const [windowsDate, setWindowsDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
