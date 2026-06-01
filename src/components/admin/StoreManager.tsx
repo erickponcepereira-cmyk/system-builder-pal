@@ -207,9 +207,11 @@ export function StoreManager() {
                         {isCatEditing ? (
                           <>
                             <input className="input-dark flex-1" value={draftCategory.name ?? c.name} onChange={(e) => setDraftCategory({ ...draftCategory, name: e.target.value })} />
-                            <input className="input-dark w-32" value={draftCategory.slug ?? c.slug} onChange={(e) => setDraftCategory({ ...draftCategory, slug: e.target.value })} />
-                            <input className="input-dark w-48" placeholder="URL imagem" value={draftCategory.image_url ?? c.image_url ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, image_url: e.target.value })} />
-                            <input type="number" className="input-dark w-20" value={draftCategory.sort_order ?? c.sort_order} onChange={(e) => setDraftCategory({ ...draftCategory, sort_order: Number(e.target.value) })} />
+                            <input className="input-dark w-28" value={draftCategory.slug ?? c.slug} onChange={(e) => setDraftCategory({ ...draftCategory, slug: e.target.value })} />
+                            <input className="input-dark w-40" placeholder="URL imagem" value={draftCategory.image_url ?? c.image_url ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, image_url: e.target.value })} />
+                            <input type="number" className="input-dark w-16" placeholder="larg" value={draftCategory.card_width ?? c.card_width ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_width: e.target.value ? Number(e.target.value) : null })} />
+                            <input type="number" className="input-dark w-16" placeholder="alt" value={draftCategory.card_height ?? c.card_height ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_height: e.target.value ? Number(e.target.value) : null })} />
+                            <input type="number" className="input-dark w-16" value={draftCategory.sort_order ?? c.sort_order} onChange={(e) => setDraftCategory({ ...draftCategory, sort_order: Number(e.target.value) })} />
                             <label className="flex items-center gap-1.5 text-xs text-white/70"><input type="checkbox" checked={draftCategory.is_active ?? c.is_active} onChange={(e) => setDraftCategory({ ...draftCategory, is_active: e.target.checked })} />Ativa</label>
                             <button onClick={() => saveCategory(c.id)} className="rounded-md bg-primary p-1.5 text-primary-foreground"><Save className="h-3.5 w-3.5" /></button>
                             <button onClick={() => { setEditingCategory(null); setDraftCategory({}); }} className="rounded-md bg-white/5 p-1.5 text-white/60"><X className="h-3.5 w-3.5" /></button>
