@@ -39,8 +39,8 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [openNew, setOpenNew] = useState(false);
-
-  const load = async () => {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [lastAssess, setLastAssess] = useState<Record<string, string>>({});
     setLoading(true);
     // Paginate to bypass Supabase's default 1000-row limit
     const PAGE = 1000;
