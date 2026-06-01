@@ -91,8 +91,7 @@ export function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
   const renderNode = (c: CoachRow, depth: number, maxDepth: number) => {
     const isOpen = !!expanded[c.id];
     const children = coachesByUpline.get(c.id) || [];
-    const studentsNonCoach = (studentsByCoach.get(c.id) || []).filter((s) => !coachProfileIds.has(s.profile_id));
-    const hasChildren = (children.length > 0 || studentsNonCoach.length > 0) && depth < maxDepth;
+    const hasChildren = children.length > 0 && depth < maxDepth;
     const badgeKeys = badgesByCoach.get(c.id) || [];
 
     return (
@@ -122,17 +121,6 @@ export function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
         {isOpen && hasChildren && (
           <div className="ml-6 border-l border-white/10 pl-3 space-y-1">
             {children.map((ch) => renderNode(ch, depth + 1, maxDepth))}
-            {studentsNonCoach.map((s) => (
-              <div key={s.id} className="flex items-start gap-2 py-1">
-                <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center text-white/30">
-                  <Dot className="h-4 w-4" />
-                </span>
-                <div className="flex-1 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-1.5">
-                  <p className="text-xs font-medium text-white/90">{s.profiles?.name || "Aluno"}</p>
-                  <p className="text-[10px] text-white/40">Aluno direto</p>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>
