@@ -48,7 +48,7 @@ function AdminCareerPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-white">Carreira</h1>
-          <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas, desafios e entregas de recompensas.</p>
+          <p className="text-xs text-white/50">Planos de pontos, patentes, categorias, desafios e entregas de recompensas.</p>
         </div>
         <button
           onClick={handleBackfill}
