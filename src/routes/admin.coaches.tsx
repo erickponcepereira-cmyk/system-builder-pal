@@ -403,6 +403,62 @@ function AdminCoaches() {
           </div>
         </div>
       )}
+
+      {cardEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => acting?.startsWith("card") ? null : setCardEditing(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white flex items-center gap-2"><IdCard className="h-4 w-4 text-yellow-400" /> Carteirinha do coach</h2>
+                <p className="text-xs text-white/50">{cardEditing.profiles?.name}</p>
+              </div>
+              <button onClick={() => setCardEditing(null)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="mb-3 text-[11px] text-white/50">
+              Status atual: {cardEditing.card_valid_until && new Date(cardEditing.card_valid_until) > new Date()
+                ? <span className="text-success font-bold">ativa até {new Date(cardEditing.card_valid_until).toLocaleDateString("pt-BR")}</span>
+                : <span className="text-red-400 font-bold">inativa</span>}
+            </p>
+
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              <button onClick={() => extendCardDays(30)} disabled={acting === `card-${cardEditing.id}`}
+                className="rounded-lg bg-white/5 hover:bg-white/10 px-2 py-2 text-[11px] font-bold text-white disabled:opacity-50">+30 dias</button>
+              <button onClick={() => extendCardDays(90)} disabled={acting === `card-${cardEditing.id}`}
+                className="rounded-lg bg-white/5 hover:bg-white/10 px-2 py-2 text-[11px] font-bold text-white disabled:opacity-50">+90 dias</button>
+              <button onClick={() => extendCardDays(365)} disabled={acting === `card-${cardEditing.id}`}
+                className="rounded-lg bg-primary hover:opacity-90 px-2 py-2 text-[11px] font-bold text-primary-foreground disabled:opacity-50">+365 dias</button>
+            </div>
+
+            <label className="block text-[11px] text-white/60 mb-1">Definir data específica</label>
+            <input
+              type="date"
+              value={cardDate}
+              onChange={(e) => setCardDate(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+            />
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => saveCard(null)}
+                disabled={acting === `card-${cardEditing.id}`}
+                className="flex-1 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+              >
+                Remover carteirinha
+              </button>
+              <button
+                onClick={() => saveCard(cardDate ? new Date(cardDate + "T23:59:59").toISOString() : null)}
+                disabled={!cardDate || acting === `card-${cardEditing.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {acting === `card-${cardEditing.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
