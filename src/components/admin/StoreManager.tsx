@@ -103,6 +103,8 @@ export function StoreManager() {
       image_url: newCategoryDraft.image_url || null,
       sort_order: newCategoryDraft.sort_order ?? 0,
       is_active: newCategoryDraft.is_active ?? true,
+      card_width: newCategoryDraft.card_width ?? null,
+      card_height: newCategoryDraft.card_height ?? null,
     });
     setNewCategoryFor(null);
     setNewCategoryDraft({});
