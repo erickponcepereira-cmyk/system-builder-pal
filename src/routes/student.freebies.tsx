@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2 } from "lucide-react";
+import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2, QrCode, ScanLine, ShieldAlert } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FreebieDetailModal, type FreebieDetail } from "@/components/student/FreebieDetailModal";
+import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
+import { QRScannerModal } from "@/components/QRScannerModal";
 
 export const Route = createFileRoute("/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
@@ -52,15 +55,39 @@ type PartnerFreeProduct = {
 };
 
 function StudentFreebies() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [selected, setSelected] = useState<FreebieDetail | null>(null);
+  const [openPartner, setOpenPartner] = useState<string | null>(null);
+  const [showMyQR, setShowMyQR] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+
+  // Carteirinha gate
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [cardValidUntil, setCardValidUntil] = useState<string | null>(null);
+  const cardActive = !!(cardValidUntil && new Date(cardValidUntil).getTime() > Date.now());
 
   const load = async () => {
     setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      const { data: profile } = await supabase
+        .from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
+      if (profile) {
+        const { data: student } = await supabase
+          .from("students").select("id, card_valid_until").eq("profile_id", profile.id).maybeSingle();
+        if (student) {
+          const s = student as unknown as { id: string; card_valid_until: string | null };
+          setStudentId(s.id);
+          setCardValidUntil(s.card_valid_until);
+        }
+      }
+    }
+
     const [a, b, c] = await Promise.all([
       supabase.from("freebies" as never).select("*").eq("is_active" as never, true).order("sort_order"),
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
@@ -92,6 +119,25 @@ function StudentFreebies() {
 
   const countMine = (id: string) => mine.filter((r) => r.freebie_id === id && r.status !== "cancelled").length;
 
+  const handleScan = (decoded: string) => {
+    setShowScanner(false);
+    // Accept URL with /partner-checkin/<uuid> or /student/partners/<uuid> or raw uuid
+    const uuid = decoded.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+    if (!uuid) {
+      toast.error("QR Code inválido");
+      return;
+    }
+    if (decoded.includes("/partner-checkin/")) {
+      navigate({ to: "/partner-checkin/$partnerId", params: { partnerId: uuid } });
+    } else {
+      setOpenPartner(uuid);
+    }
+  };
+
+  const checkinUrl = studentId
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${studentId}`
+    : "";
+
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-[#0F0F0F] px-4 py-3">
@@ -106,8 +152,41 @@ function StudentFreebies() {
       </div>
 
       <div className="p-4">
-        {loading ? <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-primary" /> : (
+        {loading ? (
+          <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-primary" />
+        ) : !cardActive ? (
+          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5 text-center">
+            <ShieldAlert className="mx-auto h-8 w-8 text-yellow-400" />
+            <p className="mt-3 text-sm font-bold text-white">Sua carteirinha está inativa</p>
+            <p className="mt-1 text-xs text-white/60">
+              Para acessar o portal de gratuitos é necessário ter a carteirinha ativa. Compre um plano ou produto para ativar.
+            </p>
+            <Link to="/student/store" className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
+              Ver loja
+            </Link>
+          </div>
+        ) : (
           <>
+            {/* QR actions */}
+            <div className="mb-5 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowMyQR(true)}
+                className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-left transition hover:bg-primary/15"
+              >
+                <QrCode className="h-5 w-5 text-primary" />
+                <p className="mt-2 text-sm font-bold text-white">Mostrar meu QR</p>
+                <p className="text-[11px] text-white/55">O parceiro lê seu QR</p>
+              </button>
+              <button
+                onClick={() => setShowScanner(true)}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+              >
+                <ScanLine className="h-5 w-5 text-primary" />
+                <p className="mt-2 text-sm font-bold text-white">Ler QR do parceiro</p>
+                <p className="text-[11px] text-white/55">Aponte para o QR da empresa</p>
+              </button>
+            </div>
+
             {items.length === 0 && partnerFreebies.length === 0 && <p className="text-center text-sm text-white/50 mt-10">Nenhum brinde disponível no momento.</p>}
 
             {partnerFreebies.length > 0 && (
@@ -115,7 +194,12 @@ function StudentFreebies() {
                 <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Brindes de empresas parceiras</h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {partnerFreebies.map((p) => (
-                    <Link key={p.id} to="/student/partners/$partnerId" params={{ partnerId: p.partner_id }} className="rounded-2xl overflow-hidden border border-white/5 block" style={{ backgroundColor: "#1A1A1A" }}>
+                    <button
+                      key={p.id}
+                      onClick={() => setOpenPartner(p.partner_id)}
+                      className="text-left rounded-2xl overflow-hidden border border-white/5 block"
+                      style={{ backgroundColor: "#1A1A1A" }}
+                    >
                       {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
                       <div className="p-4">
                         <div className="flex items-start justify-between gap-2">
@@ -126,9 +210,9 @@ function StudentFreebies() {
                         {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
                         {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                         {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                        <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver na empresa</div>
+                        <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver empresa</div>
                       </div>
-                    </Link>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -213,6 +297,38 @@ function StudentFreebies() {
           onClose={() => setSelected(null)}
           onAttend={() => { redeem(selected.id); setSelected(null); }}
           attendLabel="Resgatar grátis"
+        />
+      )}
+
+      {openPartner && (
+        <PartnerDetailsModal
+          partnerId={openPartner}
+          onClose={() => setOpenPartner(null)}
+          readOnly
+        />
+      )}
+
+      {showMyQR && studentId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowMyQR(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[10px] uppercase tracking-wider text-black/50 font-bold">Sua carteirinha</p>
+            <p className="mt-1 text-sm font-bold text-black/80">Apresente para o parceiro</p>
+            <div className="mt-4 flex justify-center">
+              <QRCodeSVG value={checkinUrl} size={220} level="H" includeMargin={false} />
+            </div>
+            <p className="mt-3 text-[10px] text-black/50">ID: {studentId.slice(0, 8).toUpperCase()}</p>
+            <button onClick={() => setShowMyQR(false)} className="mt-4 w-full rounded-lg bg-black py-2 text-sm font-bold text-white">
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showScanner && (
+        <QRScannerModal
+          onClose={() => setShowScanner(false)}
+          onScan={handleScan}
+          title="Ler QR do parceiro"
         />
       )}
     </div>
