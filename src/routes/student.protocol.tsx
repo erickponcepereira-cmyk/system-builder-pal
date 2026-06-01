@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { WindowMethod } from "@/components/student/WindowMethod";
+import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
 
 export const Route = createFileRoute("/student/protocol")({
@@ -63,10 +63,15 @@ function StudentProtocolPage() {
 
       {loading && <p className="text-sm text-white/40">Carregando...</p>}
 
-      {/* Método das Janelas — sempre disponível */}
+      {/* Método das Janelas — histórico preenchido pelo coach */}
       {!loading && studentId && (
         <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-          <WindowMethod studentId={studentId} />
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xl">🪟</span>
+            <h2 className="text-sm font-bold text-white">Método das Janelas</h2>
+          </div>
+          <p className="mb-3 text-[11px] text-white/40">Acompanhamento preenchido pelo seu coach.</p>
+          <WindowMethodHistory studentId={studentId} />
         </section>
       )}
 

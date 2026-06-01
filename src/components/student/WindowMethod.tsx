@@ -173,22 +173,25 @@ function ExplanationSection() {
   );
 }
 
-interface Props { studentId: string }
+interface Props { studentId: string; readOnly?: boolean; date?: string; hideExplanation?: boolean }
 
-export function WindowMethod({ studentId }: Props) {
+export function WindowMethod({ studentId, readOnly = false, date, hideExplanation = false }: Props) {
   const [goal, setGoal] = useState<Goal | null>(null);
   const [meals, setMeals] = useState<MealState[]>(emptyMeals());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const targetDate = date || new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (!studentId) return;
+    setLoading(true);
+    setGoal(null);
+    setMeals(emptyMeals());
     supabase
       .from("window_method_logs" as never)
       .select("*")
       .eq("student_id" as never, studentId)
-      .eq("log_date" as never, today)
+      .eq("log_date" as never, targetDate)
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
@@ -202,13 +205,13 @@ export function WindowMethod({ studentId }: Props) {
         }
         setLoading(false);
       });
-  }, [studentId, today]);
+  }, [studentId, targetDate]);
 
   const save = useCallback(async (updatedMeals: MealState[], updatedGoal: Goal) => {
-    if (!studentId || !updatedGoal) return;
+    if (!studentId || !updatedGoal || readOnly) return;
     setSaving(true);
     try {
-      const payload: Record<string, any> = { student_id: studentId, log_date: today, goal: updatedGoal };
+      const payload: Record<string, any> = { student_id: studentId, log_date: targetDate, goal: updatedGoal };
       updatedMeals.forEach((m, i) => {
         const n = i + 1;
         payload[`meal_${n}_protein`] = m.protein;
@@ -219,9 +222,10 @@ export function WindowMethod({ studentId }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [studentId, today]);
+  }, [studentId, targetDate, readOnly]);
 
   const handleGoal = (g: Goal) => {
+    if (readOnly) return;
     setGoal(g);
     if (g === "slim") {
       const reset = meals.map(m => ({ ...m, carb: false }));
@@ -233,6 +237,7 @@ export function WindowMethod({ studentId }: Props) {
   };
 
   const handleMealChange = (index: number, field: keyof MealState, value: boolean) => {
+    if (readOnly) return;
     const updated = meals.map((m, i) => i === index ? { ...m, [field]: value } : m);
     setMeals(updated);
     if (goal) save(updated, goal);
@@ -240,6 +245,14 @@ export function WindowMethod({ studentId }: Props) {
 
   if (loading) {
     return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (readOnly && !goal) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-4 text-center">
+        <p className="text-xs text-muted-foreground">Nenhum registro de janelas para esta data.</p>
+      </div>
+    );
   }
 
   return (
@@ -251,7 +264,7 @@ export function WindowMethod({ studentId }: Props) {
           <span className="text-2xl">🪟</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          {new Date(today + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          {new Date(targetDate + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
         </p>
         {saving && (
           <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
@@ -262,7 +275,7 @@ export function WindowMethod({ studentId }: Props) {
 
       {!goal ? (
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
-          <p className="text-sm font-bold text-foreground text-center">Qual é o seu objetivo hoje?</p>
+          <p className="text-sm font-bold text-foreground text-center">Qual é o objetivo deste dia?</p>
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => handleGoal("slim")} className="flex flex-col items-center gap-2 rounded-xl border-2 border-primary/30 bg-card p-4 hover:border-primary hover:bg-primary/5 transition-all">
               <TrendingDown className="h-8 w-8 text-primary" />
@@ -283,12 +296,14 @@ export function WindowMethod({ studentId }: Props) {
               {goal === "slim" ? <TrendingDown className="h-4 w-4 text-primary" /> : <Dumbbell className="h-4 w-4 text-orange-400" />}
               <span className="text-xs font-bold text-foreground">{goal === "slim" ? "Emagrecer" : "Ganhar Massa"}</span>
             </div>
-            <button onClick={() => setGoal(null)} className="text-[11px] text-muted-foreground underline">Trocar</button>
+            {!readOnly && (
+              <button onClick={() => setGoal(null)} className="text-[11px] text-muted-foreground underline">Trocar</button>
+            )}
           </div>
 
           <SummaryBar meals={meals} goal={goal} />
 
-          <div className="space-y-3">
+          <div className={`space-y-3 ${readOnly ? "pointer-events-none opacity-95" : ""}`}>
             {meals.map((meal, i) => (
               <MealCard key={i} index={i} meal={meal} goal={goal} onChange={handleMealChange} />
             ))}
@@ -296,7 +311,7 @@ export function WindowMethod({ studentId }: Props) {
         </>
       )}
 
-      <ExplanationSection />
+      {!hideExplanation && <ExplanationSection />}
     </div>
   );
 }
