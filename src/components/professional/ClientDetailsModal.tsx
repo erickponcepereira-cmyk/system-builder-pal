@@ -118,7 +118,7 @@ export default function ClientDetailsModal({ clientId, onClose }: Props) {
                       <Mini label="Peso" value={lastAssess.weight ? `${lastAssess.weight}kg` : "—"} />
                       <Mini label="IMC" value={lastAssess.bmi ? Number(lastAssess.bmi).toFixed(1) : "—"} />
                       <Mini label="% Gord" value={lastAssess.body_fat ? `${lastAssess.body_fat}%` : "—"} />
-                      <Mini label="Músc" value={lastAssess.muscle_mass ? `${lastAssess.muscle_mass}kg` : "—"} />
+                      <Mini label="Músc. Esq." value={lastAssess.skeletal_muscle != null ? `${lastAssess.skeletal_muscle}%` : (lastAssess.muscle_mass ? `${lastAssess.muscle_mass}kg` : "—")} />
                     </div>
                   </div>
                 ) : <p className="text-xs text-white/40">Sem avaliação registrada.</p>}
