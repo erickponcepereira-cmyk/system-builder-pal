@@ -881,7 +881,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
             />
             <div>
               <p className="text-xs font-semibold text-white">Gratuito para Nutricionista Parceiro</p>
-              <p className="text-[11px] text-white/50">Coaches com medalha "Nutricionista Parceiro" não pagam (ex.: FitMindShape)</p>
+              <p className="text-[11px] text-white/50">Coaches com categoria "Nutricionista Parceiro" não pagam (ex.: FitMindShape)</p>
             </div>
           </label>
         </div>
