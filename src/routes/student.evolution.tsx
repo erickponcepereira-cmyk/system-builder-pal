@@ -114,11 +114,14 @@ function StudentEvolution() {
 
       <HealthGoalsCard totalCaloriesToday={totalCalories} />
 
+      {student && <WaterTrackerCard studentId={student.id} />}
+
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{photos.length}</p><p className="text-[10px] text-muted-foreground">fotos</p></div>
         <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-primary">{totalCalories || "—"}</p><p className="text-[10px] text-muted-foreground">kcal hoje</p></div>
-        <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{student?.goal_weight ? `${student.goal_weight}kg` : "—"}</p><p className="text-[10px] text-muted-foreground">meta</p></div>
+        <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{student?.goal_weight ? `${student.goal_weight}kg` : "—"}</p><p className="text-[10px] text-muted-foreground">meta peso</p></div>
       </div>
+
 
       <section className="rounded-2xl bg-card p-4">
         <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-bold text-foreground">Fotos de evolução</h2><p className="text-[11px] text-muted-foreground">Antes, depois e acompanhamento semanal</p></div><Camera className="h-5 w-5 text-primary" /></div>
