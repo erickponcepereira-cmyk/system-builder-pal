@@ -78,7 +78,8 @@ export function ProtocolTab() {
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("meal");
+  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("health");
+
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
   const [newExercise, setNewExercise] = useState<Partial<Exercise>>({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
