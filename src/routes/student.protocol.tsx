@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { WindowMethod } from "@/components/student/WindowMethod";
+
 
 export const Route = createFileRoute("/student/protocol")({
   head: () => ({
@@ -28,6 +30,7 @@ type Protocol = {
 
 function StudentProtocolPage() {
   const [protocol, setProtocol] = useState<Protocol | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ function StudentProtocolPage() {
         ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
       if (!student?.id) { setLoading(false); return; }
+      setStudentId(student.id);
       const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle();
       if (data) setProtocol(data as any);
       setLoading(false);
@@ -59,6 +63,13 @@ function StudentProtocolPage() {
 
       {loading && <p className="text-sm text-white/40">Carregando...</p>}
 
+      {/* Método das Janelas — sempre disponível */}
+      {!loading && studentId && (
+        <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <WindowMethod studentId={studentId} />
+        </section>
+      )}
+
       {!loading && !protocol && (
         <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
           <div className="mb-2 flex items-center gap-2">
@@ -73,6 +84,9 @@ function StudentProtocolPage() {
 
       {!loading && protocol && (
         <>
+
+
+
           {/* Metas */}
           <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
             <h2 className="mb-3 text-sm font-bold text-white">Metas diárias</h2>

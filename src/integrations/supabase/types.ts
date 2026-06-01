@@ -6837,6 +6837,95 @@ export type Database = {
           },
         ]
       }
+      window_method_logs: {
+        Row: {
+          created_at: string
+          goal: string
+          id: string
+          log_date: string
+          meal_1_carb: boolean
+          meal_1_fiber: boolean
+          meal_1_protein: boolean
+          meal_2_carb: boolean
+          meal_2_fiber: boolean
+          meal_2_protein: boolean
+          meal_3_carb: boolean
+          meal_3_fiber: boolean
+          meal_3_protein: boolean
+          meal_4_carb: boolean
+          meal_4_fiber: boolean
+          meal_4_protein: boolean
+          meal_5_carb: boolean
+          meal_5_fiber: boolean
+          meal_5_protein: boolean
+          meal_6_carb: boolean
+          meal_6_fiber: boolean
+          meal_6_protein: boolean
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          goal: string
+          id?: string
+          log_date?: string
+          meal_1_carb?: boolean
+          meal_1_fiber?: boolean
+          meal_1_protein?: boolean
+          meal_2_carb?: boolean
+          meal_2_fiber?: boolean
+          meal_2_protein?: boolean
+          meal_3_carb?: boolean
+          meal_3_fiber?: boolean
+          meal_3_protein?: boolean
+          meal_4_carb?: boolean
+          meal_4_fiber?: boolean
+          meal_4_protein?: boolean
+          meal_5_carb?: boolean
+          meal_5_fiber?: boolean
+          meal_5_protein?: boolean
+          meal_6_carb?: boolean
+          meal_6_fiber?: boolean
+          meal_6_protein?: boolean
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          goal?: string
+          id?: string
+          log_date?: string
+          meal_1_carb?: boolean
+          meal_1_fiber?: boolean
+          meal_1_protein?: boolean
+          meal_2_carb?: boolean
+          meal_2_fiber?: boolean
+          meal_2_protein?: boolean
+          meal_3_carb?: boolean
+          meal_3_fiber?: boolean
+          meal_3_protein?: boolean
+          meal_4_carb?: boolean
+          meal_4_fiber?: boolean
+          meal_4_protein?: boolean
+          meal_5_carb?: boolean
+          meal_5_fiber?: boolean
+          meal_5_protein?: boolean
+          meal_6_carb?: boolean
+          meal_6_fiber?: boolean
+          meal_6_protein?: boolean
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "window_method_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawal_requests: {
         Row: {
           amount: number
