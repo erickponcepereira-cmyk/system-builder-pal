@@ -49,8 +49,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
           .from("coaches")
           .select("id, profile_id, profiles!inner(name, city, state)")
           .not("approved_at", "is", null)
-          .order("name", { foreignTable: "profiles", ascending: true })
-          .limit(50);
+          .limit(200);
 
         if (normalizedQuery) {
           request = request.ilike("profiles.name", `%${normalizedQuery}%`);
@@ -69,7 +68,8 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
             name: row.profiles?.name || "Coach sem nome",
             city: row.profiles?.city,
             state: row.profiles?.state,
-          }));
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
         const shouldShowMaster = !normalizedQuery || "master".includes(normalizedQuery.toLowerCase());
         const mergedRows = shouldShowMaster && !rows.some((coach) => coach.id === MASTER_COACH.id)
           ? [MASTER_COACH, ...rows]
