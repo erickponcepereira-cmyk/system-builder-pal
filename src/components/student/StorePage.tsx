@@ -112,7 +112,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       .order("created_at" as never, { ascending: false });
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
-    const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
+    const sections = (sectionsRes.data as unknown as SectionRow[]) || [];
     setStoreSections(sections);
     const sectionName = (id: string) => sections.find((s) => s.id === id)?.name || "Loja";
 
