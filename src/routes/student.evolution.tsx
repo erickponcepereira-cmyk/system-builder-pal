@@ -340,3 +340,176 @@ function HealthGoalsCard({ totalCaloriesToday }: { totalCaloriesToday: number })
     </section>
   );
 }
+
+type WaterLog = { id: string; amount_ml: number; created_at: string };
+
+function WaterTrackerCard({ studentId }: { studentId: string }) {
+  const [goalMl, setGoalMl] = useState<number>(2500);
+  const [logs, setLogs] = useState<WaterLog[]>([]);
+  const [streak, setStreak] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customAmount, setCustomAmount] = useState("250");
+
+  const today = new Date().toISOString().slice(0, 10);
+  const totalToday = useMemo(() => logs.reduce((s, l) => s + l.amount_ml, 0), [logs]);
+  const pct = Math.min((totalToday / Math.max(goalMl, 1)) * 100, 100);
+  const remaining = Math.max(goalMl - totalToday, 0);
+  const goalReached = totalToday >= goalMl;
+
+  const load = async () => {
+    setLoading(true);
+    const { data: st } = await supabase.from("students").select("water_goal_ml").eq("id", studentId).maybeSingle();
+    setGoalMl(Number((st as any)?.water_goal_ml) || 2500);
+    const { data: todayLogs } = await supabase
+      .from("student_water_logs" as never)
+      .select("id, amount_ml, created_at" as never)
+      .eq("student_id" as never, studentId as never)
+      .eq("log_date" as never, today as never)
+      .order("created_at" as never, { ascending: false });
+    setLogs(((todayLogs as any[]) || []) as WaterLog[]);
+
+    // streak: count consecutive days (up to 30) where goal was met
+    const since = new Date(); since.setDate(since.getDate() - 30);
+    const { data: hist } = await supabase
+      .from("student_water_logs" as never)
+      .select("log_date, amount_ml" as never)
+      .eq("student_id" as never, studentId as never)
+      .gte("log_date" as never, since.toISOString().slice(0, 10) as never);
+    const totals: Record<string, number> = {};
+    ((hist as any[]) || []).forEach((r) => { totals[r.log_date] = (totals[r.log_date] || 0) + r.amount_ml; });
+    const goal = Number((st as any)?.water_goal_ml) || 2500;
+    let s = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      if ((totals[key] || 0) >= goal) s++;
+      else if (i > 0) break;
+    }
+    setStreak(s);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [studentId]);
+
+  const addWater = async (amount: number) => {
+    if (!amount || amount <= 0) return;
+    setAdding(true);
+    const { error } = await supabase
+      .from("student_water_logs" as never)
+      .insert({ student_id: studentId, amount_ml: amount, log_date: today } as never);
+    setAdding(false);
+    if (error) return toast.error(error.message);
+    const wasReached = goalReached;
+    await load();
+    if (!wasReached && totalToday + amount >= goalMl) {
+      toast.success("🎉 Meta de água batida! +10 XP");
+    } else {
+      toast.success(`+${amount}ml registrados 💧`);
+    }
+  };
+
+  const removeLog = async (id: string) => {
+    await supabase.from("student_water_logs" as never).delete().eq("id" as never, id as never);
+    await load();
+  };
+
+  if (loading) return <div className="rounded-2xl bg-card p-4 text-xs text-muted-foreground">Carregando hidratação…</div>;
+
+  return (
+    <section className="rounded-2xl bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Droplet className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Hidratação do dia</h2>
+        </div>
+        <div className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5">
+          <Trophy className="h-3 w-3 text-primary" />
+          <span className="text-[10px] font-bold text-primary">{streak} dia{streak === 1 ? "" : "s"} seguidos</span>
+        </div>
+      </div>
+
+      <div className="mb-3 flex items-end justify-between">
+        <p className="text-xs text-muted-foreground">
+          <span className="text-2xl font-bold text-foreground">{(totalToday / 1000).toFixed(2)}</span>
+          <span className="ml-1">/ {(goalMl / 1000).toFixed(1)} L</span>
+        </p>
+        <p className="text-[11px] font-semibold text-primary">
+          {goalReached ? "Meta batida! 🎉" : `Faltam ${(remaining / 1000).toFixed(2)} L`}
+        </p>
+      </div>
+
+      <div className="mb-3 h-3 overflow-hidden rounded-full" style={{ backgroundColor: "#252525" }}>
+        <div
+          className={`h-full transition-all ${goalReached ? "bg-success" : "bg-primary"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="mb-2 grid grid-cols-4 gap-2">
+        {[200, 250, 500, 750].map((ml) => (
+          <button
+            key={ml}
+            onClick={() => addWater(ml)}
+            disabled={adding}
+            className="flex flex-col items-center gap-1 rounded-xl bg-primary/10 px-2 py-2 text-primary transition-colors hover:bg-primary/20 disabled:opacity-60"
+          >
+            <GlassWater className="h-4 w-4" />
+            <span className="text-[10px] font-bold">+{ml}ml</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {customOpen ? (
+          <>
+            <input
+              type="number"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+              placeholder="ml"
+              className="field-control flex-1"
+              autoFocus
+            />
+            <button
+              onClick={() => { addWater(Number(customAmount) || 0); setCustomOpen(false); }}
+              className="rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
+            >
+              Adicionar
+            </button>
+            <button onClick={() => setCustomOpen(false)} className="rounded-xl bg-white/5 p-2 text-white/60"><X className="h-3.5 w-3.5" /></button>
+          </>
+        ) : (
+          <button
+            onClick={() => setCustomOpen(true)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/10"
+          >
+            <Plus className="h-3.5 w-3.5" /> Outra quantidade
+          </button>
+        )}
+      </div>
+
+      {logs.length > 0 && (
+        <div className="mt-3 border-t border-white/5 pt-3">
+          <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Registros de hoje</p>
+          <div className="flex flex-wrap gap-1.5">
+            {logs.map((l) => (
+              <button
+                key={l.id}
+                onClick={() => removeLog(l.id)}
+                title="Remover"
+                className="group flex items-center gap-1 rounded-full bg-white/5 px-2 py-1 text-[11px] text-white/70 hover:bg-red-500/10 hover:text-red-300"
+              >
+                <Droplet className="h-3 w-3" />
+                {l.amount_ml}ml
+                <X className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
