@@ -531,12 +531,13 @@ export function ProtocolTab() {
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-3 text-sm font-bold text-white">Metas</h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <Field icon={Flame} label="Calorias / dia" suffix="kcal" value={protocol.daily_calorie_goal ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, daily_calorie_goal: v === "" ? null : Number(v) }))} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field icon={Droplet} label="Água / dia" suffix="ml" value={protocol.water_goal_ml ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, water_goal_ml: v === "" ? null : Number(v) }))} />
                   <Field icon={Target} label="Meta de peso" suffix="kg" value={protocol.weight_goal ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, weight_goal: v === "" ? null : Number(v) }))} step="0.1" />
                 </div>
+                <p className="mt-2 text-[10px] text-white/40">A meta de calorias é definida apenas no painel do nutricionista.</p>
               </div>
+
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-2 text-sm font-bold text-white">Observações gerais</h2>
