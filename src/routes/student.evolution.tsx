@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Apple, Camera, ImagePlus, Loader2, Sparkles, Target, TrendingDown, Upload, Pencil, X, Save } from "lucide-react";
+import { Apple, Camera, Droplet, GlassWater, ImagePlus, Loader2, Plus, Sparkles, Target, TrendingDown, Trophy, Upload, Pencil, X, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
