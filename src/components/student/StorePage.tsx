@@ -64,7 +64,8 @@ interface StorePageProps {
 export function StorePage({ coachMode = false, hasUpline = false }: StorePageProps = {}) {
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
