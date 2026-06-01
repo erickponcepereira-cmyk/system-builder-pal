@@ -295,9 +295,15 @@ export function ProtocolTab() {
     const onConflict = selected.external ? "evaluation_client_id" : "student_id";
     const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict } as never);
 
-    if (!selected.external && protocol.weight_goal != null) {
-      await supabase.from("students").update({ goal_weight: protocol.weight_goal }).eq("id", selected.id);
+    if (!selected.external) {
+      const studentPatch: any = {
+        food_restrictions: protocol.restrictions,
+        water_goal_ml: protocol.water_goal_ml,
+      };
+      if (protocol.weight_goal != null) studentPatch.goal_weight = protocol.weight_goal;
+      await supabase.from("students").update(studentPatch).eq("id", selected.id);
     }
+
 
     setSaving(false);
     if (error) { console.error(error); toast.error("Erro ao salvar protocolo"); return; }
