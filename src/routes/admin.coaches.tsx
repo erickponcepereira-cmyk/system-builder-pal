@@ -135,6 +135,34 @@ function AdminCoaches() {
     }
   };
 
+  const openCardEditor = (c: CoachRow) => {
+    setCardEditing(c);
+    setCardDate(c.card_valid_until ? c.card_valid_until.slice(0, 10) : "");
+  };
+
+  const saveCard = async (validUntil: string | null) => {
+    if (!cardEditing) return;
+    setActing(`card-${cardEditing.id}`);
+    const { error } = await supabase.rpc("admin_set_coach_card_validity" as never, {
+      _coach_id: cardEditing.id,
+      _valid_until: validUntil,
+    } as never);
+    setActing(null);
+    if (error) { toast.error(error.message || "Erro ao salvar"); return; }
+    toast.success(validUntil ? "Carteirinha atualizada" : "Carteirinha removida");
+    setCardEditing(null);
+    load();
+  };
+
+  const extendCardDays = (days: number) => {
+    if (!cardEditing) return;
+    const base = cardEditing.card_valid_until && new Date(cardEditing.card_valid_until) > new Date()
+      ? new Date(cardEditing.card_valid_until)
+      : new Date();
+    base.setDate(base.getDate() + days);
+    saveCard(base.toISOString());
+  };
+
   const transferTargets = useMemo(() => {
     if (!transferring) return [];
     const q = transferSearch.trim().toLowerCase();
