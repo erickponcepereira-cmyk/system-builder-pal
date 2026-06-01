@@ -116,13 +116,23 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
             {filtered.map((s) => {
               const age = calcAge(s.birth_date);
               return (
-                <div key={s.id} className="rounded-xl border border-white/5 p-4" style={{ backgroundColor: "#0F0F0F" }}>
+                <button
+                  key={s.id}
+                  onClick={() => setOpenId(s.id)}
+                  className="rounded-xl border border-white/5 p-4 text-left transition hover:border-primary/40 hover:bg-white/[0.02]"
+                  style={{ backgroundColor: "#0F0F0F" }}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="truncate text-sm font-bold text-white">{s.name}</h3>
                       <p className="truncate text-xs text-white/45">{s.whatsapp || s.email || "—"}</p>
+                      {s.birth_date && (
+                        <p className="mt-1 inline-flex items-center gap-1 text-[10px] text-white/55">
+                          <Cake className="h-3 w-3" /> {new Date(s.birth_date).toLocaleDateString("pt-BR")}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
                         {GENDER_LABEL[s.gender] || "—"}{age ? ` · ${age}a` : ""}
                       </span>
@@ -134,10 +144,10 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
                     <Stat label="Altura" value={s.height ? `${s.height}cm` : "—"} />
                     <Stat label="Pele" value={SKIN_LABEL[s.ethnicity] || "—"} />
                   </div>
-                  <p className="mt-3 text-[10px] text-white/40">
-                    Use as abas Dieta/Anamnese/Avaliações no menu para gerenciar este aluno.
-                  </p>
-                </div>
+                  <div className="mt-2 flex items-center gap-1 text-[11px] text-white/55">
+                    <Activity className="h-3 w-3" /> Última avaliação: <span className="font-bold text-white">{lastAssess[s.id] ? new Date(lastAssess[s.id]).toLocaleDateString("pt-BR") : "—"}</span>
+                  </div>
+                </button>
 
               );
             })}
@@ -148,6 +158,7 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
       {openNew && (
         <NewStudentModal coachId={coachId} onClose={() => setOpenNew(false)} onCreated={load} />
       )}
+      {openId && <ClientDetailsModal clientId={openId} onClose={() => setOpenId(null)} />}
     </>
   );
 }
