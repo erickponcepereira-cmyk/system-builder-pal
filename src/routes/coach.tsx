@@ -241,13 +241,23 @@ function CoachDashboard() {
     toast.success("Link copiado!");
   };
 
+  // Categoria "Mestre de Parcerias" libera a aba de aprovar parceiros
+  const fetchMyBadges = useServerFn(getMyBadges);
+  const [canApprovePartners, setCanApprovePartners] = useState(false);
+  useEffect(() => {
+    if (isAdmin) { setCanApprovePartners(true); return; }
+    fetchMyBadges()
+      .then((b) => setCanApprovePartners((b as string[]).includes("partnership_master")))
+      .catch(() => setCanApprovePartners(false));
+  }, [isAdmin, coachRowId]);
+
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
     { id: "tree", label: "Árvore da Rede", icon: Network },
     { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
-    { id: "partnerApprovals", label: "Aprovar Parceiros", icon: ClipboardCheck },
+    ...(canApprovePartners ? [{ id: "partnerApprovals" as Tab, label: "Aprovar Parceiros", icon: ClipboardCheck }] : []),
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
@@ -256,7 +266,6 @@ function CoachDashboard() {
     { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
     { id: "challenge", label: "Desafio", icon: Trophy },
 
-    { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
