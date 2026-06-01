@@ -148,10 +148,10 @@ export function PartnerDetailsModal({
               </div>
 
               {/* Stats */}
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className={`mt-4 grid gap-2 ${readOnly ? "grid-cols-2" : "grid-cols-3"}`}>
                 <Stat icon={Eye} label="Visitas" value={data.visits} />
                 <Stat icon={Package} label="Produtos" value={data.products.length} />
-                <Stat icon={UsersIcon} label="Colaboradores" value={data.collaborators.length} />
+                {!readOnly && <Stat icon={UsersIcon} label="Colaboradores" value={data.collaborators.length} />}
               </div>
 
               {/* Quick contact (read-only mode) */}
