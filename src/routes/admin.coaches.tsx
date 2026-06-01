@@ -41,6 +41,8 @@ function AdminCoaches() {
   const [transferTargetId, setTransferTargetId] = useState("");
   const [transferSearch, setTransferSearch] = useState("");
   const [acting, setActing] = useState<string | null>(null);
+  const [cardEditing, setCardEditing] = useState<CoachRow | null>(null);
+  const [cardDate, setCardDate] = useState<string>("");
 
   const load = async () => {
     setLoading(true);
