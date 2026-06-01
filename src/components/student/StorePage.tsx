@@ -33,6 +33,8 @@ interface StoreProduct extends ProductDetail {
   minPrice?: number | null;
   maxPrice?: number | null;
   creatorCoachId?: string | null;
+  sectionId?: string | null;
+  categoryId?: string | null;
 }
 
 type CartItem = StoreProduct & { quantity: number };
@@ -40,7 +42,9 @@ type OrderRow = { id: string; order_number: string; status: string; total_amount
 
 type ShippingForm = { name: string; phone: string; zip: string; address: string; city: string; state: string };
 
-const baseCategories = ["Todos"];
+type SectionRow = { id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
+type CategoryRow = { id: string; section_id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
+
 const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "" };
 
 const productCategory = (type?: string | null) => ({
@@ -60,7 +64,8 @@ interface StorePageProps {
 export function StorePage({ coachMode = false, hasUpline = false }: StorePageProps = {}) {
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -71,7 +76,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
-  const [storeSections, setStoreSections] = useState<{ id: string; name: string }[]>([]);
+  const [storeSections, setStoreSections] = useState<SectionRow[]>([]);
+  const [storeCategories, setStoreCategories] = useState<CategoryRow[]>([]);
 
   // Coach-only state
   const [clients, setClients] = useState<SaleClient[]>([]);
@@ -88,10 +94,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
-      supabase.from("store_sections" as never).select("id,name" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
+    const { data: catRows } = await supabase.from("store_categories" as never).select("id,section_id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never);
+    setStoreCategories(((catRows as unknown as CategoryRow[]) || []));
 
     // Produtos de parceiros (profissionais) — apenas aprovados e ativos
     const { data: partnerRows } = await supabase
@@ -104,7 +112,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       .order("created_at" as never, { ascending: false });
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
-    const sections = (sectionsRes.data as unknown as { id: string; name: string }[]) || [];
+    const sections = (sectionsRes.data as unknown as SectionRow[]) || [];
     setStoreSections(sections);
     const sectionName = (id: string) => sections.find((s) => s.id === id)?.name || "Loja";
 
@@ -165,6 +173,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         id: `item-${it.id}`, sourceId: it.id, title: it.name, subtitle: it.short_description, description: it.description,
         price: Number(it.price || 0), originalPrice: it.original_price ? Number(it.original_price) : null,
         category: sectionName(it.section_id), kind: "item" as const,
+        sectionId: it.section_id ?? null, categoryId: it.category_id ?? null,
         tag: it.kind === "digital" ? "Digital" : undefined,
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
         commissionCoach: it.commission_coach, commissionLevel1: it.commission_level1,
@@ -280,11 +289,23 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     return () => { cancelled = true; };
   }, [detailProduct]);
 
+  const subcatsOfActive = useMemo(
+    () => activeSection ? storeCategories.filter((c) => c.section_id === activeSection.id) : [],
+    [activeSection, storeCategories],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return items.filter((item) => (activeCategory === "Todos" || item.category === activeCategory) &&
-      (!needle || item.title.toLowerCase().includes(needle) || (item.description || "").toLowerCase().includes(needle)));
-  }, [activeCategory, items, query]);
+    return items.filter((item) => {
+      if (activeSection) {
+        const inSection = item.sectionId === activeSection.id || item.category === activeSection.name;
+        if (!inSection) return false;
+        if (activeSubcategory && item.categoryId !== activeSubcategory.id) return false;
+      }
+      if (needle && !item.title.toLowerCase().includes(needle) && !(item.description || "").toLowerCase().includes(needle)) return false;
+      return true;
+    });
+  }, [activeSection, activeSubcategory, items, query]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   // Sem taxas — total = subtotal. Taxas de cartão são cobradas no checkout/maquininha.
@@ -514,19 +535,59 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar produtos..." className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />
       </div>
 
-      <div className="flex w-full gap-2 overflow-x-auto scrollbar-none">
-        {[...baseCategories, ...storeSections.map((s) => s.name).filter((n) => !baseCategories.includes(n))].map((category: string) => (
-          <button key={category} onClick={() => setActiveCategory(category)} className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${activeCategory === category ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}>{category}</button>
-        ))}
-      </div>
+      {(activeSection || activeSubcategory) && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button onClick={() => { setActiveSection(null); setActiveSubcategory(null); }} className="rounded-full bg-card px-3 py-1.5 font-bold text-foreground">← Loja</button>
+          {activeSection && (
+            <button onClick={() => setActiveSubcategory(null)} className="rounded-full bg-primary/15 px-3 py-1.5 font-bold text-primary">{activeSection.name}</button>
+          )}
+          {activeSubcategory && (
+            <span className="rounded-full bg-primary px-3 py-1.5 font-bold text-primary-foreground">{activeSubcategory.name}</span>
+          )}
+        </div>
+      )}
 
-      <div className="relative overflow-hidden rounded-2xl bg-primary p-4">
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-[10px] font-bold text-primary-foreground"><Tag className="h-3 w-3" /> FITMIND SECRETS 2026</span>
-        <p className="mt-2 text-base font-bold text-primary-foreground">Inscrições, planos, protocolos, cursos e aulões</p>
-        <p className="text-sm text-primary-foreground/80">catálogo oficial com comissões configuradas</p>
-      </div>
+      {!activeSection && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {storeSections.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => { setActiveSection(s); setActiveSubcategory(null); }}
+              className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
+              style={{ width: s.card_width ? `${s.card_width}px` : undefined, height: s.card_height ? `${s.card_height}px` : undefined }}
+            >
+              {s.image_url ? (
+                <img src={s.image_url} alt={s.name} className="h-32 w-full object-cover" />
+              ) : (
+                <div className="flex h-32 w-full items-center justify-center bg-muted"><ShoppingBag className="h-8 w-8 text-muted-foreground" /></div>
+              )}
+              <p className="px-3 py-2 text-sm font-bold text-foreground">{s.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {!coachMode && orders.length > 0 && (
+      {activeSection && !activeSubcategory && subcatsOfActive.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {subcatsOfActive.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setActiveSubcategory(c)}
+              className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
+              style={{ width: c.card_width ? `${c.card_width}px` : undefined, height: c.card_height ? `${c.card_height}px` : undefined }}
+            >
+              {c.image_url ? (
+                <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover" />
+              ) : (
+                <div className="flex h-28 w-full items-center justify-center bg-muted"><ShoppingBag className="h-7 w-7 text-muted-foreground" /></div>
+              )}
+              <p className="px-3 py-2 text-sm font-bold text-foreground">{c.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!coachMode && !activeSection && orders.length > 0 && (
         <section className="rounded-2xl bg-card p-4">
           <h2 className="mb-3 text-sm font-bold text-foreground">Meus pedidos</h2>
           <div className="space-y-2">
@@ -543,26 +604,32 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        {filtered.map((item) => (
-          <button key={item.id} onClick={() => setDetailProduct(item)} className="rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
-            <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
-              {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
-            </div>
-            {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
-            <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
-            {item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}
-            <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-              <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
-              {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
-            </div>
-            {/* Comissão exibida apenas dentro do ProductDetailModal (com olho mágico) */}
-            {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
-              <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
-            )}
-          </button>
-        ))}
-      </div>
+      {activeSection && (subcatsOfActive.length === 0 || activeSubcategory) && (
+        <div className="grid grid-cols-2 gap-3">
+          {filtered.map((item) => (
+            <button key={item.id} onClick={() => setDetailProduct(item)} className="rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
+              <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
+                {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
+              </div>
+              {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
+              <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
+              {item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}
+              <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
+                {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
+              </div>
+              {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
+                <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
+              )}
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="col-span-2 rounded-xl bg-card p-6 text-center text-sm text-muted-foreground">Nenhum produto nessa categoria ainda.</p>
+          )}
+        </div>
+      )}
+
+
 
       {detailProduct && (
         <ProductDetailModal

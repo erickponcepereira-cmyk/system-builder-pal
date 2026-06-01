@@ -5752,6 +5752,8 @@ export type Database = {
       }
       store_categories: {
         Row: {
+          card_height: number | null
+          card_width: number | null
           created_at: string
           icon: string | null
           id: string
@@ -5764,6 +5766,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          card_height?: number | null
+          card_width?: number | null
           created_at?: string
           icon?: string | null
           id?: string
@@ -5776,6 +5780,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          card_height?: number | null
+          card_width?: number | null
           created_at?: string
           icon?: string | null
           id?: string
@@ -5984,6 +5990,8 @@ export type Database = {
       }
       store_sections: {
         Row: {
+          card_height: number | null
+          card_width: number | null
           created_at: string
           icon: string | null
           id: string
@@ -5995,6 +6003,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          card_height?: number | null
+          card_width?: number | null
           created_at?: string
           icon?: string | null
           id?: string
@@ -6006,6 +6016,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          card_height?: number | null
+          card_width?: number | null
           created_at?: string
           icon?: string | null
           id?: string

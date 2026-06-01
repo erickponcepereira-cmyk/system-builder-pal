@@ -1,4 +1,5 @@
-import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon } from "lucide-react";
+import { useState } from "react";
+import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 
 export interface ProductDetail {
   id: string;
@@ -109,6 +110,7 @@ export function ProductDetailModal({
   const extraGainPix = !hasUpline ? l1Pix + l2Pix + l3Pix : 0;
   const totalEstimatedCard = coachGainCard + extraGainCard;
   const totalEstimatedPix = coachGainPix + extraGainPix;
+  const [revealCommissions, setRevealCommissions] = useState(false);
 
 
   return (
@@ -180,12 +182,26 @@ export function ProductDetailModal({
 
           {hasCommissionData && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">
-                  Comissões deste produto
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setRevealCommissions((v) => !v)}
+                className="mb-3 flex w-full items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Comissões deste produto
+                  </p>
+                </div>
+                {revealCommissions ? (
+                  <EyeOff className="h-4 w-4 text-primary" />
+                ) : (
+                  <Eye className="h-4 w-4 text-primary" />
+                )}
+              </button>
+              {revealCommissions && (
+              <>
+
               <div className="grid grid-cols-4 gap-2 text-center text-xs">
                 {[
                   { label: "Você", pix: coachGainPix, card: coachGainCard },
@@ -241,6 +257,8 @@ export function ProductDetailModal({
                   Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, impostos e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
                 </p>
               </div>
+              </>
+              )}
             </div>
           )}
 
