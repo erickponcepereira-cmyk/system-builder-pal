@@ -33,6 +33,8 @@ interface StoreProduct extends ProductDetail {
   minPrice?: number | null;
   maxPrice?: number | null;
   creatorCoachId?: string | null;
+  sectionId?: string | null;
+  categoryId?: string | null;
 }
 
 type CartItem = StoreProduct & { quantity: number };
@@ -40,7 +42,9 @@ type OrderRow = { id: string; order_number: string; status: string; total_amount
 
 type ShippingForm = { name: string; phone: string; zip: string; address: string; city: string; state: string };
 
-const baseCategories = ["Todos"];
+type SectionRow = { id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
+type CategoryRow = { id: string; section_id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
+
 const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "" };
 
 const productCategory = (type?: string | null) => ({
