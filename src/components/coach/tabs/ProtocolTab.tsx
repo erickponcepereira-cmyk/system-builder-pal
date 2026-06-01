@@ -101,11 +101,15 @@ export function ProtocolTab() {
       if (!userData.user) return;
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
       const { data: coach } = profile?.id
-        ? await supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+        ? await supabase.from("coaches").select("id, specialty_key, is_professional").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
       if (!coach?.id) return;
       setCoachId(coach.id);
-      setIsNutritionist(true);
+      const specKey = (coach as any).specialty_key as string | null;
+      const isPro = !!(coach as any).is_professional;
+      setIsNutritionist(isPro && !!specKey && /nutricion/i.test(specKey));
+
+
 
 
       const { data: studs } = await supabase
