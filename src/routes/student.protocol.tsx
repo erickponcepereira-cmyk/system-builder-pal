@@ -63,6 +63,13 @@ function StudentProtocolPage() {
 
       {loading && <p className="text-sm text-white/40">Carregando...</p>}
 
+      {/* Método das Janelas — sempre disponível */}
+      {!loading && studentId && (
+        <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <WindowMethod studentId={studentId} />
+        </section>
+      )}
+
       {!loading && !protocol && (
         <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
           <div className="mb-2 flex items-center gap-2">
@@ -77,12 +84,7 @@ function StudentProtocolPage() {
 
       {!loading && protocol && (
         <>
-          {/* Método das Janelas */}
-          {studentId && (
-            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <WindowMethod studentId={studentId} />
-            </section>
-          )}
+
 
 
           {/* Metas */}
