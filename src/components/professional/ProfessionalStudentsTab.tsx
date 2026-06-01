@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Plus, Users, Search } from "lucide-react";
+import { Plus, Users, Search, Cake, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import NewStudentModal from "./NewStudentModal";
+import ClientDetailsModal from "./ClientDetailsModal";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 
