@@ -77,6 +77,14 @@ function StudentProtocolPage() {
 
       {!loading && protocol && (
         <>
+          {/* Método das Janelas */}
+          {studentId && (
+            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+              <WindowMethod studentId={studentId} />
+            </section>
+          )}
+
+
           {/* Metas */}
           <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
             <h2 className="mb-3 text-sm font-bold text-white">Metas diárias</h2>
