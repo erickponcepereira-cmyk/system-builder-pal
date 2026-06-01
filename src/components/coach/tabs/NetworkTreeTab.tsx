@@ -18,6 +18,8 @@ const BADGE_LABELS: Record<string, string> = {
   master_coach: "Master Coach",
   council: "Conselho",
   coach_hbl_42: "HBL 42",
+  coach_hbl_50: "HBL 50",
+  partnership_master: "Mestre de Parcerias",
 };
 
 function Badges({ keys }: { keys: string[] }) {

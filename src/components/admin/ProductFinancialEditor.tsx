@@ -766,13 +766,14 @@ function RefStep({ n, label, detail, val, color, last }: { n: number; label: str
   );
 }
 
-// ─── Seção de restrições por medalha ────────────────────────────────
+// ─── Seção de restrições por categoria ──────────────────────────────
 const BADGE_LABEL: Record<BadgeKey, string> = {
   master_coach: "Master Coach",
   coach_hbl_42: "Coach HBL 42%",
   coach_hbl_50: "Coach HBL 50%",
   nutritionist_partner: "Nutricionista Parceiro",
   council: "Conselho",
+  partnership_master: "Mestre de Parcerias",
 };
 
 function BadgeFlagsSection({ productId }: { productId: string }) {
@@ -820,7 +821,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
   return (
     <div className="mb-6 rounded-lg border border-white/10 p-4" style={{ backgroundColor: "#161616" }}>
       <div className="flex items-center justify-between mb-3">
-        <SectionLabel>Acesso por medalha</SectionLabel>
+        <SectionLabel>Acesso por categoria</SectionLabel>
         <button
           onClick={handleSave}
           disabled={loading || saving}
@@ -835,7 +836,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <label className="block">
-            <span className="block text-xs text-white/60 mb-1">Medalha exigida para vender</span>
+            <span className="block text-xs text-white/60 mb-1">Categoria exigida para vender</span>
             <select
               value={requiredBadge}
               onChange={(e) => setRequiredBadge(e.target.value as BadgeKey | "")}
@@ -868,7 +869,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
             />
             <div>
               <p className="text-xs font-semibold text-white">Gratuito para Conselho</p>
-              <p className="text-[11px] text-white/50">Coaches com medalha "Conselho" não pagam</p>
+              <p className="text-[11px] text-white/50">Coaches com categoria "Conselho" não pagam</p>
             </div>
           </label>
           <label className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-3 cursor-pointer hover:border-white/30">
@@ -880,7 +881,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
             />
             <div>
               <p className="text-xs font-semibold text-white">Gratuito para Nutricionista Parceiro</p>
-              <p className="text-[11px] text-white/50">Coaches com medalha "Nutricionista Parceiro" não pagam (ex.: FitMindShape)</p>
+              <p className="text-[11px] text-white/50">Coaches com categoria "Nutricionista Parceiro" não pagam (ex.: FitMindShape)</p>
             </div>
           </label>
         </div>

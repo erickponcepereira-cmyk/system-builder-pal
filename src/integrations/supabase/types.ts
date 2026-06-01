@@ -7319,6 +7319,7 @@ export type Database = {
         | "coach_hbl_50"
         | "nutritionist_partner"
         | "council"
+        | "partnership_master"
       commission_status: "pending" | "available" | "withdrawn" | "cancelled"
       event_category:
         | "aula"
@@ -7543,6 +7544,7 @@ export const Constants = {
         "coach_hbl_50",
         "nutritionist_partner",
         "council",
+        "partnership_master",
       ],
       commission_status: ["pending", "available", "withdrawn", "cancelled"],
       event_category: [

@@ -48,7 +48,7 @@ function AdminCareerPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-white">Carreira</h1>
-          <p className="text-xs text-white/50">Planos de pontos, patentes, medalhas, desafios e entregas de recompensas.</p>
+          <p className="text-xs text-white/50">Planos de pontos, patentes, categorias, desafios e entregas de recompensas.</p>
         </div>
         <button
           onClick={handleBackfill}
@@ -63,7 +63,7 @@ function AdminCareerPage() {
       <div className="flex flex-wrap gap-1 border-b border-white/10">
         <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}        label="Planos de Carreira" />
         <TabBtn active={tab === "patents"}    onClick={() => setTab("patents")}    icon={Award}        label="Patentes" />
-        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}        label="Medalhas" />
+        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}        label="Categorias" />
         <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy}       label="Desafios" />
         <TabBtn active={tab === "deliveries"} onClick={() => setTab("deliveries")} icon={PackageCheck} label="Entregas" />
       </div>
@@ -524,6 +524,7 @@ const BADGE_META: Record<BadgeKey, { label: string; color: string; description: 
   coach_hbl_50:         { label: "Coach HBL 50%",         color: "bg-violet-500/20 text-violet-300 border-violet-500/40", description: "Acesso aos produtos HBL com margem 50%",                      icon: "💜" },
   nutritionist_partner: { label: "Nutricionista Parceiro", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40", description: "Recebe atribuições automáticas de planos nutricionais", icon: "🥗" },
   council:              { label: "Conselho",               color: "bg-rose-500/20 text-rose-300 border-rose-500/40",       description: "Acesso gratuito a produtos liberados pelo conselho",         icon: "🛡" },
+  partnership_master:   { label: "Mestre de Parcerias",    color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",        description: "Aprova parceiros, produtos gratuitos e produtos pagos",     icon: "🤝" },
 };
 
 function MedalsTab() {
@@ -553,10 +554,10 @@ function MedalsTab() {
     try {
       if (has) {
         await revoke({ data: { coachId, badge } });
-        toast.success("Medalha removida");
+        toast.success("Categoria removida");
       } else {
         await grant({ data: { coachId, badge } });
-        toast.success("Medalha atribuída!");
+        toast.success("Categoria atribuída!");
       }
       load();
     } catch (e: any) {

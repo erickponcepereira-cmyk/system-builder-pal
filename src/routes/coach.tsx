@@ -24,9 +24,11 @@ import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
-import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
+import { PartnersApprovalTab } from "@/components/coach/tabs/PartnersApprovalTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyBadges } from "@/lib/coach-badges.functions";
 
 
 // Link "/" usage to satisfy unused import warnings (not required)
@@ -239,13 +241,23 @@ function CoachDashboard() {
     toast.success("Link copiado!");
   };
 
+  // Categoria "Mestre de Parcerias" libera a aba de aprovar parceiros
+  const fetchMyBadges = useServerFn(getMyBadges);
+  const [canApprovePartners, setCanApprovePartners] = useState(false);
+  useEffect(() => {
+    if (isAdmin) { setCanApprovePartners(true); return; }
+    fetchMyBadges()
+      .then((b) => setCanApprovePartners((b as string[]).includes("partnership_master")))
+      .catch(() => setCanApprovePartners(false));
+  }, [isAdmin, coachRowId]);
+
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
     { id: "tree", label: "Árvore da Rede", icon: Network },
     { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
-    { id: "partnerApprovals", label: "Aprovar Parceiros", icon: ClipboardCheck },
+    ...(canApprovePartners ? [{ id: "partnerApprovals" as Tab, label: "Aprovar Parceiros", icon: ClipboardCheck }] : []),
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
@@ -254,7 +266,6 @@ function CoachDashboard() {
     { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
     { id: "challenge", label: "Desafio", icon: Trophy },
 
-    { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "wallet", label: "Carteira", icon: Wallet },
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
@@ -431,7 +442,7 @@ function CoachDashboard() {
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
-          {activeTab === "partnerApprovals" && <ProfessionalProductsApprovalTab coachId={coachContext?.coachId || ""} />}
+          {activeTab === "partnerApprovals" && canApprovePartners && <PartnersApprovalTab />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "protocol" && <ProtocolTab />}

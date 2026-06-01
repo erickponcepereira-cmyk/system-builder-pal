@@ -9,6 +9,7 @@ export const BADGE_KEYS = [
   "coach_hbl_50",
   "nutritionist_partner",
   "council",
+  "partnership_master",
 ] as const;
 export type BadgeKey = (typeof BADGE_KEYS)[number];
 

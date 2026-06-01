@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Building2, Check, X, Loader2 } from "lucide-react";
+import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 
 export const Route = createFileRoute("/admin/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — Admin" }] }),
@@ -18,6 +19,7 @@ function AdminPartners() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [openPartnerId, setOpenPartnerId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -63,13 +65,16 @@ function AdminPartners() {
         <div className="grid gap-2 lg:grid-cols-2">
           {partners.map(p => (
             <div key={p.id} className="rounded-xl p-4 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
-              {p.photo_url ? <img src={p.photo_url} className="h-14 w-14 rounded-full object-cover" /> : <div className="h-14 w-14 rounded-full bg-white/5" />}
+              {p.photo_url ? <img src={p.photo_url} className="h-14 w-14 rounded-full object-cover cursor-pointer" onClick={() => setOpenPartnerId(p.id)} /> : <div className="h-14 w-14 rounded-full bg-white/5 cursor-pointer" onClick={() => setOpenPartnerId(p.id)} />}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">{p.fantasy_name}</p>
+                <button onClick={() => setOpenPartnerId(p.id)} className="text-left">
+                  <p className="text-sm font-bold text-white hover:text-primary">{p.fantasy_name}</p>
+                </button>
                 <p className="text-[11px] text-white/50">{p.document || "—"} · {p.city}/{p.state}</p>
                 <p className="text-[11px] text-white/40 mt-1">WhatsApp: {p.whatsapp || "—"}</p>
                 <span className={`mt-2 inline-block text-[10px] px-2 py-0.5 rounded ${p.status === "approved" ? "bg-green-500/15 text-green-400" : p.status === "blocked" ? "bg-red-500/15 text-red-400" : "bg-yellow-500/15 text-yellow-400"}`}>{p.status}</span>
                 <div className="mt-2 flex gap-1.5 flex-wrap">
+                  <button onClick={() => setOpenPartnerId(p.id)} className="text-[11px] rounded bg-white/10 text-white px-2 py-1">Ver perfil</button>
                   {p.status !== "approved" && <button onClick={() => updatePartner(p.id, { status: "approved" })} className="text-[11px] rounded bg-green-500/15 text-green-400 px-2 py-1">Aprovar</button>}
                   {p.status !== "blocked" && <button onClick={() => updatePartner(p.id, { status: "blocked" })} className="text-[11px] rounded bg-red-500/15 text-red-400 px-2 py-1">Bloquear</button>}
                   {p.status === "blocked" && <button onClick={() => updatePartner(p.id, { status: "approved" })} className="text-[11px] rounded bg-white/10 text-white px-2 py-1">Reativar</button>}
@@ -109,6 +114,14 @@ function AdminPartners() {
             ))}
           </div>
         </div>
+      )}
+
+      {openPartnerId && (
+        <PartnerDetailsModal
+          partnerId={openPartnerId}
+          onClose={() => setOpenPartnerId(null)}
+          onChanged={load}
+        />
       )}
     </>
   );
