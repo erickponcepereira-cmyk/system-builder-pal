@@ -19,6 +19,7 @@ function AdminPartners() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [openPartnerId, setOpenPartnerId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
