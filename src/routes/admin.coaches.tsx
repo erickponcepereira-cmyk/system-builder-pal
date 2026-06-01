@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2 } from "lucide-react";
+import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ interface CoachRow {
   total_active_students: number | null;
   total_sales: number | null;
   created_at: string | null;
+  card_valid_until: string | null;
   profiles: {
     id: string;
     name: string;
@@ -40,6 +41,8 @@ function AdminCoaches() {
   const [transferTargetId, setTransferTargetId] = useState("");
   const [transferSearch, setTransferSearch] = useState("");
   const [acting, setActing] = useState<string | null>(null);
+  const [cardEditing, setCardEditing] = useState<CoachRow | null>(null);
+  const [cardDate, setCardDate] = useState<string>("");
 
   const load = async () => {
     setLoading(true);
@@ -130,6 +133,34 @@ function AdminCoaches() {
       setTransferring(null);
       load();
     }
+  };
+
+  const openCardEditor = (c: CoachRow) => {
+    setCardEditing(c);
+    setCardDate(c.card_valid_until ? c.card_valid_until.slice(0, 10) : "");
+  };
+
+  const saveCard = async (validUntil: string | null) => {
+    if (!cardEditing) return;
+    setActing(`card-${cardEditing.id}`);
+    const { error } = await supabase.rpc("admin_set_coach_card_validity" as never, {
+      _coach_id: cardEditing.id,
+      _valid_until: validUntil,
+    } as never);
+    setActing(null);
+    if (error) { toast.error(error.message || "Erro ao salvar"); return; }
+    toast.success(validUntil ? "Carteirinha atualizada" : "Carteirinha removida");
+    setCardEditing(null);
+    load();
+  };
+
+  const extendCardDays = (days: number) => {
+    if (!cardEditing) return;
+    const base = cardEditing.card_valid_until && new Date(cardEditing.card_valid_until) > new Date()
+      ? new Date(cardEditing.card_valid_until)
+      : new Date();
+    base.setDate(base.getDate() + days);
+    saveCard(base.toISOString());
   };
 
   const transferTargets = useMemo(() => {
@@ -244,9 +275,12 @@ function AdminCoaches() {
                     )}
                   </div>
                   {c.approved_at && (
-                    <div className="mt-3 flex gap-4 text-xs">
+                    <div className="mt-3 flex flex-wrap gap-4 text-xs">
                       <span className="text-white/50">Alunos: <span className="font-bold text-white">{c.total_active_students || 0}</span></span>
                       <span className="text-white/50">Vendas: <span className="font-bold text-white">R$ {Number(c.total_sales || 0).toLocaleString("pt-BR")}</span></span>
+                      <span className="text-white/50">Carteirinha: {c.card_valid_until && new Date(c.card_valid_until) > new Date()
+                        ? <span className="font-bold text-success">ativa até {new Date(c.card_valid_until).toLocaleDateString("pt-BR")}</span>
+                        : <span className="font-bold text-red-400">inativa</span>}</span>
                     </div>
                   )}
                 </div>
@@ -268,6 +302,12 @@ function AdminCoaches() {
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openCardEditor(c)}
+                      className="flex items-center gap-1.5 rounded-lg bg-yellow-500/15 px-3 py-2 text-xs font-bold text-yellow-400 hover:bg-yellow-500/25"
+                    >
+                      <IdCard className="h-3.5 w-3.5" /> Carteirinha
+                    </button>
                     <button
                       onClick={() => openTransfer(c)}
                       disabled={acting === `transfer-${c.id}`}
@@ -358,6 +398,62 @@ function AdminCoaches() {
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {acting === `transfer-${transferring.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Confirmar migração
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cardEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => acting?.startsWith("card") ? null : setCardEditing(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white flex items-center gap-2"><IdCard className="h-4 w-4 text-yellow-400" /> Carteirinha do coach</h2>
+                <p className="text-xs text-white/50">{cardEditing.profiles?.name}</p>
+              </div>
+              <button onClick={() => setCardEditing(null)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <p className="mb-3 text-[11px] text-white/50">
+              Status atual: {cardEditing.card_valid_until && new Date(cardEditing.card_valid_until) > new Date()
+                ? <span className="text-success font-bold">ativa até {new Date(cardEditing.card_valid_until).toLocaleDateString("pt-BR")}</span>
+                : <span className="text-red-400 font-bold">inativa</span>}
+            </p>
+
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              <button onClick={() => extendCardDays(30)} disabled={acting === `card-${cardEditing.id}`}
+                className="rounded-lg bg-white/5 hover:bg-white/10 px-2 py-2 text-[11px] font-bold text-white disabled:opacity-50">+30 dias</button>
+              <button onClick={() => extendCardDays(90)} disabled={acting === `card-${cardEditing.id}`}
+                className="rounded-lg bg-white/5 hover:bg-white/10 px-2 py-2 text-[11px] font-bold text-white disabled:opacity-50">+90 dias</button>
+              <button onClick={() => extendCardDays(365)} disabled={acting === `card-${cardEditing.id}`}
+                className="rounded-lg bg-primary hover:opacity-90 px-2 py-2 text-[11px] font-bold text-primary-foreground disabled:opacity-50">+365 dias</button>
+            </div>
+
+            <label className="block text-[11px] text-white/60 mb-1">Definir data específica</label>
+            <input
+              type="date"
+              value={cardDate}
+              onChange={(e) => setCardDate(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+            />
+
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => saveCard(null)}
+                disabled={acting === `card-${cardEditing.id}`}
+                className="flex-1 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+              >
+                Remover carteirinha
+              </button>
+              <button
+                onClick={() => saveCard(cardDate ? new Date(cardDate + "T23:59:59").toISOString() : null)}
+                disabled={!cardDate || acting === `card-${cardEditing.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {acting === `card-${cardEditing.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar data
               </button>
             </div>
           </div>
