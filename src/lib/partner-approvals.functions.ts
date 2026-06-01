@@ -92,7 +92,12 @@ export const reviewPartnerStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAuthorized(context.userId);
-    const patch: Record<string, unknown> = { status: data.status };
+    const patch: {
+      status: string;
+      approved_at?: string | null;
+      blocked_at?: string | null;
+      blocked_reason?: string | null;
+    } = { status: data.status };
     if (data.status === "approved") {
       patch.approved_at = new Date().toISOString();
       patch.blocked_at = null;
