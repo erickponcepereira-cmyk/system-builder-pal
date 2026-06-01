@@ -50,7 +50,7 @@ export const getPartnerDetails = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAuthorized(context.userId);
 
-    const [partnerRes, productsRes, visitsRes, collabsRes] = await Promise.all([
+    const [partnerRes, productsRes, visitsRes, collabsRes, postsRes] = await Promise.all([
       supabaseAdmin.from("partners").select("*").eq("id", data.partnerId).maybeSingle(),
       supabaseAdmin
         .from("partner_products")
@@ -66,6 +66,12 @@ export const getPartnerDetails = createServerFn({ method: "POST" })
         .select("id, created_at, profiles!students_profile_id_fkey(name, email, phone, photo_url)")
         .eq("partner_id", data.partnerId)
         .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("partner_posts")
+        .select("id, image_url, caption, created_at")
+        .eq("partner_id", data.partnerId)
+        .order("created_at", { ascending: false })
+        .limit(60),
     ]);
 
     if (partnerRes.error) throw new Error(partnerRes.error.message);
@@ -76,8 +82,58 @@ export const getPartnerDetails = createServerFn({ method: "POST" })
       products: productsRes.data ?? [],
       visits: visitsRes.count ?? 0,
       collaborators: collabsRes.data ?? [],
+      posts: postsRes.data ?? [],
     };
   });
+
+/**
+ * Public partner profile (read-only). Available to any authenticated user
+ * (students and coaches) for viewing approved partners — no badge required.
+ */
+export const getPartnerPublicProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { partnerId: string }) =>
+    z.object({ partnerId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const [partnerRes, productsRes, visitsRes, collabsRes, postsRes] = await Promise.all([
+      supabaseAdmin.from("partners").select("*").eq("id", data.partnerId).maybeSingle(),
+      supabaseAdmin
+        .from("partner_products")
+        .select("id, kind, name, description, image_url, price, status, is_active_by_partner, redemption_instructions, admin_notes, created_at")
+        .eq("partner_id", data.partnerId)
+        .eq("status", "approved")
+        .eq("is_active_by_partner", true)
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("partner_visits")
+        .select("id", { count: "exact", head: true })
+        .eq("partner_id", data.partnerId),
+      supabaseAdmin
+        .from("students")
+        .select("id, created_at, profiles!students_profile_id_fkey(name, photo_url)")
+        .eq("partner_id", data.partnerId)
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("partner_posts")
+        .select("id, image_url, caption, created_at")
+        .eq("partner_id", data.partnerId)
+        .order("created_at", { ascending: false })
+        .limit(60),
+    ]);
+
+    if (partnerRes.error) throw new Error(partnerRes.error.message);
+    if (!partnerRes.data) throw new Error("Parceiro não encontrado");
+
+    return {
+      partner: partnerRes.data,
+      products: productsRes.data ?? [],
+      visits: visitsRes.count ?? 0,
+      collaborators: collabsRes.data ?? [],
+      posts: postsRes.data ?? [],
+    };
+  });
+
 
 export const reviewPartnerStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
