@@ -13,7 +13,7 @@ interface Props {
 }
 
 type Client = { id: string; name: string; email: string | null; whatsapp: string | null; birth_date: string | null };
-type Assess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; bmi: number | null };
+type Assess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; bmi: number | null };
 type Anam = { id: string; updated_at: string; answers: Record<string, unknown> };
 
 const fmtBR = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -42,7 +42,7 @@ export default function ClientDetailsModal({ clientId, onClose }: Props) {
       setLoading(true);
       const [cRes, aRes, anRes] = await Promise.all([
         supabase.from("coach_evaluation_clients" as never).select("id,name,email,whatsapp,birth_date" as never).eq("id" as never, clientId as never).maybeSingle(),
-        supabase.from("coach_body_assessments" as never).select("id,assessment_date,weight,body_fat,muscle_mass,bmi" as never).eq("client_id" as never, clientId as never).order("assessment_date" as never, { ascending: false }),
+        supabase.from("coach_body_assessments" as never).select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,bmi" as never).eq("client_id" as never, clientId as never).order("assessment_date" as never, { ascending: false }),
         supabase.from("professional_anamnesis_external" as never).select("id,updated_at,answers" as never).eq("evaluation_client_id" as never, clientId as never).maybeSingle(),
       ]);
       setClient(((cRes.data as unknown) as Client) || null);
@@ -118,7 +118,7 @@ export default function ClientDetailsModal({ clientId, onClose }: Props) {
                       <Mini label="Peso" value={lastAssess.weight ? `${lastAssess.weight}kg` : "—"} />
                       <Mini label="IMC" value={lastAssess.bmi ? Number(lastAssess.bmi).toFixed(1) : "—"} />
                       <Mini label="% Gord" value={lastAssess.body_fat ? `${lastAssess.body_fat}%` : "—"} />
-                      <Mini label="Músc" value={lastAssess.muscle_mass ? `${lastAssess.muscle_mass}kg` : "—"} />
+                      <Mini label="Músc. Esq." value={lastAssess.skeletal_muscle != null ? `${lastAssess.skeletal_muscle}%` : (lastAssess.muscle_mass ? `${lastAssess.muscle_mass}kg` : "—")} />
                     </div>
                   </div>
                 ) : <p className="text-xs text-white/40">Sem avaliação registrada.</p>}
@@ -142,7 +142,7 @@ export default function ClientDetailsModal({ clientId, onClose }: Props) {
                     <Mini label="Peso" value={a.weight ? `${a.weight}kg` : "—"} />
                     <Mini label="IMC" value={a.bmi ? Number(a.bmi).toFixed(1) : "—"} />
                     <Mini label="% Gord" value={a.body_fat ? `${a.body_fat}%` : "—"} />
-                    <Mini label="Músc" value={a.muscle_mass ? `${a.muscle_mass}kg` : "—"} />
+                    <Mini label="Músc. Esq." value={a.skeletal_muscle != null ? `${a.skeletal_muscle}%` : (a.muscle_mass ? `${a.muscle_mass}kg` : "—")} />
                   </div>
                 </div>
               ))}

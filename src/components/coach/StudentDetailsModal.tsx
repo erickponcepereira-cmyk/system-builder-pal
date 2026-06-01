@@ -15,7 +15,7 @@ interface Props {
 type Profile = { name: string; email: string; phone: string | null; birthdate: string | null; city: string | null; state: string | null };
 type SubRow = { id: string; status: string; start_date: string; end_date: string; products: { id: string; name: string; price: number | null } | null };
 type TxRow = { id: string; gross_amount: number; status: string; paid_at: string | null; created_at: string; products: { name: string } | null };
-type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; basal_metabolism: number | null; bmi: number | null };
+type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; basal_metabolism: number | null; bmi: number | null };
 type BioRow = { id: string; evaluation_date: string; evaluation_type: string; weight: number | null; fat_percentage: number | null; muscle_percentage: number | null };
 type AnamRow = { id: string; filled_at: string | null; objective: string | null; confirmed_at: string | null };
 type WeightRow = { id: string; log_date: string; weight: number; waist_cm: number | null; hip_cm: number | null };
@@ -61,7 +61,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
       const [subRes, txRes, bodyRes, bioRes, anamRes, wRes, pRes] = await Promise.all([
         supabase.from("subscriptions").select("id,status,start_date,end_date,products!subscriptions_product_id_fkey(id,name,price)").eq("student_id", studentId).order("end_date", { ascending: false }),
         supabase.from("transactions").select("id,gross_amount,status,paid_at,created_at,products!transactions_product_id_fkey(name)").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50),
-        supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,basal_metabolism,bmi").eq("student_id", studentId).order("assessment_date", { ascending: false }),
+        supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi").eq("student_id", studentId).order("assessment_date", { ascending: false }),
         supabase.from("bioimpedance_evaluations").select("id,evaluation_date,evaluation_type,weight,fat_percentage,muscle_percentage").eq("student_id", studentId).order("evaluation_date", { ascending: false }),
         supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at").eq("student_id", studentId).order("filled_at", { ascending: false }),
         supabase.from("weight_logs").select("id,log_date,weight,waist_cm,hip_cm").eq("student_id", studentId).order("log_date", { ascending: false }).limit(60),
@@ -171,7 +171,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
                       <Mini label="Peso" value={lastBodyAssess.weight ? `${lastBodyAssess.weight}kg` : "—"} />
                       <Mini label="IMC" value={lastBodyAssess.bmi ? Number(lastBodyAssess.bmi).toFixed(1) : "—"} />
                       <Mini label="% Gordura" value={lastBodyAssess.body_fat ? `${lastBodyAssess.body_fat}%` : "—"} />
-                      <Mini label="Músculo" value={lastBodyAssess.muscle_mass ? `${lastBodyAssess.muscle_mass}kg` : "—"} />
+                      <Mini label="Músc. Esquelético" value={lastBodyAssess.skeletal_muscle != null ? `${lastBodyAssess.skeletal_muscle}%` : (lastBodyAssess.muscle_mass ? `${lastBodyAssess.muscle_mass}kg` : "—")} />
                     </div>
                   </div>
                 ) : <p className="text-xs text-white/40">Sem avaliação registrada.</p>}
@@ -218,7 +218,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
                               <Mini label="Peso" value={a.weight ? `${a.weight}kg` : "—"} />
                               <Mini label="IMC" value={a.bmi ? Number(a.bmi).toFixed(1) : "—"} />
                               <Mini label="% Gord" value={a.body_fat ? `${a.body_fat}%` : "—"} />
-                              <Mini label="Músc" value={a.muscle_mass ? `${a.muscle_mass}kg` : "—"} />
+                              <Mini label="Músc. Esq." value={a.skeletal_muscle != null ? `${a.skeletal_muscle}%` : (a.muscle_mass ? `${a.muscle_mass}kg` : "—")} />
                             </div>
                           </div>
                         ))}
