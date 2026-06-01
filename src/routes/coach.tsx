@@ -24,9 +24,11 @@ import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
-import { ProfessionalProductsApprovalTab } from "@/components/coach/tabs/ProfessionalProductsApprovalTab";
+import { PartnersApprovalTab } from "@/components/coach/tabs/PartnersApprovalTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyBadges } from "@/lib/coach-badges.functions";
 
 
 // Link "/" usage to satisfy unused import warnings (not required)
