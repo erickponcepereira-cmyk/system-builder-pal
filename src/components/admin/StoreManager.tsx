@@ -10,6 +10,8 @@ interface Section {
   image_url: string | null;
   sort_order: number;
   is_active: boolean;
+  card_width: number | null;
+  card_height: number | null;
 }
 interface Category {
   id: string;
@@ -20,6 +22,8 @@ interface Category {
   image_url: string | null;
   sort_order: number;
   is_active: boolean;
+  card_width: number | null;
+  card_height: number | null;
 }
 
 function slugify(s: string) {
