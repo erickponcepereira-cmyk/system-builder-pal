@@ -821,7 +821,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
   return (
     <div className="mb-6 rounded-lg border border-white/10 p-4" style={{ backgroundColor: "#161616" }}>
       <div className="flex items-center justify-between mb-3">
-        <SectionLabel>Acesso por medalha</SectionLabel>
+        <SectionLabel>Acesso por categoria</SectionLabel>
         <button
           onClick={handleSave}
           disabled={loading || saving}
