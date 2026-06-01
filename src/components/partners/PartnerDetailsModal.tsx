@@ -215,7 +215,7 @@ export function PartnerDetailsModal({
 
               {/* Tabs */}
               <div className="mt-5 flex gap-1 border-b border-white/10 overflow-x-auto">
-                {(["overview", "products", "timeline", "collaborators"] as Tab[]).map((t) => (
+                {visibleTabs.map((t) => (
                   <button
                     key={t}
                     onClick={() => setTab(t)}
