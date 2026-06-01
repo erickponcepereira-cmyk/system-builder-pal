@@ -13,7 +13,7 @@ interface Props {
 }
 
 type Client = { id: string; name: string; email: string | null; whatsapp: string | null; birth_date: string | null };
-type Assess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; bmi: number | null };
+type Assess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; bmi: number | null };
 type Anam = { id: string; updated_at: string; answers: Record<string, unknown> };
 
 const fmtBR = (d: string | null) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
