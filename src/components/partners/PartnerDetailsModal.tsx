@@ -13,6 +13,8 @@ import {
 } from "@/lib/partner-approvals.functions";
 
 type Tab = "overview" | "products" | "timeline" | "collaborators";
+const allTabs: Tab[] = ["overview", "products", "timeline", "collaborators"];
+
 
 export function PartnerDetailsModal({
   partnerId,
