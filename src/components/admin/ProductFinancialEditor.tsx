@@ -836,7 +836,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
           <label className="block">
-            <span className="block text-xs text-white/60 mb-1">Medalha exigida para vender</span>
+            <span className="block text-xs text-white/60 mb-1">Categoria exigida para vender</span>
             <select
               value={requiredBadge}
               onChange={(e) => setRequiredBadge(e.target.value as BadgeKey | "")}
