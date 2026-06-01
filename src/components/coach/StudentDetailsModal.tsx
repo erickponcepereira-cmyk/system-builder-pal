@@ -79,7 +79,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
   }, [studentId]);
 
   const age = calcAge(profile?.birthdate || null);
-  const activePaidSubs = subs.filter((s) => s.status === "active" || s.status === "paid");
+  const activePaidSubs = subs.filter((s) => s.status === "active");
   const mostExpensivePlan = activePaidSubs
     .filter((s) => s.products?.price != null)
     .sort((a, b) => (Number(b.products?.price) || 0) - (Number(a.products?.price) || 0))[0]?.products || null;
