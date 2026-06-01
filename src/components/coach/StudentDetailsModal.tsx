@@ -171,7 +171,7 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
                       <Mini label="Peso" value={lastBodyAssess.weight ? `${lastBodyAssess.weight}kg` : "—"} />
                       <Mini label="IMC" value={lastBodyAssess.bmi ? Number(lastBodyAssess.bmi).toFixed(1) : "—"} />
                       <Mini label="% Gordura" value={lastBodyAssess.body_fat ? `${lastBodyAssess.body_fat}%` : "—"} />
-                      <Mini label="Músculo" value={lastBodyAssess.muscle_mass ? `${lastBodyAssess.muscle_mass}kg` : "—"} />
+                      <Mini label="Músc. Esquelético" value={lastBodyAssess.skeletal_muscle != null ? `${lastBodyAssess.skeletal_muscle}%` : (lastBodyAssess.muscle_mass ? `${lastBodyAssess.muscle_mass}kg` : "—")} />
                     </div>
                   </div>
                 ) : <p className="text-xs text-white/40">Sem avaliação registrada.</p>}
