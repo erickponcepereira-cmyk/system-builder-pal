@@ -1,70 +1,215 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Users, Award, Dot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { type CoachContext } from "@/routes/coach";
 
-type TreeCoach = { id: string; profile_id: string; upline_coach_id: string | null; total_active_students: number | null; profiles: { name: string; email: string; patent: string | null } | null };
+type CoachRow = {
+  id: string;
+  profile_id: string;
+  upline_coach_id: string | null;
+  profiles: { name: string; email: string; phone: string | null; patent: string | null } | null;
+};
+type StudentRow = { id: string; coach_id: string; profile_id: string; profiles: { name: string; email: string } | null };
+type BadgeRow = { coach_id: string; badge_key: string };
+
+const BADGE_LABELS: Record<string, string> = {
+  nutritionist_partner: "Nutricionista",
+  master_coach: "Master Coach",
+  council: "Conselho",
+  coach_hbl_42: "HBL 42",
+};
+
+function Badges({ keys }: { keys: string[] }) {
+  if (!keys.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {keys.map((k) => (
+        <span key={k} className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-semibold">
+          <Award className="h-2.5 w-2.5" /> {BADGE_LABELS[k] || k}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
-  const [upline, setUpline] = useState<TreeCoach | null>(null);
-  const [downline, setDownline] = useState<TreeCoach[]>([]);
-  const [students, setStudents] = useState<{ id: string; profiles: { name: string; email: string } | null }[]>([]);
-  const [open, setOpen] = useState(true);
+  const [allCoaches, setAllCoaches] = useState<CoachRow[]>([]);
+  const [allStudents, setAllStudents] = useState<StudentRow[]>([]);
+  const [badges, setBadges] = useState<BadgeRow[]>([]);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!coach?.coachId) return;
     (async () => {
-      if (coach.uplineCoachId) {
-        const { data } = await supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)").eq("id", coach.uplineCoachId).maybeSingle();
-        setUpline(data as unknown as TreeCoach | null);
-      }
-      const [{ data: allCoaches }, { data: studentRows }] = await Promise.all([
-        supabase.from("coaches").select("id,profile_id,upline_coach_id,total_active_students,profiles!coaches_profile_id_fkey(name,email,patent)"),
-        supabase.from("students").select("id,profiles!students_profile_id_fkey(name,email)").eq("coach_id", coach.coachId),
+      const [{ data: c }, { data: s }, { data: b }] = await Promise.all([
+        supabase.from("coaches").select("id,profile_id,upline_coach_id,profiles!coaches_profile_id_fkey(name,email,phone,patent)"),
+        supabase.from("students").select("id,coach_id,profile_id,profiles!students_profile_id_fkey(name,email)"),
+        supabase.from("coach_badges").select("coach_id,badge_key"),
       ]);
-      const coachRows = ((allCoaches as unknown as TreeCoach[]) || []);
-      const descendants: TreeCoach[] = [];
-      const collect = (parentId: string) => {
-        coachRows.filter((item) => item.upline_coach_id === parentId).forEach((item) => {
-          descendants.push(item);
-          collect(item.id);
-        });
-      };
-      collect(coach.coachId);
-      setDownline(descendants);
-      setStudents((studentRows as unknown as typeof students) || []);
+      setAllCoaches((c as unknown as CoachRow[]) || []);
+      setAllStudents((s as unknown as StudentRow[]) || []);
+      setBadges((b as unknown as BadgeRow[]) || []);
     })();
-  }, [coach?.coachId, coach?.uplineCoachId]);
+  }, [coach?.coachId]);
 
-  const PersonNode = ({ title, subtitle, tone = "white" }: { title: string; subtitle: string; tone?: "primary" | "success" | "white" }) => (
-    <div className={`rounded-xl border p-4 ${tone === "primary" ? "border-primary/40 bg-primary/10" : tone === "success" ? "border-success/30 bg-success/10" : "border-white/10 bg-white/5"}`}>
-      <p className="text-sm font-bold text-white">{title}</p>
-      <p className="text-xs text-white/45">{subtitle}</p>
-    </div>
-  );
+  const { coachesByUpline, studentsByCoach, badgesByCoach, coachProfileIds, upline } = useMemo(() => {
+    const cbu = new Map<string, CoachRow[]>();
+    allCoaches.forEach((c) => {
+      const k = c.upline_coach_id || "__root__";
+      const arr = cbu.get(k) || [];
+      arr.push(c);
+      cbu.set(k, arr);
+    });
+    const sbc = new Map<string, StudentRow[]>();
+    allStudents.forEach((s) => {
+      const arr = sbc.get(s.coach_id) || [];
+      arr.push(s);
+      sbc.set(s.coach_id, arr);
+    });
+    const bbc = new Map<string, string[]>();
+    badges.forEach((b) => {
+      const arr = bbc.get(b.coach_id) || [];
+      arr.push(b.badge_key);
+      bbc.set(b.coach_id, arr);
+    });
+    const cpids = new Set(allCoaches.map((c) => c.profile_id));
+    const up = coach?.uplineCoachId ? allCoaches.find((c) => c.id === coach.uplineCoachId) : null;
+    return { coachesByUpline: cbu, studentsByCoach: sbc, badgesByCoach: bbc, coachProfileIds: cpids, upline: up };
+  }, [allCoaches, allStudents, badges, coach?.uplineCoachId]);
+
+  // Direct student count (excluding those who are also coaches)
+  const directStudentCount = (coachId: string) => {
+    const ss = studentsByCoach.get(coachId) || [];
+    return ss.filter((s) => !coachProfileIds.has(s.profile_id)).length;
+  };
+  const childCoachCount = (coachId: string) => (coachesByUpline.get(coachId) || []).length;
+
+  const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
+
+  // Renders one coach node + its descendants up to maxDepth levels deeper.
+  const renderNode = (c: CoachRow, depth: number, maxDepth: number) => {
+    const isOpen = !!expanded[c.id];
+    const children = coachesByUpline.get(c.id) || [];
+    const studentsNonCoach = (studentsByCoach.get(c.id) || []).filter((s) => !coachProfileIds.has(s.profile_id));
+    const hasChildren = (children.length > 0 || studentsNonCoach.length > 0) && depth < maxDepth;
+    const badgeKeys = badgesByCoach.get(c.id) || [];
+
+    return (
+      <div key={c.id} className="relative">
+        <div className="flex items-start gap-2 py-1.5">
+          <button
+            type="button"
+            onClick={() => hasChildren && toggle(c.id)}
+            className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${hasChildren ? "bg-primary/20 text-primary hover:bg-primary/30" : "bg-white/10 text-white/40"}`}
+            aria-label={isOpen ? "Recolher" : "Expandir"}
+          >
+            {hasChildren ? (isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />) : <Dot className="h-3 w-3" />}
+          </button>
+          <div className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-white">{c.profiles?.name || "Coach"}</p>
+                <p className="text-[11px] text-white/45 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {directStudentCount(c.id)} alunos</span>
+                  {childCoachCount(c.id) > 0 && <span>· {childCoachCount(c.id)} coaches</span>}
+                </p>
+              </div>
+            </div>
+            <Badges keys={badgeKeys} />
+          </div>
+        </div>
+        {isOpen && hasChildren && (
+          <div className="ml-6 border-l border-white/10 pl-3 space-y-1">
+            {children.map((ch) => renderNode(ch, depth + 1, maxDepth))}
+            {studentsNonCoach.map((s) => (
+              <div key={s.id} className="flex items-start gap-2 py-1">
+                <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center text-white/30">
+                  <Dot className="h-4 w-4" />
+                </span>
+                <div className="flex-1 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-1.5">
+                  <p className="text-xs font-medium text-white/90">{s.profiles?.name || "Aluno"}</p>
+                  <p className="text-[10px] text-white/40">Aluno direto</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Direct children of "you"
+  const myChildren = coach?.coachId ? coachesByUpline.get(coach.coachId) || [] : [];
+  const myStudents = coach?.coachId
+    ? (studentsByCoach.get(coach.coachId) || []).filter((s) => !coachProfileIds.has(s.profile_id))
+    : [];
+  const myBadges = coach?.coachId ? badgesByCoach.get(coach.coachId) || [] : [];
+  const uplineBadges = upline ? badgesByCoach.get(upline.id) || [] : [];
 
   return (
     <>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Árvore da Rede</h1>
-        <p className="text-sm text-white/50">Quem está acima, você no centro e quem está abaixo</p>
+        <p className="text-sm text-white/50">Toque nos pontos para expandir até 3 níveis abaixo de cada coach</p>
       </div>
-      <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase text-white/35">Acima de você</p>
-            {upline ? <PersonNode title={upline.profiles?.name || "Coach acima"} subtitle={upline.profiles?.email || "Upline"} /> : <PersonNode title="Sem coach acima" subtitle="Você está no topo desta ramificação" />}
+
+      <div className="rounded-2xl p-5 space-y-5" style={{ backgroundColor: "#1A1A1A" }}>
+        {/* Upline */}
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase text-white/35">Acima de você</p>
+          {upline ? (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-white">{upline.profiles?.name || "Coach acima"}</p>
+                  <p className="text-[11px] text-white/45">{upline.profiles?.email}</p>
+                  <p className="text-[11px] text-white/55 mt-1 flex items-center gap-1">
+                    <Users className="h-3 w-3" /> {directStudentCount(upline.id)} alunos diretos · {childCoachCount(upline.id)} coaches
+                  </p>
+                  <Badges keys={uplineBadges} />
+                </div>
+                <WhatsAppButton phone={upline.profiles?.phone} message={`Olá ${upline.profiles?.name || ""}!`} label="WhatsApp" />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-sm font-bold text-white">Sem coach acima</p>
+              <p className="text-xs text-white/45">Você está no topo desta ramificação</p>
+            </div>
+          )}
+        </div>
+
+        {/* You */}
+        <div className="pl-5 border-l-2 border-primary/40">
+          <div className="rounded-xl border border-primary/40 bg-primary/10 p-4">
+            <p className="text-sm font-bold text-white">{coach?.name || "Você"}</p>
+            <p className="text-[11px] text-white/55">
+              {coach?.referralCode || "—"} · {myStudents.length} alunos diretos · {myChildren.length} coaches
+            </p>
+            <Badges keys={myBadges} />
           </div>
-          <div className="pl-5 border-l border-primary/40">
-            <PersonNode title={coach?.name || "Você"} subtitle={`${coach?.referralCode || "—"} · ${coach?.totalActiveStudents || 0} alunos diretos`} tone="primary" />
-          </div>
-          <div className="pl-10 border-l border-white/10">
-            <button onClick={() => setOpen(!open)} className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-white/45">{open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} Abaixo de você</button>
-            {open && <div className="grid gap-3 md:grid-cols-2">
-              {downline.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Coach"} subtitle={`Coach ligado · ${item.total_active_students || 0} alunos`} tone="success" />)}
-              {students.map((item) => <PersonNode key={item.id} title={item.profiles?.name || "Aluno"} subtitle={item.profiles?.email || "Aluno direto"} />)}
-              {downline.length + students.length === 0 && <p className="text-sm text-white/50">Nenhum aluno ou coach abaixo ainda.</p>}
-            </div>}
+        </div>
+
+        {/* Downline tree (3 levels) */}
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase text-white/35">Abaixo de você</p>
+          <div className="space-y-1">
+            {myChildren.length === 0 && myStudents.length === 0 && (
+              <p className="text-sm text-white/50">Nenhum coach ou aluno abaixo ainda.</p>
+            )}
+            {myChildren.map((c) => renderNode(c, 1, 3))}
+            {myStudents.map((s) => (
+              <div key={s.id} className="flex items-start gap-2 py-1">
+                <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center text-white/30">
+                  <Dot className="h-4 w-4" />
+                </span>
+                <div className="flex-1 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-1.5">
+                  <p className="text-xs font-medium text-white/90">{s.profiles?.name || "Aluno"}</p>
+                  <p className="text-[10px] text-white/40">Aluno direto</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
