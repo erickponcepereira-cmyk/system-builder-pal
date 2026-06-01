@@ -41,6 +41,8 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
   const [openNew, setOpenNew] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [lastAssess, setLastAssess] = useState<Record<string, string>>({});
+
+  const load = async () => {
     setLoading(true);
     // Paginate to bypass Supabase's default 1000-row limit
     const PAGE = 1000;
@@ -60,6 +62,21 @@ export function ProfessionalStudentsTab({ coachId }: Props) {
     }
     setRows(all);
     setLoading(false);
+
+    // Fetch last assessment per client
+    const ids = all.map((r) => r.id);
+    if (ids.length) {
+      const { data: aData } = await supabase
+        .from("coach_body_assessments" as never)
+        .select("client_id,assessment_date" as never)
+        .in("client_id" as never, ids as never)
+        .order("assessment_date" as never, { ascending: false });
+      const map: Record<string, string> = {};
+      ((aData || []) as Array<{ client_id: string; assessment_date: string }>).forEach((a) => {
+        if (!map[a.client_id]) map[a.client_id] = a.assessment_date;
+      });
+      setLastAssess(map);
+    }
   };
 
   useEffect(() => { if (coachId) load(); }, [coachId]);
