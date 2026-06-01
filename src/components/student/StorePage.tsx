@@ -628,7 +628,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           )}
         </div>
       )}
-      </div>
+
+
 
       {detailProduct && (
         <ProductDetailModal
