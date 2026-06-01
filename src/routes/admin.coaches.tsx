@@ -19,6 +19,7 @@ interface CoachRow {
   total_active_students: number | null;
   total_sales: number | null;
   created_at: string | null;
+  card_valid_until: string | null;
   profiles: {
     id: string;
     name: string;
