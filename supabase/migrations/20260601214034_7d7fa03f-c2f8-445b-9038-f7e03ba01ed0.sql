@@ -1,0 +1,1 @@
+ALTER TYPE public.coach_badge_key ADD VALUE IF NOT EXISTS 'partnership_master';
