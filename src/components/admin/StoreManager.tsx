@@ -72,6 +72,8 @@ export function StoreManager() {
       image_url: newSection.image_url || null,
       sort_order: newSection.sort_order ?? sections.length,
       is_active: newSection.is_active ?? true,
+      card_width: newSection.card_width ?? null,
+      card_height: newSection.card_height ?? null,
     };
     await supabase.from("store_sections").insert(payload);
     setNewSection(null);
