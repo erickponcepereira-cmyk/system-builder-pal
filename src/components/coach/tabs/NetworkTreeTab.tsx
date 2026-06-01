@@ -183,21 +183,10 @@ export function NetworkTreeTab({ coach }: { coach: CoachContext | null }) {
         <div>
           <p className="mb-2 text-xs font-bold uppercase text-white/35">Abaixo de você</p>
           <div className="space-y-1">
-            {myChildren.length === 0 && myStudents.length === 0 && (
-              <p className="text-sm text-white/50">Nenhum coach ou aluno abaixo ainda.</p>
+            {myChildren.length === 0 && (
+              <p className="text-sm text-white/50">Nenhum coach abaixo ainda.</p>
             )}
             {myChildren.map((c) => renderNode(c, 1, 3))}
-            {myStudents.map((s) => (
-              <div key={s.id} className="flex items-start gap-2 py-1">
-                <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center text-white/30">
-                  <Dot className="h-4 w-4" />
-                </span>
-                <div className="flex-1 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-1.5">
-                  <p className="text-xs font-medium text-white/90">{s.profiles?.name || "Aluno"}</p>
-                  <p className="text-[10px] text-white/40">Aluno direto</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
