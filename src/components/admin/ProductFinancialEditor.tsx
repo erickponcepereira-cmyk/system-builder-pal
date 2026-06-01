@@ -766,13 +766,14 @@ function RefStep({ n, label, detail, val, color, last }: { n: number; label: str
   );
 }
 
-// ─── Seção de restrições por medalha ────────────────────────────────
+// ─── Seção de restrições por categoria ──────────────────────────────
 const BADGE_LABEL: Record<BadgeKey, string> = {
   master_coach: "Master Coach",
   coach_hbl_42: "Coach HBL 42%",
   coach_hbl_50: "Coach HBL 50%",
   nutritionist_partner: "Nutricionista Parceiro",
   council: "Conselho",
+  partnership_master: "Mestre de Parcerias",
 };
 
 function BadgeFlagsSection({ productId }: { productId: string }) {
