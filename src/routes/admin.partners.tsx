@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Building2, Check, X, Loader2 } from "lucide-react";
+import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 
 export const Route = createFileRoute("/admin/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — Admin" }] }),
