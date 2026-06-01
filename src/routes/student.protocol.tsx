@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ClipboardList, ArrowLeft, Activity, Utensils, Droplet, Flame, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
+import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/student/protocol")({
@@ -76,8 +76,7 @@ function StudentProtocolPage() {
           {/* Metas */}
           <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
             <h2 className="mb-3 text-sm font-bold text-white">Metas diárias</h2>
-            <div className="grid grid-cols-3 gap-2">
-              <Meta icon={Flame} label="Calorias" value={protocol.daily_calorie_goal ? `${protocol.daily_calorie_goal}` : "—"} suffix="kcal" />
+            <div className="grid grid-cols-2 gap-2">
               <Meta icon={Droplet} label="Água" value={protocol.water_goal_ml ? `${(protocol.water_goal_ml / 1000).toFixed(1)}` : "—"} suffix="L" />
               <Meta icon={Target} label="Peso" value={protocol.weight_goal ? `${protocol.weight_goal}` : "—"} suffix="kg" />
             </div>
@@ -97,46 +96,7 @@ function StudentProtocolPage() {
             </section>
           )}
 
-          {/* Plano alimentar */}
-          {protocol.meal_plan?.length > 0 && (
-            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <div className="mb-3 flex items-center gap-2">
-                <Utensils className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-bold text-white">Plano alimentar ({protocol.meals_per_day || protocol.meal_plan.length} refeições)</h2>
-              </div>
-              <div className="space-y-2">
-                {protocol.meal_plan.map((m, i) => (
-                  <div key={i} className="rounded-xl bg-white/5 p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-white">{m.name || `Refeição ${i + 1}`}</p>
-                      {m.time && <span className="text-xs text-primary">{m.time}</span>}
-                    </div>
-                    <ul className="space-y-1">
-                      {m.options.filter(Boolean).map((opt, oi) => (
-                        <li key={oi} className="text-xs text-white/70">• {opt}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
 
-          {/* Lista de compras */}
-          {protocol.shopping_list && (
-            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <h2 className="mb-2 text-sm font-bold text-white">Lista de compras</h2>
-              <p className="whitespace-pre-wrap text-xs text-white/70">{protocol.shopping_list}</p>
-            </section>
-          )}
-
-          {/* Dicas marmitas */}
-          {protocol.marmita_tips && (
-            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <h2 className="mb-2 text-sm font-bold text-white">Dicas para marmitas</h2>
-              <p className="whitespace-pre-wrap text-xs text-white/70">{protocol.marmita_tips}</p>
-            </section>
-          )}
 
           {/* Treino */}
           {protocol.workout_plan?.length > 0 && (

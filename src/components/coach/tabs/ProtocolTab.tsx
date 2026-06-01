@@ -78,7 +78,8 @@ export function ProtocolTab() {
   const [protocol, setProtocol] = useState<Protocol>(emptyProtocol());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("meal");
+  const [section, setSection] = useState<"meal" | "workout" | "health" | "library" | "templates">("health");
+
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
   const [newExercise, setNewExercise] = useState<Partial<Exercise>>({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
@@ -101,11 +102,15 @@ export function ProtocolTab() {
       if (!userData.user) return;
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
       const { data: coach } = profile?.id
-        ? await supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+        ? await supabase.from("coaches").select("id, specialty_key, is_professional").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
       if (!coach?.id) return;
       setCoachId(coach.id);
-      setIsNutritionist(true);
+      const specKey = (coach as any).specialty_key as string | null;
+      const isPro = !!(coach as any).is_professional;
+      setIsNutritionist(isPro && !!specKey && /nutricion/i.test(specKey));
+
+
 
 
       const { data: studs } = await supabase
@@ -290,9 +295,15 @@ export function ProtocolTab() {
     const onConflict = selected.external ? "evaluation_client_id" : "student_id";
     const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict } as never);
 
-    if (!selected.external && protocol.weight_goal != null) {
-      await supabase.from("students").update({ goal_weight: protocol.weight_goal }).eq("id", selected.id);
+    if (!selected.external) {
+      const studentPatch: any = {
+        food_restrictions: protocol.restrictions,
+        water_goal_ml: protocol.water_goal_ml,
+      };
+      if (protocol.weight_goal != null) studentPatch.goal_weight = protocol.weight_goal;
+      await supabase.from("students").update(studentPatch).eq("id", selected.id);
     }
+
 
     setSaving(false);
     if (error) { console.error(error); toast.error("Erro ao salvar protocolo"); return; }
@@ -406,12 +417,13 @@ export function ProtocolTab() {
 
           {/* Tabs */}
           <div className="mb-4 flex gap-2 overflow-x-auto">
-            {isNutritionist && <TabBtn active={section === "meal"} onClick={() => setSection("meal")} icon={Utensils} label="Alimentação" />}
-            <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "health"} onClick={() => setSection("health")} icon={Heart} label="Saúde & metas" />
-            <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "templates"} onClick={() => setSection("templates")} icon={BookOpen} label="Treinos prontos" />
+            <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            {isNutritionist && <TabBtn active={section === "meal"} onClick={() => setSection("meal")} icon={Utensils} label="Alimentação" />}
           </div>
+
 
           {loading && <p className="text-sm text-white/40">Carregando...</p>}
 
@@ -525,12 +537,13 @@ export function ProtocolTab() {
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-3 text-sm font-bold text-white">Metas</h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <Field icon={Flame} label="Calorias / dia" suffix="kcal" value={protocol.daily_calorie_goal ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, daily_calorie_goal: v === "" ? null : Number(v) }))} />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field icon={Droplet} label="Água / dia" suffix="ml" value={protocol.water_goal_ml ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, water_goal_ml: v === "" ? null : Number(v) }))} />
                   <Field icon={Target} label="Meta de peso" suffix="kg" value={protocol.weight_goal ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, weight_goal: v === "" ? null : Number(v) }))} step="0.1" />
                 </div>
+                <p className="mt-2 text-[10px] text-white/40">A meta de calorias é definida apenas no painel do nutricionista.</p>
               </div>
+
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-2 text-sm font-bold text-white">Observações gerais</h2>
