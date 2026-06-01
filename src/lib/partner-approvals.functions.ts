@@ -126,7 +126,12 @@ export const reviewPartnerProduct = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { profileId } = await assertAuthorized(context.userId);
-    const patch: Record<string, unknown> = {
+    const patch: {
+      status: string;
+      admin_notes: string | null;
+      approved_at?: string;
+      approved_by?: string;
+    } = {
       status: data.decision,
       admin_notes: data.notes ?? null,
     };
