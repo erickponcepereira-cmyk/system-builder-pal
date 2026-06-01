@@ -554,10 +554,10 @@ function MedalsTab() {
     try {
       if (has) {
         await revoke({ data: { coachId, badge } });
-        toast.success("Medalha removida");
+        toast.success("Categoria removida");
       } else {
         await grant({ data: { coachId, badge } });
-        toast.success("Medalha atribuída!");
+        toast.success("Categoria atribuída!");
       }
       load();
     } catch (e: any) {
