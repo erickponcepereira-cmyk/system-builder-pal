@@ -141,7 +141,9 @@ export function StoreManager() {
             <input className="input-dark md:col-span-2" placeholder="Nome da seção" value={newSection.name || ""} onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} />
             <input className="input-dark" placeholder="slug (auto)" value={newSection.slug || ""} onChange={(e) => setNewSection({ ...newSection, slug: e.target.value })} />
             <input className="input-dark" placeholder="ícone (lucide name)" value={newSection.icon || ""} onChange={(e) => setNewSection({ ...newSection, icon: e.target.value })} />
-            <input className="input-dark md:col-span-3" placeholder="URL da imagem (opcional)" value={newSection.image_url || ""} onChange={(e) => setNewSection({ ...newSection, image_url: e.target.value })} />
+            <input className="input-dark md:col-span-2" placeholder="URL da imagem (opcional)" value={newSection.image_url || ""} onChange={(e) => setNewSection({ ...newSection, image_url: e.target.value })} />
+            <input type="number" className="input-dark" placeholder="largura px (ex: 160)" value={newSection.card_width ?? ""} onChange={(e) => setNewSection({ ...newSection, card_width: e.target.value ? Number(e.target.value) : null })} />
+            <input type="number" className="input-dark" placeholder="altura px (ex: 160)" value={newSection.card_height ?? ""} onChange={(e) => setNewSection({ ...newSection, card_height: e.target.value ? Number(e.target.value) : null })} />
             {newSection.image_url && <img src={newSection.image_url} alt="" className="h-12 w-12 rounded-lg object-cover border border-white/10" />}
           </div>
           <div className="flex gap-2 justify-end">
