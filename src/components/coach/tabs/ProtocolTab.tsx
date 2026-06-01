@@ -430,6 +430,32 @@ export function ProtocolTab() {
 
           {loading && <p className="text-sm text-white/40">Carregando...</p>}
 
+          {!loading && section === "windows" && (
+            <div className="space-y-4">
+              {selected.external ? (
+                <div className="rounded-2xl p-4 text-sm text-white/60" style={{ backgroundColor: "#1A1A1A" }}>
+                  O Método das Janelas só está disponível para alunos vinculados ao app (não para clientes externos).
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap" style={{ backgroundColor: "#1A1A1A" }}>
+                    <div>
+                      <p className="text-sm font-bold text-white">Registro do dia</p>
+                      <p className="text-[11px] text-white/40">Preencha as janelas do aluno. Ele verá no histórico.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setWindowsDate(new Date().toISOString().slice(0, 10))} className="rounded bg-white/10 px-2 py-1.5 text-xs text-white hover:bg-white/15">Hoje</button>
+                      <input type="date" value={windowsDate} onChange={(e) => setWindowsDate(e.target.value)} max={new Date().toISOString().slice(0, 10)} className="rounded bg-white/10 px-2 py-1.5 text-xs text-white" />
+                    </div>
+                  </div>
+                  <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+                    <WindowMethod studentId={selected.id} date={windowsDate} />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {!loading && section === "meal" && (
             <div className="space-y-4">
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
