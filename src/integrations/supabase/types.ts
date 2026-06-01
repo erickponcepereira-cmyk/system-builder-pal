@@ -1846,6 +1846,7 @@ export type Database = {
           bank_name: string | null
           blocked_at: string | null
           blocked_reason: string | null
+          card_valid_until: string | null
           career_goal_progress: Json | null
           coach_course_notes: string | null
           completed_coach_course: boolean
@@ -1891,6 +1892,7 @@ export type Database = {
           bank_name?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          card_valid_until?: string | null
           career_goal_progress?: Json | null
           coach_course_notes?: string | null
           completed_coach_course?: boolean
@@ -1936,6 +1938,7 @@ export type Database = {
           bank_name?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          card_valid_until?: string | null
           career_goal_progress?: Json | null
           coach_course_notes?: string | null
           completed_coach_course?: boolean
@@ -6983,6 +6986,10 @@ export type Database = {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
       }
+      admin_set_coach_card_validity: {
+        Args: { _coach_id: string; _valid_until: string }
+        Returns: undefined
+      }
       assign_professionals_for_transaction: {
         Args: { _transaction_id: string }
         Returns: number
@@ -7039,6 +7046,10 @@ export type Database = {
       enroll_student_in_competition: {
         Args: { _gender?: string; _student_id: string }
         Returns: string
+      }
+      extend_coach_card_access: {
+        Args: { _coach_id: string; _days: number }
+        Returns: undefined
       }
       extend_coach_inactivity_grace: {
         Args: { _coach_id: string; _days?: number; _reason?: string }
