@@ -33,6 +33,9 @@ export function PartnerDetailsModal({
   const setStatus = useServerFn(reviewPartnerStatus);
   const reviewProduct = useServerFn(reviewPartnerProduct);
 
+  const visibleTabs: Tab[] = readOnly
+    ? ["overview", "products", "timeline"]
+    : allTabs;
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
