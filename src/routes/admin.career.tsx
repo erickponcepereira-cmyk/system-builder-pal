@@ -524,6 +524,7 @@ const BADGE_META: Record<BadgeKey, { label: string; color: string; description: 
   coach_hbl_50:         { label: "Coach HBL 50%",         color: "bg-violet-500/20 text-violet-300 border-violet-500/40", description: "Acesso aos produtos HBL com margem 50%",                      icon: "💜" },
   nutritionist_partner: { label: "Nutricionista Parceiro", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40", description: "Recebe atribuições automáticas de planos nutricionais", icon: "🥗" },
   council:              { label: "Conselho",               color: "bg-rose-500/20 text-rose-300 border-rose-500/40",       description: "Acesso gratuito a produtos liberados pelo conselho",         icon: "🛡" },
+  partnership_master:   { label: "Mestre de Parcerias",    color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",        description: "Aprova parceiros, produtos gratuitos e produtos pagos",     icon: "🤝" },
 };
 
 function MedalsTab() {
