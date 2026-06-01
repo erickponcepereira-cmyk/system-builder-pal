@@ -59,6 +59,10 @@ export function PartnerDetailsModal({
 
   useEffect(() => { load(); }, [partnerId, readOnly]);
 
+  useEffect(() => {
+    if (readOnly && tab === "collaborators") setTab("overview");
+  }, [readOnly, tab]);
+
   const handleStatus = async (status: "approved" | "blocked" | "pending", rsn?: string) => {
     setActing(true);
     try {
