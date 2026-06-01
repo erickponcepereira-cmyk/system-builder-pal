@@ -289,11 +289,23 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     return () => { cancelled = true; };
   }, [detailProduct]);
 
+  const subcatsOfActive = useMemo(
+    () => activeSection ? storeCategories.filter((c) => c.section_id === activeSection.id) : [],
+    [activeSection, storeCategories],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return items.filter((item) => (activeCategory === "Todos" || item.category === activeCategory) &&
-      (!needle || item.title.toLowerCase().includes(needle) || (item.description || "").toLowerCase().includes(needle)));
-  }, [activeCategory, items, query]);
+    return items.filter((item) => {
+      if (activeSection) {
+        const inSection = item.sectionId === activeSection.id || item.category === activeSection.name;
+        if (!inSection) return false;
+        if (activeSubcategory && item.categoryId !== activeSubcategory.id) return false;
+      }
+      if (needle && !item.title.toLowerCase().includes(needle) && !(item.description || "").toLowerCase().includes(needle)) return false;
+      return true;
+    });
+  }, [activeSection, activeSubcategory, items, query]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   // Sem taxas — total = subtotal. Taxas de cartão são cobradas no checkout/maquininha.
