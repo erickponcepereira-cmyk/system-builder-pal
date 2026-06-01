@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { WindowMethod } from "@/components/student/WindowMethod";
+import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
 
 export const Route = createFileRoute("/student/protocol")({
