@@ -110,6 +110,7 @@ export function ProductDetailModal({
   const extraGainPix = !hasUpline ? l1Pix + l2Pix + l3Pix : 0;
   const totalEstimatedCard = coachGainCard + extraGainCard;
   const totalEstimatedPix = coachGainPix + extraGainPix;
+  const [revealCommissions, setRevealCommissions] = useState(false);
 
 
   return (
