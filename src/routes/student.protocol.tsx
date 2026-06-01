@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { WindowMethod } from "@/components/student/WindowMethod";
+
 
 export const Route = createFileRoute("/student/protocol")({
   head: () => ({
@@ -28,6 +30,7 @@ type Protocol = {
 
 function StudentProtocolPage() {
   const [protocol, setProtocol] = useState<Protocol | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ function StudentProtocolPage() {
         ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
         : { data: null };
       if (!student?.id) { setLoading(false); return; }
+      setStudentId(student.id);
       const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle();
       if (data) setProtocol(data as any);
       setLoading(false);
