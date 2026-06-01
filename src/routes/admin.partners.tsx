@@ -115,6 +115,14 @@ function AdminPartners() {
           </div>
         </div>
       )}
+
+      {openPartnerId && (
+        <PartnerDetailsModal
+          partnerId={openPartnerId}
+          onClose={() => setOpenPartnerId(null)}
+          onChanged={load}
+        />
+      )}
     </>
   );
 }
