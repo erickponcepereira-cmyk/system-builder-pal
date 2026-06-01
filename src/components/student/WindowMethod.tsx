@@ -2,13 +2,13 @@
 // Método das Janelas FitMind
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity } from "lucide-react";
 import janelaFechadaAsset from "@/assets/janela_fechada.png.asset.json";
 import janelaMeioAsset from "@/assets/janela_meio_aberta.png.asset.json";
 import janelaAbertaAsset from "@/assets/janela_aberta.png.asset.json";
 
 type Goal = "slim" | "mass";
-interface MealState { protein: boolean; fiber: boolean; carb: boolean }
+interface MealState { protein: boolean; fiber: boolean; carb: boolean; exercise: boolean }
 type WindowStatus = "closed" | "half" | "open";
 
 const MEAL_LABELS = ["Café da Manhã", "Lanche da Manhã", "Almoço", "Lanche da Tarde", "Janta", "Ceia"];
@@ -19,11 +19,16 @@ const WINDOW_SRC: Record<WindowStatus, string> = {
   open: janelaAbertaAsset.url,
 };
 
-const emptyMeal = (): MealState => ({ protein: false, fiber: false, carb: false });
+const emptyMeal = (): MealState => ({ protein: false, fiber: false, carb: false, exercise: false });
 const emptyMeals = (): MealState[] => Array(6).fill(null).map(emptyMeal);
 
+// Quando exercise=true OU goal=mass, carboidrato faz parte do "fechado".
+function requiresCarb(meal: MealState, goal: Goal) {
+  return goal === "mass" || meal.exercise;
+}
+
 function getWindowStatus(meal: MealState, goal: Goal): WindowStatus {
-  const required = goal === "mass"
+  const required = requiresCarb(meal, goal)
     ? [meal.protein, meal.fiber, meal.carb]
     : [meal.protein, meal.fiber];
   const checked = required.filter(Boolean).length;
@@ -59,6 +64,7 @@ interface MealCardProps {
 }
 function MealCard({ index, meal, goal, onChange }: MealCardProps) {
   const status = getWindowStatus(meal, goal);
+  const showCarb = requiresCarb(meal, goal);
   const statusColors = {
     closed: "border-green-500/40 bg-green-500/5",
     half: "border-yellow-500/40 bg-yellow-500/5",
@@ -69,7 +75,7 @@ function MealCard({ index, meal, goal, onChange }: MealCardProps) {
   const fields: { key: keyof MealState; label: string; color: string; emoji: string }[] = [
     { key: "protein", label: "Proteína", color: "bg-blue-500", emoji: "🥩" },
     { key: "fiber", label: "Fibra", color: "bg-green-500", emoji: "🥦" },
-    ...(goal === "mass" ? [{ key: "carb" as keyof MealState, label: "Carboidrato", color: "bg-orange-500", emoji: "🍚" }] : []),
+    ...(showCarb ? [{ key: "carb" as keyof MealState, label: "Carboidrato", color: "bg-orange-500", emoji: "🍚" }] : []),
   ];
   return (
     <div className={`rounded-2xl border p-4 transition-all duration-300 ${statusColors[status]}`}>
@@ -83,7 +89,20 @@ function MealCard({ index, meal, goal, onChange }: MealCardProps) {
         </div>
         <WindowImage status={status} size={56} />
       </div>
-      <div className={`grid gap-2 ${goal === "mass" ? "grid-cols-3" : "grid-cols-2"}`}>
+
+      {/* Toggle atividade física (pré/pós-treino) */}
+      <button
+        onClick={() => onChange(index, "exercise", !meal.exercise)}
+        className={`w-full mb-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-bold border transition-all ${meal.exercise ? "bg-purple-500/15 border-purple-500/40 text-purple-300" : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/30"}`}
+      >
+        <span className="flex items-center gap-2">
+          <Activity className="h-3.5 w-3.5" />
+          Atividade física (pré/pós-treino)
+        </span>
+        <span className="text-[10px] opacity-80">{meal.exercise ? "Ativada ✓" : "Toque para ativar"}</span>
+      </button>
+
+      <div className={`grid gap-2 ${showCarb ? "grid-cols-3" : "grid-cols-2"}`}>
         {fields.map(({ key, label, color, emoji }) => (
           <button
             key={key}
@@ -96,6 +115,13 @@ function MealCard({ index, meal, goal, onChange }: MealCardProps) {
           </button>
         ))}
       </div>
+      {meal.exercise && (
+        <p className="mt-2 text-[11px] text-purple-300/80 leading-snug">
+          {meal.protein || meal.fiber || meal.carb
+            ? "Carboidrato liberado para fornecer energia (pré-treino) ou auxiliar na recuperação (pós-treino)."
+            : "Marque proteína, fibra e carboidrato para fechar a janela de treino."}
+        </p>
+      )}
     </div>
   );
 }
@@ -123,14 +149,34 @@ function SummaryBar({ meals, goal }: { meals: MealState[]; goal: Goal }) {
         <div className="rounded-xl bg-yellow-500/10 p-2"><p className="text-xl font-bold text-yellow-400">{half}</p><p className="text-[11px] text-muted-foreground">Meio Abertas</p></div>
         <div className="rounded-xl bg-red-500/10 p-2"><p className="text-xl font-bold text-red-400">{open}</p><p className="text-[11px] text-muted-foreground">Abertas</p></div>
       </div>
+
       {open >= 3 && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-2">
-          <p className="text-xs font-bold text-red-400">⚠️ {open} janelas abertas — risco de dores de cabeça, irritabilidade e fadiga.</p>
+        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-2.5 space-y-1.5">
+          <p className="text-xs font-bold text-red-400">⚠️ {open} janelas abertas (3+) — Impacto crítico</p>
+          <ul className="text-[11px] text-red-200/90 space-y-0.5 leading-snug list-disc pl-4">
+            <li>Além de todos os sintomas de 2 janelas abertas: dor no estômago, dores no corpo, anemia.</li>
+            <li>Gastrite, insônia, refluxo, esofagite e maior propensão a desequilíbrios hormonais.</li>
+            <li>Aumento do risco de varizes.</li>
+            <li>Dor de cabeça, irritabilidade, ansiedade e estresse elevado.</li>
+            <li>Inchaço, celulites, intestino preso, sonolência e fadiga.</li>
+            <li>Queda de cabelo, unhas frágeis, flacidez e descontrole de peso.</li>
+            <li>Retenção de líquidos, fome excessiva por doces/carboidratos.</li>
+            <li>Dificulta o ganho de massa muscular e causa indisposição.</li>
+          </ul>
+          <p className="text-[11px] font-bold text-red-300">Evite janelas abertas para manter saúde, energia e um metabolismo equilibrado!</p>
         </div>
       )}
       {open === 2 && (
-        <div className="rounded-lg bg-orange-500/10 border border-orange-500/30 px-3 py-2">
-          <p className="text-xs font-bold text-orange-400">⚠️ 2 janelas abertas — possível inchaço, fome excessiva e queda de energia.</p>
+        <div className="rounded-lg bg-orange-500/10 border border-orange-500/30 px-3 py-2.5 space-y-1.5">
+          <p className="text-xs font-bold text-orange-400">⚠️ 2 janelas abertas — Impacto significativo</p>
+          <ul className="text-[11px] text-orange-200/90 space-y-0.5 leading-snug list-disc pl-4">
+            <li>Dor de cabeça, irritabilidade, ansiedade, estresse elevado.</li>
+            <li>Inchaço, celulites, intestino preso, sonolência e fadiga.</li>
+            <li>Queda de cabelo, unhas frágeis, flacidez e descontrole de peso.</li>
+            <li>Retenção de líquidos, fome excessiva por doces/carboidratos.</li>
+            <li>Dificulta o ganho de massa muscular e causa indisposição.</li>
+          </ul>
+          <p className="text-[11px] font-bold text-orange-300">Evite janelas abertas para manter saúde, energia e um metabolismo equilibrado!</p>
         </div>
       )}
       {closed >= 5 && (
@@ -149,23 +195,96 @@ function ExplanationSection() {
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors">
         <div className="flex items-center gap-2">
           <Info className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold text-foreground">Entenda o Método das Janelas</span>
+          <span className="text-sm font-bold text-foreground">Explicação sobre as Janelas Nutricionais</span>
         </div>
         {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
       {open && (
-        <div className="px-4 pb-5 space-y-3 border-t border-border pt-4">
-          <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3">
-            <p className="text-xs font-bold text-green-400 mb-1">🪟 Janela Fechada</p>
-            <p className="text-xs text-muted-foreground">Proteínas + fibras (+ carbo para ganho de massa). Saciedade, músculo e digestão em dia.</p>
+        <div className="px-4 pb-5 space-y-4 border-t border-border pt-4">
+          {/* Janela Fechada */}
+          <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 space-y-1">
+            <p className="text-xs font-bold text-green-400">🪟 Janela Fechada</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Contém <b>proteínas e fibras</b> na refeição. Essa é a melhor forma de manter a saciedade,
+              ajudar na construção muscular e melhorar a saúde digestiva.
+            </p>
+            <p className="text-[11px] text-muted-foreground/80"><b>Exemplo:</b> Frango grelhado com salada de folhas verdes e chia.</p>
           </div>
-          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3">
-            <p className="text-xs font-bold text-yellow-400 mb-1">🪟 Meio Aberta</p>
-            <p className="text-xs text-muted-foreground">Apenas proteína OU apenas fibra — falta um nutriente.</p>
+
+          {/* Meio Aberta */}
+          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3 space-y-1">
+            <p className="text-xs font-bold text-yellow-400">🪟 Janela Meio Aberta / Meio Fechada</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Contém <b>apenas proteínas</b> ou <b>apenas fibras</b>, mas falta um dos dois.
+            </p>
+            <p className="text-[11px] text-muted-foreground/80"><b>Exemplo:</b> Shake de proteína sem fibras OU uma salada de frutas com sementes, mas sem proteína.</p>
           </div>
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
-            <p className="text-xs font-bold text-red-400 mb-1">🪟 Totalmente Aberta</p>
-            <p className="text-xs text-muted-foreground">Sem proteína e sem fibra — só carbo e/ou gordura.</p>
+
+          {/* Totalmente Aberta */}
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-1">
+            <p className="text-xs font-bold text-red-400">🪟 Janela Totalmente Aberta</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Não possui proteínas nem fibras — apenas <b>carboidratos e/ou gorduras</b>.
+            </p>
+            <p className="text-[11px] text-muted-foreground/80"><b>Exemplo:</b> Pão com manteiga e café adoçado, ou um prato de macarrão sem fonte de proteína.</p>
+          </div>
+
+          <p className="text-xs text-foreground/90 leading-relaxed">
+            O objetivo do <b>Método das Janelas FitMind</b> é manter o maior número possível de janelas fechadas
+            ao longo do dia, garantindo um equilíbrio nutricional ideal para o organismo.
+          </p>
+
+          {/* Impacto */}
+          <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-2">
+            <p className="text-xs font-bold text-foreground">Impacto de Janelas Abertas</p>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-bold text-orange-400">2 Janelas Abertas:</p>
+              <ul className="text-[11px] text-muted-foreground list-disc pl-4 space-y-0.5 leading-snug">
+                <li>Dor de cabeça, irritabilidade, ansiedade, estresse elevado.</li>
+                <li>Inchaço, celulites, intestino preso, sonolência e fadiga.</li>
+                <li>Queda de cabelo, unhas frágeis, flacidez e descontrole de peso.</li>
+                <li>Retenção de líquidos, fome excessiva por doces/carboidratos.</li>
+                <li>Dificulta o ganho de massa muscular e causa indisposição.</li>
+              </ul>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-bold text-red-400">3+ Janelas Abertas:</p>
+              <ul className="text-[11px] text-muted-foreground list-disc pl-4 space-y-0.5 leading-snug">
+                <li>Além dos sintomas acima: dor no estômago, dores no corpo, anemia.</li>
+                <li>Gastrite, insônia, refluxo, esofagite e maior propensão a desequilíbrios hormonais.</li>
+                <li>Aumento do risco de varizes.</li>
+              </ul>
+            </div>
+            <p className="text-[11px] font-bold text-foreground/90">
+              Evite janelas abertas para manter saúde, energia e um metabolismo equilibrado!
+            </p>
+          </div>
+
+          {/* Exercício */}
+          <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
+            <p className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5" /> Janelas Nutricionais e Exercício Físico
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Se for praticar atividade física, as janelas nutricionais se ajustam para duas refeições estratégicas:
+            </p>
+            <div className="space-y-1">
+              <p className="text-[11px] font-bold text-purple-300">• Pré-Treino</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                A única janela onde os <b>carboidratos são essenciais</b>. Eles fornecem energia e evitam a fadiga durante o treino.
+              </p>
+              <p className="text-[11px] text-muted-foreground/80"><b>Exemplo:</b> Banana com aveia, pão integral com pasta de amendoim ou batata-doce com frango.</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] font-bold text-purple-300">• Pós-Treino</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Aqui, <b>proteínas e fibras</b> voltam a ser prioritárias, pois auxiliam na recuperação muscular e no controle da glicemia.
+              </p>
+              <p className="text-[11px] text-muted-foreground/80"><b>Exemplo:</b> Shake de proteína com frutas, frango grelhado com vegetais ou omelete com salada.</p>
+            </div>
+            <p className="text-[11px] font-bold text-purple-300">
+              Importante: ajustar suas janelas para treinos pode potencializar os resultados, melhorar o desempenho e evitar perda de massa muscular.
+            </p>
           </div>
         </div>
       )}
@@ -198,9 +317,10 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
           const d = data as any;
           setGoal(d.goal);
           setMeals([1, 2, 3, 4, 5, 6].map((n) => ({
-            protein: d[`meal_${n}_protein`],
-            fiber: d[`meal_${n}_fiber`],
-            carb: d[`meal_${n}_carb`],
+            protein: !!d[`meal_${n}_protein`],
+            fiber: !!d[`meal_${n}_fiber`],
+            carb: !!d[`meal_${n}_carb`],
+            exercise: !!d[`meal_${n}_exercise`],
           })));
         }
         setLoading(false);
@@ -217,6 +337,7 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
         payload[`meal_${n}_protein`] = m.protein;
         payload[`meal_${n}_fiber`] = m.fiber;
         payload[`meal_${n}_carb`] = m.carb;
+        payload[`meal_${n}_exercise`] = m.exercise;
       });
       await supabase.from("window_method_logs" as never).upsert(payload as never, { onConflict: "student_id,log_date" } as never);
     } finally {
@@ -227,18 +348,20 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
   const handleGoal = (g: Goal) => {
     if (readOnly) return;
     setGoal(g);
-    if (g === "slim") {
-      const reset = meals.map(m => ({ ...m, carb: false }));
-      setMeals(reset);
-      save(reset, g);
-    } else {
-      save(meals, g);
-    }
+    save(meals, g);
   };
 
   const handleMealChange = (index: number, field: keyof MealState, value: boolean) => {
     if (readOnly) return;
-    const updated = meals.map((m, i) => i === index ? { ...m, [field]: value } : m);
+    const updated = meals.map((m, i) => {
+      if (i !== index) return m;
+      const next = { ...m, [field]: value };
+      // Se desativar exercício em modo emagrecimento, zera carb dessa refeição
+      if (field === "exercise" && value === false && goal === "slim") {
+        next.carb = false;
+      }
+      return next;
+    });
     setMeals(updated);
     if (goal) save(updated, goal);
   };
