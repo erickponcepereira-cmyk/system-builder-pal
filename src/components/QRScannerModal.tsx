@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Camera, AlertCircle } from "lucide-react";
-import { Html5Qrcode } from "html5-qrcode";
+
 
 type Props = {
   onClose: () => void;
