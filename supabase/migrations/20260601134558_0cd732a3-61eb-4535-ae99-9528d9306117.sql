@@ -1,0 +1,1 @@
+UPDATE public.profiles SET status='active' WHERE email='erickponcepereira@outlook.com';
