@@ -869,7 +869,7 @@ function BadgeFlagsSection({ productId }: { productId: string }) {
             />
             <div>
               <p className="text-xs font-semibold text-white">Gratuito para Conselho</p>
-              <p className="text-[11px] text-white/50">Coaches com medalha "Conselho" não pagam</p>
+              <p className="text-[11px] text-white/50">Coaches com categoria "Conselho" não pagam</p>
             </div>
           </label>
           <label className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-3 cursor-pointer hover:border-white/30">
