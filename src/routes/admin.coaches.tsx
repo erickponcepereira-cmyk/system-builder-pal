@@ -303,6 +303,12 @@ function AdminCoaches() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     <button
+                      onClick={() => openCardEditor(c)}
+                      className="flex items-center gap-1.5 rounded-lg bg-yellow-500/15 px-3 py-2 text-xs font-bold text-yellow-400 hover:bg-yellow-500/25"
+                    >
+                      <IdCard className="h-3.5 w-3.5" /> Carteirinha
+                    </button>
+                    <button
                       onClick={() => openTransfer(c)}
                       disabled={acting === `transfer-${c.id}`}
                       className="flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/25 disabled:opacity-50"
