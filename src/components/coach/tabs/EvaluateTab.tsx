@@ -304,6 +304,7 @@ export function EvaluateTab() {
       <FitMindShape
         coach={coachInfo}
         clients={clients}
+        initialClientId={challengeLink?.preferredClientId}
         onCreateClient={createClient}
         onUpdateClient={async (client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
