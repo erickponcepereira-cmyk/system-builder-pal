@@ -608,6 +608,47 @@ function StudentChallengePage() {
         </div>
       )}
 
+      {/* Modal de confirmação de entrada no desafio com moeda */}
+      {confirmTurma && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card p-5 border border-border space-y-4">
+            <div className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-primary" />
+              <p className="text-base font-bold text-foreground">Confirmar entrada no desafio</p>
+            </div>
+            <p className="text-sm text-foreground">
+              Você está entrando na <span className="font-bold text-primary">Turma {confirmTurma.groupNumber}</span> do desafio <span className="font-bold">{confirmTurma.competitionLabel}</span>.
+            </p>
+            <div className="space-y-2 text-xs">
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-muted-foreground">Janela de pesagem inicial</p>
+                <p className="font-bold text-foreground">{fmt(confirmTurma.initialStart)} – {fmt(confirmTurma.initialEnd)}</p>
+              </div>
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-muted-foreground">Pesagem final</p>
+                <p className="font-bold text-foreground">{confirmTurma.finalWeighIn ? fmt(confirmTurma.finalWeighIn) : "A definir"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-muted-foreground">Data de premiação</p>
+                <p className="font-bold text-primary">{confirmTurma.awardDate ? fmt(confirmTurma.awardDate) : "A definir"}</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Ao confirmar, 1 moeda de desafio será consumida do seu saldo.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmTurma(null)} disabled={joining}
+                className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
+              <button onClick={handleJoin} disabled={joining}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground disabled:opacity-60">
+                {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+                Quero entrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
