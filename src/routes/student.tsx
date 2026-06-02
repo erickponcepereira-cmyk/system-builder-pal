@@ -42,6 +42,20 @@ function StudentLayout() {
           ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
           : { data: null };
 
+        // Block pending coaches (not yet released) from the student app
+        if (profile?.id && (profile.role === "coach" || ["manager", "director"].includes(profile.role || ""))) {
+          const { data: coachRow } = await supabase
+            .from("coaches")
+            .select("onboarding_stage")
+            .eq("profile_id", profile.id)
+            .maybeSingle();
+          const stage = (coachRow as { onboarding_stage?: string } | null)?.onboarding_stage;
+          if (stage && stage !== "released") {
+            navigate({ to: "/coach", replace: true });
+            return;
+          }
+        }
+
         if (!active) return;
         if (profile?.role === "admin" && selectedArea !== "student") navigate({ to: "/admin", replace: true });
         else if (["coach", "manager", "director"].includes(profile?.role || "") && selectedArea !== "student") navigate({ to: "/coach", replace: true });
