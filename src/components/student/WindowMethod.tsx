@@ -286,6 +286,32 @@ function ExplanationSection() {
               Importante: ajustar suas janelas para treinos pode potencializar os resultados, melhorar o desempenho e evitar perda de massa muscular.
             </p>
           </div>
+
+          {/* Disclaimer jurídico */}
+          <div className="rounded-xl border border-border/60 bg-muted/10 p-3">
+            <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+              <b className="text-muted-foreground">Aviso importante:</b> O Método das Janelas FitMind é uma
+              ferramenta educacional e de organização nutricional, de caráter exclusivamente informativo,
+              e <b>não substitui</b> consulta, avaliação, diagnóstico, prescrição ou acompanhamento de
+              nutricionista, médico ou qualquer outro profissional de saúde devidamente habilitado.
+              As informações, exemplos, recomendações e classificações aqui apresentadas (janelas
+              fechadas, meio abertas ou abertas, impactos descritos, sugestões pré e pós-treino, entre
+              outras) têm finalidade meramente orientativa e não devem ser interpretadas como conduta
+              clínica, terapêutica, dietética individualizada ou prescrição alimentar. Cada organismo
+              possui particularidades fisiológicas, metabólicas, hormonais, clínicas e patológicas que
+              somente podem ser corretamente avaliadas por um profissional habilitado. Antes de iniciar,
+              modificar ou interromper qualquer plano alimentar, rotina de jejum, prática de exercícios
+              físicos, uso de suplementos ou tratamento, o usuário deve obrigatoriamente procurar um
+              profissional da saúde de sua confiança, especialmente em casos de gestação, lactação,
+              doenças crônicas, transtornos alimentares, uso de medicamentos ou qualquer condição
+              clínica preexistente. A FitMind, seus desenvolvedores, coaches, parceiros e demais
+              profissionais vinculados à plataforma <b>não se responsabilizam</b> por decisões tomadas
+              com base exclusivamente no conteúdo aqui disponibilizado, tampouco por eventuais danos,
+              complicações de saúde, prejuízos ou efeitos adversos decorrentes do uso indevido, isolado
+              ou sem supervisão profissional do Método das Janelas. Ao utilizar esta ferramenta, o
+              usuário declara estar ciente e de acordo com este aviso.
+            </p>
+          </div>
         </div>
       )}
     </div>
