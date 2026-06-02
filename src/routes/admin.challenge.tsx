@@ -417,6 +417,14 @@ function AdminChallengePage() {
     if (comp.finalized_at) {
       if (!confirm("Este desafio já foi finalizado. Refinalizar irá registrar uma NOVA entrada de histórico (a anterior será mantida). Continuar?")) return;
     }
+    if (!winnerMaleId) {
+      toast.error("Selecione o vencedor masculino antes de finalizar.");
+      return;
+    }
+    if (!winnerFemaleId) {
+      toast.error("Selecione a vencedora feminina antes de finalizar.");
+      return;
+    }
     setFinalizing(true);
     try {
       const { data: auth } = await supabase.auth.getUser();
