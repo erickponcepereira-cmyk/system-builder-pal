@@ -340,10 +340,11 @@ function AdminChallengePage() {
         final_weight: null, final_body_fat: null, final_muscle_mass: null, final_share_url: null,
         status: "enrolled",
       } : {
-        final_date: null, final_weight: null, final_body_fat: null,
+        final_weight: null, final_body_fat: null,
         final_muscle_mass: null, final_share_url: null,
         status: "weighed_initial",
       };
+
       const { error } = await supabase.from("competition_enrollments" as never)
         .update(updates as never).eq("id" as never, enrollId as never);
       if (error) throw error;
