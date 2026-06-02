@@ -111,9 +111,9 @@ export function ChallengeTab({ coachId }: Props) {
       const { data: enrolls } = await supabase
         .from("competition_enrollments" as never)
         .select(`
-          id, gender, status, initial_weight, final_weight, initial_body_fat, final_body_fat, initial_muscle_mass, final_muscle_mass, result_pct, final_date,
+          id, gender, status, initial_weight, final_weight, initial_body_fat, final_body_fat, initial_muscle_mass, final_muscle_mass, result_pct, initial_date, final_date,
           competition:competition_id ( month, year ),
-          group:group_id ( group_number ),
+          group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date, award_date ),
           student:student_id ( id, profile:profile_id ( name ) )
         `)
         .eq("coach_id" as never, coachId)
@@ -131,9 +131,14 @@ export function ChallengeTab({ coachId }: Props) {
         initial_muscle_mass: e.initial_muscle_mass,
         final_muscle_mass: e.final_muscle_mass,
         result_pct: e.result_pct,
+        initial_date: e.initial_date,
         final_date: e.final_date,
         comp_label: `${MONTHS[e.competition?.month || 1]} ${e.competition?.year || ""}`,
         group_number: e.group?.group_number || 0,
+        initial_start_date: e.group?.initial_start_date || null,
+        initial_end_date: e.group?.initial_end_date || null,
+        final_weigh_in_date: e.group?.final_weigh_in_date || null,
+        award_date: e.group?.award_date || null,
       })));
     } finally { setLoading(false); }
   };
