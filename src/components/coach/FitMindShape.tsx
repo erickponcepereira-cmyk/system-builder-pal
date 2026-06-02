@@ -360,6 +360,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onCreateGoogleCalendarEvent,
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
+  initialClientId,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
