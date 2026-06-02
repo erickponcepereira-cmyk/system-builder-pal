@@ -73,7 +73,7 @@ function RouteComponent() {
       for (const r of rules) {
         const { error } = await supabase.from("network_unlock_rules").update({
           label: r.label,
-          product_type: r.product_type || null,
+          product_type: (r.product_type || null) as Rule["product_type"] as never,
           required_sales: Number(r.required_sales) || 1,
           is_active: r.is_active,
           sort_order: Number(r.sort_order) || 0,
