@@ -2067,8 +2067,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       setCalcDone(true);
     };
 
-    const StepMedidas = () => (
+    const StepMedidas = () => {
+      const showMeasurements =
+        assessment.method === "measurements" || assessment.method === "both";
+      const showBioimpedance =
+        !assessment.method ||
+        assessment.method === "bioimpedance" ||
+        assessment.method === "both";
+      return (
       <>
+      {showMeasurements && (
       <div>
 
         <div className="fm-section-title">Circunferências por Medição (cm)</div>
@@ -2192,124 +2200,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           />
         </div>
 
-        {/* Método de aferição */}
-        <div style={{ marginTop: 16 }}>
-          <label className="fm-label">Método de aferição</label>
-          <select
-            className="fm-select"
-            value={(assessment as any).measurementMethod ?? "fita_metrica"}
-            onChange={(e) => upd("measurementMethod" as any, e.target.value || undefined)}
-          >
-            <option value="fita_metrica">Fita métrica</option>
-            <option value="paquimetro">Paquímetro</option>
-            <option value="adipometro">Adipômetro / plicometria</option>
-          </select>
-        </div>
-      </div>
-      <div>
-
-
-        <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
-          preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
-        </p>
-        <div className="fm-grid-2" style={{ marginBottom: 12 }}>
-          {bioFields.map((f) => {
-            const unit = bioUnits[f.key as string] || f.defaultUnit;
-            return (
-              <div key={f.key as string}>
-                <label className="fm-label">
-                  {f.label} ({unit === "num" ? "número" : unit}) <Tooltip id={f.tip} />
-                  <UnitChips fieldKey={f.key as string} options={f.units} defaultUnit={f.defaultUnit} />
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="fm-input"
-                  placeholder={f.placeholder}
-                  onChange={(e) => upd(f.key, +e.target.value)}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Análise por Segmento
-        </div>
-        <div className="fm-grid-2">
-          {(
-            [
-              ["Braço Esquerdo", "leftArm"],
-              ["Braço Direito", "rightArm"],
-              ["Tronco", "trunk"],
-              ["Perna Esquerda", "leftLeg"],
-              ["Perna Direita", "rightLeg"],
-            ] as const
-          ).map(([label, key]) => {
-            const fieldKey = `seg_${key}`;
-            const unit = bioUnits[fieldKey] || "%";
-            return (
-              <div key={key}>
-                <label className="fm-label">
-                  {label} ({unit === "num" ? "número" : unit})
-                  <UnitChips fieldKey={fieldKey} options={["%", "kg", "num"]} defaultUnit="%" />
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="fm-input"
-                  placeholder="Ex: 30.5"
-                  onChange={(e) =>
-                    upd("segmentAnalysis", {
-                      ...assessment.segmentAnalysis,
-                      [key]: +e.target.value,
-                    })
-                  }
-                />
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Circunferências (cm)
-        </div>
-        <div className="fm-grid-2">
-          {(
-            [
-              ["Antebraço Esq.", "leftForearm"],
-              ["Antebraço Dir.", "rightForearm"],
-              ["Tórax", "chest"],
-              ["Cintura", "waist"],
-              ["Abdômen", "abdomen"],
-              ["Quadril", "hip"],
-              ["Braço Esq.", "leftArm"],
-              ["Braço Dir.", "rightArm"],
-              ["Coxa Esq.", "leftThigh"],
-              ["Coxa Dir.", "rightThigh"],
-              ["Panturrilha Esq.", "leftCalf"],
-              ["Panturrilha Dir.", "rightCalf"],
-            ] as const
-          ).map(([label, key]) => (
-            <div key={`circ_${key}`}>
-              <label className="fm-label">{label} (cm)</label>
-              <input
-                type="number"
-                step="0.1"
-                className="fm-input"
-                placeholder="Ex: 90.0"
-                value={(assessment.circumferences as any)?.[key] ?? ""}
-                onChange={(e) =>
-                  upd("circumferences" as any, {
-                    ...(assessment.circumferences || {}),
-                    [key]: e.target.value === "" ? undefined : +e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
-        </div>
-
+        {/* Diâmetros Ósseos */}
         <div className="fm-section-title" style={{ marginTop: 16 }}>
           Diâmetros Ósseos (cm)
         </div>
@@ -2342,26 +2233,41 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
           ))}
         </div>
-
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Método de aferição
-        </div>
-        <select
-          className="fm-select"
-          value={(assessment as any).measurementMethod ?? ""}
-          onChange={(e) => upd("measurementMethod" as any, e.target.value || undefined)}
-        >
-          <option value="">Selecione o método utilizado</option>
-          <option value="fita_metrica">Fita métrica</option>
-          <option value="paquimetro">Paquímetro</option>
-          <option value="adipometro">Adipômetro / plicometria</option>
-          <option value="bioimpedancia">Bioimpedância</option>
-          <option value="dexa">DEXA</option>
-          <option value="ultrassom">Ultrassom</option>
-        </select>
       </div>
+      )}
+
+      {showBioimpedance && (
+      <div style={{ marginTop: showMeasurements ? 20 : 0 }}>
+        <div className="fm-section-title">Bioimpedância</div>
+        <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
+          Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
+          preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
+        </p>
+        <div className="fm-grid-2" style={{ marginBottom: 12 }}>
+          {bioFields.map((f) => {
+            const unit = bioUnits[f.key as string] || f.defaultUnit;
+            return (
+              <div key={f.key as string}>
+                <label className="fm-label">
+                  {f.label} ({unit === "num" ? "número" : unit}) <Tooltip id={f.tip} />
+                  <UnitChips fieldKey={f.key as string} options={f.units} defaultUnit={f.defaultUnit} />
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="fm-input"
+                  placeholder={f.placeholder}
+                  onChange={(e) => upd(f.key, +e.target.value)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      )}
       </>
-    );
+      );
+    };
 
 
 
