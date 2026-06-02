@@ -170,6 +170,25 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
             </div>
+            <div className="space-y-2">
+              <Label className="text-white/70">Gênero</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([["M","Masculino"],["F","Feminino"],["O","Outro"]] as const).map(([v,label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setGender(v)}
+                    className={`rounded-xl py-2 text-sm font-semibold transition-colors ${gender === v ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white/70">Instagram <span className="text-white/30 text-xs">(opcional)</span></Label>
+              <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@seuusuario" maxLength={100} className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
+            </div>
             {referral ? (
               <div className="space-y-2">
                 <Label className="text-white/70">Coach indicador</Label>
