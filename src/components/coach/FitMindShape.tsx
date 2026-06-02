@@ -1541,6 +1541,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   style={{ flex: 1 }}
                 />
                 <button
+                  type="button"
                   className="fm-btn-primary"
                   style={{ padding: "0 14px" }}
                   onClick={() => {
@@ -1553,6 +1554,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   OK
                 </button>
                 <button
+                  type="button"
                   style={{
                     padding: "0 14px",
                     background: "var(--muted)",
