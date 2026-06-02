@@ -6156,6 +6156,91 @@ export type Database = {
         }
         Relationships: []
       }
+      student_challenge_tokens: {
+        Row: {
+          consumed_at: string | null
+          consumed_competition_id: string | null
+          consumed_enrollment_id: string | null
+          created_at: string
+          granted_at: string
+          granted_by: string
+          id: string
+          notes: string | null
+          source_product_id: string | null
+          source_transaction_id: string | null
+          student_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          consumed_competition_id?: string | null
+          consumed_enrollment_id?: string | null
+          created_at?: string
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          notes?: string | null
+          source_product_id?: string | null
+          source_transaction_id?: string | null
+          student_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          consumed_competition_id?: string | null
+          consumed_enrollment_id?: string | null
+          created_at?: string
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          notes?: string | null
+          source_product_id?: string | null
+          source_transaction_id?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_challenge_tokens_consumed_competition_id_fkey"
+            columns: ["consumed_competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenge_tokens_consumed_enrollment_id_fkey"
+            columns: ["consumed_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "competition_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenge_tokens_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenge_tokens_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenge_tokens_source_transaction_id_fkey"
+            columns: ["source_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenge_tokens_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_checkin_scans: {
         Row: {
           id: string

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -53,6 +53,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [weights, setWeights] = useState<WeightRow[]>([]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [sharing, setSharing] = useState(false);
+  const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
 
   useEffect(() => {
     (async () => {
@@ -80,6 +81,18 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       setAnams(((anamRes.data || []) as unknown) as AnamRow[]);
       setWeights(((wRes.data || []) as unknown) as WeightRow[]);
       setPhotos(((pRes.data || []) as unknown) as PhotoRow[]);
+
+      // Saldo de moedas de desafio
+      try {
+        const { data: toks } = await supabase
+          .from("student_challenge_tokens")
+          .select("id, consumed_at")
+          .eq("student_id", studentId);
+        const rows = (toks as { id: string; consumed_at: string | null }[] | null) || [];
+        const consumed = rows.filter((r) => !!r.consumed_at).length;
+        setTokenStats({ earned: rows.length, consumed, balance: rows.length - consumed });
+      } catch (e) { console.warn("tokens fetch failed", e); }
+
       setLoading(false);
     })();
   }, [studentId]);
@@ -198,6 +211,16 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 {lastAnam ? (
                   <p className="text-sm text-white/80">{fmtBR(lastAnam.filled_at)} {lastAnam.objective && `· ${lastAnam.objective}`} {lastAnam.confirmed_at && <span className="ml-1 rounded bg-success/15 px-1.5 py-0.5 text-[10px] text-success">assinada</span>}</p>
                 ) : <p className="text-xs text-white/40">Nenhuma anamnese preenchida.</p>}
+              </Card>
+
+              <Card title="Moedas de Desafio" icon={<Coins className="h-4 w-4 text-primary" />}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-white/50">Cada moeda = 1 entrada em 1 desafio</p>
+                    <p className="text-[10px] text-white/40">Ganhas: {tokenStats.earned} · Usadas: {tokenStats.consumed}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-primary">{tokenStats.balance}</p>
+                </div>
               </Card>
 
               <Card title="Compras pagas" icon={<ShoppingBag className="h-4 w-4 text-primary" />}>

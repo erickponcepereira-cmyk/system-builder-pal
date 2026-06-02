@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Cake, Crown, Activity } from "lucide-react";
+import { Cake, Crown, Activity, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
+import { useServerFn } from "@tanstack/react-start";
+import { getCoachStudentsTokens } from "@/lib/challenge-tokens.functions";
 
 type StudentRow = {
   id: string;
@@ -17,6 +19,7 @@ type StudentRow = {
 type ExtraInfo = {
   topPlan: { name: string; price: number | null } | null;
   lastAssessmentDate: string | null;
+  tokenBalance: number;
 };
 
 const fmtBR = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -26,6 +29,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
   const [extras, setExtras] = useState<Record<string, ExtraInfo>>({});
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const fetchTokens = useServerFn(getCoachStudentsTokens);
 
   useEffect(() => {
     if (!coachId) { setLoading(false); return; }
@@ -68,10 +72,18 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
         if (!lastAssessByStudent.has(a.student_id)) lastAssessByStudent.set(a.student_id, a.assessment_date);
       });
       const ex: Record<string, ExtraInfo> = {};
+      // Saldo de moedas de desafio por aluno
+      let tokenBalances = new Map<string, number>();
+      try {
+        const balRows = await fetchTokens({ data: { studentIds: ids } });
+        tokenBalances = new Map(balRows.map((b) => [b.studentId, b.balance]));
+      } catch (e) { console.warn("tokens fetch failed", e); }
+
       ids.forEach((id) => {
         ex[id] = {
           topPlan: topPlanByStudent.get(id) || null,
           lastAssessmentDate: lastAssessByStudent.get(id) || null,
+          tokenBalance: tokenBalances.get(id) || 0,
         };
       });
       setExtras(ex);
@@ -109,6 +121,11 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
                     </div>
                     <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${student.completed_coach_course ? "bg-success/20 text-success" : "bg-white/10 text-white/60"}`}>{student.completed_coach_course ? "Curso coach" : "Aluno"}</span>
+                      {(ex?.tokenBalance ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary" title="Moedas de desafio disponíveis">
+                          <Coins className="h-3 w-3" /> {ex!.tokenBalance} desafio{ex!.tokenBalance > 1 ? "s" : ""}
+                        </span>
+                      )}
                       <WhatsAppButton phone={student.profiles?.phone} size="sm" message={`Olá ${student.profiles?.name?.split(" ")[0] || ""}!`} />
                     </div>
                   </div>

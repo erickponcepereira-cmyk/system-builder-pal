@@ -57,6 +57,7 @@ function ProfilePage() {
   const [holderCpf, setHolderCpf] = useState("");
   const [referrals, setReferrals] = useState<Array<{ id: string; created_at: string | null; profiles: { name: string; email: string } | null }>>([]);
   const [withdrawals, setWithdrawals] = useState<Array<{ id: string; amount: number; status: string | null; requested_at: string | null; paid_at: string | null }>>([]);
+  const [challengeTokens, setChallengeTokens] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -91,6 +92,14 @@ function ProfilePage() {
       ]);
       setReferrals((referralRes.data as unknown as typeof referrals) || []);
       setWithdrawals((withdrawalRes.data as unknown as typeof withdrawals) || []);
+      try {
+        const { data: toks } = await supabase
+          .from("student_challenge_tokens")
+          .select("id, consumed_at")
+          .eq("student_id", student.id)
+          .is("consumed_at", null);
+        setChallengeTokens(((toks as unknown[]) || []).length);
+      } catch (e) { console.warn("tokens fetch failed", e); }
     })();
   }, []);
 
@@ -147,9 +156,16 @@ function ProfilePage() {
         <div className="flex-1">
           <p className="text-base font-bold text-white">{profile.name}</p>
           <p className="text-xs text-white/50">{profile.email}</p>
-          <span className="mt-1.5 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-            🔥 Plano Premium
-          </span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+              🔥 Plano Premium
+            </span>
+            {challengeTokens > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                🪙 {challengeTokens} moeda{challengeTokens > 1 ? "s" : ""} de desafio
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

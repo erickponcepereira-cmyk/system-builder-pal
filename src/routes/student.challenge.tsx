@@ -7,9 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Trophy, Scale, Calendar, AlertCircle, CheckCircle2,
-  Clock, Loader2, Lock, ChevronRight
+  Clock, Loader2, Lock, ChevronRight, Coins
 } from "lucide-react";
 import { HallOfFame } from "@/components/HallOfFame";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummary, type CurrentTurma } from "@/lib/challenge-tokens.functions";
 
 
 export const Route = createFileRoute("/student/challenge")({
@@ -81,6 +83,14 @@ function StudentChallengePage() {
 
   const [studentId, setStudentId] = useState<string | null>(null);
   const [coachId, setCoachId] = useState<string | null>(null);
+
+  // Tokens de desafio
+  const [tokens, setTokens] = useState<ChallengeTokenSummary | null>(null);
+  const [confirmTurma, setConfirmTurma] = useState<CurrentTurma | null>(null);
+  const [joining, setJoining] = useState(false);
+  const fetchTokens = useServerFn(getMyChallengeTokens);
+  const doJoin = useServerFn(joinChallengeWithToken);
+
 
 
 
@@ -175,9 +185,28 @@ function StudentChallengePage() {
     }
   };
 
+  const loadTokens = async () => {
+    try { setTokens(await fetchTokens()); } catch (e) { console.warn("tokens fetch failed", e); }
+  };
 
+  useEffect(() => { load(); loadTokens(); }, []);
 
-  useEffect(() => { load(); }, []);
+  const handleJoin = async () => {
+    if (!confirmTurma) return;
+    setJoining(true);
+    try {
+      const res = await doJoin({ data: { competitionId: confirmTurma.competitionId } });
+      if (!res.ok) { toast.error(res.error); return; }
+      toast.success(`Inscrição confirmada em ${res.turma.competitionLabel} — Turma ${res.turma.groupNumber}!`);
+      setConfirmTurma(null);
+      await Promise.all([load(), loadTokens()]);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao entrar no desafio");
+    } finally {
+      setJoining(false);
+    }
+  };
+
 
   const scheduleAppointment = async () => {
     if (!schedDate || !schedTime || !enrollment || !studentId || !coachId) return;
@@ -277,7 +306,45 @@ function StudentChallengePage() {
       {/* ── TAB: Meu Desafio ── */}
       {activeTab === "challenge" && (
         <>
-          {!hasAccess ? (
+          {/* Painel de moedas de desafio */}
+          {tokens && (tokens.balance > 0 || tokens.totalEarned > 0) && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Moedas de Desafio</p>
+                    <p className="text-[11px] text-muted-foreground">Cada moeda dá direito a 1 entrada em 1 desafio.</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-primary leading-none">{tokens.balance}</p>
+                  <p className="text-[10px] text-muted-foreground">disponíveis</p>
+                </div>
+              </div>
+              {tokens.balance > 0 && tokens.joinableTurmas.length > 0 && (
+                <div className="space-y-2">
+                  {tokens.joinableTurmas.map((t) => (
+                    <button
+                      key={t.competitionId}
+                      onClick={() => setConfirmTurma(t)}
+                      className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-bold flex items-center justify-between"
+                    >
+                      <span>Entrar no desafio — {t.competitionLabel}</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {tokens.balance > 0 && tokens.joinableTurmas.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Nenhuma turma com janela de pesagem inicial aberta no momento, ou você já está inscrito nas turmas vigentes. Sua moeda fica reservada para a próxima.
+                </p>
+              )}
+            </div>
+          )}
+
+          {!hasAccess && !(tokens && tokens.balance > 0) ? (
             /* Sem acesso */
             <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
               <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
@@ -294,10 +361,12 @@ function StudentChallengePage() {
               <Trophy className="h-12 w-12 text-primary mx-auto" />
               <p className="font-bold text-foreground">Você tem acesso ao Desafio!</p>
               <p className="text-sm text-muted-foreground">
-                Sua inscrição será feita automaticamente na próxima competição ativa,
-                ou peça ao seu coach para te inscrever manualmente.
+                {tokens && tokens.balance > 0
+                  ? "Use uma moeda acima para entrar agora na turma em pesagem inicial."
+                  : "Sua inscrição será feita automaticamente na próxima competição ativa, ou peça ao seu coach para te inscrever manualmente."}
               </p>
             </div>
+
           ) : (
             <>
               {/* Card principal da competição */}
@@ -533,6 +602,47 @@ function StudentChallengePage() {
                 className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground disabled:opacity-60">
                 {scheduling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
                 Solicitar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de entrada no desafio com moeda */}
+      {confirmTurma && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card p-5 border border-border space-y-4">
+            <div className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-primary" />
+              <p className="text-base font-bold text-foreground">Confirmar entrada no desafio</p>
+            </div>
+            <p className="text-sm text-foreground">
+              Você está entrando na <span className="font-bold text-primary">Turma {confirmTurma.groupNumber}</span> do desafio <span className="font-bold">{confirmTurma.competitionLabel}</span>.
+            </p>
+            <div className="space-y-2 text-xs">
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-muted-foreground">Janela de pesagem inicial</p>
+                <p className="font-bold text-foreground">{fmt(confirmTurma.initialStart)} – {fmt(confirmTurma.initialEnd)}</p>
+              </div>
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-muted-foreground">Pesagem final</p>
+                <p className="font-bold text-foreground">{confirmTurma.finalWeighIn ? fmt(confirmTurma.finalWeighIn) : "A definir"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-muted-foreground">Data de premiação</p>
+                <p className="font-bold text-primary">{confirmTurma.awardDate ? fmt(confirmTurma.awardDate) : "A definir"}</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Ao confirmar, 1 moeda de desafio será consumida do seu saldo.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmTurma(null)} disabled={joining}
+                className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
+              <button onClick={handleJoin} disabled={joining}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground disabled:opacity-60">
+                {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+                Quero entrar
               </button>
             </div>
           </div>
