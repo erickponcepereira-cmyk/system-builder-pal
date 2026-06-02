@@ -2330,6 +2330,47 @@ export type Database = {
           },
         ]
       }
+      competition_finalization_log: {
+        Row: {
+          competition_id: string
+          created_at: string
+          finalized_at: string
+          finalized_by: string | null
+          id: string
+          snapshot: Json
+          winner_female_enrollment_id: string | null
+          winner_male_enrollment_id: string | null
+        }
+        Insert: {
+          competition_id: string
+          created_at?: string
+          finalized_at?: string
+          finalized_by?: string | null
+          id?: string
+          snapshot?: Json
+          winner_female_enrollment_id?: string | null
+          winner_male_enrollment_id?: string | null
+        }
+        Update: {
+          competition_id?: string
+          created_at?: string
+          finalized_at?: string
+          finalized_by?: string | null
+          id?: string
+          snapshot?: Json
+          winner_female_enrollment_id?: string | null
+          winner_male_enrollment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_finalization_log_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competition_groups: {
         Row: {
           award_date: string | null
@@ -2461,6 +2502,8 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
           month: number
           prize_amount: number
@@ -2471,6 +2514,8 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           month: number
           prize_amount?: number
@@ -2481,6 +2526,8 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
           month?: number
           prize_amount?: number
