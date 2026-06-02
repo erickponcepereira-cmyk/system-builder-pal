@@ -313,21 +313,34 @@ function ProfilePage() {
             {section.title}
           </h2>
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
-            {section.items.map((it, i) => (
-              <Link
-                key={it.label}
-                to={"to" in it ? it.to : "/student/profile"}
-                className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] ${
-                  i !== section.items.length - 1 ? "border-b border-white/5" : ""
-                }`}
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
-                  <it.icon className="h-4 w-4 text-white/70" />
-                </div>
-                <span className="flex-1 text-sm text-white">{it.label}</span>
-                <ChevronRight className="h-4 w-4 text-white/30" />
-              </Link>
-            ))}
+            {section.items.map((it, i) => {
+              const target = "to" in it && it.to ? it.to : null;
+              const cls = `flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] cursor-pointer ${
+                i !== section.items.length - 1 ? "border-b border-white/5" : ""
+              }`;
+              const body = (
+                <>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
+                    <it.icon className="h-4 w-4 text-white/70" />
+                  </div>
+                  <span className="flex-1 text-sm text-white">{it.label}</span>
+                  <ChevronRight className="h-4 w-4 text-white/30" />
+                </>
+              );
+              return target ? (
+                <a
+                  key={it.label}
+                  href={target}
+                  onClick={(e) => { e.preventDefault(); navigate({ to: target as never }); }}
+                  className={cls}
+                >
+                  {body}
+                </a>
+              ) : (
+                <button key={it.label} type="button" className={cls}>{body}</button>
+              );
+            })}
+
           </div>
         </div>
       ))}
