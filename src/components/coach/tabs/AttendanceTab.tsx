@@ -144,7 +144,15 @@ export function AttendanceTab() {
         ) : (
           <div className="space-y-2">
             {filtered.map((r) => (
-              <div key={r.id} className="rounded-xl p-3" style={{ backgroundColor: "#0F0F0F" }}>
+              <div
+                key={r.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setOpenId(r.id)}
+                onKeyDown={(e) => { if (e.key === "Enter") setOpenId(r.id); }}
+                className="rounded-xl p-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
+                style={{ backgroundColor: "#0F0F0F" }}
+              >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
