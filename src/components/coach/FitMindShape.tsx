@@ -1822,6 +1822,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const upd = (k: keyof FitMindAssessment, v: unknown) =>
       setAssessment((a) => ({ ...a, [k]: v }));
 
+    const chooseAssessmentGroup = (groupName: string) => {
+      const name = groupName.trim();
+      if (!name) return;
+      upd("groupId" as keyof FitMindAssessment, name);
+      void persistSelectedClientGroup(name);
+      setNewGroupName("");
+      setIsCreatingNewGroup(false);
+    };
+
     const StepDados = () => {
       const autoAge = (() => {
         if (!selectedClient?.birthDate) return null;
