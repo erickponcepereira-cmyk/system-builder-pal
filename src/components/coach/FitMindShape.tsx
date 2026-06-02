@@ -402,6 +402,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
+  const [showProNotes, setShowProNotes] = useState(false);
 
   const availableGroups = useMemo(() => {
     const byId = new Map<string, { id: string; name: string; color?: string }>();
@@ -2305,7 +2306,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
 
     const StepAnotacoes = () => {
-      const [showProNotes, setShowProNotes] = useState(false);
       return (
       <div>
         <div className="fm-section-title">Anotações</div>
