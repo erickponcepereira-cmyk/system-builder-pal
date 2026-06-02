@@ -80,7 +80,7 @@ function RouteComponent() {
       const goalsStr = (r.goals_snapshot || []).map((g) => `${g.label}: ${g.current}/${g.required_scaled} (faltam ${g.missing})`).join(" | ");
       lines.push([
         `${monthName(r.period_month)}/${r.period_year}`,
-        p?.full_name || "—",
+        p?.name || "—",
         p?.email || "—",
         r.patent_level,
         `${r.multiplier}x`,
@@ -162,7 +162,7 @@ function RouteComponent() {
                   <tr key={r.id} className="border-t border-white/5">
                     <td className="px-3 py-2 text-white">{monthName(r.period_month)}/{r.period_year}</td>
                     <td className="px-3 py-2 text-white">
-                      <div>{p?.full_name || "—"}</div>
+                      <div>{p?.name || "—"}</div>
                       <div className="text-[10px] text-white/40">{p?.email}</div>
                     </td>
                     <td className="px-3 py-2 text-white/70">Nível {r.patent_level}</td>
