@@ -313,13 +313,13 @@ function AdminChallengePage() {
         initial_share_url: weighModal.share_url || null,
         status: "weighed_initial",
       } : {
-        final_date: weighModal.date,
         final_weight: weighModal.weight ? Number(weighModal.weight) : null,
         final_body_fat: weighModal.body_fat ? Number(weighModal.body_fat) : null,
         final_muscle_mass: weighModal.muscle_mass ? Number(weighModal.muscle_mass) : null,
         final_share_url: weighModal.share_url || null,
         status: "weighed_final",
       };
+
       const { error } = await supabase.from("competition_enrollments" as never)
         .update(updates as never).eq("id" as never, weighModal.enrollId as never);
       if (error) throw error;
