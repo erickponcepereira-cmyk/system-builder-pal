@@ -276,7 +276,9 @@ function CoachDashboard() {
   }
 
   return (
+    <CoachOnboardingGate>
     <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
+
       {/* Mobile header */}
       <div
         className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between border-b border-white/5 px-4 backdrop-blur-xl lg:hidden"
