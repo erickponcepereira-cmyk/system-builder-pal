@@ -201,7 +201,7 @@ export async function computeMonthlySnapshot(profileId: string, year: number, mo
  * Persist a monthly snapshot (idempotent upsert by profile_id+year+month).
  */
 export async function upsertMonthlySnapshot(s: MonthlySnapshot): Promise<void> {
-  const { error } = await supabaseAdmin.from("network_unlock_history").upsert({
+  const payload = {
     profile_id: s.profileId,
     coach_id: s.coachId,
     period_year: s.year,
@@ -212,7 +212,10 @@ export async function upsertMonthlySnapshot(s: MonthlySnapshot): Promise<void> {
     any_completed: s.anyCompleted,
     goals_snapshot: s.goals as unknown as object,
     computed_at: new Date().toISOString(),
-  }, { onConflict: "profile_id,period_year,period_month" });
+  };
+  const { error } = await supabaseAdmin
+    .from("network_unlock_history")
+    .upsert(payload as never, { onConflict: "profile_id,period_year,period_month" });
   if (error) throw error;
 }
 
