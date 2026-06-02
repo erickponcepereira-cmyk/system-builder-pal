@@ -2301,49 +2301,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
 
 
-    const StepOutros = () => (
-      <div>
-        <div className="fm-section-title">Pressão Arterial & Outros</div>
-        <div className="fm-grid-2" style={{ marginBottom: 12 }}>
-          <div>
-            <label className="fm-label">PA Sistólica (mmHg)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 120"
-              onChange={(e) => upd("systolicBP", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">PA Diastólica (mmHg)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 80"
-              onChange={(e) => upd("diastolicBP", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">Frequência Cardíaca (bpm)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 72"
-              onChange={(e) => upd("heartRate", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">Glicemia (mg/dL)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 95"
-              onChange={(e) => upd("bloodGlucose", +e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-    );
 
 
     const StepAnotacoes = () => (
