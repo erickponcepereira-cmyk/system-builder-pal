@@ -156,6 +156,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
         pointsPerSale: p.points_per_sale ?? 0,
+        challengeDays: (p.has_challenge_access ?? true) ? Number(p.duration_days || 30) : 0,
       });})),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
