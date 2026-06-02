@@ -4469,15 +4469,23 @@ export type Database = {
           benefits: string | null
           can_access_reports: boolean | null
           created_at: string | null
+          description: string | null
           display_name: string
           id: string
+          is_active: boolean | null
+          key: string | null
+          level: number | null
+          max_team_sales_pct: number | null
           min_consecutive_months: number | null
           min_direct_students: number | null
           min_monthly_revenue: number | null
           min_network_students: number | null
-          patent: Database["public"]["Enums"]["patent_level"]
+          min_own_sales_pct: number | null
+          patent: Database["public"]["Enums"]["patent_level"] | null
           report_scope: string | null
+          required_revenue: number | null
           sort_order: number | null
+          time_window_months: number | null
         }
         Insert: {
           badge_color: string
@@ -4485,15 +4493,23 @@ export type Database = {
           benefits?: string | null
           can_access_reports?: boolean | null
           created_at?: string | null
+          description?: string | null
           display_name: string
           id?: string
+          is_active?: boolean | null
+          key?: string | null
+          level?: number | null
+          max_team_sales_pct?: number | null
           min_consecutive_months?: number | null
           min_direct_students?: number | null
           min_monthly_revenue?: number | null
           min_network_students?: number | null
-          patent: Database["public"]["Enums"]["patent_level"]
+          min_own_sales_pct?: number | null
+          patent?: Database["public"]["Enums"]["patent_level"] | null
           report_scope?: string | null
+          required_revenue?: number | null
           sort_order?: number | null
+          time_window_months?: number | null
         }
         Update: {
           badge_color?: string
@@ -4501,15 +4517,23 @@ export type Database = {
           benefits?: string | null
           can_access_reports?: boolean | null
           created_at?: string | null
+          description?: string | null
           display_name?: string
           id?: string
+          is_active?: boolean | null
+          key?: string | null
+          level?: number | null
+          max_team_sales_pct?: number | null
           min_consecutive_months?: number | null
           min_direct_students?: number | null
           min_monthly_revenue?: number | null
           min_network_students?: number | null
-          patent?: Database["public"]["Enums"]["patent_level"]
+          min_own_sales_pct?: number | null
+          patent?: Database["public"]["Enums"]["patent_level"] | null
           report_scope?: string | null
+          required_revenue?: number | null
           sort_order?: number | null
+          time_window_months?: number | null
         }
         Relationships: []
       }
