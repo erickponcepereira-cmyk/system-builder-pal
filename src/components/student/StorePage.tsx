@@ -91,11 +91,11 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale").eq("status", "active").order("sort_order"),
+      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
     const { data: catRows } = await supabase.from("store_categories" as never).select("id,section_id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never);
@@ -156,6 +156,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
         pointsPerSale: p.points_per_sale ?? 0,
+        challengeDays: (p.has_challenge_access ?? true) ? Number(p.duration_days || 30) : 0,
       });})),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
@@ -192,6 +193,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
         pointsPerSale: it.points_per_sale ?? 0,
+        challengeDays: it.has_challenge_access ? Number(it.duration_days || 30) : 0,
       }))),
       ...(((partnerRows as any[]) || []).map((pp: any) => {
         const specKey = pp.coach?.specialty_key || "other";
@@ -623,8 +625,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
                 <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
               )}
+              {(item.challengeDays ?? 0) > 0 && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  🔥 {item.challengeDays}d desafio
+                </span>
+              )}
               {coachMode && (item.pointsPerSale ?? 0) > 0 && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
                   🏆 +{item.pointsPerSale} pts
                 </span>
               )}

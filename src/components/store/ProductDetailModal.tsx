@@ -36,6 +36,8 @@ export interface ProductDetail {
   otherCosts?: number | null;
   // Pontos para carreira do coach (gameficação)
   pointsPerSale?: number | null;
+  // Dias de acesso ao Desafio liberados pela compra/venda
+  challengeDays?: number | null;
 }
 
 const fmt = (n: number) =>
@@ -180,6 +182,21 @@ export function ProductDetailModal({
 
           {product.stock != null && (
             <p className="text-xs text-muted-foreground">Estoque disponível: {product.stock}</p>
+          )}
+
+          {(product.challengeDays ?? 0) > 0 && (
+            <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-base">🔥</span>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">Desafio liberado</p>
+                  <p className="text-xs text-foreground">Acesso ao Desafio incluso na compra</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-bold text-primary">
+                {product.challengeDays} dias
+              </span>
+            </div>
           )}
 
           {showCommissions && (product.pointsPerSale ?? 0) > 0 && (
