@@ -1140,9 +1140,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   const SelectClientScreen = () => {
     const filtered = clients.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchQuery.toLowerCase()),
+      (c) => {
+        const matchesText =
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.email.toLowerCase().includes(searchQuery.toLowerCase());
+        if (!matchesText) return false;
+        if (!groupFilter) return true;
+        return (c.groups || []).includes(groupFilter);
+      },
     );
     return (
       <div
