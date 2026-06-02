@@ -175,8 +175,9 @@ function EditProfilePage() {
           <input value={form.name} onChange={(e) => update("name", e.target.value)} maxLength={120} className="field-control" />
         </Field>
 
-        <Field label="E-mail (não editável)">
-          <input value={form.email} disabled className="field-control opacity-60" />
+        <Field label="E-mail">
+          <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} maxLength={255} className="field-control" />
+          <span className="mt-1 block text-[10px] text-white/40">Alterar o e-mail exige confirmação no novo endereço.</span>
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
@@ -187,6 +188,21 @@ function EditProfilePage() {
             <input type="date" value={form.birthdate} onChange={(e) => update("birthdate", e.target.value)} className="field-control" />
           </Field>
         </div>
+
+        <Field label="Gênero">
+          <div className="grid grid-cols-3 gap-2">
+            {GENDERS.map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => update("gender", form.gender === v ? "" : v)}
+                className={`rounded-xl py-2 text-sm font-semibold transition-colors ${form.gender === v ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </Field>
 
         <Field label="Profissão">
           <input value={form.profession} onChange={(e) => update("profession", e.target.value)} maxLength={100} placeholder="Ex: Designer, Médico..." className="field-control" />
