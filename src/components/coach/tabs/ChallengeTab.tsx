@@ -524,6 +524,26 @@ export function ChallengeTab({ coachId }: Props) {
                           ? `${(s.final_weight - s.initial_weight).toFixed(1)} kg`
                           : "—"}
                       </div>
+
+                      <div className="text-foreground text-left">% Gordura</div>
+                      <div className="font-bold text-orange-400">{s.initial_body_fat != null ? `${s.initial_body_fat}%` : "—"}</div>
+                      <div className="font-bold text-orange-400">{s.final_body_fat != null ? `${s.final_body_fat}%` : "—"}</div>
+                      <div className="font-bold text-orange-400">
+                        {s.initial_body_fat != null && s.final_body_fat != null
+                          ? `${(s.final_body_fat - s.initial_body_fat).toFixed(1)}%`
+                          : "—"}
+                      </div>
+
+                      <div className="text-foreground text-left">% Músculo</div>
+                      <div className="font-bold text-blue-400">{s.initial_muscle_mass != null ? `${s.initial_muscle_mass}%` : "—"}</div>
+                      <div className="font-bold text-blue-400">{s.final_muscle_mass != null ? `${s.final_muscle_mass}%` : "—"}</div>
+                      <div className="font-bold text-blue-400">
+                        {s.initial_muscle_mass != null && s.final_muscle_mass != null
+                          ? `${(s.final_muscle_mass - s.initial_muscle_mass).toFixed(1)}%`
+                          : "—"}
+                      </div>
+                    </div>
+
                     {s.status !== "weighed_final" && s.student_id && (
                       <div className="flex gap-2 pt-1">
                         <a
