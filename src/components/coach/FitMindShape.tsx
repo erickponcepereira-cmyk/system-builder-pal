@@ -396,6 +396,21 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [newGroupName, setNewGroupName] = useState("");
   const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
 
+  // ── Pré-seleção via initialClientId (ex.: vindo do Desafio) ──
+  const autoSelectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialClientId) return;
+    if (autoSelectedRef.current === initialClientId) return;
+    const c = clients.find((x) => x.id === initialClientId);
+    if (!c) return;
+    autoSelectedRef.current = initialClientId;
+    setSelectedClient(c);
+    setAssessment({ height: c.height || undefined });
+    setStep(0);
+    setScreen("assessment");
+  }, [initialClientId, clients]);
+
+
   // ── Cálculo automático do IMC ────────────────────────────
   const computedBMI = useMemo(() => {
     if (!assessment.weight || !assessment.height) return 0;
