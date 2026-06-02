@@ -316,9 +316,8 @@ export const getAdminTokenAttempts = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<AdminTokenAttemptRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Garantia: só admin
-    const { data: roleRow } = await supabaseAdmin
-      .from("user_roles").select("role").eq("user_id", context.userId).eq("role", "admin").maybeSingle();
-    if (!roleRow) return [];
+    const { data: isAdmin } = await supabaseAdmin.rpc("is_admin", { _user_id: context.userId });
+    if (!isAdmin) return [];
     let query = supabaseAdmin
       .from("challenge_token_attempts")
       .select("id, created_at, success, error_code, error_message, student_id, competition_id, group_id")
