@@ -2366,11 +2366,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
     const StepFotos = () => {
       const VIEWS = [
-        { key: "front", label: "1. De Frente", guide: poseFrente },
-        { key: "back", label: "2. De Costas", guide: poseCostas },
-        { key: "rightSide", label: "3. Lateral Direita", guide: poseLateralDir },
-        { key: "leftSide", label: "4. Lateral Esquerda", guide: poseLateralEsq },
+        { key: "front" as const, label: "1. De Frente", guide: poseFrente },
+        { key: "back" as const, label: "2. De Costas", guide: poseCostas },
+        { key: "rightSide" as const, label: "3. Lateral Direita", guide: poseLateralDir },
+        { key: "leftSide" as const, label: "4. Lateral Esquerda", guide: poseLateralEsq },
       ];
+      const photosObj = (assessment.photos || {}) as Record<string, string | undefined>;
+      const handlePhotoFile = (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = String(reader.result || "");
+          upd("photos" as keyof FitMindAssessment, {
+            ...(assessment.photos || {}),
+            [key]: dataUrl,
+          } as any);
+        };
+        reader.readAsDataURL(file);
+      };
       return (
         <div>
           <div className="fm-section-title">Fotos</div>
@@ -2386,45 +2399,106 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }}
           >
             💡 Posicione o aluno em roupa íntima, em pé, braços levemente
-            afastados do corpo, olhando para frente. Siga o guia de cada ângulo abaixo.
+            afastados do corpo, olhando para frente. Toque em cada cartão para
+            tirar/escolher a foto correspondente.
           </div>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
-            {VIEWS.map((v) => (
-              <div key={v.key}>
-                <label className="fm-label" style={{ marginBottom: 6 }}>
-                  {v.label}
-                </label>
-                <div
-                  className="fm-photo-box"
-                  onClick={() => alert(`Selecionar foto: ${v.label}`)}
-                  style={{ position: "relative", overflow: "hidden", padding: 0 }}
-                >
-                  <img
-                    src={v.guide}
-                    alt={`Guia de pose: ${v.label}`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
-                  />
-                  <div
+            {VIEWS.map((v) => {
+              const photo = photosObj[v.key];
+              const inputId = `fm-photo-${v.key}`;
+              return (
+                <div key={v.key}>
+                  <label className="fm-label" style={{ marginBottom: 6 }}>
+                    {v.label}
+                  </label>
+                  <label
+                    htmlFor={inputId}
+                    className="fm-photo-box"
                     style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      padding: 10,
-                      background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
+                      position: "relative",
+                      overflow: "hidden",
+                      padding: 0,
+                      display: "block",
+                      cursor: "pointer",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--card)", fontSize: 11, fontWeight: 600 }}>
-                      <Camera size={14} /> Toque para adicionar
+                    <img
+                      src={photo || v.guide}
+                      alt={`${v.label}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        opacity: photo ? 1 : 0.85,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        padding: 10,
+                        background:
+                          "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "var(--card)",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <Camera size={14} />{" "}
+                        {photo ? "Trocar foto" : "Toque para adicionar"}
+                      </div>
                     </div>
-                  </div>
+                    <input
+                      id={inputId}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      style={{ display: "none" }}
+                      onChange={(e) =>
+                        handlePhotoFile(v.key, e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+                  {photo && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        upd("photos" as keyof FitMindAssessment, {
+                          ...(assessment.photos || {}),
+                          [v.key]: undefined,
+                        } as any)
+                      }
+                      style={{
+                        marginTop: 6,
+                        fontSize: 11,
+                        background: "transparent",
+                        border: "1px solid var(--border)",
+                        color: "var(--muted-foreground)",
+                        borderRadius: 6,
+                        padding: "4px 8px",
+                        cursor: "pointer",
+                        width: "100%",
+                      }}
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
