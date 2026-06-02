@@ -156,7 +156,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: p.tax_percentage, cost: p.cost, otherCosts: p.other_costs,
         creatorCoachId: p.creator_coach_id ?? null,
         pointsPerSale: p.points_per_sale ?? 0,
-        challengeDays: (p.has_challenge_access ?? true) ? Number(p.duration_days || 30) : 0,
+        hasChallenge: (p.has_challenge_access ?? true) ? true : false,
+        cardDays: Number(p.card_access_days || 0),
       });})),
       ...((digital.data || []).map((p: any) => ({
         id: `digital-${p.id}`, sourceId: p.id, title: p.title, description: p.description,
@@ -193,7 +194,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
         pointsPerSale: it.points_per_sale ?? 0,
-        challengeDays: it.has_challenge_access ? Number(it.duration_days || 30) : 0,
+        hasChallenge: !!it.has_challenge_access,
+        cardDays: Number(it.card_access_days || 0),
       }))),
       ...(((partnerRows as any[]) || []).map((pp: any) => {
         const specKey = pp.coach?.specialty_key || "other";
@@ -625,9 +627,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
                 <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
               )}
-              {(item.challengeDays ?? 0) > 0 && (
+              {item.hasChallenge && (
                 <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                  🔥 {item.challengeDays}d desafio
+                  🔥 Acesso a 1 desafio
+                </span>
+              )}
+              {(item.cardDays ?? 0) > 0 && (
+                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                  🪪 {item.cardDays}d carteirinha
                 </span>
               )}
               {coachMode && (item.pointsPerSale ?? 0) > 0 && (
