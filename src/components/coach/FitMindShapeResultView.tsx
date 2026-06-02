@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import {
   User, ChevronLeft, HelpCircle, Camera, Activity, Heart,
-  Droplets, Bone, Share2,
+  Droplets, Bone, Share2, Eye, EyeOff,
 } from "lucide-react";
 import {
   getBodyFatCategoryACSM,
