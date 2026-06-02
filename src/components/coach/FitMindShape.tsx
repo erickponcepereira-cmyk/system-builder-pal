@@ -2262,40 +2262,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           />
         </div>
 
-        {/* Diâmetros Ósseos */}
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Diâmetros Ósseos (cm)
-        </div>
-        <div className="fm-grid-2">
-          {(
-            [
-              ["Punho", "wrist"],
-              ["Cotovelo / Úmero", "elbow"],
-              ["Tornozelo", "ankle"],
-              ["Joelho", "knee"],
-              ["Úmero (biepicondiliano)", "humerus"],
-              ["Fêmur (biepicondiliano)", "femur"],
-            ] as const
-          ).map(([label, key]) => (
-            <div key={`bone_${key}`}>
-              <label className="fm-label">{label} (cm)</label>
-              <input
-                type="number"
-                step="0.1"
-                className="fm-input"
-                placeholder="Ex: 6.5"
-                value={(assessment.boneDiameters as any)?.[key] ?? ""}
-                onChange={(e) =>
-                  upd("boneDiameters" as any, {
-                    ...(assessment.boneDiameters || {}),
-                    [key]: e.target.value === "" ? undefined : +e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
-        </div>
       </div>
+
       )}
 
       {showBioimpedance && (
