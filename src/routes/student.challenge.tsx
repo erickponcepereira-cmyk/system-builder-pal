@@ -84,6 +84,14 @@ function StudentChallengePage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [coachId, setCoachId] = useState<string | null>(null);
 
+  // Tokens de desafio
+  const [tokens, setTokens] = useState<ChallengeTokenSummary | null>(null);
+  const [confirmTurma, setConfirmTurma] = useState<CurrentTurma | null>(null);
+  const [joining, setJoining] = useState(false);
+  const fetchTokens = useServerFn(getMyChallengeTokens);
+  const doJoin = useServerFn(joinChallengeWithToken);
+
+
 
 
   const load = async () => {
