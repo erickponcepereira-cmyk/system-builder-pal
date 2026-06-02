@@ -91,16 +91,16 @@ function AdminPatents() {
       const payload = {
         key: r.key,
         display_name: r.display_name,
-        description: r.description,
-        badge_color: r.badge_color,
-        badge_icon: r.badge_icon,
+        description: r.description ?? "",
+        badge_color: r.badge_color ?? "#FF4230",
+        badge_icon: r.badge_icon ?? "trophy",
         required_revenue: r.required_revenue,
         time_window_months: r.time_window_months,
         min_own_sales_pct: r.min_own_sales_pct,
         max_team_sales_pct: r.max_team_sales_pct,
         level: r.level,
         sort_order: r.sort_order,
-        benefits: r.benefits,
+        benefits: r.benefits ?? "",
         is_active: r.is_active,
       };
       if (r.id) {
