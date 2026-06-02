@@ -312,6 +312,50 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                               <Mini label="% Gord" value={a.body_fat ? `${a.body_fat}%` : "—"} />
                               <Mini label="Músc. Esq." value={a.skeletal_muscle != null ? `${a.skeletal_muscle}%` : (a.muscle_mass ? `${a.muscle_mass}kg` : "—")} />
                             </div>
+                            {(a.client_notes || a.professional_notes) && (() => {
+                              const isOpen = expandedNotes.has(a.id);
+                              const showPro = showProNotes.has(a.id);
+                              return (
+                                <div className="mt-2">
+                                  <button
+                                    onClick={() => setExpandedNotes((prev) => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-white/60 hover:text-white"
+                                  >
+                                    {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />} Observações
+                                  </button>
+                                  {isOpen && (
+                                    <div className="mt-2 space-y-2">
+                                      {a.client_notes && (
+                                        <div className="rounded-lg border border-white/5 bg-black/30 p-2">
+                                          <p className="mb-1 text-[10px] uppercase tracking-wide text-white/40">Para o aluno</p>
+                                          <p className="whitespace-pre-wrap text-xs text-white/80">{a.client_notes}</p>
+                                        </div>
+                                      )}
+                                      {a.professional_notes && (
+                                        <div className="rounded-lg border border-white/5 bg-black/30 p-2">
+                                          <div className="mb-1 flex items-center justify-between gap-2">
+                                            <p className="text-[10px] uppercase tracking-wide text-white/40">Do profissional</p>
+                                            <button
+                                              onClick={() => setShowProNotes((prev) => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
+                                              className="text-white/60 hover:text-white"
+                                              aria-label={showPro ? "Ocultar" : "Mostrar"}
+                                            >
+                                              {showPro ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                            </button>
+                                          </div>
+                                          <p
+                                            className="whitespace-pre-wrap text-xs text-white/80 transition-[filter]"
+                                            style={{ filter: showPro ? "none" : "blur(4px)", userSelect: showPro ? "auto" : "none" }}
+                                          >
+                                            {a.professional_notes}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ))}
                       </div>
