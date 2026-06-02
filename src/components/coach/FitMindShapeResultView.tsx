@@ -796,15 +796,52 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>{CLINICAL_SOURCES}</div>
         </div>
 
-        {/* Anotações */}
+        {/* Anotações para o Aluno (visível também no compartilhamento) */}
         {a.clientNotes && (
           <div className="fm-card" style={{ marginBottom: 12, borderLeft: "4px solid var(--fm-primary)" }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--fm-primary)", marginBottom: 6 }}>
-              📋 Anotações do Profissional
+              📋 Anotações para o Aluno
             </div>
-            <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.6 }}>{a.clientNotes}</div>
+            <div style={{ fontSize: 14, color: "#475569", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{a.clientNotes}</div>
           </div>
         )}
+
+        {/* Anotações do Profissional — somente no painel do coach, com olho mágico */}
+        {!isPublic && a.professionalNotes && (
+          <div className="fm-card" style={{ marginBottom: 12, borderLeft: "4px solid #ef4444" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#ef4444", flex: 1 }}>
+                🔒 Anotações do Profissional
+              </div>
+              <span style={{ fontSize: 10, background: "#fef2f2", color: "#ef4444", padding: "2px 6px", borderRadius: 4 }}>
+                Não aparece no compartilhamento
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowProNotes((v) => !v)}
+                title={showProNotes ? "Ocultar anotação" : "Mostrar anotação"}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600 }}
+              >
+                {showProNotes ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showProNotes ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                color: "#475569",
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+                filter: showProNotes ? "none" : "blur(4px)",
+                userSelect: showProNotes ? "auto" : "none",
+                transition: "filter 120ms ease",
+              }}
+            >
+              {a.professionalNotes}
+            </div>
+          </div>
+        )}
+
 
         {/* Rodapé do Coach */}
         <div className="fm-coach-footer">
