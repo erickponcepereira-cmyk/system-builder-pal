@@ -19,7 +19,7 @@ type ChallengeLink = {
 export function EvaluateTab() {
   const navigate = useNavigate();
   const [clients, setClients] = useState<FitMindClient[]>([]);
-  const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
+  const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
 
 
