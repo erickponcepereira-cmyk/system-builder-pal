@@ -765,16 +765,61 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           {coach.logo && (
             <img src={coach.logo} alt="Logo" style={{ width: 48, height: 48, borderRadius: 10, objectFit: "cover" }} />
           )}
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 16 }}>{coach.name}</div>
             {coach.specialty && <div style={{ fontSize: 12, opacity: 0.8 }}>{coach.specialty}</div>}
             {coach.email && <div style={{ fontSize: 12, opacity: 0.7 }}>{coach.email}</div>}
+            {(coach.whatsapp || coach.instagram || coach.tiktok || coach.website) && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6, fontSize: 11 }}>
+                {coach.whatsapp && (
+                  <a
+                    href={`https://wa.me/${(coach.whatsapp.replace(/\D/g, "").length <= 11 ? "55" : "") + coach.whatsapp.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "inherit", opacity: 0.9, textDecoration: "none", background: "#ffffff22", padding: "3px 8px", borderRadius: 6 }}
+                  >
+                    📱 WhatsApp
+                  </a>
+                )}
+                {coach.instagram && (
+                  <a
+                    href={`https://instagram.com/${coach.instagram.replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "inherit", opacity: 0.9, textDecoration: "none", background: "#ffffff22", padding: "3px 8px", borderRadius: 6 }}
+                  >
+                    📷 Instagram
+                  </a>
+                )}
+                {coach.tiktok && (
+                  <a
+                    href={`https://tiktok.com/@${coach.tiktok.replace(/^@/, "").replace(/^https?:\/\/(www\.)?tiktok\.com\/@?/, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "inherit", opacity: 0.9, textDecoration: "none", background: "#ffffff22", padding: "3px 8px", borderRadius: 6 }}
+                  >
+                    🎵 TikTok
+                  </a>
+                )}
+                {coach.website && (
+                  <a
+                    href={coach.website.startsWith("http") ? coach.website : `https://${coach.website}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "inherit", opacity: 0.9, textDecoration: "none", background: "#ffffff22", padding: "3px 8px", borderRadius: 6 }}
+                  >
+                    🌐 Site
+                  </a>
+                )}
+              </div>
+            )}
           </div>
           <div style={{ marginLeft: "auto", background: "#ffffff22", borderRadius: 10, padding: "8px 14px", fontSize: 12, textAlign: "center" }}>
             <div style={{ fontWeight: 700 }}>FitMind Shape</div>
             <div style={{ opacity: 0.7 }}>Avaliação corporal</div>
           </div>
         </div>
+
 
         {/* Botões de ação (apenas no modo coach) */}
         {!isPublic && (
