@@ -1901,6 +1901,7 @@ export type Database = {
           card_valid_until: string | null
           career_goal_progress: Json | null
           coach_course_notes: string | null
+          coach_number: number | null
           completed_coach_course: boolean
           consecutive_months_as_top: number | null
           council_number: string | null
@@ -1952,6 +1953,7 @@ export type Database = {
           card_valid_until?: string | null
           career_goal_progress?: Json | null
           coach_course_notes?: string | null
+          coach_number?: number | null
           completed_coach_course?: boolean
           consecutive_months_as_top?: number | null
           council_number?: string | null
@@ -2003,6 +2005,7 @@ export type Database = {
           card_valid_until?: string | null
           career_goal_progress?: Json | null
           coach_course_notes?: string | null
+          coach_number?: number | null
           completed_coach_course?: boolean
           consecutive_months_as_top?: number | null
           council_number?: string | null
