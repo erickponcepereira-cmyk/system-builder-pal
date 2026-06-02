@@ -453,6 +453,7 @@ function CoachDashboard() {
          {activeTab === "challenge" && <div className="p-4"><ChallengeTab coachId={coachContext?.coachId} /></div>}
 
           {activeTab === "career" && <CareerTab />}
+          {activeTab === "wallet" && <WalletTab />}
           </div>
         </div>
       </main>

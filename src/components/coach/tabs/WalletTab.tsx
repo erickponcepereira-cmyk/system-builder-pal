@@ -126,13 +126,18 @@ export function WalletTab() {
       toast.error("Informe sua chave PIX");
       return;
     }
-    if (!amount || Number(amount) <= 0) {
+    const value = Number(amount);
+    if (!value || value <= 0) {
       toast.error("Informe o valor do saque");
+      return;
+    }
+    if (value > wallet.available) {
+      toast.error("Valor maior que o saldo disponível");
       return;
     }
     setSaving(true);
     try {
-      // Persist bank info so future withdrawals don't ask again
+      // Save bank info for future withdrawals
       const { error: upErr } = await supabase.from("coaches").update({
         pix_key: bank.pix_key.trim(),
         pix_key_type: bank.pix_key_type,
@@ -142,7 +147,24 @@ export function WalletTab() {
         bank_account_type: bank.bank_account_type,
       }).eq("id", bank.coachId);
       if (upErr) throw upErr;
-      toast.success(`Saque de R$ ${Number(amount).toFixed(2).replace(".", ",")} solicitado! Dados bancários salvos.`);
+
+      // Get profile_id
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user!.id).maybeSingle();
+      if (!profile?.id) throw new Error("Perfil não encontrado");
+
+      // Create withdrawal request — admin will see and pay it
+      const { error: insErr } = await supabase.from("withdrawal_requests").insert({
+        profile_id: profile.id,
+        amount: value,
+        pix_key: bank.pix_key.trim(),
+        pix_key_type: bank.pix_key_type,
+        status: "requested",
+        notes: [bank.bank_name, bank.bank_agency, bank.bank_account, bank.bank_account_type].filter(Boolean).join(" · ") || null,
+      });
+      if (insErr) throw insErr;
+
+      toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação do admin.`);
       setOpen(false);
       setAmount("");
     } catch (e) {
