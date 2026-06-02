@@ -5,11 +5,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 async function resolveStudentByUser(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: profile } = await supabaseAdmin
-    .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    .from("profiles").select("id, gender").eq("user_id", userId).maybeSingle();
   if (!profile) return null;
   const { data: student } = await supabaseAdmin
-    .from("students").select("id, coach_id, gender, profile_id").eq("profile_id", profile.id).maybeSingle();
-  return (student as { id: string; coach_id: string | null; gender: string | null; profile_id: string } | null) ?? null;
+    .from("students").select("id, coach_id, profile_id").eq("profile_id", (profile as { id: string }).id).maybeSingle();
+  if (!student) return null;
+  return {
+    id: (student as { id: string }).id,
+    coach_id: (student as { coach_id: string | null }).coach_id,
+    profile_id: (student as { profile_id: string }).profile_id,
+    gender: (profile as { gender: string | null }).gender,
+  };
 }
 
 export type CurrentTurma = {
