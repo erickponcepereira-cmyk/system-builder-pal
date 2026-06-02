@@ -1,28 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight, Trophy, Package, Layers, Loader2, Medal } from "lucide-react";
+import { ChevronDown, ChevronRight, Trophy, Package, Layers, Loader2, Medal, Calendar } from "lucide-react";
 
-type Row = {
-  section_id: string | null;
-  section_name: string;
-  category_id: string | null;
-  category_name: string;
+type SaleRow = {
   product_id: string;
-  product_name: string;
   qty: number;
+  revenue: number;
 };
 
-type ProductNode = { id: string; name: string; qty: number; rank: number };
-type CategoryNode = { id: string; name: string; qty: number; rank: number; products: ProductNode[] };
-type SectionNode = { id: string; name: string; qty: number; rank: number; categories: CategoryNode[] };
+type ProductNode = { id: string; name: string; qty: number; revenue: number; rank: number };
+type CategoryNode = { id: string; name: string; qty: number; revenue: number; rank: number; products: ProductNode[] };
+type SectionNode = { id: string; name: string; qty: number; revenue: number; rank: number; categories: CategoryNode[] };
 
 const RANK_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
 
+type PeriodKey = "all" | "month" | "30d" | "custom";
+
+const money = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 function RankBadge({ rank }: { rank: number }) {
   if (rank <= 3) {
-    return (
-      <Medal className="h-4 w-4" style={{ color: RANK_COLORS[rank - 1] }} />
-    );
+    return <Medal className="h-4 w-4" style={{ color: RANK_COLORS[rank - 1] }} />;
   }
   return (
     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white/70">
@@ -31,117 +30,155 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
+function getRange(period: PeriodKey, customFrom: string, customTo: string): { from: Date | null; to: Date | null } {
+  const now = new Date();
+  if (period === "month") {
+    return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: null };
+  }
+  if (period === "30d") {
+    const d = new Date(); d.setDate(d.getDate() - 30); return { from: d, to: null };
+  }
+  if (period === "custom") {
+    return {
+      from: customFrom ? new Date(customFrom + "T00:00:00") : null,
+      to: customTo ? new Date(customTo + "T23:59:59") : null,
+    };
+  }
+  return { from: null, to: null };
+}
+
 export function TopSellingProducts({ coachProfileId }: { coachProfileId: string | null }) {
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [sales, setSales] = useState<Map<string, SaleRow>>(new Map());
+  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; category_id: string | null }>>([]);
+  const [allCategories, setAllCategories] = useState<Array<{ id: string; name: string; section_id: string | null }>>([]);
+  const [allSections, setAllSections] = useState<Array<{ id: string; name: string }>>([]);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
+  const [period, setPeriod] = useState<PeriodKey>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [limitMode, setLimitMode] = useState<10 | 20 | "all">(10);
+
+  // Load taxonomy once
+  useEffect(() => {
+    (async () => {
+      const [secsRes, catsRes, prodsRes] = await Promise.all([
+        supabase.from("store_sections").select("id,name").order("name"),
+        supabase.from("store_categories").select("id,name,section_id").order("name"),
+        supabase.from("products").select("id,name,category_id"),
+      ]);
+      setAllSections((secsRes.data as any[]) || []);
+      setAllCategories((catsRes.data as any[]) || []);
+      setAllProducts((prodsRes.data as any[]) || []);
+    })();
+  }, []);
+
+  // Load sales when filters change
   useEffect(() => {
     if (!coachProfileId) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      // 1) Get paid commissions (level 0 = direct sale) for this coach
+      const { from, to } = getRange(period, customFrom, customTo);
+
       const { data: comms } = await supabase
         .from("commissions")
         .select("transaction_id")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
       const txIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
-      if (txIds.length === 0) { if (!cancelled) { setRows([]); setLoading(false); } return; }
+      if (txIds.length === 0) { if (!cancelled) { setSales(new Map()); setLoading(false); } return; }
 
-      const { data: txs } = await supabase
+      let q = supabase
         .from("transactions")
-        .select("id,product_id,status")
+        .select("id,product_id,status,gross_amount,paid_at,created_at")
         .in("id", txIds as string[])
         .eq("status", "paid");
-      const prodIds = Array.from(new Set((txs || []).map((t: any) => t.product_id))).filter(Boolean);
-      if (prodIds.length === 0) { if (!cancelled) { setRows([]); setLoading(false); } return; }
+      if (from) q = q.gte("paid_at", from.toISOString());
+      if (to) q = q.lte("paid_at", to.toISOString());
+      const { data: txs } = await q;
 
-      const { data: prods } = await supabase
-        .from("products")
-        .select("id,name,category_id")
-        .in("id", prodIds as string[]);
-
-      const catIds = Array.from(new Set((prods || []).map((p: any) => p.category_id).filter(Boolean)));
-      const { data: cats } = catIds.length
-        ? await supabase.from("store_categories").select("id,name,section_id").in("id", catIds as string[])
-        : { data: [] as any[] };
-      const sectionIds = Array.from(new Set((cats || []).map((c: any) => c.section_id).filter(Boolean)));
-      const { data: secs } = sectionIds.length
-        ? await supabase.from("store_sections").select("id,name").in("id", sectionIds as string[])
-        : { data: [] as any[] };
-
-      const prodMap = new Map<string, any>((prods || []).map((p: any) => [p.id, p]));
-      const catMap = new Map<string, any>((cats || []).map((c: any) => [c.id, c]));
-      const secMap = new Map<string, any>((secs || []).map((s: any) => [s.id, s]));
-
-      // Count per product
-      const counts = new Map<string, number>();
-      (txs || []).forEach((t: any) => counts.set(t.product_id, (counts.get(t.product_id) || 0) + 1));
-
-      const result: Row[] = [];
-      counts.forEach((qty, pid) => {
-        const p = prodMap.get(pid);
-        if (!p) return;
-        const c = p.category_id ? catMap.get(p.category_id) : null;
-        const s = c?.section_id ? secMap.get(c.section_id) : null;
-        result.push({
-          section_id: s?.id || null,
-          section_name: s?.name || "Sem categoria",
-          category_id: c?.id || null,
-          category_name: c?.name || "Sem subcategoria",
-          product_id: pid,
-          product_name: p.name,
-          qty,
-        });
+      const map = new Map<string, SaleRow>();
+      (txs || []).forEach((t: any) => {
+        if (!t.product_id) return;
+        const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0 };
+        existing.qty += 1;
+        existing.revenue += Number(t.gross_amount) || 0;
+        map.set(t.product_id, existing);
       });
 
       if (!cancelled) {
-        setRows(result);
+        setSales(map);
         setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [coachProfileId]);
+  }, [coachProfileId, period, customFrom, customTo]);
 
   const tree: SectionNode[] = useMemo(() => {
-    const sMap = new Map<string, SectionNode>();
-    rows.forEach((r) => {
-      const sKey = r.section_id || `none-${r.section_name}`;
-      if (!sMap.has(sKey)) sMap.set(sKey, { id: sKey, name: r.section_name, qty: 0, rank: 0, categories: [] });
-      const sec = sMap.get(sKey)!;
-      sec.qty += r.qty;
-      const cKey = r.category_id || `none-${r.category_name}`;
-      let cat = sec.categories.find((c) => c.id === cKey);
-      if (!cat) { cat = { id: cKey, name: r.category_name, qty: 0, rank: 0, products: [] }; sec.categories.push(cat); }
-      cat.qty += r.qty;
-      cat.products.push({ id: r.product_id, name: r.product_name, qty: r.qty, rank: 0 });
+    const limit = limitMode === "all" ? Infinity : limitMode;
+    const catMap = new Map(allCategories.map((c) => [c.id, c]));
+    const secMap = new Map<string, SectionNode>(
+      allSections.map((s) => [s.id, { id: s.id, name: s.name, qty: 0, revenue: 0, rank: 0, categories: [] }])
+    );
+    // ensure a virtual "Sem seção" bucket if needed
+    const ensureSec = (id: string | null, name: string) => {
+      const key = id || "__none__";
+      if (!secMap.has(key)) secMap.set(key, { id: key, name, qty: 0, revenue: 0, rank: 0, categories: [] });
+      return secMap.get(key)!;
+    };
+
+    const catNodes = new Map<string, CategoryNode>();
+    // initialize all categories (even without sales)
+    allCategories.forEach((c) => {
+      catNodes.set(c.id, { id: c.id, name: c.name, qty: 0, revenue: 0, rank: 0, products: [] });
     });
-    const arr = Array.from(sMap.values());
+
+    // initialize all products under their category
+    allProducts.forEach((p) => {
+      const sale = sales.get(p.id);
+      const node: ProductNode = {
+        id: p.id, name: p.name, qty: sale?.qty || 0, revenue: sale?.revenue || 0, rank: 0,
+      };
+      const catId = p.category_id;
+      if (catId && catNodes.has(catId)) {
+        catNodes.get(catId)!.products.push(node);
+      } else {
+        // product without category -> bucket
+        const orphanCat = catNodes.get("__none_cat__") || { id: "__none_cat__", name: "Sem subcategoria", qty: 0, revenue: 0, rank: 0, products: [] };
+        orphanCat.products.push(node);
+        catNodes.set("__none_cat__", orphanCat);
+      }
+    });
+
+    // attach categories to sections + sum
+    catNodes.forEach((cat) => {
+      cat.qty = cat.products.reduce((s, p) => s + p.qty, 0);
+      cat.revenue = cat.products.reduce((s, p) => s + p.revenue, 0);
+      const meta = catMap.get(cat.id);
+      const sec = ensureSec(meta?.section_id || null, "Sem seção");
+      sec.categories.push(cat);
+    });
+
+    const arr = Array.from(secMap.values()).filter((s) => s.categories.length > 0);
     arr.forEach((s) => {
-      s.categories.sort((a, b) => b.qty - a.qty);
-      s.categories = s.categories.slice(0, 10).map((c, i) => ({ ...c, rank: i + 1 }));
+      s.qty = s.categories.reduce((acc, c) => acc + c.qty, 0);
+      s.revenue = s.categories.reduce((acc, c) => acc + c.revenue, 0);
+      s.categories.sort((a, b) => b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name));
+      s.categories = s.categories.slice(0, limit).map((c, i) => ({ ...c, rank: i + 1 }));
       s.categories.forEach((c) => {
-        c.products.sort((a, b) => b.qty - a.qty);
-        c.products = c.products.slice(0, 10).map((p, i) => ({ ...p, rank: i + 1 }));
+        c.products.sort((a, b) => b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name));
+        c.products = c.products.slice(0, limit).map((p, i) => ({ ...p, rank: i + 1 }));
       });
     });
-    arr.sort((a, b) => b.qty - a.qty);
-    return arr.slice(0, 10).map((s, i) => ({ ...s, rank: i + 1 }));
-  }, [rows]);
+    arr.sort((a, b) => b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name));
+    return arr.map((s, i) => ({ ...s, rank: i + 1 }));
+  }, [sales, allProducts, allCategories, allSections, limitMode]);
 
-  const total = useMemo(() => tree.reduce((s, n) => s + n.qty, 0), [tree]);
-
-  if (loading) {
-    return (
-      <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-        <p className="mt-2 text-sm text-white/50">Calculando suas conquistas...</p>
-      </div>
-    );
-  }
+  const totalQty = useMemo(() => tree.reduce((s, n) => s + n.qty, 0), [tree]);
+  const totalRevenue = useMemo(() => tree.reduce((s, n) => s + n.revenue, 0), [tree]);
 
   return (
     <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
@@ -153,17 +190,69 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
             <p className="text-xs text-white/45">Suas conquistas por categoria e produto</p>
           </div>
         </div>
-        <div className="rounded-xl bg-primary/15 px-3 py-2 text-right">
-          <p className="text-[10px] uppercase text-primary/80">Total vendido</p>
-          <p className="text-xl font-bold text-primary">{total}</p>
+        <div className="flex gap-2 text-right">
+          <div className="rounded-xl bg-primary/15 px-3 py-2">
+            <p className="text-[10px] uppercase text-primary/80">Qtd vendida</p>
+            <p className="text-xl font-bold text-primary">{totalQty}</p>
+          </div>
+          <div className="rounded-xl bg-emerald-500/15 px-3 py-2">
+            <p className="text-[10px] uppercase text-emerald-400/80">Receita</p>
+            <p className="text-base font-bold text-emerald-400">{money(totalRevenue)}</p>
+          </div>
         </div>
       </div>
 
-      {tree.length === 0 ? (
+      {/* Filtros */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+          <Calendar className="ml-2 h-3.5 w-3.5 text-white/40" />
+          {([
+            { k: "all", label: "Todo o período" },
+            { k: "month", label: "Mês atual" },
+            { k: "30d", label: "Últimos 30 dias" },
+            { k: "custom", label: "Personalizado" },
+          ] as Array<{ k: PeriodKey; label: string }>).map((opt) => (
+            <button
+              key={opt.k}
+              onClick={() => setPeriod(opt.k)}
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${period === opt.k ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {period === "custom" && (
+          <div className="flex items-center gap-2">
+            <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white" />
+            <span className="text-xs text-white/40">até</span>
+            <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white" />
+          </div>
+        )}
+
+        <div className="ml-auto inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+          {([10, 20, "all"] as const).map((m) => (
+            <button
+              key={String(m)}
+              onClick={() => setLimitMode(m)}
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${limitMode === m ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}
+            >
+              {m === "all" ? "Ver todos" : `Top ${m}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="rounded-xl p-8 text-center">
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+          <p className="mt-2 text-sm text-white/50">Calculando suas conquistas...</p>
+        </div>
+      ) : tree.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/10 p-8 text-center">
           <Package className="mx-auto h-8 w-8 text-white/30" />
-          <p className="mt-2 text-sm text-white/50">Nenhuma venda registrada ainda.</p>
-          <p className="text-xs text-white/35">Quando suas vendas forem pagas, elas aparecerão aqui como conquistas.</p>
+          <p className="mt-2 text-sm text-white/50">Nenhuma categoria cadastrada ainda.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -181,7 +270,10 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                     <Layers className="h-4 w-4 text-primary" />
                     <span className="font-bold text-white">{sec.name}</span>
                   </div>
-                  <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-bold text-primary">{sec.qty}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400">{money(sec.revenue)}</span>
+                    <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-bold text-primary">{sec.qty}</span>
+                  </div>
                 </button>
                 {isOpen && (
                   <div className="space-y-1 border-t border-white/5 p-2">
@@ -199,18 +291,26 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                               {catOpen ? <ChevronDown className="h-3.5 w-3.5 text-white/60" /> : <ChevronRight className="h-3.5 w-3.5 text-white/40" />}
                               <span className="text-sm font-medium text-white/90">{cat.name}</span>
                             </div>
-                            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold text-white/80">{cat.qty}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400/90">{money(cat.revenue)}</span>
+                              <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold text-white/80">{cat.qty}</span>
+                            </div>
                           </button>
                           {catOpen && (
                             <div className="space-y-1 border-t border-white/5 p-2">
-                              {cat.products.map((p) => (
+                              {cat.products.length === 0 ? (
+                                <p className="px-3 py-2 text-[11px] text-white/40">Nenhum produto cadastrado nesta subcategoria.</p>
+                              ) : cat.products.map((p) => (
                                 <div key={p.id} className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={{ backgroundColor: "#0B0B0B" }}>
                                   <div className="flex items-center gap-2">
                                     <RankBadge rank={p.rank} />
                                     <Package className="h-3 w-3 text-white/40" />
                                     <span className="text-xs text-white/80">{p.name}</span>
                                   </div>
-                                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">{p.qty}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400/90">{money(p.revenue)}</span>
+                                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-bold text-primary">{p.qty}</span>
+                                  </div>
                                 </div>
                               ))}
                             </div>
