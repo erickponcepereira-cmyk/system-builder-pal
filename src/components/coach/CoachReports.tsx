@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CalendarCheck, BarChart3, User as UserIcon, ShoppingBag, Trophy, Users,
-  Download, Search, TrendingUp, TrendingDown,
+  Download, Search, TrendingUp, TrendingDown, Network,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -13,6 +13,7 @@ import {
   getCoachSalesReport, getCoachChallengeRanking,
   type SalesReport, type ChallengeRankingRow,
 } from "@/lib/coach-reports.functions";
+import { getCoachDownlineReport, type DownlineReport } from "@/lib/coach-downline.functions";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function thisMonthISO() { return new Date().toISOString().slice(0, 7); }
@@ -23,7 +24,7 @@ function shiftMonths(iso: string, n: number) {
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (a: number, b: number) => (b === 0 ? (a > 0 ? 100 : 0) : ((a - b) / b) * 100);
 
-type ReportTab = "atendimentos" | "vendas" | "clientes" | "desafio";
+type ReportTab = "atendimentos" | "vendas" | "clientes" | "desafio" | "rede";
 
 export function CoachReports() {
   const [tab, setTab] = useState<ReportTab>("vendas");
@@ -38,6 +39,7 @@ export function CoachReports() {
         <div className="flex gap-1.5 flex-wrap">
           <TabBtn active={tab === "vendas"} onClick={() => setTab("vendas")} icon={ShoppingBag} label="Vendas" />
           <TabBtn active={tab === "clientes"} onClick={() => setTab("clientes")} icon={Users} label="Top Clientes" />
+          <TabBtn active={tab === "rede"} onClick={() => setTab("rede")} icon={Network} label="Rede / Downline" />
           <TabBtn active={tab === "desafio"} onClick={() => setTab("desafio")} icon={Trophy} label="Desafio" />
           <TabBtn active={tab === "atendimentos"} onClick={() => setTab("atendimentos")} icon={CalendarCheck} label="Atendimentos" />
         </div>
@@ -45,6 +47,7 @@ export function CoachReports() {
 
       {tab === "vendas" && <SalesDashboard mode="sales" />}
       {tab === "clientes" && <SalesDashboard mode="customers" />}
+      {tab === "rede" && <DownlineDashboard />}
       {tab === "desafio" && <ChallengeDashboard />}
       {tab === "atendimentos" && <AttendanceDashboard />}
     </>
@@ -392,6 +395,182 @@ function AttendanceDashboard() {
         </div>
       )}
     </>
+  );
+}
+
+/* ------------------- Downline (Rede) Dashboard ------------------- */
+
+function DownlineDashboard() {
+  const fetchDownline = useServerFn(getCoachDownlineReport);
+  const [from, setFrom] = useState(firstOfMonth());
+  const [to, setTo] = useState(todayISO());
+  const [search, setSearch] = useState("");
+  const [levelFilter, setLevelFilter] = useState<0 | 1 | 2 | 3>(0);
+  const [data, setData] = useState<DownlineReport | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchDownline({ data: { from, to } })
+      .then(setData).catch(() => setData(null)).finally(() => setLoading(false));
+  }, [fetchDownline, from, to]);
+
+  const filteredCoaches = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    return data.coaches.filter((c) =>
+      (levelFilter === 0 || c.level === levelFilter) &&
+      (!q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+    );
+  }, [data, search, levelFilter]);
+
+  const exportExcel = () => {
+    if (!data) return;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
+      { Métrica: "Coaches na rede (3 níveis)", Valor: data.totals.coaches },
+      { Métrica: "Alunos totais", Valor: data.totals.students },
+      { Métrica: "Faturamento total", Valor: data.totals.revenue },
+      { Métrica: "Minhas comissões geradas", Valor: data.totals.commission },
+      { Métrica: "Período", Valor: `${data.range.from} a ${data.range.to}` },
+    ]), "Resumo");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.byLevel.map((l) => ({
+      Linha: `Nível ${l.level}`, Coaches: l.coaches, Alunos: l.students,
+      Faturamento: l.revenue, "Comissão p/ mim": l.commission,
+    }))), "Por linha");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredCoaches.map((c) => ({
+      Nível: c.level, Coach: c.name, Email: c.email,
+      Alunos: c.students, "Coaches filhos": c.child_coaches,
+      Pedidos: c.orders, Faturamento: c.revenue, "Comissão p/ mim": c.my_commission,
+    }))), "Coaches");
+    XLSX.writeFile(wb, `relatorio-rede-${data.range.from}-${data.range.to}.xlsx`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label>Período:</Label>
+          <DateInput value={from} onChange={setFrom} />
+          <span className="text-white/40 text-xs">até</span>
+          <DateInput value={to} onChange={setTo} />
+          <QuickRange label="Mês atual" onClick={() => { setFrom(firstOfMonth()); setTo(todayISO()); }} />
+          <QuickRange label="30 dias" onClick={() => { setFrom(shiftMonths(todayISO(), -1)); setTo(todayISO()); }} />
+          <QuickRange label="90 dias" onClick={() => { setFrom(shiftMonths(todayISO(), -3)); setTo(todayISO()); }} />
+          <QuickRange label="1 ano" onClick={() => { setFrom(shiftMonths(todayISO(), -12)); setTo(todayISO()); }} />
+          <button onClick={exportExcel} className="ml-auto bg-primary/15 text-primary px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-primary/25 flex items-center gap-1.5">
+            <Download className="h-3.5 w-3.5" /> Excel
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label>Linha:</Label>
+          {([0, 1, 2, 3] as const).map((lv) => (
+            <button key={lv} onClick={() => setLevelFilter(lv)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${levelFilter === lv ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
+              {lv === 0 ? "Todas" : `Nível ${lv}`}
+            </button>
+          ))}
+        </div>
+        <div className="relative">
+          <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar coach por nome ou email..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/40 border border-white/10 text-xs text-white" />
+        </div>
+      </div>
+
+      {loading && <p className="text-xs text-white/50">Carregando rede...</p>}
+
+      {!loading && data && (
+        <>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Kpi label="Coaches na rede" value={String(data.totals.coaches)} delta={null} />
+            <Kpi label="Alunos totais" value={String(data.totals.students)} delta={null} />
+            <Kpi label="Faturamento total" value={brl(data.totals.revenue)} delta={null} />
+            <Kpi label="Comissões para mim" value={brl(data.totals.commission)} delta={null} />
+          </div>
+
+          <Section title="Andamento por linha (até 3 níveis)">
+            <div className="grid gap-3 md:grid-cols-3">
+              {data.byLevel.map((l) => (
+                <div key={l.level} className="rounded-xl p-4 bg-black/30 border border-white/5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold uppercase text-primary">Nível {l.level}</span>
+                    <span className="text-[10px] text-white/40">{l.coaches} coach(es)</span>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <Row label="Alunos" value={String(l.students)} />
+                    <Row label="Faturamento" value={brl(l.revenue)} highlight />
+                    <Row label="Comissão p/ mim" value={brl(l.commission)} highlight />
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-white/5">
+                    <p className="text-[10px] font-bold uppercase text-white/40 mb-2">Top coaches da linha</p>
+                    {l.top.length === 0 ? (
+                      <p className="text-[11px] text-white/40">Sem vendas no período.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {l.top.map((t, i) => (
+                          <div key={t.coach_id} className="flex items-center justify-between text-[11px]">
+                            <span className="truncate text-white/80 min-w-0">
+                              <span className="text-primary font-bold mr-1">#{i + 1}</span>{t.name}
+                            </span>
+                            <span className="text-primary font-mono font-bold shrink-0 ml-2">{brl(t.revenue)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          <Section title={`Coaches da rede (${filteredCoaches.length})`}>
+            {filteredCoaches.length === 0 ? (
+              <p className="text-sm text-white/50">Nenhum coach encontrado.</p>
+            ) : (
+              <div className="max-h-[28rem] overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-white/50 text-left sticky top-0 bg-[#1A1A1A]">
+                    <tr>
+                      <th className="py-2 pr-3">Nv</th>
+                      <th className="pr-3">Coach</th>
+                      <th className="pr-3 text-right">Alunos</th>
+                      <th className="pr-3 text-right">Pedidos</th>
+                      <th className="pr-3 text-right">Faturamento</th>
+                      <th className="text-right">Comissão</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCoaches.map((c) => (
+                      <tr key={c.coach_id} className="border-t border-white/5">
+                        <td className="py-2 pr-3"><span className="inline-block w-6 text-center rounded bg-primary/15 text-primary font-bold">{c.level}</span></td>
+                        <td className="pr-3">
+                          <p className="text-white">{c.name}</p>
+                          <p className="text-[10px] text-white/40">{c.email}</p>
+                        </td>
+                        <td className="pr-3 text-right text-white/80">{c.students}</td>
+                        <td className="pr-3 text-right text-white/80">{c.orders}</td>
+                        <td className="pr-3 text-right text-white font-mono">{brl(c.revenue)}</td>
+                        <td className="text-right text-primary font-mono font-bold">{brl(c.my_commission)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-white/50">{label}</span>
+      <span className={`font-mono font-bold ${highlight ? "text-primary" : "text-white"}`}>{value}</span>
+    </div>
   );
 }
 
