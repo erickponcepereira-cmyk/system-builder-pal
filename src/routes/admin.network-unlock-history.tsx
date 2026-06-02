@@ -19,7 +19,7 @@ type HistoryRow = {
   computed_at: string;
 };
 
-type ProfileMini = { id: string; full_name: string | null; email: string | null };
+type ProfileMini = { id: string; name: string | null; email: string | null };
 
 const monthName = (m: number) => ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][m - 1] || "";
 
