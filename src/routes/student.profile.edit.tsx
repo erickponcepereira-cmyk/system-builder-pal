@@ -21,6 +21,7 @@ type ProfileForm = {
   phone: string;
   profession: string;
   instagram: string;
+  gender: "M" | "F" | "O" | "";
   blood_type: string;
   birthdate: string;
   bio: string;
@@ -29,10 +30,11 @@ type ProfileForm = {
 
 const empty: ProfileForm = {
   name: "", email: "", phone: "", profession: "",
-  instagram: "", blood_type: "", birthdate: "", bio: "", photo_url: "",
+  instagram: "", gender: "", blood_type: "", birthdate: "", bio: "", photo_url: "",
 };
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const GENDERS: ReadonlyArray<["M" | "F" | "O", string]> = [["M","Masculino"],["F","Feminino"],["O","Outro"]];
 
 function EditProfilePage() {
   const navigate = useNavigate();
@@ -51,21 +53,24 @@ function EditProfilePage() {
       setUserId(userData.user.id);
       const { data } = await supabase
         .from("profiles")
-        .select("id,name,email,phone,profession,instagram,blood_type,birthdate,bio,photo_url")
+        .select("id,name,email,phone,profession,instagram,blood_type,birthdate,bio,photo_url,gender" as never)
         .eq("user_id", userData.user.id)
         .maybeSingle();
       if (data) {
-        setProfileId(data.id);
+        const d = data as unknown as Record<string, string | null>;
+        setProfileId(d.id as string);
+        const g = (d.gender || "") as string;
         setForm({
-          name: data.name || "",
-          email: data.email || "",
-          phone: data.phone || "",
-          profession: (data as any).profession || "",
-          instagram: (data as any).instagram || "",
-          blood_type: (data as any).blood_type || "",
-          birthdate: data.birthdate || "",
-          bio: data.bio || "",
-          photo_url: data.photo_url || "",
+          name: d.name || "",
+          email: d.email || "",
+          phone: d.phone || "",
+          profession: d.profession || "",
+          instagram: d.instagram || "",
+          gender: (g === "M" || g === "F" || g === "O") ? g : "",
+          blood_type: d.blood_type || "",
+          birthdate: d.birthdate || "",
+          bio: d.bio || "",
+          photo_url: d.photo_url || "",
         });
       }
       setLoading(false);
@@ -92,12 +97,23 @@ function EditProfilePage() {
   const save = async () => {
     if (!profileId) return toast.error("Perfil não encontrado");
     if (!form.name.trim()) return toast.error("Informe seu nome");
+    if (!form.email.includes("@")) return toast.error("E-mail inválido");
     setSaving(true);
+    const newEmail = form.email.trim().toLowerCase();
+    const { data: userData } = await supabase.auth.getUser();
+    const currentEmail = (userData.user?.email || "").toLowerCase();
+    if (newEmail && newEmail !== currentEmail) {
+      const { error: authErr } = await supabase.auth.updateUser({ email: newEmail });
+      if (authErr) { setSaving(false); return toast.error(`Não foi possível atualizar e-mail: ${authErr.message}`); }
+      toast.message("Confirme o novo e-mail na sua caixa de entrada para concluir a troca.");
+    }
     const { error } = await supabase.from("profiles").update({
       name: form.name.trim().slice(0, 255),
+      email: newEmail,
       phone: form.phone.slice(0, 20) || null,
       profession: form.profession.trim().slice(0, 100) || null,
       instagram: form.instagram.trim().replace(/^@/, "").slice(0, 100) || null,
+      gender: form.gender || null,
       blood_type: form.blood_type || null,
       birthdate: form.birthdate || null,
       bio: form.bio.trim().slice(0, 500) || null,
@@ -159,8 +175,9 @@ function EditProfilePage() {
           <input value={form.name} onChange={(e) => update("name", e.target.value)} maxLength={120} className="field-control" />
         </Field>
 
-        <Field label="E-mail (não editável)">
-          <input value={form.email} disabled className="field-control opacity-60" />
+        <Field label="E-mail">
+          <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} maxLength={255} className="field-control" />
+          <span className="mt-1 block text-[10px] text-white/40">Alterar o e-mail exige confirmação no novo endereço.</span>
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
@@ -171,6 +188,21 @@ function EditProfilePage() {
             <input type="date" value={form.birthdate} onChange={(e) => update("birthdate", e.target.value)} className="field-control" />
           </Field>
         </div>
+
+        <Field label="Gênero">
+          <div className="grid grid-cols-3 gap-2">
+            {GENDERS.map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => update("gender", form.gender === v ? "" : v)}
+                className={`rounded-xl py-2 text-sm font-semibold transition-colors ${form.gender === v ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </Field>
 
         <Field label="Profissão">
           <input value={form.profession} onChange={(e) => update("profession", e.target.value)} maxLength={100} placeholder="Ex: Designer, Médico..." className="field-control" />

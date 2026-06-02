@@ -30,6 +30,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState<"M" | "F" | "O" | "">("");
+  const [instagram, setInstagram] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,6 +76,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     if (!name.trim()) return setErr("Informe seu nome completo.");
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido. Use o formato nome@dominio.com.");
     if (phone.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto. Inclua DDD + número.");
+    if (!gender) return setErr("Selecione seu gênero para continuar.");
     if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
@@ -90,6 +93,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
           name,
           email,
           phone,
+          gender,
+          instagram: instagram.trim() || null,
           student: {
             coachId: coachIdToUse,
             referredByStudentId: referral?.referredByStudentId || null,
@@ -164,6 +169,25 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
             <div className="space-y-2">
               <Label className="text-white/70">WhatsApp</Label>
               <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white/70">Gênero</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([["M","Masculino"],["F","Feminino"],["O","Outro"]] as const).map(([v,label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setGender(v)}
+                    className={`rounded-xl py-2 text-sm font-semibold transition-colors ${gender === v ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white/70">Instagram <span className="text-white/30 text-xs">(opcional)</span></Label>
+              <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@seuusuario" maxLength={100} className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
             </div>
             {referral ? (
               <div className="space-y-2">

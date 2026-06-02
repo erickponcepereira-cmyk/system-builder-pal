@@ -5,27 +5,34 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 async function resolveStudentByUser(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: profile } = await supabaseAdmin
-    .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    .from("profiles").select("id, gender" as never).eq("user_id", userId).maybeSingle();
   if (!profile) return null;
-  const p = profile as unknown as { id: string };
+  const p = profile as unknown as { id: string; gender: string | null };
   const { data: student } = await supabaseAdmin
     .from("students").select("id, coach_id, profile_id").eq("profile_id", p.id).maybeSingle();
   if (!student) return null;
   const s = student as unknown as { id: string; coach_id: string | null; profile_id: string };
 
-  const { data: anamnesis } = await supabaseAdmin
-    .from("anamnesis_forms")
-    .select("gender, filled_at" as never)
-    .eq("student_id" as never, s.id)
-    .order("filled_at" as never, { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const rawGender = ((anamnesis as unknown as { gender: string | null } | null)?.gender || "").toLowerCase();
-  const gender = rawGender.startsWith("masc") || rawGender === "m" || rawGender === "male"
-    ? "M"
-    : rawGender.startsWith("fem") || rawGender === "f" || rawGender === "female"
-      ? "F"
-      : null;
+  let gender: "M" | "F" | "O" | null = null;
+  const raw = (p.gender || "").toUpperCase();
+  if (raw === "M" || raw === "F" || raw === "O") {
+    gender = raw;
+  } else {
+    // Fallback: tentar inferir pela anamnese
+    const { data: anamnesis } = await supabaseAdmin
+      .from("anamnesis_forms")
+      .select("gender, filled_at" as never)
+      .eq("student_id" as never, s.id)
+      .order("filled_at" as never, { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const rg = ((anamnesis as unknown as { gender: string | null } | null)?.gender || "").toLowerCase();
+    gender = rg.startsWith("masc") || rg === "m" || rg === "male"
+      ? "M"
+      : rg.startsWith("fem") || rg === "f" || rg === "female"
+        ? "F"
+        : null;
+  }
 
   return { id: s.id, coach_id: s.coach_id, profile_id: s.profile_id, gender };
 }

@@ -10,6 +10,8 @@ const registrationSchema = z.object({
   cpf: z.string().optional().nullable(),
   birthdate: z.string().optional().nullable(),
   bio: z.string().optional().nullable(),
+  gender: z.enum(["M", "F", "O"]).optional().nullable(),
+  instagram: z.string().max(100).optional().nullable(),
   street: z.string().optional().nullable(),
   number: z.string().optional().nullable(),
   neighborhood: z.string().optional().nullable(),
