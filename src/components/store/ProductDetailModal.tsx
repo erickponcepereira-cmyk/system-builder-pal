@@ -34,6 +34,8 @@ export interface ProductDetail {
   taxPercentage?: number | null;
   cost?: number | null;
   otherCosts?: number | null;
+  // Pontos para carreira do coach (gameficação)
+  pointsPerSale?: number | null;
 }
 
 const fmt = (n: number) =>
@@ -178,6 +180,21 @@ export function ProductDetailModal({
 
           {product.stock != null && (
             <p className="text-xs text-muted-foreground">Estoque disponível: {product.stock}</p>
+          )}
+
+          {showCommissions && (product.pointsPerSale ?? 0) > 0 && (
+            <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 text-base">🏆</span>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-amber-500/80">Carreira do coach</p>
+                  <p className="text-xs text-foreground">Pontos para premiações (jantar / viagem)</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-amber-500/20 px-3 py-1 text-sm font-bold text-amber-500">
+                +{product.pointsPerSale} pts
+              </span>
+            </div>
           )}
 
           {hasCommissionData && (
