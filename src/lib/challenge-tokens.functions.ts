@@ -98,11 +98,44 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ competitionId: z.string().uuid().optional() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true; turma: CurrentTurma } | { ok: false; error: string }> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const student = await resolveStudentByUser(context.userId);
-    if (!student) return { ok: false, error: "Aluno não encontrado." };
-    if (!student.gender) return { ok: false, error: "Complete o seu perfil (gênero) antes de entrar no desafio." };
 
-    // Token disponível?
+    const logAttempt = async (params: {
+      studentId: string | null;
+      success: boolean;
+      errorCode?: string;
+      errorMessage?: string;
+      competitionId?: string | null;
+      groupId?: string | null;
+      tokenId?: string | null;
+      enrollmentId?: string | null;
+    }) => {
+      try {
+        await supabaseAdmin.from("challenge_token_attempts").insert({
+          student_id: params.studentId,
+          user_id: context.userId,
+          success: params.success,
+          error_code: params.errorCode || null,
+          error_message: params.errorMessage || null,
+          competition_id: params.competitionId || null,
+          group_id: params.groupId || null,
+          token_id: params.tokenId || null,
+          enrollment_id: params.enrollmentId || null,
+        } as never);
+      } catch (e) {
+        console.warn("Falha ao registrar tentativa de moeda:", e);
+      }
+    };
+
+    const student = await resolveStudentByUser(context.userId);
+    if (!student) {
+      await logAttempt({ studentId: null, success: false, errorCode: "student_not_found", errorMessage: "Aluno não encontrado." });
+      return { ok: false, error: "Aluno não encontrado." };
+    }
+    if (!student.gender) {
+      await logAttempt({ studentId: student.id, success: false, errorCode: "missing_gender", errorMessage: "Gênero ausente no perfil." });
+      return { ok: false, error: "Complete o seu perfil (gênero) antes de entrar no desafio." };
+    }
+
     const { data: freeTokens } = await supabaseAdmin
       .from("student_challenge_tokens")
       .select("id")
@@ -111,15 +144,35 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
       .order("granted_at", { ascending: true })
       .limit(1);
     const token = ((freeTokens as { id: string }[] | null) || [])[0];
-    if (!token) return { ok: false, error: "Você não possui moedas de desafio disponíveis." };
+    if (!token) {
+      await logAttempt({ studentId: student.id, success: false, errorCode: "no_tokens", errorMessage: "Sem moedas disponíveis." });
+      return { ok: false, error: "Você não possui moedas de desafio disponíveis." };
+    }
 
     const { joinable } = await loadJoinableTurmas(student.id);
     const target = data.competitionId
       ? joinable.find((t) => t.competitionId === data.competitionId)
       : joinable[0];
-    if (!target) return { ok: false, error: "Nenhuma turma com janela de pesagem inicial aberta no momento, ou você já está inscrito." };
+    if (!target) {
+      await logAttempt({
+        studentId: student.id, success: false,
+        errorCode: "no_open_turma",
+        errorMessage: "Nenhuma turma com janela aberta ou aluno já inscrito.",
+        competitionId: data.competitionId || null,
+        tokenId: token.id,
+      });
+      return { ok: false, error: "Nenhuma turma com janela de pesagem inicial aberta no momento, ou você já está inscrito." };
+    }
 
-    if (!student.coach_id) return { ok: false, error: "Você precisa estar vinculado a um coach para entrar no desafio." };
+    if (!student.coach_id) {
+      await logAttempt({
+        studentId: student.id, success: false,
+        errorCode: "no_coach",
+        errorMessage: "Aluno sem coach vinculado.",
+        competitionId: target.competitionId, groupId: target.groupId, tokenId: token.id,
+      });
+      return { ok: false, error: "Você precisa estar vinculado a um coach para entrar no desafio." };
+    }
 
     const { data: enrollment, error: enrollErr } = await supabaseAdmin
       .from("competition_enrollments")
@@ -135,24 +188,168 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (enrollErr || !enrollment) {
+      await logAttempt({
+        studentId: student.id, success: false,
+        errorCode: "enrollment_failed",
+        errorMessage: enrollErr?.message || "Falha ao criar inscrição.",
+        competitionId: target.competitionId, groupId: target.groupId, tokenId: token.id,
+      });
       return { ok: false, error: enrollErr?.message || "Falha ao criar inscrição." };
     }
+
+    const enrollmentId = (enrollment as { id: string }).id;
 
     const { error: tokErr } = await supabaseAdmin
       .from("student_challenge_tokens")
       .update({
         consumed_at: new Date().toISOString(),
         consumed_competition_id: target.competitionId,
-        consumed_enrollment_id: (enrollment as { id: string }).id,
+        consumed_enrollment_id: enrollmentId,
       })
       .eq("id", token.id);
     if (tokErr) {
-      // melhor esforço: tenta reverter a inscrição
-      await supabaseAdmin.from("competition_enrollments").delete().eq("id", (enrollment as { id: string }).id);
+      await supabaseAdmin.from("competition_enrollments").delete().eq("id", enrollmentId);
+      await logAttempt({
+        studentId: student.id, success: false,
+        errorCode: "token_consume_failed",
+        errorMessage: tokErr.message || "Falha ao consumir a moeda.",
+        competitionId: target.competitionId, groupId: target.groupId, tokenId: token.id,
+      });
       return { ok: false, error: "Falha ao consumir a moeda. Tente novamente." };
     }
 
+    await logAttempt({
+      studentId: student.id, success: true,
+      competitionId: target.competitionId, groupId: target.groupId,
+      tokenId: token.id, enrollmentId,
+    });
+
+    // Notifica o coach (best-effort)
+    try {
+      const { data: coachRow } = await supabaseAdmin
+        .from("coaches").select("profile_id").eq("id", student.coach_id).maybeSingle();
+      const coachProfileId = (coachRow as { profile_id: string } | null)?.profile_id;
+      if (coachProfileId) {
+        const { data: studentProf } = await supabaseAdmin
+          .from("profiles").select("name").eq("id", student.profile_id).maybeSingle();
+        const studentName = (studentProf as { name: string } | null)?.name || "Aluno";
+        await supabaseAdmin.from("notifications").insert({
+          profile_id: coachProfileId,
+          type: "challenge_enrollment",
+          title: "🏋️ Novo aluno no desafio",
+          message: `${studentName} entrou em ${target.competitionLabel} — Turma ${target.groupNumber} usando moeda de desafio.`,
+          action_url: "/coach",
+        } as never);
+      }
+    } catch (e) {
+      console.warn("Falha ao notificar coach sobre entrada no desafio:", e);
+    }
+
     return { ok: true, turma: target };
+  });
+
+// ─── Histórico detalhado de moedas (aluno) ─────────────────────────────────
+export type ChallengeTokenHistoryEntry = {
+  id: string;
+  grantedAt: string;
+  consumedAt: string | null;
+  sourceTransactionId: string | null;
+  competitionId: string | null;
+  competitionLabel: string | null;
+  enrollmentId: string | null;
+};
+
+export const getMyChallengeTokenHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ChallengeTokenHistoryEntry[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const student = await resolveStudentByUser(context.userId);
+    if (!student) return [];
+    const { data: rows } = await supabaseAdmin
+      .from("student_challenge_tokens")
+      .select("id, granted_at, consumed_at, source_transaction_id, consumed_competition_id, consumed_enrollment_id")
+      .eq("student_id", student.id)
+      .order("granted_at", { ascending: false });
+    const list = ((rows as Array<{
+      id: string; granted_at: string; consumed_at: string | null;
+      source_transaction_id: string | null;
+      consumed_competition_id: string | null; consumed_enrollment_id: string | null;
+    }> | null) || []);
+    const compIds = Array.from(new Set(list.map((r) => r.consumed_competition_id).filter(Boolean) as string[]));
+    let compMap = new Map<string, string>();
+    if (compIds.length > 0) {
+      const { data: comps } = await supabaseAdmin
+        .from("competitions").select("id, month, year").in("id", compIds);
+      compMap = new Map(((comps as Array<{ id: string; month: number; year: number }> | null) || [])
+        .map((c) => [c.id, `${MONTHS[c.month]} ${c.year}`]));
+    }
+    return list.map((r) => ({
+      id: r.id,
+      grantedAt: r.granted_at,
+      consumedAt: r.consumed_at,
+      sourceTransactionId: r.source_transaction_id,
+      competitionId: r.consumed_competition_id,
+      competitionLabel: r.consumed_competition_id ? (compMap.get(r.consumed_competition_id) || null) : null,
+      enrollmentId: r.consumed_enrollment_id,
+    }));
+  });
+
+// ─── Admin: histórico de tentativas de uso de moeda ────────────────────────
+export type AdminTokenAttemptRow = {
+  id: string;
+  createdAt: string;
+  success: boolean;
+  errorCode: string | null;
+  errorMessage: string | null;
+  studentId: string | null;
+  studentName: string | null;
+  competitionId: string | null;
+  groupId: string | null;
+};
+
+export const getAdminTokenAttempts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    onlyFailures: z.boolean().optional(),
+    limit: z.number().min(1).max(500).optional(),
+  }).parse(input || {}))
+  .handler(async ({ data, context }): Promise<AdminTokenAttemptRow[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Garantia: só admin
+    const { data: roleRow } = await supabaseAdmin
+      .from("user_roles").select("role").eq("user_id", context.userId).eq("role", "admin").maybeSingle();
+    if (!roleRow) return [];
+    let query = supabaseAdmin
+      .from("challenge_token_attempts")
+      .select("id, created_at, success, error_code, error_message, student_id, competition_id, group_id")
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 100);
+    if (data.onlyFailures) query = query.eq("success", false);
+    const { data: rows } = await query;
+    const list = ((rows as Array<{
+      id: string; created_at: string; success: boolean;
+      error_code: string | null; error_message: string | null;
+      student_id: string | null; competition_id: string | null; group_id: string | null;
+    }> | null) || []);
+    const studentIds = Array.from(new Set(list.map((r) => r.student_id).filter(Boolean) as string[]));
+    let nameMap = new Map<string, string>();
+    if (studentIds.length > 0) {
+      const { data: studs } = await supabaseAdmin
+        .from("students").select("id, profile:profile_id(name)").in("id", studentIds);
+      nameMap = new Map(((studs as Array<{ id: string; profile: { name: string } | null }> | null) || [])
+        .map((s) => [s.id, s.profile?.name || "—"]));
+    }
+    return list.map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      success: r.success,
+      errorCode: r.error_code,
+      errorMessage: r.error_message,
+      studentId: r.student_id,
+      studentName: r.student_id ? (nameMap.get(r.student_id) || null) : null,
+      competitionId: r.competition_id,
+      groupId: r.group_id,
+    }));
   });
 
 export type CoachStudentTokenBalance = { studentId: string; balance: number; totalEarned: number };
