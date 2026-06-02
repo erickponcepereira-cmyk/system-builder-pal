@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   User, Save, Mail, Phone, MapPin, BookOpen, Trophy, Award, UserRound,
-  History, Camera, GraduationCap, Activity, Instagram, Globe, Youtube, Facebook, Music2,
+  History, Camera, GraduationCap, Activity, Instagram, Globe, Youtube, Facebook, Music2, Package,
 } from "lucide-react";
 import { money, type CoachContext } from "@/routes/coach";
+import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
+
 
 export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContext | null; onSaved: () => void; onLocalChange: (value: CoachContext | null) => void }) {
   const [form, setForm] = useState({
