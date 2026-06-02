@@ -133,10 +133,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .eq("is_active" as never, true as never)
         .gte("date" as never, tzDateKey(from) as never)
         .lt("date" as never, tzDateKey(to) as never),
-    ]).then(([evRes, dayRes]) => {
+      loadMyChallengeEvents(from, to),
+    ]).then(([evRes, dayRes, challengeEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
-      setEvents((evRes.data as unknown as FitmindEvent[]) || []);
+      const base = (evRes.data as unknown as FitmindEvent[]) || [];
+      setEvents([...base, ...challengeEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
