@@ -87,6 +87,114 @@ function buildGoogleCalendarUrl(ev: FitmindEvent): string {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${desc}&location=${loc}`;
 }
 
+// ─── Pessoal: eventos do desafio do aluno logado ─────────────────────────
+async function loadMyChallengeEvents(from: Date, to: Date): Promise<FitmindEvent[]> {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return [];
+    const { data: profile } = await supabase
+      .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
+    if (!profile) return [];
+    const { data: student } = await supabase
+      .from("students" as never).select("id").eq("profile_id" as never, profile.id).maybeSingle();
+    if (!student) return [];
+
+    const { data: enrolls } = await supabase
+      .from("competition_enrollments" as never)
+      .select(`
+        id, initial_date, final_date,
+        competition:competition_id ( month, year ),
+        group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date, award_date )
+      `)
+      .eq("student_id" as never, (student as any).id);
+
+    if (!enrolls || !enrolls.length) return [];
+
+    const MONTHS = ["","Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const fromKey = from.toISOString().slice(0, 10);
+    const toKey = to.toISOString().slice(0, 10);
+    const inRange = (d: string) => d >= fromKey && d < toKey;
+    const mkISO = (d: string) => `${d}T00:00:00-04:00`;
+    const mkEndISO = (d: string) => `${d}T23:59:00-04:00`;
+    const out: FitmindEvent[] = [];
+
+    for (const e of (enrolls as any[])) {
+      const g = e.group;
+      if (!g) continue;
+      const compLabel = e.competition ? `${MONTHS[e.competition.month]} ${e.competition.year}` : "";
+      const turmaTxt = `Turma ${g.group_number}${compLabel ? " · " + compLabel : ""}`;
+
+      // Pesagem inicial — preferência: agendada; senão, todos os dias da janela
+      if (e.initial_date && inRange(e.initial_date)) {
+        out.push({
+          id: `challenge-init-${e.id}`,
+          title: `⚖️ Sua Pesagem Inicial`, subtitle: turmaTxt,
+          description: "Pesagem inicial do Desafio FitMind agendada para você.",
+          location: null, image_url: null, color: "#3b82f6",
+          category: "desafio", tags: ["desafio"],
+          starts_at: mkISO(e.initial_date), ends_at: mkEndISO(e.initial_date),
+          all_day: true, is_highlighted: true, is_important: false,
+          highlight_color: "#3b82f6", highlight_label: "Sua pesagem inicial",
+          google_calendar_title: null, google_calendar_description: null, google_calendar_location: null,
+        });
+      } else if (g.initial_start_date && g.initial_end_date) {
+        const start = new Date(g.initial_start_date + "T12:00:00");
+        const end = new Date(g.initial_end_date + "T12:00:00");
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dk = d.toISOString().slice(0, 10);
+          if (!inRange(dk)) continue;
+          out.push({
+            id: `challenge-window-${e.id}-${dk}`,
+            title: `📅 Semana da Pesagem Inicial`, subtitle: turmaTxt,
+            description: `Agende sua pesagem inicial dentro desta semana (${g.initial_start_date} – ${g.initial_end_date}).`,
+            location: null, image_url: null, color: "#3b82f6",
+            category: "desafio", tags: ["desafio"],
+            starts_at: mkISO(dk), ends_at: mkEndISO(dk),
+            all_day: true, is_highlighted: false, is_important: false,
+            highlight_color: "#3b82f6", highlight_label: null,
+            google_calendar_title: null, google_calendar_description: null, google_calendar_location: null,
+          });
+        }
+      }
+
+      // Pesagem final
+      const finalDay = e.final_date || g.final_weigh_in_date;
+      if (finalDay && inRange(finalDay)) {
+        out.push({
+          id: `challenge-final-${e.id}`,
+          title: `⚖️ Pesagem Final do Desafio`, subtitle: turmaTxt,
+          description: "Dia da pesagem final do Desafio FitMind. Não perca!",
+          location: null, image_url: null, color: "#ef4444",
+          category: "desafio", tags: ["desafio"],
+          starts_at: mkISO(finalDay), ends_at: mkEndISO(finalDay),
+          all_day: true, is_highlighted: true, is_important: true,
+          highlight_color: "#ef4444", highlight_label: "Pesagem final",
+          google_calendar_title: null, google_calendar_description: null, google_calendar_location: null,
+        });
+      }
+
+      // Premiação
+      if (g.award_date && inRange(g.award_date)) {
+        out.push({
+          id: `challenge-award-${e.id}`,
+          title: `🏆 Premiação do Desafio`, subtitle: turmaTxt,
+          description: "Dia da premiação do Desafio FitMind.",
+          location: null, image_url: null, color: "#f59e0b",
+          category: "desafio", tags: ["desafio", "premiação"],
+          starts_at: mkISO(g.award_date), ends_at: mkEndISO(g.award_date),
+          all_day: true, is_highlighted: true, is_important: false,
+          highlight_color: "#f59e0b", highlight_label: "Premiação",
+          google_calendar_title: null, google_calendar_description: null, google_calendar_location: null,
+        });
+      }
+    }
+    return out;
+  } catch (e) {
+    console.warn("loadMyChallengeEvents failed", e);
+    return [];
+  }
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface FitmindCalendarProps {
@@ -133,10 +241,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .eq("is_active" as never, true as never)
         .gte("date" as never, tzDateKey(from) as never)
         .lt("date" as never, tzDateKey(to) as never),
-    ]).then(([evRes, dayRes]) => {
+      loadMyChallengeEvents(from, to),
+    ]).then(([evRes, dayRes, challengeEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
-      setEvents((evRes.data as unknown as FitmindEvent[]) || []);
+      const base = (evRes.data as unknown as FitmindEvent[]) || [];
+      setEvents([...base, ...challengeEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });

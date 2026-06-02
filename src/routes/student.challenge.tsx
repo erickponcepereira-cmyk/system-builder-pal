@@ -439,18 +439,24 @@ function StudentChallengePage() {
                   </div>
                 )}
 
-                {/* Datas */}
+                {/* Datas completas da turma */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Janela de Pesagem Inicial</p>
+                    <p className="text-xs text-muted-foreground mb-1">📅 Semana da Pesagem Inicial</p>
                     <p className="text-sm font-bold text-foreground">
                       {fmt(enrollment.group.initial_start_date)} – {fmt(enrollment.group.initial_end_date)}
                     </p>
                   </div>
                   <div className={`rounded-xl p-3 ${daysUntilFinal !== null && daysUntilFinal <= 7 && daysUntilFinal > 0 ? "bg-red-500/10 border border-red-500/30" : "bg-muted/30"}`}>
-                    <p className="text-xs text-muted-foreground mb-1">Sua Pesagem Final</p>
+                    <p className="text-xs text-muted-foreground mb-1">⚖️ Pesagem Final</p>
                     <p className={`text-sm font-bold ${daysUntilFinal !== null && daysUntilFinal <= 7 && daysUntilFinal > 0 ? "text-red-400" : "text-foreground"}`}>
-                      {enrollment.final_date ? fmt(enrollment.final_date) : "Após pesagem inicial"}
+                      {enrollment.final_date ? fmt(enrollment.final_date) : (enrollment.group.final_weigh_in_date ? fmt(enrollment.group.final_weigh_in_date) : "Após pesagem inicial")}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-primary/10 border border-primary/30 p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground mb-1">🏆 Data da Premiação</p>
+                    <p className="text-sm font-bold text-primary">
+                      {enrollment.group.award_date ? fmt(enrollment.group.award_date) : "A definir"}
                     </p>
                   </div>
                 </div>
