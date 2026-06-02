@@ -241,6 +241,10 @@ export interface FitMindCoach {
   specialty?: string;
   logo?: string;
   primaryColor?: string;
+  whatsapp?: string;
+  instagram?: string;
+  tiktok?: string;
+  website?: string;
 }
 
 // ============================================================
