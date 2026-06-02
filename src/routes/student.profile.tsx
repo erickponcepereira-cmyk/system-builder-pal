@@ -194,6 +194,40 @@ function ProfilePage() {
         </div>
       </div>
 
+      {/* Histórico de moedas de desafio */}
+      {tokenHistory.length > 0 && (
+        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <button onClick={() => setShowTokenHistory((v) => !v)} className="flex w-full items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Coins className="h-4 w-4 text-primary" />
+              <p className="text-sm font-bold text-white">Moedas de desafio</p>
+              <span className="text-[10px] text-white/40">({tokenHistory.length} total · {tokenHistory.filter((t) => !t.consumedAt).length} disponíveis)</span>
+            </div>
+            <ChevronRight className={`h-4 w-4 text-white/40 transition ${showTokenHistory ? "rotate-90" : ""}`} />
+          </button>
+          {showTokenHistory && (
+            <div className="mt-3 space-y-2">
+              {tokenHistory.map((t) => (
+                <div key={t.id} className="rounded-lg border border-white/5 p-3 text-xs" style={{ backgroundColor: "#0F0F0F" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${t.consumedAt ? "bg-white/10 text-white/60" : "bg-success/20 text-success"}`}>
+                      {t.consumedAt ? "Usada" : "Disponível"}
+                    </span>
+                    <span className="text-[10px] text-white/40">Gerada em {new Date(t.grantedAt).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                  {t.consumedAt && (
+                    <div className="mt-2 text-[11px] text-white/70">
+                      Usada em <strong>{new Date(t.consumedAt).toLocaleDateString("pt-BR")}</strong>
+                      {t.competitionLabel && <> para entrar em <strong className="text-primary">{t.competitionLabel}</strong></>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
