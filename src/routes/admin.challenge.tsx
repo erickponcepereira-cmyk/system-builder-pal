@@ -378,6 +378,126 @@ function AdminChallengePage() {
     }
   };
 
+  const openFinalize = async (comp: Competition) => {
+    // Make sure groups for this competition are loaded
+    if (!groups[comp.id]) await loadGroups(comp.id);
+    const allEnrolls: Enrollment[] = (groups[comp.id] || []).flatMap(g => g.enrollments || []);
+    // If not loaded yet, fetch directly
+    let enrollments = allEnrolls;
+    if (enrollments.length === 0) {
+      const { data } = await supabase
+        .from("competition_groups" as never)
+        .select(`
+          id,
+          competition_enrollments (
+            id, gender, status, enrolled_by,
+            initial_date, initial_weight, final_date, final_weight,
+            initial_body_fat, final_body_fat,
+            initial_muscle_mass, final_muscle_mass,
+            initial_share_url, final_share_url,
+            result_kg, result_pct,
+            result_fat_pct_lost, result_muscle_gain_pct, result_kg_lost,
+            student:student_id ( id, profile:profile_id ( name ) ),
+            coach:coach_id ( profile:profile_id ( name ) )
+          )
+        `)
+        .eq("competition_id" as never, comp.id as never);
+      enrollments = ((data as any[]) || []).flatMap(g => g.competition_enrollments || []);
+    }
+    setFinalizeMetric("fat");
+    setWinnerMaleId("");
+    setWinnerFemaleId("");
+    setFinalizeModal({ comp, enrollments });
+  };
+
+  const finalizeChallenge = async () => {
+    if (!finalizeModal) return;
+    const { comp, enrollments } = finalizeModal;
+    if (comp.finalized_at) {
+      if (!confirm("Este desafio já foi finalizado. Refinalizar irá registrar uma NOVA entrada de histórico (a anterior será mantida). Continuar?")) return;
+    }
+    setFinalizing(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth.user?.id || null;
+
+      // Build ranking snapshot per metric/gender
+      const sortBy = (list: Enrollment[], key: "result_fat_pct_lost" | "result_kg_lost" | "result_muscle_gain_pct") =>
+        list.filter(e => (e[key] ?? 0) > 0).sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+      const males = enrollments.filter(e => e.gender === "M");
+      const females = enrollments.filter(e => e.gender === "F");
+      const snapshot = {
+        metric: finalizeMetric,
+        rankings: {
+          M: {
+            fat: sortBy(males, "result_fat_pct_lost").map((e, i) => ({ rank: i + 1, enrollment_id: e.id, student_id: e.student.id, name: (e.student as any).profile?.name, value: e.result_fat_pct_lost })),
+            kg: sortBy(males, "result_kg_lost").map((e, i) => ({ rank: i + 1, enrollment_id: e.id, student_id: e.student.id, name: (e.student as any).profile?.name, value: e.result_kg_lost })),
+            muscle: sortBy(males, "result_muscle_gain_pct").map((e, i) => ({ rank: i + 1, enrollment_id: e.id, student_id: e.student.id, name: (e.student as any).profile?.name, value: e.result_muscle_gain_pct })),
+          },
+          F: {
+            fat: sortBy(females, "result_fat_pct_lost").map((e, i) => ({ rank: i + 1, enrollment_id: e.id, student_id: e.student.id, name: (e.student as any).profile?.name, value: e.result_fat_pct_lost })),
+            kg: sortBy(females, "result_kg_lost").map((e, i) => ({ rank: i + 1, enrollment_id: e.id, student_id: e.student.id, name: (e.student as any).profile?.name, value: e.result_kg_lost })),
+            muscle: sortBy(females, "result_muscle_gain_pct").map((e, i) => ({ rank: i + 1, enrollment_id: e.id, student_id: e.student.id, name: (e.student as any).profile?.name, value: e.result_muscle_gain_pct })),
+          },
+        },
+      };
+
+      // Insert winners into hall of fame (M and F) if selected
+      const winnersToInsert: any[] = [];
+      const pushWinner = async (winnerId: string, gender: "M" | "F") => {
+        const enroll = enrollments.find(e => e.id === winnerId);
+        if (!enroll) return;
+        const { data: enrollFull } = await supabase.from("competition_enrollments" as never)
+          .select("coach_id").eq("id" as never, enroll.id as never).single();
+        winnersToInsert.push({
+          competition_id: comp.id,
+          enrollment_id: enroll.id,
+          student_id: enroll.student.id,
+          coach_id: (enrollFull as any).coach_id,
+          gender,
+          initial_weight: enroll.initial_weight,
+          final_weight: enroll.final_weight,
+          result_kg: enroll.result_kg ?? 0,
+          result_pct: enroll.result_pct ?? 0,
+          prize_amount: comp.prize_amount,
+        });
+      };
+      if (winnerMaleId) await pushWinner(winnerMaleId, "M");
+      if (winnerFemaleId) await pushWinner(winnerFemaleId, "F");
+
+      if (winnersToInsert.length > 0) {
+        const { error: hofErr } = await supabase
+          .from("competition_hall_of_fame" as never)
+          .insert(winnersToInsert as never);
+        if (hofErr) throw hofErr;
+      }
+
+      // Mark competition as finalized
+      const { error: compErr } = await supabase.from("competitions" as never)
+        .update({ finalized_at: new Date().toISOString(), finalized_by: userId, status: "closed" } as never)
+        .eq("id" as never, comp.id as never);
+      if (compErr) throw compErr;
+
+      // Audit log entry (immutable history)
+      await supabase.from("competition_finalization_log" as never).insert({
+        competition_id: comp.id,
+        finalized_by: userId,
+        winner_male_enrollment_id: winnerMaleId || null,
+        winner_female_enrollment_id: winnerFemaleId || null,
+        snapshot,
+      } as never);
+
+      toast.success("Desafio finalizado! Resultados publicados no Hall da Fama. 🏆");
+      setFinalizeModal(null);
+      load();
+      if (expandedComp) loadGroups(expandedComp);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao finalizar desafio");
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
   const deleteCompetition = async (comp: Competition) => {
     if (!confirm(`Excluir ${MONTHS[comp.month]}/${comp.year}? Tudo desta edição será removido.`)) return;
     try {
