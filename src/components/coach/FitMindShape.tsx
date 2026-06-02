@@ -161,7 +161,7 @@ export interface FitMindAssessment {
   id: string;
   clientId: string;
   date: string;
-  method: "bioimpedance" | "measurements";
+  method: "bioimpedance" | "measurements" | "both";
   // Dados básicos
   age: number;
   height: number;
@@ -443,9 +443,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     });
   }, [screen, step, selectedClient]);
 
-  // Auto-cálculo em tempo real quando método = medidas
+  // Auto-cálculo em tempo real quando método inclui medidas
   useEffect(() => {
-    if (assessment.method !== "measurements") return;
+    if (assessment.method !== "measurements" && assessment.method !== "both") return;
     if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) return;
     const circs = assessment.circumferences || {};
     const hasAny = Object.values(circs).some((v) => v != null && (v as number) > 0);
@@ -1541,6 +1541,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   style={{ flex: 1 }}
                 />
                 <button
+                  type="button"
                   className="fm-btn-primary"
                   style={{ padding: "0 14px" }}
                   onClick={() => {
@@ -1553,6 +1554,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   OK
                 </button>
                 <button
+                  type="button"
                   style={{
                     padding: "0 14px",
                     background: "var(--muted)",
@@ -1799,12 +1801,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               className="fm-select"
               value={assessment.method || "bioimpedance"}
               onChange={(e) => {
-                const method = e.target.value as "bioimpedance" | "measurements";
+                const method = e.target.value as "bioimpedance" | "measurements" | "both";
                 upd("method", method);
               }}
             >
               <option value="bioimpedance">Bioimpedância</option>
               <option value="measurements">Medidas (fita métrica)</option>
+              <option value="both">Ambos</option>
             </select>
           </div>
         </div>
@@ -1894,8 +1897,90 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 </span>
               )}
             </div>
-          </div>
         </div>
+
+        {/* Grupo do aluno (editável durante a avaliação) */}
+        <div style={{ marginTop: 12 }}>
+          <label className="fm-label">Grupo do aluno</label>
+          {!isCreatingNewGroup ? (
+            <select
+              className="fm-select"
+              value={assessment.groupId ?? selectedClient?.groups?.[0] ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__new__") {
+                  setIsCreatingNewGroup(true);
+                  setNewGroupName("");
+                } else {
+                  upd("groupId" as keyof FitMindAssessment, v || undefined);
+                }
+              }}
+            >
+              <option value="">Sem grupo</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+              {/* Permite manter um grupo legado salvo apenas pelo nome no aluno */}
+              {(selectedClient?.groups || [])
+                .filter((g) => !groups.find((x) => x.id === g))
+                .map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              <option value="__new__">+ Criar novo grupo...</option>
+            </select>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                className="fm-input"
+                autoFocus
+                placeholder="Nome do novo grupo"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newGroupName.trim()) {
+                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
+                    setIsCreatingNewGroup(false);
+                  } else if (e.key === "Escape") {
+                    setIsCreatingNewGroup(false);
+                    setNewGroupName("");
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="fm-btn-primary"
+                style={{ padding: "0 14px" }}
+                onClick={() => {
+                  if (newGroupName.trim()) {
+                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
+                    setIsCreatingNewGroup(false);
+                  }
+                }}
+              >
+                OK
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: "0 14px",
+                  background: "var(--muted)",
+                  color: "var(--foreground)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  setIsCreatingNewGroup(false);
+                  setNewGroupName("");
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
       </div>
       );
     };
@@ -1982,8 +2067,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       setCalcDone(true);
     };
 
-    const StepMedidas = () => (
+    const StepMedidas = () => {
+      const showMeasurements =
+        assessment.method === "measurements" || assessment.method === "both";
+      const showBioimpedance =
+        !assessment.method ||
+        assessment.method === "bioimpedance" ||
+        assessment.method === "both";
+      return (
       <>
+      {showMeasurements && (
       <div>
 
         <div className="fm-section-title">Circunferências por Medição (cm)</div>
@@ -2107,124 +2200,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           />
         </div>
 
-        {/* Método de aferição */}
-        <div style={{ marginTop: 16 }}>
-          <label className="fm-label">Método de aferição</label>
-          <select
-            className="fm-select"
-            value={(assessment as any).measurementMethod ?? "fita_metrica"}
-            onChange={(e) => upd("measurementMethod" as any, e.target.value || undefined)}
-          >
-            <option value="fita_metrica">Fita métrica</option>
-            <option value="paquimetro">Paquímetro</option>
-            <option value="adipometro">Adipômetro / plicometria</option>
-          </select>
-        </div>
-      </div>
-      <div>
-
-
-        <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
-          preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
-        </p>
-        <div className="fm-grid-2" style={{ marginBottom: 12 }}>
-          {bioFields.map((f) => {
-            const unit = bioUnits[f.key as string] || f.defaultUnit;
-            return (
-              <div key={f.key as string}>
-                <label className="fm-label">
-                  {f.label} ({unit === "num" ? "número" : unit}) <Tooltip id={f.tip} />
-                  <UnitChips fieldKey={f.key as string} options={f.units} defaultUnit={f.defaultUnit} />
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="fm-input"
-                  placeholder={f.placeholder}
-                  onChange={(e) => upd(f.key, +e.target.value)}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Análise por Segmento
-        </div>
-        <div className="fm-grid-2">
-          {(
-            [
-              ["Braço Esquerdo", "leftArm"],
-              ["Braço Direito", "rightArm"],
-              ["Tronco", "trunk"],
-              ["Perna Esquerda", "leftLeg"],
-              ["Perna Direita", "rightLeg"],
-            ] as const
-          ).map(([label, key]) => {
-            const fieldKey = `seg_${key}`;
-            const unit = bioUnits[fieldKey] || "%";
-            return (
-              <div key={key}>
-                <label className="fm-label">
-                  {label} ({unit === "num" ? "número" : unit})
-                  <UnitChips fieldKey={fieldKey} options={["%", "kg", "num"]} defaultUnit="%" />
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="fm-input"
-                  placeholder="Ex: 30.5"
-                  onChange={(e) =>
-                    upd("segmentAnalysis", {
-                      ...assessment.segmentAnalysis,
-                      [key]: +e.target.value,
-                    })
-                  }
-                />
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Circunferências (cm)
-        </div>
-        <div className="fm-grid-2">
-          {(
-            [
-              ["Antebraço Esq.", "leftForearm"],
-              ["Antebraço Dir.", "rightForearm"],
-              ["Tórax", "chest"],
-              ["Cintura", "waist"],
-              ["Abdômen", "abdomen"],
-              ["Quadril", "hip"],
-              ["Braço Esq.", "leftArm"],
-              ["Braço Dir.", "rightArm"],
-              ["Coxa Esq.", "leftThigh"],
-              ["Coxa Dir.", "rightThigh"],
-              ["Panturrilha Esq.", "leftCalf"],
-              ["Panturrilha Dir.", "rightCalf"],
-            ] as const
-          ).map(([label, key]) => (
-            <div key={`circ_${key}`}>
-              <label className="fm-label">{label} (cm)</label>
-              <input
-                type="number"
-                step="0.1"
-                className="fm-input"
-                placeholder="Ex: 90.0"
-                value={(assessment.circumferences as any)?.[key] ?? ""}
-                onChange={(e) =>
-                  upd("circumferences" as any, {
-                    ...(assessment.circumferences || {}),
-                    [key]: e.target.value === "" ? undefined : +e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
-        </div>
-
+        {/* Diâmetros Ósseos */}
         <div className="fm-section-title" style={{ marginTop: 16 }}>
           Diâmetros Ósseos (cm)
         </div>
@@ -2257,26 +2233,41 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
           ))}
         </div>
-
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Método de aferição
-        </div>
-        <select
-          className="fm-select"
-          value={(assessment as any).measurementMethod ?? ""}
-          onChange={(e) => upd("measurementMethod" as any, e.target.value || undefined)}
-        >
-          <option value="">Selecione o método utilizado</option>
-          <option value="fita_metrica">Fita métrica</option>
-          <option value="paquimetro">Paquímetro</option>
-          <option value="adipometro">Adipômetro / plicometria</option>
-          <option value="bioimpedancia">Bioimpedância</option>
-          <option value="dexa">DEXA</option>
-          <option value="ultrassom">Ultrassom</option>
-        </select>
       </div>
+      )}
+
+      {showBioimpedance && (
+      <div style={{ marginTop: showMeasurements ? 20 : 0 }}>
+        <div className="fm-section-title">Bioimpedância</div>
+        <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>
+          Selecione a unidade do valor que você está digitando para cada campo. O Metabolismo Basal deve ser
+          preenchido em <strong>número</strong> (kcal/dia) — esse valor será usado direto como gasto calórico em repouso.
+        </p>
+        <div className="fm-grid-2" style={{ marginBottom: 12 }}>
+          {bioFields.map((f) => {
+            const unit = bioUnits[f.key as string] || f.defaultUnit;
+            return (
+              <div key={f.key as string}>
+                <label className="fm-label">
+                  {f.label} ({unit === "num" ? "número" : unit}) <Tooltip id={f.tip} />
+                  <UnitChips fieldKey={f.key as string} options={f.units} defaultUnit={f.defaultUnit} />
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="fm-input"
+                  placeholder={f.placeholder}
+                  onChange={(e) => upd(f.key, +e.target.value)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      )}
       </>
-    );
+      );
+    };
 
 
 
@@ -2375,11 +2366,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
     const StepFotos = () => {
       const VIEWS = [
-        { key: "front", label: "1. De Frente", guide: poseFrente },
-        { key: "back", label: "2. De Costas", guide: poseCostas },
-        { key: "rightSide", label: "3. Lateral Direita", guide: poseLateralDir },
-        { key: "leftSide", label: "4. Lateral Esquerda", guide: poseLateralEsq },
+        { key: "front" as const, label: "1. De Frente", guide: poseFrente },
+        { key: "back" as const, label: "2. De Costas", guide: poseCostas },
+        { key: "rightSide" as const, label: "3. Lateral Direita", guide: poseLateralDir },
+        { key: "leftSide" as const, label: "4. Lateral Esquerda", guide: poseLateralEsq },
       ];
+      const photosObj = (assessment.photos || {}) as Record<string, string | undefined>;
+      const handlePhotoFile = (key: "front" | "back" | "rightSide" | "leftSide", file: File | null) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = String(reader.result || "");
+          upd("photos" as keyof FitMindAssessment, {
+            ...(assessment.photos || {}),
+            [key]: dataUrl,
+          } as any);
+        };
+        reader.readAsDataURL(file);
+      };
       return (
         <div>
           <div className="fm-section-title">Fotos</div>
@@ -2395,45 +2399,106 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             }}
           >
             💡 Posicione o aluno em roupa íntima, em pé, braços levemente
-            afastados do corpo, olhando para frente. Siga o guia de cada ângulo abaixo.
+            afastados do corpo, olhando para frente. Toque em cada cartão para
+            tirar/escolher a foto correspondente.
           </div>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
-            {VIEWS.map((v) => (
-              <div key={v.key}>
-                <label className="fm-label" style={{ marginBottom: 6 }}>
-                  {v.label}
-                </label>
-                <div
-                  className="fm-photo-box"
-                  onClick={() => alert(`Selecionar foto: ${v.label}`)}
-                  style={{ position: "relative", overflow: "hidden", padding: 0 }}
-                >
-                  <img
-                    src={v.guide}
-                    alt={`Guia de pose: ${v.label}`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }}
-                  />
-                  <div
+            {VIEWS.map((v) => {
+              const photo = photosObj[v.key];
+              const inputId = `fm-photo-${v.key}`;
+              return (
+                <div key={v.key}>
+                  <label className="fm-label" style={{ marginBottom: 6 }}>
+                    {v.label}
+                  </label>
+                  <label
+                    htmlFor={inputId}
+                    className="fm-photo-box"
                     style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                      padding: 10,
-                      background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
+                      position: "relative",
+                      overflow: "hidden",
+                      padding: 0,
+                      display: "block",
+                      cursor: "pointer",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--card)", fontSize: 11, fontWeight: 600 }}>
-                      <Camera size={14} /> Toque para adicionar
+                    <img
+                      src={photo || v.guide}
+                      alt={`${v.label}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        opacity: photo ? 1 : 0.85,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        padding: 10,
+                        background:
+                          "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "var(--card)",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <Camera size={14} />{" "}
+                        {photo ? "Trocar foto" : "Toque para adicionar"}
+                      </div>
                     </div>
-                  </div>
+                    <input
+                      id={inputId}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      style={{ display: "none" }}
+                      onChange={(e) =>
+                        handlePhotoFile(v.key, e.target.files?.[0] || null)
+                      }
+                    />
+                  </label>
+                  {photo && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        upd("photos" as keyof FitMindAssessment, {
+                          ...(assessment.photos || {}),
+                          [v.key]: undefined,
+                        } as any)
+                      }
+                      style={{
+                        marginTop: 6,
+                        fontSize: 11,
+                        background: "transparent",
+                        border: "1px solid var(--border)",
+                        color: "var(--muted-foreground)",
+                        borderRadius: 6,
+                        padding: "4px 8px",
+                        cursor: "pointer",
+                        width: "100%",
+                      }}
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
