@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { createAssessmentShare } from "@/lib/assessment-share.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { getStudentAttendanceDetail, type StudentCheckin, type StudentPurchase } from "@/lib/coach-attendance.functions";
 
-type Tab = "resumo" | "avaliacoes" | "anamnese" | "evolucao" | "compras";
+type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras";
 
 interface Props {
   studentId: string;
   onClose: () => void;
+  initialTab?: Tab;
 }
 
 type Profile = { name: string; email: string; phone: string | null; birthdate: string | null; city: string | null; state: string | null };
