@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { finalizeRegistration } from "./registration.server";
 
 const registrationSchema = z.object({
   userId: z.string().uuid(),
@@ -49,4 +48,7 @@ const registrationSchema = z.object({
 
 export const finalizeRegistrationFn = createServerFn({ method: "POST" })
   .inputValidator((data) => registrationSchema.parse(data))
-  .handler(async ({ data }) => finalizeRegistration(data));
+  .handler(async ({ data }) => {
+    const { finalizeRegistration } = await import("./registration.server");
+    return finalizeRegistration(data);
+  });
