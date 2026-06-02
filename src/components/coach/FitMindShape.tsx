@@ -1193,6 +1193,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <select
+            className="fm-input"
+            style={{ width: 160 }}
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            title="Filtrar por grupo"
+          >
+            <option value="">Todos os grupos</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
