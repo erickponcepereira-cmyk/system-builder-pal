@@ -830,6 +830,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setNewClientData((current) => ({ ...current, [key]: value }));
   };
 
+  const chooseNewClientGroup = (groupName: string) => {
+    const name = groupName.trim();
+    if (!name) return;
+    updateNewClient("groups", [name]);
+    setNewGroupName("");
+    setIsCreatingNewGroup(false);
+  };
+
+  const persistSelectedClientGroup = useCallback(
+    async (groupId?: string) => {
+      const group = groupId?.trim();
+      if (!group || !selectedClient) return;
+      const currentGroups = selectedClient.groups || [];
+      if (currentGroups.includes(group)) return;
+      const updatedClient = { ...selectedClient, groups: [group, ...currentGroups] };
+      setSelectedClient(updatedClient);
+      if (onUpdateClient) {
+        try {
+          await onUpdateClient(updatedClient);
+        } catch (error) {
+          console.error("Erro ao salvar grupo do aluno:", error);
+        }
+      }
+    },
+    [onUpdateClient, selectedClient],
+  );
+
   // ─── Exportação CSV de alunos + avaliações ────────────────
   const csvEscape = (v: unknown): string => {
     const s = v === null || v === undefined ? "" : String(v);
