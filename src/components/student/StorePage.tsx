@@ -193,6 +193,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         taxPercentage: it.tax_percentage, cost: it.cost, otherCosts: it.other_costs,
         creatorCoachId: it.creator_coach_id ?? null,
         pointsPerSale: it.points_per_sale ?? 0,
+        challengeDays: it.has_challenge_access ? Number(it.duration_days || 30) : 0,
       }))),
       ...(((partnerRows as any[]) || []).map((pp: any) => {
         const specKey = pp.coach?.specialty_key || "other";
