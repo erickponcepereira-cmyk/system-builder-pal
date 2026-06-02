@@ -1583,7 +1583,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 }}
               >
                 <option value="">Selecione um grupo *</option>
-                {groups.map((g) => (
+                {availableGroups.map((g) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
                 <option value="__new__">+ Criar novo grupo...</option>
@@ -1598,8 +1598,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   onChange={(e) => setNewGroupName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newGroupName.trim()) {
-                      updateNewClient("groups", [newGroupName.trim()]);
-                      setIsCreatingNewGroup(false);
+                      chooseNewClientGroup(newGroupName);
                     } else if (e.key === "Escape") {
                       setIsCreatingNewGroup(false);
                       setNewGroupName("");
@@ -1612,10 +1611,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   className="fm-btn-primary"
                   style={{ padding: "0 14px" }}
                   onClick={() => {
-                    if (newGroupName.trim()) {
-                      updateNewClient("groups", [newGroupName.trim()]);
-                      setIsCreatingNewGroup(false);
-                    }
+                    chooseNewClientGroup(newGroupName);
                   }}
                 >
                   OK
