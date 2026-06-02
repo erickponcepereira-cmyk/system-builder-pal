@@ -92,6 +92,14 @@ function ProfilePage() {
       ]);
       setReferrals((referralRes.data as unknown as typeof referrals) || []);
       setWithdrawals((withdrawalRes.data as unknown as typeof withdrawals) || []);
+      try {
+        const { data: toks } = await supabase
+          .from("student_challenge_tokens")
+          .select("id, consumed_at")
+          .eq("student_id", student.id)
+          .is("consumed_at", null);
+        setChallengeTokens(((toks as unknown[]) || []).length);
+      } catch (e) { console.warn("tokens fetch failed", e); }
     })();
   }, []);
 
