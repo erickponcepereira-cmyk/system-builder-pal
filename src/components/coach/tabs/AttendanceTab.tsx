@@ -198,6 +198,14 @@ export function AttendanceTab() {
           </div>
         )}
       </div>
+
+      {openId && (
+        <StudentDetailsModal
+          studentId={openId}
+          initialTab="frequencia"
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </>
   );
 }
