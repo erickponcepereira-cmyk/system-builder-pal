@@ -113,11 +113,22 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
 
   const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
     { id: "resumo", label: "Resumo", icon: Crown },
+    { id: "frequencia", label: "Frequência", icon: CalendarCheck },
     { id: "avaliacoes", label: "Avaliações", icon: Activity },
     { id: "anamnese", label: "Anamnese", icon: ClipboardList },
     { id: "evolucao", label: "Evolução", icon: TrendingUp },
     { id: "compras", label: "Compras", icon: ShoppingBag },
   ];
+
+  // Lazy-load attendance detail when tab opens
+  useEffect(() => {
+    if (tab !== "frequencia" || attData || attLoading) return;
+    setAttLoading(true);
+    fetchAttendance({ data: { studentId } })
+      .then((d) => setAttData(d))
+      .catch((e) => toast.error((e as Error).message || "Erro ao carregar frequência"))
+      .finally(() => setAttLoading(false));
+  }, [tab, attData, attLoading, fetchAttendance, studentId]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3" onClick={onClose}>
