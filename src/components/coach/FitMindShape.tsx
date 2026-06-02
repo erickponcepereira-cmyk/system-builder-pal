@@ -70,6 +70,8 @@ import {
   Download,
   Edit3,
   Share2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   calculateBodyComposition,
