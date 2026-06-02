@@ -1025,7 +1025,7 @@ function AdminChallengePage() {
 
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setFinalizeModal(null)} className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
-                <button onClick={finalizeChallenge} disabled={finalizing}
+                <button onClick={finalizeChallenge} disabled={finalizing || !winnerMaleId || !winnerFemaleId}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-yellow-500 py-2 text-sm font-bold text-black disabled:opacity-60">
                   {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
                   {finalizeModal.comp.finalized_at ? "Refinalizar" : "Finalizar e publicar"}
