@@ -401,6 +401,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [newGroupName, setNewGroupName] = useState("");
   const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
 
+  const availableGroups = useMemo(() => {
+    const byId = new Map<string, { id: string; name: string; color?: string }>();
+    const addGroup = (id?: string, name?: string, color?: string) => {
+      const key = (id || name || "").trim();
+      if (!key || byId.has(key)) return;
+      byId.set(key, { id: key, name: (name || key).trim(), color });
+    };
+
+    groups.forEach((group) => addGroup(group.id, group.name, group.color));
+    clients.forEach((client) => (client.groups || []).forEach((group) => addGroup(group)));
+    (selectedClient?.groups || []).forEach((group) => addGroup(group));
+    (newClientData.groups || []).forEach((group) => addGroup(group));
+    (editingClientData?.groups || []).forEach((group) => addGroup(group));
+    addGroup(assessment.groupId);
+
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [groups, clients, selectedClient?.groups, newClientData.groups, editingClientData?.groups, assessment.groupId]);
+
   // ── Pré-seleção via initialClientId (ex.: vindo do Desafio) ──
   const autoSelectedRef = useRef<string | null>(null);
   useEffect(() => {
