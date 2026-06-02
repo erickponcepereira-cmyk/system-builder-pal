@@ -176,6 +176,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                   className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-white/5"
                 >
                   <div className="flex items-center gap-3">
+                    <RankBadge rank={sec.rank} />
                     {isOpen ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-white/40" />}
                     <Layers className="h-4 w-4 text-primary" />
                     <span className="font-bold text-white">{sec.name}</span>
