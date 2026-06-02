@@ -313,17 +313,25 @@ function QuizStep({ onSubmitted }: { onSubmitted: () => void }) {
   );
 }
 
-function WaitingReleaseStep() {
-  const notify = useServerFn(notifyUplineForRelease);
+function WaitingReleaseStep({ onReleased }: { onReleased: () => void }) {
+  const unlock = useServerFn(unlockCoachWithId);
+  const [value, setValue] = useState("");
   const [sending, setSending] = useState(false);
-  const remind = async () => {
+
+  const submit = async () => {
+    const num = parseInt(value.replace(/\D/g, ""), 10);
+    if (!num || num < 1) {
+      toast.error("Digite um ID válido (apenas números).");
+      return;
+    }
     setSending(true);
     try {
-      await notify();
-      toast.success("Seu coach indicador foi notificado!");
+      await unlock({ data: { coachNumber: num } });
+      toast.success("🎉 Painel liberado!");
+      onReleased();
     } catch (e) {
       const err = e as Error;
-      toast.error(err.message || "Falha ao notificar");
+      toast.error(err.message || "Falha ao liberar");
     } finally {
       setSending(false);
     }
@@ -335,17 +343,34 @@ function WaitingReleaseStep() {
         <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
           <Clock className="h-6 w-6" />
         </div>
-        <h1 className="text-xl font-bold text-white">Tudo pronto!</h1>
+        <h1 className="text-xl font-bold text-white">Faça o curso de coach e libere seu ID</h1>
         <p className="mt-3 text-sm text-white/70">
-          Quando você concluir o curso de formação, peça ao coach que te trouxe para liberar o seu
-          painel. Assim que ele liberar, você terá acesso completo.
+          Ao concluir o curso de formação, você receberá um <strong className="text-white">ID único</strong>{" "}
+          junto com seu certificado. Insira esse número abaixo para liberar o seu painel.
         </p>
       </div>
 
-      <Button onClick={remind} disabled={sending} className="w-full h-11 font-bold">
-        {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-        Notificar meu coach indicador
-      </Button>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-white">
+          <KeyRound className="h-4 w-4 text-primary" />
+          Seu ID de coach
+        </label>
+        <input
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
+          placeholder="Ex: 42"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-center text-2xl font-bold tracking-widest text-white placeholder:text-white/20 focus:outline-none focus:border-primary"
+        />
+        <Button onClick={submit} disabled={sending || !value} className="w-full h-11 font-bold">
+          {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+          Liberar painel
+        </Button>
+        <p className="text-[11px] text-white/40 text-center">
+          O ID está vinculado à sua conta — só funciona com o número certo.
+        </p>
+      </div>
     </div>
   );
 }
