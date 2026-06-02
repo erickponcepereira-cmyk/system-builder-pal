@@ -45,6 +45,7 @@ export function AttendanceTab() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("most_inactive");
   const [search, setSearch] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
