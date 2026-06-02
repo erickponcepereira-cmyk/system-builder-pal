@@ -97,12 +97,23 @@ function EditProfilePage() {
   const save = async () => {
     if (!profileId) return toast.error("Perfil não encontrado");
     if (!form.name.trim()) return toast.error("Informe seu nome");
+    if (!form.email.includes("@")) return toast.error("E-mail inválido");
     setSaving(true);
+    const newEmail = form.email.trim().toLowerCase();
+    const { data: userData } = await supabase.auth.getUser();
+    const currentEmail = (userData.user?.email || "").toLowerCase();
+    if (newEmail && newEmail !== currentEmail) {
+      const { error: authErr } = await supabase.auth.updateUser({ email: newEmail });
+      if (authErr) { setSaving(false); return toast.error(`Não foi possível atualizar e-mail: ${authErr.message}`); }
+      toast.message("Confirme o novo e-mail na sua caixa de entrada para concluir a troca.");
+    }
     const { error } = await supabase.from("profiles").update({
       name: form.name.trim().slice(0, 255),
+      email: newEmail,
       phone: form.phone.slice(0, 20) || null,
       profession: form.profession.trim().slice(0, 100) || null,
       instagram: form.instagram.trim().replace(/^@/, "").slice(0, 100) || null,
+      gender: form.gender || null,
       blood_type: form.blood_type || null,
       birthdate: form.birthdate || null,
       bio: form.bio.trim().slice(0, 500) || null,
