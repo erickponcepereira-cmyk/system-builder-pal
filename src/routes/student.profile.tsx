@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +47,7 @@ const sections = [
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [profile, setProfile] = useState({ name: "Aluno FitMind Club", email: "aluno@email.com" });
   const [studentId, setStudentId] = useState<string | null>(null);
   const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
@@ -63,6 +64,8 @@ function ProfilePage() {
   const [tokenHistory, setTokenHistory] = useState<ChallengeTokenHistoryEntry[]>([]);
   const [showTokenHistory, setShowTokenHistory] = useState(false);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
+
+  if (location.pathname !== "/student/profile") return <Outlet />;
 
   useEffect(() => {
     (async () => {
