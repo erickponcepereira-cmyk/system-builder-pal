@@ -53,21 +53,24 @@ function EditProfilePage() {
       setUserId(userData.user.id);
       const { data } = await supabase
         .from("profiles")
-        .select("id,name,email,phone,profession,instagram,blood_type,birthdate,bio,photo_url")
+        .select("id,name,email,phone,profession,instagram,blood_type,birthdate,bio,photo_url,gender" as never)
         .eq("user_id", userData.user.id)
         .maybeSingle();
       if (data) {
-        setProfileId(data.id);
+        const d = data as unknown as Record<string, string | null>;
+        setProfileId(d.id as string);
+        const g = (d.gender || "") as string;
         setForm({
-          name: data.name || "",
-          email: data.email || "",
-          phone: data.phone || "",
-          profession: (data as any).profession || "",
-          instagram: (data as any).instagram || "",
-          blood_type: (data as any).blood_type || "",
-          birthdate: data.birthdate || "",
-          bio: data.bio || "",
-          photo_url: data.photo_url || "",
+          name: d.name || "",
+          email: d.email || "",
+          phone: d.phone || "",
+          profession: d.profession || "",
+          instagram: d.instagram || "",
+          gender: (g === "M" || g === "F" || g === "O") ? g : "",
+          blood_type: d.blood_type || "",
+          birthdate: d.birthdate || "",
+          bio: d.bio || "",
+          photo_url: d.photo_url || "",
         });
       }
       setLoading(false);
