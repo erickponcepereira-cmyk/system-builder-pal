@@ -1246,7 +1246,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             title="Filtrar por grupo"
           >
             <option value="">Todos os grupos</option>
-            {groups.map((g) => (
+            {availableGroups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
