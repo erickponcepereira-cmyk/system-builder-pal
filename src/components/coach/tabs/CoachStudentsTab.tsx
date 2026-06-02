@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Cake, Crown, Activity } from "lucide-react";
+import { Cake, Crown, Activity, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
+import { useServerFn } from "@tanstack/react-start";
+import { getCoachStudentsTokens } from "@/lib/challenge-tokens.functions";
 
 type StudentRow = {
   id: string;
