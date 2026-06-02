@@ -424,13 +424,13 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
             )}
           </div>
 
-          <SummaryBar meals={meals} goal={goal} />
-
           <div className={`space-y-3 ${readOnly ? "pointer-events-none opacity-95" : ""}`}>
             {meals.map((meal, i) => (
               <MealCard key={i} index={i} meal={meal} goal={goal} onChange={handleMealChange} />
             ))}
           </div>
+
+          <SummaryBar meals={meals} goal={goal} />
         </>
       )}
 
