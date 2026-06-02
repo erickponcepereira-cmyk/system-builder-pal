@@ -1799,12 +1799,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               className="fm-select"
               value={assessment.method || "bioimpedance"}
               onChange={(e) => {
-                const method = e.target.value as "bioimpedance" | "measurements";
+                const method = e.target.value as "bioimpedance" | "measurements" | "both";
                 upd("method", method);
               }}
             >
               <option value="bioimpedance">Bioimpedância</option>
               <option value="measurements">Medidas (fita métrica)</option>
+              <option value="both">Ambos</option>
             </select>
           </div>
         </div>
