@@ -104,6 +104,13 @@ function AdminChallengePage() {
   const [weighModal, setWeighModal] = useState<WeighForm | null>(null);
   const [savingWeigh, setSavingWeigh] = useState(false);
 
+  // Finalize challenge
+  const [finalizeModal, setFinalizeModal] = useState<{ comp: Competition; enrollments: Enrollment[] } | null>(null);
+  const [finalizeMetric, setFinalizeMetric] = useState<"fat" | "kg" | "muscle">("fat");
+  const [winnerMaleId, setWinnerMaleId] = useState<string>("");
+  const [winnerFemaleId, setWinnerFemaleId] = useState<string>("");
+  const [finalizing, setFinalizing] = useState(false);
+
   // Tentativas de moeda
   const [attempts, setAttempts] = useState<AdminTokenAttemptRow[]>([]);
   const [attemptsOnlyFailures, setAttemptsOnlyFailures] = useState(true);
