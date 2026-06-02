@@ -147,9 +147,16 @@ function ProfilePage() {
         <div className="flex-1">
           <p className="text-base font-bold text-white">{profile.name}</p>
           <p className="text-xs text-white/50">{profile.email}</p>
-          <span className="mt-1.5 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-            🔥 Plano Premium
-          </span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+              🔥 Plano Premium
+            </span>
+            {challengeTokens > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                🪙 {challengeTokens} moeda{challengeTokens > 1 ? "s" : ""} de desafio
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
