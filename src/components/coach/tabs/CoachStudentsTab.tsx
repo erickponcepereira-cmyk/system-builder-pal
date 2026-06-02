@@ -72,10 +72,18 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
         if (!lastAssessByStudent.has(a.student_id)) lastAssessByStudent.set(a.student_id, a.assessment_date);
       });
       const ex: Record<string, ExtraInfo> = {};
+      // Saldo de moedas de desafio por aluno
+      let tokenBalances = new Map<string, number>();
+      try {
+        const balRows = await fetchTokens({ data: { studentIds: ids } });
+        tokenBalances = new Map(balRows.map((b) => [b.studentId, b.balance]));
+      } catch (e) { console.warn("tokens fetch failed", e); }
+
       ids.forEach((id) => {
         ex[id] = {
           topPlan: topPlanByStudent.get(id) || null,
           lastAssessmentDate: lastAssessByStudent.get(id) || null,
+          tokenBalance: tokenBalances.get(id) || 0,
         };
       });
       setExtras(ex);
