@@ -36,6 +36,8 @@ export interface ProductDetail {
   otherCosts?: number | null;
   // Pontos para carreira do coach (gameficação)
   pointsPerSale?: number | null;
+  // Dias de acesso ao Desafio liberados pela compra/venda
+  challengeDays?: number | null;
 }
 
 const fmt = (n: number) =>
