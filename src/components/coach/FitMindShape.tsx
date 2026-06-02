@@ -1988,15 +1988,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               }}
             >
               <option value="">Sem grupo</option>
-              {groups.map((g) => (
+              {availableGroups.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
-              {/* Permite manter um grupo legado salvo apenas pelo nome no aluno */}
-              {(selectedClient?.groups || [])
-                .filter((g) => !groups.find((x) => x.id === g))
-                .map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
               <option value="__new__">+ Criar novo grupo...</option>
             </select>
           ) : (
@@ -2009,8 +2003,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 onChange={(e) => setNewGroupName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newGroupName.trim()) {
-                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
-                    setIsCreatingNewGroup(false);
+                    chooseAssessmentGroup(newGroupName);
                   } else if (e.key === "Escape") {
                     setIsCreatingNewGroup(false);
                     setNewGroupName("");
@@ -2023,10 +2016,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 className="fm-btn-primary"
                 style={{ padding: "0 14px" }}
                 onClick={() => {
-                  if (newGroupName.trim()) {
-                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
-                    setIsCreatingNewGroup(false);
-                  }
+                  chooseAssessmentGroup(newGroupName);
                 }}
               >
                 OK
@@ -2051,7 +2041,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
           )}
         </div>
-      </div>
       </div>
       );
     };
