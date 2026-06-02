@@ -19,6 +19,7 @@ type StudentRow = {
 type ExtraInfo = {
   topPlan: { name: string; price: number | null } | null;
   lastAssessmentDate: string | null;
+  tokenBalance: number;
 };
 
 const fmtBR = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
@@ -28,6 +29,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
   const [extras, setExtras] = useState<Record<string, ExtraInfo>>({});
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const fetchTokens = useServerFn(getCoachStudentsTokens);
 
   useEffect(() => {
     if (!coachId) { setLoading(false); return; }
