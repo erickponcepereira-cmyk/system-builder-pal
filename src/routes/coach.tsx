@@ -29,6 +29,8 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyBadges } from "@/lib/coach-badges.functions";
+import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
+
 
 
 // Link "/" usage to satisfy unused import warnings (not required)
