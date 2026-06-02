@@ -6,6 +6,7 @@ import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity
 import janelaFechadaAsset from "@/assets/janela_fechada.png.asset.json";
 import janelaMeioAsset from "@/assets/janela_meio_aberta.png.asset.json";
 import janelaAbertaAsset from "@/assets/janela_aberta.png.asset.json";
+import janelasChuvaAsset from "@/assets/janelas-chuva.gif.asset.json";
 
 type Goal = "slim" | "mass";
 interface MealState { protein: boolean; fiber: boolean; carb: boolean; exercise: boolean }
