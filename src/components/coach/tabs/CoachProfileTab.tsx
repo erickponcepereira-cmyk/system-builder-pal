@@ -17,7 +17,9 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [activeView, setActiveView] = useState<"profile" | "top">("profile");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   
 
   useEffect(() => {
