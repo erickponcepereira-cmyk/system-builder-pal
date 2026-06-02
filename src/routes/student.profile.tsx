@@ -105,6 +105,10 @@ function ProfilePage() {
           .is("consumed_at", null);
         setChallengeTokens(((toks as unknown[]) || []).length);
       } catch (e) { console.warn("tokens fetch failed", e); }
+      try {
+        const hist = await fetchTokenHistory();
+        setTokenHistory(hist);
+      } catch (e) { console.warn("token history fetch failed", e); }
     })();
   }, []);
 
