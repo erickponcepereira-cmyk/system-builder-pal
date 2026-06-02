@@ -29,6 +29,8 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyBadges } from "@/lib/coach-badges.functions";
+import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
+
 
 
 // Link "/" usage to satisfy unused import warnings (not required)
@@ -276,7 +278,9 @@ function CoachDashboard() {
   }
 
   return (
+    <CoachOnboardingGate>
     <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
+
       {/* Mobile header */}
       <div
         className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between border-b border-white/5 px-4 backdrop-blur-xl lg:hidden"
@@ -458,5 +462,7 @@ function CoachDashboard() {
         </div>
       </main>
     </div>
+    </CoachOnboardingGate>
   );
 }
+

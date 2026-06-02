@@ -1888,6 +1888,8 @@ export type Database = {
       }
       coaches: {
         Row: {
+          activation_order_id: string | null
+          activation_paid_at: string | null
           approved_at: string | null
           approved_by: string | null
           bank_account: string | null
@@ -1912,10 +1914,13 @@ export type Database = {
           instagram: string | null
           is_professional: boolean
           last_activity_at: string | null
+          onboarding_stage: string
           pix_key: string | null
           pix_key_type: string | null
           professional_council: string | null
           profile_id: string
+          quiz_result_submitted_at: string | null
+          quiz_result_url: string | null
           referral_code: string
           referral_link: string | null
           serves_whole_network: boolean
@@ -1934,6 +1939,8 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          activation_order_id?: string | null
+          activation_paid_at?: string | null
           approved_at?: string | null
           approved_by?: string | null
           bank_account?: string | null
@@ -1958,10 +1965,13 @@ export type Database = {
           instagram?: string | null
           is_professional?: boolean
           last_activity_at?: string | null
+          onboarding_stage?: string
           pix_key?: string | null
           pix_key_type?: string | null
           professional_council?: string | null
           profile_id: string
+          quiz_result_submitted_at?: string | null
+          quiz_result_url?: string | null
           referral_code: string
           referral_link?: string | null
           serves_whole_network?: boolean
@@ -1980,6 +1990,8 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          activation_order_id?: string | null
+          activation_paid_at?: string | null
           approved_at?: string | null
           approved_by?: string | null
           bank_account?: string | null
@@ -2004,10 +2016,13 @@ export type Database = {
           instagram?: string | null
           is_professional?: boolean
           last_activity_at?: string | null
+          onboarding_stage?: string
           pix_key?: string | null
           pix_key_type?: string | null
           professional_council?: string | null
           profile_id?: string
+          quiz_result_submitted_at?: string | null
+          quiz_result_url?: string | null
           referral_code?: string
           referral_link?: string | null
           serves_whole_network?: boolean

@@ -85,6 +85,12 @@ export async function applyApproval(kind: SourceKind, id: string) {
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("purchase_type", "store_order")
       .contains("metadata", { store_order_id: id } as never);
+    try {
+      const { handlePaidStoreOrderForActivation } = await import("./coach-onboarding.server");
+      await handlePaidStoreOrderForActivation(id);
+    } catch (e) {
+      console.error("[coach-onboarding] activation hook failed:", e);
+    }
   } else if (kind === "partner_product_order") {
     // Atualiza status e distribui comissões via RPC.
     await supabaseAdmin.rpc("process_partner_product_order_paid" as never, { _order_id: id } as never);
