@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, TrendingDown, TrendingUp, Minus, Search, Activity, ShoppingBag, LogIn, CalendarCheck } from "lucide-react";
 import { getCoachAttendance, type CoachStudentAttendance } from "@/lib/coach-attendance.functions";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 
 type Filter = "all" | "active" | "watch" | "inactive_7" | "inactive_15" | "inactive_30";
 type SortKey = "most_active" | "most_inactive" | "name";
