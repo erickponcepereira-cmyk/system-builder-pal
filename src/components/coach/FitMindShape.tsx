@@ -2638,7 +2638,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const stepComponents = [
       StepDados,
       StepMedidas,
-      StepOutros,
       StepAnotacoes,
       StepFotos,
       StepAgendamento,
