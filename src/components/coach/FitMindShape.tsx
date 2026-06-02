@@ -264,7 +264,7 @@ export interface FitMindShapeProps {
   onSaveAssessment?: (
     assessment: FitMindAssessment,
     client: FitMindClient,
-  ) => Promise<void>;
+  ) => Promise<string | void>;
   onDeleteAssessment?: (
     assessmentId: string,
     reason: string,
