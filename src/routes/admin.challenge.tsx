@@ -417,6 +417,14 @@ function AdminChallengePage() {
     if (comp.finalized_at) {
       if (!confirm("Este desafio já foi finalizado. Refinalizar irá registrar uma NOVA entrada de histórico (a anterior será mantida). Continuar?")) return;
     }
+    if (!winnerMaleId) {
+      toast.error("Selecione o vencedor masculino antes de finalizar.");
+      return;
+    }
+    if (!winnerFemaleId) {
+      toast.error("Selecione a vencedora feminina antes de finalizar.");
+      return;
+    }
     setFinalizing(true);
     try {
       const { data: auth } = await supabase.auth.getUser();
@@ -982,7 +990,7 @@ function AdminChallengePage() {
                   Finalizar {MONTHS[finalizeModal.comp.month]} {finalizeModal.comp.year}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Selecione os vencedores Masc. e Fem. (opcional). O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
+                  Selecione obrigatoriamente os vencedores Masc. e Fem. O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
                 </p>
               </div>
 
@@ -1017,7 +1025,7 @@ function AdminChallengePage() {
 
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setFinalizeModal(null)} className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
-                <button onClick={finalizeChallenge} disabled={finalizing}
+                <button onClick={finalizeChallenge} disabled={finalizing || !winnerMaleId || !winnerFemaleId}
                   className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-yellow-500 py-2 text-sm font-bold text-black disabled:opacity-60">
                   {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
                   {finalizeModal.comp.finalized_at ? "Refinalizar" : "Finalizar e publicar"}
