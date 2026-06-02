@@ -8,7 +8,7 @@ import * as XLSX from "xlsx";
 import {
   getCoachAttendanceHistory,
   type AttendanceHistory,
-} from "@/server/google-calendar.functions";
+} from "@/lib/google-calendar.functions";
 import {
   getCoachSalesReport, getCoachChallengeRanking,
   type SalesReport, type ChallengeRankingRow,
