@@ -358,7 +358,7 @@ export function ChallengeTab({ coachId }: Props) {
         ))}
       </div>
 
-      {tab === "hall" && <HallOfFame />}
+      {tab === "hall" && <HallOfFame coachId={coachId} />}
 
 
 

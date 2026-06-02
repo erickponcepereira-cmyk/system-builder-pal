@@ -566,7 +566,7 @@ function StudentChallengePage() {
       )}
 
       {/* ── TAB: Hall da Fama ── */}
-      {activeTab === "hall" && <HallOfFame />}
+      {activeTab === "hall" && <HallOfFame highlightStudentId={studentId || undefined} />}
 
 
       {/* Modal: Agendar Pesagem */}
