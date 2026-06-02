@@ -42,13 +42,13 @@ function RouteComponent() {
       .order("period_month", { ascending: false })
       .limit(500);
     if (error) toast.error(error.message);
-    const list = (data as HistoryRow[]) || [];
+    const list = ((data as unknown) as HistoryRow[]) || [];
     setRows(list);
     const profileIds = Array.from(new Set(list.map((r) => r.profile_id)));
     if (profileIds.length) {
-      const { data: pp } = await supabase.from("profiles").select("id,full_name,email").in("id", profileIds);
+      const { data: pp } = await supabase.from("profiles").select("id,name,email").in("id", profileIds);
       const map: Record<string, ProfileMini> = {};
-      ((pp as ProfileMini[]) || []).forEach((p) => { map[p.id] = p; });
+      (((pp as unknown) as ProfileMini[]) || []).forEach((p) => { map[p.id] = p; });
       setProfiles(map);
     }
     setLoading(false);
