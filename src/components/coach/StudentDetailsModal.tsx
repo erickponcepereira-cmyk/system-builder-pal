@@ -68,7 +68,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       const [subRes, txRes, bodyRes, bioRes, anamRes, wRes, pRes] = await Promise.all([
         supabase.from("subscriptions").select("id,status,start_date,end_date,products!subscriptions_product_id_fkey(id,name,price)").eq("student_id", studentId).order("end_date", { ascending: false }),
         supabase.from("transactions").select("id,gross_amount,status,paid_at,created_at,products!transactions_product_id_fkey(name)").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50),
-        supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi").eq("student_id", studentId).order("assessment_date", { ascending: false }),
+        supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi,client_notes,professional_notes").eq("student_id", studentId).order("assessment_date", { ascending: false }),
         supabase.from("bioimpedance_evaluations").select("id,evaluation_date,evaluation_type,weight,fat_percentage,muscle_percentage").eq("student_id", studentId).order("evaluation_date", { ascending: false }),
         supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at").eq("student_id", studentId).order("filled_at", { ascending: false }),
         supabase.from("weight_logs").select("id,log_date,weight,waist_cm,hip_cm").eq("student_id", studentId).order("log_date", { ascending: false }).limit(60),
