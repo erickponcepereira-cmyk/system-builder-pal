@@ -316,26 +316,81 @@ function QuizStep({ onSubmitted }: { onSubmitted: () => void }) {
 function WaitingReleaseStep({ onReleased }: { onReleased: () => void }) {
   const unlock = useServerFn(unlockCoachWithId);
   const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [success, setSuccess] = useState<{
+    coachNumber: number | null;
+    approvedAt: string | null;
+  } | null>(null);
+
+  const validate = (raw: string): { ok: true; num: number } | { ok: false; msg: string } => {
+    const trimmed = raw.trim();
+    if (!trimmed) return { ok: false, msg: "Digite o seu ID de coach." };
+    if (!/^\d+$/.test(trimmed))
+      return { ok: false, msg: "Apenas números são aceitos (inteiro positivo)." };
+    const num = parseInt(trimmed, 10);
+    if (!Number.isFinite(num) || num < 1)
+      return { ok: false, msg: "O ID deve ser um número inteiro maior que zero." };
+    if (num > 9999999) return { ok: false, msg: "ID muito longo. Verifique o número." };
+    return { ok: true, num };
+  };
 
   const submit = async () => {
-    const num = parseInt(value.replace(/\D/g, ""), 10);
-    if (!num || num < 1) {
-      toast.error("Digite um ID válido (apenas números).");
+    setError(null);
+    const v = validate(value);
+    if (!v.ok) {
+      setError(v.msg);
+      toast.error(v.msg);
       return;
     }
     setSending(true);
     try {
-      await unlock({ data: { coachNumber: num } });
+      const res = await unlock({ data: { coachNumber: v.num } });
+      setSuccess({
+        coachNumber: res?.coachNumber ?? v.num,
+        approvedAt: res?.approvedAt ?? new Date().toISOString(),
+      });
       toast.success("🎉 Painel liberado!");
-      onReleased();
     } catch (e) {
-      const err = e as Error;
-      toast.error(err.message || "Falha ao liberar");
+      const msg = (e as Error).message || "Falha ao liberar";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSending(false);
     }
   };
+
+  if (success) {
+    const when = success.approvedAt
+      ? new Date(success.approvedAt).toLocaleString("pt-BR")
+      : null;
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
+          <div className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+            <KeyRound className="h-7 w-7" />
+          </div>
+          <h1 className="text-xl font-bold text-white">ID validado com sucesso 🎉</h1>
+          <p className="mt-2 text-sm text-white/70">
+            Seu painel de coach foi liberado e está pronto para uso.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-left">
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Seu ID</p>
+              <p className="mt-1 text-lg font-bold text-white">#{success.coachNumber ?? "—"}</p>
+            </div>
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Liberado em</p>
+              <p className="mt-1 text-xs font-semibold text-white">{when || "—"}</p>
+            </div>
+          </div>
+        </div>
+        <Button onClick={onReleased} className="w-full h-12 text-base font-bold">
+          Acessar meu painel
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -359,16 +414,31 @@ function WaitingReleaseStep({ onReleased }: { onReleased: () => void }) {
           inputMode="numeric"
           pattern="[0-9]*"
           value={value}
-          onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
+          onChange={(e) => {
+            setValue(e.target.value.replace(/\D/g, ""));
+            if (error) setError(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !sending) submit();
+          }}
           placeholder="Ex: 42"
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-3 text-center text-2xl font-bold tracking-widest text-white placeholder:text-white/20 focus:outline-none focus:border-primary"
+          aria-invalid={!!error}
+          className={`w-full rounded-lg border bg-white/5 px-3 py-3 text-center text-2xl font-bold tracking-widest text-white placeholder:text-white/20 focus:outline-none ${
+            error ? "border-red-500/60 focus:border-red-400" : "border-white/10 focus:border-primary"
+          }`}
         />
+        {error && (
+          <p className="text-xs font-semibold text-red-400" role="alert">
+            {error}
+          </p>
+        )}
         <Button onClick={submit} disabled={sending || !value} className="w-full h-11 font-bold">
           {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
           Liberar painel
         </Button>
         <p className="text-[11px] text-white/40 text-center">
-          O ID está vinculado à sua conta — só funciona com o número certo.
+          O ID está vinculado à sua conta — só funciona com o número certo. Após 10 tentativas
+          inválidas, será necessário contatar o suporte.
         </p>
       </div>
     </div>
