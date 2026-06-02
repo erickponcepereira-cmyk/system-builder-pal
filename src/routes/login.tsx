@@ -33,7 +33,10 @@ function LoginPage() {
 
   const enterArea = (area: "coach" | "student" | "admin" | "partner") => {
     if (area !== "admin" && area !== "partner") sessionStorage.setItem("fitmind_selected_area", area);
-    const target = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : "/student";
+    const redirect = new URLSearchParams(window.location.search).get("redirect") || "";
+    const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "";
+    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : "/student";
+    const target = safeRedirect.startsWith(areaRoot) ? safeRedirect : areaRoot;
     window.location.assign(target);
   };
 
