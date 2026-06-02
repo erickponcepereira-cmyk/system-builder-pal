@@ -134,7 +134,7 @@ function GateShell({
           <PaymentStep email={email} name={name} profileId={profileId} onPaid={onRefresh} />
         )}
         {stage === "awaiting_quiz_result" && <QuizStep onSubmitted={onRefresh} />}
-        {stage === "awaiting_upline_release" && <WaitingReleaseStep />}
+        {stage === "awaiting_upline_release" && <WaitingReleaseStep onReleased={onRefresh} />}
       </div>
     </div>
   );
