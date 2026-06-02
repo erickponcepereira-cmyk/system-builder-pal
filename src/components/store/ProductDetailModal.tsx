@@ -36,8 +36,10 @@ export interface ProductDetail {
   otherCosts?: number | null;
   // Pontos para carreira do coach (gameficação)
   pointsPerSale?: number | null;
-  // Dias de acesso ao Desafio liberados pela compra/venda
-  challengeDays?: number | null;
+  // Indica se a compra/venda libera acesso ao Desafio
+  hasChallenge?: boolean | null;
+  // Dias de validade da carteirinha de benefícios concedidos pela compra
+  cardDays?: number | null;
 }
 
 const fmt = (n: number) =>
