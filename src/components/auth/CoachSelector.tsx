@@ -47,15 +47,17 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
       try {
         let request = supabase
           .from("coaches")
-          .select("id, profile_id, profiles!inner(name, city, state)")
+          .select("id, profile_id, profiles!coaches_profile_id_fkey!inner(name, city, state)")
           .not("approved_at", "is", null)
+          .is("blocked_at", null)
           .limit(200);
 
         if (normalizedQuery) {
           request = request.ilike("profiles.name", `%${normalizedQuery}%`);
         }
 
-        const { data } = await request;
+        const { data, error } = await request;
+        if (error) throw error;
         const rows = ((data || []) as Array<{
           id: string;
           profile_id: string;
