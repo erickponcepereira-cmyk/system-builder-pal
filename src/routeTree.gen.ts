@@ -61,6 +61,7 @@ import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as AdminPartnerOrdersRouteImport } from './routes/admin.partner-orders'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
+import { Route as AdminNetworkUnlockHistoryRouteImport } from './routes/admin.network-unlock-history'
 import { Route as AdminNetworkUnlockRouteImport } from './routes/admin.network-unlock'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
@@ -346,6 +347,12 @@ const AdminNutritionistWalletRoute = AdminNutritionistWalletRouteImport.update({
   path: '/nutritionist-wallet',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminNetworkUnlockHistoryRoute =
+  AdminNetworkUnlockHistoryRouteImport.update({
+    id: '/network-unlock-history',
+    path: '/network-unlock-history',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminNetworkUnlockRoute = AdminNetworkUnlockRouteImport.update({
   id: '/network-unlock',
   path: '/network-unlock',
@@ -498,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/network-unlock': typeof AdminNetworkUnlockRoute
+  '/admin/network-unlock-history': typeof AdminNetworkUnlockHistoryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/partner-orders': typeof AdminPartnerOrdersRoute
@@ -574,6 +582,7 @@ export interface FileRoutesByTo {
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/network-unlock': typeof AdminNetworkUnlockRoute
+  '/admin/network-unlock-history': typeof AdminNetworkUnlockHistoryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/partner-orders': typeof AdminPartnerOrdersRoute
@@ -653,6 +662,7 @@ export interface FileRoutesById {
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/network-unlock': typeof AdminNetworkUnlockRoute
+  '/admin/network-unlock-history': typeof AdminNetworkUnlockHistoryRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/partner-orders': typeof AdminPartnerOrdersRoute
@@ -733,6 +743,7 @@ export interface FileRouteTypes {
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/network-unlock'
+    | '/admin/network-unlock-history'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/partner-orders'
@@ -809,6 +820,7 @@ export interface FileRouteTypes {
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/network-unlock'
+    | '/admin/network-unlock-history'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/partner-orders'
@@ -887,6 +899,7 @@ export interface FileRouteTypes {
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/network-unlock'
+    | '/admin/network-unlock-history'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/partner-orders'
@@ -1333,6 +1346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNutritionistWalletRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/network-unlock-history': {
+      id: '/admin/network-unlock-history'
+      path: '/network-unlock-history'
+      fullPath: '/admin/network-unlock-history'
+      preLoaderRoute: typeof AdminNetworkUnlockHistoryRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/network-unlock': {
       id: '/admin/network-unlock'
       path: '/network-unlock'
@@ -1531,6 +1551,7 @@ interface AdminRouteChildren {
   AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNetworkUnlockRoute: typeof AdminNetworkUnlockRoute
+  AdminNetworkUnlockHistoryRoute: typeof AdminNetworkUnlockHistoryRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPartnerOrdersRoute: typeof AdminPartnerOrdersRoute
@@ -1564,6 +1585,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFreebiesRoute: AdminFreebiesRoute,
   AdminLibraryRoute: AdminLibraryRoute,
   AdminNetworkUnlockRoute: AdminNetworkUnlockRoute,
+  AdminNetworkUnlockHistoryRoute: AdminNetworkUnlockHistoryRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPartnerOrdersRoute: AdminPartnerOrdersRoute,
