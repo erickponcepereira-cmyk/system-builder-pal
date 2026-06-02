@@ -143,6 +143,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   onPrint,
 }) => {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [photosOpen, setPhotosOpen] = useState(false);
 
   const computedBMI = useMemo(() => {
     if (!a.weight || !a.height) return 0;
