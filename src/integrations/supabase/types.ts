@@ -5617,6 +5617,7 @@ export type Database = {
           cpf: string | null
           created_at: string | null
           email: string
+          gender: string | null
           id: string
           instagram: string | null
           is_master_admin: boolean
@@ -5647,6 +5648,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string | null
           email: string
+          gender?: string | null
           id?: string
           instagram?: string | null
           is_master_admin?: boolean
@@ -5677,6 +5679,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string | null
           email?: string
+          gender?: string | null
           id?: string
           instagram?: string | null
           is_master_admin?: boolean
