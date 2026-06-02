@@ -115,16 +115,19 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
 
     type Log = { student_id: string; log_date: string; attended: boolean | null };
     type Visit = { student_id: string; visited_at: string };
-    type Order = { student_id: string; created_at: string; status: string };
+    type Tx = { student_id: string; paid_at: string; status: string };
+    type SOrder = { student_id: string; updated_at: string; created_at: string; status: string };
 
     const logRows = (logs as Log[] | null) || [];
     const visitRows = (visits as Visit[] | null) || [];
-    const orderRows = (orders as Order[] | null) || [];
+    const txRows = (txs as Tx[] | null) || [];
+    const storeOrderRows = (storeOrders as SOrder[] | null) || [];
 
     return studentRows.map<CoachStudentAttendance>((s) => {
       const sLogs = logRows.filter((l) => l.student_id === s.id && l.attended);
       const sVisits = visitRows.filter((v) => v.student_id === s.id);
-      const sOrders = orderRows.filter((o) => o.student_id === s.id && o.status !== "cancelled");
+      const sTxs = txRows.filter((t) => t.student_id === s.id);
+      const sStoreOrders = storeOrderRows.filter((o) => o.student_id === s.id);
 
       const lastApp = sLogs
         .map((l) => l.log_date)
@@ -145,7 +148,9 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
         lastSource = "freebie";
       }
 
-      const lastPurchase = sOrders[0]?.created_at || null;
+      const lastTxPaid = sTxs[0]?.paid_at || null;
+      const lastStorePaid = sStoreOrders[0]?.updated_at || sStoreOrders[0]?.created_at || null;
+      const lastPurchase = [lastTxPaid, lastStorePaid].filter(Boolean).sort().at(-1) || null;
       const lastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
 
       // Activity = max(lastCheckin, lastSignIn, lastPurchase)
