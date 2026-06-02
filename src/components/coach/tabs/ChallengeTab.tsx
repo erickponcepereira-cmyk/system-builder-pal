@@ -44,9 +44,14 @@ type MyStudent = {
   initial_muscle_mass: number | null;
   final_muscle_mass: number | null;
   result_pct: number | null;
+  initial_date: string | null;
   final_date: string | null;
   comp_label: string;
   group_number: number;
+  initial_start_date: string | null;
+  initial_end_date: string | null;
+  final_weigh_in_date: string | null;
+  award_date: string | null;
 };
 
 const MONTHS = ["","Janeiro","Fevereiro","Março","Abril","Maio","Junho",
