@@ -377,6 +377,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [assessment, setAssessment] = useState<Partial<FitMindAssessment>>({});
   const [step, setStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
