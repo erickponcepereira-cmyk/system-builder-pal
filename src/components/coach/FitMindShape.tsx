@@ -17,7 +17,7 @@
 // - date-fns
 // ============================================================
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import AssessmentComparison from "./AssessmentComparison";
 import FitMindShapeResultView from "./FitMindShapeResultView";
 import { useServerFn } from "@tanstack/react-start";
@@ -284,6 +284,8 @@ export interface FitMindShapeProps {
   // Identidade visual herdada do sistema pai
   themeColor?: string; // hex, ex: "#1a7a4a"
   themeFontFamily?: string;
+  // Pré-seleção de cliente (usado quando vindo do Desafio)
+  initialClientId?: string;
 }
 
 // ============================================================
@@ -358,6 +360,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onCreateGoogleCalendarEvent,
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
+  initialClientId,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
@@ -392,6 +395,21 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
+
+  // ── Pré-seleção via initialClientId (ex.: vindo do Desafio) ──
+  const autoSelectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialClientId) return;
+    if (autoSelectedRef.current === initialClientId) return;
+    const c = clients.find((x) => x.id === initialClientId);
+    if (!c) return;
+    autoSelectedRef.current = initialClientId;
+    setSelectedClient(c);
+    setAssessment({ height: c.height || undefined });
+    setStep(0);
+    setScreen("assessment");
+  }, [initialClientId, clients]);
+
 
   // ── Cálculo automático do IMC ────────────────────────────
   const computedBMI = useMemo(() => {
