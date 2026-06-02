@@ -1984,6 +1984,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   setNewGroupName("");
                 } else {
                   upd("groupId" as keyof FitMindAssessment, v || undefined);
+                  void persistSelectedClientGroup(v || undefined);
                 }
               }}
             >
