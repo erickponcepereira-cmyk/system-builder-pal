@@ -81,6 +81,18 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       setAnams(((anamRes.data || []) as unknown) as AnamRow[]);
       setWeights(((wRes.data || []) as unknown) as WeightRow[]);
       setPhotos(((pRes.data || []) as unknown) as PhotoRow[]);
+
+      // Saldo de moedas de desafio
+      try {
+        const { data: toks } = await supabase
+          .from("student_challenge_tokens")
+          .select("id, consumed_at")
+          .eq("student_id", studentId);
+        const rows = (toks as { id: string; consumed_at: string | null }[] | null) || [];
+        const consumed = rows.filter((r) => !!r.consumed_at).length;
+        setTokenStats({ earned: rows.length, consumed, balance: rows.length - consumed });
+      } catch (e) { console.warn("tokens fetch failed", e); }
+
       setLoading(false);
     })();
   }, [studentId]);
