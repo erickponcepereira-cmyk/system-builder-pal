@@ -284,6 +284,8 @@ export interface FitMindShapeProps {
   // Identidade visual herdada do sistema pai
   themeColor?: string; // hex, ex: "#1a7a4a"
   themeFontFamily?: string;
+  // Pré-seleção de cliente (usado quando vindo do Desafio)
+  initialClientId?: string;
 }
 
 // ============================================================
