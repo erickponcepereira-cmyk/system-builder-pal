@@ -1785,11 +1785,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               onChange={(e) => updateEditingClient("groups", e.target.value ? [e.target.value] : [])}
             >
               <option value="">Sem grupo</option>
-              {groups.map((g) => (
+              {availableGroups.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-              {(c.groups || []).filter((g) => !groups.find((x) => x.id === g)).map((g) => (
-                <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </div>
