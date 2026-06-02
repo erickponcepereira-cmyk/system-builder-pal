@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getCareerProgress } from "@/lib/coach-career.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { computeMonthlySnapshot, upsertMonthlySnapshot } from "@/lib/network-unlock.server";
 
 export type UnlockGoal = {
   id: string;
@@ -12,6 +12,7 @@ export type UnlockGoal = {
   current: number;
   completed: boolean;
   sort_order: number;
+  missing: number;
 };
 
 export type WalletSplit = {
@@ -29,18 +30,15 @@ export type WalletSplit = {
   };
 };
 
-function monthRange(): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
-  return { start, end };
-}
-
-function multiplierForLevel(level: number): { mult: number; tier: string } {
-  if (level >= 8) return { mult: 4, tier: "Patente 8-12 (4x)" };
-  if (level >= 4) return { mult: 2, tier: "Patente 4-7 (2x)" };
-  return { mult: 1, tier: "Patente 1-3 (base)" };
-}
+export type HistoryEntry = {
+  year: number;
+  month: number;
+  patent_level: number;
+  multiplier: number;
+  total_sales: number;
+  any_completed: boolean;
+  goals: UnlockGoal[];
+};
 
 export const getWalletSplit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -48,90 +46,21 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     const userId = context.userId;
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("id").eq("user_id", userId).maybeSingle();
-    if (!profile) {
-      return emptySplit();
-    }
-    const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
+    if (!profile) return emptySplit();
 
-    // Patent level via career helper (highest patent currently achieved)
-    let patentLevel = 1;
-    try {
-      const career = await getCareerProgress();
-      const curKey = career?.currentPatentKey;
-      const cur = career?.patents.find((p) => p.key === curKey);
-      if (cur?.level) patentLevel = Number(cur.level) || 1;
-    } catch { /* default 1 */ }
-    const { mult, tier } = multiplierForLevel(patentLevel);
+    const now = new Date();
+    const snap = await computeMonthlySnapshot(profile.id, now.getFullYear(), now.getMonth() + 1);
 
-    // Month range
-    const { start, end } = monthRange();
-    const startIso = start.toISOString();
-    const endIso = end.toISOString();
+    // Persist live snapshot so admin reports always reflect latest progress.
+    // Best-effort — never fail the wallet because of this.
+    try { await upsertMonthlySnapshot(snap); } catch (e) { console.error("live snapshot upsert failed", e); }
 
-    // Sales this month (own direct sales) — students owned by this coach
-    let salesByType = new Map<string, number>();
-    let totalSales = 0;
-    if (coach?.id) {
-      const { data: studs } = await supabaseAdmin
-        .from("students").select("id").eq("coach_id", coach.id);
-      const studentIds = ((studs as { id: string }[] | null) || []).map((s) => s.id);
-      if (studentIds.length > 0) {
-        const { data: txs } = await supabaseAdmin
-          .from("transactions")
-          .select("id, product_id, paid_at, status")
-          .in("student_id", studentIds)
-          .eq("status", "paid")
-          .not("paid_at", "is", null)
-          .gte("paid_at", startIso)
-          .lt("paid_at", endIso);
-        const txRows = (txs as { id: string; product_id: string }[] | null) || [];
-        const productIds = Array.from(new Set(txRows.map((t) => t.product_id).filter(Boolean)));
-        const typeByProduct = new Map<string, string>();
-        if (productIds.length > 0) {
-          const { data: prods } = await supabaseAdmin
-            .from("products").select("id,type").in("id", productIds);
-          ((prods as { id: string; type: string }[] | null) || []).forEach((p) => {
-            typeByProduct.set(p.id, p.type);
-          });
-        }
-        txRows.forEach((t) => {
-          const t2 = typeByProduct.get(t.product_id);
-          if (t2) salesByType.set(t2, (salesByType.get(t2) || 0) + 1);
-          totalSales += 1;
-        });
-      }
-    }
-
-    // Rules
-    const { data: rules } = await supabaseAdmin
-      .from("network_unlock_rules")
-      .select("id,label,product_type,required_sales,is_active,sort_order")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    const goals: UnlockGoal[] = ((rules as Array<{ id: string; label: string; product_type: string | null; required_sales: number; sort_order: number }> | null) || []).map((r) => {
-      const required_scaled = r.required_sales * mult;
-      const current = r.product_type === null ? totalSales : (salesByType.get(r.product_type) || 0);
-      return {
-        id: r.id,
-        label: r.label,
-        product_type: r.product_type,
-        required_base: r.required_sales,
-        required_scaled,
-        current,
-        completed: current >= required_scaled,
-        sort_order: r.sort_order,
-      };
-    });
-    const anyCompleted = goals.length === 0 ? true : goals.some((g) => g.completed);
-
-    // Commissions split: level 0 = direct, level > 0 = network
+    // Commissions split
     const { data: comms } = await supabaseAdmin
-      .from("commissions")
-      .select("amount, level, status")
+      .from("commissions").select("amount, level, status")
       .eq("beneficiary_profile_id", profile.id);
     const direct = { available: 0, pending: 0, total: 0 };
-    const network = { available: 0, pending: 0, total: 0, locked: !anyCompleted };
+    const network = { available: 0, pending: 0, total: 0, locked: !snap.anyCompleted };
     ((comms as Array<{ amount: number; level: number; status: string }> | null) || []).forEach((c) => {
       const amt = Number(c.amount) || 0;
       const bucket = c.level === 0 ? direct : network;
@@ -139,27 +68,49 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       if (c.status === "available" || c.status === "paid") bucket.available += amt;
       else bucket.pending += amt;
     });
-
-    const withdrawable = direct.available + (anyCompleted ? network.available : 0);
+    const withdrawable = direct.available + (snap.anyCompleted ? network.available : 0);
 
     return {
       direct,
       network,
       withdrawable,
       unlock: {
-        monthStart: startIso,
-        monthEnd: endIso,
-        patentLevel,
-        patentMultiplier: mult,
-        multiplierTier: tier,
-        goals,
-        anyCompleted,
+        monthStart: snap.monthStart,
+        monthEnd: snap.monthEnd,
+        patentLevel: snap.patentLevel,
+        patentMultiplier: snap.multiplier,
+        multiplierTier: snap.multiplierTier,
+        goals: snap.goals,
+        anyCompleted: snap.anyCompleted,
       },
     };
   });
 
+export const getMyUnlockHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<HistoryEntry[]> => {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+    if (!profile) return [];
+    const { data } = await supabaseAdmin
+      .from("network_unlock_history")
+      .select("period_year,period_month,patent_level,multiplier,total_sales,any_completed,goals_snapshot")
+      .eq("profile_id", profile.id)
+      .order("period_year", { ascending: false })
+      .order("period_month", { ascending: false })
+      .limit(24);
+    return ((data as Array<{ period_year: number; period_month: number; patent_level: number; multiplier: number; total_sales: number; any_completed: boolean; goals_snapshot: UnlockGoal[] }> | null) || []).map((r) => ({
+      year: r.period_year, month: r.period_month,
+      patent_level: r.patent_level, multiplier: r.multiplier,
+      total_sales: r.total_sales, any_completed: r.any_completed,
+      goals: r.goals_snapshot || [],
+    }));
+  });
+
 function emptySplit(): WalletSplit {
-  const { start, end } = monthRange();
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   return {
     direct: { available: 0, pending: 0, total: 0 },
     network: { available: 0, pending: 0, total: 0, locked: true },
