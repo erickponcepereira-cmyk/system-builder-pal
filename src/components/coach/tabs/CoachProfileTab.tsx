@@ -92,13 +92,33 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
 
   return (
     <>
-      <div className="mb-6 flex items-start justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Meu Perfil</h1>
           <p className="text-sm text-white/50">Informações do coach, foto e histórico</p>
         </div>
+        <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+          <button
+            onClick={() => setActiveView("profile")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${activeView === "profile" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}
+          >
+            <User className="h-3.5 w-3.5" /> Perfil
+          </button>
+          <button
+            onClick={() => setActiveView("top")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${activeView === "top" ? "bg-primary text-primary-foreground" : "text-white/60 hover:text-white"}`}
+          >
+            <Package className="h-3.5 w-3.5" /> Produtos mais vendidos
+          </button>
+        </div>
       </div>
+
+      {activeView === "top" ? (
+        <TopSellingProducts coachProfileId={coach?.profileId || null} />
+      ) : (
+      <>
       <div className="grid gap-4 lg:grid-cols-[1fr_0.7fr]">
+
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="grid gap-3 sm:grid-cols-2">
             {[{ key: "name", label: "Nome", icon: User }, { key: "phone", label: "Telefone", icon: Phone }, { key: "city", label: "Cidade", icon: MapPin }, { key: "state", label: "Estado", icon: MapPin }].map((field) => {
