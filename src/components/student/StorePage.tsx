@@ -625,8 +625,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
                 <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
               )}
+              {(item.challengeDays ?? 0) > 0 && (
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  🔥 {item.challengeDays}d desafio
+                </span>
+              )}
               {coachMode && (item.pointsPerSale ?? 0) > 0 && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
                   🏆 +{item.pointsPerSale} pts
                 </span>
               )}
