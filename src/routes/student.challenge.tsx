@@ -306,7 +306,45 @@ function StudentChallengePage() {
       {/* ── TAB: Meu Desafio ── */}
       {activeTab === "challenge" && (
         <>
-          {!hasAccess ? (
+          {/* Painel de moedas de desafio */}
+          {tokens && (tokens.balance > 0 || tokens.totalEarned > 0) && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-bold text-foreground">Moedas de Desafio</p>
+                    <p className="text-[11px] text-muted-foreground">Cada moeda dá direito a 1 entrada em 1 desafio.</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-primary leading-none">{tokens.balance}</p>
+                  <p className="text-[10px] text-muted-foreground">disponíveis</p>
+                </div>
+              </div>
+              {tokens.balance > 0 && tokens.joinableTurmas.length > 0 && (
+                <div className="space-y-2">
+                  {tokens.joinableTurmas.map((t) => (
+                    <button
+                      key={t.competitionId}
+                      onClick={() => setConfirmTurma(t)}
+                      className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-bold flex items-center justify-between"
+                    >
+                      <span>Entrar no desafio — {t.competitionLabel}</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {tokens.balance > 0 && tokens.joinableTurmas.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Nenhuma turma com janela de pesagem inicial aberta no momento, ou você já está inscrito nas turmas vigentes. Sua moeda fica reservada para a próxima.
+                </p>
+              )}
+            </div>
+          )}
+
+          {!hasAccess && !(tokens && tokens.balance > 0) ? (
             /* Sem acesso */
             <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
               <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
@@ -323,10 +361,12 @@ function StudentChallengePage() {
               <Trophy className="h-12 w-12 text-primary mx-auto" />
               <p className="font-bold text-foreground">Você tem acesso ao Desafio!</p>
               <p className="text-sm text-muted-foreground">
-                Sua inscrição será feita automaticamente na próxima competição ativa,
-                ou peça ao seu coach para te inscrever manualmente.
+                {tokens && tokens.balance > 0
+                  ? "Use uma moeda acima para entrar agora na turma em pesagem inicial."
+                  : "Sua inscrição será feita automaticamente na próxima competição ativa, ou peça ao seu coach para te inscrever manualmente."}
               </p>
             </div>
+
           ) : (
             <>
               {/* Card principal da competição */}
