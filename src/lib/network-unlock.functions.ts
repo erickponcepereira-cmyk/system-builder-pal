@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getCareerProgress } from "@/lib/coach-career.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type UnlockGoal = {
