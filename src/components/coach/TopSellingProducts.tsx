@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ChevronRight, Trophy, Package, Layers, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Trophy, Package, Layers, Loader2, Medal } from "lucide-react";
 
 type Row = {
   section_id: string | null;
@@ -12,9 +12,24 @@ type Row = {
   qty: number;
 };
 
-type ProductNode = { id: string; name: string; qty: number };
-type CategoryNode = { id: string; name: string; qty: number; products: ProductNode[] };
-type SectionNode = { id: string; name: string; qty: number; categories: CategoryNode[] };
+type ProductNode = { id: string; name: string; qty: number; rank: number };
+type CategoryNode = { id: string; name: string; qty: number; rank: number; products: ProductNode[] };
+type SectionNode = { id: string; name: string; qty: number; rank: number; categories: CategoryNode[] };
+
+const RANK_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
+
+function RankBadge({ rank }: { rank: number }) {
+  if (rank <= 3) {
+    return (
+      <Medal className="h-4 w-4" style={{ color: RANK_COLORS[rank - 1] }} />
+    );
+  }
+  return (
+    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white/70">
+      {rank}
+    </span>
+  );
+}
 
 export function TopSellingProducts({ coachProfileId }: { coachProfileId: string | null }) {
   const [loading, setLoading] = useState(true);
@@ -95,22 +110,26 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     const sMap = new Map<string, SectionNode>();
     rows.forEach((r) => {
       const sKey = r.section_id || `none-${r.section_name}`;
-      if (!sMap.has(sKey)) sMap.set(sKey, { id: sKey, name: r.section_name, qty: 0, categories: [] });
+      if (!sMap.has(sKey)) sMap.set(sKey, { id: sKey, name: r.section_name, qty: 0, rank: 0, categories: [] });
       const sec = sMap.get(sKey)!;
       sec.qty += r.qty;
       const cKey = r.category_id || `none-${r.category_name}`;
       let cat = sec.categories.find((c) => c.id === cKey);
-      if (!cat) { cat = { id: cKey, name: r.category_name, qty: 0, products: [] }; sec.categories.push(cat); }
+      if (!cat) { cat = { id: cKey, name: r.category_name, qty: 0, rank: 0, products: [] }; sec.categories.push(cat); }
       cat.qty += r.qty;
-      cat.products.push({ id: r.product_id, name: r.product_name, qty: r.qty });
+      cat.products.push({ id: r.product_id, name: r.product_name, qty: r.qty, rank: 0 });
     });
     const arr = Array.from(sMap.values());
     arr.forEach((s) => {
       s.categories.sort((a, b) => b.qty - a.qty);
-      s.categories.forEach((c) => c.products.sort((a, b) => b.qty - a.qty));
+      s.categories = s.categories.slice(0, 10).map((c, i) => ({ ...c, rank: i + 1 }));
+      s.categories.forEach((c) => {
+        c.products.sort((a, b) => b.qty - a.qty);
+        c.products = c.products.slice(0, 10).map((p, i) => ({ ...p, rank: i + 1 }));
+      });
     });
     arr.sort((a, b) => b.qty - a.qty);
-    return arr;
+    return arr.slice(0, 10).map((s, i) => ({ ...s, rank: i + 1 }));
   }, [rows]);
 
   const total = useMemo(() => tree.reduce((s, n) => s + n.qty, 0), [tree]);
