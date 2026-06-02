@@ -143,6 +143,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   onPrint,
 }) => {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [photosOpen, setPhotosOpen] = useState(false);
 
   const computedBMI = useMemo(() => {
     if (!a.weight || !a.height) return 0;
@@ -485,31 +486,75 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           </div>
           {(() => {
             const photos = a.photos || {};
-            const count = [photos.front, photos.back, photos.leftSide, photos.rightSide].filter(Boolean).length;
+            const items = [
+              { key: "front", label: "Frente", src: photos.front },
+              { key: "back", label: "Costas", src: photos.back },
+              { key: "rightSide", label: "Lateral Direita", src: photos.rightSide },
+              { key: "leftSide", label: "Lateral Esquerda", src: photos.leftSide },
+            ].filter((p) => !!p.src) as Array<{ key: string; label: string; src: string }>;
+            const count = items.length;
             return (
-              <button
-                type="button"
-                onClick={() => {
-                  if (count === 0) { alert("Nenhuma foto anexada nesta avaliação."); return; }
-                  const list = [
-                    photos.front && "Frente", photos.back && "Costas",
-                    photos.rightSide && "Lateral Direita", photos.leftSide && "Lateral Esquerda",
-                  ].filter(Boolean).join(", ");
-                  alert(`Fotos disponíveis: ${list}`);
-                }}
-                style={{
-                  marginTop: 12, width: "100%", padding: "10px 14px", borderRadius: 10,
-                  border: "1px solid #e2e8f0",
-                  background: count > 0 ? "var(--fm-primary)" : "#f1f5f9",
-                  color: count > 0 ? "#fff" : "#64748b",
-                  fontWeight: 700, fontSize: 13,
-                  cursor: count > 0 ? "pointer" : "not-allowed",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                }}
-              >
-                <Camera size={14} />
-                {count > 0 ? `Visualizar fotos (${count})` : "Sem fotos anexadas"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => { if (count > 0) setPhotosOpen(true); }}
+                  disabled={count === 0}
+                  style={{
+                    marginTop: 12, width: "100%", padding: "10px 14px", borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    background: count > 0 ? "var(--fm-primary)" : "#f1f5f9",
+                    color: count > 0 ? "#fff" : "#64748b",
+                    fontWeight: 700, fontSize: 13,
+                    cursor: count > 0 ? "pointer" : "not-allowed",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  }}
+                >
+                  <Camera size={14} />
+                  {count > 0 ? `Visualizar fotos (${count})` : "Sem fotos anexadas"}
+                </button>
+                {photosOpen && count > 0 && (
+                  <div
+                    onClick={() => setPhotosOpen(false)}
+                    style={{
+                      position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+                      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
+                      padding: 20,
+                    }}
+                  >
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        background: "#0f172a", borderRadius: 14, padding: 16,
+                        maxWidth: 960, width: "100%", maxHeight: "90vh", overflowY: "auto",
+                        position: "relative",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPhotosOpen(false)}
+                        style={{
+                          position: "absolute", top: 10, right: 10, background: "#ffffff22",
+                          border: "none", borderRadius: 999, color: "#fff", width: 32, height: 32,
+                          cursor: "pointer", fontSize: 18, lineHeight: 1,
+                        }}
+                      >×</button>
+                      <div style={{ color: "#fff", fontWeight: 800, marginBottom: 12 }}>
+                        Fotos da avaliação
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                        {items.map((p) => (
+                          <div key={p.key} style={{ background: "#000", borderRadius: 10, overflow: "hidden" }}>
+                            <img src={p.src} alt={p.label} style={{ width: "100%", display: "block", maxHeight: 480, objectFit: "contain" }} />
+                            <div style={{ padding: "6px 10px", color: "#fff", fontSize: 12, fontWeight: 600, textAlign: "center" }}>
+                              {p.label}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             );
           })()}
         </div>

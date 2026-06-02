@@ -273,7 +273,11 @@ export function EvaluateTab() {
     } else if ((client as any).studentId) {
       payload.student_id = (client as any).studentId;
     }
-    const { error } = await supabase.from("coach_body_assessments" as never).insert(payload as never);
+    const { data: inserted, error } = await supabase
+      .from("coach_body_assessments" as never)
+      .insert(payload as never)
+      .select("id" as never)
+      .single();
     if (error) {
       console.error("saveAssessment error:", error);
       toast.error(error.message || "Erro ao salvar avaliação");
@@ -286,7 +290,9 @@ export function EvaluateTab() {
       toast.success("Avaliação salva");
     }
     await loadClients();
+    return (inserted as { id: string } | null)?.id;
   };
+
 
 
   return (

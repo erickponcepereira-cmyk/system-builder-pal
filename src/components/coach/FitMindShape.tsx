@@ -70,6 +70,8 @@ import {
   Download,
   Edit3,
   Share2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   calculateBodyComposition,
@@ -262,7 +264,7 @@ export interface FitMindShapeProps {
   onSaveAssessment?: (
     assessment: FitMindAssessment,
     client: FitMindClient,
-  ) => Promise<void>;
+  ) => Promise<string | void>;
   onDeleteAssessment?: (
     assessmentId: string,
     reason: string,
@@ -568,8 +570,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         date: assessmentDate,
         bmi: computedBMI,
       };
-      await onSaveAssessment(full, selectedClient);
-      setAssessment(full);
+      const savedId = await onSaveAssessment(full, selectedClient);
+      const finalAssessment = savedId ? { ...full, id: savedId } : full;
+      setAssessment(finalAssessment);
       setScreen("result");
     } catch (err: any) {
       console.error("Erro ao salvar avaliação:", err);
@@ -820,7 +823,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const STEPS = [
     "Dados Básicos",
     "Composição Corporal",
-    "Outros Dados",
     "Anotações",
     "Fotos",
     "Agendamento",
@@ -2261,40 +2263,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           />
         </div>
 
-        {/* Diâmetros Ósseos */}
-        <div className="fm-section-title" style={{ marginTop: 16 }}>
-          Diâmetros Ósseos (cm)
-        </div>
-        <div className="fm-grid-2">
-          {(
-            [
-              ["Punho", "wrist"],
-              ["Cotovelo / Úmero", "elbow"],
-              ["Tornozelo", "ankle"],
-              ["Joelho", "knee"],
-              ["Úmero (biepicondiliano)", "humerus"],
-              ["Fêmur (biepicondiliano)", "femur"],
-            ] as const
-          ).map(([label, key]) => (
-            <div key={`bone_${key}`}>
-              <label className="fm-label">{label} (cm)</label>
-              <input
-                type="number"
-                step="0.1"
-                className="fm-input"
-                placeholder="Ex: 6.5"
-                value={(assessment.boneDiameters as any)?.[key] ?? ""}
-                onChange={(e) =>
-                  upd("boneDiameters" as any, {
-                    ...(assessment.boneDiameters || {}),
-                    [key]: e.target.value === "" ? undefined : +e.target.value,
-                  })
-                }
-              />
-            </div>
-          ))}
-        </div>
       </div>
+
       )}
 
       {showBioimpedance && (
@@ -2332,52 +2302,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
 
 
-    const StepOutros = () => (
-      <div>
-        <div className="fm-section-title">Pressão Arterial & Outros</div>
-        <div className="fm-grid-2" style={{ marginBottom: 12 }}>
-          <div>
-            <label className="fm-label">PA Sistólica (mmHg)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 120"
-              onChange={(e) => upd("systolicBP", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">PA Diastólica (mmHg)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 80"
-              onChange={(e) => upd("diastolicBP", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">Frequência Cardíaca (bpm)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 72"
-              onChange={(e) => upd("heartRate", +e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="fm-label">Glicemia (mg/dL)</label>
-            <input
-              type="number"
-              className="fm-input"
-              placeholder="Ex: 95"
-              onChange={(e) => upd("bloodGlucose", +e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-    );
 
 
-    const StepAnotacoes = () => (
+    const StepAnotacoes = () => {
+      const [showProNotes, setShowProNotes] = useState(false);
+      return (
       <div>
         <div className="fm-section-title">Anotações</div>
         <div style={{ marginBottom: 16 }}>
@@ -2413,17 +2342,48 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             >
               🔒 Não aparece no relatório
             </span>
+            <button
+              type="button"
+              onClick={() => setShowProNotes((v) => !v)}
+              title={showProNotes ? "Ocultar anotação" : "Mostrar anotação"}
+              style={{
+                marginLeft: "auto",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#ef4444",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              {showProNotes ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showProNotes ? "Ocultar" : "Mostrar"}
+            </button>
           </label>
-          <textarea
-            className="fm-input"
-            rows={5}
-            placeholder="Anotações internas — apenas você verá..."
-            style={{ resize: "none" }}
-            onChange={(e) => upd("professionalNotes", e.target.value)}
-          />
+          <div style={{ position: "relative" }}>
+            <textarea
+              className="fm-input"
+              rows={5}
+              placeholder="Anotações internas — apenas você verá..."
+              style={{
+                resize: "none",
+                WebkitTextSecurity: showProNotes ? "none" : "disc",
+                filter: showProNotes ? "none" : "blur(4px)",
+                transition: "filter 120ms ease",
+              } as React.CSSProperties}
+              defaultValue={(assessment.professionalNotes as string) || ""}
+              onChange={(e) => upd("professionalNotes", e.target.value)}
+              onFocus={() => setShowProNotes(true)}
+            />
+          </div>
         </div>
       </div>
-    );
+      );
+    };
+
 
     const StepFotos = () => {
       const VIEWS = [
@@ -2669,7 +2629,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     const stepComponents = [
       StepDados,
       StepMedidas,
-      StepOutros,
       StepAnotacoes,
       StepFotos,
       StepAgendamento,
