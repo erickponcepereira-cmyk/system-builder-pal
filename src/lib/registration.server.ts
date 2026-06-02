@@ -94,6 +94,8 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
         cpf: digits(input.cpf),
         birthdate: clean(input.birthdate),
         bio: clean(input.bio),
+        gender: clean((input as { gender?: string | null }).gender) || null,
+        instagram: clean((input as { instagram?: string | null }).instagram)?.replace(/^@/, "").slice(0, 100) || null,
         street: clean(input.street),
         number: clean(input.number),
         neighborhood: clean(input.neighborhood),
