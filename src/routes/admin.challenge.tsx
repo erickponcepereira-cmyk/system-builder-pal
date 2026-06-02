@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink } from "lucide-react";
+import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { getAdminTokenAttempts, type AdminTokenAttemptRow } from "@/lib/challenge-tokens.functions";
 
 export const Route = createFileRoute("/admin/challenge")({
   component: AdminChallengePage,
