@@ -2303,7 +2303,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
 
 
-    const StepAnotacoes = () => (
+    const StepAnotacoes = () => {
+      const [showProNotes, setShowProNotes] = useState(false);
+      return (
       <div>
         <div className="fm-section-title">Anotações</div>
         <div style={{ marginBottom: 16 }}>
@@ -2339,17 +2341,48 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             >
               🔒 Não aparece no relatório
             </span>
+            <button
+              type="button"
+              onClick={() => setShowProNotes((v) => !v)}
+              title={showProNotes ? "Ocultar anotação" : "Mostrar anotação"}
+              style={{
+                marginLeft: "auto",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#ef4444",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              {showProNotes ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showProNotes ? "Ocultar" : "Mostrar"}
+            </button>
           </label>
-          <textarea
-            className="fm-input"
-            rows={5}
-            placeholder="Anotações internas — apenas você verá..."
-            style={{ resize: "none" }}
-            onChange={(e) => upd("professionalNotes", e.target.value)}
-          />
+          <div style={{ position: "relative" }}>
+            <textarea
+              className="fm-input"
+              rows={5}
+              placeholder="Anotações internas — apenas você verá..."
+              style={{
+                resize: "none",
+                WebkitTextSecurity: showProNotes ? "none" : "disc",
+                filter: showProNotes ? "none" : "blur(4px)",
+                transition: "filter 120ms ease",
+              } as React.CSSProperties}
+              defaultValue={(assessment.professionalNotes as string) || ""}
+              onChange={(e) => upd("professionalNotes", e.target.value)}
+              onFocus={() => setShowProNotes(true)}
+            />
+          </div>
         </div>
       </div>
-    );
+      );
+    };
+
 
     const StepFotos = () => {
       const VIEWS = [
