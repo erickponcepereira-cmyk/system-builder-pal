@@ -52,15 +52,16 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       return emptySplit();
     }
     const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, patent_key").eq("profile_id", profile.id).maybeSingle();
+      .from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
 
-    // Patent level
+    // Patent level via career helper (highest patent currently achieved)
     let patentLevel = 1;
-    if (coach?.patent_key) {
-      const { data: pr } = await supabaseAdmin
-        .from("patent_rules").select("level").eq("key", coach.patent_key).maybeSingle();
-      patentLevel = Number((pr as { level: number } | null)?.level) || 1;
-    }
+    try {
+      const career = await getCareerProgress();
+      const curKey = career?.currentPatentKey;
+      const cur = career?.patents.find((p) => p.key === curKey);
+      if (cur?.level) patentLevel = Number(cur.level) || 1;
+    } catch { /* default 1 */ }
     const { mult, tier } = multiplierForLevel(patentLevel);
 
     // Month range
