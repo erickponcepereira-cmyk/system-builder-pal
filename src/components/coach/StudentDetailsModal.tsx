@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -18,7 +18,7 @@ interface Props {
 type Profile = { name: string; email: string; phone: string | null; birthdate: string | null; city: string | null; state: string | null };
 type SubRow = { id: string; status: string; start_date: string; end_date: string; products: { id: string; name: string; price: number | null } | null };
 type TxRow = { id: string; gross_amount: number; status: string; paid_at: string | null; created_at: string; products: { name: string } | null };
-type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; basal_metabolism: number | null; bmi: number | null };
+type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; basal_metabolism: number | null; bmi: number | null; client_notes: string | null; professional_notes: string | null };
 type BioRow = { id: string; evaluation_date: string; evaluation_type: string; weight: number | null; fat_percentage: number | null; muscle_percentage: number | null };
 type AnamRow = { id: string; filled_at: string | null; objective: string | null; confirmed_at: string | null };
 type WeightRow = { id: string; log_date: string; weight: number; waist_cm: number | null; hip_cm: number | null };
@@ -54,6 +54,8 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [sharing, setSharing] = useState(false);
   const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [showProNotes, setShowProNotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -68,7 +70,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       const [subRes, txRes, bodyRes, bioRes, anamRes, wRes, pRes] = await Promise.all([
         supabase.from("subscriptions").select("id,status,start_date,end_date,products!subscriptions_product_id_fkey(id,name,price)").eq("student_id", studentId).order("end_date", { ascending: false }),
         supabase.from("transactions").select("id,gross_amount,status,paid_at,created_at,products!transactions_product_id_fkey(name)").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50),
-        supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi").eq("student_id", studentId).order("assessment_date", { ascending: false }),
+        supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi,client_notes,professional_notes").eq("student_id", studentId).order("assessment_date", { ascending: false }),
         supabase.from("bioimpedance_evaluations").select("id,evaluation_date,evaluation_type,weight,fat_percentage,muscle_percentage").eq("student_id", studentId).order("evaluation_date", { ascending: false }),
         supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at").eq("student_id", studentId).order("filled_at", { ascending: false }),
         supabase.from("weight_logs").select("id,log_date,weight,waist_cm,hip_cm").eq("student_id", studentId).order("log_date", { ascending: false }).limit(60),
@@ -310,6 +312,50 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                               <Mini label="% Gord" value={a.body_fat ? `${a.body_fat}%` : "—"} />
                               <Mini label="Músc. Esq." value={a.skeletal_muscle != null ? `${a.skeletal_muscle}%` : (a.muscle_mass ? `${a.muscle_mass}kg` : "—")} />
                             </div>
+                            {(a.client_notes || a.professional_notes) && (() => {
+                              const isOpen = expandedNotes.has(a.id);
+                              const showPro = showProNotes.has(a.id);
+                              return (
+                                <div className="mt-2">
+                                  <button
+                                    onClick={() => setExpandedNotes((prev) => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-white/60 hover:text-white"
+                                  >
+                                    {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />} Observações
+                                  </button>
+                                  {isOpen && (
+                                    <div className="mt-2 space-y-2">
+                                      {a.client_notes && (
+                                        <div className="rounded-lg border border-white/5 bg-black/30 p-2">
+                                          <p className="mb-1 text-[10px] uppercase tracking-wide text-white/40">Para o aluno</p>
+                                          <p className="whitespace-pre-wrap text-xs text-white/80">{a.client_notes}</p>
+                                        </div>
+                                      )}
+                                      {a.professional_notes && (
+                                        <div className="rounded-lg border border-white/5 bg-black/30 p-2">
+                                          <div className="mb-1 flex items-center justify-between gap-2">
+                                            <p className="text-[10px] uppercase tracking-wide text-white/40">Do profissional</p>
+                                            <button
+                                              onClick={() => setShowProNotes((prev) => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
+                                              className="text-white/60 hover:text-white"
+                                              aria-label={showPro ? "Ocultar" : "Mostrar"}
+                                            >
+                                              {showPro ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                            </button>
+                                          </div>
+                                          <p
+                                            className="whitespace-pre-wrap text-xs text-white/80 transition-[filter]"
+                                            style={{ filter: showPro ? "none" : "blur(4px)", userSelect: showPro ? "auto" : "none" }}
+                                          >
+                                            {a.professional_notes}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ))}
                       </div>
