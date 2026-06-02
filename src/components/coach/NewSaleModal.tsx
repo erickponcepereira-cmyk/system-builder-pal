@@ -8,7 +8,7 @@ import {
   createCoachSale,
   type SaleClient,
   type SaleProduct,
-} from "@/server/coach-sales.functions";
+} from "@/lib/coach-sales.functions";
 import { previewCoachSaleEarnings, type SaleEarningsItem } from "@/lib/financial.functions";
 import type { PaymentMethod } from "@/lib/financialEngine";
 

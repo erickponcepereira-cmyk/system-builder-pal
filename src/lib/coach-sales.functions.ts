@@ -12,7 +12,7 @@ export type SaleClient = {
 
 export type SaleProduct = {
   id: string;
-  kind: "challenge" | "digital" | "store";
+  kind: "challenge" | "digital" | "store" | "item";
   title: string;
   description?: string | null;
   imageUrl?: string | null;
@@ -70,14 +70,23 @@ export const listCoachClients = createServerFn({ method: "GET" })
 /** Lists all sellable products: challenges (products), digital_products, store_products. */
 export const listSellableProducts = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .handler(async (): Promise<SaleProduct[]> => {
-    const [{ data: challenges }, { data: digitals }, { data: stores }] = await Promise.all([
-      supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee").eq("status", "active"),
+  .handler(async ({ context }): Promise<SaleProduct[]> => {
+    // Resolve coach + their badges, used to filter products with required_badge
+    const coachId = await getCoachIdForUser(context.userId);
+    const { data: badgeRows } = coachId
+      ? await supabaseAdmin.from("coach_badges").select("badge_key").eq("coach_id", coachId)
+      : { data: [] as { badge_key: string }[] };
+    const myBadges = new Set((badgeRows || []).map((b: any) => b.badge_key as string));
+    const canSell = (required: string | null | undefined) => !required || myBadges.has(required);
+
+    const [{ data: challenges }, { data: digitals }, { data: stores }, { data: items }] = await Promise.all([
+      supabaseAdmin.from("products").select("id,name,description,price,original_price,type,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,required_badge").eq("status", "active").is("kind", null),
       supabaseAdmin.from("digital_products").select("id,title,description,price,original_price,type,cover_url").eq("status", "active"),
       supabaseAdmin.from("store_products").select("id,name,description,price,original_price,category,image_url,stock").eq("status", "active"),
+      supabaseAdmin.from("products").select("id,name,short_description,description,price,original_price,kind,image_url,stock,commission_coach,commission_level1,commission_level2,commission_level3,required_badge").eq("is_active", true).not("kind", "is", null),
     ]);
     const out: SaleProduct[] = [];
-    (challenges || []).forEach((p: any) => out.push({
+    (challenges || []).filter((p: any) => canSell(p.required_badge)).forEach((p: any) => out.push({
       id: p.id, kind: "challenge", title: p.name, description: p.description, imageUrl: p.image_url,
       price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
       category: p.type,
@@ -95,6 +104,13 @@ export const listSellableProducts = createServerFn({ method: "GET" })
       price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
       category: p.category, stock: p.stock,
     }));
+    (items || []).filter((p: any) => canSell(p.required_badge)).forEach((p: any) => out.push({
+      id: p.id, kind: "item", title: p.name, description: p.short_description || p.description, imageUrl: p.image_url,
+      price: Number(p.price || 0), originalPrice: p.original_price ? Number(p.original_price) : null,
+      category: p.kind, stock: p.stock,
+      commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
+      commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
+    }));
     return out;
   });
 
@@ -102,7 +118,7 @@ export type CartInput = {
   clientId: string;
   items: Array<{
     productId: string;
-    kind: "challenge" | "digital" | "store";
+    kind: "challenge" | "digital" | "store" | "item";
     title: string;
     unitPrice: number;
     quantity: number;
@@ -154,9 +170,76 @@ export const createCoachSale = createServerFn({ method: "POST" })
       quantity: i.quantity,
       unit_price: i.unitPrice,
       total_price: i.unitPrice * i.quantity,
+      metadata: i.kind === "item" ? { store_item_id: i.productId } : {},
     }));
     const { error: itemsErr } = await supabaseAdmin.from("store_order_items").insert(itemsPayload);
     if (itemsErr) throw new Error(itemsErr.message);
+
+    // ─── Master Coach cross-sale (10% extra deduzido da comissão) ───
+    // Para cada produto "challenge" ou "item" com allow_master_coach_sale = true,
+    // procura o master coach mais próximo na upline e registra a comissão extra.
+    try {
+      const allProductIds = data.items
+        .filter((i) => i.kind === "challenge" || i.kind === "item")
+        .map((i) => i.productId);
+      if (allProductIds.length) {
+        const { data: prodRows } = await supabaseAdmin
+          .from("products")
+          .select("id, price, commission_coach, allow_master_coach_sale")
+          .in("id", allProductIds);
+        const prodMap = new Map<string, any>();
+        (prodRows || []).forEach((p: any) => prodMap.set(p.id, p));
+
+        const { data: masterRow } = await supabaseAdmin.rpc("find_master_coach_for", {
+          _coach_id: coachId,
+        });
+        const masterCoachId = masterRow as unknown as string | null;
+        const isCross = masterCoachId && masterCoachId !== coachId;
+
+        if (masterCoachId) {
+          const rows: any[] = [];
+          for (const item of data.items) {
+            const p = prodMap.get(item.productId);
+            if (!p || !p.allow_master_coach_sale) continue;
+            const commissionPct = Number(p.commission_coach || 0);
+            const baseCommission = item.unitPrice * item.quantity * (commissionPct / 100);
+            const masterAmount = Math.round(baseCommission * 10) / 100; // 10% da comissão
+            rows.push({
+              order_id: order.id,
+              product_id: item.productId,
+              seller_coach_id: coachId,
+              master_coach_id: masterCoachId,
+              is_cross_sale: !!isCross,
+              base_commission: baseCommission,
+              master_amount: masterAmount,
+            });
+          }
+          if (rows.length) {
+            await supabaseAdmin.from("master_coach_commissions").insert(rows);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("master coach commission failed:", e);
+    }
+
+    // ─── Atribuição automática de Nutricionista Parceiro ───
+    try {
+      const { data: nutriRow } = await supabaseAdmin.rpc("find_nutritionist_for", {
+        _coach_id: coachId,
+      });
+      const nutritionistCoachId = nutriRow as unknown as string | null;
+      if (nutritionistCoachId) {
+        await supabaseAdmin.from("sale_nutritionist_assignments").insert({
+          order_id: order.id,
+          seller_coach_id: coachId,
+          nutritionist_coach_id: nutritionistCoachId,
+          assignment_method: "auto_upline",
+        });
+      }
+    } catch (e) {
+      console.error("nutritionist assignment failed:", e);
+    }
 
     return {
       orderId: order.id,
