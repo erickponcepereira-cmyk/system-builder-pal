@@ -2759,6 +2759,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           logo: coach.logo,
           specialty: coach.specialty,
           email: coach.email,
+          whatsapp: coach.whatsapp || coach.phone,
+          instagram: coach.instagram,
+          tiktok: coach.tiktok,
+          website: coach.website,
         }}
         themeColor={themeColor}
         themeFontFamily={themeFontFamily}
