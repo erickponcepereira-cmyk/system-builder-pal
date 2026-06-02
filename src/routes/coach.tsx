@@ -460,5 +460,7 @@ function CoachDashboard() {
         </div>
       </main>
     </div>
+    </CoachOnboardingGate>
   );
 }
+
