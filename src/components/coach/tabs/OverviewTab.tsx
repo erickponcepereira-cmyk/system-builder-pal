@@ -6,6 +6,7 @@ import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { supabase } from "@/integrations/supabase/client";
+import { RewardsPanel } from "@/components/coach/RewardsPanel";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -147,6 +148,10 @@ export function OverviewTab({
             <Copy className="h-3.5 w-3.5 text-primary-foreground" />
           </button>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <RewardsPanel />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
