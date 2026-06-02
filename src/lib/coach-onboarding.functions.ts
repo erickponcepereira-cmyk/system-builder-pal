@@ -91,7 +91,9 @@ export const submitQuizResult = createServerFn({ method: "POST" })
 export const unlockCoachWithId = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({ coachNumber: z.number().int().positive().max(9999999) }).parse(input)
+    z
+      .object({ coachNumber: z.number().int().positive().max(9999999) })
+      .parse(input)
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
@@ -104,22 +106,61 @@ export const unlockCoachWithId = createServerFn({ method: "POST" })
     if (!profile) throw new Error("Perfil não encontrado");
     const { data: coach } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, coach_number, onboarding_stage")
+      .select("id, profile_id, coach_number, onboarding_stage, unlock_attempts, approved_at")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
+
     if (coach.onboarding_stage === "released") {
-      return { ok: true, alreadyReleased: true };
+      return {
+        ok: true,
+        alreadyReleased: true,
+        approvedAt: coach.approved_at as string | null,
+        coachNumber: coach.coach_number as number | null,
+      };
     }
     if (coach.onboarding_stage !== "awaiting_upline_release") {
       throw new Error("Conclua as etapas anteriores antes de liberar o ID.");
     }
-    if (!coach.coach_number || coach.coach_number !== data.coachNumber) {
-      throw new Error("ID inválido. Confira o número que veio com seu certificado.");
+
+    const attempts = (coach as { unlock_attempts?: number }).unlock_attempts ?? 0;
+    if (attempts >= 10) {
+      throw new Error(
+        "Limite de tentativas excedido. Entre em contato com o suporte para liberar o seu ID."
+      );
     }
+
+    const success = !!coach.coach_number && coach.coach_number === data.coachNumber;
+    const nowIso = new Date().toISOString();
+
+    await supabaseAdmin.from("coach_unlock_attempts" as never).insert({
+      coach_id: coach.id,
+      profile_id: coach.profile_id,
+      attempted_number: data.coachNumber,
+      success,
+    } as never);
+
+    if (!success) {
+      await supabaseAdmin
+        .from("coaches")
+        .update({
+          unlock_attempts: attempts + 1,
+          last_unlock_attempt_at: nowIso,
+          last_unlock_failed_at: nowIso,
+        })
+        .eq("id", coach.id);
+      throw new Error(
+        `ID inválido. Confira o número que veio com seu certificado. (${attempts + 1}/10 tentativas)`
+      );
+    }
+
     await supabaseAdmin
       .from("coaches")
-      .update({ onboarding_stage: "released", approved_at: new Date().toISOString() })
+      .update({
+        onboarding_stage: "released",
+        approved_at: nowIso,
+        last_unlock_attempt_at: nowIso,
+      })
       .eq("id", coach.id);
     await supabaseAdmin
       .from("profiles")
@@ -132,7 +173,44 @@ export const unlockCoachWithId = createServerFn({ method: "POST" })
       message: "Acesso completo ao painel e ao app do aluno disponível.",
       action_url: "/coach",
     });
-    return { ok: true, alreadyReleased: false };
+    return {
+      ok: true,
+      alreadyReleased: false,
+      approvedAt: nowIso,
+      coachNumber: coach.coach_number as number | null,
+    };
+  });
+
+export const listCoachIds = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: me } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!me || me.role !== "admin") throw new Error("Acesso negado");
+
+    const { data: coaches } = await supabaseAdmin
+      .from("coaches")
+      .select(
+        "id, coach_number, onboarding_stage, activation_paid_at, approved_at, unlock_attempts, last_unlock_attempt_at, last_unlock_failed_at, profile:profiles!coaches_profile_id_fkey(name,email)"
+      )
+      .order("coach_number", { ascending: true, nullsFirst: false });
+
+    return (coaches || []) as unknown as Array<{
+      id: string;
+      coach_number: number | null;
+      onboarding_stage: string;
+      activation_paid_at: string | null;
+      approved_at: string | null;
+      unlock_attempts: number | null;
+      last_unlock_attempt_at: string | null;
+      last_unlock_failed_at: string | null;
+      profile: { name?: string; email?: string } | null;
+    }>;
   });
 
 export const listPendingReleases = createServerFn({ method: "GET" })
