@@ -907,6 +907,56 @@ export type Database = {
           },
         ]
       }
+      challenge_token_attempts: {
+        Row: {
+          competition_id: string | null
+          created_at: string
+          enrollment_id: string | null
+          error_code: string | null
+          error_message: string | null
+          group_id: string | null
+          id: string
+          student_id: string | null
+          success: boolean
+          token_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          competition_id?: string | null
+          created_at?: string
+          enrollment_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          group_id?: string | null
+          id?: string
+          student_id?: string | null
+          success: boolean
+          token_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          competition_id?: string | null
+          created_at?: string
+          enrollment_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          group_id?: string | null
+          id?: string
+          student_id?: string | null
+          success?: boolean
+          token_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_token_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_winners: {
         Row: {
           after_photo_url: string | null

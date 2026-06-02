@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink } from "lucide-react";
+import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pencil, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { getAdminTokenAttempts, type AdminTokenAttemptRow } from "@/lib/challenge-tokens.functions";
 
 export const Route = createFileRoute("/admin/challenge")({
   component: AdminChallengePage,
@@ -100,6 +102,31 @@ function AdminChallengePage() {
   // Weighing
   const [weighModal, setWeighModal] = useState<WeighForm | null>(null);
   const [savingWeigh, setSavingWeigh] = useState(false);
+
+  // Tentativas de moeda
+  const [attempts, setAttempts] = useState<AdminTokenAttemptRow[]>([]);
+  const [attemptsOnlyFailures, setAttemptsOnlyFailures] = useState(true);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [showAttempts, setShowAttempts] = useState(false);
+  const fetchAttempts = useServerFn(getAdminTokenAttempts);
+
+  const loadAttempts = async (onlyFailures: boolean) => {
+    setAttemptsLoading(true);
+    try {
+      const rows = await fetchAttempts({ data: { onlyFailures, limit: 100 } });
+      setAttempts(rows);
+    } catch (e) {
+      console.warn("attempts fetch failed", e);
+      toast.error("Erro ao carregar tentativas");
+    } finally {
+      setAttemptsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showAttempts) loadAttempts(attemptsOnlyFailures);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAttempts, attemptsOnlyFailures]);
 
   const load = async () => {
     setLoading(true);
@@ -408,6 +435,74 @@ function AdminChallengePage() {
         </div>
         <p className="text-xs text-muted-foreground mt-3">As turmas devem ser adicionadas manualmente com as datas exatas (podem cruzar meses).</p>
       </div>
+
+      {/* Tentativas de uso de moeda de desafio */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <button onClick={() => setShowAttempts((v) => !v)} className="flex w-full items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-bold text-foreground">Tentativas de entrada por moeda</h2>
+            <span className="text-xs text-muted-foreground">{showAttempts ? "(clique para ocultar)" : "(clique para abrir)"}</span>
+          </div>
+          {showAttempts ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+        {showAttempts && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                onClick={() => setAttemptsOnlyFailures(true)}
+                className={`rounded-full px-3 py-1 font-bold ${attemptsOnlyFailures ? "bg-destructive/20 text-destructive" : "bg-muted text-muted-foreground"}`}
+              >Apenas falhas</button>
+              <button
+                onClick={() => setAttemptsOnlyFailures(false)}
+                className={`rounded-full px-3 py-1 font-bold ${!attemptsOnlyFailures ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}
+              >Todas</button>
+              <button
+                onClick={() => loadAttempts(attemptsOnlyFailures)}
+                className="ml-auto rounded-lg bg-muted px-3 py-1 text-xs text-foreground"
+              >Atualizar</button>
+            </div>
+            {attemptsLoading ? (
+              <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : attempts.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">Nenhuma tentativa registrada.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/40">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-3 py-2">Data</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">Aluno</th>
+                      <th className="px-3 py-2">Erro</th>
+                      <th className="px-3 py-2">Mensagem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attempts.map((a) => (
+                      <tr key={a.id} className="border-t border-border">
+                        <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{new Date(a.createdAt).toLocaleString("pt-BR")}</td>
+                        <td className="px-3 py-2">
+                          {a.success ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-success/20 px-2 py-0.5 font-bold text-success"><CheckCircle2 className="h-3 w-3" /> Sucesso</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/20 px-2 py-0.5 font-bold text-destructive"><AlertTriangle className="h-3 w-3" /> Falha</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-foreground">{a.studentName || "—"}</td>
+                        <td className="px-3 py-2 text-foreground"><code>{a.errorCode || "—"}</code></td>
+                        <td className="px-3 py-2 text-muted-foreground">{a.errorMessage || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+
 
       {/* Lista */}
       {loading ? (
