@@ -570,8 +570,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         date: assessmentDate,
         bmi: computedBMI,
       };
-      await onSaveAssessment(full, selectedClient);
-      setAssessment(full);
+      const savedId = await onSaveAssessment(full, selectedClient);
+      const finalAssessment = savedId ? { ...full, id: savedId } : full;
+      setAssessment(finalAssessment);
       setScreen("result");
     } catch (err: any) {
       console.error("Erro ao salvar avaliação:", err);
