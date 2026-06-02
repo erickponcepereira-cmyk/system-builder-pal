@@ -7,9 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Trophy, Scale, Calendar, AlertCircle, CheckCircle2,
-  Clock, Loader2, Lock, ChevronRight
+  Clock, Loader2, Lock, ChevronRight, Coins
 } from "lucide-react";
 import { HallOfFame } from "@/components/HallOfFame";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummary, type CurrentTurma } from "@/lib/challenge-tokens.functions";
 
 
 export const Route = createFileRoute("/student/challenge")({
