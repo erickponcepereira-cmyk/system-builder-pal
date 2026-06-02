@@ -65,8 +65,6 @@ function ProfilePage() {
   const [showTokenHistory, setShowTokenHistory] = useState(false);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
 
-  if (location.pathname !== "/student/profile") return <Outlet />;
-
   useEffect(() => {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -114,6 +112,8 @@ function ProfilePage() {
       } catch (e) { console.warn("token history fetch failed", e); }
     })();
   }, []);
+
+  if (location.pathname !== "/student/profile") return <Outlet />;
 
   const requestWithdrawal = async () => {
     if (!studentId) return toast.error("Aluno não encontrado");
