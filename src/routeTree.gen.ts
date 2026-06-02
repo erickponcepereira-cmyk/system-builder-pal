@@ -61,6 +61,7 @@ import { Route as AdminPartnersRouteImport } from './routes/admin.partners'
 import { Route as AdminPartnerOrdersRouteImport } from './routes/admin.partner-orders'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminNutritionistWalletRouteImport } from './routes/admin.nutritionist-wallet'
+import { Route as AdminNetworkUnlockRouteImport } from './routes/admin.network-unlock'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
 import { Route as AdminFitmindEventsRouteImport } from './routes/admin.fitmind-events'
@@ -344,6 +345,11 @@ const AdminNutritionistWalletRoute = AdminNutritionistWalletRouteImport.update({
   path: '/nutritionist-wallet',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminNetworkUnlockRoute = AdminNetworkUnlockRouteImport.update({
+  id: '/network-unlock',
+  path: '/network-unlock',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLibraryRoute = AdminLibraryRouteImport.update({
   id: '/library',
   path: '/library',
@@ -484,6 +490,7 @@ export interface FileRoutesByFullPath {
   '/admin/fitmind-events': typeof AdminFitmindEventsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
+  '/admin/network-unlock': typeof AdminNetworkUnlockRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/partner-orders': typeof AdminPartnerOrdersRoute
@@ -558,6 +565,7 @@ export interface FileRoutesByTo {
   '/admin/fitmind-events': typeof AdminFitmindEventsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
+  '/admin/network-unlock': typeof AdminNetworkUnlockRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/partner-orders': typeof AdminPartnerOrdersRoute
@@ -635,6 +643,7 @@ export interface FileRoutesById {
   '/admin/fitmind-events': typeof AdminFitmindEventsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
+  '/admin/network-unlock': typeof AdminNetworkUnlockRoute
   '/admin/nutritionist-wallet': typeof AdminNutritionistWalletRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/partner-orders': typeof AdminPartnerOrdersRoute
@@ -713,6 +722,7 @@ export interface FileRouteTypes {
     | '/admin/fitmind-events'
     | '/admin/freebies'
     | '/admin/library'
+    | '/admin/network-unlock'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/partner-orders'
@@ -787,6 +797,7 @@ export interface FileRouteTypes {
     | '/admin/fitmind-events'
     | '/admin/freebies'
     | '/admin/library'
+    | '/admin/network-unlock'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/partner-orders'
@@ -863,6 +874,7 @@ export interface FileRouteTypes {
     | '/admin/fitmind-events'
     | '/admin/freebies'
     | '/admin/library'
+    | '/admin/network-unlock'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
     | '/admin/partner-orders'
@@ -1307,6 +1319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNutritionistWalletRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/network-unlock': {
+      id: '/admin/network-unlock'
+      path: '/network-unlock'
+      fullPath: '/admin/network-unlock'
+      preLoaderRoute: typeof AdminNetworkUnlockRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/library': {
       id: '/admin/library'
       path: '/library'
@@ -1490,6 +1509,7 @@ interface AdminRouteChildren {
   AdminFitmindEventsRoute: typeof AdminFitmindEventsRoute
   AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminLibraryRoute: typeof AdminLibraryRoute
+  AdminNetworkUnlockRoute: typeof AdminNetworkUnlockRoute
   AdminNutritionistWalletRoute: typeof AdminNutritionistWalletRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPartnerOrdersRoute: typeof AdminPartnerOrdersRoute
@@ -1522,6 +1542,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFitmindEventsRoute: AdminFitmindEventsRoute,
   AdminFreebiesRoute: AdminFreebiesRoute,
   AdminLibraryRoute: AdminLibraryRoute,
+  AdminNetworkUnlockRoute: AdminNetworkUnlockRoute,
   AdminNutritionistWalletRoute: AdminNutritionistWalletRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPartnerOrdersRoute: AdminPartnerOrdersRoute,
