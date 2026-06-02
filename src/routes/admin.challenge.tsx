@@ -643,15 +643,25 @@ function AdminChallengePage() {
                 if (expandedComp === comp.id) setExpandedComp(null);
                 else { setExpandedComp(comp.id); loadGroups(comp.id); }
               }}>
-              <Trophy className={`h-5 w-5 ${comp.status === "active" ? "text-primary" : "text-muted-foreground"}`} />
+              <Trophy className={`h-5 w-5 ${comp.finalized_at ? "text-yellow-400" : comp.status === "active" ? "text-primary" : "text-muted-foreground"}`} />
               <div>
-                <p className="font-bold text-foreground">{MONTHS[comp.month]} {comp.year}</p>
+                <p className="font-bold text-foreground flex items-center gap-2">
+                  {MONTHS[comp.month]} {comp.year}
+                  {comp.finalized_at && (
+                    <span className="rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-bold text-yellow-400">FINALIZADO</span>
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   Prêmio: {money(comp.prize_amount)} por gênero · {comp.status}
+                  {comp.finalized_at && ` · em ${new Date(comp.finalized_at).toLocaleDateString("pt-BR")}`}
                 </p>
               </div>
             </button>
             <div className="flex items-center gap-2">
+              <button onClick={(e) => { e.stopPropagation(); openFinalize(comp); }}
+                className="flex items-center gap-1 rounded-lg bg-yellow-500/10 px-3 py-1.5 text-xs font-bold text-yellow-400 hover:bg-yellow-500/20">
+                <Award className="h-3 w-3" /> {comp.finalized_at ? "Refinalizar" : "Finalizar Desafio"}
+              </button>
               <button onClick={(e) => { e.stopPropagation(); deleteCompetition(comp); }}
                 className="flex items-center gap-1 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-bold text-destructive hover:bg-destructive/20">
                 <Trash2 className="h-3 w-3" /> Excluir
