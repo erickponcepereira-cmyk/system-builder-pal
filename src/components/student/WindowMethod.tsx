@@ -458,6 +458,16 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
           </div>
 
           <SummaryBar meals={meals} goal={goal} />
+
+          <div className="rounded-2xl overflow-hidden border border-border bg-card">
+            <img
+              src={janelasChuvaAsset.url}
+              alt="Ilustração das janelas nutricionais"
+              className="w-full h-auto object-cover"
+              loading="lazy"
+            />
+          </div>
+
         </>
       )}
 
