@@ -210,8 +210,11 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
           })}
         </div>
       </div>
+      </>
+      )}
     </>
   );
+
 }
 
 export default CoachProfileTab;
