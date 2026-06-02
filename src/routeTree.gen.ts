@@ -81,6 +81,7 @@ import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coach
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
+import { Route as ApiPublicHooksNetworkUnlockSnapshotRouteImport } from './routes/api/public/hooks/network-unlock-snapshot'
 import { Route as ApiPublicCareerResetExpiredRouteImport } from './routes/api/public/career.reset-expired'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
@@ -447,6 +448,12 @@ const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
   path: '/api/public/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksNetworkUnlockSnapshotRoute =
+  ApiPublicHooksNetworkUnlockSnapshotRouteImport.update({
+    id: '/api/public/hooks/network-unlock-snapshot',
+    path: '/api/public/hooks/network-unlock-snapshot',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCareerResetExpiredRoute =
   ApiPublicCareerResetExpiredRouteImport.update({
     id: '/api/public/career/reset-expired',
@@ -537,6 +544,7 @@ export interface FileRoutesByFullPath {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
@@ -612,6 +620,7 @@ export interface FileRoutesByTo {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
@@ -690,6 +699,7 @@ export interface FileRoutesById {
   '/api/oauth/google/callback': typeof ApiOauthGoogleCallbackRoute
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
+  '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
@@ -769,6 +779,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/network-unlock-snapshot'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
@@ -844,6 +855,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/network-unlock-snapshot'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
@@ -921,6 +933,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/callback'
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
+    | '/api/public/hooks/network-unlock-snapshot'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
@@ -948,6 +961,7 @@ export interface RootRouteChildren {
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
+  ApiPublicHooksNetworkUnlockSnapshotRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
   ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
   ApiPublicPayOrderNumberRoute: typeof ApiPublicPayOrderNumberRoute
@@ -1459,6 +1473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/network-unlock-snapshot': {
+      id: '/api/public/hooks/network-unlock-snapshot'
+      path: '/api/public/hooks/network-unlock-snapshot'
+      fullPath: '/api/public/hooks/network-unlock-snapshot'
+      preLoaderRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/career/reset-expired': {
       id: '/api/public/career/reset-expired'
       path: '/api/public/career/reset-expired'
@@ -1654,6 +1675,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
+  ApiPublicHooksNetworkUnlockSnapshotRoute:
+    ApiPublicHooksNetworkUnlockSnapshotRoute,
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
   ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
   ApiPublicPayOrderNumberRoute: ApiPublicPayOrderNumberRoute,
