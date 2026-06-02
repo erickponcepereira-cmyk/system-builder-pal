@@ -17,7 +17,7 @@
 // - date-fns
 // ============================================================
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import AssessmentComparison from "./AssessmentComparison";
 import FitMindShapeResultView from "./FitMindShapeResultView";
 import { useServerFn } from "@tanstack/react-start";
