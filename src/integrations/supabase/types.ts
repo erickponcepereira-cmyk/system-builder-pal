@@ -3799,6 +3799,69 @@ export type Database = {
         }
         Relationships: []
       }
+      network_unlock_history: {
+        Row: {
+          any_completed: boolean
+          coach_id: string | null
+          computed_at: string
+          created_at: string
+          goals_snapshot: Json
+          id: string
+          multiplier: number
+          patent_level: number
+          period_month: number
+          period_year: number
+          profile_id: string
+          total_sales: number
+          updated_at: string
+        }
+        Insert: {
+          any_completed?: boolean
+          coach_id?: string | null
+          computed_at?: string
+          created_at?: string
+          goals_snapshot?: Json
+          id?: string
+          multiplier?: number
+          patent_level?: number
+          period_month: number
+          period_year: number
+          profile_id: string
+          total_sales?: number
+          updated_at?: string
+        }
+        Update: {
+          any_completed?: boolean
+          coach_id?: string | null
+          computed_at?: string
+          created_at?: string
+          goals_snapshot?: Json
+          id?: string
+          multiplier?: number
+          patent_level?: number
+          period_month?: number
+          period_year?: number
+          profile_id?: string
+          total_sales?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "network_unlock_history_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_unlock_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       network_unlock_rules: {
         Row: {
           created_at: string
