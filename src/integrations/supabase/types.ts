@@ -1886,6 +1886,47 @@ export type Database = {
           },
         ]
       }
+      coach_unlock_attempts: {
+        Row: {
+          attempted_number: number
+          coach_id: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          profile_id: string
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_number: number
+          coach_id: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          profile_id: string
+          success: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_number?: number
+          coach_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          profile_id?: string
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_unlock_attempts_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaches: {
         Row: {
           activation_order_id: string | null
@@ -1915,6 +1956,8 @@ export type Database = {
           instagram: string | null
           is_professional: boolean
           last_activity_at: string | null
+          last_unlock_attempt_at: string | null
+          last_unlock_failed_at: string | null
           onboarding_stage: string
           pix_key: string | null
           pix_key_type: string | null
@@ -1935,6 +1978,7 @@ export type Database = {
           total_sales: number | null
           transferred_at: string | null
           transferred_to_coach_id: string | null
+          unlock_attempts: number
           upline_coach_id: string | null
           website: string | null
           youtube: string | null
@@ -1967,6 +2011,8 @@ export type Database = {
           instagram?: string | null
           is_professional?: boolean
           last_activity_at?: string | null
+          last_unlock_attempt_at?: string | null
+          last_unlock_failed_at?: string | null
           onboarding_stage?: string
           pix_key?: string | null
           pix_key_type?: string | null
@@ -1987,6 +2033,7 @@ export type Database = {
           total_sales?: number | null
           transferred_at?: string | null
           transferred_to_coach_id?: string | null
+          unlock_attempts?: number
           upline_coach_id?: string | null
           website?: string | null
           youtube?: string | null
@@ -2019,6 +2066,8 @@ export type Database = {
           instagram?: string | null
           is_professional?: boolean
           last_activity_at?: string | null
+          last_unlock_attempt_at?: string | null
+          last_unlock_failed_at?: string | null
           onboarding_stage?: string
           pix_key?: string | null
           pix_key_type?: string | null
@@ -2039,6 +2088,7 @@ export type Database = {
           total_sales?: number | null
           transferred_at?: string | null
           transferred_to_coach_id?: string | null
+          unlock_attempts?: number
           upline_coach_id?: string | null
           website?: string | null
           youtube?: string | null
