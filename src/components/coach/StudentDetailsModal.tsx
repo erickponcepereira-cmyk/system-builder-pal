@@ -207,6 +207,56 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 </div>
               </Card>
             </div>
+          ) : tab === "frequencia" ? (
+            attLoading || !attData ? (
+              <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/50" /></div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <Mini label="Último acesso" value={attData.last_sign_in_at ? fmtBR(attData.last_sign_in_at) : "—"} />
+                  <Mini label="Check-ins (180d)" value={String(attData.checkins.length)} />
+                  <Mini label="Compras pagas (180d)" value={String(attData.purchases.length)} />
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Histórico de check-ins</p>
+                  {attData.checkins.length === 0 ? (
+                    <p className="text-xs text-white/40">Nenhum check-in registrado nos últimos 180 dias.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      {attData.checkins.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/5 p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.source === "freebie" ? "bg-amber-500/15 text-amber-400" : "bg-emerald-500/15 text-emerald-400"}`}>
+                              {c.source === "freebie" ? "Gratuito" : "App"}
+                            </span>
+                            <p className="truncate text-xs text-white/80">{c.label}</p>
+                          </div>
+                          <p className="shrink-0 text-[11px] text-white/50">{fmtBR(c.at)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Linha do tempo de compras pagas</p>
+                  {attData.purchases.length === 0 ? (
+                    <p className="text-xs text-white/40">Nenhuma compra paga registrada nos últimos 180 dias.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      {attData.purchases.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/5 p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-white">{p.label}</p>
+                            <p className="text-[10px] text-white/40">{fmtBR(p.at)} {p.method && `· ${p.method}`}</p>
+                          </div>
+                          <p className="shrink-0 text-sm font-bold text-white">{money(p.amount)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
           ) : tab === "avaliacoes" ? (
             <div className="space-y-2">
               {bodyAssess.length === 0 && bios.length === 0 ? (
