@@ -241,6 +241,10 @@ export interface FitMindCoach {
   specialty?: string;
   logo?: string;
   primaryColor?: string;
+  whatsapp?: string;
+  instagram?: string;
+  tiktok?: string;
+  website?: string;
 }
 
 // ============================================================
@@ -373,6 +377,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [assessment, setAssessment] = useState<Partial<FitMindAssessment>>({});
   const [step, setStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
@@ -1135,9 +1140,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ────────────────────────────────────────────────────────
   const SelectClientScreen = () => {
     const filtered = clients.filter(
-      (c) =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchQuery.toLowerCase()),
+      (c) => {
+        const matchesText =
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.email.toLowerCase().includes(searchQuery.toLowerCase());
+        if (!matchesText) return false;
+        if (!groupFilter) return true;
+        return (c.groups || []).includes(groupFilter);
+      },
     );
     return (
       <div
@@ -1183,6 +1193,18 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <select
+            className="fm-input"
+            style={{ width: 160 }}
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            title="Filtrar por grupo"
+          >
+            <option value="">Todos os grupos</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -2755,6 +2777,10 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           logo: coach.logo,
           specialty: coach.specialty,
           email: coach.email,
+          whatsapp: coach.whatsapp || coach.phone,
+          instagram: coach.instagram,
+          tiktok: coach.tiktok,
+          website: coach.website,
         }}
         themeColor={themeColor}
         themeFontFamily={themeFontFamily}

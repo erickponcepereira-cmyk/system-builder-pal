@@ -19,7 +19,7 @@ type ChallengeLink = {
 export function EvaluateTab() {
   const navigate = useNavigate();
   const [clients, setClients] = useState<FitMindClient[]>([]);
-  const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal" });
+  const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
 
 
@@ -81,12 +81,24 @@ export function EvaluateTab() {
   const loadClients = async () => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
-    const { data: profile } = await supabase.from("profiles").select("id,name,email").eq("user_id", userData.user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("id,name,email,phone,instagram").eq("user_id", userData.user.id).maybeSingle();
     const { data: coach } = profile?.id
-      ? await supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle()
+      ? await supabase.from("coaches").select("id,instagram,tiktok,website").eq("profile_id", profile.id).maybeSingle()
       : { data: null };
     if (!coach?.id) return;
-    setCoachInfo({ id: coach.id, name: profile?.name || "Coach FitMind", email: profile?.email || "", specialty: "Avaliação corporal" });
+    const p: any = profile || {};
+    const c: any = coach || {};
+    setCoachInfo({
+      id: coach.id,
+      name: p.name || "Coach FitMind",
+      email: p.email || "",
+      specialty: "Avaliação corporal",
+      phone: p.phone || "",
+      whatsapp: p.phone || "",
+      instagram: c.instagram || p.instagram || "",
+      tiktok: c.tiktok || "",
+      website: c.website || "",
+    });
     // Paginate to bypass Supabase's default 1000-row limit
     const PAGE = 1000;
     let from = 0;
