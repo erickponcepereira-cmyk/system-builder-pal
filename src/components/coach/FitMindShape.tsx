@@ -1895,8 +1895,90 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 </span>
               )}
             </div>
-          </div>
         </div>
+
+        {/* Grupo do aluno (editável durante a avaliação) */}
+        <div style={{ marginTop: 12 }}>
+          <label className="fm-label">Grupo do aluno</label>
+          {!isCreatingNewGroup ? (
+            <select
+              className="fm-select"
+              value={assessment.groupId ?? selectedClient?.groups?.[0] ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__new__") {
+                  setIsCreatingNewGroup(true);
+                  setNewGroupName("");
+                } else {
+                  upd("groupId" as keyof FitMindAssessment, v || undefined);
+                }
+              }}
+            >
+              <option value="">Sem grupo</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+              {/* Permite manter um grupo legado salvo apenas pelo nome no aluno */}
+              {(selectedClient?.groups || [])
+                .filter((g) => !groups.find((x) => x.id === g))
+                .map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              <option value="__new__">+ Criar novo grupo...</option>
+            </select>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                className="fm-input"
+                autoFocus
+                placeholder="Nome do novo grupo"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newGroupName.trim()) {
+                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
+                    setIsCreatingNewGroup(false);
+                  } else if (e.key === "Escape") {
+                    setIsCreatingNewGroup(false);
+                    setNewGroupName("");
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="fm-btn-primary"
+                style={{ padding: "0 14px" }}
+                onClick={() => {
+                  if (newGroupName.trim()) {
+                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
+                    setIsCreatingNewGroup(false);
+                  }
+                }}
+              >
+                OK
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: "0 14px",
+                  background: "var(--muted)",
+                  color: "var(--foreground)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  setIsCreatingNewGroup(false);
+                  setNewGroupName("");
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
       </div>
       );
     };
