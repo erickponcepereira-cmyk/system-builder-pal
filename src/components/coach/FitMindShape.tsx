@@ -443,9 +443,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     });
   }, [screen, step, selectedClient]);
 
-  // Auto-cálculo em tempo real quando método = medidas
+  // Auto-cálculo em tempo real quando método inclui medidas
   useEffect(() => {
-    if (assessment.method !== "measurements") return;
+    if (assessment.method !== "measurements" && assessment.method !== "both") return;
     if (!selectedClient || !assessment.weight || !assessment.height || !assessment.age) return;
     const circs = assessment.circumferences || {};
     const hasAny = Object.values(circs).some((v) => v != null && (v as number) > 0);
