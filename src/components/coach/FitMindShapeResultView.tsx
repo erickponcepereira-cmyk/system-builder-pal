@@ -100,6 +100,10 @@ export interface FitMindShapeResultViewCoach {
   logo?: string | null;
   specialty?: string | null;
   email?: string | null;
+  whatsapp?: string | null;
+  instagram?: string | null;
+  tiktok?: string | null;
+  website?: string | null;
 }
 
 export interface FitMindShapeResultViewProps {
