@@ -6,6 +6,7 @@ import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity
 import janelaFechadaAsset from "@/assets/janela_fechada.png.asset.json";
 import janelaMeioAsset from "@/assets/janela_meio_aberta.png.asset.json";
 import janelaAbertaAsset from "@/assets/janela_aberta.png.asset.json";
+import janelasChuvaAsset from "@/assets/janelas-chuva.gif.asset.json";
 
 type Goal = "slim" | "mass";
 interface MealState { protein: boolean; fiber: boolean; carb: boolean; exercise: boolean }
@@ -457,6 +458,16 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
           </div>
 
           <SummaryBar meals={meals} goal={goal} />
+
+          <div className="rounded-2xl overflow-hidden border border-border bg-card">
+            <img
+              src={janelasChuvaAsset.url}
+              alt="Ilustração das janelas nutricionais"
+              className="w-full h-auto object-cover"
+              loading="lazy"
+            />
+          </div>
+
         </>
       )}
 
