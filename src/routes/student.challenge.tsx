@@ -185,9 +185,28 @@ function StudentChallengePage() {
     }
   };
 
+  const loadTokens = async () => {
+    try { setTokens(await fetchTokens()); } catch (e) { console.warn("tokens fetch failed", e); }
+  };
 
+  useEffect(() => { load(); loadTokens(); }, []);
 
-  useEffect(() => { load(); }, []);
+  const handleJoin = async () => {
+    if (!confirmTurma) return;
+    setJoining(true);
+    try {
+      const res = await doJoin({ data: { competitionId: confirmTurma.competitionId } });
+      if (!res.ok) { toast.error(res.error); return; }
+      toast.success(`Inscrição confirmada em ${res.turma.competitionLabel} — Turma ${res.turma.groupNumber}!`);
+      setConfirmTurma(null);
+      await Promise.all([load(), loadTokens()]);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao entrar no desafio");
+    } finally {
+      setJoining(false);
+    }
+  };
+
 
   const scheduleAppointment = async () => {
     if (!schedDate || !schedTime || !enrollment || !studentId || !coachId) return;
