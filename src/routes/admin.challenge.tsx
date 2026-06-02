@@ -949,6 +949,89 @@ function AdminChallengePage() {
           </div>
         </div>
       )}
+
+      {/* Modal: Finalizar Desafio */}
+      {finalizeModal && (() => {
+        const enrs = finalizeModal.enrollments;
+        const key = finalizeMetric === "fat" ? "result_fat_pct_lost" : finalizeMetric === "kg" ? "result_kg_lost" : "result_muscle_gain_pct";
+        const unit = finalizeMetric === "kg" ? "kg" : "%";
+        const sortByKey = (list: Enrollment[]) =>
+          list.filter(e => ((e as any)[key] ?? 0) > 0)
+            .sort((a, b) => ((b as any)[key] ?? 0) - ((a as any)[key] ?? 0));
+        const males = sortByKey(enrs.filter(e => e.gender === "M"));
+        const females = sortByKey(enrs.filter(e => e.gender === "F"));
+        const renderList = (list: Enrollment[], gender: "M" | "F", selected: string, setSelected: (id: string) => void) => (
+          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            {list.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhum participante com resultado positivo.</p>
+            ) : list.map((e, i) => (
+              <label key={e.id}
+                className={`flex items-center gap-2 rounded-lg border p-2 cursor-pointer ${selected === e.id ? "border-yellow-400 bg-yellow-500/10" : "border-border bg-muted/20 hover:bg-muted/40"}`}>
+                <input type="radio" name={`winner-${gender}`} checked={selected === e.id} onChange={() => setSelected(e.id)} className="accent-yellow-400" />
+                <span className="w-6 text-center text-xs font-bold text-muted-foreground">{i + 1}º</span>
+                <span className="flex-1 text-sm font-medium text-foreground truncate">{(e.student as any)?.profile?.name || "—"}</span>
+                <span className="text-sm font-bold text-green-400">{(((e as any)[key] ?? 0) as number).toFixed(finalizeMetric === "kg" ? 1 : 2)}{unit}</span>
+              </label>
+            ))}
+            {list.length > 0 && selected && (
+              <button type="button" onClick={() => setSelected("")} className="text-[11px] text-muted-foreground underline">Limpar seleção</button>
+            )}
+          </div>
+        );
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4">
+            <div className="w-full max-w-3xl my-8 rounded-2xl border border-border bg-card p-6 space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Award className="h-5 w-5 text-yellow-400" />
+                  Finalizar {MONTHS[finalizeModal.comp.month]} {finalizeModal.comp.year}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Selecione os vencedores Masc. e Fem. (opcional). O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Métrica de classificação:</span>
+                {([
+                  ["fat", "% Gordura perdida"],
+                  ["kg", "Kg perdidos"],
+                  ["muscle", "% Músculo ganho"],
+                ] as const).map(([id, label]) => (
+                  <button key={id} type="button" onClick={() => setFinalizeMetric(id)}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${finalizeMetric === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 space-y-2">
+                  <h4 className="text-sm font-bold text-blue-400">Masculino — escolha o campeão</h4>
+                  {renderList(males, "M", winnerMaleId, setWinnerMaleId)}
+                </div>
+                <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-3 space-y-2">
+                  <h4 className="text-sm font-bold text-pink-400">Feminino — escolha a campeã</h4>
+                  {renderList(females, "F", winnerFemaleId, setWinnerFemaleId)}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-xs text-yellow-200/90">
+                <strong>Atenção:</strong> ao finalizar, o ranking completo (Kg perdidos, % gordura, % músculo) ficará visível no Hall da Fama para todos. O histórico desta finalização (vencedores, ranking e métrica usada) é salvo permanentemente para relatórios futuros.
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setFinalizeModal(null)} className="flex-1 rounded-lg bg-muted py-2 text-sm font-bold text-muted-foreground">Cancelar</button>
+                <button onClick={finalizeChallenge} disabled={finalizing}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-yellow-500 py-2 text-sm font-bold text-black disabled:opacity-60">
+                  {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
+                  {finalizeModal.comp.finalized_at ? "Refinalizar" : "Finalizar e publicar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
