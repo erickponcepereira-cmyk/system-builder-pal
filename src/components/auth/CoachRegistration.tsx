@@ -48,8 +48,28 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
   // Step 3
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
+  const [uplineLocked, setUplineLocked] = useState(false);
   const [completedCoachCourse, setCompletedCoachCourse] = useState<"yes" | "no" | "">("");
   const [coachCourseNotes, setCoachCourseNotes] = useState("");
+
+  // Prefill upline from referral link (lock if present)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("fitmind_referral");
+      if (!raw) return;
+      const ref = JSON.parse(raw) as { kind?: string; coachId?: string; sponsorName?: string };
+      if (ref.kind === "coach" && ref.coachId) {
+        setSelectedCoach({
+          id: ref.coachId,
+          profileId: "",
+          name: ref.sponsorName || "Coach indicador",
+        });
+        setUplineLocked(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Validação email em tempo real (debounced)
   useEffect(() => {
@@ -367,7 +387,17 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
           {/* Step 3 */}
           {step === 3 && (
             <div className="space-y-4">
-              <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+              {uplineLocked && selectedCoach ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Coach indicador</p>
+                  <p className="mt-1 text-sm font-bold text-white">{selectedCoach.name}</p>
+                  <p className="mt-1 text-[11px] text-white/50">
+                    Você chegou pelo link deste coach — a indicação não pode ser alterada.
+                  </p>
+                </div>
+              ) : (
+                <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
+              )}
 
               <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 <Label className="text-white/80 text-sm">Você já fez o curso de coach? *</Label>

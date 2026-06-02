@@ -52,7 +52,8 @@ function ReferralLandingPage() {
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
       setTimeout(() => {
-        navigate({ to: "/register", search: { role: "student" } });
+        const targetRole = row.kind === "coach" ? "coach" : "student";
+        navigate({ to: "/register", search: { role: targetRole } });
       }, 1400);
     })();
     return () => {
