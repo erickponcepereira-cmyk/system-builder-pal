@@ -21,6 +21,7 @@ type ProfileForm = {
   phone: string;
   profession: string;
   instagram: string;
+  gender: "M" | "F" | "O" | "";
   blood_type: string;
   birthdate: string;
   bio: string;
@@ -29,10 +30,11 @@ type ProfileForm = {
 
 const empty: ProfileForm = {
   name: "", email: "", phone: "", profession: "",
-  instagram: "", blood_type: "", birthdate: "", bio: "", photo_url: "",
+  instagram: "", gender: "", blood_type: "", birthdate: "", bio: "", photo_url: "",
 };
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const GENDERS: ReadonlyArray<["M" | "F" | "O", string]> = [["M","Masculino"],["F","Feminino"],["O","Outro"]];
 
 function EditProfilePage() {
   const navigate = useNavigate();
