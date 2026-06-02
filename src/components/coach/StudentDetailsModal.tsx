@@ -53,6 +53,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [weights, setWeights] = useState<WeightRow[]>([]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [sharing, setSharing] = useState(false);
+  const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
 
   useEffect(() => {
     (async () => {
