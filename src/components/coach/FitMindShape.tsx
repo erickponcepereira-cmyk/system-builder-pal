@@ -1937,6 +1937,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             display: "flex",
             alignItems: "center",
             gap: 10,
+            marginBottom: 12,
           }}
         >
           <Scale size={20} color="var(--fm-primary)" />
@@ -1966,10 +1967,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 </span>
               )}
             </div>
+          </div>
         </div>
 
         {/* Grupo do aluno (editável durante a avaliação) */}
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginBottom: 12 }}>
           <label className="fm-label">Grupo do aluno</label>
           {!isCreatingNewGroup ? (
             <select
