@@ -186,7 +186,7 @@ export function ProductDetailModal({
             <p className="text-xs text-muted-foreground">Estoque disponível: {product.stock}</p>
           )}
 
-          {(product.challengeDays ?? 0) > 0 && (
+          {product.hasChallenge && (
             <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-base">🔥</span>
@@ -196,7 +196,22 @@ export function ProductDetailModal({
                 </div>
               </div>
               <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-bold text-primary">
-                {product.challengeDays} dias
+                Acesso a 1 desafio
+              </span>
+            </div>
+          )}
+
+          {(product.cardDays ?? 0) > 0 && (
+            <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-base">🪪</span>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-500/80">Carteirinha de benefícios</p>
+                  <p className="text-xs text-foreground">Acesso ao portal de benefícios e gratuitos</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm font-bold text-emerald-500">
+                {product.cardDays} dias
               </span>
             </div>
           )}
