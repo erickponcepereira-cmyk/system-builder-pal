@@ -76,6 +76,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     if (!name.trim()) return setErr("Informe seu nome completo.");
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido. Use o formato nome@dominio.com.");
     if (phone.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto. Inclua DDD + número.");
+    if (!gender) return setErr("Selecione seu gênero para continuar.");
     if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
@@ -92,6 +93,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
           name,
           email,
           phone,
+          gender,
+          instagram: instagram.trim() || null,
           student: {
             coachId: coachIdToUse,
             referredByStudentId: referral?.referredByStudentId || null,
