@@ -401,6 +401,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [newGroupName, setNewGroupName] = useState("");
   const [editingClientData, setEditingClientData] = useState<FitMindClient | null>(null);
 
+  const availableGroups = useMemo(() => {
+    const byId = new Map<string, { id: string; name: string; color?: string }>();
+    const addGroup = (id?: string, name?: string, color?: string) => {
+      const key = (id || name || "").trim();
+      if (!key || byId.has(key)) return;
+      byId.set(key, { id: key, name: (name || key).trim(), color });
+    };
+
+    groups.forEach((group) => addGroup(group.id, group.name, group.color));
+    clients.forEach((client) => (client.groups || []).forEach((group) => addGroup(group)));
+    (selectedClient?.groups || []).forEach((group) => addGroup(group));
+    (newClientData.groups || []).forEach((group) => addGroup(group));
+    (editingClientData?.groups || []).forEach((group) => addGroup(group));
+    addGroup(assessment.groupId);
+
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [groups, clients, selectedClient?.groups, newClientData.groups, editingClientData?.groups, assessment.groupId]);
+
   // ── Pré-seleção via initialClientId (ex.: vindo do Desafio) ──
   const autoSelectedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -812,6 +830,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setNewClientData((current) => ({ ...current, [key]: value }));
   };
 
+  const chooseNewClientGroup = (groupName: string) => {
+    const name = groupName.trim();
+    if (!name) return;
+    updateNewClient("groups", [name]);
+    setNewGroupName("");
+    setIsCreatingNewGroup(false);
+  };
+
+  const persistSelectedClientGroup = useCallback(
+    async (groupId?: string) => {
+      const group = groupId?.trim();
+      if (!group || !selectedClient) return;
+      const currentGroups = selectedClient.groups || [];
+      if (currentGroups[0] === group) return;
+      const updatedClient = { ...selectedClient, groups: [group, ...currentGroups.filter((item) => item !== group)] };
+      setSelectedClient(updatedClient);
+      if (onUpdateClient) {
+        try {
+          await onUpdateClient(updatedClient);
+        } catch (error) {
+          console.error("Erro ao salvar grupo do aluno:", error);
+        }
+      }
+    },
+    [onUpdateClient, selectedClient],
+  );
+
   // ─── Exportação CSV de alunos + avaliações ────────────────
   const csvEscape = (v: unknown): string => {
     const s = v === null || v === undefined ? "" : String(v);
@@ -1201,7 +1246,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             title="Filtrar por grupo"
           >
             <option value="">Todos os grupos</option>
-            {groups.map((g) => (
+            {availableGroups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
@@ -1538,7 +1583,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 }}
               >
                 <option value="">Selecione um grupo *</option>
-                {groups.map((g) => (
+                {availableGroups.map((g) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
                 <option value="__new__">+ Criar novo grupo...</option>
@@ -1553,8 +1598,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   onChange={(e) => setNewGroupName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newGroupName.trim()) {
-                      updateNewClient("groups", [newGroupName.trim()]);
-                      setIsCreatingNewGroup(false);
+                      chooseNewClientGroup(newGroupName);
                     } else if (e.key === "Escape") {
                       setIsCreatingNewGroup(false);
                       setNewGroupName("");
@@ -1567,10 +1611,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   className="fm-btn-primary"
                   style={{ padding: "0 14px" }}
                   onClick={() => {
-                    if (newGroupName.trim()) {
-                      updateNewClient("groups", [newGroupName.trim()]);
-                      setIsCreatingNewGroup(false);
-                    }
+                    chooseNewClientGroup(newGroupName);
                   }}
                 >
                   OK
@@ -1744,11 +1785,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               onChange={(e) => updateEditingClient("groups", e.target.value ? [e.target.value] : [])}
             >
               <option value="">Sem grupo</option>
-              {groups.map((g) => (
+              {availableGroups.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-              {(c.groups || []).filter((g) => !groups.find((x) => x.id === g)).map((g) => (
-                <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </div>
@@ -1783,6 +1821,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const AssessmentScreen = () => {
     const upd = (k: keyof FitMindAssessment, v: unknown) =>
       setAssessment((a) => ({ ...a, [k]: v }));
+
+    const chooseAssessmentGroup = (groupName: string) => {
+      const name = groupName.trim();
+      if (!name) return;
+      upd("groupId" as keyof FitMindAssessment, name);
+      void persistSelectedClientGroup(name);
+      setNewGroupName("");
+      setIsCreatingNewGroup(false);
+    };
 
     const StepDados = () => {
       const autoAge = (() => {
@@ -1890,6 +1937,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             display: "flex",
             alignItems: "center",
             gap: 10,
+            marginBottom: 12,
           }}
         >
           <Scale size={20} color="var(--fm-primary)" />
@@ -1919,10 +1967,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 </span>
               )}
             </div>
+          </div>
         </div>
 
         {/* Grupo do aluno (editável durante a avaliação) */}
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginBottom: 12 }}>
           <label className="fm-label">Grupo do aluno</label>
           {!isCreatingNewGroup ? (
             <select
@@ -1935,19 +1984,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   setNewGroupName("");
                 } else {
                   upd("groupId" as keyof FitMindAssessment, v || undefined);
+                  void persistSelectedClientGroup(v || undefined);
                 }
               }}
             >
               <option value="">Sem grupo</option>
-              {groups.map((g) => (
+              {availableGroups.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
-              {/* Permite manter um grupo legado salvo apenas pelo nome no aluno */}
-              {(selectedClient?.groups || [])
-                .filter((g) => !groups.find((x) => x.id === g))
-                .map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
               <option value="__new__">+ Criar novo grupo...</option>
             </select>
           ) : (
@@ -1960,8 +2004,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 onChange={(e) => setNewGroupName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newGroupName.trim()) {
-                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
-                    setIsCreatingNewGroup(false);
+                    chooseAssessmentGroup(newGroupName);
                   } else if (e.key === "Escape") {
                     setIsCreatingNewGroup(false);
                     setNewGroupName("");
@@ -1974,10 +2017,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 className="fm-btn-primary"
                 style={{ padding: "0 14px" }}
                 onClick={() => {
-                  if (newGroupName.trim()) {
-                    upd("groupId" as keyof FitMindAssessment, newGroupName.trim());
-                    setIsCreatingNewGroup(false);
-                  }
+                  chooseAssessmentGroup(newGroupName);
                 }}
               >
                 OK
@@ -2002,7 +2042,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             </div>
           )}
         </div>
-      </div>
       </div>
       );
     };
