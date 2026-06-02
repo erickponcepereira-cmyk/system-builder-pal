@@ -1,13 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard, ClipboardCheck, Clock, ExternalLink, Loader2, LogOut, RefreshCw } from "lucide-react";
+import { CreditCard, ClipboardCheck, Clock, ExternalLink, KeyRound, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyOnboardingStage,
   submitQuizResult,
-  notifyUplineForRelease,
+  unlockCoachWithId,
   QUIZ_URL,
   ACTIVATION_PRODUCT_ID,
 } from "@/lib/coach-onboarding.functions";
