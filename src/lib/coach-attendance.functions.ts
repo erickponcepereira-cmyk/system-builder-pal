@@ -244,13 +244,7 @@ export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
       .eq("profile_id", profile.id)
       .maybeSingle();
 
-    const { data: roles } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    const isAdmin = (roles || []).some((r: { role: string }) => r.role === "admin");
-
-    if (!isAdmin && (!coach || student.coach_id !== coach.id)) {
+    if (!coach || student.coach_id !== coach.id) {
       throw new Error("Forbidden");
     }
 
