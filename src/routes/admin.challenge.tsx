@@ -14,6 +14,7 @@ export const Route = createFileRoute("/admin/challenge")({
 type Competition = {
   id: string; month: number; year: number; status: string;
   prize_amount: number; description: string | null;
+  finalized_at: string | null; finalized_by: string | null;
 };
 type CompGroup = {
   id: string;
