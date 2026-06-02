@@ -206,6 +206,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                               {cat.products.map((p) => (
                                 <div key={p.id} className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={{ backgroundColor: "#0B0B0B" }}>
                                   <div className="flex items-center gap-2">
+                                    <RankBadge rank={p.rank} />
                                     <Package className="h-3 w-3 text-white/40" />
                                     <span className="text-xs text-white/80">{p.name}</span>
                                   </div>
