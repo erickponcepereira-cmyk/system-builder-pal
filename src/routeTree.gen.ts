@@ -71,6 +71,7 @@ import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
 import { Route as AdminDigitalProductsRouteImport } from './routes/admin.digital-products'
 import { Route as AdminCoachesRouteImport } from './routes/admin.coaches'
 import { Route as AdminCoachReleasesRouteImport } from './routes/admin.coach-releases'
+import { Route as AdminCoachIdsRouteImport } from './routes/admin.coach-ids'
 import { Route as AdminCoachApplicationsRouteImport } from './routes/admin.coach-applications'
 import { Route as AdminChallengeRouteImport } from './routes/admin.challenge'
 import { Route as AdminCareerRouteImport } from './routes/admin.career'
@@ -399,6 +400,11 @@ const AdminCoachReleasesRoute = AdminCoachReleasesRouteImport.update({
   path: '/coach-releases',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCoachIdsRoute = AdminCoachIdsRouteImport.update({
+  id: '/coach-ids',
+  path: '/coach-ids',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCoachApplicationsRoute = AdminCoachApplicationsRouteImport.update({
   id: '/coach-applications',
   path: '/coach-applications',
@@ -503,6 +509,7 @@ export interface FileRoutesByFullPath {
   '/admin/career': typeof AdminCareerRoute
   '/admin/challenge': typeof AdminChallengeRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
+  '/admin/coach-ids': typeof AdminCoachIdsRoute
   '/admin/coach-releases': typeof AdminCoachReleasesRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -581,6 +588,7 @@ export interface FileRoutesByTo {
   '/admin/career': typeof AdminCareerRoute
   '/admin/challenge': typeof AdminChallengeRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
+  '/admin/coach-ids': typeof AdminCoachIdsRoute
   '/admin/coach-releases': typeof AdminCoachReleasesRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -662,6 +670,7 @@ export interface FileRoutesById {
   '/admin/career': typeof AdminCareerRoute
   '/admin/challenge': typeof AdminChallengeRoute
   '/admin/coach-applications': typeof AdminCoachApplicationsRoute
+  '/admin/coach-ids': typeof AdminCoachIdsRoute
   '/admin/coach-releases': typeof AdminCoachReleasesRoute
   '/admin/coaches': typeof AdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AdminDigitalProductsRoute
@@ -744,6 +753,7 @@ export interface FileRouteTypes {
     | '/admin/career'
     | '/admin/challenge'
     | '/admin/coach-applications'
+    | '/admin/coach-ids'
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -822,6 +832,7 @@ export interface FileRouteTypes {
     | '/admin/career'
     | '/admin/challenge'
     | '/admin/coach-applications'
+    | '/admin/coach-ids'
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -902,6 +913,7 @@ export interface FileRouteTypes {
     | '/admin/career'
     | '/admin/challenge'
     | '/admin/coach-applications'
+    | '/admin/coach-ids'
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
@@ -1428,6 +1440,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoachReleasesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/coach-ids': {
+      id: '/admin/coach-ids'
+      path: '/coach-ids'
+      fullPath: '/admin/coach-ids'
+      preLoaderRoute: typeof AdminCoachIdsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/coach-applications': {
       id: '/admin/coach-applications'
       path: '/coach-applications'
@@ -1562,6 +1581,7 @@ interface AdminRouteChildren {
   AdminCareerRoute: typeof AdminCareerRoute
   AdminChallengeRoute: typeof AdminChallengeRoute
   AdminCoachApplicationsRoute: typeof AdminCoachApplicationsRoute
+  AdminCoachIdsRoute: typeof AdminCoachIdsRoute
   AdminCoachReleasesRoute: typeof AdminCoachReleasesRoute
   AdminCoachesRoute: typeof AdminCoachesRouteWithChildren
   AdminDigitalProductsRoute: typeof AdminDigitalProductsRoute
@@ -1597,6 +1617,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCareerRoute: AdminCareerRoute,
   AdminChallengeRoute: AdminChallengeRoute,
   AdminCoachApplicationsRoute: AdminCoachApplicationsRoute,
+  AdminCoachIdsRoute: AdminCoachIdsRoute,
   AdminCoachReleasesRoute: AdminCoachReleasesRoute,
   AdminCoachesRoute: AdminCoachesRouteWithChildren,
   AdminDigitalProductsRoute: AdminDigitalProductsRoute,
