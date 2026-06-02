@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, TrendingDown, TrendingUp, Minus, Search, Activity, ShoppingBag, LogIn, CalendarCheck } from "lucide-react";
 import { getCoachAttendance, type CoachStudentAttendance } from "@/lib/coach-attendance.functions";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 
 type Filter = "all" | "active" | "watch" | "inactive_7" | "inactive_15" | "inactive_30";
 type SortKey = "most_active" | "most_inactive" | "name";
@@ -44,6 +45,7 @@ export function AttendanceTab() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("most_inactive");
   const [search, setSearch] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -142,7 +144,15 @@ export function AttendanceTab() {
         ) : (
           <div className="space-y-2">
             {filtered.map((r) => (
-              <div key={r.id} className="rounded-xl p-3" style={{ backgroundColor: "#0F0F0F" }}>
+              <div
+                key={r.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setOpenId(r.id)}
+                onKeyDown={(e) => { if (e.key === "Enter") setOpenId(r.id); }}
+                className="rounded-xl p-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
+                style={{ backgroundColor: "#0F0F0F" }}
+              >
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -188,6 +198,14 @@ export function AttendanceTab() {
           </div>
         )}
       </div>
+
+      {openId && (
+        <StudentDetailsModal
+          studentId={openId}
+          initialTab="frequencia"
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </>
   );
 }

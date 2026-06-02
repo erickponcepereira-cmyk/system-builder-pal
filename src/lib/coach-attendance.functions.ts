@@ -64,7 +64,7 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
     const date14 = d14.slice(0, 10);
     const date30 = d30.slice(0, 10);
 
-    const [{ data: logs }, { data: visits }, { data: orders }] = await Promise.all([
+    const [{ data: logs }, { data: visits }, { data: txs }, { data: storeOrders }] = await Promise.all([
       supabaseAdmin
         .from("attendance_logs")
         .select("student_id, log_date, attended")
@@ -76,10 +76,18 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
         .in("student_id", studentIds)
         .gte("visited_at", d30),
       supabaseAdmin
-        .from("store_orders")
-        .select("student_id, created_at, status")
+        .from("transactions")
+        .select("student_id, paid_at, status")
         .in("student_id", studentIds)
-        .order("created_at", { ascending: false }),
+        .eq("status", "paid")
+        .not("paid_at", "is", null)
+        .order("paid_at", { ascending: false }),
+      supabaseAdmin
+        .from("store_orders")
+        .select("student_id, updated_at, created_at, status")
+        .in("student_id", studentIds)
+        .eq("status", "paid")
+        .order("updated_at", { ascending: false }),
     ]);
 
     // last sign-ins via auth admin (paginate users we need)
@@ -107,16 +115,19 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
 
     type Log = { student_id: string; log_date: string; attended: boolean | null };
     type Visit = { student_id: string; visited_at: string };
-    type Order = { student_id: string; created_at: string; status: string };
+    type Tx = { student_id: string; paid_at: string; status: string };
+    type SOrder = { student_id: string; updated_at: string; created_at: string; status: string };
 
     const logRows = (logs as Log[] | null) || [];
     const visitRows = (visits as Visit[] | null) || [];
-    const orderRows = (orders as Order[] | null) || [];
+    const txRows = (txs as Tx[] | null) || [];
+    const storeOrderRows = (storeOrders as SOrder[] | null) || [];
 
     return studentRows.map<CoachStudentAttendance>((s) => {
       const sLogs = logRows.filter((l) => l.student_id === s.id && l.attended);
       const sVisits = visitRows.filter((v) => v.student_id === s.id);
-      const sOrders = orderRows.filter((o) => o.student_id === s.id && o.status !== "cancelled");
+      const sTxs = txRows.filter((t) => t.student_id === s.id);
+      const sStoreOrders = storeOrderRows.filter((o) => o.student_id === s.id);
 
       const lastApp = sLogs
         .map((l) => l.log_date)
@@ -137,7 +148,9 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
         lastSource = "freebie";
       }
 
-      const lastPurchase = sOrders[0]?.created_at || null;
+      const lastTxPaid = sTxs[0]?.paid_at || null;
+      const lastStorePaid = sStoreOrders[0]?.updated_at || sStoreOrders[0]?.created_at || null;
+      const lastPurchase = [lastTxPaid, lastStorePaid].filter(Boolean).sort().at(-1) || null;
       const lastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
 
       // Activity = max(lastCheckin, lastSignIn, lastPurchase)
@@ -184,3 +197,144 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
       };
     });
   });
+
+export type StudentCheckin = {
+  id: string;
+  at: string;
+  source: "app" | "freebie";
+  label: string;
+};
+export type StudentPurchase = {
+  id: string;
+  at: string;
+  amount: number;
+  label: string;
+  method: string | null;
+};
+export type StudentAttendanceDetail = {
+  checkins: StudentCheckin[];
+  purchases: StudentPurchase[];
+  last_sign_in_at: string | null;
+};
+
+export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { studentId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    // Authorize: ensure the student belongs to this coach (or user is admin)
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!profile) throw new Error("Profile not found");
+
+    const { data: student } = await supabaseAdmin
+      .from("students")
+      .select("id, profile_id, coach_id, profiles!students_profile_id_fkey(user_id)")
+      .eq("id", data.studentId)
+      .maybeSingle();
+    if (!student) throw new Error("Student not found");
+
+    const { data: coach } = await supabaseAdmin
+      .from("coaches")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+
+    if (!coach || student.coach_id !== coach.id) {
+      throw new Error("Forbidden");
+    }
+
+    const cutoff = new Date(Date.now() - 180 * 86400000).toISOString();
+    const cutoffDate = cutoff.slice(0, 10);
+
+    const [{ data: logs }, { data: visits }, { data: visitsPartners }, { data: txs }, { data: storeOrders }] = await Promise.all([
+      supabaseAdmin
+        .from("attendance_logs")
+        .select("id, log_date, activity_type")
+        .eq("student_id", data.studentId)
+        .eq("attended", true)
+        .gte("log_date", cutoffDate)
+        .order("log_date", { ascending: false }),
+      supabaseAdmin
+        .from("partner_visits")
+        .select("id, visited_at, partner_id, source")
+        .eq("student_id", data.studentId)
+        .gte("visited_at", cutoff)
+        .order("visited_at", { ascending: false }),
+      Promise.resolve({ data: null }),
+      supabaseAdmin
+        .from("transactions")
+        .select("id, paid_at, gross_amount, payment_method, products!transactions_product_id_fkey(name)")
+        .eq("student_id", data.studentId)
+        .eq("status", "paid")
+        .not("paid_at", "is", null)
+        .order("paid_at", { ascending: false })
+        .limit(50),
+      supabaseAdmin
+        .from("store_orders")
+        .select("id, updated_at, total_amount, payment_method, order_number")
+        .eq("student_id", data.studentId)
+        .eq("status", "paid")
+        .order("updated_at", { ascending: false })
+        .limit(50),
+    ]);
+
+    // Lookup partner names
+    const partnerIds = Array.from(new Set(((visits as { partner_id: string }[]) || []).map((v) => v.partner_id)));
+    let partnerMap: Record<string, string> = {};
+    if (partnerIds.length) {
+      const { data: parts } = await supabaseAdmin
+        .from("partners")
+        .select("id, fantasy_name")
+        .in("id", partnerIds);
+      partnerMap = Object.fromEntries(((parts as { id: string; fantasy_name: string }[]) || []).map((p) => [p.id, p.fantasy_name]));
+    }
+
+    const checkins: StudentCheckin[] = [
+      ...((logs as { id: string; log_date: string; activity_type: string | null }[]) || []).map((l) => ({
+        id: `app-${l.id}`,
+        at: new Date(l.log_date + "T12:00:00").toISOString(),
+        source: "app" as const,
+        label: l.activity_type ? `App · ${l.activity_type}` : "Check-in pelo app",
+      })),
+      ...((visits as { id: string; visited_at: string; partner_id: string }[]) || []).map((v) => ({
+        id: `visit-${v.id}`,
+        at: v.visited_at,
+        source: "freebie" as const,
+        label: partnerMap[v.partner_id] ? `Gratuito · ${partnerMap[v.partner_id]}` : "Gratuito (QR parceiro)",
+      })),
+    ].sort((a, b) => b.at.localeCompare(a.at));
+
+    const purchases: StudentPurchase[] = [
+      ...((txs as unknown as { id: string; paid_at: string; gross_amount: number; payment_method: string | null; products: { name: string } | null }[]) || []).map((t) => ({
+        id: `tx-${t.id}`,
+        at: t.paid_at,
+        amount: Number(t.gross_amount || 0),
+        label: t.products?.name || "Compra",
+        method: t.payment_method,
+      })),
+      ...((storeOrders as { id: string; updated_at: string; total_amount: number; payment_method: string | null; order_number: string }[]) || []).map((o) => ({
+        id: `order-${o.id}`,
+        at: o.updated_at,
+        amount: Number(o.total_amount || 0),
+        label: `Loja · ${o.order_number}`,
+        method: o.payment_method,
+      })),
+    ].sort((a, b) => b.at.localeCompare(a.at));
+
+    // last sign-in
+    let lastSignIn: string | null = null;
+    type StudentWithProfile = { profiles: { user_id: string } | null };
+    const studUserId = (student as unknown as StudentWithProfile).profiles?.user_id;
+    if (studUserId) {
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(studUserId);
+      lastSignIn = u?.user?.last_sign_in_at ?? null;
+    }
+
+    return { checkins, purchases, last_sign_in_at: lastSignIn };
+  });
+

@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { createAssessmentShare } from "@/lib/assessment-share.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { getStudentAttendanceDetail, type StudentCheckin, type StudentPurchase } from "@/lib/coach-attendance.functions";
 
-type Tab = "resumo" | "avaliacoes" | "anamnese" | "evolucao" | "compras";
+type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras";
 
 interface Props {
   studentId: string;
   onClose: () => void;
+  initialTab?: Tab;
 }
 
 type Profile = { name: string; email: string; phone: string | null; birthdate: string | null; city: string | null; state: string | null };
@@ -35,8 +38,11 @@ function calcAge(birth: string | null) {
   return age;
 }
 
-export default function StudentDetailsModal({ studentId, onClose }: Props) {
-  const [tab, setTab] = useState<Tab>("resumo");
+export default function StudentDetailsModal({ studentId, onClose, initialTab = "resumo" }: Props) {
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const fetchAttendance = useServerFn(getStudentAttendanceDetail);
+  const [attData, setAttData] = useState<{ checkins: StudentCheckin[]; purchases: StudentPurchase[]; last_sign_in_at: string | null } | null>(null);
+  const [attLoading, setAttLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [subs, setSubs] = useState<SubRow[]>([]);
@@ -107,11 +113,22 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
 
   const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
     { id: "resumo", label: "Resumo", icon: Crown },
+    { id: "frequencia", label: "Frequência", icon: CalendarCheck },
     { id: "avaliacoes", label: "Avaliações", icon: Activity },
     { id: "anamnese", label: "Anamnese", icon: ClipboardList },
     { id: "evolucao", label: "Evolução", icon: TrendingUp },
     { id: "compras", label: "Compras", icon: ShoppingBag },
   ];
+
+  // Lazy-load attendance detail when tab opens
+  useEffect(() => {
+    if (tab !== "frequencia" || attData || attLoading) return;
+    setAttLoading(true);
+    fetchAttendance({ data: { studentId } })
+      .then((d) => setAttData(d))
+      .catch((e) => toast.error((e as Error).message || "Erro ao carregar frequência"))
+      .finally(() => setAttLoading(false));
+  }, [tab, attData, attLoading, fetchAttendance, studentId]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3" onClick={onClose}>
@@ -190,6 +207,56 @@ export default function StudentDetailsModal({ studentId, onClose }: Props) {
                 </div>
               </Card>
             </div>
+          ) : tab === "frequencia" ? (
+            attLoading || !attData ? (
+              <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/50" /></div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <Mini label="Último acesso" value={attData.last_sign_in_at ? fmtBR(attData.last_sign_in_at) : "—"} />
+                  <Mini label="Check-ins (180d)" value={String(attData.checkins.length)} />
+                  <Mini label="Compras pagas (180d)" value={String(attData.purchases.length)} />
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Histórico de check-ins</p>
+                  {attData.checkins.length === 0 ? (
+                    <p className="text-xs text-white/40">Nenhum check-in registrado nos últimos 180 dias.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      {attData.checkins.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/5 p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${c.source === "freebie" ? "bg-amber-500/15 text-amber-400" : "bg-emerald-500/15 text-emerald-400"}`}>
+                              {c.source === "freebie" ? "Gratuito" : "App"}
+                            </span>
+                            <p className="truncate text-xs text-white/80">{c.label}</p>
+                          </div>
+                          <p className="shrink-0 text-[11px] text-white/50">{fmtBR(c.at)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Linha do tempo de compras pagas</p>
+                  {attData.purchases.length === 0 ? (
+                    <p className="text-xs text-white/40">Nenhuma compra paga registrada nos últimos 180 dias.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      {attData.purchases.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/5 p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-white">{p.label}</p>
+                            <p className="text-[10px] text-white/40">{fmtBR(p.at)} {p.method && `· ${p.method}`}</p>
+                          </div>
+                          <p className="shrink-0 text-sm font-bold text-white">{money(p.amount)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
           ) : tab === "avaliacoes" ? (
             <div className="space-y-2">
               {bodyAssess.length === 0 && bios.length === 0 ? (
