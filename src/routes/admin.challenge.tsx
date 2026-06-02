@@ -990,7 +990,7 @@ function AdminChallengePage() {
                   Finalizar {MONTHS[finalizeModal.comp.month]} {finalizeModal.comp.year}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Selecione os vencedores Masc. e Fem. (opcional). O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
+                  Selecione obrigatoriamente os vencedores Masc. e Fem. O ranking completo será publicado no Hall da Fama e este momento ficará registrado no histórico permanente.
                 </p>
               </div>
 
