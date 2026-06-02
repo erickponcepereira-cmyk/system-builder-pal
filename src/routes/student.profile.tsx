@@ -57,6 +57,7 @@ function ProfilePage() {
   const [holderCpf, setHolderCpf] = useState("");
   const [referrals, setReferrals] = useState<Array<{ id: string; created_at: string | null; profiles: { name: string; email: string } | null }>>([]);
   const [withdrawals, setWithdrawals] = useState<Array<{ id: string; amount: number; status: string | null; requested_at: string | null; paid_at: string | null }>>([]);
+  const [challengeTokens, setChallengeTokens] = useState(0);
 
   useEffect(() => {
     (async () => {
