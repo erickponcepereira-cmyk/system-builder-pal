@@ -103,6 +103,31 @@ function AdminChallengePage() {
   const [weighModal, setWeighModal] = useState<WeighForm | null>(null);
   const [savingWeigh, setSavingWeigh] = useState(false);
 
+  // Tentativas de moeda
+  const [attempts, setAttempts] = useState<AdminTokenAttemptRow[]>([]);
+  const [attemptsOnlyFailures, setAttemptsOnlyFailures] = useState(true);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [showAttempts, setShowAttempts] = useState(false);
+  const fetchAttempts = useServerFn(getAdminTokenAttempts);
+
+  const loadAttempts = async (onlyFailures: boolean) => {
+    setAttemptsLoading(true);
+    try {
+      const rows = await fetchAttempts({ data: { onlyFailures, limit: 100 } });
+      setAttempts(rows);
+    } catch (e) {
+      console.warn("attempts fetch failed", e);
+      toast.error("Erro ao carregar tentativas");
+    } finally {
+      setAttemptsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showAttempts) loadAttempts(attemptsOnlyFailures);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAttempts, attemptsOnlyFailures]);
+
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
