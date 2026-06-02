@@ -843,8 +843,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       const group = groupId?.trim();
       if (!group || !selectedClient) return;
       const currentGroups = selectedClient.groups || [];
-      if (currentGroups.includes(group)) return;
-      const updatedClient = { ...selectedClient, groups: [group, ...currentGroups] };
+      if (currentGroups[0] === group) return;
+      const updatedClient = { ...selectedClient, groups: [group, ...currentGroups.filter((item) => item !== group)] };
       setSelectedClient(updatedClient);
       if (onUpdateClient) {
         try {
