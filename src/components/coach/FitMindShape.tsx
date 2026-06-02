@@ -822,7 +822,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const STEPS = [
     "Dados Básicos",
     "Composição Corporal",
-    "Outros Dados",
     "Anotações",
     "Fotos",
     "Agendamento",
