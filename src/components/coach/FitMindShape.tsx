@@ -161,7 +161,7 @@ export interface FitMindAssessment {
   id: string;
   clientId: string;
   date: string;
-  method: "bioimpedance" | "measurements";
+  method: "bioimpedance" | "measurements" | "both";
   // Dados básicos
   age: number;
   height: number;
