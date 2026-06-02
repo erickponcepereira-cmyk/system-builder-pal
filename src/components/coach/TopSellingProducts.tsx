@@ -195,6 +195,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                             className="flex w-full items-center justify-between gap-3 p-3 text-left transition hover:bg-white/5"
                           >
                             <div className="flex items-center gap-2">
+                              <RankBadge rank={cat.rank} />
                               {catOpen ? <ChevronDown className="h-3.5 w-3.5 text-white/60" /> : <ChevronRight className="h-3.5 w-3.5 text-white/40" />}
                               <span className="text-sm font-medium text-white/90">{cat.name}</span>
                             </div>
