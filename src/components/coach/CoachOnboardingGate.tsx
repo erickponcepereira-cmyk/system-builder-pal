@@ -144,7 +144,7 @@ function Stepper({ stage }: { stage: Stage }) {
   const steps: { id: Stage; label: string }[] = [
     { id: "awaiting_payment", label: "Pagar curso" },
     { id: "awaiting_quiz_result", label: "Concluir & enviar resultado" },
-    { id: "awaiting_upline_release", label: "Liberação" },
+    { id: "awaiting_upline_release", label: "Liberar ID" },
   ];
   const currentIdx = steps.findIndex((s) => s.id === stage);
   return (
