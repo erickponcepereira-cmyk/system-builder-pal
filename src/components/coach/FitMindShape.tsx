@@ -2306,7 +2306,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
 
 
     const StepAnotacoes = () => {
-      const [showProNotes, setShowProNotes] = useState(false);
       return (
       <div>
         <div className="fm-section-title">Anotações</div>
