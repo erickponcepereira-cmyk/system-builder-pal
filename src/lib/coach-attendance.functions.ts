@@ -64,7 +64,7 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
     const date14 = d14.slice(0, 10);
     const date30 = d30.slice(0, 10);
 
-    const [{ data: logs }, { data: visits }, { data: orders }] = await Promise.all([
+    const [{ data: logs }, { data: visits }, { data: txs }, { data: storeOrders }] = await Promise.all([
       supabaseAdmin
         .from("attendance_logs")
         .select("student_id, log_date, attended")
@@ -76,10 +76,18 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
         .in("student_id", studentIds)
         .gte("visited_at", d30),
       supabaseAdmin
-        .from("store_orders")
-        .select("student_id, created_at, status")
+        .from("transactions")
+        .select("student_id, paid_at, status")
         .in("student_id", studentIds)
-        .order("created_at", { ascending: false }),
+        .eq("status", "paid")
+        .not("paid_at", "is", null)
+        .order("paid_at", { ascending: false }),
+      supabaseAdmin
+        .from("store_orders")
+        .select("student_id, updated_at, created_at, status")
+        .in("student_id", studentIds)
+        .eq("status", "paid")
+        .order("updated_at", { ascending: false }),
     ]);
 
     // last sign-ins via auth admin (paginate users we need)
