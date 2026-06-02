@@ -479,28 +479,51 @@ export function ChallengeTab({ coachId }: Props) {
                   </div>
                 </button>
                 {expandedStudent === s.enrollment_id && (
-                  <div className="px-4 pb-4 border-t border-border pt-3 space-y-2 text-xs">
+                  <div className="px-4 pb-4 border-t border-border pt-3 space-y-3 text-xs">
+                    {/* Dados completos da turma */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-lg bg-muted/30 p-2">
+                        <p className="text-[10px] text-muted-foreground">Turma inserida</p>
+                        <p className="font-bold text-foreground">Turma {s.group_number} · {s.comp_label}</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/30 p-2">
+                        <p className="text-[10px] text-muted-foreground">Semana da pesagem inicial</p>
+                        <p className="font-bold text-foreground">
+                          {s.initial_start_date && s.initial_end_date
+                            ? `${fmt(s.initial_start_date)} – ${fmt(s.initial_end_date)}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/30 p-2">
+                        <p className="text-[10px] text-muted-foreground">Pesagem inicial agendada</p>
+                        <p className="font-bold text-foreground">{s.initial_date ? fmt(s.initial_date) : "—"}</p>
+                      </div>
+                      <div className={`rounded-lg p-2 ${isUrgent ? "bg-red-500/10 border border-red-500/30" : "bg-muted/30"}`}>
+                        <p className="text-[10px] text-muted-foreground">Pesagem final</p>
+                        <p className={`font-bold ${isUrgent ? "text-red-400" : "text-foreground"}`}>
+                          {s.final_date ? fmt(s.final_date) : (s.final_weigh_in_date ? fmt(s.final_weigh_in_date) : "—")}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-primary/10 border border-primary/30 p-2 col-span-2">
+                        <p className="text-[10px] text-muted-foreground">🏆 Data da premiação</p>
+                        <p className="font-bold text-primary">{s.award_date ? fmt(s.award_date) : "A definir"}</p>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-4 gap-2 text-center">
                       <div className="text-muted-foreground font-bold text-left">Métrica</div>
                       <div className="text-muted-foreground font-bold">Inicial</div>
                       <div className="text-muted-foreground font-bold">Final</div>
-                      <div className="text-muted-foreground font-bold">Pesagem Final</div>
+                      <div className="text-muted-foreground font-bold">Variação</div>
 
                       <div className="text-foreground text-left">Peso</div>
                       <div className="font-bold text-foreground">{s.initial_weight != null ? `${s.initial_weight} kg` : "—"}</div>
                       <div className="font-bold text-foreground">{s.final_weight != null ? `${s.final_weight} kg` : "—"}</div>
-                      <div className={`font-bold ${isUrgent ? "text-red-400" : "text-foreground"}`}>{s.final_date ? fmt(s.final_date) : "—"}</div>
-
-                      <div className="text-foreground text-left">% Gordura</div>
-                      <div className="font-bold text-orange-400">{s.initial_body_fat != null ? `${s.initial_body_fat}%` : "—"}</div>
-                      <div className="font-bold text-orange-400">{s.final_body_fat != null ? `${s.final_body_fat}%` : "—"}</div>
-                      <div></div>
-
-                      <div className="text-foreground text-left">% Músculo</div>
-                      <div className="font-bold text-blue-400">{s.initial_muscle_mass != null ? `${s.initial_muscle_mass}%` : "—"}</div>
-                      <div className="font-bold text-blue-400">{s.final_muscle_mass != null ? `${s.final_muscle_mass}%` : "—"}</div>
-                      <div></div>
-                    </div>
+                      <div className="font-bold text-foreground">
+                        {s.initial_weight != null && s.final_weight != null
+                          ? `${(s.final_weight - s.initial_weight).toFixed(1)} kg`
+                          : "—"}
+                      </div>
                     {s.status !== "weighed_final" && s.student_id && (
                       <div className="flex gap-2 pt-1">
                         <a
