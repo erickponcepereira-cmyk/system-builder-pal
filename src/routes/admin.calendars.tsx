@@ -4,7 +4,7 @@ import { Calendar, RefreshCw, ExternalLink, MapPin, User as UserIcon, CheckCircl
 import {
   adminListAppointments,
   adminListCoachConnections,
-} from "@/server/google-calendar.functions";
+} from "@/lib/google-calendar.functions";
 
 export const Route = createFileRoute("/admin/calendars")({
   head: () => ({

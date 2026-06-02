@@ -10,7 +10,7 @@ import {
   setAppointmentCompleted,
   type UpcomingEvent,
   type GoogleConnectionStatus,
-} from "@/server/google-calendar.functions";
+} from "@/lib/google-calendar.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 

@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
-import { createCoachCalendarEvent } from "@/server/google-calendar.functions";
+import { createCoachCalendarEvent } from "@/lib/google-calendar.functions";
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
 
