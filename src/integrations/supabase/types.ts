@@ -3799,6 +3799,42 @@ export type Database = {
         }
         Relationships: []
       }
+      network_unlock_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          product_type: Database["public"]["Enums"]["product_type"] | null
+          required_sales: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          required_sales?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          product_type?: Database["public"]["Enums"]["product_type"] | null
+          required_sales?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_url: string | null
