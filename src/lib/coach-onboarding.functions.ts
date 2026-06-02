@@ -88,9 +88,12 @@ export const submitQuizResult = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const notifyUplineForRelease = createServerFn({ method: "POST" })
+export const unlockCoachWithId = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input) =>
+    z.object({ coachNumber: z.number().int().positive().max(9999999) }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile } = await supabaseAdmin
@@ -101,21 +104,35 @@ export const notifyUplineForRelease = createServerFn({ method: "POST" })
     if (!profile) throw new Error("Perfil não encontrado");
     const { data: coach } = await supabaseAdmin
       .from("coaches")
-      .select("id, onboarding_stage")
+      .select("id, profile_id, coach_number, onboarding_stage")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
-    const { notifyUpline, notifyAdmins } = await import("./coach-onboarding.server");
-    await notifyUpline(
-      coach.id,
-      "Lembrete: novo coach aguardando você",
-      `${profile.name} pediu para você liberar o painel dele.`
-    );
-    await notifyAdmins(
-      "Lembrete de liberação de coach",
-      `${profile.name} solicitou liberação do painel.`
-    );
-    return { ok: true };
+    if (coach.onboarding_stage === "released") {
+      return { ok: true, alreadyReleased: true };
+    }
+    if (coach.onboarding_stage !== "awaiting_upline_release") {
+      throw new Error("Conclua as etapas anteriores antes de liberar o ID.");
+    }
+    if (!coach.coach_number || coach.coach_number !== data.coachNumber) {
+      throw new Error("ID inválido. Confira o número que veio com seu certificado.");
+    }
+    await supabaseAdmin
+      .from("coaches")
+      .update({ onboarding_stage: "released", approved_at: new Date().toISOString() })
+      .eq("id", coach.id);
+    await supabaseAdmin
+      .from("profiles")
+      .update({ status: "active" })
+      .eq("id", coach.profile_id);
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: coach.profile_id,
+      type: "coach_onboarding",
+      title: "🎉 Seu painel de coach foi liberado!",
+      message: "Acesso completo ao painel e ao app do aluno disponível.",
+      action_url: "/coach",
+    });
+    return { ok: true, alreadyReleased: false };
   });
 
 export const listPendingReleases = createServerFn({ method: "GET" })
