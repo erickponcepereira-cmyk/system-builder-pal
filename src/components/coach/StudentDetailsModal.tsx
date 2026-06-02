@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
