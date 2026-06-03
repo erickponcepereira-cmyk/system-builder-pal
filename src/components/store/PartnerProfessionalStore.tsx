@@ -205,7 +205,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const visibleSections = sections.filter((s) => usedSectionIds.has(s.id));
 
   // Drill-down: section list → categories → products of category
-  let body: JSX.Element;
+  let body: ReactNode;
   if (!activeSection) {
     body = (
       <div className="space-y-3">
