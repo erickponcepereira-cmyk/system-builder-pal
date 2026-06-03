@@ -597,6 +597,45 @@ export type Database = {
         }
         Relationships: []
       }
+      career_medal_rules: {
+        Row: {
+          created_at: string
+          display_name: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          key: string
+          kind: string
+          sort_order: number
+          threshold: number
+          tier: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          kind: string
+          sort_order?: number
+          threshold: number
+          tier?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          kind?: string
+          sort_order?: number
+          threshold?: number
+          tier?: string | null
+        }
+        Relationships: []
+      }
       career_plan_config: {
         Row: {
           created_at: string | null
@@ -1710,6 +1749,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "coach_google_tokens_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_medals_individual: {
+        Row: {
+          awarded_at: string
+          coach_id: string
+          id: string
+          medal_key: string
+          medal_kind: string
+          period_month: number | null
+          period_year: number | null
+          vp_amount: number
+        }
+        Insert: {
+          awarded_at?: string
+          coach_id: string
+          id?: string
+          medal_key: string
+          medal_kind: string
+          period_month?: number | null
+          period_year?: number | null
+          vp_amount?: number
+        }
+        Update: {
+          awarded_at?: string
+          coach_id?: string
+          id?: string
+          medal_key?: string
+          medal_kind?: string
+          period_month?: number | null
+          period_year?: number | null
+          vp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_medals_individual_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
@@ -4746,10 +4826,13 @@ export type Database = {
           min_network_students: number | null
           min_own_sales_pct: number | null
           patent: Database["public"]["Enums"]["patent_level"] | null
+          phase: number | null
           report_scope: string | null
           required_revenue: number | null
           sort_order: number | null
           time_window_months: number | null
+          ve_max_pct: number | null
+          vp_max_pct: number | null
         }
         Insert: {
           badge_color: string
@@ -4770,10 +4853,13 @@ export type Database = {
           min_network_students?: number | null
           min_own_sales_pct?: number | null
           patent?: Database["public"]["Enums"]["patent_level"] | null
+          phase?: number | null
           report_scope?: string | null
           required_revenue?: number | null
           sort_order?: number | null
           time_window_months?: number | null
+          ve_max_pct?: number | null
+          vp_max_pct?: number | null
         }
         Update: {
           badge_color?: string
@@ -4794,10 +4880,13 @@ export type Database = {
           min_network_students?: number | null
           min_own_sales_pct?: number | null
           patent?: Database["public"]["Enums"]["patent_level"] | null
+          phase?: number | null
           report_scope?: string | null
           required_revenue?: number | null
           sort_order?: number | null
           time_window_months?: number | null
+          ve_max_pct?: number | null
+          vp_max_pct?: number | null
         }
         Relationships: []
       }
