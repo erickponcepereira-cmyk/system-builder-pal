@@ -116,8 +116,7 @@ function PartnerPanel() {
     ...benefitTabs,
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
-    { key: "profile" as Tab, label: "Perfil", icon: UserCog },
-
+    { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
