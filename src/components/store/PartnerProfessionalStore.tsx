@@ -90,19 +90,33 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
 
   const buy = async (method: "pix" | "card") => {
     if (!selected) return;
-    if (selected.kind === "partner") {
-      toast.info("Compras de produtos de empresas parceiras acontecem na loja principal.");
-      return;
-    }
     if (selected.isSchedulable && !slot) {
       toast.error("Selecione um horário para agendar.");
+      return;
+    }
+    if (selected.kind === "partner" && !studentEmail.trim()) {
+      toast.error("Informe o e-mail do aluno indicado.");
       return;
     }
     setBuying(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
-      if (selected.isSchedulable && slot) {
+      if (selected.kind === "partner") {
+        const { data: stuId, error: stuErr } = await supabase.rpc(
+          "find_student_id_by_email" as never,
+          { _email: studentEmail.trim() } as never,
+        );
+        if (stuErr) throw new Error(stuErr.message);
+        if (!stuId) throw new Error("Aluno não encontrado para esse e-mail.");
+        const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
+          _partner_product_id: selected.id,
+          _student_id: stuId,
+          _payment_method: method,
+        } as never);
+        if (error) throw new Error(error.message);
+        ppId = data as unknown as string;
+      } else if (selected.isSchedulable && slot) {
         const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
           _professional_product_id: selected.id,
           _starts_at: slot,
@@ -134,6 +148,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       });
       setSelected(null);
       setSlot(null);
+      setStudentEmail("");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
       toast.error(msg);
