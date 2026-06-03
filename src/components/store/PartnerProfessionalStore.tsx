@@ -107,8 +107,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       toast.error("Selecione um horário para agendar.");
       return;
     }
-    if (selected.kind === "partner" && mode === "reseller" && !studentEmail.trim()) {
-      toast.error("Informe o e-mail do aluno indicado.");
+    if (mode === "reseller" && !resellerStudent?.id) {
+      toast.error("Selecione um aluno antes de comprar.");
       return;
     }
     if (selected.kind === "partner" && mode === "student" && !ownStudentId) {
@@ -119,20 +119,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     try {
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
+      const buyerStudentId = mode === "reseller" ? resellerStudent!.id : ownStudentId;
       if (selected.kind === "partner") {
-        let stuId: string | null = ownStudentId;
-        if (mode === "reseller") {
-          const { data: foundId, error: stuErr } = await supabase.rpc(
-            "find_student_id_by_email" as never,
-            { _email: studentEmail.trim() } as never,
-          );
-          if (stuErr) throw new Error(stuErr.message);
-          stuId = (foundId as unknown as string) || null;
-        }
-        if (!stuId) throw new Error("Aluno não encontrado.");
+        if (!buyerStudentId) throw new Error("Aluno não encontrado.");
         const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
           _partner_product_id: selected.id,
-          _student_id: stuId,
+          _student_id: buyerStudentId,
           _payment_method: method,
         } as never);
         if (error) throw new Error(error.message);
@@ -142,6 +134,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           _professional_product_id: selected.id,
           _starts_at: slot,
           _payment_method: method,
+          ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;
@@ -149,6 +142,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
           _professional_product_id: selected.id,
           _payment_method: method,
+          ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;
