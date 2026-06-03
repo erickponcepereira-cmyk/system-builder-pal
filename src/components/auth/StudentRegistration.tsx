@@ -40,6 +40,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [referralCoachName, setReferralCoachName] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   useEffect(() => {
     try {
