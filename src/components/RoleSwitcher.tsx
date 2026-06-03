@@ -81,7 +81,12 @@ export function RoleSwitcher({ current }: { current: RoleOption["key"] }) {
                 <button
                   key={r.key}
                   disabled={isCurrent}
-                  onClick={() => { setOpen(false); navigate({ to: r.to }); }}
+                  onClick={() => {
+                    setOpen(false);
+                    if (r.to === "/student") sessionStorage.setItem("fitmind_selected_area", "student");
+                    else sessionStorage.removeItem("fitmind_selected_area");
+                    navigate({ to: r.to });
+                  }}
                   className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs ${
                     isCurrent ? "bg-white/5 text-white/40 cursor-default" : "text-white hover:bg-white/10"
                   }`}
