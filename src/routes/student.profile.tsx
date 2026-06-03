@@ -19,6 +19,7 @@ const sections = [
       { icon: CreditCard, label: "Meus planos" },
       { icon: Award, label: "Minha evolução" },
       { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
+      { icon: ClipboardList, label: "Meu Protocolo", to: "/student/protocol" },
       { icon: ClipboardList, label: "Anamnese", to: "/student/health" },
     ],
   },
