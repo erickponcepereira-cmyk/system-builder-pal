@@ -656,36 +656,48 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       {activeSection && (subcatsOfActive.length === 0 || activeSubcategory) && (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((item) => (
-            <button key={item.id} onClick={() => setDetailProduct(item)} className="rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
-              <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
-                {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
-              </div>
-              {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
-              <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
-              {item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}
-              <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-                <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
-                {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
-              </div>
-              {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
-                <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
+            <div key={item.id} className="relative">
+              <button onClick={() => setDetailProduct(item)} className="w-full rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
+                <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
+                  {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
+                </div>
+                {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
+                <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
+                {item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}
+                <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                  <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
+                  {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
+                </div>
+                {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
+                )}
+                {item.hasChallenge && (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    🔥 Acesso a 1 desafio
+                  </span>
+                )}
+                {(item.cardDays ?? 0) > 0 && (
+                  <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                    🪪 {item.cardDays}d carteirinha
+                  </span>
+                )}
+                {coachMode && (item.pointsPerSale ?? 0) > 0 && (
+                  <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                    🏆 +{item.pointsPerSale} pts
+                  </span>
+                )}
+              </button>
+              {!coachMode && myReferralCode && indicableProductIds.has(item.sourceId) && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId); }}
+                  title="Copiar link de indicação"
+                  className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
               )}
-              {item.hasChallenge && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                  🔥 Acesso a 1 desafio
-                </span>
-              )}
-              {(item.cardDays ?? 0) > 0 && (
-                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                  🪪 {item.cardDays}d carteirinha
-                </span>
-              )}
-              {coachMode && (item.pointsPerSale ?? 0) > 0 && (
-                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                  🏆 +{item.pointsPerSale} pts
-                </span>
-              )}
-            </button>
+            </div>
           ))}
           {filtered.length === 0 && (
             <p className="col-span-2 rounded-xl bg-card p-6 text-center text-sm text-muted-foreground">Nenhum produto nessa categoria ainda.</p>
