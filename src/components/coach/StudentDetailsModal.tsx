@@ -97,7 +97,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
         supabase.from("transactions").select("id,gross_amount,status,paid_at,created_at,products!transactions_product_id_fkey(name)").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50),
         supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi,client_notes,professional_notes").eq("student_id", studentId).order("assessment_date", { ascending: false }),
         supabase.from("bioimpedance_evaluations").select("id,evaluation_date,evaluation_type,weight,fat_percentage,muscle_percentage").eq("student_id", studentId).order("evaluation_date", { ascending: false }),
-        supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at").eq("student_id", studentId).order("filled_at", { ascending: false }),
+        supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at,gender,height,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations,blood_type,food_intolerances,has_diabetes,has_hypertension,has_cardiopathy,other_chronic_conditions,surgical_history,supplements_used").eq("student_id", studentId).order("filled_at", { ascending: false }),
         supabase.from("weight_logs").select("id,log_date,weight,waist_cm,hip_cm").eq("student_id", studentId).order("log_date", { ascending: false }).limit(60),
         supabase.from("evolution_photos").select("id,photo_url,photo_date,caption").eq("student_id", studentId).order("photo_date", { ascending: false }).limit(24),
       ]);
