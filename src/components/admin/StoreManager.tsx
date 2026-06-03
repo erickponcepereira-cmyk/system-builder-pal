@@ -146,6 +146,52 @@ export function StoreManager() {
         </button>
       </div>
 
+      {(() => {
+        const pendingSecs = sections.filter((s) => s.pending);
+        const pendingCats = categories.filter((c) => c.pending);
+        if (pendingSecs.length === 0 && pendingCats.length === 0) return null;
+        return (
+          <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/5 p-4 space-y-2">
+            <h2 className="text-sm font-bold text-yellow-300 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Aprovações pendentes ({pendingSecs.length + pendingCats.length})
+            </h2>
+            <p className="text-[11px] text-yellow-200/70">
+              Categorias e subcategorias criadas por parceiros e profissionais. Aprove para liberar a exibição na loja.
+            </p>
+            <div className="space-y-1.5">
+              {pendingSecs.map((s) => (
+                <div key={s.id} className="flex items-center gap-2 rounded-lg bg-black/30 px-3 py-2 text-sm">
+                  <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Seção</span>
+                  <span className="flex-1 text-white truncate">{s.name}</span>
+                  <button onClick={() => approveSection(s.id)} className="flex items-center gap-1 rounded bg-green-500/15 px-3 py-1 text-[11px] font-bold text-green-400 hover:bg-green-500/25">
+                    <CheckCircle2 className="h-3 w-3" /> Aprovar
+                  </button>
+                  <button onClick={() => deleteSection(s.id)} className="flex items-center gap-1 rounded bg-red-500/15 px-3 py-1 text-[11px] font-bold text-red-400 hover:bg-red-500/25">
+                    <Trash2 className="h-3 w-3" /> Rejeitar
+                  </button>
+                </div>
+              ))}
+              {pendingCats.map((c) => {
+                const parent = sections.find((s) => s.id === c.section_id);
+                return (
+                  <div key={c.id} className="flex items-center gap-2 rounded-lg bg-black/30 px-3 py-2 text-sm">
+                    <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Subcategoria</span>
+                    <span className="flex-1 text-white truncate">{c.name} <span className="text-white/40 text-xs">em {parent?.name || "—"}</span></span>
+                    <button onClick={() => approveCategory(c.id)} className="flex items-center gap-1 rounded bg-green-500/15 px-3 py-1 text-[11px] font-bold text-green-400 hover:bg-green-500/25">
+                      <CheckCircle2 className="h-3 w-3" /> Aprovar
+                    </button>
+                    <button onClick={() => deleteCategory(c.id)} className="flex items-center gap-1 rounded bg-red-500/15 px-3 py-1 text-[11px] font-bold text-red-400 hover:bg-red-500/25">
+                      <Trash2 className="h-3 w-3" /> Rejeitar
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {newSection && (
         <div className="rounded-xl border border-primary/40 bg-[#0F0F0F] p-4 space-y-3">
           <div className="grid gap-3 md:grid-cols-4">
