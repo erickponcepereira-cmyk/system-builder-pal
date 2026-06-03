@@ -116,8 +116,7 @@ function PartnerPanel() {
     ...benefitTabs,
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
-    { key: "profile" as Tab, label: "Perfil", icon: UserCog },
-
+    { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
@@ -152,9 +151,8 @@ function PartnerPanel() {
         {tab === "store" && hasActiveFree && <StorePage />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
         {tab === "fitmind_calendar" && <FitmindCalendar />}
-
+        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && <MyNetworkPanel />}
-        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
@@ -818,36 +816,50 @@ function CollaboratorsPanel({ partner }: { partner: Partner }) {
     );
   }
 
+  const MAX_COLLABS = 7;
+  const reached = collabs.length >= MAX_COLLABS;
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: "#1A1A1A" }}>
         <Users className="h-7 w-7 text-primary mx-auto mb-2" />
         <h2 className="text-base font-bold text-white">Convidar colaboradores</h2>
         <p className="mt-1 text-xs text-white/50">
-          Compartilhe este link com seus colaboradores. Eles entram como alunos vinculados à <b className="text-white/80">{partner.fantasy_name}</b> e recebem todos os benefícios do painel do aluno.
+          Compartilhe este link com seus colaboradores. Eles entram vinculados à <b className="text-white/80">{partner.fantasy_name}</b>, recebem todos os <b className="text-white/80">produtos gratuitos</b>, <b className="text-white/80">desafios</b> e acesso completo ao painel do aluno enquanto sua empresa tiver produtos ativos.
+        </p>
+        <p className="mt-2 text-[11px] text-white/60">
+          Limite: <b className={reached ? "text-red-400" : "text-primary"}>{collabs.length} / {MAX_COLLABS}</b> colaboradores
         </p>
 
-        <div className="mt-4 inline-block bg-white p-3 rounded-xl">
-          <QRCodeSVG value={link} size={180} />
-        </div>
+        {!reached ? (
+          <>
+            <div className="mt-4 inline-block bg-white p-3 rounded-xl">
+              <QRCodeSVG value={link} size={180} />
+            </div>
 
-        <div className="mt-3 rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{link}</div>
-        <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{partner.referral_code}</span></p>
+            <div className="mt-3 rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{link}</div>
+            <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{partner.referral_code}</span></p>
 
-        <div className="mt-4 flex gap-2">
-          <button onClick={copy} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20">
-            <Copy className="h-3.5 w-3.5" /> Copiar link
-          </button>
-          <button onClick={share} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90">
-            <Share2 className="h-3.5 w-3.5" /> Compartilhar
-          </button>
-        </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={copy} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20">
+                <Copy className="h-3.5 w-3.5" /> Copiar link
+              </button>
+              <button onClick={share} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90">
+                <Share2 className="h-3.5 w-3.5" /> Compartilhar
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="mt-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3 text-xs text-yellow-200">
+            Limite de {MAX_COLLABS} colaboradores atingido. Remova alguém para liberar novas vagas.
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-white">Meus colaboradores</h3>
-          <span className="text-[11px] text-white/50">{collabs.length} cadastrado(s)</span>
+          <span className="text-[11px] text-white/50">{collabs.length} / {MAX_COLLABS}</span>
         </div>
         {loading ? (
           <p className="text-xs text-white/40">Carregando...</p>
@@ -865,8 +877,9 @@ function CollaboratorsPanel({ partner }: { partner: Partner }) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">{c.profiles?.name || "—"}</p>
                   <p className="text-[10px] text-white/40 truncate">{c.profiles?.email || c.profiles?.phone || ""}</p>
+                  <p className="text-[10px] text-primary/80 truncate font-semibold">Colaborador · {partner.fantasy_name}</p>
                 </div>
-                <span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold">Colab.</span>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold whitespace-nowrap">Colab.</span>
               </div>
             ))}
           </div>
