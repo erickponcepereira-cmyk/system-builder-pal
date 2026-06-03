@@ -331,13 +331,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                       {resellerStudent.email && (
                         <p className="text-[11px] text-muted-foreground">{resellerStudent.email}</p>
                       )}
-                      <p className="text-[11px] text-foreground/60">
-                        O pedido será registrado em nome deste aluno. Comissões de rede seguem o coach dele.
-                      </p>
                     </>
                   ) : (
-                    <p className="text-sm text-foreground">
-                      Selecione um aluno no topo da loja antes de finalizar.
+                    <p className="text-[11px] text-foreground/70">
+                      Você poderá selecionar o aluno no carrinho antes de finalizar.
                     </p>
                   )}
                 </div>
