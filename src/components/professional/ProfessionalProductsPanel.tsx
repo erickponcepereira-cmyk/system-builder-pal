@@ -9,6 +9,7 @@ import {
   type CoachCommissionPct,
   type PartnerPriceMode,
 } from "@/lib/partnerFinance";
+import { CurrencyInputBRL } from "@/components/ui/currency-input";
 
 interface ProProduct {
   id: string;
@@ -247,45 +248,24 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
   const pct = (product.coach_commission_percentage || 10) as CoachCommissionPct;
   const [method, setMethod] = useState<"pix" | "card">("card");
 
-  // Local string state for the editable input → permite digitar decimais sem "saltar"
-  const [chargeStr, setChargeStr] = useState<string>(() => String(product.price ?? ""));
-  const [receiveStr, setReceiveStr] = useState<string>(() => String(product.professional_net_amount ?? ""));
-
-  // Sincroniza quando o produto carrega/edita externamente (id diferente)
-  useEffect(() => {
-    setChargeStr(product.price != null ? String(product.price) : "");
-    setReceiveStr(product.professional_net_amount != null ? String(product.professional_net_amount) : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id]);
-
-  const charge = Number(chargeStr.replace(",", ".")) || 0;
-  const receive = Number(receiveStr.replace(",", ".")) || 0;
+  const charge = Number(product.price) || 0;
+  const receive = Number(product.professional_net_amount) || 0;
 
   const breakdown = mode === "receive"
     ? computeFromReceive(receive, pct, method)
     : computeFromCharge(charge, pct, method);
 
-  const updateCharge = (v: string) => {
-    setChargeStr(v);
-    const n = Number(v.replace(",", ".")) || 0;
-    onChange({ price: n });
-  };
-  const updateReceive = (v: string) => {
-    setReceiveStr(v);
-    const n = Number(v.replace(",", ".")) || 0;
+  const updateCharge = (n: number) => onChange({ price: n });
+  const updateReceive = (n: number) => {
     const inv = computeFromReceive(n, pct, method);
     onChange({ professional_net_amount: n, price: inv.gross });
   };
 
   const switchMode = (next: PartnerPriceMode) => {
-    onChange({ price_input_mode: next });
     if (next === "receive") {
-      // ao trocar para "receber", recalcula o líquido a partir do bruto atual
       const b = computeFromCharge(charge, pct, method);
-      setReceiveStr(b.partnerNet > 0 ? String(b.partnerNet) : "");
       onChange({ price_input_mode: next, professional_net_amount: Math.max(0, b.partnerNet) });
     } else {
-      setChargeStr(breakdown.gross > 0 ? String(breakdown.gross) : "");
       onChange({ price_input_mode: next, price: breakdown.gross });
     }
   };
@@ -293,7 +273,6 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
   const changePct = (next: CoachCommissionPct) => {
     if (mode === "receive") {
       const inv = computeFromReceive(receive, next, method);
-      setChargeStr(inv.gross > 0 ? String(inv.gross) : "");
       onChange({ coach_commission_percentage: next, price: inv.gross });
     } else {
       onChange({ coach_commission_percentage: next });
@@ -304,7 +283,6 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
     setMethod(m);
     if (mode === "receive") {
       const inv = computeFromReceive(receive, pct, m);
-      setChargeStr(inv.gross > 0 ? String(inv.gross) : "");
       onChange({ price: inv.gross });
     }
   };
@@ -327,27 +305,13 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
       </div>
 
       {mode === "charge" ? (
-        <Field label="Preço cobrado do cliente (R$)">
-          <input
-            type="text"
-            inputMode="decimal"
-            value={chargeStr}
-            onChange={e => updateCharge(e.target.value)}
-            placeholder="0,00"
-            className="field-input"
-          />
+        <Field label="Preço cobrado do cliente">
+          <CurrencyInputBRL value={charge} onChange={updateCharge} />
         </Field>
       ) : (
-        <Field label="Quanto você quer receber líquido (R$)">
-          <input
-            type="text"
-            inputMode="decimal"
-            value={receiveStr}
-            onChange={e => updateReceive(e.target.value)}
-            placeholder="0,00"
-            className="field-input"
-          />
-          <p className="mt-1 text-[10px] text-white/40">Vamos calcular automaticamente quanto cobrar do cliente.</p>
+        <Field label="Quanto você quer receber líquido">
+          <CurrencyInputBRL value={receive} onChange={updateReceive} />
+          <p className="mt-1 text-[10px] text-white/40">O preço cobrado é aumentado automaticamente para cobrir as taxas (igual simulação de cartão em apps bancários).</p>
         </Field>
       )}
 
