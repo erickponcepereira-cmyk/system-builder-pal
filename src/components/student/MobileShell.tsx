@@ -46,7 +46,7 @@ export function MobileShell({ children }: MobileShellProps) {
           className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 border-t border-white/5"
           style={{ backgroundColor: "rgba(15,15,15,0.95)", backdropFilter: "blur(20px)" }}
         >
-          <div className="grid grid-cols-8 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="grid grid-cols-7 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {navItems.map((item) => {
               const isActive =
                 item.to === "/student"
