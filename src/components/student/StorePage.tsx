@@ -9,6 +9,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
+import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -91,6 +92,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [myReferralCode, setMyReferralCode] = useState<string | null>(null);
   const [indicableProductIds, setIndicableProductIds] = useState<Set<string>>(new Set());
   const [pendingReferrerStudentId, setPendingReferrerStudentId] = useState<string | null>(null);
+
+  const [storeTab, setStoreTab] = useState<"fitmind" | "partner" | "professional">("fitmind");
 
   const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
 
@@ -516,9 +519,36 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
 
 
+  const tabsBar = (
+    <div className="flex gap-2 rounded-full bg-card p-1">
+      {([
+        { id: "fitmind", label: "FitMind" },
+        { id: "partner", label: "Parceiros" },
+        { id: "professional", label: "Profissionais" },
+      ] as const).map((t) => (
+        <button key={t.id} onClick={() => setStoreTab(t.id)} className={`flex-1 rounded-full px-3 py-1.5 text-xs font-bold transition ${storeTab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (storeTab !== "fitmind") {
+    return (
+      <div className="flex flex-col gap-4 p-4 pb-6">
+        <header className="pt-2">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
+          <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
+        </header>
+        {tabsBar}
+        <PartnerProfessionalStore kind={storeTab} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
+      {tabsBar}
       <header className="flex items-center justify-between pt-2">
         <div>
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
