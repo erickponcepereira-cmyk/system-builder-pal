@@ -12,6 +12,15 @@ const SourceSchema = z.object({
   id: z.string().uuid(),
 });
 
+const cleanCheckoutError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "Falha ao criar pagamento");
+  return message
+    .replace(/^\[DIAG\]\s*/i, "")
+    .replace(/^Error:\s*/i, "")
+    .replace(/\n[\s\S]*$/g, "")
+    .trim() || "Falha ao criar pagamento";
+};
+
 /** Cria pagamento PIX no Mercado Pago e retorna QR code + texto copia-e-cola. */
 export const createPixCheckout = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => {
@@ -30,7 +39,7 @@ export const createPixCheckout = createServerFn({ method: "POST" })
       const { handleCreatePix } = await import("./mercadopago-impl.server");
       return await handleCreatePix(data.data);
     } catch (e: any) {
-      return { _error: `HANDLER: ${e?.message || String(e)}\n${e?.stack || ""}` } as any;
+      return { _error: cleanCheckoutError(e) } as any;
     }
   });
 
