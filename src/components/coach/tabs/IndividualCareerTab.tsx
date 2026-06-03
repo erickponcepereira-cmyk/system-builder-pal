@@ -151,10 +151,11 @@ export function IndividualCareerTab() {
   );
 }
 
-function MedalCard({ rule, current, earned }: { rule: MedalRule; current: number; earned: boolean }) {
+function MedalCard({ rule, current, earned, awardedAt }: { rule: MedalRule; current: number; earned: boolean; awardedAt: string | null }) {
   const color = TIER_COLOR[rule.tier || ""] || "#CD7F32";
   const pct = rule.threshold > 0 ? Math.min((current / rule.threshold) * 100, 100) : 0;
   const Icon = rule.icon === "crown" ? Crown : rule.icon === "trophy" ? Trophy : Medal;
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
   return (
     <div
       className={`rounded-xl p-3 ${earned ? "ring-1" : ""}`}
@@ -170,16 +171,21 @@ function MedalCard({ rule, current, earned }: { rule: MedalRule; current: number
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold" style={{ color: earned ? color : "#fff" }}>{rule.display_name}</span>
-            {earned && (
+            {earned ? (
               <span className="text-[9px] font-bold rounded-full px-2 py-0.5" style={{ backgroundColor: `${color}25`, color }}>
                 CONQUISTADA
               </span>
+            ) : (
+              <span className="text-[9px] font-bold rounded-full px-2 py-0.5 bg-white/5 text-white/40">BLOQUEADA</span>
             )}
           </div>
           <p className="text-[10px] text-white/40">{fmtBRL(rule.threshold)}</p>
           <div className="h-1.5 rounded-full overflow-hidden mt-1.5" style={{ backgroundColor: "#252525" }}>
             <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
           </div>
+          {earned && awardedAt && (
+            <p className="text-[10px] mt-1" style={{ color }}>Conquistada em {fmtDate(awardedAt)}</p>
+          )}
         </div>
       </div>
     </div>
