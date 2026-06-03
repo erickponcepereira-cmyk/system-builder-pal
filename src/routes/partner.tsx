@@ -14,6 +14,7 @@ import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
+import { CategoryPicker } from "@/components/store/CategoryPicker";
 
 
 export const Route = createFileRoute("/partner")({
@@ -45,6 +46,8 @@ interface Product {
   network_l1_amount?: number;
   network_l2_amount?: number;
   network_l3_amount?: number;
+  section_id?: string | null;
+  category_id?: string | null;
 }
 
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
@@ -216,6 +219,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
+    section_id: null,
+    category_id: null,
   });
 
   const upload = async (file: File) => {
@@ -357,6 +362,12 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               {editing.kind === "paid" && (
                 <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
               )}
+
+              <CategoryPicker
+                sectionId={editing.section_id}
+                categoryId={editing.category_id}
+                onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
+              />
 
               <Field label="Instruções de resgate"><textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Apresente o QR Code da carteirinha na loja" /></Field>
             </div>
