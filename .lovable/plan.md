@@ -1,49 +1,54 @@
-## Reestruturação do Sistema de Carreira
+## Objetivo
 
-Vou reorganizar a aba **Carreira** do coach em duas seções, conforme o PDF e o texto enviados:
+Substituir todo o conteúdo atual de `/student/coach-course` por uma jornada de conversão em 4 blocos: explicação inspiracional → trilha (curso + análise de perfil) → pitch + compra → contato direto do coach upline.
 
-### 1. Aba "Individual" — Hall da Fama FitMind (medalhas)
-Reconhecimento da produção pessoal (VP).
+## Estrutura nova da página
 
-**Ordem da Excelência FitMind** — medalhas mensais (VP de um único mês):
-- 🥉 Contribuidor R$ 2.500 · Construtor R$ 5.000 · Realizador R$ 7.500
-- 🥈 Influenciador R$ 10.000 · Pioneiro R$ 20.000 · Estrategista R$ 30.000
-- 🥇 Arquiteto R$ 40.000 · Expansor R$ 50.000
-- 🏅 Líder R$ 65.000 · Mentor R$ 85.000
-- 👑 Master R$ 100.000
+### 1. Hero + Modal "Por que ser Coach FitMind"
+- Card de topo com CTA "Entenda a oportunidade" que abre um `Dialog`.
+- Texto do modal (versão refinada do briefing):
+  > **Torne-se Coach FitMind e construa ganhos sem teto.**
+  > Monte sua própria rede, venda produtos e serviços do ecossistema, participe de desafios premiados e transforme a sua paixão por saúde em uma carreira escalável. Você ganha indicando, ganha vendendo e ganha pelo crescimento de quem entra com você. Tudo com a estrutura, a metodologia e a marca FitMind ao seu lado.
+- Bullets curtos: "Comissões recorrentes", "Bônus de rede", "Desafios e premiações", "Carreira reconhecida".
 
-**Clube dos Campeões FitMind** — VP acumulado em toda a carreira:
-- 🏆 Clube 100K · 250K · 500K · 1M · 2,5M · 5M · 10M
+### 2. Trilha para se tornar Coach (2 passos visíveis)
 
-Cada cartão mostra: status (conquistada/em progresso), valor alvo, valor atual e barra de progresso. Medalhas mensais conquistadas em meses anteriores ficam registradas como histórico.
+**Passo 1 — Curso "Ativação Coach – Anual"**
+- Card com selo "Obrigatório", descrição do curso, duração, e botão `Acessar curso`.
+- Sem checklist de módulos individuais (toda a antiga listagem de `coach_course_modules` sai da tela; mantemos a tabela no banco, apenas escondemos da UI).
+- Estado visual: `Pendente` / `Em andamento` / `Concluído` baseado em `coach_course_progress` agregado (qualquer registro = em andamento; 100% dos módulos obrigatórios = concluído).
 
-### 2. Aba "Ordem dos Construtores FitMind" — Carreira com equipe (VP + VE)
-21 patentes organizadas em 4 fases (extraído do PDF):
+**Passo 2 — Análise de Perfil Comportamental**
+- Card explicando: "Preencha sua análise de perfil comportamental e receba um relatório com os produtos e serviços que você tem mais facilidade de vender."
+- Botão `Iniciar análise` (por ora abre um modal placeholder "Em breve" — a implementação do questionário/relatório fica fora do escopo desta página, será uma rota própria depois). Status: `Não iniciada`.
 
-- **Fase 1 — Desenvolvimento Pessoal** (níveis 1–3): Explorador, Contribuidor, Construtor
-- **Fase 2 — Resultados e Liderança** (níveis 4–12): Realizador → Master
-- **Fase 3 — Expansão** (níveis 13–17): Navegador → Presidente
-- **Fase 4 — Legado** (níveis 18–21): Titã → Círculo dos Fundadores
+### 3. Pitch + Produto à venda (Ativação Coach – Anual)
+- Card destaque com:
+  - Headline curta de pitch ("Pronto pra ativar? Comece hoje sua jornada Coach FitMind.")
+  - Preço e descrição do produto "Ativação Coach – Anual" (buscado de `products`/`store_items` pelo SKU/slug configurado; fallback hardcoded se não existir).
+  - Botão **Comprar agora** → reaproveita o fluxo de checkout existente (`MercadoPagoCheckout` ou rota `pay.$orderNumber`) já usado em outros pontos do app.
 
-Cada patente passa a guardar: meta (R$), prazo em meses, % máximo de VP, % máximo de VE. A patente atual é a maior alcançada respeitando os limites de VP/VE no prazo da patente.
+### 4. Fale com seu Coach (upline 1)
+- Bloco final mostrando nome, foto e WhatsApp do coach vinculado ao aluno (`students.coach_id` → `coaches` → `profile`), com botão **Falar no WhatsApp** usando `whatsappUrl()` e mensagem pré-preenchida ("Olá! Quero entender melhor como me tornar Coach FitMind.").
+- Texto de apoio: "Seu coach pode te orientar e tirar dúvidas antes da decisão."
 
-### Mudanças técnicas
+## Itens removidos da tela
+- Listagem de módulos do curso (`modules.map(...)`).
+- Formulário de solicitação para Coach (motivação, experiência, cidade, telefone, seletor de coach, botão `Enviar solicitação`).
+- Barra de progresso percentual de módulos.
 
-**Banco (migração):**
-- Reescrever `patent_rules` com os 21 níveis do PDF (key, display_name, level, required_revenue, time_window_months, vp_max_pct, ve_max_pct, phase). Renomear `min_own_sales_pct` para refletir limite máximo de VP por nível, ou adicionar coluna `vp_max_pct`.
-- Nova tabela `coach_medals_individual` (coach_id, medal_key, month/year para mensais, awarded_at) — para registrar medalhas mensais conquistadas como histórico permanente.
-- Nova tabela `career_medal_rules` com os dois conjuntos (Ordem da Excelência mensal e Clube dos Campeões acumulado), para o admin auditar.
+Mantemos os imports/dados de banco somente onde forem reaproveitados (status agregado do curso e coach upline).
 
-**Server function:**
-- Estender `getCareerProgress`: retornar também (a) VP do mês atual, (b) VP acumulado total, (c) medalhas mensais já conquistadas, (d) progresso por patente da Ordem dos Construtores agrupado por fase.
-- Job/cron já existente (`career.reset-expired`) — adaptar para também "carimbar" a medalha mensal do coach no fechamento do mês.
+## Arquivos afetados
+- `src/routes/student.coach-course.tsx` — reescrita completa do componente.
+- (Eventual) novo componente local de modal `BecomeCoachInfoModal` no mesmo arquivo, sem novos arquivos.
 
-**Frontend:**
-- `CareerTab.tsx` vira um wrapper com duas tabs ("Individual" | "Ordem dos Construtores FitMind").
-- Novo `IndividualCareerTab`: lista medalhas mensais (mês atual + histórico) e clubes acumulados.
-- Renomeado `ConstructorsCareerTab` (atual conteúdo da `CareerTab`): mostra as 21 patentes agrupadas por Fase, destacando a atual e a próxima.
-- Página admin `admin.patents` atualizada para refletir o novo schema.
+## Pontos técnicos
+- Buscar coach upline: `profiles → students(coach_id) → coaches(profile_id) → profiles(name, phone, avatar_url)`.
+- Buscar produto "Ativação Coach – Anual": tentar `products` por slug `ativacao-coach-anual`; se não existir, mostrar card estático com aviso "Configurar produto no admin" só em dev — em produção, esconde o botão de compra e mostra "Em breve".
+- Checkout: usar o mesmo padrão já presente em `student.store.tsx` (a confirmar ao implementar).
+- Não criar tabelas novas. A análise de perfil comportamental fica como placeholder visual nesta etapa.
 
-### Pergunta antes de prosseguir
-1. **Histórico de medalhas mensais** — devo começar a registrar agora (não há histórico anterior, somente do mês atual em diante), ou você quer que eu tente reconstruir retroativamente a partir das transações pagas existentes?
-2. **Patentes atuais dos coaches** — quer que eu recalcule a patente de todos os coaches já cadastrados com base no novo sistema, ou mantém a patente atual e o recálculo acontece naturalmente quando rodar o próximo ciclo?
+## Fora de escopo
+- Implementação do questionário e do relatório de perfil comportamental.
+- Criação automática do produto "Ativação Coach – Anual" no catálogo (precisa estar cadastrado no admin).
