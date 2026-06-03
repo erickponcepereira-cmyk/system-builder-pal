@@ -13,6 +13,9 @@ export type PatentRule = {
   time_window_months: number;
   min_own_sales_pct: number;
   max_team_sales_pct: number;
+  vp_max_pct: number | null;
+  ve_max_pct: number | null;
+  phase: number | null;
   level: number;
   sort_order: number;
   benefits: string | null;
@@ -60,7 +63,7 @@ export const getCareerProgress = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<CareerProgress> => {
     const { data: rules } = await supabaseAdmin
       .from("patent_rules")
-      .select("id,key,display_name,description,badge_color,badge_icon,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,level,sort_order,benefits,is_active")
+      .select("id,key,display_name,description,badge_color,badge_icon,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,vp_max_pct,ve_max_pct,phase,level,sort_order,benefits,is_active")
       .eq("is_active", true)
       .not("key", "is", null)
       .order("level", { ascending: true });
@@ -70,6 +73,9 @@ export const getCareerProgress = createServerFn({ method: "GET" })
       time_window_months: Number(r.time_window_months) || 1,
       min_own_sales_pct: Number(r.min_own_sales_pct) || 0,
       max_team_sales_pct: Number(r.max_team_sales_pct) || 0,
+      vp_max_pct: r.vp_max_pct == null ? null : Number(r.vp_max_pct),
+      ve_max_pct: r.ve_max_pct == null ? null : Number(r.ve_max_pct),
+      phase: r.phase == null ? null : Number(r.phase),
       level: Number(r.level) || 0,
     }));
 
@@ -110,13 +116,17 @@ export const getCareerProgress = createServerFn({ method: "GET" })
     }
 
     // Determine current patent (highest level whose rules are met)
+    // Rule: own VP counts up to vp_max_pct of required_revenue; the remainder must come from team.
     let currentPatentKey: string | null = null;
     for (const p of patents) {
       const w = windows[p.time_window_months];
       if (!w) continue;
-      const meetsRevenue = p.required_revenue === 0 || w.totalRevenue >= p.required_revenue;
-      const meetsOwnPct = w.ownPct >= p.min_own_sales_pct - 0.0001;
-      if (meetsRevenue && meetsOwnPct) currentPatentKey = p.key;
+      if (p.required_revenue === 0) { currentPatentKey = p.key; continue; }
+      const vpMax = p.vp_max_pct != null ? p.vp_max_pct : p.min_own_sales_pct;
+      const cap = (p.required_revenue * (vpMax || 100)) / 100;
+      const cappedOwn = Math.min(w.ownRevenue, cap);
+      const qualifying = cappedOwn + w.teamRevenue;
+      if (qualifying >= p.required_revenue) currentPatentKey = p.key;
       else break;
     }
     const currentLevel = patents.find((p) => p.key === currentPatentKey)?.level ?? 0;
