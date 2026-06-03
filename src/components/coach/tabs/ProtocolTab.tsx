@@ -630,6 +630,10 @@ export function ProtocolTab() {
         </>
       )}
 
+      {detailsTab && selected && !selected.external && (
+        <StudentDetailsModal studentId={selected.id} initialTab={detailsTab} onClose={() => setDetailsTab(null)} />
+      )}
+
       {templatePickerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setTemplatePickerOpen(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
