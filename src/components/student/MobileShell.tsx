@@ -23,9 +23,9 @@ export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
+    <div className="h-screen w-full overflow-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
       <div
-        className="relative flex w-full max-w-[430px] flex-col min-h-screen overflow-x-hidden shadow-2xl"
+        className="relative flex w-full max-w-[430px] flex-col h-screen overflow-hidden shadow-2xl"
         style={{ backgroundColor: "#0F0F0F" }}
       >
         {/* Top header with role switcher */}
@@ -43,7 +43,7 @@ export function MobileShell({ children }: MobileShellProps) {
         <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24">{children}</main>
 
         <nav
-          className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 border-t border-white/5"
+          className="absolute bottom-0 left-0 right-0 z-50 border-t border-white/5"
           style={{ backgroundColor: "rgba(15,15,15,0.95)", backdropFilter: "blur(20px)" }}
         >
           <div className="grid grid-cols-7 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
