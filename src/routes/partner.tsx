@@ -80,13 +80,33 @@ function PartnerPanel() {
       supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }),
       supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }).limit(30),
       supabase.from("partner_visits" as never).select("id" as never, { count: "exact", head: true }).eq("partner_id" as never, pt.id),
-      supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, referral_code, upline_coach_id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
     setProducts((pr.data as unknown as Product[]) || []);
     setPosts((ps.data as unknown as Post[]) || []);
     setVisits(v.count || 0);
     setOtherRoles({ admin: profile.role === "admin", coach: !!coach.data, student: !!student.data });
+    if (coach.data) {
+      const c = coach.data as { id: string; referral_code: string | null; upline_coach_id: string | null };
+      setCoachCtx({
+        profileId: profile.id,
+        coachId: c.id,
+        name: pt.fantasy_name,
+        email: "",
+        phone: pt.whatsapp || "",
+        city: pt.city || "",
+        state: pt.state || "",
+        bio: "",
+        avatarUrl: pt.photo_url,
+        patent: null,
+        referralCode: c.referral_code || "",
+        referralLink: c.referral_code ? `${window.location.origin}/r/${c.referral_code}` : "",
+        uplineCoachId: c.upline_coach_id,
+        totalActiveStudents: 0,
+        totalSales: 0,
+      });
+    }
     setLoading(false);
   };
 
