@@ -6297,6 +6297,7 @@ export type Database = {
           order_number: string
           payment_fee: number
           payment_method: Database["public"]["Enums"]["payment_method"]
+          referrer_student_id: string | null
           shipping_address: string | null
           shipping_city: string | null
           shipping_name: string | null
@@ -6319,6 +6320,7 @@ export type Database = {
           order_number?: string
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          referrer_student_id?: string | null
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_name?: string | null
@@ -6341,6 +6343,7 @@ export type Database = {
           order_number?: string
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          referrer_student_id?: string | null
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_name?: string | null
@@ -6360,6 +6363,13 @@ export type Database = {
             columns: ["mp_payment_id"]
             isOneToOne: false
             referencedRelation: "mercadopago_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_orders_referrer_student_id_fkey"
+            columns: ["referrer_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
           {
@@ -7203,6 +7213,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
           purchase_type: string | null
+          referrer_student_id: string | null
           status: Database["public"]["Enums"]["transaction_status"] | null
           store_product_id: string | null
           student_id: string
@@ -7225,6 +7236,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
           purchase_type?: string | null
+          referrer_student_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"] | null
           store_product_id?: string | null
           student_id: string
@@ -7247,6 +7259,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"]
           product_id?: string
           purchase_type?: string | null
+          referrer_student_id?: string | null
           status?: Database["public"]["Enums"]["transaction_status"] | null
           store_product_id?: string | null
           student_id?: string
@@ -7273,6 +7286,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_referrer_student_id_fkey"
+            columns: ["referrer_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
           {
