@@ -8086,6 +8086,7 @@ export type Database = {
       find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_nutritionist_for: { Args: { _coach_id: string }; Returns: string }
+      find_student_id_by_email: { Args: { _email: string }; Returns: string }
       find_upline_with_badge: {
         Args: {
           _badge: Database["public"]["Enums"]["coach_badge_key"]
