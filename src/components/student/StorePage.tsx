@@ -567,10 +567,42 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
         </header>
         {tabsBar}
-        <PartnerProfessionalStore kind={storeTab} mode={coachMode ? "reseller" : "student"} />
+        {coachMode && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary">Selecione seu aluno</p>
+            <button
+              onClick={() => setClientPickerOpen(true)}
+              className="flex w-full items-center justify-between rounded-xl bg-card px-4 py-3 text-left"
+            >
+              <div className="flex items-center gap-3">
+                <UserRound className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione seu aluno"}</p>
+                  {selectedClient?.email && <p className="text-[11px] text-muted-foreground">{selectedClient.email}</p>}
+                  {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {selectedClient.cpf}</p>}
+                </div>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        )}
+        <PartnerProfessionalStore
+          kind={storeTab}
+          mode={coachMode ? "reseller" : "student"}
+          resellerStudent={coachMode && selectedClient ? { id: selectedClient.id, name: selectedClient.name, email: selectedClient.email } : null}
+        />
+        {clientPickerOpen && (
+          <ClientPickerModal
+            clients={clients}
+            isMaster={isMasterCoach}
+            onPick={(c) => { setSelectedClient(c); setClientPickerOpen(false); }}
+            onClose={() => setClientPickerOpen(false)}
+          />
+        )}
       </div>
     );
   }
+
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
