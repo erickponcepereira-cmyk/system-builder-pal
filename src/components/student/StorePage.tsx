@@ -92,6 +92,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [myReferralCode, setMyReferralCode] = useState<string | null>(null);
   const [indicableProductIds, setIndicableProductIds] = useState<Set<string>>(new Set());
   const [pendingReferrerStudentId, setPendingReferrerStudentId] = useState<string | null>(null);
+  const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
 
   const [storeTab, setStoreTab] = useState<"fitmind" | "partner" | "professional">("fitmind");
 
