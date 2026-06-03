@@ -543,3 +543,13 @@ function Mini({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="rounded-lg bg-white/5 p-2">
+      <p className="text-[10px] uppercase tracking-wide text-white/40">{label}</p>
+      <p className="text-xs text-white">{value}</p>
+    </div>
+  );
+}
