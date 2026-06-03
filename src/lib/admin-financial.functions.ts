@@ -350,10 +350,60 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
 
     const statuses = (data.statuses?.length ? data.statuses : ["pending", "available"]) as Array<"pending" | "available">;
 
+    // Bucket "referrals" = comissões com is_referral=true (alunos indicadores)
+    if (data.bucket === "referrals") {
+      const { data: rows, error } = await supabaseAdmin
+        .from("commissions")
+        .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
+        .eq("is_referral", true)
+        .in("status", [...statuses, "blocked"])
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw new Error(error.message);
+      const txIds = Array.from(new Set((rows || []).map((c: any) => c.transaction_id).filter(Boolean)));
+      let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
+      if (txIds.length) {
+        const { data: txs } = await supabaseAdmin
+          .from("transactions")
+          .select("id, product_id, student_id")
+          .in("id", txIds);
+        const sIds = Array.from(new Set((txs || []).map((t: any) => t.student_id).filter(Boolean)));
+        const pIds = Array.from(new Set((txs || []).map((t: any) => t.product_id).filter(Boolean)));
+        const [{ data: students }, { data: products }] = await Promise.all([
+          sIds.length ? supabaseAdmin.from("students").select("id, profiles(name)").in("id", sIds) : Promise.resolve({ data: [] as any[] }),
+          pIds.length ? supabaseAdmin.from("products").select("id, name").in("id", pIds) : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const sMap = new Map<string, string>();
+        (students || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+        const pMap = new Map<string, string>();
+        (products || []).forEach((p: any) => pMap.set(p.id, p.name));
+        (txs || []).forEach((t: any) => txMap.set(t.id, {
+          studentName: t.student_id ? sMap.get(t.student_id) || null : null,
+          productName: t.product_id ? pMap.get(t.product_id) || null : null,
+        }));
+      }
+      return (rows || []).map((c: any) => {
+        const tx = c.transaction_id ? txMap.get(c.transaction_id) : null;
+        return {
+          commissionId: c.id,
+          transactionId: c.transaction_id,
+          beneficiaryName: c.profiles?.name || "—",
+          beneficiaryEmail: c.profiles?.email || null,
+          clientName: tx?.studentName ?? null,
+          productName: tx?.productName ?? null,
+          slotLabel: c.slot_label,
+          level: Number(c.level || 0),
+          amount: Number(c.amount || 0),
+          status: c.status,
+          createdAt: c.created_at,
+        };
+      });
+    }
+
     const { data: rows, error } = await supabaseAdmin
       .from("commissions")
       .select(
-        "id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
+        "id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, is_referral, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
       )
       .in("status", statuses)
       .order("created_at", { ascending: false })
@@ -361,6 +411,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const filtered = (rows || []).filter((c: any) => {
+      if (c.is_referral) return false; // tratado pelo bucket "referrals"
       const slot = String(c.slot_label || "").toLowerCase();
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
       const isNetwork = Number(c.level || 0) > 0;
