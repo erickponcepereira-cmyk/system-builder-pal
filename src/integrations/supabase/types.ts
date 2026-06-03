@@ -7757,6 +7757,7 @@ export type Database = {
           _items: Json
           _notes?: string
           _payment_method?: Database["public"]["Enums"]["payment_method"]
+          _referrer_student_id?: string
           _shipping?: Json
         }
         Returns: string
