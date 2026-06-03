@@ -3,26 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar, Loader2, X, CheckCircle2, User as UserIcon, Clock } from "lucide-react";
 import { AvailabilityEditor } from "./AvailabilityEditor";
+import { useServerFn } from "@tanstack/react-start";
+import { getProfessionalAppointments, type ProfessionalAppointmentItem } from "@/lib/professional-appointments.functions";
+import ProfessionalStudentDetailsModal from "./ProfessionalStudentDetailsModal";
 
-type Appointment = {
-  id: string;
-  starts_at: string;
-  ends_at: string;
-  status: string;
-  cancellation_window_hours: number;
-  notes: string | null;
-  student_id: string;
-  product_id: string;
-  seller_coach_id: string | null;
-  order_id: string | null;
-  students?: {
-    profiles?: { name: string | null; avatar_url: string | null } | null;
-    coach?: { profiles?: { name: string | null } | null } | null;
-  } | null;
-  professional_products?: { name: string | null } | null;
-  seller?: { profiles?: { name: string | null } | null } | null;
-  order?: { status: string | null } | null;
-};
+type Appointment = ProfessionalAppointmentItem;
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", {
@@ -34,22 +19,23 @@ const fmt = (iso: string) =>
   });
 
 export function AppointmentsTab({ coachId }: { coachId: string }) {
+  const fetchAppointments = useServerFn(getProfessionalAppointments);
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "cancelled">("upcoming");
   const [section, setSection] = useState<"list" | "agenda">("list");
+  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("professional_appointments" as never)
-      .select(
-        "id,starts_at,ends_at,status,cancellation_window_hours,notes,student_id,product_id,seller_coach_id,order_id,students(profiles(name,avatar_url),coach:coaches!students_coach_id_fkey(profiles(name))),professional_products(name),seller:coaches!professional_appointments_seller_coach_id_fkey(profiles(name)),order:partner_product_orders!professional_appointments_order_id_fkey(status)" as never,
-      )
-      .eq("professional_coach_id" as never, coachId as never)
-      .order("starts_at" as never, { ascending: true });
-    setItems((data as unknown as Appointment[]) || []);
-    setLoading(false);
+    try {
+      const data = await fetchAppointments();
+      setItems(data);
+    } catch (error) {
+      toast.error((error as Error).message || "Erro ao carregar atendimentos");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
