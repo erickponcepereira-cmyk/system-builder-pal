@@ -8067,7 +8067,7 @@ export type Database = {
         Args: {
           _partner_product_id: string
           _payment_method?: string
-          _student_id: string
+          _student_id?: string
         }
         Returns: string
       }
