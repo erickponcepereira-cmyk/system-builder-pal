@@ -274,6 +274,14 @@ function Info({ label, value }: { label: string; value: string | null | undefine
   );
 }
 
+function ConditionChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
+      <AlertTriangle className="h-3 w-3" />{label}
+    </span>
+  );
+}
+
 
 function Meta({ icon: Icon, label, value, suffix }: { icon: any; label: string; value: string; suffix: string }) {
   return (
