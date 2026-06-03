@@ -28,6 +28,12 @@ type FormState = {
   current_medications: string;
   supplements_used: string;
   food_allergies: string;
+  food_intolerances: string;
+  blood_type: string;
+  has_diabetes: boolean | null;
+  has_hypertension: boolean | null;
+  has_cardiopathy: boolean | null;
+  other_chronic_conditions: string;
   // Objetivos
   protocol_reason: string;
   objective: string;
@@ -71,6 +77,9 @@ const initial: FormState = {
   gender: "", height: "", profession: "", marital_status: "",
   preexisting_conditions: "", surgical_history: "", current_medications: "",
   supplements_used: "", food_allergies: "",
+  food_intolerances: "", blood_type: "",
+  has_diabetes: null, has_hypertension: null, has_cardiopathy: null,
+  other_chronic_conditions: "",
   protocol_reason: "", objective: "", dietary_goals: [], dietary_goals_other: "",
   food_diary: DEFAULT_MEALS, fast_food_frequency: "", special_dietary_habits: "",
   water_intake_daily: "", disliked_foods: "",
@@ -115,6 +124,12 @@ function AnamneseWizardPage() {
           current_medications: d.current_medications || "",
           supplements_used: d.supplements_used || "",
           food_allergies: d.food_allergies || "",
+          food_intolerances: d.food_intolerances || "",
+          blood_type: d.blood_type || "",
+          has_diabetes: d.has_diabetes,
+          has_hypertension: d.has_hypertension,
+          has_cardiopathy: d.has_cardiopathy,
+          other_chronic_conditions: d.other_chronic_conditions || "",
           protocol_reason: d.protocol_reason || "",
           objective: d.objective || "",
           dietary_goals: Array.isArray(d.dietary_goals) ? d.dietary_goals : [],
@@ -165,6 +180,12 @@ function AnamneseWizardPage() {
       current_medications: form.current_medications || null,
       supplements_used: form.supplements_used || null,
       food_allergies: form.food_allergies || null,
+      food_intolerances: form.food_intolerances || null,
+      blood_type: form.blood_type || null,
+      has_diabetes: form.has_diabetes,
+      has_hypertension: form.has_hypertension,
+      has_cardiopathy: form.has_cardiopathy,
+      other_chronic_conditions: form.other_chronic_conditions || null,
       protocol_reason: form.protocol_reason || null,
       objective: form.objective || null,
       dietary_goals: form.dietary_goals,
@@ -371,7 +392,19 @@ function buildSteps(form: FormState, update: <K extends keyof FormState>(k: K, v
     { section: "Histórico médico", title: "Histórico de cirurgias", help: "Cite cirurgias relevantes e quando aconteceram.", render: () => text("surgical_history", "Ex: apendicectomia em 2018...") },
     { section: "Histórico médico", title: "Uso atual de medicamentos", render: () => text("current_medications", "Liste medicamentos e dosagem...") },
     { section: "Histórico médico", title: "Faz ou já fez uso de suplementos?", help: "Se sim, quais?", render: () => text("supplements_used", "Ex: whey protein, creatina, ômega 3...") },
-    { section: "Histórico médico", title: "Alergias alimentares ou intolerâncias", render: () => text("food_allergies", "Ex: lactose, glúten, frutos do mar...") },
+    { section: "Histórico médico", title: "Alergias alimentares", render: () => text("food_allergies", "Ex: lactose, glúten, frutos do mar...") },
+    { section: "Histórico médico", title: "Intolerâncias alimentares", help: "Diferente de alergia — alimentos que causam desconforto digestivo.", render: () => text("food_intolerances", "Ex: lactose, frutose, FODMAPs...") },
+    { section: "Histórico médico", title: "Qual seu tipo sanguíneo?", render: () => choice("blood_type", [
+      { value: "A+", label: "A+" }, { value: "A-", label: "A-" },
+      { value: "B+", label: "B+" }, { value: "B-", label: "B-" },
+      { value: "AB+", label: "AB+" }, { value: "AB-", label: "AB-" },
+      { value: "O+", label: "O+" }, { value: "O-", label: "O-" },
+      { value: "nao_sei", label: "Não sei" },
+    ]) },
+    { section: "Histórico médico", title: "Você tem diabetes?", render: () => boolChoice("has_diabetes") },
+    { section: "Histórico médico", title: "Você tem hipertensão?", render: () => boolChoice("has_hypertension") },
+    { section: "Histórico médico", title: "Você tem cardiopatia?", render: () => boolChoice("has_cardiopathy") },
+    { section: "Histórico médico", title: "Outras condições crônicas", help: "Tireoide, asma, autoimunes, etc. Deixe em branco se não tiver.", render: () => text("other_chronic_conditions", "Descreva...") },
 
     // Objetivos
     { section: "Objetivos", title: "Qual o principal motivo da sua participação no protocolo?", render: () => text("protocol_reason", "Conte sua motivação...") },

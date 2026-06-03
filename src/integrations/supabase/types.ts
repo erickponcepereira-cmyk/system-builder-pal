@@ -135,6 +135,7 @@ export type Database = {
           additional_observations: string | null
           alcohol_consumption: boolean | null
           alcohol_frequency: string | null
+          blood_type: string | null
           confirmed_at: string | null
           current_medications: string | null
           dietary_goals: Json | null
@@ -150,11 +151,16 @@ export type Database = {
           filled_at: string | null
           food_allergies: string | null
           food_diary: Json | null
+          food_intolerances: string | null
           gender: string | null
+          has_cardiopathy: boolean | null
+          has_diabetes: boolean | null
+          has_hypertension: boolean | null
           height: number | null
           id: string
           marital_status: string | null
           objective: string | null
+          other_chronic_conditions: string | null
           preexisting_conditions: string | null
           profession: string | null
           protocol_reason: string | null
@@ -175,6 +181,7 @@ export type Database = {
           additional_observations?: string | null
           alcohol_consumption?: boolean | null
           alcohol_frequency?: string | null
+          blood_type?: string | null
           confirmed_at?: string | null
           current_medications?: string | null
           dietary_goals?: Json | null
@@ -190,11 +197,16 @@ export type Database = {
           filled_at?: string | null
           food_allergies?: string | null
           food_diary?: Json | null
+          food_intolerances?: string | null
           gender?: string | null
+          has_cardiopathy?: boolean | null
+          has_diabetes?: boolean | null
+          has_hypertension?: boolean | null
           height?: number | null
           id?: string
           marital_status?: string | null
           objective?: string | null
+          other_chronic_conditions?: string | null
           preexisting_conditions?: string | null
           profession?: string | null
           protocol_reason?: string | null
@@ -215,6 +227,7 @@ export type Database = {
           additional_observations?: string | null
           alcohol_consumption?: boolean | null
           alcohol_frequency?: string | null
+          blood_type?: string | null
           confirmed_at?: string | null
           current_medications?: string | null
           dietary_goals?: Json | null
@@ -230,11 +243,16 @@ export type Database = {
           filled_at?: string | null
           food_allergies?: string | null
           food_diary?: Json | null
+          food_intolerances?: string | null
           gender?: string | null
+          has_cardiopathy?: boolean | null
+          has_diabetes?: boolean | null
+          has_hypertension?: boolean | null
           height?: number | null
           id?: string
           marital_status?: string | null
           objective?: string | null
+          other_chronic_conditions?: string | null
           preexisting_conditions?: string | null
           profession?: string | null
           protocol_reason?: string | null
@@ -6563,6 +6581,51 @@ export type Database = {
           },
           {
             foreignKeyName: "student_checkin_scans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_medical_confidential_notes: {
+        Row: {
+          author_profile_id: string
+          content: string
+          created_at: string
+          id: string
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_profile_id: string
+          content: string
+          created_at?: string
+          id?: string
+          student_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_profile_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_medical_confidential_notes_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_medical_confidential_notes_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"

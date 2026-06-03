@@ -41,6 +41,14 @@ type Anamnese = {
   stress_level: string | null;
   exercises_regularly: boolean | null;
   additional_observations: string | null;
+  blood_type: string | null;
+  food_intolerances: string | null;
+  has_diabetes: boolean | null;
+  has_hypertension: boolean | null;
+  has_cardiopathy: boolean | null;
+  other_chronic_conditions: string | null;
+  surgical_history: string | null;
+  supplements_used: string | null;
 };
 
 function StudentProtocolPage() {
@@ -62,7 +70,7 @@ function StudentProtocolPage() {
       setStudentId(student.id);
       const [{ data: prot }, { data: anam }] = await Promise.all([
         supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle(),
-        supabase.from("anamnesis_forms").select("filled_at,gender,height,objective,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations").eq("student_id", student.id).order("filled_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("anamnesis_forms").select("filled_at,gender,height,objective,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations,blood_type,food_intolerances,has_diabetes,has_hypertension,has_cardiopathy,other_chronic_conditions,surgical_history,supplements_used").eq("student_id", student.id).order("filled_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
       if (prot) setProtocol(prot as any);
       if (anam) setAnamnese(anam as Anamnese);
@@ -170,6 +178,47 @@ function StudentProtocolPage() {
         </>
       )}
 
+      {/* Ficha Médica — extraída da anamnese (sem dados sigilosos) */}
+      {!loading && anamnese && (
+        <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-center gap-2">
+            <Heart className="h-4 w-4 text-primary" />
+            <div className="flex-1">
+              <h2 className="text-sm font-bold text-white">Ficha médica</h2>
+              <p className="text-[10px] text-white/40">Dados de saúde relevantes para seus protocolos. Informações sigilosas ficam visíveis apenas para médicos autorizados.</p>
+            </div>
+          </div>
+
+          {/* Condições crônicas (chips) */}
+          {(anamnese.has_diabetes || anamnese.has_hypertension || anamnese.has_cardiopathy || anamnese.other_chronic_conditions) && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {anamnese.has_diabetes && <ConditionChip label="Diabetes" />}
+              {anamnese.has_hypertension && <ConditionChip label="Hipertensão" />}
+              {anamnese.has_cardiopathy && <ConditionChip label="Cardiopatia" />}
+              {anamnese.other_chronic_conditions && <ConditionChip label={anamnese.other_chronic_conditions} />}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <Info label="Tipo sanguíneo" value={anamnese.blood_type} />
+            <Info label="Altura" value={anamnese.height ? `${anamnese.height} cm` : null} />
+          </div>
+          <div className="mt-2 grid grid-cols-1 gap-2 text-xs">
+            <Info label="Alergias alimentares" value={anamnese.food_allergies} />
+            <Info label="Intolerâncias alimentares" value={anamnese.food_intolerances} />
+            <Info label="Condições preexistentes" value={anamnese.preexisting_conditions} />
+            <Info label="Medicamentos contínuos" value={anamnese.current_medications} />
+            <Info label="Suplementos em uso" value={anamnese.supplements_used} />
+            <Info label="Histórico cirúrgico" value={anamnese.surgical_history} />
+          </div>
+
+          <Link to="/student/health" className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline">
+            Atualizar ficha médica →
+          </Link>
+        </section>
+      )}
+
+
       {/* Anamnese — resultado salvo */}
       {!loading && (
         <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
@@ -222,6 +271,14 @@ function Info({ label, value }: { label: string; value: string | null | undefine
       <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
       <p className="mt-0.5 whitespace-pre-wrap text-xs text-white">{value || "—"}</p>
     </div>
+  );
+}
+
+function ConditionChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
+      <AlertTriangle className="h-3 w-3" />{label}
+    </span>
   );
 }
 
