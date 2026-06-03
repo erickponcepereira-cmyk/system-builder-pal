@@ -132,10 +132,21 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
     [data],
   );
 
+  // Remapeia os slots para que o engine (que filtra por applies_to_referral_sales)
+  // honre o cenário selecionado no simulador.
+  const simSlots = useMemo(
+    () =>
+      sortedSlots.map((s) => ({
+        ...s,
+        applies_to_referral_sales: slotApplies(s),
+      })),
+    [sortedSlots, simMode],
+  );
+
   const dist = useMemo(() => {
     if (!data) return null;
-    return calculateDistribution(data.product.price, previewMethod, feeCfg, sortedSlots, taxPct);
-  }, [data, sortedSlots, previewMethod, feeCfg, taxPct]);
+    return calculateDistribution(data.product.price, previewMethod, feeCfg, simSlots, taxPct);
+  }, [data, simSlots, previewMethod, feeCfg, taxPct]);
 
   const slotAmtMap = useMemo(() => {
     if (!data || !dist) return new Map<string, number>();
@@ -401,9 +412,12 @@ function CoachCommissionByMethod({ price, feeCfg, slots, taxPct, selected, onSel
     { label: "Cartão 1-2x", method: "credit_1x",  feePct: feeCfg.card_fee_percentage },
     { label: "Cartão 3-12x",method: "credit_3x",  feePct: feeCfg.card_fee_3x12_percentage },
   ];
-  const filteredSlots = slots.filter((s) =>
-    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
-  );
+  // Remapeia a flag aplicável para applies_to_referral_sales (engine usa essa).
+  const filteredSlots = slots.map((s) => ({
+    ...s,
+    applies_to_referral_sales:
+      simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  }));
   const calc = (method: PaymentMethod) => {
     const d = calculateDistribution(price, method, feeCfg, filteredSlots, taxPct);
     const coachSlots = d.lines
