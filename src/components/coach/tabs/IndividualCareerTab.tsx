@@ -47,17 +47,11 @@ export function IndividualCareerTab() {
 
   const { vpThisMonth, vpLifetime, monthlyRules, cumulativeRules, earned, currentMonth } = data;
 
-  const earnedMonthlyThisPeriod = new Set(
-    earned
-      .filter((e) => e.medal_kind === "monthly" && e.period_year === currentMonth.year && e.period_month === currentMonth.month)
-      .map((e) => e.medal_key),
-  );
-  const earnedCumulative = new Set(
-    earned.filter((e) => e.medal_kind === "cumulative").map((e) => e.medal_key),
-  );
   const monthlyHistory = earned.filter(
     (e) => e.medal_kind === "monthly" && !(e.period_year === currentMonth.year && e.period_month === currentMonth.month),
   );
+  // referenced above via inline lookups
+
 
   return (
     <>
