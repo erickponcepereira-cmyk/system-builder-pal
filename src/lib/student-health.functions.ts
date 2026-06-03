@@ -104,6 +104,7 @@ export type SaveStudentHealthGoalsInput = {
   goalWeight?: number | null;
   dailyCaloriesGoal?: number | null;
   activityFactor?: number | null;
+  currentWeight?: number | null;
 };
 
 export const saveStudentHealthGoals = createServerFn({ method: "POST" })
@@ -114,6 +115,7 @@ export const saveStudentHealthGoals = createServerFn({ method: "POST" })
     const updates: Record<string, unknown> = {};
     if (data.goalWeight !== undefined) updates.goal_weight = data.goalWeight;
     if (data.dailyCaloriesGoal !== undefined) updates.daily_calories_goal = data.dailyCaloriesGoal;
+    if (data.currentWeight !== undefined) updates.current_weight = data.currentWeight;
     if (data.activityFactor !== undefined) {
       const af = Number(data.activityFactor);
       if (af && af >= 1 && af <= 3) updates.activity_factor = af;
@@ -126,3 +128,4 @@ export const saveStudentHealthGoals = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+

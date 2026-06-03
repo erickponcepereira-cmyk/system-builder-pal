@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  CheckCircle2, Gift, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2, History, UserRound, ChevronDown,
+  CheckCircle2, Minus, Plus, Search, Share2, ShoppingBag, Sparkles, Tag, Trash2, History, UserRound, ChevronDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -514,12 +514,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
   const checkout = coachMode ? checkoutAsCoach : checkoutAsStudent;
 
-  const inviteFriend = async () => {
-    const text = "Entre no FitMind Club pelo meu convite.";
-    if (navigator.share) { await navigator.share({ title: "FitMind Club", text, url: window.location.origin }); return; }
-    await navigator.clipboard.writeText(window.location.origin);
-    toast.success("Link de indicação copiado.");
-  };
+
+
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
@@ -529,12 +525,6 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           <h1 className="text-2xl font-bold text-foreground">FitMind Club Store</h1>
         </div>
         <div className="flex items-center gap-2">
-          {!coachMode && (
-            <>
-              <Link to="/student/freebies" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-card px-3 text-[10px] font-bold text-foreground"><Gift className="h-3.5 w-3.5 text-primary" /> Grátis</Link>
-              <button onClick={inviteFriend} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-3 text-[10px] font-bold text-primary-foreground"><Share2 className="h-3.5 w-3.5" /> Indique</button>
-            </>
-          )}
           {coachMode && (
             <button onClick={() => setShowHistory((v) => !v)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-card px-3 text-[10px] font-bold text-foreground">
               <History className="h-3.5 w-3.5 text-primary" /> Histórico ({salesHistory.length})
