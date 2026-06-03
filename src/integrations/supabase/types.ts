@@ -4530,11 +4530,13 @@ export type Database = {
           notes: string | null
           order_number: string
           paid_at: string | null
+          partner_id: string | null
           partner_net_amount: number
+          partner_product_id: string | null
           payment_fee: number
           payment_method: string
-          professional_coach_id: string
-          professional_product_id: string
+          professional_coach_id: string | null
+          professional_product_id: string | null
           selling_coach_id: string | null
           status: string
           student_id: string
@@ -4563,11 +4565,13 @@ export type Database = {
           notes?: string | null
           order_number?: string
           paid_at?: string | null
+          partner_id?: string | null
           partner_net_amount?: number
+          partner_product_id?: string | null
           payment_fee?: number
           payment_method?: string
-          professional_coach_id: string
-          professional_product_id: string
+          professional_coach_id?: string | null
+          professional_product_id?: string | null
           selling_coach_id?: string | null
           status?: string
           student_id: string
@@ -4596,11 +4600,13 @@ export type Database = {
           notes?: string | null
           order_number?: string
           paid_at?: string | null
+          partner_id?: string | null
           partner_net_amount?: number
+          partner_product_id?: string | null
           payment_fee?: number
           payment_method?: string
-          professional_coach_id?: string
-          professional_product_id?: string
+          professional_coach_id?: string | null
+          professional_product_id?: string | null
           selling_coach_id?: string | null
           status?: string
           student_id?: string
@@ -4617,6 +4623,20 @@ export type Database = {
             columns: ["master_coach_cross_beneficiary_coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
             referencedColumns: ["id"]
           },
           {
@@ -8010,6 +8030,14 @@ export type Database = {
           order_number: string
           total: number
         }[]
+      }
+      create_partner_company_order: {
+        Args: {
+          _partner_product_id: string
+          _payment_method?: string
+          _student_id: string
+        }
+        Returns: string
       }
       create_partner_product_order: {
         Args: { _payment_method?: string; _professional_product_id: string }
