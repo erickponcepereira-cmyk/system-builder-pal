@@ -40,13 +40,8 @@ function AdminPartners() {
     toast.success("Atualizado"); load();
   };
 
-  const reviewProduct = async (id: string, decision: "approved" | "rejected") => {
-    const patch: Partial<ProductRow> & { approved_at?: string | null } = { status: decision, admin_notes: notes[id] || null };
-    if (decision === "approved") patch.approved_at = new Date().toISOString();
-    const { error } = await supabase.from("partner_products" as never).update(patch as never).eq("id" as never, id);
-    if (error) return toast.error(error.message);
-    toast.success(decision === "approved" ? "Produto aprovado" : "Produto reprovado"); load();
-  };
+  // Product approval handled by ProductReviewModal
+
 
   return (
     <>
