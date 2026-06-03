@@ -6,8 +6,10 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { createAssessmentShare } from "@/lib/assessment-share.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { getStudentAttendanceDetail, type StudentCheckin, type StudentPurchase } from "@/lib/coach-attendance.functions";
+import { WindowMethod } from "@/components/student/WindowMethod";
+import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
-type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras";
+type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas";
 
 interface Props {
   studentId: string;
