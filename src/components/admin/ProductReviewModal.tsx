@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { DEFAULT_PARTNER_FEES } from "@/lib/partnerFinance";
 import { toast } from "sonner";
 
 type Kind = "partner_products" | "professional_products";
