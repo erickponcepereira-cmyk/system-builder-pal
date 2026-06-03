@@ -75,51 +75,82 @@ function CoachCoursePage() {
       if (!userData.user) { setLoading(false); return; }
       setUserEmail(userData.user.email || "");
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id,name")
-        .eq("user_id", userData.user.id)
-        .maybeSingle();
-      if (!profile) { setLoading(false); return; }
-      setProfileId(profile.id);
-      setUserName(profile.name || "");
+  const loadAll = async () => {
+    setLoading(true);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) { setLoading(false); return; }
+    setUserEmail(userData.user.email || "");
 
-      const { data: student } = await supabase
-        .from("students")
-        .select("id, coach_id, coach_course_completed_at")
-        .eq("profile_id", profile.id)
-        .maybeSingle();
-      if (!student) { setLoading(false); return; }
-      setStudentId(student.id);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id,name,phone,city")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    if (!profile) { setLoading(false); return; }
+    setProfileId(profile.id);
+    setUserName(profile.name || "");
+    setUserPhone(profile.phone || "");
+    setUserCity(profile.city || "");
 
-      // Course aggregated status
-      const [requiredRes, progressRes] = await Promise.all([
-        supabase.from("coach_course_modules" as never).select("id" as never).eq("is_active" as never, true as never).eq("is_required" as never, true as never),
-        supabase.from("coach_course_progress" as never).select("module_id" as never).eq("student_id" as never, student.id as never),
-      ]);
-      const requiredIds = ((requiredRes.data as unknown as { id: string }[]) || []).map((r) => r.id);
-      const completedIds = new Set(((progressRes.data as unknown as { module_id: string }[]) || []).map((r) => r.module_id));
-      const requiredDone = requiredIds.filter((id) => completedIds.has(id)).length;
-      if (student.coach_course_completed_at || (requiredIds.length > 0 && requiredDone === requiredIds.length)) setCourseStatus("concluido");
-      else if (progressRes.data && (progressRes.data as unknown[]).length > 0) setCourseStatus("em_andamento");
-      else setCourseStatus("pendente");
+    const { data: student } = await supabase
+      .from("students")
+      .select("id, coach_id, coach_course_completed_at")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    if (!student) { setLoading(false); return; }
+    setStudentId(student.id);
 
-      // Upline coach
-      if (student.coach_id) {
-        const { data: coachRow } = await supabase.from("coaches").select("profile_id").eq("id", student.coach_id).maybeSingle();
-        if (coachRow?.profile_id) {
-          const { data: coachProfile } = await supabase
-            .from("profiles")
-            .select("name, phone, avatar_url")
-            .eq("id", coachRow.profile_id)
-            .maybeSingle();
-          if (coachProfile) setUplineCoach(coachProfile as CoachInfo);
-        }
+    // Course aggregated status
+    const [requiredRes, progressRes, ordersRes, appRes] = await Promise.all([
+      supabase.from("coach_course_modules" as never).select("id" as never).eq("is_active" as never, true as never).eq("is_required" as never, true as never),
+      supabase.from("coach_course_progress" as never).select("module_id" as never).eq("student_id" as never, student.id as never),
+      supabase
+        .from("store_orders" as never)
+        .select("id, status, store_order_items(product_id, store_product_id, digital_product_id)" as never)
+        .eq("student_id" as never, student.id as never)
+        .eq("status" as never, "paid" as never),
+      supabase
+        .from("coach_applications" as never)
+        .select("id, status, admin_notes, created_at" as never)
+        .eq("student_id" as never, student.id as never)
+        .order("created_at" as never, { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    const requiredIds = ((requiredRes.data as unknown as { id: string }[]) || []).map((r) => r.id);
+    const completedIds = new Set(((progressRes.data as unknown as { module_id: string }[]) || []).map((r) => r.module_id));
+    const requiredDone = requiredIds.filter((id) => completedIds.has(id)).length;
+    if (student.coach_course_completed_at || (requiredIds.length > 0 && requiredDone === requiredIds.length)) setCourseStatus("concluido");
+    else if (progressRes.data && (progressRes.data as unknown[]).length > 0) setCourseStatus("em_andamento");
+    else setCourseStatus("pendente");
+
+    // Purchase check
+    const orders = (ordersRes.data as unknown as Array<{ store_order_items?: Array<{ product_id?: string | null; store_product_id?: string | null; digital_product_id?: string | null }> }>) || [];
+    const purchased = orders.some((o) => (o.store_order_items || []).some((i) =>
+      i.product_id === ACTIVATION_PRODUCT_ID ||
+      i.store_product_id === ACTIVATION_PRODUCT_ID ||
+      i.digital_product_id === ACTIVATION_PRODUCT_ID
+    ));
+    setHasPurchased(purchased);
+    setApplication((appRes.data as unknown as ApplicationRow) || null);
+
+    // Upline coach
+    if (student.coach_id) {
+      const { data: coachRow } = await supabase.from("coaches").select("profile_id").eq("id", student.coach_id).maybeSingle();
+      if (coachRow?.profile_id) {
+        const { data: coachProfile } = await supabase
+          .from("profiles")
+          .select("name, phone, avatar_url")
+          .eq("id", coachRow.profile_id)
+          .maybeSingle();
+        if (coachProfile) setUplineCoach(coachProfile as CoachInfo);
       }
+    }
 
-      setLoading(false);
-    })();
-  }, []);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadAll(); }, []);
 
   const startCheckout = async () => {
     if (!profileId) return toast.error("Perfil não encontrado");
@@ -147,6 +178,30 @@ function CoachCoursePage() {
       setCreatingOrder(false);
     }
   };
+
+  const submitApplication = async () => {
+    if (!selectedUpline) return toast.error("Selecione o coach da rede onde você vai entrar");
+    if (motivation.trim().length < 20) return toast.error("Conte sua motivação com mais detalhes");
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("submit_coach_application" as never, {
+        _motivation: motivation,
+        _experience: experience || null,
+        _city: userCity || null,
+        _phone: userPhone || null,
+        _selected_upline_coach_id: selectedUpline.id,
+      } as never);
+      if (error) throw new Error(error.message);
+      toast.success("Inscrição enviada! Aguarde a aprovação.");
+      setShowApply(false);
+      await loadAll();
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao enviar inscrição");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   const waLink = whatsappUrl(
     uplineCoach?.phone,
