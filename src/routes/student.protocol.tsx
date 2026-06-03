@@ -170,31 +170,6 @@ function StudentProtocolPage() {
         </>
       )}
 
-      {/* Atalhos sempre visíveis */}
-      <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <h2 className="mb-3 text-sm font-bold text-white">Documentos profissionais</h2>
-        <div className="space-y-2">
-          <Shortcut icon={ClipboardList} title="Anamnese" desc="Histórico inicial preenchido com o coach" />
-          <Shortcut icon={Activity} title="Bioimpedância" desc="Última avaliação corporal" />
-          <Shortcut icon={Heart} title="Acompanhamento médico" desc="Receitas, exames e medicações" />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function Meta({ icon: Icon, label, value, suffix }: { icon: any; label: string; value: string; suffix: string }) {
-  return (
-    <div className="rounded-xl bg-white/5 p-3">
-      <div className="mb-1 flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 text-primary" />
-        <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
-      </div>
-      <p className="text-lg font-bold text-white">{value}<span className="ml-1 text-xs text-white/40">{suffix}</span></p>
-    </div>
-  );
-}
-
       {/* Anamnese — resultado salvo */}
       {!loading && (
         <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
@@ -250,6 +225,3 @@ function Info({ label, value }: { label: string; value: string | null | undefine
   );
 }
 
-    </div>
-  );
-}
