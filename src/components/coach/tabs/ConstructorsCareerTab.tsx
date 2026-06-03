@@ -142,8 +142,9 @@ export function ConstructorsCareerTab() {
                   const cap = (p.required_revenue * (vpMax || 100)) / 100;
                   const cappedOwn = w ? Math.min(w.ownRevenue, cap) : 0;
                   const qualifying = w ? cappedOwn + w.teamRevenue : 0;
-                  const achieved = p.required_revenue === 0 || qualifying >= p.required_revenue;
-                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} />;
+                  const achievedAt = achievedAtByKey.get(p.key) ?? null;
+                  const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue;
+                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} />;
                 })}
               </div>
             </div>
