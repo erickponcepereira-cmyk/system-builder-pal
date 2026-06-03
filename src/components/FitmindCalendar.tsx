@@ -40,7 +40,10 @@ interface FitmindEvent {
   google_calendar_title: string | null;
   google_calendar_description: string | null;
   google_calendar_location: string | null;
+  appointment_pay_url?: string | null;
+  appointment_pending?: boolean;
 }
+
 
 interface HighlightedDay {
   id: string;
@@ -195,6 +198,69 @@ async function loadMyChallengeEvents(from: Date, to: Date): Promise<FitmindEvent
   }
 }
 
+// ─── Pessoal: agendamentos com profissionais ─────────────────────────────
+
+async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]> {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return [];
+    const { data: profile } = await supabase
+      .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
+    if (!profile) return [];
+    const { data: student } = await supabase
+      .from("students" as never).select("id").eq("profile_id" as never, profile.id).maybeSingle();
+    if (!student) return [];
+
+    const { data: appts } = await supabase
+      .from("professional_appointments" as never)
+      .select(
+        "id,starts_at,ends_at,status,order_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(name),order:partner_product_orders(order_number,status)" as never,
+      )
+      .eq("student_id" as never, (student as any).id)
+      .neq("status" as never, "cancelled" as never)
+      .gte("starts_at" as never, from.toISOString() as never)
+      .lt("starts_at" as never, to.toISOString() as never);
+
+    const paidStatuses = new Set(["paid", "approved", "completed"]);
+    return ((appts as any[]) || []).map((a) => {
+      const orderStatus: string | null = a.order?.status || null;
+      const orderNumber: string | null = a.order?.order_number || null;
+      const pending = !!a.order_id && (!orderStatus || !paidStatuses.has(orderStatus));
+      const profName = a.professional?.name || "profissional";
+      const prodName = a.professional_products?.name || "Consulta";
+      const color = pending ? "#f59e0b" : "#22c55e";
+      return {
+        id: `appt-${a.id}`,
+        title: pending ? `⏳ ${prodName} (pagamento pendente)` : `🩺 ${prodName}`,
+        subtitle: `com ${profName}`,
+        description: pending
+          ? "Sua pré-reserva está aguardando pagamento. Toque em Pagar agora para concluir."
+          : "Consulta confirmada.",
+        location: null,
+        image_url: null,
+        color,
+        category: "avaliacao",
+        tags: pending ? ["pagamento pendente"] : ["consulta"],
+        starts_at: a.starts_at,
+        ends_at: a.ends_at,
+        all_day: false,
+        is_highlighted: pending,
+        is_important: pending,
+        highlight_color: color,
+        highlight_label: pending ? "Pagamento pendente" : null,
+        google_calendar_title: prodName,
+        google_calendar_description: `Consulta com ${profName}`,
+        google_calendar_location: null,
+        appointment_pay_url: pending && orderNumber ? `/pay/${orderNumber}` : null,
+        appointment_pending: pending,
+      } satisfies FitmindEvent;
+    });
+  } catch (e) {
+    console.warn("loadMyAppointments failed", e);
+    return [];
+  }
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface FitmindCalendarProps {
@@ -242,11 +308,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .gte("date" as never, tzDateKey(from) as never)
         .lt("date" as never, tzDateKey(to) as never),
       loadMyChallengeEvents(from, to),
-    ]).then(([evRes, dayRes, challengeEvents]) => {
+      loadMyAppointments(from, to),
+    ]).then(([evRes, dayRes, challengeEvents, appointmentEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
       const base = (evRes.data as unknown as FitmindEvent[]) || [];
-      setEvents([...base, ...challengeEvents]);
+      setEvents([...base, ...challengeEvents, ...appointmentEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
@@ -657,8 +724,21 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             </div>
           )}
 
-          {/* Presença */}
-          <EventAttendanceBlock eventId={ev.id} color={evColor} />
+          {/* CTA: Pagar agora (pré-reserva pendente) */}
+          {ev.appointment_pay_url && (
+            <a
+              href={ev.appointment_pay_url}
+              className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90"
+              style={{ backgroundColor: "#f59e0b" }}>
+              Pagar agora e confirmar reserva
+              <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+            </a>
+          )}
+
+          {/* Presença (somente eventos FitMind) */}
+          {!ev.id.startsWith("appt-") && !ev.id.startsWith("challenge-") && (
+            <EventAttendanceBlock eventId={ev.id} color={evColor} />
+          )}
 
           {/* CTA: Adicionar ao Google Agenda */}
           <a
@@ -672,6 +752,7 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             Adicionar ao Google Agenda
             <ExternalLink className="h-3.5 w-3.5 opacity-60" />
           </a>
+
         </div>
       </div>
     </div>
