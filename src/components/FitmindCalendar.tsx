@@ -383,7 +383,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/40 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Destaques do mês
           </p>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 grid-cols-1">
             {events.filter((ev) => ev.is_highlighted).map((ev) => {
               const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
               const evColor = ev.color || "#E24B4A";
