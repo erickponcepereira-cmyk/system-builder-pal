@@ -299,7 +299,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
                   onChange={setSlot}
                 />
               )}
-              {selected.kind === "partner" && (
+              {selected.kind === "partner" && mode === "reseller" && (
                 <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-primary">
                     E-mail do aluno indicado
