@@ -253,7 +253,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                 </div>
               )}
               <button
-                onClick={() => { setSelected(null); setSlot(null); }}
+                onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />
