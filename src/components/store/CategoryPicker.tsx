@@ -51,25 +51,25 @@ export function CategoryPicker({ sectionId, categoryId, onChange, ownerOnly = fa
     if (creating === "section") {
       const { data, error } = await supabase
         .from("store_sections")
-        .insert({ name, slug: slugify(name), pending: true, is_active: false, created_by: userId, sort_order: sections.length } as never)
+        .insert({ name, slug: slugify(name), pending: false, is_active: true, created_by: userId, sort_order: sections.length } as never)
         .select("id,name,pending,is_active")
         .single();
       if (error) { toast.error(error.message); return; }
       const row = data as Section;
       setSections((p) => [...p, row]);
       onChange({ section_id: row.id, category_id: null });
-      toast.success("Seção enviada para aprovação");
+      toast.success("Seção criada");
     } else if (creating === "category" && sectionId) {
       const { data, error } = await supabase
         .from("store_categories")
-        .insert({ section_id: sectionId, name, slug: slugify(name), pending: true, is_active: false, created_by: userId, sort_order: filteredCategories.length } as never)
+        .insert({ section_id: sectionId, name, slug: slugify(name), pending: false, is_active: true, created_by: userId, sort_order: filteredCategories.length } as never)
         .select("id,section_id,name,pending,is_active")
         .single();
       if (error) { toast.error(error.message); return; }
       const row = data as Category;
       setCategories((p) => [...p, row]);
       onChange({ section_id: sectionId, category_id: row.id });
-      toast.success("Categoria enviada para aprovação");
+      toast.success("Categoria criada");
     }
     setNewName("");
     setCreating(null);
