@@ -329,9 +329,7 @@ function ProfilePage() {
             </>
           )}
         </button>
-            </div>
-          )}
-        </div>
+
 
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="mb-3 flex items-center justify-between">
