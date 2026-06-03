@@ -194,7 +194,7 @@ export const createCoachSale = createServerFn({ method: "POST" })
       total_price: i.unitPrice * i.quantity,
       metadata: i.kind === "item" ? { store_item_id: i.productId } : {},
     }));
-    const { error: itemsErr } = await supabaseAdmin.from("store_order_items").insert itemsPayload as never);
+    const { error: itemsErr } = await supabaseAdmin.from("store_order_items").insert(itemsPayload as never);
     if (itemsErr) throw new Error(itemsErr.message);
 
     // ─── Master Coach cross-sale tracking (informational) ───
