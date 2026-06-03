@@ -4611,6 +4611,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           card_fee_percentage: number
+          category_id: string | null
           coach_commission_amount: number | null
           coach_commission_percentage: number
           created_at: string
@@ -4629,6 +4630,7 @@ export type Database = {
           price: number | null
           price_input_mode: string
           redemption_instructions: string | null
+          section_id: string | null
           status: string
           stock: number | null
           system_fee_fixed: number
@@ -4640,6 +4642,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           card_fee_percentage?: number
+          category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           created_at?: string
@@ -4658,6 +4661,7 @@ export type Database = {
           price?: number | null
           price_input_mode?: string
           redemption_instructions?: string | null
+          section_id?: string | null
           status?: string
           stock?: number | null
           system_fee_fixed?: number
@@ -4669,6 +4673,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           card_fee_percentage?: number
+          category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           created_at?: string
@@ -4687,6 +4692,7 @@ export type Database = {
           price?: number | null
           price_input_mode?: string
           redemption_instructions?: string | null
+          section_id?: string | null
           status?: string
           stock?: number | null
           system_fee_fixed?: number
@@ -4702,10 +4708,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "partner_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "partner_products_partner_id_fkey"
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_products_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "store_sections"
             referencedColumns: ["id"]
           },
         ]
@@ -5698,6 +5718,7 @@ export type Database = {
       professional_products: {
         Row: {
           admin_notes: string | null
+          category_id: string | null
           coach_commission_amount: number | null
           coach_commission_percentage: number
           coach_id: string
@@ -5714,12 +5735,14 @@ export type Database = {
           price_input_mode: string
           professional_net_amount: number | null
           redemption_instructions: string | null
+          section_id: string | null
           status: string
           stock: number | null
           updated_at: string
         }
         Insert: {
           admin_notes?: string | null
+          category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           coach_id: string
@@ -5736,12 +5759,14 @@ export type Database = {
           price_input_mode?: string
           professional_net_amount?: number | null
           redemption_instructions?: string | null
+          section_id?: string | null
           status?: string
           stock?: number | null
           updated_at?: string
         }
         Update: {
           admin_notes?: string | null
+          category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           coach_id?: string
@@ -5758,16 +5783,31 @@ export type Database = {
           price_input_mode?: string
           professional_net_amount?: number | null
           redemption_instructions?: string | null
+          section_id?: string | null
           status?: string
           stock?: number | null
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "professional_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "professional_products_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_products_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "store_sections"
             referencedColumns: ["id"]
           },
         ]
@@ -6186,11 +6226,13 @@ export type Database = {
           card_height: number | null
           card_width: number | null
           created_at: string
+          created_by: string | null
           icon: string | null
           id: string
           image_url: string | null
           is_active: boolean
           name: string
+          pending: boolean
           section_id: string
           slug: string
           sort_order: number
@@ -6200,11 +6242,13 @@ export type Database = {
           card_height?: number | null
           card_width?: number | null
           created_at?: string
+          created_by?: string | null
           icon?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           name: string
+          pending?: boolean
           section_id: string
           slug: string
           sort_order?: number
@@ -6214,11 +6258,13 @@ export type Database = {
           card_height?: number | null
           card_width?: number | null
           created_at?: string
+          created_by?: string | null
           icon?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           name?: string
+          pending?: boolean
           section_id?: string
           slug?: string
           sort_order?: number
@@ -6434,11 +6480,13 @@ export type Database = {
           card_height: number | null
           card_width: number | null
           created_at: string
+          created_by: string | null
           icon: string | null
           id: string
           image_url: string | null
           is_active: boolean
           name: string
+          pending: boolean
           slug: string
           sort_order: number
           updated_at: string
@@ -6447,11 +6495,13 @@ export type Database = {
           card_height?: number | null
           card_width?: number | null
           created_at?: string
+          created_by?: string | null
           icon?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           name: string
+          pending?: boolean
           slug: string
           sort_order?: number
           updated_at?: string
@@ -6460,11 +6510,13 @@ export type Database = {
           card_height?: number | null
           card_width?: number | null
           created_at?: string
+          created_by?: string | null
           icon?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           name?: string
+          pending?: boolean
           slug?: string
           sort_order?: number
           updated_at?: string

@@ -10,6 +10,7 @@ import {
   type PartnerPriceMode,
 } from "@/lib/partnerFinance";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
+import { CategoryPicker } from "@/components/store/CategoryPicker";
 
 interface ProProduct {
   id: string;
@@ -30,6 +31,8 @@ interface ProProduct {
   network_l1_amount?: number;
   network_l2_amount?: number;
   network_l3_amount?: number;
+  section_id?: string | null;
+  category_id?: string | null;
 }
 
 export default function ProfessionalProductsPanel({ coachId }: { coachId: string }) {
@@ -58,6 +61,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     professional_net_amount: 0,
+    section_id: null,
+    category_id: null,
   });
 
   const upload = async (file: File) => {
@@ -223,6 +228,12 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               <Field label="Estoque (opcional)">
                 <input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" />
               </Field>
+
+              <CategoryPicker
+                sectionId={editing.section_id}
+                categoryId={editing.category_id}
+                onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
+              />
 
               <Field label="Instruções de resgate">
                 <textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Como o aluno usa o produto após pagar" />
