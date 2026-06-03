@@ -38,6 +38,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
   const [selected, setSelected] = useState<Card | null>(null);
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
+  const [studentEmail, setStudentEmail] = useState("");
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -89,19 +90,33 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
 
   const buy = async (method: "pix" | "card") => {
     if (!selected) return;
-    if (selected.kind === "partner") {
-      toast.info("Compras de produtos de empresas parceiras acontecem na loja principal.");
-      return;
-    }
     if (selected.isSchedulable && !slot) {
       toast.error("Selecione um horário para agendar.");
+      return;
+    }
+    if (selected.kind === "partner" && !studentEmail.trim()) {
+      toast.error("Informe o e-mail do aluno indicado.");
       return;
     }
     setBuying(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
-      if (selected.isSchedulable && slot) {
+      if (selected.kind === "partner") {
+        const { data: stuId, error: stuErr } = await supabase.rpc(
+          "find_student_id_by_email" as never,
+          { _email: studentEmail.trim() } as never,
+        );
+        if (stuErr) throw new Error(stuErr.message);
+        if (!stuId) throw new Error("Aluno não encontrado para esse e-mail.");
+        const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
+          _partner_product_id: selected.id,
+          _student_id: stuId,
+          _payment_method: method,
+        } as never);
+        if (error) throw new Error(error.message);
+        ppId = data as unknown as string;
+      } else if (selected.isSchedulable && slot) {
         const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
           _professional_product_id: selected.id,
           _starts_at: slot,
@@ -133,6 +148,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       });
       setSelected(null);
       setSlot(null);
+      setStudentEmail("");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
       toast.error(msg);
@@ -222,7 +238,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       {selected && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-          onClick={() => { setSelected(null); setSlot(null); }}
+          onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -237,7 +253,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                 </div>
               )}
               <button
-                onClick={() => { setSelected(null); setSlot(null); }}
+                onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />
@@ -263,28 +279,39 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                   onChange={setSlot}
                 />
               )}
-              {selected.kind === "partner" ? (
-                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80">
-                  Compras de produtos de empresas parceiras acontecem na loja principal.
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    disabled={buying}
-                    onClick={() => buy("pix")}
-                    className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {buying ? "Processando..." : "Comprar com PIX"}
-                  </button>
-                  <button
-                    disabled={buying}
-                    onClick={() => buy("card")}
-                    className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
-                  >
-                    {buying ? "..." : "Comprar com Cartão"}
-                  </button>
+              {selected.kind === "partner" && (
+                <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-primary">
+                    E-mail do aluno indicado
+                  </label>
+                  <input
+                    type="email"
+                    value={studentEmail}
+                    onChange={(e) => setStudentEmail(e.target.value)}
+                    placeholder="aluno@exemplo.com"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                  <p className="text-[11px] text-foreground/60">
+                    O pedido será registrado em nome desse aluno. Comissões de rede seguem o coach dele.
+                  </p>
                 </div>
               )}
+              <div className="flex gap-2">
+                <button
+                  disabled={buying}
+                  onClick={() => buy("pix")}
+                  className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {buying ? "Processando..." : "Comprar com PIX"}
+                </button>
+                <button
+                  disabled={buying}
+                  onClick={() => buy("card")}
+                  className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                >
+                  {buying ? "..." : "Comprar com Cartão"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
