@@ -151,9 +151,8 @@ function PartnerPanel() {
         {tab === "store" && hasActiveFree && <StorePage />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
         {tab === "fitmind_calendar" && <FitmindCalendar />}
-
+        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && <MyNetworkPanel />}
-        {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
