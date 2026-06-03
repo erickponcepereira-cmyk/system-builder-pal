@@ -26,7 +26,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [accessOptions, setAccessOptions] = useState<{ coach: boolean; student: boolean } | null>(null);
+  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; student: boolean; partner: boolean } | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
