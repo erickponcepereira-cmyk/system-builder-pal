@@ -58,6 +58,7 @@ import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminProfessionalsRouteImport } from './routes/admin.professionals'
+import { Route as AdminProfessionalProductsRouteImport } from './routes/admin.professional-products'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminProductOrdersRouteImport } from './routes/admin.product-orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
@@ -340,6 +341,12 @@ const AdminProfessionalsRoute = AdminProfessionalsRouteImport.update({
   path: '/professionals',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProfessionalProductsRoute =
+  AdminProfessionalProductsRouteImport.update({
+    id: '/professional-products',
+    path: '/professional-products',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -562,6 +569,7 @@ export interface FileRoutesByFullPath {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/professional-products': typeof AdminProfessionalProductsRoute
   '/admin/professionals': typeof AdminProfessionalsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -646,6 +654,7 @@ export interface FileRoutesByTo {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/professional-products': typeof AdminProfessionalProductsRoute
   '/admin/professionals': typeof AdminProfessionalsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -733,6 +742,7 @@ export interface FileRoutesById {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/product-orders': typeof AdminProductOrdersRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/professional-products': typeof AdminProfessionalProductsRoute
   '/admin/professionals': typeof AdminProfessionalsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -821,6 +831,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/product-orders'
     | '/admin/products'
+    | '/admin/professional-products'
     | '/admin/professionals'
     | '/admin/reports'
     | '/admin/settings'
@@ -905,6 +916,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/product-orders'
     | '/admin/products'
+    | '/admin/professional-products'
     | '/admin/professionals'
     | '/admin/reports'
     | '/admin/settings'
@@ -991,6 +1003,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/product-orders'
     | '/admin/products'
+    | '/admin/professional-products'
     | '/admin/professionals'
     | '/admin/reports'
     | '/admin/settings'
@@ -1413,6 +1426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProfessionalsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/professional-products': {
+      id: '/admin/professional-products'
+      path: '/professional-products'
+      fullPath: '/admin/professional-products'
+      preLoaderRoute: typeof AdminProfessionalProductsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/products': {
       id: '/admin/products'
       path: '/products'
@@ -1699,6 +1719,7 @@ interface AdminRouteChildren {
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminProductOrdersRoute: typeof AdminProductOrdersRoute
   AdminProductsRoute: typeof AdminProductsRoute
+  AdminProfessionalProductsRoute: typeof AdminProfessionalProductsRoute
   AdminProfessionalsRoute: typeof AdminProfessionalsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -1735,6 +1756,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminProductOrdersRoute: AdminProductOrdersRoute,
   AdminProductsRoute: AdminProductsRoute,
+  AdminProfessionalProductsRoute: AdminProfessionalProductsRoute,
   AdminProfessionalsRoute: AdminProfessionalsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,

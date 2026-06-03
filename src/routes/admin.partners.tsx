@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Check, X, Loader2 } from "lucide-react";
+import { Building2, Loader2, Eye } from "lucide-react";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
+import { ProductReviewModal } from "@/components/admin/ProductReviewModal";
 
 export const Route = createFileRoute("/admin/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — Admin" }] }),
@@ -18,8 +19,8 @@ function AdminPartners() {
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState<Record<string, string>>({});
   const [openPartnerId, setOpenPartnerId] = useState<string | null>(null);
+  const [openProductId, setOpenProductId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -39,13 +40,8 @@ function AdminPartners() {
     toast.success("Atualizado"); load();
   };
 
-  const reviewProduct = async (id: string, decision: "approved" | "rejected") => {
-    const patch: Partial<ProductRow> & { approved_at?: string | null } = { status: decision, admin_notes: notes[id] || null };
-    if (decision === "approved") patch.approved_at = new Date().toISOString();
-    const { error } = await supabase.from("partner_products" as never).update(patch as never).eq("id" as never, id);
-    if (error) return toast.error(error.message);
-    toast.success(decision === "approved" ? "Produto aprovado" : "Produto reprovado"); load();
-  };
+  // Product approval handled by ProductReviewModal
+
 
   return (
     <>
@@ -89,18 +85,14 @@ function AdminPartners() {
       {!loading && tab === "produtos" && (
         <div className="space-y-2">
           {products.filter(p => p.status === "pending").map(p => (
-            <div key={p.id} className="rounded-xl p-4 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
+            <button key={p.id} onClick={() => setOpenProductId(p.id)} className="w-full text-left rounded-xl p-4 flex gap-3 hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
               {p.image_url ? <img src={p.image_url} className="h-20 w-20 rounded object-cover" /> : <div className="h-20 w-20 rounded bg-white/5" />}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{p.name}</p>
                 <p className="text-[11px] text-white/50">{p.partners?.fantasy_name} · {p.kind === "free" ? "Gratuito" : `R$ ${Number(p.price).toFixed(2)}`}</p>
-                <textarea value={notes[p.id] || ""} onChange={e => setNotes({ ...notes, [p.id]: e.target.value })} placeholder="Observação (obrigatória para reprovar)" className="mt-2 w-full rounded bg-black/40 border border-white/10 px-2 py-1.5 text-xs text-white" rows={2} />
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => reviewProduct(p.id, "approved")} className="flex items-center gap-1 rounded bg-green-500/15 text-green-400 px-3 py-1.5 text-xs"><Check className="h-3.5 w-3.5" /> Aprovar</button>
-                  <button onClick={() => { if (!notes[p.id]?.trim()) return toast.error("Informe a observação"); reviewProduct(p.id, "rejected"); }} className="flex items-center gap-1 rounded bg-red-500/15 text-red-400 px-3 py-1.5 text-xs"><X className="h-3.5 w-3.5" /> Reprovar</button>
-                </div>
+                <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary"><Eye className="h-3.5 w-3.5" /> Abrir para revisar</span>
               </div>
-            </div>
+            </button>
           ))}
           {products.filter(p => p.status === "pending").length === 0 && <p className="text-sm text-white/50">Nenhum produto pendente.</p>}
 
@@ -120,6 +112,14 @@ function AdminPartners() {
         <PartnerDetailsModal
           partnerId={openPartnerId}
           onClose={() => setOpenPartnerId(null)}
+          onChanged={load}
+        />
+      )}
+      {openProductId && (
+        <ProductReviewModal
+          table="partner_products"
+          productId={openProductId}
+          onClose={() => setOpenProductId(null)}
           onChanged={load}
         />
       )}
