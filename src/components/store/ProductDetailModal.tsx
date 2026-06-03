@@ -84,6 +84,8 @@ export function ProductDetailModal({
   addLabel,
   professional,
 }: Props) {
+  const [slot, setSlot] = useState<string | null>(product.scheduledSlot || null);
+  const needsSlot = !!(product.isSchedulable && product.professionalCoachId);
   const hasCommissionData =
     showCommissions &&
     (product.commissionCoach != null ||
