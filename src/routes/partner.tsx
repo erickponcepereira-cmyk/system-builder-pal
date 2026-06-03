@@ -64,6 +64,7 @@ function PartnerPanel() {
   const [visits, setVisits] = useState(0);
   const [loading, setLoading] = useState(true);
   const [otherRoles, setOtherRoles] = useState<{ admin: boolean; coach: boolean; student: boolean }>({ admin: false, coach: false, student: false });
+  const [coachCtx, setCoachCtx] = useState<CoachContext | null>(null);
 
   const load = async () => {
     setLoading(true);
