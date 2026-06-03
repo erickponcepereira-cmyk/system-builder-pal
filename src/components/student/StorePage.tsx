@@ -431,11 +431,25 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       // Caminho exclusivo: produto de parceiro (1 item por pedido)
       if (partnerItems.length === 1) {
         const pp = partnerItems[0];
-        const { data: ppId, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
-          _professional_product_id: pp.sourceId,
-          _payment_method: paymentMethod,
-        } as never);
-        if (ppErr) throw new Error(ppErr.message);
+        let ppId: string | null = null;
+        if (pp.isSchedulable && pp.scheduledSlot) {
+          const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
+            _professional_product_id: pp.sourceId,
+            _starts_at: pp.scheduledSlot,
+            _payment_method: paymentMethod,
+          } as never);
+          if (error) throw new Error(error.message);
+          ppId = data as unknown as string;
+        } else if (pp.isSchedulable && !pp.scheduledSlot) {
+          throw new Error("Selecione um horário para este atendimento.");
+        } else {
+          const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
+            _professional_product_id: pp.sourceId,
+            _payment_method: paymentMethod,
+          } as never);
+          if (ppErr) throw new Error(ppErr.message);
+          ppId = data as unknown as string;
+        }
         if (!ppId) throw new Error("Pedido não retornado");
         const { data: orderData } = await supabase
           .from("partner_product_orders" as never)
