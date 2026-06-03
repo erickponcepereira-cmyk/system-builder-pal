@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen } from "lucide-react";
 import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/components/workouts/WorkoutTemplatesPanel";
 import { WindowMethod } from "@/components/student/WindowMethod";
+import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 
 type Student = {
   id: string;
@@ -85,8 +86,10 @@ export function ProtocolTab() {
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
   const [newExercise, setNewExercise] = useState<Partial<Exercise>>({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
-  const [bioEvalUrl, setBioEvalUrl] = useState<string | null>(null);
-  const [anamnesisUrl, setAnamnesisUrl] = useState<string | null>(null);
+  const [hasBio, setHasBio] = useState(false);
+  const [hasAnamnesis, setHasAnamnesis] = useState(false);
+  const [lastBioWeight, setLastBioWeight] = useState<number | null>(null);
+  const [detailsTab, setDetailsTab] = useState<"avaliacoes" | "anamnese" | null>(null);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
@@ -264,13 +267,21 @@ export function ProtocolTab() {
     }
 
     if (!s.external) {
-      const { data: bio } = await supabase.from("bioimpedance_evaluations").select("id").eq("student_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      setBioEvalUrl(bio ? `/admin/students?student=${s.id}` : null);
+      const { data: bio } = await supabase
+        .from("coach_body_assessments")
+        .select("id, weight")
+        .eq("student_id", s.id)
+        .order("assessment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setHasBio(!!bio);
+      setLastBioWeight(bio?.weight ?? null);
       const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
-      setAnamnesisUrl(an ? `/admin/students?student=${s.id}` : null);
+      setHasAnamnesis(!!an);
     } else {
-      setBioEvalUrl(null);
-      setAnamnesisUrl(null);
+      setHasBio(false);
+      setHasAnamnesis(false);
+      setLastBioWeight(null);
     }
 
     setLoading(false);
@@ -411,9 +422,9 @@ export function ProtocolTab() {
 
           {/* Atalhos rápidos */}
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <ShortcutLink icon={FileText} label="Anamnese" to={anamnesisUrl} fallback="Sem registro" />
-            <ShortcutLink icon={Activity} label="Bioimpedância" to={bioEvalUrl} fallback="Sem registro" />
-            <InfoChip icon={Target} label="Peso atual" value={selected.current_weight ? `${selected.current_weight} kg` : "—"} />
+            <ShortcutButton icon={FileText} label="Anamnese" value={hasAnamnesis ? "Ver registro" : "Sem registro"} disabled={selected.external || !hasAnamnesis} onClick={() => setDetailsTab("anamnese")} />
+            <ShortcutButton icon={Activity} label="Bioimpedância" value={hasBio ? "Ver avaliações" : "Sem registro"} disabled={selected.external || !hasBio} onClick={() => setDetailsTab("avaliacoes")} />
+            <InfoChip icon={Target} label="Peso atual" value={lastBioWeight != null ? `${lastBioWeight} kg` : (selected.current_weight ? `${selected.current_weight} kg` : "—")} />
             <InfoChip icon={Heart} label="Restrições" value={protocol.restrictions.length ? `${protocol.restrictions.length}` : "Nenhuma"} />
           </div>
 
@@ -619,6 +630,10 @@ export function ProtocolTab() {
         </>
       )}
 
+      {detailsTab && selected && !selected.external && (
+        <StudentDetailsModal studentId={selected.id} initialTab={detailsTab} onClose={() => setDetailsTab(null)} />
+      )}
+
       {templatePickerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setTemplatePickerOpen(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
@@ -741,17 +756,16 @@ function InfoChip({ icon: Icon, label, value }: { icon: any; label: string; valu
   );
 }
 
-function ShortcutLink({ icon: Icon, label, to, fallback }: { icon: any; label: string; to: string | null; fallback: string }) {
-  const content = (
-    <div className="rounded-xl bg-white/5 p-3">
+function ShortcutButton({ icon: Icon, label, value, disabled, onClick }: { icon: any; label: string; value: string; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className="text-left rounded-xl bg-white/5 p-3 transition hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/5">
       <div className="mb-1 flex items-center gap-1.5">
         <Icon className="h-3.5 w-3.5 text-primary" />
         <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
       </div>
-      <p className="text-sm font-semibold text-white">{to ? "Abrir" : fallback}</p>
-    </div>
+      <p className="text-sm font-semibold text-white">{value}</p>
+    </button>
   );
-  return to ? <a href={to} className="block hover:opacity-80">{content}</a> : <div className="opacity-60">{content}</div>;
 }
 
 export default ProtocolTab;
