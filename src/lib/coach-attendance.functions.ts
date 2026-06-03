@@ -258,6 +258,7 @@ export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
         .eq("student_id", data.studentId)
         .eq("attended", true)
         .gte("log_date", cutoffDate)
+        .neq("activity_type", "partner_visit")
         .order("log_date", { ascending: false }),
       supabaseAdmin
         .from("partner_visits")
