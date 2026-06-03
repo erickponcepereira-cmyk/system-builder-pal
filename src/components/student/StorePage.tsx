@@ -142,8 +142,9 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
     if (!coachMode && userData.user) {
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
-      const { data: student } = profile?.id ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle() : { data: null };
+      const { data: student } = profile?.id ? await supabase.from("students").select("id, referral_code").eq("profile_id", profile.id).maybeSingle() : { data: null };
       if (student?.id) {
+        setMyReferralCode((student as any).referral_code || null);
         const { data: orderData } = await supabase
           .from("store_orders" as never)
           .select("id,order_number,status,total_amount,created_at" as never)
@@ -152,6 +153,24 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           .limit(8);
         setOrders((orderData as unknown as OrderRow[]) || []);
       }
+
+      // Produtos com slot de indicação aluno→aluno
+      const { data: refSlots } = await supabase
+        .from("product_value_slots" as never)
+        .select("product_id" as never)
+        .eq("applies_to_student_referral" as never, true as never)
+        .eq("is_active" as never, true as never);
+      const ids = new Set<string>(((refSlots as any[]) || []).map((s) => s.product_id));
+      setIndicableProductIds(ids);
+
+      // Indicação ativa em sessão (vinda de /r/{code}?p=…)
+      try {
+        const raw = sessionStorage.getItem("fitmind_referral");
+        if (raw) {
+          const parsed = JSON.parse(raw) as { referredByStudentId?: string | null };
+          setPendingReferrerStudentId(parsed?.referredByStudentId || null);
+        }
+      } catch { /* ignore */ }
     }
 
     setItems([
