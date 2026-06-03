@@ -21,6 +21,7 @@ import {
   type PendingFeeRow,
 } from "@/lib/admin-financial.functions";
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
+import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
 
 export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
 
