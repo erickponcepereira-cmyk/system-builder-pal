@@ -7839,9 +7839,22 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_coach: { Args: { _user_id: string }; Returns: boolean }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_master_coach: { Args: { _coach_id: string }; Returns: boolean }
       join_student_challenge_group: {
         Args: { _group_id: string }
         Returns: undefined
+      }
+      list_all_students_for_master: {
+        Args: { _q?: string }
+        Returns: {
+          coach_id: string
+          coach_name: string
+          cpf: string
+          email: string
+          id: string
+          name: string
+          phone: string
+        }[]
       }
       list_coach_team_clients: {
         Args: never

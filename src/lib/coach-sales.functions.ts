@@ -136,12 +136,34 @@ export const createCoachSale = createServerFn({ method: "POST" })
     if (!coachId) throw new Error("Coach não encontrado");
     if (!data.items.length) throw new Error("Carrinho vazio");
 
-    // Validate the client belongs to this coach
+    // Validate the client exists. Master Coaches may sell to clients of other coaches;
+    // every other coach can only sell to their own clients.
     const { data: client } = await supabaseAdmin
       .from("students").select("id,coach_id").eq("id", data.clientId).maybeSingle();
-    if (!client || client.coach_id !== coachId) throw new Error("Cliente não pertence ao coach");
+    if (!client) throw new Error("Cliente não encontrado");
+
+    const titularCoachId: string | null = (client as { coach_id: string | null }).coach_id ?? null;
+    let isMasterCrossSale = false;
+    if (titularCoachId !== coachId) {
+      const { data: masterCheck } = await supabaseAdmin
+        .rpc("is_master_coach" as never, { _coach_id: coachId } as never);
+      if (!masterCheck) throw new Error("Cliente não pertence ao coach");
+      if (titularCoachId) isMasterCrossSale = true;
+    }
 
     const subtotal = data.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+
+    const orderMetadata: Record<string, unknown> = {
+      created_by_coach_id: coachId,
+      source: "coach_sale",
+    };
+    if (isMasterCrossSale && titularCoachId) {
+      orderMetadata.master_cross_sale = {
+        seller_coach_id: coachId,
+        titular_coach_id: titularCoachId,
+        master_pct: 10,
+      };
+    }
 
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("store_orders")
@@ -154,8 +176,8 @@ export const createCoachSale = createServerFn({ method: "POST" })
         tax_amount: 0,
         total_amount: subtotal,
         notes: data.notes || null,
-        metadata: { created_by_coach_id: coachId, source: "coach_sale" },
-      })
+        metadata: orderMetadata,
+      } as never)
       .select("id, order_number, total_amount")
       .single();
     if (orderErr || !order) throw new Error(orderErr?.message || "Falha ao criar pedido");
@@ -172,55 +194,51 @@ export const createCoachSale = createServerFn({ method: "POST" })
       total_price: i.unitPrice * i.quantity,
       metadata: i.kind === "item" ? { store_item_id: i.productId } : {},
     }));
-    const { error: itemsErr } = await supabaseAdmin.from("store_order_items").insert(itemsPayload);
+    const { error: itemsErr } = await supabaseAdmin.from("store_order_items").insert(itemsPayload as never);
     if (itemsErr) throw new Error(itemsErr.message);
 
-    // ─── Master Coach cross-sale (10% extra deduzido da comissão) ───
-    // Para cada produto "challenge" ou "item" com allow_master_coach_sale = true,
-    // procura o master coach mais próximo na upline e registra a comissão extra.
-    try {
-      const allProductIds = data.items
-        .filter((i) => i.kind === "challenge" || i.kind === "item")
-        .map((i) => i.productId);
-      if (allProductIds.length) {
-        const { data: prodRows } = await supabaseAdmin
-          .from("products")
-          .select("id, price, commission_coach, allow_master_coach_sale")
-          .in("id", allProductIds);
-        const prodMap = new Map<string, any>();
-        (prodRows || []).forEach((p: any) => prodMap.set(p.id, p));
+    // ─── Master Coach cross-sale tracking (informational) ───
+    // A divisão real 10/90 é aplicada pelo trigger SQL `apply_master_cross_sale_split`
+    // sobre a tabela `commissions` quando a transação for paga. Aqui apenas registramos
+    // o evento na tabela `master_coach_commissions` para relatórios.
+    if (isMasterCrossSale) {
+      try {
+        const allProductIds = data.items
+          .filter((i) => i.kind === "challenge" || i.kind === "item")
+          .map((i) => i.productId);
+        if (allProductIds.length) {
+          const { data: prodRows } = await supabaseAdmin
+            .from("products")
+            .select("id, price, commission_coach")
+            .in("id", allProductIds);
+          const prodMap = new Map<string, { commission_coach: number }>();
+          (prodRows || []).forEach((p) =>
+            prodMap.set(p.id as string, { commission_coach: Number((p as { commission_coach: number }).commission_coach || 0) }),
+          );
 
-        const { data: masterRow } = await supabaseAdmin.rpc("find_master_coach_for", {
-          _coach_id: coachId,
-        });
-        const masterCoachId = masterRow as unknown as string | null;
-        const isCross = masterCoachId && masterCoachId !== coachId;
-
-        if (masterCoachId) {
-          const rows: any[] = [];
+          const rows: Record<string, unknown>[] = [];
           for (const item of data.items) {
             const p = prodMap.get(item.productId);
-            if (!p || !p.allow_master_coach_sale) continue;
-            const commissionPct = Number(p.commission_coach || 0);
-            const baseCommission = item.unitPrice * item.quantity * (commissionPct / 100);
-            const masterAmount = Math.round(baseCommission * 10) / 100; // 10% da comissão
+            if (!p) continue;
+            const baseCommission = item.unitPrice * item.quantity * (p.commission_coach / 100);
+            const masterAmount = Math.round(baseCommission * 10) / 100;
             rows.push({
               order_id: order.id,
               product_id: item.productId,
               seller_coach_id: coachId,
-              master_coach_id: masterCoachId,
-              is_cross_sale: !!isCross,
+              master_coach_id: coachId,
+              is_cross_sale: true,
               base_commission: baseCommission,
               master_amount: masterAmount,
             });
           }
           if (rows.length) {
-            await supabaseAdmin.from("master_coach_commissions").insert(rows);
+            await supabaseAdmin.from("master_coach_commissions").insert(rows as never);
           }
         }
+      } catch (e) {
+        console.error("master coach commission tracking failed:", e);
       }
-    } catch (e) {
-      console.error("master coach commission failed:", e);
     }
 
     // ─── Atribuição automática de Nutricionista Parceiro ───

@@ -1,37 +1,82 @@
 ## Objetivo
 
-Eliminar o redirect automático para um painel específico após o login quando o usuário tem acesso a mais de um (admin + aluno, coach + aluno, etc.) e garantir que o link de indicação `/r/$code` sempre leve para a loja como aluno, mesmo se o usuário logado for admin/coach/parceiro.
+Três mudanças, todas na lógica de comissionamento do Master Coach e simulação financeira:
 
-## Mudanças
+1. **Comissão de venda cruzada do Master Coach** — quando um coach com o badge `master_coach` vende para cliente de outro coach.
+2. **Acesso ampliado de clientes na loja** — Master Coach pode pesquisar e vender para qualquer aluno do app.
+3. **Simulador de venda direta vs aluno→aluno** na aba financeira do produto.
 
-### 1. `src/routes/login.tsx` — sempre perguntar quando houver 2+ painéis
+---
 
-Hoje a função `routeSignedInUser` só mostra o seletor quando `canCoach && canStudent`. Admin entra direto, mesmo tendo registro em `students`.
+### 1. Comissão cruzada do Master Coach (todos os produtos)
 
-- Trocar o estado `accessOptions: { coach, student }` por `accessOptions: { admin, coach, student, partner }`.
-- Calcular `canAdmin` (role admin/director/manager), `canCoach` (registro em `coaches` ou role gerencial), `canStudent` (registro em `students`), `canPartner` (registro em `partners`).
-- Se a soma de painéis disponíveis for ≥ 2, mostrar o seletor com botões para cada painel disponível. Caso contrário, entrar direto no único painel.
-- Não persistir a escolha (sem localStorage); a tela aparece em todo login.
-- Estender o bloco de UI atual (linhas 304-322) para renderizar dinamicamente os botões disponíveis (Admin, Coach, Aluno, Parceiro), reaproveitando o `enterArea` existente.
+**Regra**
+- Quando o vendedor é Master Coach **E** o cliente pertence a outro coach:
+  - Calcular a comissão do coach normalmente (`commission_coach %` do bruto, já descontadas taxas/impostos conforme regra existente).
+  - Master Coach fica com **10% dessa comissão**.
+  - O coach do cliente (titular do aluno) recebe os **90% restantes**, no lugar do vendedor.
+- Quando o cliente é do próprio Master Coach → comissionamento normal (Master = vendedor = titular).
+- Vale para todos os produtos (challenges, items, store, professional_products), **sem depender de `allow_master_coach_sale`** quando o vendedor é Master Coach.
 
-### 2. `src/routes/r.$code.tsx` — forçar aluno direto na loja
+**Implementação backend (`src/lib/coach-sales.functions.ts` + nova migração)**
+- Adicionar helper `is_master_coach(_coach_id uuid)` (SQL) que retorna `true` se existe badge `master_coach` ativo.
+- Reescrever o bloco `Master Coach cross-sale` em `coach-sales.functions.ts` (linhas 178–224):
+  - Detectar se `coachId` é Master Coach.
+  - Obter o `coach_id` titular do aluno comprador (`students.coach_id`).
+  - Se `seller != titular`:
+    - Para cada item, calcular `baseCommission` (mantém regra atual).
+    - `masterAmount = baseCommission * 0.10`
+    - `titularAmount = baseCommission * 0.90`
+    - Registrar em `master_coach_commissions` (já existe) com `master_coach_id = seller`, `is_cross_sale = true`.
+    - Criar/atualizar linha de comissão direcionando o restante (`titularAmount`) ao coach titular em vez do vendedor (ajuste em `commissions` ou via override no fluxo de pagamento já existente — usar a mesma trigger SQL que processa comissões: passar `beneficiary_coach_id = titular` quando `is_cross_sale = true`).
+- Manter o `allow_master_coach_sale` apenas como flag legada (pode ser ignorada quando vendedor é Master Coach).
 
-Substituir a lógica atual de checar `profile.role === "student"` (que falha para admins com perfil de aluno) por:
+**Checkout fora do coach (compra pelo próprio aluno via link `/r/{code}`)**
+- Não se aplica: aluno→aluno é regra separada. Cruzamento Master só ocorre em vendas iniciadas pelo coach Master.
 
-- Se há sessão ativa, consultar `students` por `profile_id` do usuário.
-- Se existir registro de aluno → setar `sessionStorage.fitmind_selected_area = "student"` e navegar para `/student/store` (sem deslogar, sem perguntar).
-- Se não existir → deslogar e mandar para `/register` como aluno (fluxo atual).
-- Se não há sessão → fluxo atual de cadastro.
+---
 
-Isso garante que admin/coach/parceiro abrindo o link vai direto para a loja na área do aluno, independentemente do `profiles.role`.
+### 2. Loja: filtro "Meus clientes" / "Todos os clientes" para Master Coach
 
-### 3. Impacto colateral
+**Em `src/components/student/StorePage.tsx` (modo `coachMode`)**
+- Adicionar checagem `isMasterCoach` (consulta `coach_badges` por `master_coach`).
+- Em `loadCoachData`:
+  - Chamar `list_coach_team_clients` (atual) para "Meus clientes".
+  - Se `isMasterCoach`, também carregar/expor opção de buscar em **todos os alunos** via nova RPC `list_all_students_for_master(_q text)` (admin-style, retorna `id, name, email, cpf, phone, coach_name`).
+- No `ClientPickerModal`: quando `isMasterCoach`, mostrar abas **Meus clientes** | **Todos os clientes** com campo de busca (nome ou CPF). Coaches normais continuam vendo apenas seus alunos (sem abas).
 
-- A flag `sessionStorage.fitmind_selected_area` continua sendo o que o `_authenticated` (e telas de aluno) usam para saber em qual painel o usuário está; manter o comportamento atual.
-- Nenhuma mudança de schema; nenhuma migração necessária.
-- Nenhuma mudança nas rotas protegidas (`/admin/*`, `/coach/*`, `/student/*`, `/partner/*`) — elas continuam acessíveis se o usuário tiver os registros correspondentes.
+**Backend (nova migração)**
+- Criar RPC `list_all_students_for_master(_q text)`:
+  - `SECURITY DEFINER`, valida se `auth.uid()` é Master Coach.
+  - Retorna alunos filtrando por nome/CPF (`ILIKE`), limit 50.
 
-## Arquivos tocados
+---
 
-- `src/routes/login.tsx` (lógica de roteamento pós-login + UI do seletor)
-- `src/routes/r.$code.tsx` (detecção via tabela `students` em vez de `profiles.role`)
+### 3. Simulador "Venda direta" vs "Venda aluno→aluno" no editor financeiro
+
+**Em `src/components/admin/ProductFinancialEditor.tsx`**
+- Acima do bloco "Distribuição da venda normal" (linha ~230), adicionar toggle:
+  - `[ Venda direta ] [ Venda aluno → aluno ]`
+- Estado `simMode: "direct" | "referral"`.
+- Quando `simMode = "referral"`:
+  - Filtrar `sortedSlots` para considerar apenas slots com `applies_to_student_referral = true` (já existe).
+  - Recalcular `dist` e o fluxo de distribuição usando os slots dessa cesta.
+- Quando `simMode = "direct"`:
+  - Considerar slots com `applies_to_referral_sales = true` (campo "Venda normal").
+- O bloco "Comissão do coach vendedor por forma de pagamento" também passa a refletir o modo selecionado.
+- Apenas simulação visual — não altera dados salvos.
+
+---
+
+### Arquivos afetados
+
+- `src/lib/coach-sales.functions.ts` — nova lógica de divisão Master/titular.
+- `src/components/student/StorePage.tsx` — detectar Master, abas de clientes, busca por CPF/nome.
+- `src/components/admin/ProductFinancialEditor.tsx` — toggle e recálculo do simulador.
+- Nova migração SQL — função `is_master_coach`, RPC `list_all_students_for_master`, ajuste no fluxo de comissão para roteamento ao coach titular em cross-sale.
+
+### Pontos a confirmar
+
+1. Em **vendas cruzadas**, o coach titular recebe a comissão dele (90%) imediatamente ou só na entrega/aprovação (mesma regra dos slots `is_blocked_until_delivery`)? Assumindo **mesma regra dos slots atuais**.
+2. O filtro "Todos os clientes" do Master Coach deve incluir alunos **sem coach** também? Assumindo **sim** (todos os students ativos).
+3. O simulador deve mostrar os dois modos lado a lado ou apenas alternar? Assumindo **alternar** (mais compacto, cabe no layout atual).
