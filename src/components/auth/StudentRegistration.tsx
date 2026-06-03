@@ -40,6 +40,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [referralCoachName, setReferralCoachName] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   useEffect(() => {
     try {
@@ -80,6 +81,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
+    if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
 
     setLoading(true);
     setFormError(null);
@@ -225,6 +227,14 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                 </button>
               </div>
             </div>
+            <label className="flex items-start gap-2 cursor-pointer pt-1">
+              <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
+              <span className="text-xs text-white/60">
+                Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
+                os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a> e a{" "}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Política de Privacidade</a>.
+              </span>
+            </label>
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
