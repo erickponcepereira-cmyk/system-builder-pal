@@ -560,11 +560,40 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   );
 
   if (storeTab !== "fitmind") {
+    const addPartnerProductToCart = (item: { id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; seller: string; kind: "partner" | "professional"; isSchedulable?: boolean; professionalCoachId?: string | null; durationMinutes?: number; scheduledSlot?: string | null }) => {
+      const cartKind: ProductKind = item.kind === "partner" ? "partner_company" : "partner";
+      const cartItem: StoreProduct = {
+        id: `${cartKind}-${item.id}`,
+        sourceId: item.id,
+        title: item.name,
+        description: item.description,
+        price: item.price,
+        category: item.seller,
+        kind: cartKind,
+        tag: item.seller,
+        imageUrl: item.image_url,
+        creatorCoachId: item.professionalCoachId ?? null,
+        professionalCoachId: item.professionalCoachId ?? null,
+        isSchedulable: !!item.isSchedulable,
+        defaultDurationMinutes: item.durationMinutes ?? 30,
+        scheduledSlot: item.scheduledSlot ?? null,
+      };
+      // Apenas 1 produto de parceiro/profissional por pedido — substitui o atual
+      setCart([{ ...cartItem, quantity: 1 }]);
+      setCartOpen(true);
+    };
+
     return (
       <div className="flex flex-col gap-4 p-4 pb-6">
-        <header className="pt-2">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
-          <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
+        <header className="flex items-center justify-between pt-2">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
+            <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
+          </div>
+          <button onClick={() => setCartOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card">
+            <ShoppingBag className="h-5 w-5 text-muted-foreground" />
+            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{cart.reduce((s, i) => s + i.quantity, 0)}</span>
+          </button>
         </header>
         {tabsBar}
         {coachMode && (
@@ -590,6 +619,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           kind={storeTab}
           mode={coachMode ? "reseller" : "student"}
           resellerStudent={coachMode && selectedClient ? { id: selectedClient.id, name: selectedClient.name, email: selectedClient.email } : null}
+          onAddToCart={addPartnerProductToCart}
         />
         {clientPickerOpen && (
           <ClientPickerModal
@@ -598,6 +628,95 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
             onPick={(c) => { setSelectedClient(c); setClientPickerOpen(false); }}
             onClose={() => setClientPickerOpen(false)}
           />
+        )}
+        {cartOpen && (
+          <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+            <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Carrinho</h2>
+                  <p className="text-xs text-muted-foreground">{cart.length} itens no pedido</p>
+                </div>
+              </div>
+              {coachMode && (
+                <div className="mb-3 rounded-xl bg-muted p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Cliente</p>
+                  {selectedClient ? (
+                    <button onClick={() => { setCartOpen(false); setClientPickerOpen(true); }} className="mt-1 flex w-full items-center justify-between text-left">
+                      <p className="text-sm font-bold text-foreground">{selectedClient.name}</p>
+                      <span className="text-[10px] font-bold text-primary">Trocar</span>
+                    </button>
+                  ) : (
+                    <button onClick={() => { setCartOpen(false); setClientPickerOpen(true); }} className="mt-1 flex w-full items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2">
+                      <UserRound className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-bold text-primary">Selecionar aluno →</span>
+                    </button>
+                  )}
+                </div>
+              )}
+              {cart.length === 0 ? (
+                <p className="rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground">Seu carrinho está vazio.</p>
+              ) : (
+                <div className="space-y-2">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 rounded-xl bg-muted p-3">
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-foreground">{item.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{fmt(item.price)}</p>
+                        {item.scheduledSlot && <p className="text-[10px] text-primary">📅 {new Date(item.scheduledSlot).toLocaleString("pt-BR")}</p>}
+                      </div>
+                      <button onClick={() => setCart((c) => c.filter((x) => x.id !== item.id))}><Trash2 className="h-4 w-4 text-muted-foreground" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="my-4 grid grid-cols-3 gap-2">
+                {(["pix", "credit_card", "debit_card"] as PaymentMethod[]).map((method) => (
+                  <button key={method} onClick={() => setPaymentMethod(method)} className={`rounded-xl px-2 py-2 text-xs font-bold ${paymentMethod === method ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                    {method === "pix" ? "PIX" : method === "credit_card" ? "Crédito" : "Débito"}
+                  </button>
+                ))}
+              </div>
+              <div className="mb-4 rounded-xl bg-muted p-3 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Total</span><b className="text-primary">{fmt(total)}</b></div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setCartOpen(false)} className="flex-1 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-foreground">Fechar</button>
+                <button
+                  onClick={() => {
+                    if (coachMode && !selectedClient) { setCartOpen(false); setClientPickerOpen(true); }
+                    else checkout();
+                  }}
+                  disabled={checkingOut || cart.length === 0}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> {checkingOut ? "Processando..." : (coachMode && !selectedClient ? "Selecionar Aluno →" : "Finalizar")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {payOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Pagamento</h2>
+                  <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                </div>
+                <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
+              </div>
+              <MercadoPagoCheckout
+                source={{ kind: payOrder.sourceKind, id: payOrder.id }}
+                amount={payOrder.total}
+                description={`Pedido ${payOrder.number}`}
+                defaultPayer={{ email: payOrder.email, name: payOrder.name }}
+                initialMethod={paymentMethod === "pix" ? "pix" : "card"}
+                onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); }}
+              />
+            </div>
+          </div>
         )}
       </div>
     );
