@@ -509,8 +509,66 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const checkoutAsCoach = async () => {
     if (!selectedClient) { setCartOpen(false); setClientPickerOpen(true); return; }
     if (cart.length === 0) return;
+    const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
+    if (partnerItems.length > 0 && cart.length > 1) {
+      toast.error("Produtos de parceiros/profissionais devem ser vendidos separadamente.");
+      return;
+    }
     setCheckingOut(true);
     try {
+      // Caminho exclusivo: parceiro/profissional revendido para aluno
+      if (partnerItems.length === 1) {
+        const pp = partnerItems[0];
+        let ppId: string | null = null;
+        if (pp.kind === "partner_company") {
+          const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
+            _partner_product_id: pp.sourceId,
+            _student_id: selectedClient.id,
+            _payment_method: paymentMethod,
+          } as never);
+          if (error) throw new Error(error.message);
+          ppId = data as unknown as string;
+        } else if (pp.isSchedulable && pp.scheduledSlot) {
+          const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
+            _professional_product_id: pp.sourceId,
+            _starts_at: pp.scheduledSlot,
+            _payment_method: paymentMethod,
+            _buyer_student_id: selectedClient.id,
+          } as never);
+          if (error) throw new Error(error.message);
+          ppId = data as unknown as string;
+        } else if (pp.isSchedulable && !pp.scheduledSlot) {
+          throw new Error("Selecione um horário para este atendimento.");
+        } else {
+          const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
+            _professional_product_id: pp.sourceId,
+            _payment_method: paymentMethod,
+            _buyer_student_id: selectedClient.id,
+          } as never);
+          if (ppErr) throw new Error(ppErr.message);
+          ppId = data as unknown as string;
+        }
+        if (!ppId) throw new Error("Pedido não retornado");
+        const { data: orderData } = await supabase
+          .from("partner_product_orders" as never)
+          .select("id,order_number,gross_amount" as never)
+          .eq("id" as never, ppId as never)
+          .maybeSingle();
+        const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
+        setCart([]); setCartOpen(false);
+        setPayOrder({
+          id: od?.id || String(ppId),
+          total: Number(od?.gross_amount || pp.price),
+          number: od?.order_number || "pedido",
+          email: selectedClient.email || "",
+          name: selectedClient.name,
+          sourceKind: "partner_product_order",
+        });
+        toast.success("Venda criada. Finalize o pagamento.");
+        loadCoachData();
+        return;
+      }
+
       const items = cart.map((c) => ({
         productId: c.sourceId,
         kind: c.kind,
@@ -519,15 +577,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         quantity: c.quantity,
         itemKind: c.kind === "item" ? (c.stock === null || c.stock === undefined ? "digital" : "physical") : undefined,
       }));
-      if (!items.length) { toast.error("Carrinho vazio."); setCheckingOut(false); return; }
-      console.log("[coach sale payload]", { client: selectedClient.id, items, paymentMethod });
       const { data: res, error: rpcErr } = await supabase.rpc("create_coach_sale" as never, {
         _client_id: selectedClient.id,
         _items: items,
         _payment_method: paymentMethod,
         _notes: null,
       } as never);
-      console.log("[coach sale response]", { res, rpcErr });
       if (rpcErr) throw new Error(rpcErr.message);
       const row = (Array.isArray(res) ? res[0] : res) as { order_id?: string; orderId?: string; order_number?: string; orderNumber?: string; total?: number; total_amount?: number } | null;
       const orderId = row?.order_id || row?.orderId;
@@ -539,7 +594,6 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         email: selectedClient.email || "", name: selectedClient.name,
         sourceKind: "store_order",
       });
-
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
     } catch (e: any) {
