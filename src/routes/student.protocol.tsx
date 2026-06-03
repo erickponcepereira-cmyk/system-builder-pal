@@ -70,7 +70,7 @@ function StudentProtocolPage() {
       setStudentId(student.id);
       const [{ data: prot }, { data: anam }] = await Promise.all([
         supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle(),
-        supabase.from("anamnesis_forms").select("filled_at,gender,height,objective,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations").eq("student_id", student.id).order("filled_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("anamnesis_forms").select("filled_at,gender,height,objective,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations,blood_type,food_intolerances,has_diabetes,has_hypertension,has_cardiopathy,other_chronic_conditions,surgical_history,supplements_used").eq("student_id", student.id).order("filled_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
       if (prot) setProtocol(prot as any);
       if (anam) setAnamnese(anam as Anamnese);
