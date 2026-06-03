@@ -222,7 +222,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       {selected && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-          onClick={() => setSelected(null)}
+          onClick={() => { setSelected(null); setSlot(null); }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -237,7 +237,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                 </div>
               )}
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); setSlot(null); }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />
@@ -254,6 +254,14 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição</p>
                   <p className="mt-1 whitespace-pre-line text-sm text-foreground">{selected.description}</p>
                 </div>
+              )}
+              {selected.isSchedulable && selected.professionalCoachId && (
+                <AvailabilityPicker
+                  professionalCoachId={selected.professionalCoachId}
+                  durationMinutes={selected.durationMinutes || 30}
+                  value={slot}
+                  onChange={setSlot}
+                />
               )}
               {selected.kind === "partner" ? (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80">
