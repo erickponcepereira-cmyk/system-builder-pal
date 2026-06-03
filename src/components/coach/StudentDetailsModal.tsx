@@ -398,6 +398,18 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 </div>
               ))}
             </div>
+          ) : tab === "janelas" ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-bold text-primary mb-1">Método das Janelas — Registro do dia</p>
+                <p className="text-[11px] text-white/60">Preencha o registro de hoje. Ele fica vinculado automaticamente ao protocolo do aluno (Meu Protocolo → Método das Janelas).</p>
+              </div>
+              <WindowMethod studentId={studentId} hideExplanation />
+              <div>
+                <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Histórico</p>
+                <WindowMethodHistory studentId={studentId} />
+              </div>
+            </div>
           ) : tab === "evolucao" ? (
             <div className="space-y-4">
               <div>
