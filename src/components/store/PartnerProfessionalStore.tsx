@@ -38,6 +38,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
   const [selected, setSelected] = useState<Card | null>(null);
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
+  const [studentEmail, setStudentEmail] = useState("");
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   useEffect(() => {
