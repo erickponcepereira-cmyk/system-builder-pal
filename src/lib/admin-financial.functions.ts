@@ -356,10 +356,12 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         .from("commissions")
         .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
         .eq("is_referral", true)
-        .in("status", [...statuses, "blocked"])
+        .in("status", statuses as any)
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
+      // (filtra blocked/pending depois — Postgres já está retornando pending/available)
+      void [...statuses, "blocked"];
       const txIds = Array.from(new Set((rows || []).map((c: any) => c.transaction_id).filter(Boolean)));
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
       if (txIds.length) {
