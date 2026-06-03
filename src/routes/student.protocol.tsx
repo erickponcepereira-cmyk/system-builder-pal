@@ -195,17 +195,61 @@ function Meta({ icon: Icon, label, value, suffix }: { icon: any; label: string; 
   );
 }
 
-function Shortcut({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
+      {/* Anamnese — resultado salvo */}
+      {!loading && (
+        <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <button onClick={() => setShowAnamnese((v) => !v)} className="flex w-full items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              <div className="text-left">
+                <p className="text-sm font-bold text-white">Anamnese</p>
+                <p className="text-[11px] text-white/40">
+                  {anamnese?.filled_at ? `Preenchida em ${new Date(anamnese.filled_at).toLocaleDateString("pt-BR")}` : "Ainda não preenchida"}
+                </p>
+              </div>
+            </div>
+            {anamnese ? (
+              <ChevronRight className={`h-4 w-4 text-white/40 transition ${showAnamnese ? "rotate-90" : ""}`} />
+            ) : (
+              <Link to="/student/health" className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground">Preencher</Link>
+            )}
+          </button>
+          {anamnese && showAnamnese && (
+            <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
+              <Info label="Objetivo" value={anamnese.objective || anamnese.protocol_reason} />
+              <div className="grid grid-cols-2 gap-2">
+                <Info label="Gênero" value={anamnese.gender} />
+                <Info label="Altura" value={anamnese.height ? `${anamnese.height} cm` : null} />
+              </div>
+              <Info label="Condições preexistentes" value={anamnese.preexisting_conditions} />
+              <Info label="Medicamentos" value={anamnese.current_medications} />
+              <Info label="Alergias alimentares" value={anamnese.food_allergies} />
+              <div className="grid grid-cols-2 gap-2">
+                <Info label="Sono" value={anamnese.sleep_hours} />
+                <Info label="Estresse" value={anamnese.stress_level} />
+              </div>
+              <Info label="Pratica exercícios" value={anamnese.exercises_regularly == null ? null : anamnese.exercises_regularly ? "Sim" : "Não"} />
+              <Info label="Observações" value={anamnese.additional_observations} />
+              <Link to="/student/health" className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-bold text-primary hover:underline">
+                Editar anamnese →
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-white">{title}</p>
-        <p className="text-[11px] text-white/40">{desc}</p>
-      </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">Em breve</span>
+    <div className="rounded-xl bg-white/5 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
+      <p className="mt-0.5 whitespace-pre-wrap text-xs text-white">{value || "—"}</p>
+    </div>
+  );
+}
+
     </div>
   );
 }
