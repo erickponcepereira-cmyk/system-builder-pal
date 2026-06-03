@@ -416,7 +416,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
   const checkoutAsStudent = async () => {
     if (cart.length === 0) return;
-    const partnerItems = cart.filter((c) => c.kind === "partner");
+    const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
     if (partnerItems.length > 0 && cart.length > 1) {
       toast.error("Produtos de parceiros devem ser comprados separadamente.");
       return;
@@ -429,11 +429,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     try {
       const { data: userData } = await supabase.auth.getUser();
 
-      // Caminho exclusivo: produto de parceiro (1 item por pedido)
+      // Caminho exclusivo: produto de parceiro/profissional (1 item por pedido)
       if (partnerItems.length === 1) {
         const pp = partnerItems[0];
         let ppId: string | null = null;
-        if (pp.isSchedulable && pp.scheduledSlot) {
+        if (pp.kind === "partner_company") {
+          if (!ownStudentId) throw new Error("Conta de aluno não encontrada.");
+          const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
+            _partner_product_id: pp.sourceId,
+            _student_id: ownStudentId,
+            _payment_method: paymentMethod,
+          } as never);
+          if (error) throw new Error(error.message);
+          ppId = data as unknown as string;
+        } else if (pp.isSchedulable && pp.scheduledSlot) {
           const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
             _professional_product_id: pp.sourceId,
             _starts_at: pp.scheduledSlot,
