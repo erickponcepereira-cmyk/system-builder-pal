@@ -82,29 +82,19 @@ function LoginPage() {
       supabase.rpc("touch_my_activity" as never).then(() => {}, () => {});
     }
 
-    // Partner: rota direta
-    if (profile.role === "partner") {
-      const { data: partner } = await supabase
-        .from("partners" as never)
-        .select("id" as never)
-        .eq("profile_id" as never, profile.id)
-        .maybeSingle();
-      if (!partner) {
-        setLoading(false);
-        const m = "Cadastro de parceiro incompleto. Contate o suporte.";
-        setFormError(m); toast.error(m); return;
-      }
-      if (showSuccess) toast.success("Login realizado!");
-      enterArea("partner");
-      return;
-    }
+    const role = profile.role;
 
-    const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
+    const [
+      { data: coach, error: coachError },
+      { data: student, error: studentError },
+      { data: partner, error: partnerError },
+    ] = await Promise.all([
       supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
     ]);
 
-    if (coachError || studentError) {
+    if (coachError || studentError || partnerError) {
       setLoading(false);
       const message = "Não foi possível validar seu acesso. Tente novamente.";
       setFormError(message);
@@ -112,10 +102,10 @@ function LoginPage() {
       return;
     }
 
-    const role = profile.role;
-    // Coach pendente também pode entrar no painel de coach (em modo travado)
-    const canCoach = role === "admin" || role === "manager" || role === "director" || !!coach;
+    const canAdmin = role === "admin" || role === "manager" || role === "director";
+    const canCoach = canAdmin || !!coach;
     const canStudent = role === "student" || !!student;
+    const canPartner = role === "partner" || !!partner;
 
     if (role === "coach" && !coach) {
       setLoading(false);
@@ -133,7 +123,16 @@ function LoginPage() {
       return;
     }
 
-    if (role !== "admin" && !canCoach && !canStudent) {
+    if (role === "partner" && !partner) {
+      setLoading(false);
+      const m = "Cadastro de parceiro incompleto. Contate o suporte.";
+      setFormError(m); toast.error(m); return;
+    }
+
+    const available = { admin: canAdmin, coach: canCoach, student: canStudent, partner: canPartner };
+    const count = Number(canAdmin) + Number(canCoach) + Number(canStudent) + Number(canPartner);
+
+    if (count === 0) {
       setLoading(false);
       const message = "Login indisponível: nenhum painel liberado para este cadastro.";
       setFormError(message);
@@ -142,14 +141,19 @@ function LoginPage() {
     }
 
     if (showSuccess) toast.success("Login realizado com sucesso!");
-    if (role === "admin") enterArea("admin");
-    else if (canCoach && canStudent) {
-      setAccessOptions({ coach: true, student: true });
+
+    if (count >= 2) {
+      setAccessOptions(available);
       setLoading(false);
+      return;
     }
+
+    if (canAdmin) enterArea("admin");
     else if (canCoach) enterArea("coach");
-    else enterArea("student");
+    else if (canStudent) enterArea("student");
+    else enterArea("partner");
   };
+
 
 
   // Auto-login desativado durante a fase de testes.
