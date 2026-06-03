@@ -61,7 +61,7 @@ function StudentSupportPage() {
         {admins.map((admin) => {
           const url = whatsappUrl(admin.phone, `Olá ${admin.name.split(" ")[0]}, sou aluno da FitMind Club e preciso de ajuda.`);
           return (
-            <div key={admin.key} className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
+            <div key={admin.match} className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
               <p className="text-sm font-bold text-white">{admin.name}</p>
               <p className="mt-0.5 text-[11px] text-white/50">{admin.role}</p>
               {url ? (
