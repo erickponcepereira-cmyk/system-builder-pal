@@ -501,6 +501,47 @@ function ProfilePage() {
           </div>
         </div>
       )}
+
+      {showReferralsModal && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShowReferralsModal(false)}>
+          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Minhas indicações</h2>
+                <p className="text-[11px] text-white/40">{referralCommissions.length} comissão(ões) · total ganho R$ {referralCommissions.reduce((s, c) => s + c.amount, 0).toFixed(2).replace(".", ",")}</p>
+              </div>
+              <button onClick={() => setShowReferralsModal(false)} className="text-white/40 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {referralCommissions.length === 0 ? (
+              <p className="text-sm text-white/50">Nenhuma comissão de indicação ainda. Quando alguém usar seu link e fizer uma compra, aparece aqui.</p>
+            ) : (
+              <div className="space-y-2">
+                {referralCommissions.map((c) => {
+                  const statusLabel = c.status === "paid" ? "Pago" : c.status === "available" ? "Disponível" : c.status === "pending" ? "Pendente" : c.status === "cancelled" ? "Cancelado" : c.status || "—";
+                  const statusColor = c.status === "paid" || c.status === "available" ? "bg-success/20 text-success" : c.status === "cancelled" ? "bg-red-500/20 text-red-400" : "bg-white/10 text-white/60";
+                  return (
+                    <div key={c.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-white">{c.buyer_name || "Cliente"}</p>
+                          <p className="truncate text-[11px] text-white/50">{c.product_label || "Produto"}</p>
+                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleDateString("pt-BR")}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</p>
+                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${statusColor}`}>{statusLabel}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
