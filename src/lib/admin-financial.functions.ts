@@ -360,8 +360,6 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
-      // (filtra blocked/pending depois — Postgres já está retornando pending/available)
-      void [...statuses, "blocked"];
       const txIds = Array.from(new Set((rows || []).map((c: any) => c.transaction_id).filter(Boolean)));
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
       if (txIds.length) {
