@@ -260,7 +260,6 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
     return [];
   }
 }
-}
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
