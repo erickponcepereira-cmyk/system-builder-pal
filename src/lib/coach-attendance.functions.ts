@@ -67,8 +67,9 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
     const [{ data: logs }, { data: visits }, { data: txs }, { data: storeOrders }] = await Promise.all([
       supabaseAdmin
         .from("attendance_logs")
-        .select("student_id, log_date, attended")
+        .select("student_id, log_date, attended, activity_type")
         .in("student_id", studentIds)
+        .neq("activity_type", "partner_visit")
         .gte("log_date", date30),
       supabaseAdmin
         .from("partner_visits")
