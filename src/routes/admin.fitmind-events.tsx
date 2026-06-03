@@ -840,3 +840,116 @@ function HighlightedDaysTab() {
     </div>
   );
 }
+
+// ─── Attendance Report Tab ──────────────────────────────────────────────────
+
+type AttRow = { id: string; display_name: string; created_at: string; event_id: string; profile_id: string };
+type EventLite = { id: string; title: string; starts_at: string };
+
+function AttendanceReportTab() {
+  const [events, setEvents] = useState<EventLite[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<string>("");
+  const [rows, setRows] = useState<AttRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("fitmind_events")
+        .select("id,title,starts_at")
+        .order("starts_at", { ascending: false })
+        .limit(200);
+      const list = (data as EventLite[]) || [];
+      setEvents(list);
+      if (list.length && !selectedEvent) setSelectedEvent(list[0].id);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!selectedEvent) { setRows([]); return; }
+    setLoading(true);
+    (async () => {
+      const { data } = await supabase
+        .from("event_attendances")
+        .select("id,display_name,created_at,event_id,profile_id")
+        .eq("event_id", selectedEvent)
+        .order("created_at", { ascending: true });
+      setRows((data as AttRow[]) || []);
+      setLoading(false);
+    })();
+  }, [selectedEvent]);
+
+  const exportCSV = () => {
+    if (!rows.length) return;
+    const ev = events.find((e) => e.id === selectedEvent);
+    const header = "Nome,Data de presença\n";
+    const body = rows.map((r) => `"${(r.display_name || "").replace(/"/g, '""')}","${new Date(r.created_at).toLocaleString("pt-BR")}"`).join("\n");
+    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `presencas_${(ev?.title || "evento").replace(/\W+/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={selectedEvent}
+          onChange={(e) => setSelectedEvent(e.target.value)}
+          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white"
+        >
+          {events.length === 0 && <option value="">Nenhum evento</option>}
+          {events.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.title} — {new Date(ev.starts_at).toLocaleDateString("pt-BR")}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={exportCSV}
+          disabled={!rows.length}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
+        >
+          Exportar CSV
+        </button>
+        <span className="text-xs text-white/50 ml-auto">
+          <Users className="inline h-3.5 w-3.5 mr-1" />
+          {rows.length} {rows.length === 1 ? "presença" : "presenças"}
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/40" /></div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-xl border border-white/10 p-8 text-center text-sm text-white/50">
+          Nenhuma presença registrada para este evento.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-white/10">
+          <table className="w-full text-sm">
+            <thead className="bg-white/5 text-xs uppercase text-white/50">
+              <tr>
+                <th className="px-4 py-2 text-left">#</th>
+                <th className="px-4 py-2 text-left">Nome</th>
+                <th className="px-4 py-2 text-left">Marcado em</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {rows.map((r, i) => (
+                <tr key={r.id} className="text-white/80">
+                  <td className="px-4 py-2 text-white/40">{i + 1}</td>
+                  <td className="px-4 py-2">{r.display_name}</td>
+                  <td className="px-4 py-2 text-white/50">{new Date(r.created_at).toLocaleString("pt-BR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
