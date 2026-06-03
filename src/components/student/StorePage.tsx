@@ -902,15 +902,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 }
 
 function ClientPickerModal({
-  clients, onPick, onClose,
+  clients, isMaster, onPick, onClose,
 }: {
   clients: SaleClient[];
+  isMaster?: boolean;
   onPick: (c: SaleClient) => void;
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"mine" | "all">("mine");
+  const [allResults, setAllResults] = useState<SaleClient[]>([]);
+  const [searching, setSearching] = useState(false);
   const onlyDigits = (s: string) => s.replace(/\D/g, "");
-  const filtered = useMemo(() => {
+
+  const filteredMine = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return clients;
     const termDigits = onlyDigits(term);
@@ -920,27 +925,61 @@ function ClientPickerModal({
       return nameMatch || cpfMatch;
     });
   }, [clients, q]);
+
+  // Master Coach: search across all students on demand
+  useEffect(() => {
+    if (!isMaster || tab !== "all") return;
+    const handle = setTimeout(async () => {
+      setSearching(true);
+      const { data, error } = await supabase.rpc("list_all_students_for_master" as never, { _q: q } as never);
+      setSearching(false);
+      if (error) { toast.error(error.message || "Erro na busca"); return; }
+      setAllResults(((data || []) as any[]).map((s) => ({
+        id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null,
+      })));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [isMaster, tab, q]);
+
+  const list = tab === "all" ? allResults : filteredMine;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-base font-bold text-foreground">Selecione seu aluno</h2>
+        <h2 className="mb-3 text-base font-bold text-foreground">Selecione o aluno</h2>
+        {isMaster && (
+          <div className="mb-3 flex rounded-lg bg-muted p-0.5">
+            <button onClick={() => setTab("mine")}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition ${tab === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              Meus clientes
+            </button>
+            <button onClick={() => setTab("all")}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-bold transition ${tab === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              Todos os clientes
+            </button>
+          </div>
+        )}
         <div className="mb-3 flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nome ou CPF..."
+            placeholder={tab === "all" ? "Buscar por nome, CPF ou e-mail..." : "Buscar por nome ou CPF..."}
             className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
-        {clients.length === 0 ? (
+        {tab === "mine" && clients.length === 0 ? (
           <p className="text-sm text-muted-foreground">Você ainda não tem alunos vinculados.</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+        ) : tab === "all" && searching ? (
+          <p className="text-sm text-muted-foreground">Buscando...</p>
+        ) : list.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {tab === "all" && !q ? "Digite para buscar entre todos os alunos." : "Nenhum aluno encontrado."}
+          </p>
         ) : (
           <div className="space-y-1.5">
-            {filtered.map((c) => (
+            {list.map((c) => (
               <button key={c.id} onClick={() => onPick(c)} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
                 <p className="text-sm font-bold text-foreground">{c.name}</p>
                 {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
