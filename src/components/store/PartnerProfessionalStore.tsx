@@ -106,8 +106,12 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       toast.error("Selecione um horário para agendar.");
       return;
     }
-    if (selected.kind === "partner" && !studentEmail.trim()) {
+    if (selected.kind === "partner" && mode === "reseller" && !studentEmail.trim()) {
       toast.error("Informe o e-mail do aluno indicado.");
+      return;
+    }
+    if (selected.kind === "partner" && mode === "student" && !ownStudentId) {
+      toast.error("Conta de aluno não encontrada. Faça login como aluno para comprar.");
       return;
     }
     setBuying(true);
@@ -115,12 +119,16 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
       if (selected.kind === "partner") {
-        const { data: stuId, error: stuErr } = await supabase.rpc(
-          "find_student_id_by_email" as never,
-          { _email: studentEmail.trim() } as never,
-        );
-        if (stuErr) throw new Error(stuErr.message);
-        if (!stuId) throw new Error("Aluno não encontrado para esse e-mail.");
+        let stuId: string | null = ownStudentId;
+        if (mode === "reseller") {
+          const { data: foundId, error: stuErr } = await supabase.rpc(
+            "find_student_id_by_email" as never,
+            { _email: studentEmail.trim() } as never,
+          );
+          if (stuErr) throw new Error(stuErr.message);
+          stuId = (foundId as unknown as string) || null;
+        }
+        if (!stuId) throw new Error("Aluno não encontrado.");
         const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
           _partner_product_id: selected.id,
           _student_id: stuId,
