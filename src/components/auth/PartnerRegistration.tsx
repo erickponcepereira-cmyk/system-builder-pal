@@ -110,6 +110,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
 
     const uplineCoachId = referral?.coachId || selectedCoach?.id || null;
     if (!uplineCoachId) return setErr("Selecione um coach indicador para continuar.");
+    if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
 
     setLoading(true);
     setFormError(null);
