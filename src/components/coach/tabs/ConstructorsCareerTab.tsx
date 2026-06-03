@@ -44,10 +44,13 @@ export function ConstructorsCareerTab() {
     );
   }
 
-  const { patents, windows, currentPatentKey, nextPatentKey } = data;
+  const { patents, windows, currentPatentKey, nextPatentKey, achievements } = data;
   const current = patents.find((p) => p.key === currentPatentKey) ?? null;
   const next = patents.find((p) => p.key === nextPatentKey) ?? null;
   const nextWindow = next ? windows[next.time_window_months] : null;
+  const achievedAtByKey = new Map<string, string>(
+    (achievements || []).map((a) => [a.patent_key, a.achieved_at]),
+  );
 
   // Group patents by phase
   const phases = new Map<number, PatentRule[]>();
