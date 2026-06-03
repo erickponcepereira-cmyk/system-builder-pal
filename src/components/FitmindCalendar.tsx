@@ -195,7 +195,69 @@ async function loadMyChallengeEvents(from: Date, to: Date): Promise<FitmindEvent
   } catch (e) {
     console.warn("loadMyChallengeEvents failed", e);
     return [];
+}
+
+// ─── Pessoal: agendamentos com profissionais ─────────────────────────────
+async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]> {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return [];
+    const { data: profile } = await supabase
+      .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
+    if (!profile) return [];
+    const { data: student } = await supabase
+      .from("students" as never).select("id").eq("profile_id" as never, profile.id).maybeSingle();
+    if (!student) return [];
+
+    const { data: appts } = await supabase
+      .from("professional_appointments" as never)
+      .select(
+        "id,starts_at,ends_at,status,order_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(name),order:partner_product_orders(order_number,status)" as never,
+      )
+      .eq("student_id" as never, (student as any).id)
+      .neq("status" as never, "cancelled" as never)
+      .gte("starts_at" as never, from.toISOString() as never)
+      .lt("starts_at" as never, to.toISOString() as never);
+
+    const paidStatuses = new Set(["paid", "approved", "completed"]);
+    return ((appts as any[]) || []).map((a) => {
+      const orderStatus: string | null = a.order?.status || null;
+      const orderNumber: string | null = a.order?.order_number || null;
+      const pending = !!a.order_id && (!orderStatus || !paidStatuses.has(orderStatus));
+      const profName = a.professional?.name || "profissional";
+      const prodName = a.professional_products?.name || "Consulta";
+      const color = pending ? "#f59e0b" : "#22c55e";
+      return {
+        id: `appt-${a.id}`,
+        title: pending ? `⏳ ${prodName} (pagamento pendente)` : `🩺 ${prodName}`,
+        subtitle: `com ${profName}`,
+        description: pending
+          ? "Sua pré-reserva está aguardando pagamento. Toque em Pagar agora para concluir."
+          : "Consulta confirmada.",
+        location: null,
+        image_url: null,
+        color,
+        category: "avaliacao",
+        tags: pending ? ["pagamento pendente"] : ["consulta"],
+        starts_at: a.starts_at,
+        ends_at: a.ends_at,
+        all_day: false,
+        is_highlighted: pending,
+        is_important: pending,
+        highlight_color: color,
+        highlight_label: pending ? "Pagamento pendente" : null,
+        google_calendar_title: prodName,
+        google_calendar_description: `Consulta com ${profName}`,
+        google_calendar_location: null,
+        appointment_pay_url: pending && orderNumber ? `/pay/${orderNumber}` : null,
+        appointment_pending: pending,
+      } satisfies FitmindEvent;
+    });
+  } catch (e) {
+    console.warn("loadMyAppointments failed", e);
+    return [];
   }
+}
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
