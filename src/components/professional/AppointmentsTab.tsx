@@ -23,8 +23,11 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "cancelled">("upcoming");
+  const [payFilter, setPayFilter] = useState<"all" | "paid" | "pending">("all");
   const [section, setSection] = useState<"list" | "agenda">("list");
   const [openStudentId, setOpenStudentId] = useState<string | null>(null);
+
+  const paidStatusesSet = new Set(["paid", "approved", "completed"]);
 
   const load = async () => {
     setLoading(true);
@@ -65,13 +68,22 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
 
   const now = Date.now();
   const filtered = items.filter((a) => {
-    if (filter === "cancelled") return a.status === "cancelled";
-    if (filter === "past")
-      return a.status !== "cancelled" && new Date(a.ends_at).getTime() < now;
-    return a.status === "scheduled" && new Date(a.ends_at).getTime() >= now;
+    if (filter === "cancelled") {
+      if (a.status !== "cancelled") return false;
+    } else if (filter === "past") {
+      if (!(a.status !== "cancelled" && new Date(a.ends_at).getTime() < now)) return false;
+    } else {
+      if (!(a.status === "scheduled" && new Date(a.ends_at).getTime() >= now)) return false;
+    }
+    if (payFilter !== "all") {
+      const isPaid = !a.order_id || (a.order_status && paidStatusesSet.has(a.order_status));
+      if (payFilter === "paid" && !isPaid) return false;
+      if (payFilter === "pending" && isPaid) return false;
+    }
+    return true;
   });
 
-  const paidStatuses = new Set(["paid", "approved", "completed"]);
+  const paidStatuses = paidStatusesSet;
 
   return (
     <div className="space-y-4">
@@ -94,22 +106,37 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Calendar className="h-4 w-4" /> Atendimentos
             </h2>
-            <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
-              {(["upcoming", "past", "cancelled"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-md px-2.5 py-1 font-medium transition ${
-                    filter === f ? "bg-primary text-primary-foreground" : "text-white/60"
-                  }`}
-                >
-                  {f === "upcoming" ? "Próximos" : f === "past" ? "Realizados" : "Cancelados"}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2">
+              <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
+                {(["upcoming", "past", "cancelled"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      filter === f ? "bg-primary text-primary-foreground" : "text-white/60"
+                    }`}
+                  >
+                    {f === "upcoming" ? "Próximos" : f === "past" ? "Realizados" : "Cancelados"}
+                  </button>
+                ))}
+              </div>
+              <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
+                {(["all", "paid", "pending"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setPayFilter(f)}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      payFilter === f ? "bg-primary text-primary-foreground" : "text-white/60"
+                    }`}
+                  >
+                    {f === "all" ? "Todos" : f === "paid" ? "Pagos" : "Pendentes"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
