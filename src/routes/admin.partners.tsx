@@ -115,6 +115,14 @@ function AdminPartners() {
           onChanged={load}
         />
       )}
+      {openProductId && (
+        <ProductReviewModal
+          table="partner_products"
+          productId={openProductId}
+          onClose={() => setOpenProductId(null)}
+          onChanged={load}
+        />
+      )}
     </>
   );
 }
