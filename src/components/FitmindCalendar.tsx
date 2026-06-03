@@ -764,31 +764,39 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
 
   return (
     <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
-      <div className="flex items-center justify-between gap-3">
-        <button onClick={() => setShowList((v) => !v)} className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 text-sm text-white/80">
           <Users className="h-4 w-4 text-white/50" />
           <span className="font-semibold">{attendees.length}</span>
           <span className="text-white/50">{attendees.length === 1 ? "presente" : "presentes"}</span>
-        </button>
-        {mine ? (
+        </div>
+        <div className="flex items-center gap-2">
           <button
-            onClick={removePresent}
-            disabled={loading}
+            onClick={() => setShowList((v) => !v)}
             className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition"
           >
-            Cancelar presença
+            {showList ? "Ocultar lista" : "Ver lista"}
           </button>
-        ) : (
-          <button
-            onClick={markPresent}
-            disabled={loading || !myProfileId}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-            style={{ backgroundColor: color }}
-          >
-            <Check className="h-3.5 w-3.5" />
-            Marcar presença
-          </button>
-        )}
+          {mine ? (
+            <button
+              onClick={removePresent}
+              disabled={loading}
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition"
+            >
+              Cancelar presença
+            </button>
+          ) : (
+            <button
+              onClick={markPresent}
+              disabled={loading || !myProfileId}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: color }}
+            >
+              <Check className="h-3.5 w-3.5" />
+              Marcar presença
+            </button>
+          )}
+        </div>
       </div>
       {showList && attendees.length > 0 && (
         <ul className="mt-3 max-h-48 overflow-y-auto divide-y divide-white/5">
