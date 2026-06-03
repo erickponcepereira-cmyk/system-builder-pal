@@ -114,7 +114,7 @@ function AdminFinanceiro() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4 mb-6">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
         <BucketCard
           title="Coaches a pagar"
           subtitle="Comissões diretas dos vendedores"
@@ -134,6 +134,16 @@ function AdminFinanceiro() {
           paid={data.network.paid}
           accent="#F09595"
           onClick={() => openBucket("network", "Rede (uplines) a pagar")}
+        />
+        <BucketCard
+          title="Alunos Indicadores"
+          subtitle="Comissões de indicação aluno → aluno"
+          icon={Users}
+          pending={data.referrals.pending}
+          available={data.referrals.available}
+          paid={data.referrals.paid}
+          accent="#34D399"
+          onClick={() => openBucket("referrals", "Alunos Indicadores")}
         />
         <BucketCard
           title="Nutricionistas"
