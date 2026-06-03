@@ -566,3 +566,111 @@ function RecipientsTable({ title, rows, kind, onPay }: {
     </section>
   );
 }
+
+function ReconcileButton({ onDone }: { onDone: () => void }) {
+  const callReconcile = useServerFn(reconcileMpPayment);
+  const fetchPending = useServerFn(listPendingMpPayments);
+  const [open, setOpen] = useState(false);
+  const [mpId, setMpId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchPending>> | null>(null);
+
+  const loadPending = () => fetchPending().then(setPending).catch(() => setPending([]));
+
+  const run = async (id: string) => {
+    setBusy(true);
+    try {
+      const r = await callReconcile({ data: { mpPaymentId: id } });
+      toast.success(`${r.message} • ${money(r.amount)}`);
+      onDone();
+      loadPending();
+      setMpId("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao reconciliar");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => { setOpen(true); loadPending(); }}
+        className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"
+      >
+        <RefreshCw className="h-3.5 w-3.5" /> Reconciliar pagamento MP
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-3xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Reconciliar pagamentos Mercado Pago</h2>
+                <p className="text-xs text-white/50">Consulta a API do MP e sincroniza pagamentos que não foram atualizados via webhook.</p>
+              </div>
+              <button onClick={() => setOpen(false)} className="rounded p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="mb-5 flex gap-2">
+              <input
+                value={mpId}
+                onChange={(e) => setMpId(e.target.value)}
+                placeholder="ID do pagamento MP (ex: 162149996496)"
+                className="flex-1 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => mpId && run(mpId)}
+                disabled={!mpId || busy}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reconciliar"}
+              </button>
+            </div>
+            <h3 className="mb-2 text-xs uppercase tracking-wider text-white/40">Pendentes há mais de 5 min</h3>
+            {pending === null ? (
+              <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : pending.length === 0 ? (
+              <p className="text-sm text-white/40">Nenhum pagamento pendente.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] uppercase text-white/40">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Criado</th>
+                      <th className="px-2 py-1 text-left">MP ID</th>
+                      <th className="px-2 py-1 text-left">Origem</th>
+                      <th className="px-2 py-1 text-left">Email</th>
+                      <th className="px-2 py-1 text-right">Valor</th>
+                      <th className="px-2 py-1 text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pending.map((p) => (
+                      <tr key={p.id} className="border-t border-white/5">
+                        <td className="px-2 py-1.5 text-white/70">{new Date(p.created_at).toLocaleString("pt-BR")}</td>
+                        <td className="px-2 py-1.5 font-mono text-white/80">{p.mp_payment_id || "—"}</td>
+                        <td className="px-2 py-1.5 text-white/60">{p.source_kind}</td>
+                        <td className="px-2 py-1.5 text-white/60">{p.payer_email || "—"}</td>
+                        <td className="px-2 py-1.5 text-right font-bold text-primary">{money(Number(p.amount))}</td>
+                        <td className="px-2 py-1.5 text-right">
+                          {p.mp_payment_id && (
+                            <button
+                              onClick={() => run(p.mp_payment_id!)}
+                              disabled={busy}
+                              className="rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-30"
+                            >
+                              Sincronizar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
