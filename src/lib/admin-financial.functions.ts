@@ -278,7 +278,7 @@ export const listPayoutHistory = createServerFn({ method: "POST" })
 // modais ao clicar em cada bucket do painel Financeiro.
 // ---------------------------------------------------------------------------
 
-export type BucketKind = "coaches" | "network" | "system";
+export type BucketKind = "coaches" | "network" | "system" | "referrals";
 
 export interface BucketCommissionRow {
   commissionId: string;
