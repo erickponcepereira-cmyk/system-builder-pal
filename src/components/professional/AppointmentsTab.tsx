@@ -23,8 +23,11 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "cancelled">("upcoming");
+  const [payFilter, setPayFilter] = useState<"all" | "paid" | "pending">("all");
   const [section, setSection] = useState<"list" | "agenda">("list");
   const [openStudentId, setOpenStudentId] = useState<string | null>(null);
+
+  const paidStatusesSet = new Set(["paid", "approved", "completed"]);
 
   const load = async () => {
     setLoading(true);
