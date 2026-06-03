@@ -22,12 +22,20 @@ export type PatentRule = {
   is_active: boolean;
 };
 
+export type PatentAchievement = {
+  patent_key: string;
+  patent_level: number;
+  achieved_at: string;
+  qualifying_revenue: number;
+};
+
 export type CareerProgress = {
   coachId: string | null;
   patents: PatentRule[];
   windows: Record<number, { ownRevenue: number; teamRevenue: number; totalRevenue: number; ownPct: number }>;
   currentPatentKey: string | null;
   nextPatentKey: string | null;
+  achievements: PatentAchievement[];
 };
 
 async function resolveCoachId(userId: string): Promise<string | null> {
