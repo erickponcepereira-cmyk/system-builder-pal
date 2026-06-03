@@ -86,8 +86,10 @@ export function ProtocolTab() {
   const [library, setLibrary] = useState<Exercise[]>([]);
   const [libQuery, setLibQuery] = useState("");
   const [newExercise, setNewExercise] = useState<Partial<Exercise>>({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
-  const [bioEvalUrl, setBioEvalUrl] = useState<string | null>(null);
-  const [anamnesisUrl, setAnamnesisUrl] = useState<string | null>(null);
+  const [hasBio, setHasBio] = useState(false);
+  const [hasAnamnesis, setHasAnamnesis] = useState(false);
+  const [lastBioWeight, setLastBioWeight] = useState<number | null>(null);
+  const [detailsTab, setDetailsTab] = useState<"avaliacoes" | "anamnese" | null>(null);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
