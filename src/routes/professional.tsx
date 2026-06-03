@@ -7,7 +7,7 @@ import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbel
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
-import { MyNetworkPanel } from "@/components/MyNetworkPanel";
+import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
