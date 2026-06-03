@@ -28,7 +28,7 @@ type Card = {
 const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
+export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kind; mode?: "student" | "reseller" }) {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -39,6 +39,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [studentEmail, setStudentEmail] = useState("");
+  const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   useEffect(() => {
