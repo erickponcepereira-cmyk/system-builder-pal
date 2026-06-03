@@ -301,6 +301,21 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   useEffect(() => { load(); }, []);
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
+  // Abre automaticamente o produto vindo do link de indicação (/r/{code}?p=…)
+  useEffect(() => {
+    if (coachMode) return;
+    if (!items.length) return;
+    let pendingId: string | null = null;
+    try { pendingId = sessionStorage.getItem("fitmind_pending_product"); } catch { /* ignore */ }
+    if (!pendingId) return;
+    const match = items.find((it) => it.sourceId === pendingId);
+    if (match) {
+      setDetailProduct(match);
+      try { sessionStorage.removeItem("fitmind_pending_product"); } catch { /* ignore */ }
+    }
+  }, [items, coachMode]);
+
+
   useEffect(() => {
     const coachId = detailProduct?.creatorCoachId;
     if (!coachId) { setDetailProfessional(null); return; }
