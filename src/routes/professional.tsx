@@ -72,6 +72,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   network: { label: "Rede", icon: Network },
   settings: { label: "Configurações", icon: Settings },
   fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
+  collaborators: { label: "Colaboradores", icon: UserPlus },
 
 };
 
