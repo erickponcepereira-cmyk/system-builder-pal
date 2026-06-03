@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Calendar, Loader2, X, CheckCircle2, User as UserIcon } from "lucide-react";
+import { Calendar, Loader2, X, CheckCircle2, User as UserIcon, Clock } from "lucide-react";
+import { AvailabilityEditor } from "./AvailabilityEditor";
 
 type Appointment = {
   id: string;
@@ -13,9 +14,14 @@ type Appointment = {
   student_id: string;
   product_id: string;
   seller_coach_id: string | null;
-  students?: { profiles?: { name: string | null; avatar_url: string | null } | null } | null;
+  order_id: string | null;
+  students?: {
+    profiles?: { name: string | null; avatar_url: string | null } | null;
+    coach?: { profiles?: { name: string | null } | null } | null;
+  } | null;
   professional_products?: { name: string | null } | null;
-  seller?: { name: string | null } | null;
+  seller?: { profiles?: { name: string | null } | null } | null;
+  order?: { status: string | null } | null;
 };
 
 const fmt = (iso: string) =>
@@ -31,13 +37,14 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "cancelled">("upcoming");
+  const [section, setSection] = useState<"list" | "agenda">("list");
 
   const load = async () => {
     setLoading(true);
     const { data } = await supabase
       .from("professional_appointments" as never)
       .select(
-        "id,starts_at,ends_at,status,cancellation_window_hours,notes,student_id,product_id,seller_coach_id,students(profiles(name,avatar_url)),professional_products(name),seller:coaches!professional_appointments_seller_coach_id_fkey(name)" as never,
+        "id,starts_at,ends_at,status,cancellation_window_hours,notes,student_id,product_id,seller_coach_id,order_id,students(profiles(name,avatar_url),coach:coaches!students_coach_id_fkey(profiles(name))),professional_products(name),seller:coaches!professional_appointments_seller_coach_id_fkey(profiles(name)),order:partner_product_orders!professional_appointments_order_id_fkey(status)" as never,
       )
       .eq("professional_coach_id" as never, coachId as never)
       .order("starts_at" as never, { ascending: true });
@@ -78,119 +85,146 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
     return a.status === "scheduled" && new Date(a.ends_at).getTime() >= now;
   });
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-10">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  const paidStatuses = new Set(["paid", "approved", "completed"]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <Calendar className="h-4 w-4" /> Atendimentos
-        </h2>
-        <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
-          {(["upcoming", "past", "cancelled"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-md px-2.5 py-1 font-medium transition ${
-                filter === f ? "bg-primary text-primary-foreground" : "text-white/60"
-              }`}
-            >
-              {f === "upcoming" ? "Próximos" : f === "past" ? "Realizados" : "Cancelados"}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <button onClick={() => setSection("list")}
+          className={`rounded-lg px-4 py-2 text-sm font-bold ${section === "list" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+          Atendimentos
+        </button>
+        <button onClick={() => setSection("agenda")}
+          className={`rounded-lg px-4 py-2 text-sm font-bold ${section === "agenda" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+          Minha agenda
+        </button>
       </div>
 
-      {filtered.length === 0 ? (
-        <div
-          className="rounded-2xl border border-dashed border-white/10 p-10 text-center"
-          style={{ backgroundColor: "#1A1A1A" }}
-        >
-          <Calendar className="mx-auto mb-2 h-8 w-8 text-white/30" />
-          <p className="text-sm text-white/50">Nenhum agendamento.</p>
+      {section === "agenda" ? (
+        <AvailabilityEditor coachId={coachId} />
+      ) : loading ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : (
-        filtered.map((a) => {
-          const stProfile = a.students?.profiles;
-          const canCancel =
-            a.status === "scheduled" &&
-            Date.now() <
-              new Date(a.starts_at).getTime() -
-                a.cancellation_window_hours * 3600 * 1000;
-          return (
-            <div
-              key={a.id}
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: "#1A1A1A" }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold text-white/60">
-                  {stProfile?.avatar_url ? (
-                    <img src={stProfile.avatar_url} className="h-full w-full object-cover" />
-                  ) : (
-                    <UserIcon className="h-4 w-4" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white truncate">
-                    {stProfile?.name || "Aluno"}
-                  </p>
-                  <p className="text-[11px] text-white/50 truncate">
-                    {a.professional_products?.name || "Consulta"}
-                    {a.seller?.name ? ` · vendido por ${a.seller.name}` : ""}
-                  </p>
-                  <p className="mt-1 text-xs text-primary">{fmt(a.starts_at)}</p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    a.status === "scheduled"
-                      ? "bg-blue-500/20 text-blue-300"
-                      : a.status === "completed"
-                        ? "bg-green-500/20 text-green-300"
-                        : a.status === "cancelled"
-                          ? "bg-red-500/20 text-red-300"
-                          : "bg-white/10 text-white/60"
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Atendimentos
+            </h2>
+            <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
+              {(["upcoming", "past", "cancelled"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
+                    filter === f ? "bg-primary text-primary-foreground" : "text-white/60"
                   }`}
                 >
-                  {a.status === "scheduled"
-                    ? "Agendado"
-                    : a.status === "completed"
-                      ? "Concluído"
-                      : a.status === "cancelled"
-                        ? "Cancelado"
-                        : a.status}
-                </span>
-              </div>
-              {a.status === "scheduled" && (
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => complete(a.id)}
-                    className="flex-1 rounded-lg bg-green-500/15 px-3 py-1.5 text-[11px] font-bold text-green-300 hover:bg-green-500/25 flex items-center justify-center gap-1"
-                  >
-                    <CheckCircle2 className="h-3 w-3" /> Marcar concluído
-                  </button>
-                  <button
-                    onClick={() => cancel(a.id)}
-                    disabled={!canCancel}
-                    title={
-                      !canCancel
-                        ? `Cancelamento só permitido até ${a.cancellation_window_hours}h antes`
-                        : ""
-                    }
-                    className="flex-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-[11px] font-bold text-red-300 hover:bg-red-500/25 disabled:opacity-40 flex items-center justify-center gap-1"
-                  >
-                    <X className="h-3 w-3" /> Cancelar
-                  </button>
-                </div>
-              )}
+                  {f === "upcoming" ? "Próximos" : f === "past" ? "Realizados" : "Cancelados"}
+                </button>
+              ))}
             </div>
-          );
-        })
+          </div>
+
+          {filtered.length === 0 ? (
+            <div
+              className="rounded-2xl border border-dashed border-white/10 p-10 text-center"
+              style={{ backgroundColor: "#1A1A1A" }}
+            >
+              <Calendar className="mx-auto mb-2 h-8 w-8 text-white/30" />
+              <p className="text-sm text-white/50">Nenhum agendamento.</p>
+            </div>
+          ) : (
+            filtered.map((a) => {
+              const stProfile = a.students?.profiles;
+              const studentCoachName = a.students?.coach?.profiles?.name;
+              const sellerName = a.seller?.profiles?.name;
+              const orderStatus = a.order?.status;
+              const isPendingPayment = !!a.order_id && orderStatus && !paidStatuses.has(orderStatus);
+              const canCancel =
+                a.status === "scheduled" &&
+                Date.now() <
+                  new Date(a.starts_at).getTime() -
+                    a.cancellation_window_hours * 3600 * 1000;
+              return (
+                <div
+                  key={a.id}
+                  className="rounded-2xl p-4"
+                  style={{ backgroundColor: "#1A1A1A" }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold text-white/60">
+                      {stProfile?.avatar_url ? (
+                        <img src={stProfile.avatar_url} className="h-full w-full object-cover" />
+                      ) : (
+                        <UserIcon className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-white truncate">
+                        {stProfile?.name || "Aluno"}
+                      </p>
+                      <p className="text-[11px] text-white/50 truncate">
+                        {a.professional_products?.name || "Consulta"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-white/40">
+                        {studentCoachName && <span>Coach: <span className="text-white/70">{studentCoachName}</span></span>}
+                        {sellerName && <span>Vendido por: <span className="text-white/70">{sellerName}</span></span>}
+                      </div>
+                      <p className="mt-1 text-xs text-primary">{fmt(a.starts_at)}</p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        isPendingPayment
+                          ? "bg-amber-500/20 text-amber-300"
+                          : a.status === "scheduled"
+                            ? "bg-blue-500/20 text-blue-300"
+                            : a.status === "completed"
+                              ? "bg-green-500/20 text-green-300"
+                              : a.status === "cancelled"
+                                ? "bg-red-500/20 text-red-300"
+                                : "bg-white/10 text-white/60"
+                      }`}
+                    >
+                      {isPendingPayment ? (
+                        <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" /> Pré-reserva · pagamento pendente</span>
+                      ) : a.status === "scheduled"
+                        ? "Agendado"
+                        : a.status === "completed"
+                          ? "Concluído"
+                          : a.status === "cancelled"
+                            ? "Cancelado"
+                            : a.status}
+                    </span>
+                  </div>
+                  {a.status === "scheduled" && !isPendingPayment && (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => complete(a.id)}
+                        className="flex-1 rounded-lg bg-green-500/15 px-3 py-1.5 text-[11px] font-bold text-green-300 hover:bg-green-500/25 flex items-center justify-center gap-1"
+                      >
+                        <CheckCircle2 className="h-3 w-3" /> Marcar concluído
+                      </button>
+                      <button
+                        onClick={() => cancel(a.id)}
+                        disabled={!canCancel}
+                        title={
+                          !canCancel
+                            ? `Cancelamento só permitido até ${a.cancellation_window_hours}h antes`
+                            : ""
+                        }
+                        className="flex-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-[11px] font-bold text-red-300 hover:bg-red-500/25 disabled:opacity-40 flex items-center justify-center gap-1"
+                      >
+                        <X className="h-3 w-3" /> Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );
