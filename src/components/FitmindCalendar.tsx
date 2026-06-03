@@ -657,6 +657,9 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             </div>
           )}
 
+          {/* Presença */}
+          <EventAttendanceBlock eventId={ev.id} color={evColor} />
+
           {/* CTA: Adicionar ao Google Agenda */}
           <a
             href={gcUrl}
@@ -671,6 +674,137 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
           </a>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Attendance ─────────────────────────────────────────────────────────────
+
+type Attendee = { id: string; display_name: string; profile_id: string; avatar_url: string | null };
+
+function EventAttendanceBlock({ eventId, color }: { eventId: string; color: string }) {
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [myProfileId, setMyProfileId] = useState<string | null>(null);
+  const [myName, setMyName] = useState<string>("");
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
+  const [myStudentId, setMyStudentId] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const reload = async () => {
+    const { data } = await supabase
+      .from("event_attendances")
+      .select("id,display_name,profile_id,avatar_url")
+      .eq("event_id", eventId)
+      .order("created_at", { ascending: true });
+    setAttendees((data as Attendee[]) || []);
+  };
+
+  useEffect(() => {
+    (async () => {
+      await reload();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id,name,avatar_url")
+        .eq("user_id", userData.user.id)
+        .maybeSingle();
+      if (profile) {
+        setMyProfileId(profile.id);
+        setMyName(profile.name || "Aluno FitMind");
+        setMyAvatar(profile.avatar_url || null);
+        const { data: student } = await supabase
+          .from("students")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .maybeSingle();
+        setMyStudentId(student?.id || null);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId]);
+
+  const mine = attendees.find((a) => a.profile_id === myProfileId);
+
+  const markPresent = async () => {
+    if (!myProfileId) {
+      toast.error("Faça login para marcar presença.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.from("event_attendances").insert({
+      event_id: eventId,
+      profile_id: myProfileId,
+      display_name: myName,
+      avatar_url: myAvatar,
+      student_id: myStudentId,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error("Não foi possível marcar presença.");
+      return;
+    }
+    toast.success("Presença confirmada!");
+    reload();
+  };
+
+  const removePresent = async () => {
+    if (!mine) return;
+    setLoading(true);
+    const { error } = await supabase.from("event_attendances").delete().eq("id", mine.id);
+    setLoading(false);
+    if (error) {
+      toast.error("Não foi possível remover presença.");
+      return;
+    }
+    toast.success("Presença removida.");
+    reload();
+  };
+
+  return (
+    <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+      <div className="flex items-center justify-between gap-3">
+        <button onClick={() => setShowList((v) => !v)} className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
+          <Users className="h-4 w-4 text-white/50" />
+          <span className="font-semibold">{attendees.length}</span>
+          <span className="text-white/50">{attendees.length === 1 ? "presente" : "presentes"}</span>
+        </button>
+        {mine ? (
+          <button
+            onClick={removePresent}
+            disabled={loading}
+            className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition"
+          >
+            Cancelar presença
+          </button>
+        ) : (
+          <button
+            onClick={markPresent}
+            disabled={loading || !myProfileId}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: color }}
+          >
+            <Check className="h-3.5 w-3.5" />
+            Marcar presença
+          </button>
+        )}
+      </div>
+      {showList && attendees.length > 0 && (
+        <ul className="mt-3 max-h-48 overflow-y-auto divide-y divide-white/5">
+          {attendees.map((a) => (
+            <li key={a.id} className="flex items-center gap-2 py-1.5 text-xs text-white/70">
+              <div className="h-6 w-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/60 overflow-hidden">
+                {a.avatar_url ? <img src={a.avatar_url} alt="" className="h-full w-full object-cover" /> : (a.display_name?.[0] || "?").toUpperCase()}
+              </div>
+              <span className="truncate">{a.display_name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {showList && attendees.length === 0 && (
+        <p className="mt-3 text-xs text-white/40">Nenhuma presença confirmada ainda.</p>
+      )}
     </div>
   );
 }
