@@ -176,7 +176,7 @@ export const createCoachSale = createServerFn({ method: "POST" })
         tax_amount: 0,
         total_amount: subtotal,
         notes: data.notes || null,
-        metadata: orderMetadata,
+        metadata: orderMetadata as never,
       })
       .select("id, order_number, total_amount")
       .single();
