@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -15,6 +15,9 @@ import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
+import { WalletTab } from "@/components/coach/tabs/WalletTab";
+import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
+import type { CoachContext } from "@/routes/coach";
 
 
 export const Route = createFileRoute("/partner")({
@@ -22,7 +25,7 @@ export const Route = createFileRoute("/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "profile" | "fitmind_calendar";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "profile" | "fitmind_calendar";
 
 
 interface Partner {
@@ -61,6 +64,7 @@ function PartnerPanel() {
   const [visits, setVisits] = useState(0);
   const [loading, setLoading] = useState(true);
   const [otherRoles, setOtherRoles] = useState<{ admin: boolean; coach: boolean; student: boolean }>({ admin: false, coach: false, student: false });
+  const [coachCtx, setCoachCtx] = useState<CoachContext | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -76,13 +80,33 @@ function PartnerPanel() {
       supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }),
       supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }).limit(30),
       supabase.from("partner_visits" as never).select("id" as never, { count: "exact", head: true }).eq("partner_id" as never, pt.id),
-      supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, referral_code, upline_coach_id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
     ]);
     setProducts((pr.data as unknown as Product[]) || []);
     setPosts((ps.data as unknown as Post[]) || []);
     setVisits(v.count || 0);
     setOtherRoles({ admin: profile.role === "admin", coach: !!coach.data, student: !!student.data });
+    if (coach.data) {
+      const c = coach.data as { id: string; referral_code: string | null; upline_coach_id: string | null };
+      setCoachCtx({
+        profileId: profile.id,
+        coachId: c.id,
+        name: pt.fantasy_name,
+        email: "",
+        phone: pt.whatsapp || "",
+        city: pt.city || "",
+        state: pt.state || "",
+        bio: "",
+        avatarUrl: pt.photo_url,
+        patent: null,
+        referralCode: c.referral_code || "",
+        referralLink: c.referral_code ? `${window.location.origin}/r/${c.referral_code}` : "",
+        uplineCoachId: c.upline_coach_id,
+        totalActiveStudents: 0,
+        totalSales: 0,
+      });
+    }
     setLoading(false);
   };
 
@@ -115,6 +139,7 @@ function PartnerPanel() {
     ...baseTabs,
     ...benefitTabs,
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
+    { key: "wallet" as Tab, label: "Carteira", icon: Wallet },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
@@ -152,7 +177,8 @@ function PartnerPanel() {
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
         {tab === "fitmind_calendar" && <FitmindCalendar />}
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
-        {tab === "network" && <MyNetworkPanel />}
+        {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
+        {tab === "wallet" && <WalletTab />}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>

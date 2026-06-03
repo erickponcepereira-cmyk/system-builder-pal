@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, UserPlus } from "lucide-react";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -15,6 +15,7 @@ import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
+import { CollaboratorsTab } from "@/components/professional/CollaboratorsTab";
 
 import type { CoachContext } from "@/routes/coach";
 
@@ -71,6 +72,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   network: { label: "Rede", icon: Network },
   settings: { label: "Configurações", icon: Settings },
   fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
+  collaborators: { label: "Colaboradores", icon: UserPlus },
 
 };
 
@@ -158,7 +160,7 @@ function ProfessionalPanel() {
   }
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate", "network"];
-  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "settings", "fitmind_calendar"];
+  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "collaborators", "settings", "fitmind_calendar"];
   const tabs = Array.from(new Set([...baseTabs, ...ensureTabs]));
 
 
@@ -216,6 +218,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "wallet") return <WalletTab />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
+  if (tab === "collaborators") return <CollaboratorsTab coachId={info.coachId} displayName={info.name} />;
 
   if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
   if (tab === "diet") return <ProtocolTab />;
