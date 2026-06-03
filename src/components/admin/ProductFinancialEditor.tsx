@@ -139,12 +139,12 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
 
   const slotAmtMap = useMemo(() => {
     if (!data || !dist) return new Map<string, number>();
-    const active = sortedSlots.filter((s) => s.applies_to_referral_sales);
+    const active = sortedSlots.filter(slotApplies);
     const amts = computeSlotAmounts(active, dist.base_distributable);
     const map = new Map<string, number>();
     active.forEach((s, i) => map.set(s.id, amts[i]));
     return map;
-  }, [data, dist, sortedSlots]);
+  }, [data, dist, sortedSlots, simMode]);
 
   const handleSave = async () => {
     if (!data) return;
