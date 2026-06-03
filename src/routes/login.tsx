@@ -66,12 +66,20 @@ function LoginPage() {
       return;
     }
 
-    if (profile.status === "blocked" || profile.status === "inactive") {
+    if (profile.status === "blocked") {
       setLoading(false);
-      const message = profile.status === "blocked" ? "Login indisponível: conta bloqueada." : "Login indisponível: conta inativa.";
+      const message = "Login indisponível: conta bloqueada.";
       setFormError(message);
       toast.error(message);
       return;
+    }
+
+    // Reativa automaticamente se estava inativo por falta de atividade
+    if (profile.status === "inactive") {
+      await supabase.rpc("touch_my_activity" as never);
+    } else {
+      // Registra atividade silenciosamente
+      supabase.rpc("touch_my_activity" as never).then(() => {}, () => {});
     }
 
     // Partner: rota direta
