@@ -162,7 +162,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       });
       setSelected(null);
       setSlot(null);
-      setStudentEmail("");
+      
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
       toast.error(msg);
@@ -252,7 +252,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       {selected && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-          onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
+          onClick={() => { setSelected(null); setSlot(null); }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -267,7 +267,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 </div>
               )}
               <button
-                onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
+                onClick={() => { setSelected(null); setSlot(null); }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />
