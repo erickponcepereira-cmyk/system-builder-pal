@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
+import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 
 export interface ProductDetail {
   id: string;
@@ -40,6 +41,11 @@ export interface ProductDetail {
   hasChallenge?: boolean | null;
   // Dias de validade da carteirinha de benefícios concedidos pela compra
   cardDays?: number | null;
+  // Agendamento (produtos de profissionais agendáveis)
+  isSchedulable?: boolean | null;
+  defaultDurationMinutes?: number | null;
+  professionalCoachId?: string | null;
+  scheduledSlot?: string | null;
 }
 
 const fmt = (n: number) =>
@@ -78,6 +84,8 @@ export function ProductDetailModal({
   addLabel,
   professional,
 }: Props) {
+  const [slot, setSlot] = useState<string | null>(product.scheduledSlot || null);
+  const needsSlot = !!(product.isSchedulable && product.professionalCoachId);
   const hasCommissionData =
     showCommissions &&
     (product.commissionCoach != null ||
@@ -380,11 +388,21 @@ export function ProductDetailModal({
           )}
 
 
+          {needsSlot && (
+            <AvailabilityPicker
+              professionalCoachId={product.professionalCoachId!}
+              durationMinutes={product.defaultDurationMinutes || 30}
+              value={slot}
+              onChange={setSlot}
+            />
+          )}
+
           <button
-            onClick={() => onAdd(product)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90"
+            onClick={() => onAdd({ ...product, scheduledSlot: slot })}
+            disabled={needsSlot && !slot}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Plus className="h-4 w-4" /> {addLabel || "Adicionar ao carrinho"}
+            <Plus className="h-4 w-4" /> {needsSlot && !slot ? "Escolha um horário" : (addLabel || "Adicionar ao carrinho")}
           </button>
         </div>
       </div>

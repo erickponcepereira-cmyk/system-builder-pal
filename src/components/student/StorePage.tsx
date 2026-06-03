@@ -133,7 +133,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     const { data: partnerRows } = await supabase
       .from("professional_products" as never)
       .select(
-        "id,name,description,image_url,price,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+        "id,name,description,image_url,price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
       )
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
@@ -259,6 +259,9 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           tag: specLabel,
           imageUrl: pp.image_url,
           creatorCoachId: pp.coach?.id ?? null,
+          professionalCoachId: pp.coach?.id ?? null,
+          isSchedulable: !!pp.is_schedulable,
+          defaultDurationMinutes: pp.default_duration_minutes ?? 30,
         };
       })),
     ]);
@@ -389,12 +392,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       toast.error("Produto sem estoque.");
       return;
     }
+    if (item.isSchedulable && !item.scheduledSlot) {
+      toast.error("Escolha um horário antes de adicionar.");
+      return;
+    }
     setCart((current) => {
       const found = current.find((cartItem) => cartItem.id === item.id);
-      if (found) return current.map((cartItem) => cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
+      // Itens agendáveis: cada compra é única (1 horário por item), não somar quantidade
+      if (found && !item.isSchedulable) return current.map((cartItem) => cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
+      if (found && item.isSchedulable) {
+        return current.map((cartItem) => cartItem.id === item.id ? { ...item, quantity: 1 } : cartItem);
+      }
       return [...current, { ...item, quantity: 1 }];
     });
-    toast.success("Adicionado ao carrinho.");
+    toast.success(item.isSchedulable ? "Horário reservado no carrinho." : "Adicionado ao carrinho.");
     setDetailProduct(null);
   };
 
@@ -420,11 +431,25 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       // Caminho exclusivo: produto de parceiro (1 item por pedido)
       if (partnerItems.length === 1) {
         const pp = partnerItems[0];
-        const { data: ppId, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
-          _professional_product_id: pp.sourceId,
-          _payment_method: paymentMethod,
-        } as never);
-        if (ppErr) throw new Error(ppErr.message);
+        let ppId: string | null = null;
+        if (pp.isSchedulable && pp.scheduledSlot) {
+          const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
+            _professional_product_id: pp.sourceId,
+            _starts_at: pp.scheduledSlot,
+            _payment_method: paymentMethod,
+          } as never);
+          if (error) throw new Error(error.message);
+          ppId = data as unknown as string;
+        } else if (pp.isSchedulable && !pp.scheduledSlot) {
+          throw new Error("Selecione um horário para este atendimento.");
+        } else {
+          const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
+            _professional_product_id: pp.sourceId,
+            _payment_method: paymentMethod,
+          } as never);
+          if (ppErr) throw new Error(ppErr.message);
+          ppId = data as unknown as string;
+        }
         if (!ppId) throw new Error("Pedido não retornado");
         const { data: orderData } = await supabase
           .from("partner_product_orders" as never)
