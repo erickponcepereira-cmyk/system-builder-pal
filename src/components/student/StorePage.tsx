@@ -567,7 +567,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
         </header>
         {tabsBar}
-        <PartnerProfessionalStore kind={storeTab} />
+        <PartnerProfessionalStore kind={storeTab} mode={coachMode ? "reseller" : "student"} />
       </div>
     );
   }
