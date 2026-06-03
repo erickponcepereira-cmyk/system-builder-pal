@@ -4520,6 +4520,8 @@ export type Database = {
           created_at: string
           gross_amount: number
           id: string
+          master_coach_cross_beneficiary_coach_id: string | null
+          master_coach_cross_bonus_amount: number
           metadata: Json
           mp_payment_id: string | null
           network_l1_amount: number
@@ -4551,6 +4553,8 @@ export type Database = {
           created_at?: string
           gross_amount?: number
           id?: string
+          master_coach_cross_beneficiary_coach_id?: string | null
+          master_coach_cross_bonus_amount?: number
           metadata?: Json
           mp_payment_id?: string | null
           network_l1_amount?: number
@@ -4582,6 +4586,8 @@ export type Database = {
           created_at?: string
           gross_amount?: number
           id?: string
+          master_coach_cross_beneficiary_coach_id?: string | null
+          master_coach_cross_bonus_amount?: number
           metadata?: Json
           mp_payment_id?: string | null
           network_l1_amount?: number
@@ -4606,6 +4612,13 @@ export type Database = {
           upline_l3_coach_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "partner_product_orders_master_coach_cross_beneficiary_coac_fkey"
+            columns: ["master_coach_cross_beneficiary_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "partner_product_orders_professional_coach_id_fkey"
             columns: ["professional_coach_id"]
@@ -5767,18 +5780,158 @@ export type Database = {
           },
         ]
       }
+      professional_appointments: {
+        Row: {
+          cancel_reason: string | null
+          cancellation_window_hours: number
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          ends_at: string
+          id: string
+          notes: string | null
+          order_id: string | null
+          product_id: string
+          professional_coach_id: string
+          seller_coach_id: string | null
+          starts_at: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_reason?: string | null
+          cancellation_window_hours?: number
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          ends_at: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          product_id: string
+          professional_coach_id: string
+          seller_coach_id?: string | null
+          starts_at: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_reason?: string | null
+          cancellation_window_hours?: number
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          product_id?: string
+          professional_coach_id?: string
+          seller_coach_id?: string | null
+          starts_at?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_appointments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_appointments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "professional_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_appointments_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_appointments_seller_coach_id_fkey"
+            columns: ["seller_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_appointments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_availability: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          is_active: boolean
+          professional_coach_id: string
+          slot_minutes: number
+          start_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          professional_coach_id: string
+          slot_minutes?: number
+          start_time: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          professional_coach_id?: string
+          slot_minutes?: number
+          start_time?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_products: {
         Row: {
           admin_notes: string | null
+          cancellation_window_hours: number
           category_id: string | null
           coach_commission_amount: number | null
           coach_commission_percentage: number
           coach_id: string
           created_at: string
+          default_duration_minutes: number
           description: string | null
           id: string
           image_url: string | null
           is_active_by_professional: boolean
+          is_schedulable: boolean
           name: string
           network_l1_amount: number | null
           network_l2_amount: number | null
@@ -5794,15 +5947,18 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          cancellation_window_hours?: number
           category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           coach_id: string
           created_at?: string
+          default_duration_minutes?: number
           description?: string | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
+          is_schedulable?: boolean
           name: string
           network_l1_amount?: number | null
           network_l2_amount?: number | null
@@ -5818,15 +5974,18 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          cancellation_window_hours?: number
           category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           coach_id?: string
           created_at?: string
+          default_duration_minutes?: number
           description?: string | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
+          is_schedulable?: boolean
           name?: string
           network_l1_amount?: number | null
           network_l2_amount?: number | null
@@ -7856,6 +8015,15 @@ export type Database = {
         Args: { _payment_method?: string; _professional_product_id: string }
         Returns: string
       }
+      create_scheduled_professional_order: {
+        Args: {
+          _payment_method?: string
+          _professional_product_id: string
+          _starts_at: string
+          _student_id?: string
+        }
+        Returns: string
+      }
       create_store_order: {
         Args: {
           _items: Json
@@ -7969,6 +8137,18 @@ export type Database = {
           id: string
           name: string
           phone: string
+        }[]
+      }
+      list_professional_available_slots: {
+        Args: {
+          _coach_id: string
+          _duration_minutes?: number
+          _from: string
+          _to: string
+        }
+        Returns: {
+          slot_end: string
+          slot_start: string
         }[]
       }
       mark_all_notifications_read: { Args: never; Returns: number }
