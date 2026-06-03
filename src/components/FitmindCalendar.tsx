@@ -195,9 +195,11 @@ async function loadMyChallengeEvents(from: Date, to: Date): Promise<FitmindEvent
   } catch (e) {
     console.warn("loadMyChallengeEvents failed", e);
     return [];
+  }
 }
 
 // ─── Pessoal: agendamentos com profissionais ─────────────────────────────
+
 async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]> {
   try {
     const { data: auth } = await supabase.auth.getUser();
