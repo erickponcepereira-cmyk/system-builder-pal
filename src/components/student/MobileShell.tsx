@@ -14,7 +14,6 @@ const navItems = [
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
   { to: "/student/calendar", label: "Agenda", icon: CalendarDays },
   { to: "/student/evolution", label: "Foto", icon: Camera },
-  { to: "/student/group", label: "Grupo", icon: MessageCircle },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/freebies", label: "Grátis", icon: Gift },
   { to: "/student/profile", label: "Perfil", icon: User },
