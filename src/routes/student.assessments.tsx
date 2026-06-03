@@ -43,10 +43,23 @@ function MyAssessmentsPage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) { setLoading(false); return; }
-      // RLS will scope assessments to those with student_id matching this user
+      // Resolve own student id so we never show assessments where this user is the coach
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .maybeSingle();
+      if (!profile) { setLoading(false); return; }
+      const { data: student } = await supabase
+        .from("students")
+        .select("id")
+        .eq("profile_id", (profile as any).id)
+        .maybeSingle();
+      if (!student) { setRows([]); setLoading(false); return; }
       const { data, error } = await supabase
         .from("coach_body_assessments" as never)
         .select("id, assessment_date, method, weight, bmi, body_fat, muscle_mass, skeletal_muscle, visceral_fat, body_water, basal_metabolism, body_age, coach_id")
+        .eq("student_id" as never, (student as any).id as never)
         .order("assessment_date" as never, { ascending: false });
       if (error) console.error(error);
       const list = (data as any[]) || [];
