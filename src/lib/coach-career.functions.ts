@@ -90,7 +90,7 @@ export const getCareerProgress = createServerFn({ method: "GET" })
     const myCoachId = await resolveCoachId(context.userId);
     const windows: CareerProgress["windows"] = {};
     if (!myCoachId) {
-      return { coachId: null, patents, windows, currentPatentKey: null, nextPatentKey: patents[0]?.key ?? null };
+      return { coachId: null, patents, windows, currentPatentKey: null, nextPatentKey: patents[0]?.key ?? null, achievements: [] };
     }
 
     // Build full downline (all depths) for "team" sales
@@ -123,22 +123,51 @@ export const getCareerProgress = createServerFn({ method: "GET" })
       windows[months] = { ownRevenue: own, teamRevenue: team, totalRevenue: total, ownPct };
     }
 
-    // Determine current patent (highest level whose rules are met)
-    // Rule: own VP counts up to vp_max_pct of required_revenue; the remainder must come from team.
+    // Determine current patent (highest level whose rules are met) + track achievements
     let currentPatentKey: string | null = null;
+    const achievedNow: Array<{ key: string; level: number; qualifying: number }> = [];
     for (const p of patents) {
       const w = windows[p.time_window_months];
       if (!w) continue;
-      if (p.required_revenue === 0) { currentPatentKey = p.key; continue; }
+      if (p.required_revenue === 0) {
+        currentPatentKey = p.key;
+        achievedNow.push({ key: p.key, level: p.level, qualifying: 0 });
+        continue;
+      }
       const vpMax = p.vp_max_pct != null ? p.vp_max_pct : p.min_own_sales_pct;
       const cap = (p.required_revenue * (vpMax || 100)) / 100;
       const cappedOwn = Math.min(w.ownRevenue, cap);
       const qualifying = cappedOwn + w.teamRevenue;
-      if (qualifying >= p.required_revenue) currentPatentKey = p.key;
-      else break;
+      if (qualifying >= p.required_revenue) {
+        currentPatentKey = p.key;
+        achievedNow.push({ key: p.key, level: p.level, qualifying });
+      } else break;
     }
     const currentLevel = patents.find((p) => p.key === currentPatentKey)?.level ?? 0;
     const nextPatentKey = patents.find((p) => p.level > currentLevel)?.key ?? null;
 
-    return { coachId: myCoachId, patents, windows, currentPatentKey, nextPatentKey };
+    // Persist first-time achievements (idempotent via unique index)
+    for (const a of achievedNow) {
+      await supabaseAdmin
+        .from("coach_patent_achievements" as never)
+        .insert({
+          coach_id: myCoachId,
+          patent_key: a.key,
+          patent_level: a.level,
+          qualifying_revenue: a.qualifying,
+        } as never)
+        .then(() => undefined, () => undefined);
+    }
+
+    const { data: achRaw } = await supabaseAdmin
+      .from("coach_patent_achievements" as never)
+      .select("patent_key,patent_level,achieved_at,qualifying_revenue")
+      .eq("coach_id", myCoachId)
+      .order("achieved_at", { ascending: true });
+    const achievements = ((achRaw as unknown as PatentAchievement[] | null) || []).map((a) => ({
+      ...a,
+      qualifying_revenue: Number(a.qualifying_revenue) || 0,
+    }));
+
+    return { coachId: myCoachId, patents, windows, currentPatentKey, nextPatentKey, achievements };
   });
