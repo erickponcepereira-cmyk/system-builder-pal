@@ -38,7 +38,6 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [selected, setSelected] = useState<Card | null>(null);
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
-  const [studentEmail, setStudentEmail] = useState("");
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
