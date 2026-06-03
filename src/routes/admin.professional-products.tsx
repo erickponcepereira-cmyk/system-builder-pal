@@ -16,7 +16,7 @@ interface Row {
   price: number;
   image_url: string | null;
   coach_id: string;
-  coaches?: { profile?: { name: string | null } | null } | null;
+  coachName?: string | null;
 }
 
 function AdminProfessionalProducts() {
@@ -29,10 +29,24 @@ function AdminProfessionalProducts() {
     setLoading(true);
     const { data, error } = await supabase
       .from("professional_products" as never)
-      .select("id,name,status,price,image_url,coach_id,coaches(profile:profiles(name))" as never)
+      .select("id,name,status,price,image_url,coach_id,created_at" as never)
       .order("created_at" as never, { ascending: false });
     if (error) console.error("[admin pro products]", error);
-    setRows((data as unknown as Row[]) || []);
+    const base = (data as unknown as Row[]) || [];
+    const coachIds = Array.from(new Set(base.map((r) => r.coach_id).filter(Boolean)));
+    let nameById: Record<string, string | null> = {};
+    if (coachIds.length) {
+      const { data: cs } = await supabase
+        .from("coaches")
+        .select("id,profile_id,profiles:profile_id(name)")
+        .in("id", coachIds);
+      nameById = Object.fromEntries(
+        ((cs as unknown as Array<{ id: string; profiles?: { name: string | null } | null }>) || []).map(
+          (c) => [c.id, c.profiles?.name ?? null],
+        ),
+      );
+    }
+    setRows(base.map((r) => ({ ...r, coachName: nameById[r.coach_id] ?? null })));
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
