@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { CalendarDays, Gift, Home, MessageCircle, ShoppingBag, Trophy, User } from "lucide-react";
+import { CalendarDays, Camera, Gift, Home, MessageCircle, ShoppingBag, Trophy, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -13,9 +13,10 @@ const navItems = [
   { to: "/student", label: "Home", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
   { to: "/student/calendar", label: "Agenda", icon: CalendarDays },
+  { to: "/student/evolution", label: "Foto", icon: Camera },
   { to: "/student/group", label: "Grupo", icon: MessageCircle },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
-  { to: "/student/freebies", label: "Gratuitos", icon: Gift },
+  { to: "/student/freebies", label: "Grátis", icon: Gift },
   { to: "/student/profile", label: "Perfil", icon: User },
 ] as const;
 
