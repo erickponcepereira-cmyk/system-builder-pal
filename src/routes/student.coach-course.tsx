@@ -300,29 +300,57 @@ function CoachCoursePage() {
             </article>
           </section>
 
-          {/* PITCH + COMPRA */}
-          <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-5">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
-              <TrendingUp className="h-3 w-3" /> Comece agora
-            </div>
-            <h3 className="text-lg font-bold leading-tight text-white">
-              Pronto pra ativar? Garanta hoje sua entrada como Coach FitMind.
-            </h3>
-            <p className="mt-2 text-xs leading-relaxed text-white/65">
-              Ativação Coach Anual: acesso completo ao curso, ao painel de coach, à sua rede e ao programa de comissões por 12 meses.
-            </p>
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <p className="text-[10px] uppercase text-white/40">Investimento</p>
-                <p className="text-2xl font-bold text-white">R$ {ACTIVATION_PRICE.toFixed(2).replace(".", ",")}</p>
-                <p className="text-[10px] text-white/40">à vista no Pix</p>
+          {/* PITCH + COMPRA / CADASTRO COACH */}
+          {!hasPurchased ? (
+            <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-5">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                <TrendingUp className="h-3 w-3" /> Comece agora
               </div>
-              <Button onClick={startCheckout} disabled={creatingOrder} className="gap-2" size="lg">
-                {creatingOrder ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-                Comprar agora
-              </Button>
-            </div>
-          </section>
+              <h3 className="text-lg font-bold leading-tight text-white">
+                Pronto pra ativar? Garanta hoje sua entrada como Coach FitMind.
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-white/65">
+                Ativação Coach Anual: acesso completo ao curso, ao painel de coach, à sua rede e ao programa de comissões por 12 meses.
+              </p>
+              <div className="mt-4 flex items-end justify-between">
+                <div>
+                  <p className="text-[10px] uppercase text-white/40">Investimento</p>
+                  <p className="text-2xl font-bold text-white">R$ {ACTIVATION_PRICE.toFixed(2).replace(".", ",")}</p>
+                  <p className="text-[10px] text-white/40">à vista no Pix</p>
+                </div>
+                <Button onClick={startCheckout} disabled={creatingOrder} className="gap-2" size="lg">
+                  {creatingOrder ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
+                  Comprar agora
+                </Button>
+              </div>
+            </section>
+          ) : (
+            <section className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-transparent p-5">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                <CheckCircle2 className="h-3 w-3" /> Ativação adquirida
+              </div>
+              <h3 className="text-lg font-bold leading-tight text-white">
+                Tudo certo com sua Ativação Coach!
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-white/70">
+                Você já tem o curso garantido. Agora é só se cadastrar como Coach — a etapa de pagamento será pulada automaticamente e você vai direto para o teste de perfil comportamental.
+              </p>
+              {application ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-bold uppercase text-white/50">Status da inscrição</p>
+                  <p className="mt-1 text-sm font-bold text-white">
+                    {application.status === "approved" ? "Aprovada ✅" : application.status === "rejected" ? "Recusada" : "Em análise"}
+                  </p>
+                  {application.admin_notes && <p className="mt-1 text-[11px] text-white/60">{application.admin_notes}</p>}
+                </div>
+              ) : (
+                <Button onClick={() => setShowApply(true)} className="mt-4 w-full gap-2" size="lg">
+                  <UserPlus className="h-4 w-4" /> Cadastrar como Coach
+                </Button>
+              )}
+            </section>
+          )}
+
 
           {/* COACH UPLINE */}
           {uplineCoach && (
