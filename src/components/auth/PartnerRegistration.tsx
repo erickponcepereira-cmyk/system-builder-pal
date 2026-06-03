@@ -40,6 +40,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   const [referral, setReferral] = useState<ReferralContext | null>(null);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [referralCoachName, setReferralCoachName] = useState<string>("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   // Detect logged-in user — if signed in, switch to "existing account" flow
   useEffect(() => {
