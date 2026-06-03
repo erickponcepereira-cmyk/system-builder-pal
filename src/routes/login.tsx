@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dumbbell, Eye, EyeOff, Loader2, User } from "lucide-react";
+import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [accessOptions, setAccessOptions] = useState<{ coach: boolean; student: boolean } | null>(null);
+  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; student: boolean; partner: boolean } | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -82,29 +82,19 @@ function LoginPage() {
       supabase.rpc("touch_my_activity" as never).then(() => {}, () => {});
     }
 
-    // Partner: rota direta
-    if (profile.role === "partner") {
-      const { data: partner } = await supabase
-        .from("partners" as never)
-        .select("id" as never)
-        .eq("profile_id" as never, profile.id)
-        .maybeSingle();
-      if (!partner) {
-        setLoading(false);
-        const m = "Cadastro de parceiro incompleto. Contate o suporte.";
-        setFormError(m); toast.error(m); return;
-      }
-      if (showSuccess) toast.success("Login realizado!");
-      enterArea("partner");
-      return;
-    }
+    const role = profile.role;
 
-    const [{ data: coach, error: coachError }, { data: student, error: studentError }] = await Promise.all([
+    const [
+      { data: coach, error: coachError },
+      { data: student, error: studentError },
+      { data: partner, error: partnerError },
+    ] = await Promise.all([
       supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
     ]);
 
-    if (coachError || studentError) {
+    if (coachError || studentError || partnerError) {
       setLoading(false);
       const message = "Não foi possível validar seu acesso. Tente novamente.";
       setFormError(message);
@@ -112,10 +102,10 @@ function LoginPage() {
       return;
     }
 
-    const role = profile.role;
-    // Coach pendente também pode entrar no painel de coach (em modo travado)
-    const canCoach = role === "admin" || role === "manager" || role === "director" || !!coach;
+    const canAdmin = role === "admin" || role === "manager" || role === "director";
+    const canCoach = canAdmin || !!coach;
     const canStudent = role === "student" || !!student;
+    const canPartner = role === "partner" || !!partner;
 
     if (role === "coach" && !coach) {
       setLoading(false);
@@ -133,7 +123,16 @@ function LoginPage() {
       return;
     }
 
-    if (role !== "admin" && !canCoach && !canStudent) {
+    if (role === "partner" && !partner) {
+      setLoading(false);
+      const m = "Cadastro de parceiro incompleto. Contate o suporte.";
+      setFormError(m); toast.error(m); return;
+    }
+
+    const available = { admin: canAdmin, coach: canCoach, student: canStudent, partner: canPartner };
+    const count = Number(canAdmin) + Number(canCoach) + Number(canStudent) + Number(canPartner);
+
+    if (count === 0) {
       setLoading(false);
       const message = "Login indisponível: nenhum painel liberado para este cadastro.";
       setFormError(message);
@@ -142,14 +141,19 @@ function LoginPage() {
     }
 
     if (showSuccess) toast.success("Login realizado com sucesso!");
-    if (role === "admin") enterArea("admin");
-    else if (canCoach && canStudent) {
-      setAccessOptions({ coach: true, student: true });
+
+    if (count >= 2) {
+      setAccessOptions(available);
       setLoading(false);
+      return;
     }
+
+    if (canAdmin) enterArea("admin");
     else if (canCoach) enterArea("coach");
-    else enterArea("student");
+    else if (canStudent) enterArea("student");
+    else enterArea("partner");
   };
+
 
 
   // Auto-login desativado durante a fase de testes.
@@ -303,24 +307,49 @@ function LoginPage() {
 
             {!resetMode && accessOptions ? (
               <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => enterArea("coach")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
-                >
-                  <Dumbbell className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Painel de Coach</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => enterArea("student")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
-                >
-                  <User className="h-5 w-5 text-white/70" />
-                  <span className="font-semibold">Painel de Aluno</span>
-                </button>
+                {accessOptions.admin && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("admin")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                  >
+                    <Shield className="h-5 w-5 text-primary" />
+                    <span className="font-semibold">Painel de Admin</span>
+                  </button>
+                )}
+                {accessOptions.coach && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("coach")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                  >
+                    <Dumbbell className="h-5 w-5 text-primary" />
+                    <span className="font-semibold">Painel de Coach</span>
+                  </button>
+                )}
+                {accessOptions.student && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("student")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                  >
+                    <User className="h-5 w-5 text-white/70" />
+                    <span className="font-semibold">Painel de Aluno</span>
+                  </button>
+                )}
+                {accessOptions.partner && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("partner")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                  >
+                    <Briefcase className="h-5 w-5 text-white/70" />
+                    <span className="font-semibold">Painel de Parceiro</span>
+                  </button>
+                )}
               </div>
             ) : !resetMode ? (
+
 
             <form onSubmit={handleLogin} className="space-y-4">
               {formError && (

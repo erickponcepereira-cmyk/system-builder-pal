@@ -60,19 +60,29 @@ function ReferralLandingPage() {
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
 
-      // Se já está logado: verifica o papel.
-      // - aluno → vai direto pra loja (mantém sessão)
-      // - outro papel (admin/coach/etc) → desloga e manda pro cadastro como aluno
+      // Se já está logado: verifica se tem registro de aluno (mesmo que role seja admin/coach/partner).
+      // - tem registro de aluno → entra na loja como aluno (mantém sessão, troca área)
+      // - não tem registro de aluno → desloga e manda pro cadastro
       const { data: userData } = await supabase.auth.getUser();
       let nextAction: "store" | "register" = "register";
       if (userData.user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("id")
           .eq("user_id", userData.user.id)
           .maybeSingle();
-        if (profile?.role === "student") {
-          nextAction = "store";
+        if (profile?.id) {
+          const { data: student } = await supabase
+            .from("students")
+            .select("id")
+            .eq("profile_id", profile.id)
+            .maybeSingle();
+          if (student?.id) {
+            sessionStorage.setItem("fitmind_selected_area", "student");
+            nextAction = "store";
+          } else {
+            await supabase.auth.signOut();
+          }
         } else {
           await supabase.auth.signOut();
         }
@@ -85,6 +95,7 @@ function ReferralLandingPage() {
         const targetRole = row.kind === "coach" ? "coach" : "student";
         navigate({ to: "/register", search: { role: targetRole } });
       }, 1200);
+
 
 
     })();
