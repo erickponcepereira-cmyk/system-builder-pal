@@ -2910,6 +2910,58 @@ export type Database = {
           },
         ]
       }
+      event_attendances: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          event_id: string
+          id: string
+          profile_id: string
+          student_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name: string
+          event_id: string
+          id?: string
+          profile_id: string
+          student_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          event_id?: string
+          id?: string
+          profile_id?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_attendances_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "fitmind_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_attendances_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_attendances_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_tickets: {
         Row: {
           amount_paid: number | null
@@ -8032,6 +8084,10 @@ export type Database = {
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
         Returns: string
+      }
+      student_has_partner_benefits: {
+        Args: { _student_id: string }
+        Returns: boolean
       }
       submit_coach_application:
         | {
