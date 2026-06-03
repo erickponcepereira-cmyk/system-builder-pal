@@ -195,38 +195,63 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
-          <div onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#1A1A1A]">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-white/5">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
+          >
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-muted">
               {selected.image_url ? (
                 <img src={selected.image_url} alt={selected.name} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-white/30"><ShoppingBag className="h-16 w-16" /></div>
+                <div className="flex h-full w-full items-center justify-center">
+                  <ShoppingBag className="h-16 w-16 text-muted-foreground" />
+                </div>
               )}
-              <button onClick={() => setSelected(null)} className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white">
+              <button
+                onClick={() => setSelected(null)}
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="space-y-4 p-5">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-white/40">{selected.seller}</p>
-                <h2 className="mt-1 text-xl font-bold text-white">{selected.name}</h2>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{selected.seller}</p>
+                <h2 className="mt-1 text-xl font-bold text-foreground">{selected.name}</h2>
                 <p className="mt-2 text-2xl font-bold text-primary">{money(selected.price)}</p>
               </div>
               {selected.description && (
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/40">Descrição</p>
-                  <p className="mt-1 whitespace-pre-line text-sm text-white/85">{selected.description}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição</p>
+                  <p className="mt-1 whitespace-pre-line text-sm text-foreground">{selected.description}</p>
                 </div>
               )}
-              <div className="flex gap-2">
-                <button disabled={buying} onClick={() => buy("pix")} className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50">
-                  {buying ? "Processando..." : "Comprar com PIX"}
-                </button>
-                <button disabled={buying} onClick={() => buy("card")} className="flex-1 rounded-lg border border-primary/40 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50">
-                  {buying ? "..." : "Comprar com Cartão"}
-                </button>
-              </div>
+              {selected.kind === "partner" ? (
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80">
+                  Compras de produtos de empresas parceiras acontecem na loja principal.
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    disabled={buying}
+                    onClick={() => buy("pix")}
+                    className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    {buying ? "Processando..." : "Comprar com PIX"}
+                  </button>
+                  <button
+                    disabled={buying}
+                    onClick={() => buy("card")}
+                    className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                  >
+                    {buying ? "..." : "Comprar com Cartão"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
