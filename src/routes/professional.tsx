@@ -218,6 +218,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "wallet") return <WalletTab />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
+  if (tab === "collaborators") return <CollaboratorsTab coachId={info.coachId} displayName={info.name} />;
 
   if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
   if (tab === "diet") return <ProtocolTab />;
