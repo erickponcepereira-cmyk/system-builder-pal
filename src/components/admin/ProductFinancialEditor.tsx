@@ -132,10 +132,21 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
     [data],
   );
 
+  // Remapeia os slots para que o engine (que filtra por applies_to_referral_sales)
+  // honre o cenário selecionado no simulador.
+  const simSlots = useMemo(
+    () =>
+      sortedSlots.map((s) => ({
+        ...s,
+        applies_to_referral_sales: slotApplies(s),
+      })),
+    [sortedSlots, simMode],
+  );
+
   const dist = useMemo(() => {
     if (!data) return null;
-    return calculateDistribution(data.product.price, previewMethod, feeCfg, sortedSlots, taxPct);
-  }, [data, sortedSlots, previewMethod, feeCfg, taxPct]);
+    return calculateDistribution(data.product.price, previewMethod, feeCfg, simSlots, taxPct);
+  }, [data, simSlots, previewMethod, feeCfg, taxPct]);
 
   const slotAmtMap = useMemo(() => {
     if (!data || !dist) return new Map<string, number>();
