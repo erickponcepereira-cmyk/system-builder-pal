@@ -14,7 +14,7 @@ import { PartnerProfessionalStore } from "@/components/store/PartnerProfessional
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
-type ProductKind = "challenge" | "digital" | "store" | "item" | "partner";
+type ProductKind = "challenge" | "digital" | "store" | "item" | "partner" | "partner_company";
 type PaymentMethod = "pix" | "credit_card" | "debit_card";
 
 const SPECIALTY_LABEL: Record<string, string> = {
