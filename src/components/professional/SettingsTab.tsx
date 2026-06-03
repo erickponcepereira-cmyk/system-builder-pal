@@ -31,7 +31,7 @@ const EMPTY_PROFILE: PublicProfile = {
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
-  const [tab, setTab] = useState<"profile" | "questions" | "agenda">("profile");
+  const [tab, setTab] = useState<"profile" | "questions">("profile");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileBio, setProfileBio] = useState("");
   const [pub, setPub] = useState<PublicProfile>(EMPTY_PROFILE);
