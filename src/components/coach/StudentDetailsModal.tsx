@@ -133,6 +133,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
     { id: "frequencia", label: "Frequência", icon: CalendarCheck },
     { id: "avaliacoes", label: "Avaliações", icon: Activity },
     { id: "anamnese", label: "Anamnese", icon: ClipboardList },
+    { id: "janelas", label: "Janelas", icon: ClipboardList },
     { id: "evolucao", label: "Evolução", icon: TrendingUp },
     { id: "compras", label: "Compras", icon: ShoppingBag },
   ];
