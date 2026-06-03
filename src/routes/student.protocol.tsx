@@ -41,6 +41,14 @@ type Anamnese = {
   stress_level: string | null;
   exercises_regularly: boolean | null;
   additional_observations: string | null;
+  blood_type: string | null;
+  food_intolerances: string | null;
+  has_diabetes: boolean | null;
+  has_hypertension: boolean | null;
+  has_cardiopathy: boolean | null;
+  other_chronic_conditions: string | null;
+  surgical_history: string | null;
+  supplements_used: string | null;
 };
 
 function StudentProtocolPage() {
