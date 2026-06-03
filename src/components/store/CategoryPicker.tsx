@@ -14,9 +14,11 @@ interface Props {
   sectionId: string | null | undefined;
   categoryId: string | null | undefined;
   onChange: (next: { section_id: string | null; category_id: string | null }) => void;
+  /** Quando true, só lista seções/categorias criadas pelo próprio usuário. */
+  ownerOnly?: boolean;
 }
 
-export function CategoryPicker({ sectionId, categoryId, onChange }: Props) {
+export function CategoryPicker({ sectionId, categoryId, onChange, ownerOnly = false }: Props) {
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [creating, setCreating] = useState<"section" | "category" | null>(null);
@@ -25,15 +27,19 @@ export function CategoryPicker({ sectionId, categoryId, onChange }: Props) {
 
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
-    setUserId(u.user?.id || null);
-    const [{ data: s }, { data: c }] = await Promise.all([
-      supabase.from("store_sections").select("id,name,pending,is_active").order("name"),
-      supabase.from("store_categories").select("id,section_id,name,pending,is_active").order("name"),
-    ]);
+    const uid = u.user?.id || null;
+    setUserId(uid);
+    let sQ: any = supabase.from("store_sections").select("id,name,pending,is_active,created_by").order("name");
+    let cQ: any = supabase.from("store_categories").select("id,section_id,name,pending,is_active,created_by").order("name");
+    if (ownerOnly && uid) {
+      sQ = sQ.eq("created_by", uid);
+      cQ = cQ.eq("created_by", uid);
+    }
+    const [{ data: s }, { data: c }] = await Promise.all([sQ, cQ]);
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [ownerOnly]);
 
   const filteredCategories = categories.filter((c) => c.section_id === sectionId);
 
