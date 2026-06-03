@@ -44,10 +44,13 @@ export function ConstructorsCareerTab() {
     );
   }
 
-  const { patents, windows, currentPatentKey, nextPatentKey } = data;
+  const { patents, windows, currentPatentKey, nextPatentKey, achievements } = data;
   const current = patents.find((p) => p.key === currentPatentKey) ?? null;
   const next = patents.find((p) => p.key === nextPatentKey) ?? null;
   const nextWindow = next ? windows[next.time_window_months] : null;
+  const achievedAtByKey = new Map<string, string>(
+    (achievements || []).map((a) => [a.patent_key, a.achieved_at]),
+  );
 
   // Group patents by phase
   const phases = new Map<number, PatentRule[]>();
@@ -139,8 +142,9 @@ export function ConstructorsCareerTab() {
                   const cap = (p.required_revenue * (vpMax || 100)) / 100;
                   const cappedOwn = w ? Math.min(w.ownRevenue, cap) : 0;
                   const qualifying = w ? cappedOwn + w.teamRevenue : 0;
-                  const achieved = p.required_revenue === 0 || qualifying >= p.required_revenue;
-                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} />;
+                  const achievedAt = achievedAtByKey.get(p.key) ?? null;
+                  const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue;
+                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} />;
                 })}
               </div>
             </div>
@@ -181,9 +185,10 @@ function Stat({ icon: Icon, label, value, hint }: { icon: typeof Users; label: s
   );
 }
 
-function PatentRow({ p, achieved, isCurrent, qualifying }: {
-  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number;
+function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt }: {
+  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number; achievedAt: string | null;
 }) {
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
   return (
     <div className={`rounded-xl p-3 ${isCurrent ? "ring-1 ring-primary/40" : ""}`}
       style={{ backgroundColor: isCurrent ? "rgba(255,66,48,0.06)" : "#0F0F0F" }}>
@@ -200,12 +205,23 @@ function PatentRow({ p, achieved, isCurrent, qualifying }: {
             {isCurrent && (
               <span className="text-[9px] font-bold rounded-full bg-primary/20 px-2 py-0.5 text-primary">ATUAL</span>
             )}
+            {achieved && !isCurrent && (
+              <span className="text-[9px] font-bold rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-400">CONQUISTADA</span>
+            )}
+            {!achieved && (
+              <span className="text-[9px] font-bold rounded-full bg-white/5 px-2 py-0.5 text-white/40">BLOQUEADA</span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-[10px] text-white/50">
             <span className="inline-flex items-center gap-1"><Star className="h-2.5 w-2.5" />{p.required_revenue > 0 ? fmtBRL(p.required_revenue) : "Cadastro"}</span>
             <span className="inline-flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{p.time_window_months === 1 ? "mensal" : `${p.time_window_months} meses`}</span>
             {p.vp_max_pct != null && p.vp_max_pct < 100 && (
               <span>VP até {p.vp_max_pct}% · VE {(100 - p.vp_max_pct).toFixed(1)}%</span>
+            )}
+            {achievedAt && (
+              <span className="inline-flex items-center gap-1 text-emerald-400/80">
+                <Check className="h-2.5 w-2.5" /> Conquistada em {fmtDate(achievedAt)}
+              </span>
             )}
           </div>
           {p.description && <p className="text-[10px] text-white/40 mt-1">{p.description}</p>}
