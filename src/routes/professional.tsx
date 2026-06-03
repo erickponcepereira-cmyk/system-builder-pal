@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, UserPlus } from "lucide-react";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -15,6 +15,7 @@ import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
+import { CollaboratorsTab } from "@/components/professional/CollaboratorsTab";
 
 import type { CoachContext } from "@/routes/coach";
 
