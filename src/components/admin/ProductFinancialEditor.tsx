@@ -391,17 +391,21 @@ export function ProductFinancialDrawer({ productId, onClose, onSaved }: { produc
 }
 
 // ── Internal subcomponents ─────────────────────────────────────
-function CoachCommissionByMethod({ price, feeCfg, slots, taxPct, selected, onSelect }: {
+function CoachCommissionByMethod({ price, feeCfg, slots, taxPct, selected, onSelect, simMode }: {
   price: number; feeCfg: FeeLike; slots: ValueSlot[]; taxPct: number;
   selected: PaymentMethod; onSelect: (m: PaymentMethod) => void;
+  simMode: "direct" | "referral";
 }) {
   const groups: { label: string; method: PaymentMethod; feePct: number }[] = [
     { label: "PIX",         method: "pix",        feePct: feeCfg.pix_fee_percentage },
     { label: "Cartão 1-2x", method: "credit_1x",  feePct: feeCfg.card_fee_percentage },
     { label: "Cartão 3-12x",method: "credit_3x",  feePct: feeCfg.card_fee_3x12_percentage },
   ];
+  const filteredSlots = slots.filter((s) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  );
   const calc = (method: PaymentMethod) => {
-    const d = calculateDistribution(price, method, feeCfg, slots, taxPct);
+    const d = calculateDistribution(price, method, feeCfg, filteredSlots, taxPct);
     const coachSlots = d.lines
       .filter((l) => l.type === "distribution" && (l.destination === "coach_wallet" || l.destination === "platform_reserve"))
       .reduce((s, l) => s + l.amount, 0);
