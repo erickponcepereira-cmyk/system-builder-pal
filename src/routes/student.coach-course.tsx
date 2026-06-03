@@ -68,12 +68,8 @@ function CoachCoursePage() {
   const [submitting, setSubmitting] = useState(false);
 
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) { setLoading(false); return; }
-      setUserEmail(userData.user.email || "");
+  // (data loading moved into loadAll below)
+
 
   const loadAll = async () => {
     setLoading(true);
