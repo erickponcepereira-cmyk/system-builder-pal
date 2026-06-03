@@ -85,18 +85,14 @@ function AdminPartners() {
       {!loading && tab === "produtos" && (
         <div className="space-y-2">
           {products.filter(p => p.status === "pending").map(p => (
-            <div key={p.id} className="rounded-xl p-4 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
+            <button key={p.id} onClick={() => setOpenProductId(p.id)} className="w-full text-left rounded-xl p-4 flex gap-3 hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
               {p.image_url ? <img src={p.image_url} className="h-20 w-20 rounded object-cover" /> : <div className="h-20 w-20 rounded bg-white/5" />}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{p.name}</p>
                 <p className="text-[11px] text-white/50">{p.partners?.fantasy_name} · {p.kind === "free" ? "Gratuito" : `R$ ${Number(p.price).toFixed(2)}`}</p>
-                <textarea value={notes[p.id] || ""} onChange={e => setNotes({ ...notes, [p.id]: e.target.value })} placeholder="Observação (obrigatória para reprovar)" className="mt-2 w-full rounded bg-black/40 border border-white/10 px-2 py-1.5 text-xs text-white" rows={2} />
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => reviewProduct(p.id, "approved")} className="flex items-center gap-1 rounded bg-green-500/15 text-green-400 px-3 py-1.5 text-xs"><Check className="h-3.5 w-3.5" /> Aprovar</button>
-                  <button onClick={() => { if (!notes[p.id]?.trim()) return toast.error("Informe a observação"); reviewProduct(p.id, "rejected"); }} className="flex items-center gap-1 rounded bg-red-500/15 text-red-400 px-3 py-1.5 text-xs"><X className="h-3.5 w-3.5" /> Reprovar</button>
-                </div>
+                <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary"><Eye className="h-3.5 w-3.5" /> Abrir para revisar</span>
               </div>
-            </div>
+            </button>
           ))}
           {products.filter(p => p.status === "pending").length === 0 && <p className="text-sm text-white/50">Nenhum produto pendente.</p>}
 
