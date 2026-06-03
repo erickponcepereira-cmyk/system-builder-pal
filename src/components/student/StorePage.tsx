@@ -425,7 +425,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       }
 
       const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
-      const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
+      const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null, _referrer_student_id: pendingReferrerStudentId } as never);
       if (error) throw new Error(error.message);
       if (!orderId) throw new Error("Pedido não retornado");
       const { data: orderData } = await supabase
