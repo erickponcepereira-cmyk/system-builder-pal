@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Check, X, Loader2 } from "lucide-react";
+import { Building2, Loader2, Eye } from "lucide-react";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
+import { ProductReviewModal } from "@/components/admin/ProductReviewModal";
 
 export const Route = createFileRoute("/admin/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — Admin" }] }),
@@ -18,8 +19,8 @@ function AdminPartners() {
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState<Record<string, string>>({});
   const [openPartnerId, setOpenPartnerId] = useState<string | null>(null);
+  const [openProductId, setOpenProductId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
