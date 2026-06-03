@@ -65,7 +65,10 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
   const [feeCfg, setFeeCfg] = useState<FeeLike>({ pix_fee_percentage: 0.99, card_fee_percentage: 4.98, card_fee_3x12_percentage: 4.98 });
   const [taxPct, setTaxPct] = useState(6);
   const [previewMethod, setPreviewMethod] = useState<PaymentMethod>("pix");
+  const [simMode, setSimMode] = useState<"direct" | "referral">("direct");
   const [saving, setSaving] = useState(false);
+  const slotApplies = (s: ValueSlot) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral;
 
   useEffect(() => {
     fetchOne({ data: { productId } }).then(setData).catch((e: any) => toast.error(e?.message || "Erro"));
@@ -136,12 +139,12 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
 
   const slotAmtMap = useMemo(() => {
     if (!data || !dist) return new Map<string, number>();
-    const active = sortedSlots.filter((s) => s.applies_to_referral_sales);
+    const active = sortedSlots.filter(slotApplies);
     const amts = computeSlotAmounts(active, dist.base_distributable);
     const map = new Map<string, number>();
     active.forEach((s, i) => map.set(s.id, amts[i]));
     return map;
-  }, [data, dist, sortedSlots]);
+  }, [data, dist, sortedSlots, simMode]);
 
   const handleSave = async () => {
     if (!data) return;
@@ -223,11 +226,26 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
         taxPct={taxPct}
         selected={previewMethod}
         onSelect={setPreviewMethod}
+        simMode={simMode}
       />
 
       <div className={`grid grid-cols-1 ${compact ? "" : "lg:grid-cols-2"} gap-4`}>
         <div>
-          <SectionLabel>Distribuição da venda normal</SectionLabel>
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+            <SectionLabel>
+              {simMode === "direct" ? "Distribuição da venda direta" : "Distribuição da venda aluno → aluno"}
+            </SectionLabel>
+            <div className="inline-flex rounded-md border border-white/10 overflow-hidden text-[10px] font-medium uppercase tracking-wider">
+              <button type="button" onClick={() => setSimMode("direct")}
+                className={`px-2.5 py-1 transition ${simMode === "direct" ? "bg-[#E24B4A] text-white" : "bg-transparent text-white/60 hover:text-white"}`}>
+                Venda direta
+              </button>
+              <button type="button" onClick={() => setSimMode("referral")}
+                className={`px-2.5 py-1 transition ${simMode === "referral" ? "bg-[#E24B4A] text-white" : "bg-transparent text-white/60 hover:text-white"}`}>
+                Aluno → Aluno
+              </button>
+            </div>
+          </div>
           <div className="rounded-lg p-3" style={{ backgroundColor: "#161616" }}>
             <div className="space-y-2">
               {sortedSlots.map((s, idx) => (
@@ -320,7 +338,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
               <span className="text-white/60">Comissão do vendedor (sobra)</span>
               <span className="font-mono text-[#E24B4A]">{dist.remainder > 0.005 ? money(dist.remainder) : "—"}</span>
             </div>
-            <ProgressTrack dist={dist} slots={data.slots} />
+            <ProgressTrack dist={dist} slots={data.slots} simMode={simMode} />
             <div className="mt-2 text-[11px]">
               {Math.abs(dist.remainder) < 0.01 ? (
                 <span className="text-emerald-400 inline-flex items-center gap-1"><CircleCheck className="h-3 w-3" /> 100% distribuído</span>
@@ -332,7 +350,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
             </div>
           </div>
 
-          <SummaryGrid dist={dist} slots={data.slots} />
+          <SummaryGrid dist={dist} slots={data.slots} simMode={simMode} />
         </div>
       </div>
 
@@ -373,17 +391,21 @@ export function ProductFinancialDrawer({ productId, onClose, onSaved }: { produc
 }
 
 // ── Internal subcomponents ─────────────────────────────────────
-function CoachCommissionByMethod({ price, feeCfg, slots, taxPct, selected, onSelect }: {
+function CoachCommissionByMethod({ price, feeCfg, slots, taxPct, selected, onSelect, simMode }: {
   price: number; feeCfg: FeeLike; slots: ValueSlot[]; taxPct: number;
   selected: PaymentMethod; onSelect: (m: PaymentMethod) => void;
+  simMode: "direct" | "referral";
 }) {
   const groups: { label: string; method: PaymentMethod; feePct: number }[] = [
     { label: "PIX",         method: "pix",        feePct: feeCfg.pix_fee_percentage },
     { label: "Cartão 1-2x", method: "credit_1x",  feePct: feeCfg.card_fee_percentage },
     { label: "Cartão 3-12x",method: "credit_3x",  feePct: feeCfg.card_fee_3x12_percentage },
   ];
+  const filteredSlots = slots.filter((s) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  );
   const calc = (method: PaymentMethod) => {
-    const d = calculateDistribution(price, method, feeCfg, slots, taxPct);
+    const d = calculateDistribution(price, method, feeCfg, filteredSlots, taxPct);
     const coachSlots = d.lines
       .filter((l) => l.type === "distribution" && (l.destination === "coach_wallet" || l.destination === "platform_reserve"))
       .reduce((s, l) => s + l.amount, 0);
@@ -630,12 +652,14 @@ function FlowDivider() {
     </div>
   );
 }
-function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[] }) {
+function ProgressTrack({ dist, slots, simMode }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[]; simMode: "direct" | "referral" }) {
   const segs: { w: number; cls: string }[] = [
     { w: (dist.payment_fee_amount / dist.gross_amount) * 100, cls: "bg-[#E24B4A]" },
     { w: (dist.tax_amount / dist.gross_amount) * 100, cls: "bg-[#F09595]" },
   ];
-  const active = slots.filter((s) => s.applies_to_referral_sales);
+  const active = slots.filter((s) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  );
   const amts = computeSlotAmounts(active, dist.base_distributable);
   active.forEach((s, i) => {
     segs.push({ w: (amts[i] / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
@@ -647,8 +671,10 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
     </div>
   );
 }
-function SummaryGrid({ dist, slots }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[] }) {
-  const active = slots.filter((s) => s.applies_to_referral_sales);
+function SummaryGrid({ dist, slots, simMode }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[]; simMode: "direct" | "referral" }) {
+  const active = slots.filter((s) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  );
   const amts = computeSlotAmounts(active, dist.base_distributable);
   const sumBy = (preds: string[]) =>
     active.reduce((a, s, i) => a + (preds.includes(s.destination) ? amts[i] : 0), 0);
