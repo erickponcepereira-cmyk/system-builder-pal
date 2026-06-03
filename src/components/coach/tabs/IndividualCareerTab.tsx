@@ -86,14 +86,20 @@ export function IndividualCareerTab() {
           <p className="text-[11px] text-white/40">Medalhas conquistadas pela produção pessoal em um único mês</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {monthlyRules.map((r) => (
-            <MedalCard
-              key={r.id}
-              rule={r}
-              current={vpThisMonth}
-              earned={earnedMonthlyThisPeriod.has(r.key)}
-            />
-          ))}
+          {monthlyRules.map((r) => {
+            const e = earned.find(
+              (x) => x.medal_kind === "monthly" && x.medal_key === r.key && x.period_year === currentMonth.year && x.period_month === currentMonth.month,
+            );
+            return (
+              <MedalCard
+                key={r.id}
+                rule={r}
+                current={vpThisMonth}
+                earned={!!e}
+                awardedAt={e?.awarded_at ?? null}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -104,14 +110,18 @@ export function IndividualCareerTab() {
           <p className="text-[11px] text-white/40">Marcos históricos de produção acumulada na carreira</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {cumulativeRules.map((r) => (
-            <MedalCard
-              key={r.id}
-              rule={r}
-              current={vpLifetime}
-              earned={earnedCumulative.has(r.key)}
-            />
-          ))}
+          {cumulativeRules.map((r) => {
+            const e = earned.find((x) => x.medal_kind === "cumulative" && x.medal_key === r.key);
+            return (
+              <MedalCard
+                key={r.id}
+                rule={r}
+                current={vpLifetime}
+                earned={!!e}
+                awardedAt={e?.awarded_at ?? null}
+              />
+            );
+          })}
         </div>
       </div>
 
