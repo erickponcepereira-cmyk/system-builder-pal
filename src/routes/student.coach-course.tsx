@@ -247,63 +247,8 @@ function CoachCoursePage() {
         </div>
       ) : (
         <>
-          {/* TRILHA */}
-          <section className="space-y-3">
-            <h3 className="px-1 text-xs font-bold uppercase tracking-wider text-white/50">Trilha para se tornar Coach</h3>
+          {/* TRILHA removida — passos foram migrados para a aba do coach */}
 
-            {/* Step 1 — Curso */}
-            <article className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <div className="flex items-start gap-3">
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${courseStatus === "concluido" ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"}`}>
-                  {courseStatus === "concluido" ? <CheckCircle2 className="h-5 w-5" /> : <GraduationCap className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-sm font-bold text-white">Curso Ativação Coach – Anual</h4>
-                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">Obrigatório</span>
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-white/55">
-                    Formação oficial FitMind com a metodologia, vendas, atendimento e bastidores da rede. Concluindo essa trilha, você está pronto para ativar sua conta de coach.
-                  </p>
-                  <div className="mt-2 flex items-center gap-2 text-[10px] text-white/40">
-                    <Clock className="h-3 w-3" />
-                    <span>Acesso anual • conteúdo on-line</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className={`text-[11px] font-bold uppercase ${courseStatus === "concluido" ? "text-primary" : "text-white/50"}`}>
-                  {courseStatus === "concluido" ? "Concluído" : courseStatus === "em_andamento" ? "Em andamento" : "Pendente"}
-                </span>
-                <Button size="sm" variant={courseStatus === "concluido" ? "secondary" : "default"} onClick={startCheckout} disabled={creatingOrder} className="rounded-xl">
-                  {creatingOrder ? <Loader2 className="h-4 w-4 animate-spin" /> : courseStatus === "concluido" ? "Acessar curso" : "Ativar curso"}
-                </Button>
-              </div>
-            </article>
-
-            {/* Step 2 — Perfil Comportamental */}
-            <article className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/70">
-                  <Brain className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-bold text-white">Análise de Perfil Comportamental</h4>
-                  <p className="mt-1 text-xs leading-relaxed text-white/55">
-                    Preencha sua análise e receba um relatório completo com os produtos e serviços que você tem mais facilidade de vender de acordo com o seu perfil.
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold uppercase text-white/50">
-                  {profileStatus === "concluida" ? "Concluída" : "Não iniciada"}
-                </span>
-                <Button size="sm" variant="default" onClick={() => setShowProfile(true)} className="rounded-xl">
-                  Iniciar análise
-                </Button>
-              </div>
-            </article>
-          </section>
 
           {/* PITCH + COMPRA / CADASTRO COACH */}
           {!hasPurchased ? (
