@@ -652,12 +652,14 @@ function FlowDivider() {
     </div>
   );
 }
-function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[] }) {
+function ProgressTrack({ dist, slots, simMode }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[]; simMode: "direct" | "referral" }) {
   const segs: { w: number; cls: string }[] = [
     { w: (dist.payment_fee_amount / dist.gross_amount) * 100, cls: "bg-[#E24B4A]" },
     { w: (dist.tax_amount / dist.gross_amount) * 100, cls: "bg-[#F09595]" },
   ];
-  const active = slots.filter((s) => s.applies_to_referral_sales);
+  const active = slots.filter((s) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  );
   const amts = computeSlotAmounts(active, dist.base_distributable);
   active.forEach((s, i) => {
     segs.push({ w: (amts[i] / dist.gross_amount) * 100, cls: getMeta(s.destination).barClass });
@@ -669,8 +671,10 @@ function ProgressTrack({ dist, slots }: { dist: NonNullable<ReturnType<typeof ca
     </div>
   );
 }
-function SummaryGrid({ dist, slots }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[] }) {
-  const active = slots.filter((s) => s.applies_to_referral_sales);
+function SummaryGrid({ dist, slots, simMode }: { dist: NonNullable<ReturnType<typeof calculateDistribution>>; slots: ValueSlot[]; simMode: "direct" | "referral" }) {
+  const active = slots.filter((s) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral,
+  );
   const amts = computeSlotAmounts(active, dist.base_distributable);
   const sumBy = (preds: string[]) =>
     active.reduce((a, s, i) => a + (preds.includes(s.destination) ? amts[i] : 0), 0);
