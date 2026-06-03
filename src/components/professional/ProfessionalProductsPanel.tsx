@@ -9,6 +9,7 @@ import {
   type CoachCommissionPct,
   type PartnerPriceMode,
 } from "@/lib/partnerFinance";
+import { CurrencyInputBRL } from "@/components/ui/currency-input";
 
 interface ProProduct {
   id: string;
