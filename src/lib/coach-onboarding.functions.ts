@@ -22,21 +22,95 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) return { isCoach: false as const };
+
+    let stage = (coach.onboarding_stage || "released") as
+      | "awaiting_payment"
+      | "awaiting_quiz_result"
+      | "awaiting_upline_release"
+      | "released";
+
+    // Auto-advance: se a pessoa já comprou a Ativação Coach antes de virar coach,
+    // pula a etapa de pagamento e vai direto para o quiz de perfil comportamental.
+    if (stage === "awaiting_payment") {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: student } = await supabaseAdmin
+        .from("students")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      if (student?.id) {
+        const { data: paidOrders } = await supabaseAdmin
+          .from("store_orders")
+          .select("id, store_order_items(product_id, store_product_id, digital_product_id)")
+          .eq("student_id", student.id)
+          .eq("status", "paid");
+        const orderWithActivation = (paidOrders || []).find((o) => {
+          const items = (o as { store_order_items?: Array<{ product_id?: string | null; store_product_id?: string | null; digital_product_id?: string | null }> }).store_order_items || [];
+          return items.some((i) =>
+            i.product_id === ACTIVATION_PRODUCT_ID ||
+            i.store_product_id === ACTIVATION_PRODUCT_ID ||
+            i.digital_product_id === ACTIVATION_PRODUCT_ID
+          );
+        });
+        if (orderWithActivation) {
+          await supabaseAdmin
+            .from("coaches")
+            .update({
+              onboarding_stage: "awaiting_quiz_result",
+              activation_paid_at: new Date().toISOString(),
+              activation_order_id: (orderWithActivation as { id: string }).id,
+            })
+            .eq("id", coach.id);
+          stage = "awaiting_quiz_result";
+        }
+      }
+    }
+
     return {
       isCoach: true as const,
       profileId: profile.id,
       coachId: coach.id,
       name: profile.name,
       email: profile.email,
-      stage: (coach.onboarding_stage || "released") as
-        | "awaiting_payment"
-        | "awaiting_quiz_result"
-        | "awaiting_upline_release"
-        | "released",
+      stage,
       quizResultUrl: coach.quiz_result_url,
       uplineCoachId: coach.upline_coach_id,
       approvedAt: coach.approved_at,
     };
+  });
+
+// Verifica se o aluno (ainda não-coach) já comprou a Ativação Coach.
+export const hasPurchasedActivation = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!profile) return { purchased: false as const };
+    const { data: student } = await supabaseAdmin
+      .from("students")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    if (!student?.id) return { purchased: false as const };
+    const { data: paidOrders } = await supabaseAdmin
+      .from("store_orders")
+      .select("id, store_order_items(product_id, store_product_id, digital_product_id)")
+      .eq("student_id", student.id)
+      .eq("status", "paid");
+    const found = (paidOrders || []).some((o) => {
+      const items = (o as { store_order_items?: Array<{ product_id?: string | null; store_product_id?: string | null; digital_product_id?: string | null }> }).store_order_items || [];
+      return items.some((i) =>
+        i.product_id === ACTIVATION_PRODUCT_ID ||
+        i.store_product_id === ACTIVATION_PRODUCT_ID ||
+        i.digital_product_id === ACTIVATION_PRODUCT_ID
+      );
+    });
+    return { purchased: found };
   });
 
 export const submitQuizResult = createServerFn({ method: "POST" })
