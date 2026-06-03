@@ -42,16 +42,10 @@ export interface ReferralSelfTestResult {
  * e remove tudo no final (rollback manual).
  */
 export const runReferralSelfTest = createServerFn({ method: "POST" })
-  .handler(async (): Promise<ReferralSelfTestResult> => {
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ReferralSelfTestResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const ctx = (await import("@tanstack/react-start/server")).getRequestHeader("authorization");
-    // Verifica admin manualmente (sem middleware: este endpoint precisa ser disparável só por admins)
-    if (!ctx) throw new Error("Não autenticado");
-    // decodifica via supabase
-    const token = ctx.replace(/^Bearer\s+/i, "");
-    const { data: userResp, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userResp.user) throw new Error("Sessão inválida");
-    await assertAdmin(supabaseAdmin, userResp.user.id);
+    await assertAdmin(supabaseAdmin, (context as any).userId);
 
     const steps: ReferralSelfTestStep[] = [];
     const summary: ReferralSelfTestResult["summary"] = {};
