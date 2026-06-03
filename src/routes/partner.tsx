@@ -167,6 +167,7 @@ function PartnerPanel() {
 
 function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number }) {
   const approved = products.filter(p => p.status === "approved" && p.is_active_by_partner).length;
+  const [showVisits, setShowVisits] = useState(false);
   return (
     <div className="space-y-3">
       {!hasActiveFree && (
@@ -175,7 +176,9 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         </div>
       )}
       <div className="grid grid-cols-3 gap-2">
-        <Stat label="Visitas" value={visits} />
+        <button onClick={() => setShowVisits(true)} className="text-left">
+          <Stat label="Visitas (clique p/ ver)" value={visits} />
+        </button>
         <Stat label="Produtos ativos" value={approved} />
         <Stat label="Pendentes" value={pendingCount} />
       </div>
@@ -183,6 +186,7 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         <p className="text-xs text-white/40 mb-2">Bem-vindo(a), {partner.fantasy_name}</p>
         <p className="text-sm text-white/70">Use as abas para gerenciar produtos, timeline, QR code de presença e seu perfil público.</p>
       </div>
+      {showVisits && <PartnerVisitsModal onClose={() => setShowVisits(false)} />}
     </div>
   );
 }
@@ -195,6 +199,7 @@ function Stat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
 
 
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
