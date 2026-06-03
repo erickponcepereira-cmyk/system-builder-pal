@@ -116,7 +116,10 @@ function AdminFinanceiro() {
             Clique em um bucket para ver as vendas que originaram os valores.
           </p>
         </div>
-        <ReconcileButton onDone={reload} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ReferralSelfTestButton />
+          <ReconcileButton onDone={reload} />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
