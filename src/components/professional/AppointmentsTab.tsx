@@ -123,11 +123,8 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
             </div>
           ) : (
             filtered.map((a) => {
-              const stProfile = a.students?.profiles;
-              const studentCoachName = a.students?.coach?.profiles?.name;
-              const sellerName = a.seller?.profiles?.name;
-              const orderStatus = a.order?.status;
-              const isPendingPayment = !!a.order_id && orderStatus && !paidStatuses.has(orderStatus);
+              const orderStatus = a.order_status;
+              const isPendingPayment = !!a.order_id && (!orderStatus || !paidStatuses.has(orderStatus));
               const canCancel =
                 a.status === "scheduled" &&
                 Date.now() <
@@ -140,23 +137,32 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
                   style={{ backgroundColor: "#1A1A1A" }}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold text-white/60">
-                      {stProfile?.avatar_url ? (
-                        <img src={stProfile.avatar_url} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setOpenStudentId(a.student_id)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold text-white/60 hover:ring-2 hover:ring-primary/50"
+                    >
+                      {a.student_avatar_url ? (
+                        <img src={a.student_avatar_url} className="h-full w-full object-cover" alt={a.student_name || "Aluno"} />
                       ) : (
                         <UserIcon className="h-4 w-4" />
                       )}
-                    </div>
+                    </button>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-white truncate">
-                        {stProfile?.name || "Aluno"}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setOpenStudentId(a.student_id)}
+                        className="block max-w-full truncate text-left text-sm font-bold text-white hover:text-primary"
+                      >
+                        {a.student_name || "Aluno"}
+                      </button>
                       <p className="text-[11px] text-white/50 truncate">
-                        {a.professional_products?.name || "Consulta"}
+                        {a.product_name || "Consulta"}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-white/40">
-                        {studentCoachName && <span>Coach: <span className="text-white/70">{studentCoachName}</span></span>}
-                        {sellerName && <span>Vendido por: <span className="text-white/70">{sellerName}</span></span>}
+                        {a.student_coach_name && <span>Coach: <span className="text-white/70">{a.student_coach_name}</span></span>}
+                        {a.seller_name && <span>Vendido por: <span className="text-white/70">{a.seller_name}</span></span>}
+                        {a.order_number && <span>Pedido: <span className="text-white/70">{a.order_number}</span></span>}
                       </div>
                       <p className="mt-1 text-xs text-primary">{fmt(a.starts_at)}</p>
                     </div>
@@ -211,6 +217,12 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
             })
           )}
         </div>
+      )}
+      {openStudentId && (
+        <ProfessionalStudentDetailsModal
+          studentId={openStudentId}
+          onClose={() => setOpenStudentId(null)}
+        />
       )}
     </div>
   );
