@@ -724,8 +724,21 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             </div>
           )}
 
-          {/* Presença */}
-          <EventAttendanceBlock eventId={ev.id} color={evColor} />
+          {/* CTA: Pagar agora (pré-reserva pendente) */}
+          {ev.appointment_pay_url && (
+            <a
+              href={ev.appointment_pay_url}
+              className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90"
+              style={{ backgroundColor: "#f59e0b" }}>
+              Pagar agora e confirmar reserva
+              <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+            </a>
+          )}
+
+          {/* Presença (somente eventos FitMind) */}
+          {!ev.id.startsWith("appt-") && !ev.id.startsWith("challenge-") && (
+            <EventAttendanceBlock eventId={ev.id} color={evColor} />
+          )}
 
           {/* CTA: Adicionar ao Google Agenda */}
           <a
@@ -739,6 +752,7 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             Adicionar ao Google Agenda
             <ExternalLink className="h-3.5 w-3.5 opacity-60" />
           </a>
+
         </div>
       </div>
     </div>
