@@ -1849,6 +1849,36 @@ export type Database = {
           },
         ]
       }
+      coach_patent_achievements: {
+        Row: {
+          achieved_at: string
+          coach_id: string
+          created_at: string
+          id: string
+          patent_key: string
+          patent_level: number
+          qualifying_revenue: number
+        }
+        Insert: {
+          achieved_at?: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          patent_key: string
+          patent_level?: number
+          qualifying_revenue?: number
+        }
+        Update: {
+          achieved_at?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          patent_key?: string
+          patent_level?: number
+          qualifying_revenue?: number
+        }
+        Relationships: []
+      }
       coach_points_log: {
         Row: {
           coach_id: string
