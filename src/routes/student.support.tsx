@@ -6,22 +6,28 @@ import { whatsappUrl } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/student/support")({ component: StudentSupportPage });
 
-type Admin = { name: string; role: string; key: string; phone: string };
+type Admin = { name: string; role: string; match: string; phone: string };
 
 function StudentSupportPage() {
   const [admins, setAdmins] = useState<Admin[]>([
-    { name: "Erick Ponce Pereira", role: "Administrador — Gestor de Software", key: "support_whatsapp_erick", phone: "" },
-    { name: "Nathan Utuari", role: "Administrador — Fundador", key: "support_whatsapp_nathan", phone: "" },
+    { name: "Erick Ponce Pereira", role: "Administrador — Gestor de Software", match: "erick ponce", phone: "" },
+    { name: "Nathan Utuari", role: "Administrador — Fundador", match: "nathan utuari", phone: "" },
   ]);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
-        .from("app_settings")
-        .select("key,value")
-        .in("key", ["support_whatsapp_erick", "support_whatsapp_nathan"]);
-      const map = new Map(((data as Array<{ key: string; value: string | null }>) || []).map((r) => [r.key, r.value || ""]));
-      setAdmins((prev) => prev.map((a) => ({ ...a, phone: map.get(a.key) || "" })));
+        .from("profiles")
+        .select("name,phone,role")
+        .or("name.ilike.%erick ponce%,name.ilike.%nathan utuari%")
+        .not("phone", "is", null);
+      const rows = (data as Array<{ name: string; phone: string | null }>) || [];
+      setAdmins((prev) =>
+        prev.map((a) => {
+          const found = rows.find((r) => (r.name || "").toLowerCase().includes(a.match) && r.phone);
+          return { ...a, phone: found?.phone || "" };
+        }),
+      );
     })();
   }, []);
 
@@ -55,7 +61,7 @@ function StudentSupportPage() {
         {admins.map((admin) => {
           const url = whatsappUrl(admin.phone, `Olá ${admin.name.split(" ")[0]}, sou aluno da FitMind Club e preciso de ajuda.`);
           return (
-            <div key={admin.key} className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
+            <div key={admin.match} className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
               <p className="text-sm font-bold text-white">{admin.name}</p>
               <p className="mt-0.5 text-[11px] text-white/50">{admin.role}</p>
               {url ? (
