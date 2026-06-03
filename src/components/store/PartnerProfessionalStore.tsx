@@ -10,7 +10,7 @@ type Kind = "partner" | "professional";
 type Section = { id: string; name: string; image_url: string | null };
 type Category = { id: string; section_id: string; name: string; image_url: string | null };
 
-type Card = {
+export type PartnerStoreCard = {
   id: string;
   name: string;
   description: string | null;
@@ -23,19 +23,28 @@ type Card = {
   isSchedulable?: boolean;
   professionalCoachId?: string | null;
   durationMinutes?: number;
+  scheduledSlot?: string | null;
 };
 
 const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function PartnerProfessionalStore({ kind, mode = "student", resellerStudent }: { kind: Kind; mode?: "student" | "reseller"; resellerStudent?: { id: string; name: string; email?: string | null } | null }) {
+interface Props {
+  kind: Kind;
+  mode?: "student" | "reseller";
+  resellerStudent?: { id: string; name: string; email?: string | null } | null;
+  /** Quando informado, o componente delega a compra ao carrinho da página pai. */
+  onAddToCart?: (item: PartnerStoreCard) => void;
+}
+
+export function PartnerProfessionalStore({ kind, mode = "student", resellerStudent, onAddToCart }: Props) {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cards, setCards] = useState<Card[]>([]);
+  const [cards, setCards] = useState<PartnerStoreCard[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Card | null>(null);
+  const [selected, setSelected] = useState<PartnerStoreCard | null>(null);
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
@@ -63,12 +72,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       }
 
       if (kind === "partner") {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("partner_products" as never)
           .select("id,name,description,image_url,price,section_id,category_id,partner_id,partners(fantasy_name)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true);
+        if (error) console.error("[partner store]", error);
         setCards(
           ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
             id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price),
@@ -80,7 +90,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       } else {
         const { data, error } = await supabase
           .from("professional_products" as never)
-          .select("id,name,description,image_url,price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coaches(profile:profiles(name))")
+          .select(
+            "id,name,description,image_url,price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+          )
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true);
         if (error) console.error("[pp store]", error);
@@ -99,6 +111,22 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       setLoading(false);
     })();
   }, [kind, mode]);
+
+  const handleAddToCart = () => {
+    if (!selected) return;
+    if (selected.isSchedulable && !slot) {
+      toast.error("Selecione um horário para agendar.");
+      return;
+    }
+    if (mode === "reseller" && !resellerStudent?.id) {
+      toast.error("Selecione um aluno antes de adicionar ao carrinho.");
+      return;
+    }
+    onAddToCart?.({ ...selected, scheduledSlot: slot });
+    toast.success("Adicionado ao carrinho.");
+    setSelected(null);
+    setSlot(null);
+  };
 
   const buy = async (method: "pix" | "card") => {
     if (!selected) return;
@@ -162,7 +190,6 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       });
       setSelected(null);
       setSlot(null);
-      
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
       toast.error(msg);
@@ -178,8 +205,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const visibleSections = sections.filter((s) => usedSectionIds.has(s.id));
 
   // Drill-down: section list → categories → products of category
+  let body: JSX.Element;
   if (!activeSection) {
-    return (
+    body = (
       <div className="space-y-3">
         <h2 className="text-base font-bold text-white">Seções</h2>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -196,58 +224,61 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         </div>
       </div>
     );
-  }
+  } else {
+    const sectionCats = categories.filter((c) => c.section_id === activeSection);
+    const usedCatIds = new Set(cards.filter((c) => c.section_id === activeSection).map((c) => c.category_id).filter(Boolean) as string[]);
+    const visibleCats = sectionCats.filter((c) => usedCatIds.has(c.id));
+    const currentSection = sections.find((s) => s.id === activeSection);
 
-  const sectionCats = categories.filter((c) => c.section_id === activeSection);
-  const usedCatIds = new Set(cards.filter((c) => c.section_id === activeSection).map((c) => c.category_id).filter(Boolean) as string[]);
-  const visibleCats = sectionCats.filter((c) => usedCatIds.has(c.id));
-  const currentSection = sections.find((s) => s.id === activeSection);
-
-  if (!activeCategory) {
-    return (
-      <div className="space-y-3">
-        <button onClick={() => setActiveSection(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
-        <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {visibleCats.map((c) => (
-            <button key={c.id} onClick={() => setActiveCategory(c.id)} className="group overflow-hidden rounded-xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A" }}>
-              {c.image_url ? (
-                <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover transition group-hover:scale-105" />
-              ) : (
-                <div className="h-28 w-full bg-white/5" />
-              )}
-              <p className="p-3 text-sm font-bold text-white">{c.name}</p>
-            </button>
-          ))}
+    if (!activeCategory) {
+      body = (
+        <div className="space-y-3">
+          <button onClick={() => setActiveSection(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
+          <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {visibleCats.map((c) => (
+              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="group overflow-hidden rounded-xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A" }}>
+                {c.image_url ? (
+                  <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="h-28 w-full bg-white/5" />
+                )}
+                <p className="p-3 text-sm font-bold text-white">{c.name}</p>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      const items = cards.filter((c) => c.section_id === activeSection && c.category_id === activeCategory);
+      const currentCat = categories.find((c) => c.id === activeCategory);
+      body = (
+        <div className="space-y-3">
+          <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
+          <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            {items.map((p) => (
+              <button key={p.id} onClick={() => setSelected(p)} className="rounded-xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
+                {p.image_url ? (
+                  <img src={p.image_url} alt={p.name} className="mb-2 h-32 w-full rounded object-cover" />
+                ) : (
+                  <div className="mb-2 flex h-32 w-full items-center justify-center rounded bg-white/5"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
+                )}
+                <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
+                <p className="text-sm font-bold text-white line-clamp-2">{p.name}</p>
+                <p className="mt-2 text-base font-bold text-primary">{money(p.price)}</p>
+              </button>
+            ))}
+            {items.length === 0 && <p className="col-span-full text-sm text-white/50">Nenhum produto nesta subcategoria.</p>}
+          </div>
+        </div>
+      );
+    }
   }
-
-  const items = cards.filter((c) => c.section_id === activeSection && c.category_id === activeCategory);
-  const currentCat = categories.find((c) => c.id === activeCategory);
 
   return (
     <>
-      <div className="space-y-3">
-        <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
-        <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-          {items.map((p) => (
-            <button key={p.id} onClick={() => setSelected(p)} className="rounded-xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
-              {p.image_url ? (
-                <img src={p.image_url} alt={p.name} className="mb-2 h-32 w-full rounded object-cover" />
-              ) : (
-                <div className="mb-2 flex h-32 w-full items-center justify-center rounded bg-white/5"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
-              )}
-              <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
-              <p className="text-sm font-bold text-white line-clamp-2">{p.name}</p>
-              <p className="mt-2 text-base font-bold text-primary">{money(p.price)}</p>
-            </button>
-          ))}
-          {items.length === 0 && <p className="col-span-full text-sm text-white/50">Nenhum produto nesta subcategoria.</p>}
-        </div>
-      </div>
+      {body}
 
       {selected && (
         <div
@@ -315,22 +346,31 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   )}
                 </div>
               )}
-              <div className="flex gap-2">
+              {onAddToCart ? (
                 <button
-                  disabled={buying}
-                  onClick={() => buy("pix")}
-                  className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  onClick={handleAddToCart}
+                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90"
                 >
-                  {buying ? "Processando..." : "Comprar com PIX"}
+                  Adicionar ao carrinho
                 </button>
-                <button
-                  disabled={buying}
-                  onClick={() => buy("card")}
-                  className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
-                >
-                  {buying ? "..." : "Comprar com Cartão"}
-                </button>
-              </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    disabled={buying}
+                    onClick={() => buy("pix")}
+                    className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    {buying ? "Processando..." : "Comprar com PIX"}
+                  </button>
+                  <button
+                    disabled={buying}
+                    onClick={() => buy("card")}
+                    className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                  >
+                    {buying ? "..." : "Comprar com Cartão"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
