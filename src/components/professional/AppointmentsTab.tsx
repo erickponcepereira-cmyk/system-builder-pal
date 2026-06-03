@@ -106,22 +106,37 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Calendar className="h-4 w-4" /> Atendimentos
             </h2>
-            <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
-              {(["upcoming", "past", "cancelled"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-md px-2.5 py-1 font-medium transition ${
-                    filter === f ? "bg-primary text-primary-foreground" : "text-white/60"
-                  }`}
-                >
-                  {f === "upcoming" ? "Próximos" : f === "past" ? "Realizados" : "Cancelados"}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2">
+              <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
+                {(["upcoming", "past", "cancelled"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      filter === f ? "bg-primary text-primary-foreground" : "text-white/60"
+                    }`}
+                  >
+                    {f === "upcoming" ? "Próximos" : f === "past" ? "Realizados" : "Cancelados"}
+                  </button>
+                ))}
+              </div>
+              <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
+                {(["all", "paid", "pending"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setPayFilter(f)}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      payFilter === f ? "bg-primary text-primary-foreground" : "text-white/60"
+                    }`}
+                  >
+                    {f === "all" ? "Todos" : f === "paid" ? "Pagos" : "Pendentes"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
