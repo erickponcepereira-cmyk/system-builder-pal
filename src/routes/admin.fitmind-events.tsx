@@ -117,7 +117,7 @@ const EMPTY_DAY: Omit<HighlightedDay, "id"> = {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 function AdminFitmindEventsPage() {
-  const [tab, setTab] = useState<"events" | "days">("events");
+  const [tab, setTab] = useState<"events" | "days" | "attendance">("events");
 
   return (
     <div className="space-y-4">
@@ -136,10 +136,12 @@ function AdminFitmindEventsPage() {
       <div className="flex gap-1 border-b border-white/10">
         <TabBtn active={tab === "events"} onClick={() => setTab("events")} icon={CalendarDays} label="Eventos" />
         <TabBtn active={tab === "days"}   onClick={() => setTab("days")}   icon={Star}          label="Dias em Destaque" />
+        <TabBtn active={tab === "attendance"} onClick={() => setTab("attendance")} icon={Users} label="Presenças" />
       </div>
 
       {tab === "events" && <EventsTab />}
       {tab === "days"   && <HighlightedDaysTab />}
+      {tab === "attendance" && <AttendanceReportTab />}
     </div>
   );
 }
