@@ -23,6 +23,7 @@ type CardData = {
   since: string | null;
   avatarUrl: string | null;
   validUntil: string | null;
+  partnerBenefit: { partnerName: string } | null;
 };
 
 type ScanEntry = {
@@ -55,7 +56,7 @@ function StudentCardPage() {
       }
       const { data: student } = await supabase
         .from("students")
-        .select("id, card_valid_until, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
+        .select("id, card_valid_until, partner_id, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
         .eq("profile_id", profile.id)
         .maybeSingle();
       if (!student) {
@@ -75,15 +76,32 @@ function StudentCardPage() {
       const coachName =
         (student as unknown as { coach?: { profiles?: { name?: string } } })?.coach?.profiles?.name ?? null;
 
+      // Partner benefit: collaborators of an approved partner with at least 1 active product
+      // get the carteirinha always active, regardless of subscription/card_valid_until.
+      let partnerBenefit: { partnerName: string } | null = null;
+      const partnerId = (student as unknown as { partner_id?: string | null }).partner_id;
+      if (partnerId) {
+        const { data: partner } = await supabase
+          .from("partners" as never)
+          .select("fantasy_name, status, partner_products(id, status, is_active_by_partner)" as never)
+          .eq("id" as never, partnerId)
+          .maybeSingle();
+        const p = partner as unknown as { fantasy_name: string; status: string; partner_products: Array<{ status: string; is_active_by_partner: boolean }> } | null;
+        if (p && p.status === "approved" && (p.partner_products || []).some(pp => pp.status === "approved" && pp.is_active_by_partner)) {
+          partnerBenefit = { partnerName: p.fantasy_name };
+        }
+      }
+
       setCard({
         studentId: student.id,
         name: profile.name,
         email: profile.email,
-        plan: (activeSub as unknown as { products?: { name?: string } })?.products?.name ?? "FitMind Club",
+        plan: (activeSub as unknown as { products?: { name?: string } })?.products?.name ?? (partnerBenefit ? `Colaborador · ${partnerBenefit.partnerName}` : "FitMind Club"),
         coachName,
         since: profile.created_at,
         avatarUrl: profile.avatar_url,
         validUntil: (student as unknown as { card_valid_until?: string | null })?.card_valid_until ?? null,
+        partnerBenefit,
       });
 
       const { data: scanData } = await supabase
@@ -129,7 +147,7 @@ function StudentCardPage() {
 
   const checkinUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}`;
   const validUntilDate = card.validUntil ? new Date(card.validUntil) : null;
-  const isActive = !!(validUntilDate && validUntilDate.getTime() > Date.now());
+  const isActive = !!(validUntilDate && validUntilDate.getTime() > Date.now()) || !!card.partnerBenefit;
   const formattedValidUntil = validUntilDate
     ? validUntilDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
     : null;
@@ -188,7 +206,11 @@ function StudentCardPage() {
             <p className="relative mt-3 text-center text-[11px] text-white/50">
               Apresente este QR para o seu coach registrar sua presença.
             </p>
-            {formattedValidUntil && (
+            {card.partnerBenefit ? (
+              <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
+                Acesso vitalício · Colaborador {card.partnerBenefit.partnerName}
+              </p>
+            ) : formattedValidUntil && (
               <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
                 Válida até {formattedValidUntil}
               </p>
