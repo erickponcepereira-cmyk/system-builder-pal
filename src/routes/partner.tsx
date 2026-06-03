@@ -13,8 +13,6 @@ import { computeFromCharge, computeFromReceive, COACH_COMMISSION_OPTIONS, type C
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
-import { useServerFn } from "@tanstack/react-start";
-import { getMyPartnerVisits, type PartnerVisitRow } from "@/lib/partner-visits.functions";
 
 
 export const Route = createFileRoute("/partner")({
