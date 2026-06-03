@@ -202,6 +202,90 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+function PartnerVisitsModal({ onClose }: { onClose: () => void }) {
+  const fetchVisits = useServerFn(getMyPartnerVisits);
+  const [rows, setRows] = useState<PartnerVisitRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [month, setMonth] = useState<string>("");
+
+  useEffect(() => {
+    fetchVisits({})
+      .then((data) => setRows(data as PartnerVisitRow[]))
+      .catch(() => toast.error("Falha ao carregar visitas"))
+      .finally(() => setLoading(false));
+  }, [fetchVisits]);
+
+  const months = Array.from(
+    new Set(rows.map((r) => r.visited_at.slice(0, 7))),
+  ).sort().reverse();
+
+  const filtered = rows.filter((r) => {
+    if (month && !r.visited_at.startsWith(month)) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !r.student_name.toLowerCase().includes(q) &&
+        !(r.coach_name || "").toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl bg-[#1A1A1A] border border-white/10 flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h3 className="text-lg font-bold text-white">Quem me visitou</h3>
+          <button onClick={onClose} className="text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-4 space-y-2 border-b border-white/10">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por aluno ou coach..."
+            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30"
+          />
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white"
+          >
+            <option value="">Todos os meses</option>
+            {months.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-white/40 py-8">Nenhuma visita encontrada.</p>
+          ) : (
+            filtered.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 rounded-xl bg-black/40 p-3">
+                {r.student_photo ? (
+                  <img src={r.student_photo} alt="" className="h-10 w-10 rounded-full object-cover" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white/40"><Users className="h-5 w-5" /></div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{r.student_name}</p>
+                  <p className="text-xs text-white/50 truncate">
+                    Coach: {r.coach_name || "—"} · {r.student_visit_count}x visitas
+                  </p>
+                  <p className="text-[10px] text-white/40">{new Date(r.visited_at).toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
