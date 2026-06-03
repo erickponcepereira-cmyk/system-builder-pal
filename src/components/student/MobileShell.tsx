@@ -40,7 +40,7 @@ export function MobileShell({ children }: MobileShellProps) {
           <RoleSwitcher current="student" />
         </header>
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</main>
 
         <nav
           className="absolute bottom-0 left-0 right-0 z-50 border-t border-white/5"
