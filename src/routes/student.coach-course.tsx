@@ -198,6 +198,11 @@ function CoachCoursePage() {
     }
   };
 
+  const handleCheckoutOpenChange = (o: boolean) => {
+    setShowCheckout(o);
+    if (!o) setOrderId(null);
+  };
+
 
   const waLink = whatsappUrl(
     uplineCoach?.phone,
@@ -427,7 +432,7 @@ function CoachCoursePage() {
       </Dialog>
 
       {/* Modal: checkout */}
-      <Dialog open={showCheckout} onOpenChange={(o) => { setShowCheckout(o); if (!o) setOrderId(null); }}>
+      <Dialog open={showCheckout} onOpenChange={handleCheckoutOpenChange}>
         <DialogContent className="max-w-md border-white/10 bg-[#1A1A1A] text-white">
           <DialogHeader>
             <DialogTitle className="text-xl">Ativação Coach – Anual</DialogTitle>
