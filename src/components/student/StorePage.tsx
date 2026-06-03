@@ -133,7 +133,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     const { data: partnerRows } = await supabase
       .from("professional_products" as never)
       .select(
-        "id,name,description,image_url,price,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+        "id,name,description,image_url,price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
       )
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
