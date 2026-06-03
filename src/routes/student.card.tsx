@@ -147,7 +147,7 @@ function StudentCardPage() {
 
   const checkinUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}`;
   const validUntilDate = card.validUntil ? new Date(card.validUntil) : null;
-  const isActive = !!(validUntilDate && validUntilDate.getTime() > Date.now());
+  const isActive = !!(validUntilDate && validUntilDate.getTime() > Date.now()) || !!card.partnerBenefit;
   const formattedValidUntil = validUntilDate
     ? validUntilDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
     : null;
