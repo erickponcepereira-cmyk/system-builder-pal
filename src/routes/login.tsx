@@ -307,24 +307,49 @@ function LoginPage() {
 
             {!resetMode && accessOptions ? (
               <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => enterArea("coach")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
-                >
-                  <Dumbbell className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Painel de Coach</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => enterArea("student")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
-                >
-                  <User className="h-5 w-5 text-white/70" />
-                  <span className="font-semibold">Painel de Aluno</span>
-                </button>
+                {accessOptions.admin && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("admin")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                  >
+                    <Shield className="h-5 w-5 text-primary" />
+                    <span className="font-semibold">Painel de Admin</span>
+                  </button>
+                )}
+                {accessOptions.coach && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("coach")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
+                  >
+                    <Dumbbell className="h-5 w-5 text-primary" />
+                    <span className="font-semibold">Painel de Coach</span>
+                  </button>
+                )}
+                {accessOptions.student && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("student")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                  >
+                    <User className="h-5 w-5 text-white/70" />
+                    <span className="font-semibold">Painel de Aluno</span>
+                  </button>
+                )}
+                {accessOptions.partner && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("partner")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
+                  >
+                    <Briefcase className="h-5 w-5 text-white/70" />
+                    <span className="font-semibold">Painel de Parceiro</span>
+                  </button>
+                )}
               </div>
             ) : !resetMode ? (
+
 
             <form onSubmit={handleLogin} className="space-y-4">
               {formError && (
