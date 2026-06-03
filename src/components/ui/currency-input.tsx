@@ -32,26 +32,21 @@ export const CurrencyInputBRL = forwardRef<HTMLInputElement, Props>(function Cur
   ref,
 ) {
   const cents = Math.round((Number(value) || 0) * 100);
-  const display = cents > 0 ? formatCentsBRL(cents) : "";
+  const display = cents > 0 ? `R$ ${formatCentsBRL(cents)}` : "";
   return (
-    <div className={`relative ${className}`}>
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-white/60">
-        R$
-      </span>
-      <input
-        ref={ref}
-        id={id}
-        type="text"
-        inputMode="numeric"
-        disabled={disabled}
-        value={display}
-        placeholder={placeholder}
-        onChange={(e) => {
-          const c = parseToCents(e.target.value);
-          onChange(c / 100);
-        }}
-        className="field-input pl-10"
-      />
-    </div>
+    <input
+      ref={ref}
+      id={id}
+      type="text"
+      inputMode="numeric"
+      disabled={disabled}
+      value={display}
+      placeholder={placeholder ? `R$ ${placeholder}` : "R$ 0,00"}
+      onChange={(e) => {
+        const c = parseToCents(e.target.value);
+        onChange(c / 100);
+      }}
+      className={`field-input ${className}`}
+    />
   );
 });
