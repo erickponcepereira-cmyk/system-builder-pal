@@ -406,7 +406,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
                         {ev.highlight_label}
                       </p>
                     )}
-                    <p className="text-sm font-bold text-white truncate">{ev.title}</p>
+                    <p className="text-sm font-bold text-white break-words">{ev.title}</p>
+
                     <p className="text-[11px] text-white/50">
                       {dtStart.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                       {!ev.all_day && ` · ${dtStart.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
