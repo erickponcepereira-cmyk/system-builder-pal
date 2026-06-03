@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
+import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
@@ -28,9 +28,26 @@ type Protocol = {
   workout_plan: Array<{ name: string; sets: string; reps: string; rest: string; notes: string }>;
 };
 
+type Anamnese = {
+  filled_at: string | null;
+  gender: string | null;
+  height: number | null;
+  objective: string | null;
+  protocol_reason: string | null;
+  preexisting_conditions: string | null;
+  current_medications: string | null;
+  food_allergies: string | null;
+  sleep_hours: string | null;
+  stress_level: string | null;
+  exercises_regularly: boolean | null;
+  additional_observations: string | null;
+};
+
 function StudentProtocolPage() {
   const [protocol, setProtocol] = useState<Protocol | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [anamnese, setAnamnese] = useState<Anamnese | null>(null);
+  const [showAnamnese, setShowAnamnese] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,11 +60,16 @@ function StudentProtocolPage() {
         : { data: null };
       if (!student?.id) { setLoading(false); return; }
       setStudentId(student.id);
-      const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle();
-      if (data) setProtocol(data as any);
+      const [{ data: prot }, { data: anam }] = await Promise.all([
+        supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle(),
+        supabase.from("anamnesis_forms").select("filled_at,gender,height,objective,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations").eq("student_id", student.id).order("filled_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      if (prot) setProtocol(prot as any);
+      if (anam) setAnamnese(anam as Anamnese);
       setLoading(false);
     })();
   }, []);
+
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
