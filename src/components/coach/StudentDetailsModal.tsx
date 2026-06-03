@@ -408,16 +408,51 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               )}
             </div>
           ) : tab === "anamnese" ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {anams.length === 0 ? (
                 <p className="py-6 text-center text-xs text-white/40">Nenhuma anamnese.</p>
-              ) : anams.map((a) => (
-                <div key={a.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+              ) : anams.map((a, idx) => (
+                <div key={a.id} className="rounded-xl border border-white/5 p-3 space-y-3" style={{ backgroundColor: "#0F0F0F" }}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-bold text-white">{fmtBRLong(a.filled_at)}</p>
                     {a.confirmed_at && <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">Assinada</span>}
                   </div>
-                  {a.objective && <p className="mt-1 text-xs text-white/60">Objetivo: <span className="text-white">{a.objective}</span></p>}
+
+                  {idx === 0 && (a.has_diabetes || a.has_hypertension || a.has_cardiopathy || a.other_chronic_conditions) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {a.has_diabetes && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">Diabetes</span>}
+                      {a.has_hypertension && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">Hipertensão</span>}
+                      {a.has_cardiopathy && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">Cardiopatia</span>}
+                      {a.other_chronic_conditions && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">{a.other_chronic_conditions}</span>}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Info label="Objetivo" value={a.objective || a.protocol_reason} />
+                    <Info label="Gênero" value={a.gender} />
+                    <Info label="Tipo sanguíneo" value={a.blood_type} />
+                    <Info label="Altura" value={a.height ? `${a.height} cm` : null} />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <Info label="Alergias alimentares" value={a.food_allergies} />
+                    <Info label="Intolerâncias alimentares" value={a.food_intolerances} />
+                    <Info label="Condições preexistentes" value={a.preexisting_conditions} />
+                    <Info label="Medicamentos contínuos" value={a.current_medications} />
+                    <Info label="Suplementos em uso" value={a.supplements_used} />
+                    <Info label="Histórico cirúrgico" value={a.surgical_history} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Info label="Sono" value={a.sleep_hours} />
+                    <Info label="Estresse" value={a.stress_level} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <Info label="Pratica exercícios" value={a.exercises_regularly == null ? null : a.exercises_regularly ? "Sim" : "Não"} />
+                    <Info label="Observações" value={a.additional_observations} />
+                  </div>
+
+                  <p className="text-[10px] text-white/30">Dados sigilosos médicos não aparecem aqui — apenas para médicos autorizados.</p>
                 </div>
               ))}
             </div>
