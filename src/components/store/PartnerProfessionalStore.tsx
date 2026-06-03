@@ -52,6 +52,17 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       setSections((s as Section[]) || []);
       setCategories((c as Category[]) || []);
 
+      if (mode === "student") {
+        const { data: u } = await supabase.auth.getUser();
+        if (u.user) {
+          const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", u.user.id).maybeSingle();
+          if (prof?.id) {
+            const { data: stu } = await supabase.from("students").select("id").eq("profile_id", prof.id).maybeSingle();
+            if (stu?.id) setOwnStudentId(stu.id);
+          }
+        }
+      }
+
       if (kind === "partner") {
         const { data } = await supabase
           .from("partner_products" as never)
@@ -87,7 +98,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       }
       setLoading(false);
     })();
-  }, [kind]);
+  }, [kind, mode]);
 
   const buy = async (method: "pix" | "card") => {
     if (!selected) return;
