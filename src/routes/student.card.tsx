@@ -92,7 +92,25 @@ function StudentCardPage() {
         .eq("student_id", student.id)
         .order("scanned_at", { ascending: false })
         .limit(10);
-      setScans((scanData as ScanEntry[]) || []);
+
+      const { data: visitData } = await supabase
+        .from("partner_visits" as never)
+        .select("id, visited_at, partner_id, partners!partner_visits_partner_id_fkey(fantasy_name)" as never)
+        .eq("student_id" as never, student.id as never)
+        .order("visited_at" as never, { ascending: false })
+        .limit(10);
+
+      const partnerVisits: ScanEntry[] = ((visitData as unknown as Array<{ id: string; visited_at: string; partners: { fantasy_name: string } | null }>) || []).map((v) => ({
+        id: `pv-${v.id}`,
+        scanned_at: v.visited_at,
+        location: v.partners?.fantasy_name ? `Parceiro · ${v.partners.fantasy_name}` : "Visita ao parceiro",
+        scanned_by_profile_id: null,
+      }));
+
+      const merged = [...((scanData as ScanEntry[]) || []), ...partnerVisits]
+        .sort((a, b) => new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime())
+        .slice(0, 10);
+      setScans(merged);
       setLoading(false);
     })();
   }, []);
