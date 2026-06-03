@@ -208,7 +208,7 @@ function StudentCardPage() {
             </p>
             {card.partnerBenefit ? (
               <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
-                Acesso vitalício · Colaborador {card.partnerBenefit.partnerName}
+                Acesso ativo · Colaborador {card.partnerBenefit.partnerName}
               </p>
             ) : formattedValidUntil && (
               <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
