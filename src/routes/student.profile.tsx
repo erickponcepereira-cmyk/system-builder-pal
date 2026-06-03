@@ -71,6 +71,18 @@ function ProfilePage() {
   const [showTokenHistory, setShowTokenHistory] = useState(false);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [showChallengesModal, setShowChallengesModal] = useState(false);
+  const [showReferralsModal, setShowReferralsModal] = useState(false);
+  const [referralCommissions, setReferralCommissions] = useState<Array<{
+    id: string;
+    amount: number;
+    status: string | null;
+    available_at: string | null;
+    created_at: string;
+    buyer_name: string | null;
+    product_label: string | null;
+    purchase_type: string | null;
+    gross_amount: number | null;
+  }>>([]);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
 
   useEffect(() => {
