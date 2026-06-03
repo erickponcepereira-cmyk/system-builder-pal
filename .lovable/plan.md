@@ -1,49 +1,49 @@
+## Reestruturação do Sistema de Carreira
 
-## Fluxo Coach pendente (após cadastro)
+Vou reorganizar a aba **Carreira** do coach em duas seções, conforme o PDF e o texto enviados:
 
-Estados do coach (campo novo em `coaches.onboarding_stage`):
-1. `awaiting_payment` — acabou de se cadastrar (com ou sem link de venda)
-2. `awaiting_quiz_result` — pagou o curso "Ativação Coach - Anual"
-3. `awaiting_upline_release` — colou o link do resultado do quiz
-4. `released` — admin liberou (libera painel coach + app aluno)
+### 1. Aba "Individual" — Hall da Fama FitMind (medalhas)
+Reconhecimento da produção pessoal (VP).
 
-### 1. Banco
-Migration adicionando em `coaches`:
-- `onboarding_stage` text default `'awaiting_payment'`
-- `quiz_result_url` text
-- `quiz_result_submitted_at` timestamptz
-- `activation_paid_at` timestamptz
-- `activation_order_id` uuid
+**Ordem da Excelência FitMind** — medalhas mensais (VP de um único mês):
+- 🥉 Contribuidor R$ 2.500 · Construtor R$ 5.000 · Realizador R$ 7.500
+- 🥈 Influenciador R$ 10.000 · Pioneiro R$ 20.000 · Estrategista R$ 30.000
+- 🥇 Arquiteto R$ 40.000 · Expansor R$ 50.000
+- 🏅 Líder R$ 65.000 · Mentor R$ 85.000
+- 👑 Master R$ 100.000
 
-### 2. Cadastro (`registration.server.ts`)
-- Coach já entra com `status=pending` e `approved_at=null` (já funciona).
-- Setar `onboarding_stage='awaiting_payment'`.
-- Manter criação do registro de aluno (acesso só ao bloqueio).
+**Clube dos Campeões FitMind** — VP acumulado em toda a carreira:
+- 🏆 Clube 100K · 250K · 500K · 1M · 2,5M · 5M · 10M
 
-### 3. Bloqueio do app — novo componente `CoachOnboardingGate`
-Wrap em `src/routes/student.tsx` e `src/routes/coach.tsx`. Se o profile logado é coach com `onboarding_stage != 'released'`, renderiza tela única (não deixa entrar em mais nada):
+Cada cartão mostra: status (conquistada/em progresso), valor alvo, valor atual e barra de progresso. Medalhas mensais conquistadas em meses anteriores ficam registradas como histórico.
 
-- **Stage `awaiting_payment`**: tela "Faça o curso de Formação de Coachs e inicie sua trajetória conosco" + CTA grande abrindo checkout direto do produto "Ativação Coach - Anual" (uso do `MercadoPagoCheckout` existente). Nenhuma outra navegação.
-- **Stage `awaiting_quiz_result`**: tela com link `https://diagnostic-quiz-craft.lovable.app` (botão "Abrir quiz") + campo "Cole aqui o link do resultado" + botão Enviar. Validar que começa com `https://diagnostic-quiz-craft.lovable.app/`.
-- **Stage `awaiting_upline_release`**: tela "Tudo pronto! Quando terminar o curso, peça ao coach que te trouxe para liberar seu painel" + botão "Notificar meu coach indicador" (cria notification para upline e admin).
-- **Stage `released`**: gate não renderiza, app normal.
+### 2. Aba "Ordem dos Construtores FitMind" — Carreira com equipe (VP + VE)
+21 patentes organizadas em 4 fases (extraído do PDF):
 
-### 4. Server functions novas (`src/lib/coach-onboarding.functions.ts`)
-- `getMyOnboardingStage()` — usa `requireSupabaseAuth`, retorna stage + dados.
-- `submitQuizResult({url})` — valida domínio, salva, avança para `awaiting_upline_release`, cria notification para upline + admin.
-- `notifyUplineForRelease()` — botão "lembrar upline".
-- `releaseCoach({coachId})` — admin-only, marca `released`, seta `approved_at`, `profiles.status='active'`.
+- **Fase 1 — Desenvolvimento Pessoal** (níveis 1–3): Explorador, Contribuidor, Construtor
+- **Fase 2 — Resultados e Liderança** (níveis 4–12): Realizador → Master
+- **Fase 3 — Expansão** (níveis 13–17): Navegador → Presidente
+- **Fase 4 — Legado** (níveis 18–21): Titã → Círculo dos Fundadores
 
-### 5. Trigger de pagamento
-No webhook do Mercado Pago / fulfillment de pedido (procurar `partner-orders` / `orderpool`), quando o pedido pago contém produto "Ativação Coach - Anual" para um coach com `onboarding_stage='awaiting_payment'`:
-- Atualizar `onboarding_stage='awaiting_quiz_result'`, gravar `activation_paid_at`, `activation_order_id`.
+Cada patente passa a guardar: meta (R$), prazo em meses, % máximo de VP, % máximo de VE. A patente atual é a maior alcançada respeitando os limites de VP/VE no prazo da patente.
 
-### 6. Painel admin
-Nova aba (ou card em `admin.coach-applications.tsx`): lista coaches com `onboarding_stage='awaiting_upline_release'` mostrando o link do quiz colado + botão "Liberar painel". Notificação criada para upline + admin quando coach colou o link.
+### Mudanças técnicas
 
-### 7. Link de venda (`/r/{code}`)
-Já existe `src/routes/r.$code.tsx`. Garantir que ao cadastrar via esse link o `uplineCoachId` é setado automaticamente e o seletor de coach é skipado (ou pré-selecionado e travado). Verificar implementação atual e ajustar se necessário.
+**Banco (migração):**
+- Reescrever `patent_rules` com os 21 níveis do PDF (key, display_name, level, required_revenue, time_window_months, vp_max_pct, ve_max_pct, phase). Renomear `min_own_sales_pct` para refletir limite máximo de VP por nível, ou adicionar coluna `vp_max_pct`.
+- Nova tabela `coach_medals_individual` (coach_id, medal_key, month/year para mensais, awarded_at) — para registrar medalhas mensais conquistadas como histórico permanente.
+- Nova tabela `career_medal_rules` com os dois conjuntos (Ordem da Excelência mensal e Clube dos Campeões acumulado), para o admin auditar.
 
-### Fora do escopo
-- Não vou mexer no fluxo de aluno comum.
-- Não vou criar produto "Ativação Coach - Anual" — assumir que existe (admin cadastra). Se não existir, o gate mostra mensagem "Curso indisponível, contate o admin".
+**Server function:**
+- Estender `getCareerProgress`: retornar também (a) VP do mês atual, (b) VP acumulado total, (c) medalhas mensais já conquistadas, (d) progresso por patente da Ordem dos Construtores agrupado por fase.
+- Job/cron já existente (`career.reset-expired`) — adaptar para também "carimbar" a medalha mensal do coach no fechamento do mês.
+
+**Frontend:**
+- `CareerTab.tsx` vira um wrapper com duas tabs ("Individual" | "Ordem dos Construtores FitMind").
+- Novo `IndividualCareerTab`: lista medalhas mensais (mês atual + histórico) e clubes acumulados.
+- Renomeado `ConstructorsCareerTab` (atual conteúdo da `CareerTab`): mostra as 21 patentes agrupadas por Fase, destacando a atual e a próxima.
+- Página admin `admin.patents` atualizada para refletir o novo schema.
+
+### Pergunta antes de prosseguir
+1. **Histórico de medalhas mensais** — devo começar a registrar agora (não há histórico anterior, somente do mês atual em diante), ou você quer que eu tente reconstruir retroativamente a partir das transações pagas existentes?
+2. **Patentes atuais dos coaches** — quer que eu recalcule a patente de todos os coaches já cadastrados com base no novo sistema, ou mantém a patente atual e o recálculo acontece naturalmente quando rodar o próximo ciclo?
