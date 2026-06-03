@@ -22,7 +22,30 @@ type SubRow = { id: string; status: string; start_date: string; end_date: string
 type TxRow = { id: string; gross_amount: number; status: string; paid_at: string | null; created_at: string; products: { name: string } | null };
 type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; basal_metabolism: number | null; bmi: number | null; client_notes: string | null; professional_notes: string | null };
 type BioRow = { id: string; evaluation_date: string; evaluation_type: string; weight: number | null; fat_percentage: number | null; muscle_percentage: number | null };
-type AnamRow = { id: string; filled_at: string | null; objective: string | null; confirmed_at: string | null };
+type AnamRow = {
+  id: string;
+  filled_at: string | null;
+  objective: string | null;
+  confirmed_at: string | null;
+  gender: string | null;
+  height: number | null;
+  protocol_reason: string | null;
+  preexisting_conditions: string | null;
+  current_medications: string | null;
+  food_allergies: string | null;
+  sleep_hours: string | null;
+  stress_level: string | null;
+  exercises_regularly: boolean | null;
+  additional_observations: string | null;
+  blood_type: string | null;
+  food_intolerances: string | null;
+  has_diabetes: boolean | null;
+  has_hypertension: boolean | null;
+  has_cardiopathy: boolean | null;
+  other_chronic_conditions: string | null;
+  surgical_history: string | null;
+  supplements_used: string | null;
+};
 type WeightRow = { id: string; log_date: string; weight: number; waist_cm: number | null; hip_cm: number | null };
 type PhotoRow = { id: string; photo_url: string; photo_date: string; caption: string | null };
 
