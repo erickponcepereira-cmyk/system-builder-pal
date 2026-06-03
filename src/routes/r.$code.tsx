@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { z } from "zod";
 
 export const Route = createFileRoute("/r/$code")({
+  validateSearch: (search: Record<string, unknown>) =>
+    z.object({ p: z.string().optional() }).parse(search),
   head: () => ({
     meta: [
       { title: "Convite — FitMind Club" },
@@ -16,6 +19,7 @@ export const Route = createFileRoute("/r/$code")({
 
 function ReferralLandingPage() {
   const { code } = Route.useParams();
+  const { p: productId } = Route.useSearch();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "valid" | "invalid">("loading");
   const [sponsorName, setSponsorName] = useState<string>("");
@@ -47,19 +51,30 @@ function ReferralLandingPage() {
           coachId: row.coach_id,
           referredByStudentId: row.referred_by_student_id,
           partnerId: row.partner_id,
+          productId: productId || null,
         })
       );
+      if (productId) {
+        sessionStorage.setItem("fitmind_pending_product", productId);
+      }
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
+
+      // Se já está logado, vai direto para a loja com o produto pré-selecionado
+      const { data: userData } = await supabase.auth.getUser();
       setTimeout(() => {
+        if (userData.user) {
+          navigate({ to: "/loja" as never });
+          return;
+        }
         const targetRole = row.kind === "coach" ? "coach" : "student";
         navigate({ to: "/register", search: { role: targetRole } });
-      }, 1400);
+      }, 1200);
     })();
     return () => {
       cancelled = true;
     };
-  }, [code, navigate]);
+  }, [code, productId, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: "#0A0A0A" }}>
@@ -78,7 +93,9 @@ function ReferralLandingPage() {
             <p className="mt-2 text-sm text-white/60">
               Você foi convidado por <span className="font-semibold text-white">{sponsorName}</span>.
             </p>
-            <p className="mt-4 text-xs text-white/40">Redirecionando para o cadastro...</p>
+            <p className="mt-4 text-xs text-white/40">
+              {productId ? "Redirecionando para o produto..." : "Redirecionando para o cadastro..."}
+            </p>
             <Loader2 className="mx-auto mt-3 h-4 w-4 animate-spin text-white/40" />
           </>
         )}

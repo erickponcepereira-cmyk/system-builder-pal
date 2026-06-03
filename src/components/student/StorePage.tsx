@@ -86,7 +86,31 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [salesHistory, setSalesHistory] = useState<CoachSaleRow[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Indicação aluno→aluno
+  const [myReferralCode, setMyReferralCode] = useState<string | null>(null);
+  const [indicableProductIds, setIndicableProductIds] = useState<Set<string>>(new Set());
+  const [pendingReferrerStudentId, setPendingReferrerStudentId] = useState<string | null>(null);
+
   const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
+
+  const copyReferralLink = async (productSourceId: string) => {
+    if (!myReferralCode) {
+      toast.error("Seu código de indicação ainda não está disponível.");
+      return;
+    }
+    const url = `${window.location.origin}/r/${myReferralCode}?p=${productSourceId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Indicação FitMind Club", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link de indicação copiado!");
+      }
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link de indicação copiado!");
+    }
+  };
 
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
@@ -118,8 +142,9 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
     if (!coachMode && userData.user) {
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
-      const { data: student } = profile?.id ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle() : { data: null };
+      const { data: student } = profile?.id ? await supabase.from("students").select("id, referral_code").eq("profile_id", profile.id).maybeSingle() : { data: null };
       if (student?.id) {
+        setMyReferralCode((student as any).referral_code || null);
         const { data: orderData } = await supabase
           .from("store_orders" as never)
           .select("id,order_number,status,total_amount,created_at" as never)
@@ -128,6 +153,24 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           .limit(8);
         setOrders((orderData as unknown as OrderRow[]) || []);
       }
+
+      // Produtos com slot de indicação aluno→aluno
+      const { data: refSlots } = await supabase
+        .from("product_value_slots" as never)
+        .select("product_id" as never)
+        .eq("applies_to_student_referral" as never, true as never)
+        .eq("is_active" as never, true as never);
+      const ids = new Set<string>(((refSlots as any[]) || []).map((s) => s.product_id));
+      setIndicableProductIds(ids);
+
+      // Indicação ativa em sessão (vinda de /r/{code}?p=…)
+      try {
+        const raw = sessionStorage.getItem("fitmind_referral");
+        if (raw) {
+          const parsed = JSON.parse(raw) as { referredByStudentId?: string | null };
+          setPendingReferrerStudentId(parsed?.referredByStudentId || null);
+        }
+      } catch { /* ignore */ }
     }
 
     setItems([
@@ -382,7 +425,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       }
 
       const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
-      const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null } as never);
+      const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null, _referrer_student_id: pendingReferrerStudentId } as never);
       if (error) throw new Error(error.message);
       if (!orderId) throw new Error("Pedido não retornado");
       const { data: orderData } = await supabase
@@ -613,36 +656,48 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       {activeSection && (subcatsOfActive.length === 0 || activeSubcategory) && (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((item) => (
-            <button key={item.id} onClick={() => setDetailProduct(item)} className="rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
-              <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
-                {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
-              </div>
-              {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
-              <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
-              {item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}
-              <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-                <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
-                {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
-              </div>
-              {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
-                <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
+            <div key={item.id} className="relative">
+              <button onClick={() => setDetailProduct(item)} className="w-full rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
+                <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
+                  {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
+                </div>
+                {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
+                <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
+                {item.subtitle && <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{item.subtitle}</p>}
+                <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                  <span className="text-sm font-bold text-foreground">{priceLabel(item)}</span>
+                  {item.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{fmt(item.originalPrice)}</span>}
+                </div>
+                {(item.kind === "store" || item.kind === "item") && item.stock !== null && item.stock !== undefined && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">Estoque: {item.stock}</p>
+                )}
+                {item.hasChallenge && (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    🔥 Acesso a 1 desafio
+                  </span>
+                )}
+                {(item.cardDays ?? 0) > 0 && (
+                  <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                    🪪 {item.cardDays}d carteirinha
+                  </span>
+                )}
+                {coachMode && (item.pointsPerSale ?? 0) > 0 && (
+                  <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                    🏆 +{item.pointsPerSale} pts
+                  </span>
+                )}
+              </button>
+              {!coachMode && myReferralCode && indicableProductIds.has(item.sourceId) && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId); }}
+                  title="Copiar link de indicação"
+                  className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
               )}
-              {item.hasChallenge && (
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                  🔥 Acesso a 1 desafio
-                </span>
-              )}
-              {(item.cardDays ?? 0) > 0 && (
-                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                  🪪 {item.cardDays}d carteirinha
-                </span>
-              )}
-              {coachMode && (item.pointsPerSale ?? 0) > 0 && (
-                <span className="mt-2 ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                  🏆 +{item.pointsPerSale} pts
-                </span>
-              )}
-            </button>
+            </div>
           ))}
           {filtered.length === 0 && (
             <p className="col-span-2 rounded-xl bg-card p-6 text-center text-sm text-muted-foreground">Nenhum produto nessa categoria ainda.</p>
