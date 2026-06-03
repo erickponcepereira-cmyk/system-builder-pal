@@ -28,7 +28,7 @@ type Card = {
 const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kind; mode?: "student" | "reseller" }) {
+export function PartnerProfessionalStore({ kind, mode = "student", resellerStudent }: { kind: Kind; mode?: "student" | "reseller"; resellerStudent?: { id: string; name: string; email?: string | null } | null }) {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -38,7 +38,6 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
   const [selected, setSelected] = useState<Card | null>(null);
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
-  const [studentEmail, setStudentEmail] = useState("");
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
@@ -107,8 +106,8 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       toast.error("Selecione um horário para agendar.");
       return;
     }
-    if (selected.kind === "partner" && mode === "reseller" && !studentEmail.trim()) {
-      toast.error("Informe o e-mail do aluno indicado.");
+    if (mode === "reseller" && !resellerStudent?.id) {
+      toast.error("Selecione um aluno antes de comprar.");
       return;
     }
     if (selected.kind === "partner" && mode === "student" && !ownStudentId) {
@@ -119,20 +118,12 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
     try {
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
+      const buyerStudentId = mode === "reseller" ? resellerStudent!.id : ownStudentId;
       if (selected.kind === "partner") {
-        let stuId: string | null = ownStudentId;
-        if (mode === "reseller") {
-          const { data: foundId, error: stuErr } = await supabase.rpc(
-            "find_student_id_by_email" as never,
-            { _email: studentEmail.trim() } as never,
-          );
-          if (stuErr) throw new Error(stuErr.message);
-          stuId = (foundId as unknown as string) || null;
-        }
-        if (!stuId) throw new Error("Aluno não encontrado.");
+        if (!buyerStudentId) throw new Error("Aluno não encontrado.");
         const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
           _partner_product_id: selected.id,
-          _student_id: stuId,
+          _student_id: buyerStudentId,
           _payment_method: method,
         } as never);
         if (error) throw new Error(error.message);
@@ -142,6 +133,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
           _professional_product_id: selected.id,
           _starts_at: slot,
           _payment_method: method,
+          ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;
@@ -149,6 +141,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
         const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
           _professional_product_id: selected.id,
           _payment_method: method,
+          ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;
@@ -169,7 +162,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       });
       setSelected(null);
       setSlot(null);
-      setStudentEmail("");
+      
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
       toast.error(msg);
@@ -259,7 +252,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
       {selected && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-          onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
+          onClick={() => { setSelected(null); setSlot(null); }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -274,7 +267,7 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
                 </div>
               )}
               <button
-                onClick={() => { setSelected(null); setSlot(null); setStudentEmail(""); }}
+                onClick={() => { setSelected(null); setSlot(null); }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />
@@ -300,21 +293,26 @@ export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kin
                   onChange={setSlot}
                 />
               )}
-              {selected.kind === "partner" && mode === "reseller" && (
-                <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-primary">
-                    E-mail do aluno indicado
-                  </label>
-                  <input
-                    type="email"
-                    value={studentEmail}
-                    onChange={(e) => setStudentEmail(e.target.value)}
-                    placeholder="aluno@exemplo.com"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-                  />
-                  <p className="text-[11px] text-foreground/60">
-                    O pedido será registrado em nome desse aluno. Comissões de rede seguem o coach dele.
+              {mode === "reseller" && (
+                <div className="space-y-1 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Venda para o aluno
                   </p>
+                  {resellerStudent ? (
+                    <>
+                      <p className="text-sm font-bold text-foreground">{resellerStudent.name}</p>
+                      {resellerStudent.email && (
+                        <p className="text-[11px] text-muted-foreground">{resellerStudent.email}</p>
+                      )}
+                      <p className="text-[11px] text-foreground/60">
+                        O pedido será registrado em nome deste aluno. Comissões de rede seguem o coach dele.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-foreground">
+                      Selecione um aluno no topo da loja antes de finalizar.
+                    </p>
+                  )}
                 </div>
               )}
               <div className="flex gap-2">
