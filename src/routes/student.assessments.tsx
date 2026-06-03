@@ -91,7 +91,7 @@ function MyAssessmentsPage() {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-6">
       <header className="flex items-center gap-3 border-b border-border p-4">
         <Link to="/student/profile" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
         <div className="flex-1">

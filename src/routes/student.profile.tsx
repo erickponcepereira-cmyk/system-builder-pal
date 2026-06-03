@@ -71,6 +71,18 @@ function ProfilePage() {
   const [showTokenHistory, setShowTokenHistory] = useState(false);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [showChallengesModal, setShowChallengesModal] = useState(false);
+  const [showReferralsModal, setShowReferralsModal] = useState(false);
+  const [referralCommissions, setReferralCommissions] = useState<Array<{
+    id: string;
+    amount: number;
+    status: string | null;
+    available_at: string | null;
+    created_at: string;
+    buyer_name: string | null;
+    product_label: string | null;
+    purchase_type: string | null;
+    gross_amount: number | null;
+  }>>([]);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
 
   useEffect(() => {
@@ -124,6 +136,27 @@ function ProfilePage() {
         const hist = await fetchTokenHistory();
         setTokenHistory(hist);
       } catch (e) { console.warn("token history fetch failed", e); }
+      try {
+        const { data: comms } = await supabase
+          .from("commissions")
+          .select("id,amount,status,available_at,created_at,transaction:transactions!commissions_transaction_id_fkey(gross_amount,purchase_type,product:products(name),student:students!transactions_student_id_fkey(profile:profiles!students_profile_id_fkey(name)))" as never)
+          .eq("is_referral", true as never)
+          .eq("referred_by_student_id", student.id as never)
+          .order("created_at", { ascending: false })
+          .limit(100);
+        const mapped = ((comms as unknown as any[]) || []).map((c) => ({
+          id: c.id,
+          amount: Number(c.amount || 0),
+          status: c.status,
+          available_at: c.available_at,
+          created_at: c.created_at,
+          buyer_name: c.transaction?.student?.profile?.name || null,
+          product_label: c.transaction?.product?.name || (c.transaction?.purchase_type ? String(c.transaction.purchase_type).replace(/_/g, " ") : null),
+          purchase_type: c.transaction?.purchase_type || null,
+          gross_amount: c.transaction?.gross_amount != null ? Number(c.transaction.gross_amount) : null,
+        }));
+        setReferralCommissions(mapped);
+      } catch (e) { console.warn("referral commissions fetch failed", e); }
     })();
   }, []);
 
@@ -250,24 +283,29 @@ function ProfilePage() {
 
       {/* Carteira */}
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
-            <p className="mt-1 text-2xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
-            <p className="text-[11px] text-white/40">+ R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente · total R$ {wallet.total_earned.toFixed(2).replace(".", ",")}</p>
-          </div>
-          <button onClick={() => setWithdrawOpen(true)} className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
-            <Wallet className="h-5 w-5 text-primary" />
-          </button>
-        </div>
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-          <span className="truncate font-mono text-xs text-white/60">{referralLink}</span>
-          <button onClick={copyReferral} className="text-xs font-bold text-primary">Copiar</button>
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
+        <p className="mt-1 text-3xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
+        <p className="text-[11px] text-white/40">+ R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente · total ganho R$ {wallet.total_earned.toFixed(2).replace(".", ",")}</p>
+        <button
+          onClick={() => setWithdrawOpen(true)}
+          disabled={wallet.available_balance < 50}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+        >
+          <Wallet className="h-4 w-4" />
+          Solicitar saque
+        </button>
+        {wallet.available_balance < 50 && (
+          <p className="mt-2 text-center text-[10px] text-white/40">Saque mínimo R$ 50,00</p>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <button
+          type="button"
+          onClick={() => setShowReferralsModal(true)}
+          className="rounded-2xl p-4 text-left transition hover:bg-white/5"
+          style={{ backgroundColor: "#1A1A1A" }}
+        >
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">Minhas indicações</h2>
             <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">{referrals.length}</span>
@@ -275,19 +313,23 @@ function ProfilePage() {
           {referrals.length === 0 ? (
             <p className="text-xs text-white/45">Nenhum amigo entrou pelo seu link ainda.</p>
           ) : (
-            <div className="space-y-2">
-              {referrals.slice(0, 4).map((referral) => (
-                <div key={referral.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-white">{referral.profiles?.name || "Aluno indicado"}</p>
-                    <p className="truncate text-[10px] text-white/40">{referral.profiles?.email || "cadastro confirmado"}</p>
+            <>
+              <div className="space-y-2">
+                {referrals.slice(0, 3).map((referral) => (
+                  <div key={referral.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-white">{referral.profiles?.name || "Aluno indicado"}</p>
+                      <p className="truncate text-[10px] text-white/40">{referral.profiles?.email || "cadastro confirmado"}</p>
+                    </div>
+                    <span className="text-[10px] text-white/35">{referral.created_at ? new Date(referral.created_at).toLocaleDateString("pt-BR") : "—"}</span>
                   </div>
-                  <span className="text-[10px] text-white/35">{referral.created_at ? new Date(referral.created_at).toLocaleDateString("pt-BR") : "—"}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <p className="mt-3 text-center text-[10px] font-bold text-primary">Ver comissões →</p>
+            </>
           )}
-        </div>
+        </button>
+
 
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="mb-3 flex items-center justify-between">
@@ -449,6 +491,47 @@ function ProfilePage() {
                           <p className="text-[9px] uppercase text-primary/80">Resultado</p>
                           <p className="text-sm font-bold text-primary">{Number.isFinite(kg) && kg !== 0 ? `${kg > 0 ? "-" : "+"}${Math.abs(kg).toFixed(1)} kg` : "—"}</p>
                           {Number.isFinite(pct) && pct !== 0 && <p className="text-[9px] text-primary/70">{pct.toFixed(1)}%</p>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showReferralsModal && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShowReferralsModal(false)}>
+          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Minhas indicações</h2>
+                <p className="text-[11px] text-white/40">{referralCommissions.length} comissão(ões) · total ganho R$ {referralCommissions.reduce((s, c) => s + c.amount, 0).toFixed(2).replace(".", ",")}</p>
+              </div>
+              <button onClick={() => setShowReferralsModal(false)} className="text-white/40 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {referralCommissions.length === 0 ? (
+              <p className="text-sm text-white/50">Nenhuma comissão de indicação ainda. Quando alguém usar seu link e fizer uma compra, aparece aqui.</p>
+            ) : (
+              <div className="space-y-2">
+                {referralCommissions.map((c) => {
+                  const statusLabel = c.status === "paid" ? "Pago" : c.status === "available" ? "Disponível" : c.status === "pending" ? "Pendente" : c.status === "cancelled" ? "Cancelado" : c.status || "—";
+                  const statusColor = c.status === "paid" || c.status === "available" ? "bg-success/20 text-success" : c.status === "cancelled" ? "bg-red-500/20 text-red-400" : "bg-white/10 text-white/60";
+                  return (
+                    <div key={c.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-white">{c.buyer_name || "Cliente"}</p>
+                          <p className="truncate text-[11px] text-white/50">{c.product_label || "Produto"}</p>
+                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleDateString("pt-BR")}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</p>
+                          <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${statusColor}`}>{statusLabel}</span>
                         </div>
                       </div>
                     </div>
