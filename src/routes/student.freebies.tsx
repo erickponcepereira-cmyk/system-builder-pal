@@ -69,7 +69,8 @@ function StudentFreebies() {
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
   const [cardValidUntil, setCardValidUntil] = useState<string | null>(null);
-  const cardActive = !!(cardValidUntil && new Date(cardValidUntil).getTime() > Date.now());
+  const [hasPartnerBenefit, setHasPartnerBenefit] = useState(false);
+  const cardActive = hasPartnerBenefit || !!(cardValidUntil && new Date(cardValidUntil).getTime() > Date.now());
 
   const load = async () => {
     setLoading(true);
@@ -79,11 +80,14 @@ function StudentFreebies() {
         .from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
       if (profile) {
         const { data: student } = await supabase
-          .from("students").select("id, card_valid_until").eq("profile_id", profile.id).maybeSingle();
+          .from("students").select("id, card_valid_until, partner_id").eq("profile_id", profile.id).maybeSingle();
         if (student) {
-          const s = student as unknown as { id: string; card_valid_until: string | null };
+          const s = student as unknown as { id: string; card_valid_until: string | null; partner_id: string | null };
           setStudentId(s.id);
           setCardValidUntil(s.card_valid_until);
+          // Check partner benefit
+          const { data: benefit } = await supabase.rpc("student_has_partner_benefits" as never, { _student_id: s.id } as never);
+          setHasPartnerBenefit(Boolean(benefit));
         }
       }
     }
