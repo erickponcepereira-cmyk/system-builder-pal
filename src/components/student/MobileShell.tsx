@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { CalendarDays, Camera, Gift, Home, MessageCircle, ShoppingBag, Trophy, User } from "lucide-react";
+import { CalendarDays, Camera, Gift, Home, ShoppingBag, Trophy, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
