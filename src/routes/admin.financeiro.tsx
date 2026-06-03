@@ -21,6 +21,7 @@ import {
   type PendingFeeRow,
 } from "@/lib/admin-financial.functions";
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
+import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
 
 export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
 
@@ -115,7 +116,10 @@ function AdminFinanceiro() {
             Clique em um bucket para ver as vendas que originaram os valores.
           </p>
         </div>
-        <ReconcileButton onDone={reload} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ReferralSelfTestButton />
+          <ReconcileButton onDone={reload} />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
@@ -668,6 +672,72 @@ function ReconcileButton({ onDone }: { onDone: () => void }) {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ReferralSelfTestButton() {
+  const callTest = useServerFn(runReferralSelfTest);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<ReferralSelfTestResult | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const run = async () => {
+    setBusy(true);
+    setResult(null);
+    try {
+      const r = await callTest();
+      setResult(r);
+      setOpen(true);
+      if (r.ok) toast.success("Teste de indicação OK");
+      else toast.error("Teste de indicação falhou — veja detalhes");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao rodar teste");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={run}
+        disabled={busy}
+        className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-50"
+        title="Cria transação simulada com referrer_student_id, roda process_paid_transaction, valida is_referral=true e referred_by_student_id, e reverte tudo."
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+        Testar fluxo de indicação
+      </button>
+      {open && result && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Self-test: Indicação Aluno → Aluno</h2>
+                <p className={`text-xs font-bold ${result.ok ? "text-emerald-400" : "text-red-400"}`}>
+                  {result.ok ? "✓ Todos os passos OK" : "✗ Falha em pelo menos um passo"}
+                </p>
+              </div>
+              <button onClick={() => setOpen(false)} className="rounded p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
+            <ol className="space-y-2 mb-5">
+              {result.steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 rounded-md border border-white/10 bg-white/5 p-2">
+                  <span className={`mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${s.ok ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
+                    {s.ok ? "✓" : "✗"}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-white">{s.step}</p>
+                    {s.detail && <p className="mt-0.5 text-[11px] text-white/60 break-all">{s.detail}</p>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <pre className="rounded-md bg-black/40 p-3 text-[11px] text-white/70 overflow-x-auto">{JSON.stringify(result.summary, null, 2)}</pre>
           </div>
         </div>
       )}
