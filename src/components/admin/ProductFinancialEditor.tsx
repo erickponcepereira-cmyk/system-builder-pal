@@ -65,7 +65,10 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
   const [feeCfg, setFeeCfg] = useState<FeeLike>({ pix_fee_percentage: 0.99, card_fee_percentage: 4.98, card_fee_3x12_percentage: 4.98 });
   const [taxPct, setTaxPct] = useState(6);
   const [previewMethod, setPreviewMethod] = useState<PaymentMethod>("pix");
+  const [simMode, setSimMode] = useState<"direct" | "referral">("direct");
   const [saving, setSaving] = useState(false);
+  const slotApplies = (s: ValueSlot) =>
+    simMode === "direct" ? s.applies_to_referral_sales : s.applies_to_student_referral;
 
   useEffect(() => {
     fetchOne({ data: { productId } }).then(setData).catch((e: any) => toast.error(e?.message || "Erro"));
