@@ -271,6 +271,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     if (!prof) return;
     const { data: coach } = await supabase.from("coaches").select("id").eq("profile_id", prof.id).maybeSingle();
     if (!coach) return;
+    const { data: masterFlag } = await supabase.rpc("is_master_coach" as never, { _coach_id: coach.id } as never);
+    setIsMasterCoach(!!masterFlag);
     const { data: clientRows, error: clientsError } = await supabase.rpc("list_coach_team_clients" as never);
     if (clientsError) toast.error(clientsError.message || "Erro ao carregar alunos da equipe");
     const normalizedClients = ((clientRows || []) as any[]).map((s) => ({
