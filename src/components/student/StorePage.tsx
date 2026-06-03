@@ -259,6 +259,9 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           tag: specLabel,
           imageUrl: pp.image_url,
           creatorCoachId: pp.coach?.id ?? null,
+          professionalCoachId: pp.coach?.id ?? null,
+          isSchedulable: !!pp.is_schedulable,
+          defaultDurationMinutes: pp.default_duration_minutes ?? 30,
         };
       })),
     ]);
