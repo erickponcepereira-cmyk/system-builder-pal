@@ -30,7 +30,9 @@ import { Route as StudentSupportRouteImport } from './routes/student.support'
 import { Route as StudentStoreRouteImport } from './routes/student.store'
 import { Route as StudentProtocolRouteImport } from './routes/student.protocol'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentProfessionalTrackRouteImport } from './routes/student.professional-track'
 import { Route as StudentPartnersRouteImport } from './routes/student.partners'
+import { Route as StudentPartnerTrackRouteImport } from './routes/student.partner-track'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
 import { Route as StudentLibraryRouteImport } from './routes/student.library'
 import { Route as StudentHealthRouteImport } from './routes/student.health'
@@ -197,9 +199,20 @@ const StudentProfileRoute = StudentProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentProfessionalTrackRoute =
+  StudentProfessionalTrackRouteImport.update({
+    id: '/professional-track',
+    path: '/professional-track',
+    getParentRoute: () => StudentRoute,
+  } as any)
 const StudentPartnersRoute = StudentPartnersRouteImport.update({
   id: '/partners',
   path: '/partners',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentPartnerTrackRoute = StudentPartnerTrackRouteImport.update({
+  id: '/partner-track',
+  path: '/partner-track',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentNotificationsRoute = StudentNotificationsRouteImport.update({
@@ -574,7 +587,9 @@ export interface FileRoutesByFullPath {
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
+  '/student/partner-track': typeof StudentPartnerTrackRoute
   '/student/partners': typeof StudentPartnersRouteWithChildren
+  '/student/professional-track': typeof StudentProfessionalTrackRoute
   '/student/profile': typeof StudentProfileRouteWithChildren
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
@@ -656,7 +671,9 @@ export interface FileRoutesByTo {
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
+  '/student/partner-track': typeof StudentPartnerTrackRoute
   '/student/partners': typeof StudentPartnersRouteWithChildren
+  '/student/professional-track': typeof StudentProfessionalTrackRoute
   '/student/profile': typeof StudentProfileRouteWithChildren
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
@@ -741,7 +758,9 @@ export interface FileRoutesById {
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
   '/student/notifications': typeof StudentNotificationsRoute
+  '/student/partner-track': typeof StudentPartnerTrackRoute
   '/student/partners': typeof StudentPartnersRouteWithChildren
+  '/student/professional-track': typeof StudentProfessionalTrackRoute
   '/student/profile': typeof StudentProfileRouteWithChildren
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
@@ -827,7 +846,9 @@ export interface FileRouteTypes {
     | '/student/health'
     | '/student/library'
     | '/student/notifications'
+    | '/student/partner-track'
     | '/student/partners'
+    | '/student/professional-track'
     | '/student/profile'
     | '/student/protocol'
     | '/student/store'
@@ -909,7 +930,9 @@ export interface FileRouteTypes {
     | '/student/health'
     | '/student/library'
     | '/student/notifications'
+    | '/student/partner-track'
     | '/student/partners'
+    | '/student/professional-track'
     | '/student/profile'
     | '/student/protocol'
     | '/student/store'
@@ -993,7 +1016,9 @@ export interface FileRouteTypes {
     | '/student/health'
     | '/student/library'
     | '/student/notifications'
+    | '/student/partner-track'
     | '/student/partners'
+    | '/student/professional-track'
     | '/student/profile'
     | '/student/protocol'
     | '/student/store'
@@ -1192,11 +1217,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentProfileRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/student/professional-track': {
+      id: '/student/professional-track'
+      path: '/professional-track'
+      fullPath: '/student/professional-track'
+      preLoaderRoute: typeof StudentProfessionalTrackRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/student/partners': {
       id: '/student/partners'
       path: '/partners'
       fullPath: '/student/partners'
       preLoaderRoute: typeof StudentPartnersRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/partner-track': {
+      id: '/student/partner-track'
+      path: '/partner-track'
+      fullPath: '/student/partner-track'
+      preLoaderRoute: typeof StudentPartnerTrackRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/notifications': {
@@ -1745,7 +1784,9 @@ interface StudentRouteChildren {
   StudentHealthRoute: typeof StudentHealthRoute
   StudentLibraryRoute: typeof StudentLibraryRoute
   StudentNotificationsRoute: typeof StudentNotificationsRoute
+  StudentPartnerTrackRoute: typeof StudentPartnerTrackRoute
   StudentPartnersRoute: typeof StudentPartnersRouteWithChildren
+  StudentProfessionalTrackRoute: typeof StudentProfessionalTrackRoute
   StudentProfileRoute: typeof StudentProfileRouteWithChildren
   StudentProtocolRoute: typeof StudentProtocolRoute
   StudentStoreRoute: typeof StudentStoreRoute
@@ -1766,7 +1807,9 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentHealthRoute: StudentHealthRoute,
   StudentLibraryRoute: StudentLibraryRoute,
   StudentNotificationsRoute: StudentNotificationsRoute,
+  StudentPartnerTrackRoute: StudentPartnerTrackRoute,
   StudentPartnersRoute: StudentPartnersRouteWithChildren,
+  StudentProfessionalTrackRoute: StudentProfessionalTrackRoute,
   StudentProfileRoute: StudentProfileRouteWithChildren,
   StudentProtocolRoute: StudentProtocolRoute,
   StudentStoreRoute: StudentStoreRoute,
