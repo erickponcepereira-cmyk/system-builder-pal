@@ -41,6 +41,11 @@ export interface ProductDetail {
   hasChallenge?: boolean | null;
   // Dias de validade da carteirinha de benefícios concedidos pela compra
   cardDays?: number | null;
+  // Agendamento (produtos de profissionais agendáveis)
+  isSchedulable?: boolean | null;
+  defaultDurationMinutes?: number | null;
+  professionalCoachId?: string | null;
+  scheduledSlot?: string | null;
 }
 
 const fmt = (n: number) =>
