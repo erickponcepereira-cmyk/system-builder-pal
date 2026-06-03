@@ -294,21 +294,26 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   onChange={setSlot}
                 />
               )}
-              {selected.kind === "partner" && mode === "reseller" && (
-                <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-primary">
-                    E-mail do aluno indicado
-                  </label>
-                  <input
-                    type="email"
-                    value={studentEmail}
-                    onChange={(e) => setStudentEmail(e.target.value)}
-                    placeholder="aluno@exemplo.com"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-                  />
-                  <p className="text-[11px] text-foreground/60">
-                    O pedido será registrado em nome desse aluno. Comissões de rede seguem o coach dele.
+              {mode === "reseller" && (
+                <div className="space-y-1 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Venda para o aluno
                   </p>
+                  {resellerStudent ? (
+                    <>
+                      <p className="text-sm font-bold text-foreground">{resellerStudent.name}</p>
+                      {resellerStudent.email && (
+                        <p className="text-[11px] text-muted-foreground">{resellerStudent.email}</p>
+                      )}
+                      <p className="text-[11px] text-foreground/60">
+                        O pedido será registrado em nome deste aluno. Comissões de rede seguem o coach dele.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-foreground">
+                      Selecione um aluno no topo da loja antes de finalizar.
+                    </p>
+                  )}
                 </div>
               )}
               <div className="flex gap-2">
