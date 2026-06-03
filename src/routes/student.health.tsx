@@ -28,6 +28,12 @@ type FormState = {
   current_medications: string;
   supplements_used: string;
   food_allergies: string;
+  food_intolerances: string;
+  blood_type: string;
+  has_diabetes: boolean | null;
+  has_hypertension: boolean | null;
+  has_cardiopathy: boolean | null;
+  other_chronic_conditions: string;
   // Objetivos
   protocol_reason: string;
   objective: string;
