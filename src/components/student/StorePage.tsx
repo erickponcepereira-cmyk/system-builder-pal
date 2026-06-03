@@ -392,12 +392,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       toast.error("Produto sem estoque.");
       return;
     }
+    if (item.isSchedulable && !item.scheduledSlot) {
+      toast.error("Escolha um horário antes de adicionar.");
+      return;
+    }
     setCart((current) => {
       const found = current.find((cartItem) => cartItem.id === item.id);
-      if (found) return current.map((cartItem) => cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
+      // Itens agendáveis: cada compra é única (1 horário por item), não somar quantidade
+      if (found && !item.isSchedulable) return current.map((cartItem) => cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
+      if (found && item.isSchedulable) {
+        return current.map((cartItem) => cartItem.id === item.id ? { ...item, quantity: 1 } : cartItem);
+      }
       return [...current, { ...item, quantity: 1 }];
     });
-    toast.success("Adicionado ao carrinho.");
+    toast.success(item.isSchedulable ? "Horário reservado no carrinho." : "Adicionado ao carrinho.");
     setDetailProduct(null);
   };
 
