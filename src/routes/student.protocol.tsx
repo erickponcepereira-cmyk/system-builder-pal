@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell } from "lucide-react";
+import { ClipboardList, ArrowLeft, Activity, Droplet, Heart, AlertTriangle, Target, Dumbbell, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
@@ -28,9 +28,26 @@ type Protocol = {
   workout_plan: Array<{ name: string; sets: string; reps: string; rest: string; notes: string }>;
 };
 
+type Anamnese = {
+  filled_at: string | null;
+  gender: string | null;
+  height: number | null;
+  objective: string | null;
+  protocol_reason: string | null;
+  preexisting_conditions: string | null;
+  current_medications: string | null;
+  food_allergies: string | null;
+  sleep_hours: string | null;
+  stress_level: string | null;
+  exercises_regularly: boolean | null;
+  additional_observations: string | null;
+};
+
 function StudentProtocolPage() {
   const [protocol, setProtocol] = useState<Protocol | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [anamnese, setAnamnese] = useState<Anamnese | null>(null);
+  const [showAnamnese, setShowAnamnese] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,11 +60,16 @@ function StudentProtocolPage() {
         : { data: null };
       if (!student?.id) { setLoading(false); return; }
       setStudentId(student.id);
-      const { data } = await supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle();
-      if (data) setProtocol(data as any);
+      const [{ data: prot }, { data: anam }] = await Promise.all([
+        supabase.from("student_protocols" as never).select("*" as never).eq("student_id" as never, student.id as never).maybeSingle(),
+        supabase.from("anamnesis_forms").select("filled_at,gender,height,objective,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations").eq("student_id", student.id).order("filled_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      if (prot) setProtocol(prot as any);
+      if (anam) setAnamnese(anam as Anamnese);
       setLoading(false);
     })();
   }, []);
+
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
@@ -148,18 +170,61 @@ function StudentProtocolPage() {
         </>
       )}
 
-      {/* Atalhos sempre visíveis */}
-      <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <h2 className="mb-3 text-sm font-bold text-white">Documentos profissionais</h2>
-        <div className="space-y-2">
-          <Shortcut icon={ClipboardList} title="Anamnese" desc="Histórico inicial preenchido com o coach" />
-          <Shortcut icon={Activity} title="Bioimpedância" desc="Última avaliação corporal" />
-          <Shortcut icon={Heart} title="Acompanhamento médico" desc="Receitas, exames e medicações" />
-        </div>
-      </section>
+      {/* Anamnese — resultado salvo */}
+      {!loading && (
+        <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <button onClick={() => setShowAnamnese((v) => !v)} className="flex w-full items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              <div className="text-left">
+                <p className="text-sm font-bold text-white">Anamnese</p>
+                <p className="text-[11px] text-white/40">
+                  {anamnese?.filled_at ? `Preenchida em ${new Date(anamnese.filled_at).toLocaleDateString("pt-BR")}` : "Ainda não preenchida"}
+                </p>
+              </div>
+            </div>
+            {anamnese ? (
+              <ChevronRight className={`h-4 w-4 text-white/40 transition ${showAnamnese ? "rotate-90" : ""}`} />
+            ) : (
+              <Link to="/student/health" className="rounded-lg bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground">Preencher</Link>
+            )}
+          </button>
+          {anamnese && showAnamnese && (
+            <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
+              <Info label="Objetivo" value={anamnese.objective || anamnese.protocol_reason} />
+              <div className="grid grid-cols-2 gap-2">
+                <Info label="Gênero" value={anamnese.gender} />
+                <Info label="Altura" value={anamnese.height ? `${anamnese.height} cm` : null} />
+              </div>
+              <Info label="Condições preexistentes" value={anamnese.preexisting_conditions} />
+              <Info label="Medicamentos" value={anamnese.current_medications} />
+              <Info label="Alergias alimentares" value={anamnese.food_allergies} />
+              <div className="grid grid-cols-2 gap-2">
+                <Info label="Sono" value={anamnese.sleep_hours} />
+                <Info label="Estresse" value={anamnese.stress_level} />
+              </div>
+              <Info label="Pratica exercícios" value={anamnese.exercises_regularly == null ? null : anamnese.exercises_regularly ? "Sim" : "Não"} />
+              <Info label="Observações" value={anamnese.additional_observations} />
+              <Link to="/student/health" className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-bold text-primary hover:underline">
+                Editar anamnese →
+              </Link>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
+
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="rounded-xl bg-white/5 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
+      <p className="mt-0.5 whitespace-pre-wrap text-xs text-white">{value || "—"}</p>
+    </div>
+  );
+}
+
 
 function Meta({ icon: Icon, label, value, suffix }: { icon: any; label: string; value: string; suffix: string }) {
   return (
@@ -169,21 +234,6 @@ function Meta({ icon: Icon, label, value, suffix }: { icon: any; label: string; 
         <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
       </div>
       <p className="text-lg font-bold text-white">{value}<span className="ml-1 text-xs text-white/40">{suffix}</span></p>
-    </div>
-  );
-}
-
-function Shortcut({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-white">{title}</p>
-        <p className="text-[11px] text-white/40">{desc}</p>
-      </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">Em breve</span>
     </div>
   );
 }

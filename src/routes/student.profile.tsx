@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, CreditCard, Gift, Users, Award, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, Rocket, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins } from "lucide-react";
+import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -10,32 +10,37 @@ export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
 });
 
+type Enrollment = {
+  id: string;
+  competition_id: string;
+  initial_date: string | null;
+  final_date: string | null;
+  initial_weight: number | null;
+  final_weight: number | null;
+  result_kg: number | null;
+  result_pct: number | null;
+  status: string;
+  enrolled_at: string;
+  competitions: { month: number; year: number; status: string } | null;
+};
+
 const sections = [
   {
     title: "Conta",
     items: [
       { icon: QrCode, label: "Minha Carteirinha", to: "/student/card" },
       { icon: Settings, label: "Editar perfil", to: "/student/profile/edit" },
-      { icon: CreditCard, label: "Meus planos" },
-      { icon: Award, label: "Minha evolução" },
       { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
       { icon: ClipboardList, label: "Meu Protocolo", to: "/student/protocol" },
-      { icon: ClipboardList, label: "Anamnese", to: "/student/health" },
-    ],
-  },
-  {
-    title: "Programa",
-    items: [
-      { icon: Gift, label: "Gratuitos", to: "/student/freebies" },
-      { icon: Building2, label: "Empresas Parceiras", to: "/student/partners" },
-      { icon: Users, label: "Indicar amigos" },
-      { icon: GraduationCap, label: "Meus cursos", to: "/student/library" },
+      { icon: ClipboardList, label: "Preencher anamnese", to: "/student/health" },
     ],
   },
   {
     title: "Negócios",
     items: [
-      { icon: Building2, label: "Tornar-se Empresa Parceira", to: "/become-partner" },
+      { icon: GraduationCap, label: "Quero ser Coach", to: "/student/coach-course" },
+      { icon: Briefcase, label: "Quero ser Profissional", to: "/register", search: { role: "professional" } },
+      { icon: Building2, label: "Quero ser Empresa Parceira", to: "/become-partner" },
     ],
   },
   {
@@ -44,7 +49,7 @@ const sections = [
       { icon: HelpCircle, label: "Central de ajuda", to: "/student/support" },
     ],
   },
-];
+] as const;
 
 function ProfilePage() {
   const navigate = useNavigate();
@@ -64,6 +69,8 @@ function ProfilePage() {
   const [challengeTokens, setChallengeTokens] = useState(0);
   const [tokenHistory, setTokenHistory] = useState<ChallengeTokenHistoryEntry[]>([]);
   const [showTokenHistory, setShowTokenHistory] = useState(false);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [showChallengesModal, setShowChallengesModal] = useState(false);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
 
   useEffect(() => {
@@ -83,7 +90,7 @@ function ProfilePage() {
         pending_balance: Number(walletData?.pending_balance || 0),
         total_earned: Number(walletData?.total_earned || 0),
       });
-      const [referralRes, withdrawalRes] = await Promise.all([
+      const [referralRes, withdrawalRes, enrollmentRes] = await Promise.all([
         supabase
           .from("students")
           .select("id,created_at,profiles!students_profile_id_fkey(name,email)")
@@ -96,9 +103,15 @@ function ProfilePage() {
           .eq("student_id", student.id)
           .order("requested_at", { ascending: false })
           .limit(10),
+        supabase
+          .from("competition_enrollments")
+          .select("id,competition_id,initial_date,final_date,initial_weight,final_weight,result_kg,result_pct,status,enrolled_at,competitions(month,year,status)")
+          .eq("student_id", student.id)
+          .order("enrolled_at", { ascending: false }),
       ]);
       setReferrals((referralRes.data as unknown as typeof referrals) || []);
       setWithdrawals((withdrawalRes.data as unknown as typeof withdrawals) || []);
+      setEnrollments((enrollmentRes.data as unknown as Enrollment[]) || []);
       try {
         const { data: toks } = await supabase
           .from("student_challenge_tokens")
@@ -150,6 +163,9 @@ function ProfilePage() {
     navigate({ to: "/login" });
   };
 
+  const totalKgLost = enrollments.reduce((sum, e) => sum + (Number(e.result_kg) > 0 ? Number(e.result_kg) : 0), 0);
+  const challengesCount = enrollments.length;
+
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
       <header className="pt-2">
@@ -182,19 +198,19 @@ function ProfilePage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* Stats reais */}
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setShowChallengesModal(true)} className="rounded-2xl p-3 text-center transition hover:bg-white/5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-0.5 flex items-center justify-center gap-1">
+            <Trophy className="h-3 w-3 text-primary" />
+            <p className="text-base font-bold text-white">{challengesCount}</p>
+          </div>
+          <p className="text-[10px] text-white/40">Desafios participados</p>
+          <p className="mt-0.5 text-[9px] text-primary">Ver histórico →</p>
+        </button>
         <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-base font-bold text-white">3</p>
-          <p className="text-[10px] text-white/40">Desafios</p>
-        </div>
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-base font-bold text-white">-8.4</p>
-          <p className="text-[10px] text-white/40">kg total</p>
-        </div>
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-base font-bold text-primary">A+</p>
-          <p className="text-[10px] text-white/40">Nota</p>
+          <p className="text-base font-bold text-white">{totalKgLost > 0 ? `-${totalKgLost.toFixed(1)}` : "0"}</p>
+          <p className="text-[10px] text-white/40">kg perdidos no total</p>
         </div>
       </div>
 
@@ -232,21 +248,7 @@ function ProfilePage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Rocket className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-sm font-bold text-white">Quer fazer parte da equipe de coaches?</h2>
-            <p className="mt-1 text-xs leading-relaxed text-white/60">Torne-se um Coach FitMind Club e ganhe ajudando outras pessoas a se transformarem.</p>
-            <Link to="/student/coach-course" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">
-              <GraduationCap className="h-4 w-4" /> Fazer Curso de Coach
-            </Link>
-          </div>
-        </div>
-      </div>
-
+      {/* Carteira */}
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -319,6 +321,7 @@ function ProfilePage() {
           <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
             {section.items.map((it, i) => {
               const target = "to" in it && it.to ? it.to : null;
+              const search = ("search" in it ? (it as { search?: Record<string, unknown> }).search : undefined);
               const cls = `flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.04] cursor-pointer ${
                 i !== section.items.length - 1 ? "border-b border-white/5" : ""
               }`;
@@ -335,7 +338,10 @@ function ProfilePage() {
                 <a
                   key={it.label}
                   href={target}
-                  onClick={(e) => { e.preventDefault(); navigate({ to: target as never }); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate({ to: target as never, search: (search ?? undefined) as never });
+                  }}
                   className={cls}
                 >
                   {body}
@@ -394,6 +400,62 @@ function ProfilePage() {
               <button onClick={() => setWithdrawOpen(false)} className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white">Cancelar</button>
               <button onClick={requestWithdrawal} className="rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground">Confirmar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showChallengesModal && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm" onClick={() => setShowChallengesModal(false)}>
+          <div className="w-full max-w-[430px] rounded-3xl border border-white/10 bg-card p-5 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Histórico de desafios</h2>
+              <button onClick={() => setShowChallengesModal(false)} className="text-white/40 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {enrollments.length === 0 ? (
+              <p className="text-sm text-white/50">Você ainda não participou de nenhum desafio.</p>
+            ) : (
+              <div className="space-y-2">
+                {enrollments.map((e) => {
+                  const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                  const label = e.competitions ? `${monthNames[(e.competitions.month - 1) % 12]}/${e.competitions.year}` : "Desafio";
+                  const kg = Number(e.result_kg);
+                  const pct = Number(e.result_pct);
+                  return (
+                    <div key={e.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-bold text-white">{label}</p>
+                          <p className="text-[10px] text-white/40">
+                            {e.initial_date ? new Date(e.initial_date).toLocaleDateString("pt-BR") : "—"}
+                            {e.final_date && <> → {new Date(e.final_date).toLocaleDateString("pt-BR")}</>}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${e.status === "completed" ? "bg-success/20 text-success" : e.status === "enrolled" ? "bg-primary/20 text-primary" : "bg-white/10 text-white/60"}`}>
+                          {e.status === "completed" ? "Concluído" : e.status === "enrolled" ? "Em andamento" : e.status}
+                        </span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-white/5 p-2">
+                          <p className="text-[9px] uppercase text-white/40">Inicial</p>
+                          <p className="text-sm font-bold text-white">{e.initial_weight ?? "—"}<span className="text-[9px] text-white/40"> kg</span></p>
+                        </div>
+                        <div className="rounded-lg bg-white/5 p-2">
+                          <p className="text-[9px] uppercase text-white/40">Final</p>
+                          <p className="text-sm font-bold text-white">{e.final_weight ?? "—"}<span className="text-[9px] text-white/40"> kg</span></p>
+                        </div>
+                        <div className="rounded-lg bg-primary/10 p-2">
+                          <p className="text-[9px] uppercase text-primary/80">Resultado</p>
+                          <p className="text-sm font-bold text-primary">{Number.isFinite(kg) && kg !== 0 ? `${kg > 0 ? "-" : "+"}${Math.abs(kg).toFixed(1)} kg` : "—"}</p>
+                          {Number.isFinite(pct) && pct !== 0 && <p className="text-[9px] text-primary/70">{pct.toFixed(1)}%</p>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

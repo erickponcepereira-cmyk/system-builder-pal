@@ -91,14 +91,16 @@ function MyAssessmentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 backdrop-blur p-4">
+    <div className="flex flex-col">
+      <header className="flex items-center gap-3 border-b border-border p-4">
         <Link to="/student/profile" className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></Link>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-foreground">Minhas Avaliações</h1>
           <p className="text-xs text-muted-foreground">Bioimpedâncias realizadas pelo seu coach</p>
         </div>
       </header>
+
+
 
       <div className="p-4 space-y-3">
         {loading ? (
