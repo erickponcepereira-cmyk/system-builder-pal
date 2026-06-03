@@ -202,6 +202,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 
 
+
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [uploading, setUploading] = useState(false);
