@@ -526,7 +526,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
             _partner_product_id: pp.sourceId,
             _student_id: selectedClient.id,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
@@ -534,7 +534,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
             _professional_product_id: pp.sourceId,
             _starts_at: pp.scheduledSlot,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
             _buyer_student_id: selectedClient.id,
           } as never);
           if (error) throw new Error(error.message);
@@ -544,7 +544,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         } else {
           const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
             _professional_product_id: pp.sourceId,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
             _buyer_student_id: selectedClient.id,
           } as never);
           if (ppErr) throw new Error(ppErr.message);
