@@ -68,13 +68,22 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
 
   const now = Date.now();
   const filtered = items.filter((a) => {
-    if (filter === "cancelled") return a.status === "cancelled";
-    if (filter === "past")
-      return a.status !== "cancelled" && new Date(a.ends_at).getTime() < now;
-    return a.status === "scheduled" && new Date(a.ends_at).getTime() >= now;
+    if (filter === "cancelled") {
+      if (a.status !== "cancelled") return false;
+    } else if (filter === "past") {
+      if (!(a.status !== "cancelled" && new Date(a.ends_at).getTime() < now)) return false;
+    } else {
+      if (!(a.status === "scheduled" && new Date(a.ends_at).getTime() >= now)) return false;
+    }
+    if (payFilter !== "all") {
+      const isPaid = !a.order_id || (a.order_status && paidStatusesSet.has(a.order_status));
+      if (payFilter === "paid" && !isPaid) return false;
+      if (payFilter === "pending" && isPaid) return false;
+    }
+    return true;
   });
 
-  const paidStatuses = new Set(["paid", "approved", "completed"]);
+  const paidStatuses = paidStatusesSet;
 
   return (
     <div className="space-y-4">
