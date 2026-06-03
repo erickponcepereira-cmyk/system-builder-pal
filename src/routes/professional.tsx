@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, Network, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag } from "lucide-react";
+import { StorePage } from "@/components/student/StorePage";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -69,6 +70,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   legal_docs: { label: "Documentos", icon: FileText },
   consultations: { label: "Consultas", icon: Calendar },
   products: { label: "Produtos", icon: Package },
+  store: { label: "Loja", icon: ShoppingBag },
   wallet: { label: "Carteira", icon: Wallet },
   network: { label: "Rede", icon: Network },
   settings: { label: "Configurações", icon: Settings },
@@ -161,7 +163,7 @@ function ProfessionalPanel() {
   }
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate", "network"];
-  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "appointments", "settings", "fitmind_calendar"];
+  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "store", "appointments", "settings", "fitmind_calendar"];
   const tabs = Array.from(new Set([...baseTabs, ...ensureTabs])).filter((t) => t !== "collaborators");
 
 
@@ -217,6 +219,7 @@ function ProfessionalPanel() {
 function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; assignments: AssignmentRow[] }) {
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
   if (tab === "wallet") return <WalletTab />;
+  if (tab === "store") return <StorePage coachMode />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
   
