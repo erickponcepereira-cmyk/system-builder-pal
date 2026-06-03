@@ -225,3 +225,15 @@ function Info({ label, value }: { label: string; value: string | null | undefine
   );
 }
 
+
+function Meta({ icon: Icon, label, value, suffix }: { icon: any; label: string; value: string; suffix: string }) {
+  return (
+    <div className="rounded-xl bg-white/5 p-3">
+      <div className="mb-1 flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-primary" />
+        <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
+      </div>
+      <p className="text-lg font-bold text-white">{value}<span className="ml-1 text-xs text-white/40">{suffix}</span></p>
+    </div>
+  );
+}
