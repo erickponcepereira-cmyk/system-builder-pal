@@ -338,7 +338,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
               <span className="text-white/60">Comissão do vendedor (sobra)</span>
               <span className="font-mono text-[#E24B4A]">{dist.remainder > 0.005 ? money(dist.remainder) : "—"}</span>
             </div>
-            <ProgressTrack dist={dist} slots={data.slots} />
+            <ProgressTrack dist={dist} slots={data.slots} simMode={simMode} />
             <div className="mt-2 text-[11px]">
               {Math.abs(dist.remainder) < 0.01 ? (
                 <span className="text-emerald-400 inline-flex items-center gap-1"><CircleCheck className="h-3 w-3" /> 100% distribuído</span>
@@ -350,7 +350,7 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
             </div>
           </div>
 
-          <SummaryGrid dist={dist} slots={data.slots} />
+          <SummaryGrid dist={dist} slots={data.slots} simMode={simMode} />
         </div>
       </div>
 
