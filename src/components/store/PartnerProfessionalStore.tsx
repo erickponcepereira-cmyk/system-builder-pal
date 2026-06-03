@@ -28,7 +28,7 @@ type Card = {
 const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
+export function PartnerProfessionalStore({ kind, mode = "student" }: { kind: Kind; mode?: "student" | "reseller" }) {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -39,6 +39,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
   const [buying, setBuying] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [studentEmail, setStudentEmail] = useState("");
+  const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -50,6 +51,17 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       ]);
       setSections((s as Section[]) || []);
       setCategories((c as Category[]) || []);
+
+      if (mode === "student") {
+        const { data: u } = await supabase.auth.getUser();
+        if (u.user) {
+          const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", u.user.id).maybeSingle();
+          if (prof?.id) {
+            const { data: stu } = await supabase.from("students").select("id").eq("profile_id", prof.id).maybeSingle();
+            if (stu?.id) setOwnStudentId(stu.id);
+          }
+        }
+      }
 
       if (kind === "partner") {
         const { data } = await supabase
@@ -86,7 +98,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       }
       setLoading(false);
     })();
-  }, [kind]);
+  }, [kind, mode]);
 
   const buy = async (method: "pix" | "card") => {
     if (!selected) return;
@@ -94,8 +106,12 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       toast.error("Selecione um horário para agendar.");
       return;
     }
-    if (selected.kind === "partner" && !studentEmail.trim()) {
+    if (selected.kind === "partner" && mode === "reseller" && !studentEmail.trim()) {
       toast.error("Informe o e-mail do aluno indicado.");
+      return;
+    }
+    if (selected.kind === "partner" && mode === "student" && !ownStudentId) {
+      toast.error("Conta de aluno não encontrada. Faça login como aluno para comprar.");
       return;
     }
     setBuying(true);
@@ -103,12 +119,16 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
       if (selected.kind === "partner") {
-        const { data: stuId, error: stuErr } = await supabase.rpc(
-          "find_student_id_by_email" as never,
-          { _email: studentEmail.trim() } as never,
-        );
-        if (stuErr) throw new Error(stuErr.message);
-        if (!stuId) throw new Error("Aluno não encontrado para esse e-mail.");
+        let stuId: string | null = ownStudentId;
+        if (mode === "reseller") {
+          const { data: foundId, error: stuErr } = await supabase.rpc(
+            "find_student_id_by_email" as never,
+            { _email: studentEmail.trim() } as never,
+          );
+          if (stuErr) throw new Error(stuErr.message);
+          stuId = (foundId as unknown as string) || null;
+        }
+        if (!stuId) throw new Error("Aluno não encontrado.");
         const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
           _partner_product_id: selected.id,
           _student_id: stuId,
@@ -279,7 +299,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                   onChange={setSlot}
                 />
               )}
-              {selected.kind === "partner" && (
+              {selected.kind === "partner" && mode === "reseller" && (
                 <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-primary">
                     E-mail do aluno indicado
