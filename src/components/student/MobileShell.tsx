@@ -23,9 +23,9 @@ export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
+    <div className="h-screen w-full overflow-hidden flex justify-center" style={{ backgroundColor: "#0A0A0A" }}>
       <div
-        className="relative flex w-full max-w-[430px] flex-col min-h-screen overflow-x-hidden shadow-2xl"
+        className="relative flex w-full max-w-[430px] flex-col h-screen overflow-hidden shadow-2xl"
         style={{ backgroundColor: "#0F0F0F" }}
       >
         {/* Top header with role switcher */}
