@@ -214,7 +214,7 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
     const { data: appts } = await supabase
       .from("professional_appointments" as never)
       .select(
-        "id,starts_at,ends_at,status,order_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(name),order:partner_product_orders(order_number,status)" as never,
+        "id,starts_at,ends_at,status,order_id,professional_products(name),professional:coaches!professional_appointments_professional_coach_id_fkey(profiles!coaches_profile_id_fkey(name)),order:partner_product_orders(order_number,status)" as never,
       )
       .eq("student_id" as never, (student as any).id)
       .neq("status" as never, "cancelled" as never)
@@ -226,8 +226,9 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
       const orderStatus: string | null = a.order?.status || null;
       const orderNumber: string | null = a.order?.order_number || null;
       const pending = !!a.order_id && (!orderStatus || !paidStatuses.has(orderStatus));
-      const profName = a.professional?.name || "profissional";
+      const profName = a.professional?.profiles?.name || "profissional";
       const prodName = a.professional_products?.name || "Consulta";
+
       const color = pending ? "#f59e0b" : "#22c55e";
       return {
         id: `appt-${a.id}`,
