@@ -307,11 +307,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .gte("date" as never, tzDateKey(from) as never)
         .lt("date" as never, tzDateKey(to) as never),
       loadMyChallengeEvents(from, to),
-    ]).then(([evRes, dayRes, challengeEvents]) => {
+      loadMyAppointments(from, to),
+    ]).then(([evRes, dayRes, challengeEvents, appointmentEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
       const base = (evRes.data as unknown as FitmindEvent[]) || [];
-      setEvents([...base, ...challengeEvents]);
+      setEvents([...base, ...challengeEvents, ...appointmentEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
