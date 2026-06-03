@@ -18,7 +18,7 @@ type PartnerFreeProduct = {
   partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
 };
 
-export function CoachBenefitsTab() {
+export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolean } = {}) {
   const navigate = useNavigate();
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export function CoachBenefitsTab() {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [cardValidUntil, setCardValidUntil] = useState<string | null>(null);
-  const cardActive = !!(cardValidUntil && new Date(cardValidUntil).getTime() > Date.now());
+  const cardActive = forceActive || !!(cardValidUntil && new Date(cardValidUntil).getTime() > Date.now());
 
   useEffect(() => {
     (async () => {
