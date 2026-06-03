@@ -12,6 +12,7 @@ export const Route = createFileRoute("/pay/$orderNumber")({
 type OrderData = {
   order: {
     id: string;
+    sourceKind?: "store_order" | "partner_product_order";
     number: string;
     status: string;
     paymentMethod: string;
@@ -82,7 +83,7 @@ function PayPage() {
 
         {!isPaid && (
           <MercadoPagoCheckout
-            source={{ kind: "store_order", id: data.order.id }}
+            source={{ kind: data.order.sourceKind || "store_order", id: data.order.id }}
             amount={data.order.total}
             description={`Pedido #${data.order.number}`}
             defaultPayer={{ email: data.order.clientEmail || "", name: data.order.clientName }}

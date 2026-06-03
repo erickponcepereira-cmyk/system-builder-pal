@@ -149,6 +149,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
       const { data: student } = profile?.id ? await supabase.from("students").select("id, referral_code").eq("profile_id", profile.id).maybeSingle() : { data: null };
       if (student?.id) {
+        setOwnStudentId(student.id);
         setMyReferralCode((student as any).referral_code || null);
         const { data: orderData } = await supabase
           .from("store_orders" as never)
@@ -386,6 +387,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const total = subtotal;
   const requiresShipping = !coachMode && cart.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const partnerRpcPaymentMethod = () => paymentMethod === "pix" ? "pix" : "card";
   const priceLabel = (item: StoreProduct) => item.isPriceRange && item.minPrice && item.maxPrice ? `${fmt(item.minPrice)} - ${fmt(item.maxPrice)}` : fmt(item.price);
 
   const addToCart = (item: StoreProduct) => {
@@ -438,7 +440,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
             _partner_product_id: pp.sourceId,
             _student_id: ownStudentId,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
@@ -446,7 +448,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
             _professional_product_id: pp.sourceId,
             _starts_at: pp.scheduledSlot,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
@@ -455,7 +457,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         } else {
           const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
             _professional_product_id: pp.sourceId,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
           } as never);
           if (ppErr) throw new Error(ppErr.message);
           ppId = data as unknown as string;
@@ -524,7 +526,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
             _partner_product_id: pp.sourceId,
             _student_id: selectedClient.id,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
@@ -532,7 +534,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
             _professional_product_id: pp.sourceId,
             _starts_at: pp.scheduledSlot,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
             _buyer_student_id: selectedClient.id,
           } as never);
           if (error) throw new Error(error.message);
@@ -542,7 +544,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         } else {
           const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
             _professional_product_id: pp.sourceId,
-            _payment_method: paymentMethod,
+            _payment_method: partnerRpcPaymentMethod(),
             _buyer_student_id: selectedClient.id,
           } as never);
           if (ppErr) throw new Error(ppErr.message);

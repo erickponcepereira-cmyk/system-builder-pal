@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
                 raw_webhook: payment,
               })
               .eq("id", existing.id);
-          } else if (kind === "store_order" || kind === "transaction") {
+          } else if (kind === "store_order" || kind === "transaction" || kind === "partner_product_order") {
             await supabaseAdmin.from("mercadopago_payments").insert({
               mp_payment_id: String(mpPaymentId),
               source_kind: kind,
@@ -62,8 +62,8 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
             });
           }
 
-          if (status === "approved" && (kind === "store_order" || kind === "transaction")) {
-            await applyApproval(kind, sourceId);
+          if (status === "approved" && (kind === "store_order" || kind === "transaction" || kind === "partner_product_order")) {
+            await applyApproval(kind as "store_order" | "transaction" | "partner_product_order", sourceId);
           }
 
           return new Response(JSON.stringify({ ok: true, status }), { status: 200, headers: { "content-type": "application/json" } });
