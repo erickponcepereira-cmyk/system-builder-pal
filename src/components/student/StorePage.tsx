@@ -86,7 +86,31 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [salesHistory, setSalesHistory] = useState<CoachSaleRow[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Indicação aluno→aluno
+  const [myReferralCode, setMyReferralCode] = useState<string | null>(null);
+  const [indicableProductIds, setIndicableProductIds] = useState<Set<string>>(new Set());
+  const [pendingReferrerStudentId, setPendingReferrerStudentId] = useState<string | null>(null);
+
   const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
+
+  const copyReferralLink = async (productSourceId: string) => {
+    if (!myReferralCode) {
+      toast.error("Seu código de indicação ainda não está disponível.");
+      return;
+    }
+    const url = `${window.location.origin}/r/${myReferralCode}?p=${productSourceId}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Indicação FitMind Club", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link de indicação copiado!");
+      }
+    } catch {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link de indicação copiado!");
+    }
+  };
 
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
