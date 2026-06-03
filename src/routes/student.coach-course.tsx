@@ -198,6 +198,11 @@ function CoachCoursePage() {
     }
   };
 
+  const handleCheckoutOpenChange = (o: boolean) => {
+    setShowCheckout(o);
+    if (!o) setOrderId(null);
+  };
+
 
   const waLink = whatsappUrl(
     uplineCoach?.phone,
