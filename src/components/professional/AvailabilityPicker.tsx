@@ -178,7 +178,7 @@ export function AvailabilityPicker({
           <div className="mb-2 flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 text-primary" />
             <p className="text-xs font-bold text-foreground">
-              {new Date(selectedDay).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+              {(() => { const [y,m,d] = selectedDay.split("-").map(Number); return new Date(y, m-1, d).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" }); })()}
             </p>
           </div>
           {todaysSlots.length === 0 ? (

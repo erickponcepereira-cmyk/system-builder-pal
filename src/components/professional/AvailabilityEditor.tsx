@@ -162,7 +162,8 @@ export function AvailabilityEditor({ coachId }: Props) {
   const goPrev = () => setCursor(new Date(year, month - 1, 1));
   const goNext = () => setCursor(new Date(year, month + 1, 1));
 
-  const selectedDate = selectedDay ? new Date(selectedDay) : null;
+  const parseLocal = (k: string) => { const [y,m,d] = k.split("-").map(Number); return new Date(y, m-1, d); };
+  const selectedDate = selectedDay ? parseLocal(selectedDay) : null;
   const selectedAppts = selectedDay ? (apptsByDay.get(selectedDay) || []).sort((a, b) => a.starts_at.localeCompare(b.starts_at)) : [];
   const selectedIsBlocked = selectedDay ? blockSet.has(selectedDay) : false;
   const selectedIsWorkday = selectedDate ? workWeekdays.has(selectedDate.getDay()) : false;
