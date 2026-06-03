@@ -64,7 +64,7 @@ function ReferralLandingPage() {
       const { data: userData } = await supabase.auth.getUser();
       setTimeout(() => {
         if (userData.user) {
-          navigate({ to: "/loja" as never });
+          navigate({ to: "/student/store" });
           return;
         }
         const targetRole = row.kind === "coach" ? "coach" : "student";
