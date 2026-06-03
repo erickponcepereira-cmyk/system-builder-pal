@@ -81,6 +81,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
+    if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
 
     setLoading(true);
     setFormError(null);
