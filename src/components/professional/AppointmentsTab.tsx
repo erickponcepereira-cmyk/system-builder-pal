@@ -3,26 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar, Loader2, X, CheckCircle2, User as UserIcon, Clock } from "lucide-react";
 import { AvailabilityEditor } from "./AvailabilityEditor";
+import { useServerFn } from "@tanstack/react-start";
+import { getProfessionalAppointments, type ProfessionalAppointmentItem } from "@/lib/professional-appointments.functions";
+import ProfessionalStudentDetailsModal from "./ProfessionalStudentDetailsModal";
 
-type Appointment = {
-  id: string;
-  starts_at: string;
-  ends_at: string;
-  status: string;
-  cancellation_window_hours: number;
-  notes: string | null;
-  student_id: string;
-  product_id: string;
-  seller_coach_id: string | null;
-  order_id: string | null;
-  students?: {
-    profiles?: { name: string | null; avatar_url: string | null } | null;
-    coach?: { profiles?: { name: string | null } | null } | null;
-  } | null;
-  professional_products?: { name: string | null } | null;
-  seller?: { profiles?: { name: string | null } | null } | null;
-  order?: { status: string | null } | null;
-};
+type Appointment = ProfessionalAppointmentItem;
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", {
@@ -34,22 +19,23 @@ const fmt = (iso: string) =>
   });
 
 export function AppointmentsTab({ coachId }: { coachId: string }) {
+  const fetchAppointments = useServerFn(getProfessionalAppointments);
   const [items, setItems] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "cancelled">("upcoming");
   const [section, setSection] = useState<"list" | "agenda">("list");
+  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("professional_appointments" as never)
-      .select(
-        "id,starts_at,ends_at,status,cancellation_window_hours,notes,student_id,product_id,seller_coach_id,order_id,students(profiles(name,avatar_url),coach:coaches!students_coach_id_fkey(profiles(name))),professional_products(name),seller:coaches!professional_appointments_seller_coach_id_fkey(profiles(name)),order:partner_product_orders!professional_appointments_order_id_fkey(status)" as never,
-      )
-      .eq("professional_coach_id" as never, coachId as never)
-      .order("starts_at" as never, { ascending: true });
-    setItems((data as unknown as Appointment[]) || []);
-    setLoading(false);
+    try {
+      const data = await fetchAppointments();
+      setItems(data);
+    } catch (error) {
+      toast.error((error as Error).message || "Erro ao carregar atendimentos");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -137,11 +123,8 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
             </div>
           ) : (
             filtered.map((a) => {
-              const stProfile = a.students?.profiles;
-              const studentCoachName = a.students?.coach?.profiles?.name;
-              const sellerName = a.seller?.profiles?.name;
-              const orderStatus = a.order?.status;
-              const isPendingPayment = !!a.order_id && orderStatus && !paidStatuses.has(orderStatus);
+              const orderStatus = a.order_status;
+              const isPendingPayment = !!a.order_id && (!orderStatus || !paidStatuses.has(orderStatus));
               const canCancel =
                 a.status === "scheduled" &&
                 Date.now() <
@@ -154,23 +137,32 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
                   style={{ backgroundColor: "#1A1A1A" }}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold text-white/60">
-                      {stProfile?.avatar_url ? (
-                        <img src={stProfile.avatar_url} className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setOpenStudentId(a.student_id)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-bold text-white/60 hover:ring-2 hover:ring-primary/50"
+                    >
+                      {a.student_avatar_url ? (
+                        <img src={a.student_avatar_url} className="h-full w-full object-cover" alt={a.student_name || "Aluno"} />
                       ) : (
                         <UserIcon className="h-4 w-4" />
                       )}
-                    </div>
+                    </button>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-white truncate">
-                        {stProfile?.name || "Aluno"}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setOpenStudentId(a.student_id)}
+                        className="block max-w-full truncate text-left text-sm font-bold text-white hover:text-primary"
+                      >
+                        {a.student_name || "Aluno"}
+                      </button>
                       <p className="text-[11px] text-white/50 truncate">
-                        {a.professional_products?.name || "Consulta"}
+                        {a.product_name || "Consulta"}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-white/40">
-                        {studentCoachName && <span>Coach: <span className="text-white/70">{studentCoachName}</span></span>}
-                        {sellerName && <span>Vendido por: <span className="text-white/70">{sellerName}</span></span>}
+                        {a.student_coach_name && <span>Coach: <span className="text-white/70">{a.student_coach_name}</span></span>}
+                        {a.seller_name && <span>Vendido por: <span className="text-white/70">{a.seller_name}</span></span>}
+                        {a.order_number && <span>Pedido: <span className="text-white/70">{a.order_number}</span></span>}
                       </div>
                       <p className="mt-1 text-xs text-primary">{fmt(a.starts_at)}</p>
                     </div>
@@ -225,6 +217,12 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
             })
           )}
         </div>
+      )}
+      {openStudentId && (
+        <ProfessionalStudentDetailsModal
+          studentId={openStudentId}
+          onClose={() => setOpenStudentId(null)}
+        />
       )}
     </div>
   );
