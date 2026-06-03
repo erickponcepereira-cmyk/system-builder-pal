@@ -206,7 +206,11 @@ function StudentCardPage() {
             <p className="relative mt-3 text-center text-[11px] text-white/50">
               Apresente este QR para o seu coach registrar sua presença.
             </p>
-            {formattedValidUntil && (
+            {card.partnerBenefit ? (
+              <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
+                Acesso vitalício · Colaborador {card.partnerBenefit.partnerName}
+              </p>
+            ) : formattedValidUntil && (
               <p className="relative mt-1 text-center text-[11px] font-semibold text-primary">
                 Válida até {formattedValidUntil}
               </p>
