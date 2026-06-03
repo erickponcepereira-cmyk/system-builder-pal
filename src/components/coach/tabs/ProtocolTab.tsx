@@ -752,17 +752,16 @@ function InfoChip({ icon: Icon, label, value }: { icon: any; label: string; valu
   );
 }
 
-function ShortcutLink({ icon: Icon, label, to, fallback }: { icon: any; label: string; to: string | null; fallback: string }) {
-  const content = (
-    <div className="rounded-xl bg-white/5 p-3">
+function ShortcutButton({ icon: Icon, label, value, disabled, onClick }: { icon: any; label: string; value: string; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className="text-left rounded-xl bg-white/5 p-3 transition hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/5">
       <div className="mb-1 flex items-center gap-1.5">
         <Icon className="h-3.5 w-3.5 text-primary" />
         <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
       </div>
-      <p className="text-sm font-semibold text-white">{to ? "Abrir" : fallback}</p>
-    </div>
+      <p className="text-sm font-semibold text-white">{value}</p>
+    </button>
   );
-  return to ? <a href={to} className="block hover:opacity-80">{content}</a> : <div className="opacity-60">{content}</div>;
 }
 
 export default ProtocolTab;
