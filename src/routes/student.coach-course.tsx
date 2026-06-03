@@ -14,6 +14,9 @@ import {
   Users,
   Trophy,
   Award,
+  UserPlus,
+  Send,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +30,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
+import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/student/coach-course")({ component: CoachCoursePage });
 
 type CoachInfo = { name: string | null; phone: string | null; avatar_url: string | null };
+type ApplicationRow = { id: string; status: string; admin_notes: string | null; created_at: string | null };
 
 const ACTIVATION_PRICE = 179.9;
 
@@ -39,17 +44,29 @@ function CoachCoursePage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [userPhone, setUserPhone] = useState<string>("");
+  const [userCity, setUserCity] = useState<string>("");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [courseStatus, setCourseStatus] = useState<"pendente" | "em_andamento" | "concluido">("pendente");
   const [profileStatus, setProfileStatus] = useState<"nao_iniciada" | "concluida">("nao_iniciada");
   const [uplineCoach, setUplineCoach] = useState<CoachInfo | null>(null);
+  const [hasPurchased, setHasPurchased] = useState(false);
+  const [application, setApplication] = useState<ApplicationRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showApply, setShowApply] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderTotal, setOrderTotal] = useState<number>(ACTIVATION_PRICE);
+
+  // Application form state
+  const [motivation, setMotivation] = useState("");
+  const [experience, setExperience] = useState("");
+  const [selectedUpline, setSelectedUpline] = useState<CoachOption | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
 
   useEffect(() => {
     (async () => {
