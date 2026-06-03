@@ -162,8 +162,8 @@ function ProfessionalPanel() {
   }
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate", "network"];
-  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "appointments", "collaborators", "settings", "fitmind_calendar"];
-  const tabs = Array.from(new Set([...baseTabs, ...ensureTabs]));
+  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "appointments", "settings", "fitmind_calendar"];
+  const tabs = Array.from(new Set([...baseTabs, ...ensureTabs])).filter((t) => t !== "collaborators");
 
 
   return (
@@ -220,7 +220,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "wallet") return <WalletTab />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
-  if (tab === "collaborators") return <CollaboratorsTab coachId={info.coachId} displayName={info.name} />;
+  
   if (tab === "appointments") return <AppointmentsTab coachId={info.coachId} />;
 
   if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
