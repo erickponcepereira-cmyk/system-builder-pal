@@ -185,9 +185,10 @@ function Stat({ icon: Icon, label, value, hint }: { icon: typeof Users; label: s
   );
 }
 
-function PatentRow({ p, achieved, isCurrent, qualifying }: {
-  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number;
+function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt }: {
+  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number; achievedAt: string | null;
 }) {
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
   return (
     <div className={`rounded-xl p-3 ${isCurrent ? "ring-1 ring-primary/40" : ""}`}
       style={{ backgroundColor: isCurrent ? "rgba(255,66,48,0.06)" : "#0F0F0F" }}>
@@ -204,12 +205,23 @@ function PatentRow({ p, achieved, isCurrent, qualifying }: {
             {isCurrent && (
               <span className="text-[9px] font-bold rounded-full bg-primary/20 px-2 py-0.5 text-primary">ATUAL</span>
             )}
+            {achieved && !isCurrent && (
+              <span className="text-[9px] font-bold rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-400">CONQUISTADA</span>
+            )}
+            {!achieved && (
+              <span className="text-[9px] font-bold rounded-full bg-white/5 px-2 py-0.5 text-white/40">BLOQUEADA</span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-[10px] text-white/50">
             <span className="inline-flex items-center gap-1"><Star className="h-2.5 w-2.5" />{p.required_revenue > 0 ? fmtBRL(p.required_revenue) : "Cadastro"}</span>
             <span className="inline-flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{p.time_window_months === 1 ? "mensal" : `${p.time_window_months} meses`}</span>
             {p.vp_max_pct != null && p.vp_max_pct < 100 && (
               <span>VP até {p.vp_max_pct}% · VE {(100 - p.vp_max_pct).toFixed(1)}%</span>
+            )}
+            {achievedAt && (
+              <span className="inline-flex items-center gap-1 text-emerald-400/80">
+                <Check className="h-2.5 w-2.5" /> Conquistada em {fmtDate(achievedAt)}
+              </span>
             )}
           </div>
           {p.description && <p className="text-[10px] text-white/40 mt-1">{p.description}</p>}
