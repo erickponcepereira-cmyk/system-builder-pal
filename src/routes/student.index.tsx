@@ -306,21 +306,6 @@ function StudentHome() {
         )}
       </Link>
 
-      {/* Mini stats */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-lg font-bold text-white">—</p>
-          <p className="mt-0.5 text-[10px] text-white/40">kg perdidos</p>
-        </div>
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-lg font-bold text-white">—</p>
-          <p className="mt-0.5 text-[10px] text-white/40">aulas feitas</p>
-        </div>
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-lg font-bold text-primary">{tokens}</p>
-          <p className="mt-0.5 text-[10px] text-white/40">moedas</p>
-        </div>
-      </div>
     </div>
   );
 }
