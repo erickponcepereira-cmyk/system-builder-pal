@@ -392,7 +392,19 @@ function buildSteps(form: FormState, update: <K extends keyof FormState>(k: K, v
     { section: "Histórico médico", title: "Histórico de cirurgias", help: "Cite cirurgias relevantes e quando aconteceram.", render: () => text("surgical_history", "Ex: apendicectomia em 2018...") },
     { section: "Histórico médico", title: "Uso atual de medicamentos", render: () => text("current_medications", "Liste medicamentos e dosagem...") },
     { section: "Histórico médico", title: "Faz ou já fez uso de suplementos?", help: "Se sim, quais?", render: () => text("supplements_used", "Ex: whey protein, creatina, ômega 3...") },
-    { section: "Histórico médico", title: "Alergias alimentares ou intolerâncias", render: () => text("food_allergies", "Ex: lactose, glúten, frutos do mar...") },
+    { section: "Histórico médico", title: "Alergias alimentares", render: () => text("food_allergies", "Ex: lactose, glúten, frutos do mar...") },
+    { section: "Histórico médico", title: "Intolerâncias alimentares", help: "Diferente de alergia — alimentos que causam desconforto digestivo.", render: () => text("food_intolerances", "Ex: lactose, frutose, FODMAPs...") },
+    { section: "Histórico médico", title: "Qual seu tipo sanguíneo?", render: () => choice("blood_type", [
+      { value: "A+", label: "A+" }, { value: "A-", label: "A-" },
+      { value: "B+", label: "B+" }, { value: "B-", label: "B-" },
+      { value: "AB+", label: "AB+" }, { value: "AB-", label: "AB-" },
+      { value: "O+", label: "O+" }, { value: "O-", label: "O-" },
+      { value: "nao_sei", label: "Não sei" },
+    ]) },
+    { section: "Histórico médico", title: "Você tem diabetes?", render: () => boolChoice("has_diabetes") },
+    { section: "Histórico médico", title: "Você tem hipertensão?", render: () => boolChoice("has_hypertension") },
+    { section: "Histórico médico", title: "Você tem cardiopatia?", render: () => boolChoice("has_cardiopathy") },
+    { section: "Histórico médico", title: "Outras condições crônicas", help: "Tireoide, asma, autoimunes, etc. Deixe em branco se não tiver.", render: () => text("other_chronic_conditions", "Descreva...") },
 
     // Objetivos
     { section: "Objetivos", title: "Qual o principal motivo da sua participação no protocolo?", render: () => text("protocol_reason", "Conte sua motivação...") },
