@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { X, Loader2, ShoppingBag } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 
 type Kind = "partner" | "professional";
 
@@ -19,6 +20,9 @@ type Card = {
   category_id: string | null;
   seller: string;
   kind: Kind;
+  isSchedulable?: boolean;
+  professionalCoachId?: string | null;
+  durationMinutes?: number;
 };
 
 const money = (v: number) =>
@@ -33,6 +37,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selected, setSelected] = useState<Card | null>(null);
   const [buying, setBuying] = useState(false);
+  const [slot, setSlot] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -63,15 +68,18 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       } else {
         const { data } = await supabase
           .from("professional_products" as never)
-          .select("id,name,description,image_url,price,section_id,category_id,coach_id,coaches(name)")
+          .select("id,name,description,image_url,price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coaches(name)")
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coaches?: { name: string | null } | null }>) || []).map((r) => ({
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coaches?: { name: string | null } | null }>) || []).map((r) => ({
             id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price),
             section_id: r.section_id, category_id: r.category_id,
             seller: r.coaches?.name || "Profissional",
             kind: "professional",
+            isSchedulable: !!r.is_schedulable,
+            professionalCoachId: r.coach_id,
+            durationMinutes: r.default_duration_minutes ?? 30,
           })),
         );
       }
@@ -85,14 +93,30 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       toast.info("Compras de produtos de empresas parceiras acontecem na loja principal.");
       return;
     }
+    if (selected.isSchedulable && !slot) {
+      toast.error("Selecione um horário para agendar.");
+      return;
+    }
     setBuying(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const { data: ppId, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
-        _professional_product_id: selected.id,
-        _payment_method: method,
-      } as never);
-      if (ppErr) throw new Error(ppErr.message);
+      let ppId: string | null = null;
+      if (selected.isSchedulable && slot) {
+        const { data, error } = await supabase.rpc("create_scheduled_professional_order" as never, {
+          _professional_product_id: selected.id,
+          _starts_at: slot,
+          _payment_method: method,
+        } as never);
+        if (error) throw new Error(error.message);
+        ppId = data as unknown as string;
+      } else {
+        const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
+          _professional_product_id: selected.id,
+          _payment_method: method,
+        } as never);
+        if (error) throw new Error(error.message);
+        ppId = data as unknown as string;
+      }
       if (!ppId) throw new Error("Pedido não retornado");
       const { data: od } = await supabase
         .from("partner_product_orders" as never)
@@ -108,6 +132,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
         name: (userData.user?.user_metadata as { name?: string } | undefined)?.name || "",
       });
       setSelected(null);
+      setSlot(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
       toast.error(msg);
@@ -197,7 +222,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
       {selected && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
-          onClick={() => setSelected(null)}
+          onClick={() => { setSelected(null); setSlot(null); }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -212,7 +237,7 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                 </div>
               )}
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); setSlot(null); }}
                 className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
               >
                 <X className="h-4 w-4" />
@@ -229,6 +254,14 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição</p>
                   <p className="mt-1 whitespace-pre-line text-sm text-foreground">{selected.description}</p>
                 </div>
+              )}
+              {selected.isSchedulable && selected.professionalCoachId && (
+                <AvailabilityPicker
+                  professionalCoachId={selected.professionalCoachId}
+                  durationMinutes={selected.durationMinutes || 30}
+                  value={slot}
+                  onChange={setSlot}
+                />
               )}
               {selected.kind === "partner" ? (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80">
