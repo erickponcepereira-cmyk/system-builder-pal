@@ -283,24 +283,29 @@ function ProfilePage() {
 
       {/* Carteira */}
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
-            <p className="mt-1 text-2xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
-            <p className="text-[11px] text-white/40">+ R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente · total R$ {wallet.total_earned.toFixed(2).replace(".", ",")}</p>
-          </div>
-          <button onClick={() => setWithdrawOpen(true)} className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15">
-            <Wallet className="h-5 w-5 text-primary" />
-          </button>
-        </div>
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-          <span className="truncate font-mono text-xs text-white/60">{referralLink}</span>
-          <button onClick={copyReferral} className="text-xs font-bold text-primary">Copiar</button>
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
+        <p className="mt-1 text-3xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
+        <p className="text-[11px] text-white/40">+ R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente · total ganho R$ {wallet.total_earned.toFixed(2).replace(".", ",")}</p>
+        <button
+          onClick={() => setWithdrawOpen(true)}
+          disabled={wallet.available_balance < 50}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+        >
+          <Wallet className="h-4 w-4" />
+          Solicitar saque
+        </button>
+        {wallet.available_balance < 50 && (
+          <p className="mt-2 text-center text-[10px] text-white/40">Saque mínimo R$ 50,00</p>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+        <button
+          type="button"
+          onClick={() => setShowReferralsModal(true)}
+          className="rounded-2xl p-4 text-left transition hover:bg-white/5"
+          style={{ backgroundColor: "#1A1A1A" }}
+        >
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">Minhas indicações</h2>
             <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">{referrals.length}</span>
@@ -308,16 +313,22 @@ function ProfilePage() {
           {referrals.length === 0 ? (
             <p className="text-xs text-white/45">Nenhum amigo entrou pelo seu link ainda.</p>
           ) : (
-            <div className="space-y-2">
-              {referrals.slice(0, 4).map((referral) => (
-                <div key={referral.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-white">{referral.profiles?.name || "Aluno indicado"}</p>
-                    <p className="truncate text-[10px] text-white/40">{referral.profiles?.email || "cadastro confirmado"}</p>
+            <>
+              <div className="space-y-2">
+                {referrals.slice(0, 3).map((referral) => (
+                  <div key={referral.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-white">{referral.profiles?.name || "Aluno indicado"}</p>
+                      <p className="truncate text-[10px] text-white/40">{referral.profiles?.email || "cadastro confirmado"}</p>
+                    </div>
+                    <span className="text-[10px] text-white/35">{referral.created_at ? new Date(referral.created_at).toLocaleDateString("pt-BR") : "—"}</span>
                   </div>
-                  <span className="text-[10px] text-white/35">{referral.created_at ? new Date(referral.created_at).toLocaleDateString("pt-BR") : "—"}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+              <p className="mt-3 text-center text-[10px] font-bold text-primary">Ver comissões →</p>
+            </>
+          )}
+        </button>
             </div>
           )}
         </div>
