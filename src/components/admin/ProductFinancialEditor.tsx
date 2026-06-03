@@ -336,17 +336,8 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
         </div>
       </div>
 
-      <ReferralSection
-        referralRule={data.referralRule}
-        onChange={(rr) => setData({ ...data, referralRule: rr })}
-        gross={data.product.price}
-        feePct={dist.payment_fee_pct}
-        feeAmt={dist.payment_fee_amount}
-        taxAmt={dist.tax_amount}
-        base={dist.base_distributable}
-        slots={data.slots}
-        method={previewMethod}
-      />
+      {/* Bloco antigo "Indicação aluno → aluno" removido.
+          Agora a indicação é controlada pela checkbox "Indicação" em cada slot acima. */}
 
       <div className="flex justify-end gap-2 pt-4 mt-6 border-t border-white/10">
         <button type="button" onClick={handleSave} disabled={saving}

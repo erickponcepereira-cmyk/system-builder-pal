@@ -379,18 +379,8 @@ function ProductFinancialDrawer({
               </div>
             </div>
 
-            {/* Indicação */}
-            <ReferralSection
-              referralRule={data.referralRule}
-              onChange={(rr) => setData({ ...data, referralRule: rr })}
-              gross={data.product.price}
-              feePct={dist.payment_fee_pct}
-              feeAmt={dist.payment_fee_amount}
-              taxAmt={dist.tax_amount}
-              base={dist.base_distributable}
-              slots={data.slots}
-              method={previewMethod}
-            />
+            {/* Bloco antigo "Indicação aluno → aluno" removido.
+                Indicação agora é controlada pela checkbox "Indicação" em cada slot acima. */}
 
             <div className="flex justify-end gap-2 sticky bottom-0 py-3 mt-6" style={{ backgroundColor: "#0F0F0F" }}>
               <button onClick={onClose} className="rounded-md bg-white/5 hover:bg-white/10 px-4 py-2 text-sm">Cancelar</button>

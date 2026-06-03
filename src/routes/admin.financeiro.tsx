@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X, Receipt, CreditCard, CheckCircle2, Users } from "lucide-react";
+import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X, Receipt, CreditCard, CheckCircle2, Users, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
@@ -20,6 +20,7 @@ import {
   type FeesAndTaxesOverview,
   type PendingFeeRow,
 } from "@/lib/admin-financial.functions";
+import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
 
 export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
 
@@ -106,15 +107,18 @@ function AdminFinanceiro() {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Financeiro</h1>
-        <p className="text-sm text-white/50">
-          Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
-          Clique em um bucket para ver as vendas que originaram os valores.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Financeiro</h1>
+          <p className="text-sm text-white/50">
+            Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
+            Clique em um bucket para ver as vendas que originaram os valores.
+          </p>
+        </div>
+        <ReconcileButton onDone={reload} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4 mb-6">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
         <BucketCard
           title="Coaches a pagar"
           subtitle="Comissões diretas dos vendedores"
@@ -134,6 +138,16 @@ function AdminFinanceiro() {
           paid={data.network.paid}
           accent="#F09595"
           onClick={() => openBucket("network", "Rede (uplines) a pagar")}
+        />
+        <BucketCard
+          title="Alunos Indicadores"
+          subtitle="Comissões de indicação aluno → aluno"
+          icon={Users}
+          pending={data.referrals.pending}
+          available={data.referrals.available}
+          paid={data.referrals.paid}
+          accent="#34D399"
+          onClick={() => openBucket("referrals", "Alunos Indicadores")}
         />
         <BucketCard
           title="Nutricionistas"
@@ -550,5 +564,113 @@ function RecipientsTable({ title, rows, kind, onPay }: {
         </table>
       </div>
     </section>
+  );
+}
+
+function ReconcileButton({ onDone }: { onDone: () => void }) {
+  const callReconcile = useServerFn(reconcileMpPayment);
+  const fetchPending = useServerFn(listPendingMpPayments);
+  const [open, setOpen] = useState(false);
+  const [mpId, setMpId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<Awaited<ReturnType<typeof fetchPending>> | null>(null);
+
+  const loadPending = () => fetchPending().then(setPending).catch(() => setPending([]));
+
+  const run = async (id: string) => {
+    setBusy(true);
+    try {
+      const r = await callReconcile({ data: { mpPaymentId: id } });
+      toast.success(`${r.message} • ${money(r.amount)}`);
+      onDone();
+      loadPending();
+      setMpId("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao reconciliar");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => { setOpen(true); loadPending(); }}
+        className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"
+      >
+        <RefreshCw className="h-3.5 w-3.5" /> Reconciliar pagamento MP
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-3xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Reconciliar pagamentos Mercado Pago</h2>
+                <p className="text-xs text-white/50">Consulta a API do MP e sincroniza pagamentos que não foram atualizados via webhook.</p>
+              </div>
+              <button onClick={() => setOpen(false)} className="rounded p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="mb-5 flex gap-2">
+              <input
+                value={mpId}
+                onChange={(e) => setMpId(e.target.value)}
+                placeholder="ID do pagamento MP (ex: 162149996496)"
+                className="flex-1 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => mpId && run(mpId)}
+                disabled={!mpId || busy}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reconciliar"}
+              </button>
+            </div>
+            <h3 className="mb-2 text-xs uppercase tracking-wider text-white/40">Pendentes há mais de 5 min</h3>
+            {pending === null ? (
+              <div className="flex justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : pending.length === 0 ? (
+              <p className="text-sm text-white/40">Nenhum pagamento pendente.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] uppercase text-white/40">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Criado</th>
+                      <th className="px-2 py-1 text-left">MP ID</th>
+                      <th className="px-2 py-1 text-left">Origem</th>
+                      <th className="px-2 py-1 text-left">Email</th>
+                      <th className="px-2 py-1 text-right">Valor</th>
+                      <th className="px-2 py-1 text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pending.map((p) => (
+                      <tr key={p.id} className="border-t border-white/5">
+                        <td className="px-2 py-1.5 text-white/70">{new Date(p.created_at).toLocaleString("pt-BR")}</td>
+                        <td className="px-2 py-1.5 font-mono text-white/80">{p.mp_payment_id || "—"}</td>
+                        <td className="px-2 py-1.5 text-white/60">{p.source_kind}</td>
+                        <td className="px-2 py-1.5 text-white/60">{p.payer_email || "—"}</td>
+                        <td className="px-2 py-1.5 text-right font-bold text-primary">{money(Number(p.amount))}</td>
+                        <td className="px-2 py-1.5 text-right">
+                          {p.mp_payment_id && (
+                            <button
+                              onClick={() => run(p.mp_payment_id!)}
+                              disabled={busy}
+                              className="rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-30"
+                            >
+                              Sincronizar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
