@@ -85,6 +85,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [salesHistory, setSalesHistory] = useState<CoachSaleRow[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [isMasterCoach, setIsMasterCoach] = useState(false);
 
   // Indicação aluno→aluno
   const [myReferralCode, setMyReferralCode] = useState<string | null>(null);
