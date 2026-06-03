@@ -267,13 +267,21 @@ export function ProtocolTab() {
     }
 
     if (!s.external) {
-      const { data: bio } = await supabase.from("bioimpedance_evaluations").select("id").eq("student_id", s.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      setBioEvalUrl(bio ? `/admin/students?student=${s.id}` : null);
+      const { data: bio } = await supabase
+        .from("coach_body_assessments")
+        .select("id, weight")
+        .eq("student_id", s.id)
+        .order("assessment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setHasBio(!!bio);
+      setLastBioWeight(bio?.weight ?? null);
       const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
-      setAnamnesisUrl(an ? `/admin/students?student=${s.id}` : null);
+      setHasAnamnesis(!!an);
     } else {
-      setBioEvalUrl(null);
-      setAnamnesisUrl(null);
+      setHasBio(false);
+      setHasAnamnesis(false);
+      setLastBioWeight(null);
     }
 
     setLoading(false);
