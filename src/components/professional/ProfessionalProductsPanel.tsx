@@ -33,6 +33,9 @@ interface ProProduct {
   network_l3_amount?: number;
   section_id?: string | null;
   category_id?: string | null;
+  is_schedulable?: boolean;
+  default_duration_minutes?: number;
+  cancellation_window_hours?: number;
 }
 
 export default function ProfessionalProductsPanel({ coachId }: { coachId: string }) {
@@ -63,6 +66,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     professional_net_amount: 0,
     section_id: null,
     category_id: null,
+    is_schedulable: false,
+    default_duration_minutes: 30,
+    cancellation_window_hours: 24,
   });
 
   const upload = async (file: File) => {
@@ -239,6 +245,51 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               <Field label="Instruções de resgate">
                 <textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Como o aluno usa o produto após pagar" />
               </Field>
+
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-primary cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!editing.is_schedulable}
+                    onChange={(e) => setEditing({ ...editing, is_schedulable: e.target.checked })}
+                  />
+                  Produto agendável (consulta / atendimento)
+                </label>
+                {editing.is_schedulable && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Duração (min)">
+                      <input
+                        type="number"
+                        min={5}
+                        max={240}
+                        step={5}
+                        value={editing.default_duration_minutes ?? 30}
+                        onChange={(e) =>
+                          setEditing({ ...editing, default_duration_minutes: Number(e.target.value) || 30 })
+                        }
+                        className="field-input"
+                      />
+                    </Field>
+                    <Field label="Janela cancelar (h)">
+                      <input
+                        type="number"
+                        min={0}
+                        max={168}
+                        value={editing.cancellation_window_hours ?? 24}
+                        onChange={(e) =>
+                          setEditing({ ...editing, cancellation_window_hours: Number(e.target.value) || 24 })
+                        }
+                        className="field-input"
+                      />
+                    </Field>
+                  </div>
+                )}
+                {editing.is_schedulable && (
+                  <p className="text-[10px] text-white/50">
+                    Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
+                  </p>
+                )}
+              </div>
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
