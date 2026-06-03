@@ -5937,6 +5937,38 @@ export type Database = {
           },
         ]
       }
+      professional_availability_blocks: {
+        Row: {
+          block_date: string
+          created_at: string
+          id: string
+          professional_coach_id: string
+          reason: string | null
+        }
+        Insert: {
+          block_date: string
+          created_at?: string
+          id?: string
+          professional_coach_id: string
+          reason?: string | null
+        }
+        Update: {
+          block_date?: string
+          created_at?: string
+          id?: string
+          professional_coach_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_blocks_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_products: {
         Row: {
           admin_notes: string | null
