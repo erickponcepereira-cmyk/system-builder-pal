@@ -156,9 +156,12 @@ export function SettingsTab({ coachId, profileId }: Props) {
       <div className="mb-4 flex gap-2">
         <button onClick={() => setTab("profile")} className={`rounded-lg px-4 py-2 text-sm font-bold ${tab === "profile" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>Perfil público</button>
         <button onClick={() => setTab("questions")} className={`rounded-lg px-4 py-2 text-sm font-bold ${tab === "questions" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>Perguntas da anamnese</button>
+        <button onClick={() => setTab("agenda")} className={`rounded-lg px-4 py-2 text-sm font-bold ${tab === "agenda" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>Agenda</button>
       </div>
 
-      {tab === "profile" ? (
+      {tab === "agenda" ? (
+        <AvailabilityEditor coachId={coachId} />
+      ) : tab === "profile" ? (
         <div className="rounded-2xl p-5 space-y-5" style={{ backgroundColor: "#1A1A1A" }}>
           {/* Avatar */}
           <div className="flex items-center gap-4">
