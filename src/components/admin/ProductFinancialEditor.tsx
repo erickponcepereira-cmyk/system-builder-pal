@@ -226,11 +226,26 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
         taxPct={taxPct}
         selected={previewMethod}
         onSelect={setPreviewMethod}
+        simMode={simMode}
       />
 
       <div className={`grid grid-cols-1 ${compact ? "" : "lg:grid-cols-2"} gap-4`}>
         <div>
-          <SectionLabel>Distribuição da venda normal</SectionLabel>
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+            <SectionLabel>
+              {simMode === "direct" ? "Distribuição da venda direta" : "Distribuição da venda aluno → aluno"}
+            </SectionLabel>
+            <div className="inline-flex rounded-md border border-white/10 overflow-hidden text-[10px] font-medium uppercase tracking-wider">
+              <button type="button" onClick={() => setSimMode("direct")}
+                className={`px-2.5 py-1 transition ${simMode === "direct" ? "bg-[#E24B4A] text-white" : "bg-transparent text-white/60 hover:text-white"}`}>
+                Venda direta
+              </button>
+              <button type="button" onClick={() => setSimMode("referral")}
+                className={`px-2.5 py-1 transition ${simMode === "referral" ? "bg-[#E24B4A] text-white" : "bg-transparent text-white/60 hover:text-white"}`}>
+                Aluno → Aluno
+              </button>
+            </div>
+          </div>
           <div className="rounded-lg p-3" style={{ backgroundColor: "#161616" }}>
             <div className="space-y-2">
               {sortedSlots.map((s, idx) => (
