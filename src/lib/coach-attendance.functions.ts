@@ -258,6 +258,7 @@ export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
         .eq("student_id", data.studentId)
         .eq("attended", true)
         .gte("log_date", cutoffDate)
+        .neq("activity_type", "partner_visit")
         .order("log_date", { ascending: false }),
       supabaseAdmin
         .from("partner_visits")
@@ -301,11 +302,13 @@ export const getStudentAttendanceDetail = createServerFn({ method: "GET" })
         source: "app" as const,
         label: l.activity_type ? `App · ${l.activity_type}` : "Check-in pelo app",
       })),
-      ...((visits as { id: string; visited_at: string; partner_id: string }[]) || []).map((v) => ({
+      ...((visits as { id: string; visited_at: string; partner_id: string; source: string | null }[]) || []).map((v) => ({
         id: `visit-${v.id}`,
         at: v.visited_at,
         source: "freebie" as const,
-        label: partnerMap[v.partner_id] ? `Gratuito · ${partnerMap[v.partner_id]}` : "Gratuito (QR parceiro)",
+        label: partnerMap[v.partner_id]
+          ? `${v.source === "partner_scan" ? "Parceiro" : "Gratuito"} · ${partnerMap[v.partner_id]}`
+          : v.source === "partner_scan" ? "Visita ao parceiro" : "Gratuito (QR parceiro)",
       })),
     ].sort((a, b) => b.at.localeCompare(a.at));
 

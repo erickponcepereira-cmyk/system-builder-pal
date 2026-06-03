@@ -167,6 +167,7 @@ function PartnerPanel() {
 
 function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number }) {
   const approved = products.filter(p => p.status === "approved" && p.is_active_by_partner).length;
+  const [showVisits, setShowVisits] = useState(false);
   return (
     <div className="space-y-3">
       {!hasActiveFree && (
@@ -175,7 +176,9 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         </div>
       )}
       <div className="grid grid-cols-3 gap-2">
-        <Stat label="Visitas" value={visits} />
+        <button onClick={() => setShowVisits(true)} className="text-left">
+          <Stat label="Visitas (clique p/ ver)" value={visits} />
+        </button>
         <Stat label="Produtos ativos" value={approved} />
         <Stat label="Pendentes" value={pendingCount} />
       </div>
@@ -183,6 +186,7 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         <p className="text-xs text-white/40 mb-2">Bem-vindo(a), {partner.fantasy_name}</p>
         <p className="text-sm text-white/70">Use as abas para gerenciar produtos, timeline, QR code de presença e seu perfil público.</p>
       </div>
+      {showVisits && <PartnerVisitsModal onClose={() => setShowVisits(false)} />}
     </div>
   );
 }
@@ -195,6 +199,7 @@ function Stat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
 
 
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
@@ -872,6 +877,104 @@ function CollaboratorsPanel({ partner }: { partner: Partner }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PartnerVisitsModal({ onClose }: { onClose: () => void }) {
+  const [rows, setRows] = useState<import("@/lib/partner-visits.functions").PartnerVisitRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [month, setMonth] = useState<string>("all");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getMyPartnerVisits } = await import("@/lib/partner-visits.functions");
+        const data = await getMyPartnerVisits();
+        setRows(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const months = Array.from(new Set(rows.map((r) => r.visited_at.slice(0, 7)))).sort().reverse();
+
+  const filtered = rows.filter((r) => {
+    if (month !== "all" && r.visited_at.slice(0, 7) !== month) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (!`${r.student_name} ${r.student_email || ""} ${r.coach_name || ""}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const totalUnique = new Set(filtered.map((r) => r.student_id)).size;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2 sm:p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl rounded-2xl border border-white/10 max-h-[90vh] flex flex-col" style={{ backgroundColor: "#111" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <h3 className="text-base font-bold text-white">Visitas registradas</h3>
+            <p className="text-[11px] text-white/50">{filtered.length} visita(s) · {totalUnique} aluno(s) único(s)</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1 text-white/60 hover:bg-white/5"><X className="h-5 w-5" /></button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 px-4 py-3 border-b border-white/5">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome ou coach..."
+            className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30"
+          />
+          <select
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none"
+          >
+            <option value="all">Todos os meses</option>
+            {months.map((m) => {
+              const [y, mo] = m.split("-");
+              const label = new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+              return <option key={m} value={m}>{label}</option>;
+            })}
+          </select>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3">
+          {loading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-white/50 py-10">Nenhuma visita no filtro selecionado.</p>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+                  {r.student_photo ? (
+                    <img src={r.student_photo} alt={r.student_name} className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center text-primary text-sm font-bold">
+                      {r.student_name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{r.student_name}</p>
+                    <p className="text-[11px] text-white/50 truncate">
+                      Coach: {r.coach_name || "—"} · Total: {r.student_visit_count} visita{r.student_visit_count !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-white/50 shrink-0">{new Date(r.visited_at).toLocaleString("pt-BR")}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
