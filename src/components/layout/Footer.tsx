@@ -10,6 +10,11 @@ export function Footer() {
           </div>
           <span className="font-semibold text-foreground">FitMind Club</span>
         </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <a href="/termos" className="hover:text-foreground">Termos de Uso</a>
+          <a href="/termos-compra" className="hover:text-foreground">Termos de Compra</a>
+          <a href="/privacidade" className="hover:text-foreground">Privacidade</a>
+        </div>
         <p className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} FitMind Club. Todos os direitos reservados.
         </p>

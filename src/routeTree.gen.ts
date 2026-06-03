@@ -9,10 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosCompraRouteImport } from './routes/termos-compra'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as StudentRouteImport } from './routes/student'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfessionalRouteImport } from './routes/professional'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -89,6 +92,16 @@ import { Route as ApiPublicCareerResetExpiredRouteImport } from './routes/api/pu
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
 import { Route as ApiOauthGoogleCallbackRouteImport } from './routes/api.oauth.google.callback'
 
+const TermosCompraRoute = TermosCompraRouteImport.update({
+  id: '/termos-compra',
+  path: '/termos-compra',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
   path: '/student',
@@ -107,6 +120,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const ProfessionalRoute = ProfessionalRouteImport.update({
   id: '/professional',
   path: '/professional',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PendingApprovalRoute = PendingApprovalRouteImport.update({
@@ -499,10 +517,13 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/termos': typeof TermosRoute
+  '/termos-compra': typeof TermosCompraRoute
   '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -579,9 +600,12 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/termos': typeof TermosRoute
+  '/termos-compra': typeof TermosCompraRoute
   '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -660,10 +684,13 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
+  '/termos': typeof TermosRoute
+  '/termos-compra': typeof TermosCompraRoute
   '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -743,10 +770,13 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
+    | '/privacidade'
     | '/professional'
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/termos'
+    | '/termos-compra'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
@@ -823,9 +853,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
+    | '/privacidade'
     | '/professional'
     | '/register'
     | '/reset-password'
+    | '/termos'
+    | '/termos-compra'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
@@ -903,10 +936,13 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
+    | '/privacidade'
     | '/professional'
     | '/register'
     | '/reset-password'
     | '/student'
+    | '/termos'
+    | '/termos-compra'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
@@ -985,10 +1021,13 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ProfessionalRoute: typeof ProfessionalRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
+  TermosRoute: typeof TermosRoute
+  TermosCompraRoute: typeof TermosCompraRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PartnerCheckinPartnerIdRoute: typeof PartnerCheckinPartnerIdRoute
@@ -1006,6 +1045,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos-compra': {
+      id: '/termos-compra'
+      path: '/termos-compra'
+      fullPath: '/termos-compra'
+      preLoaderRoute: typeof TermosCompraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/student': {
       id: '/student'
       path: '/student'
@@ -1032,6 +1085,13 @@ declare module '@tanstack/react-router' {
       path: '/professional'
       fullPath: '/professional'
       preLoaderRoute: typeof ProfessionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pending-approval': {
@@ -1726,10 +1786,13 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
   PendingApprovalRoute: PendingApprovalRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ProfessionalRoute: ProfessionalRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
+  TermosRoute: TermosRoute,
+  TermosCompraRoute: TermosCompraRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   InviteTokenRoute: InviteTokenRoute,
   PartnerCheckinPartnerIdRoute: PartnerCheckinPartnerIdRoute,
