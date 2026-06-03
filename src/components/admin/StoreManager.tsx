@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Trash2, Pencil, Save, X, ChevronDown, ChevronRight, FolderTree } from "lucide-react";
+import { Loader2, Plus, Trash2, Pencil, Save, X, ChevronDown, ChevronRight, FolderTree, CheckCircle2 } from "lucide-react";
 
 interface Section {
   id: string;
@@ -12,6 +12,7 @@ interface Section {
   is_active: boolean;
   card_width: number | null;
   card_height: number | null;
+  pending?: boolean | null;
 }
 interface Category {
   id: string;
@@ -24,6 +25,7 @@ interface Category {
   is_active: boolean;
   card_width: number | null;
   card_height: number | null;
+  pending?: boolean | null;
 }
 
 function slugify(s: string) {
@@ -116,6 +118,15 @@ export function StoreManager() {
     load();
   };
 
+  const approveSection = async (id: string) => {
+    await supabase.from("store_sections").update({ pending: false, is_active: true }).eq("id", id);
+    load();
+  };
+  const approveCategory = async (id: string) => {
+    await supabase.from("store_categories").update({ pending: false, is_active: true }).eq("id", id);
+    load();
+  };
+
   if (loading) {
     return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -189,9 +200,17 @@ export function StoreManager() {
                       <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10" />
                     )}
                     <div className="flex-1">
-                      <div className="font-semibold text-white">{s.name}</div>
+                      <div className="font-semibold text-white flex items-center gap-2">
+                        {s.name}
+                        {s.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
+                      </div>
                       <div className="text-xs text-white/40">/{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s)</div>
                     </div>
+                    {s.pending && (
+                      <button onClick={() => approveSection(s.id)} className="flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-xs font-bold text-green-400 hover:bg-green-500/25">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Aprovar
+                      </button>
+                    )}
                     <button onClick={() => { setEditingSection(s.id); setDraftSection(s); }} className="rounded-lg bg-white/5 p-2 text-white/70 hover:text-white"><Pencil className="h-4 w-4" /></button>
                     <button onClick={() => deleteSection(s.id)} className="rounded-lg bg-red-500/10 p-2 text-red-400 hover:bg-red-500/20"><Trash2 className="h-4 w-4" /></button>
                   </>
@@ -223,7 +242,16 @@ export function StoreManager() {
                             ) : (
                               <div className="h-8 w-8 rounded-md bg-white/5 border border-white/10" />
                             )}
-                            <div className="flex-1 text-sm text-white">{c.name} <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"}</span></div>
+                            <div className="flex-1 text-sm text-white flex items-center gap-2">
+                              {c.name}
+                              {c.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
+                              <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"}</span>
+                            </div>
+                            {c.pending && (
+                              <button onClick={() => approveCategory(c.id)} className="flex items-center gap-1 rounded-md bg-green-500/15 px-2 py-1.5 text-[11px] font-bold text-green-400 hover:bg-green-500/25">
+                                <CheckCircle2 className="h-3 w-3" /> Aprovar
+                              </button>
+                            )}
                             <button onClick={() => { setEditingCategory(c.id); setDraftCategory(c); }} className="rounded-md bg-white/5 p-1.5 text-white/70 hover:text-white"><Pencil className="h-3.5 w-3.5" /></button>
                             <button onClick={() => deleteCategory(c.id)} className="rounded-md bg-red-500/10 p-1.5 text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
                           </>
