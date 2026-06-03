@@ -58,8 +58,12 @@ export const createCardCheckout = createServerFn({ method: "POST" })
     }).parse(input)
   )
   .handler(async ({ data }) => {
-    const { handleCreateCard } = await import("./mercadopago-impl.server");
-    return handleCreateCard(data);
+    try {
+      const { handleCreateCard } = await import("./mercadopago-impl.server");
+      return await handleCreateCard(data);
+    } catch (e) {
+      throw new Error(cleanCheckoutError(e));
+    }
   });
 
 /** Consulta status atual do pagamento (para polling no frontend). */
