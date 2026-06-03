@@ -422,9 +422,9 @@ export function ProtocolTab() {
 
           {/* Atalhos rápidos */}
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <ShortcutLink icon={FileText} label="Anamnese" to={anamnesisUrl} fallback="Sem registro" />
-            <ShortcutLink icon={Activity} label="Bioimpedância" to={bioEvalUrl} fallback="Sem registro" />
-            <InfoChip icon={Target} label="Peso atual" value={selected.current_weight ? `${selected.current_weight} kg` : "—"} />
+            <ShortcutButton icon={FileText} label="Anamnese" value={hasAnamnesis ? "Ver registro" : "Sem registro"} disabled={selected.external || !hasAnamnesis} onClick={() => setDetailsTab("anamnese")} />
+            <ShortcutButton icon={Activity} label="Bioimpedância" value={hasBio ? "Ver avaliações" : "Sem registro"} disabled={selected.external || !hasBio} onClick={() => setDetailsTab("avaliacoes")} />
+            <InfoChip icon={Target} label="Peso atual" value={lastBioWeight != null ? `${lastBioWeight} kg` : (selected.current_weight ? `${selected.current_weight} kg` : "—")} />
             <InfoChip icon={Heart} label="Restrições" value={protocol.restrictions.length ? `${protocol.restrictions.length}` : "Nenhuma"} />
           </div>
 
