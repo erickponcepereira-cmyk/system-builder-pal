@@ -26,7 +26,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
-import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.server";
+import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/student/coach-course")({ component: CoachCoursePage });
