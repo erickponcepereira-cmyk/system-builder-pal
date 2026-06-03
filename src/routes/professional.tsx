@@ -163,7 +163,7 @@ function ProfessionalPanel() {
   }
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate", "network"];
-  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "appointments", "settings", "fitmind_calendar"];
+  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "store", "appointments", "settings", "fitmind_calendar"];
   const tabs = Array.from(new Set([...baseTabs, ...ensureTabs])).filter((t) => t !== "collaborators");
 
 
