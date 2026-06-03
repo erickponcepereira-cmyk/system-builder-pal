@@ -16,7 +16,7 @@ interface Row {
   price: number;
   image_url: string | null;
   coach_id: string;
-  coaches?: { name: string | null } | null;
+  coaches?: { profile?: { name: string | null } | null } | null;
 }
 
 function AdminProfessionalProducts() {
@@ -27,10 +27,11 @@ function AdminProfessionalProducts() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("professional_products" as never)
-      .select("id,name,status,price,image_url,coach_id,coaches(name)" as never)
+      .select("id,name,status,price,image_url,coach_id,coaches(profile:profiles(name))" as never)
       .order("created_at" as never, { ascending: false });
+    if (error) console.error("[admin pro products]", error);
     setRows((data as unknown as Row[]) || []);
     setLoading(false);
   };
