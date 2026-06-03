@@ -118,10 +118,6 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       toast.error("Selecione um horário para agendar.");
       return;
     }
-    if (mode === "reseller" && !resellerStudent?.id) {
-      toast.error("Selecione um aluno antes de adicionar ao carrinho.");
-      return;
-    }
     onAddToCart?.({ ...selected, scheduledSlot: slot });
     toast.success("Adicionado ao carrinho.");
     setSelected(null);
