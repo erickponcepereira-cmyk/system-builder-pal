@@ -60,16 +60,32 @@ function ReferralLandingPage() {
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
 
-      // Sempre forçar fluxo de aluno: se houver sessão ativa (admin/coach/outro),
-      // desloga para garantir que o indicado entre/cadastre como aluno na loja.
+      // Se já está logado: verifica o papel.
+      // - aluno → vai direto pra loja (mantém sessão)
+      // - outro papel (admin/coach/etc) → desloga e manda pro cadastro como aluno
       const { data: userData } = await supabase.auth.getUser();
+      let nextAction: "store" | "register" = "register";
       if (userData.user) {
-        await supabase.auth.signOut();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", userData.user.id)
+          .maybeSingle();
+        if (profile?.role === "student") {
+          nextAction = "store";
+        } else {
+          await supabase.auth.signOut();
+        }
       }
       setTimeout(() => {
+        if (nextAction === "store") {
+          navigate({ to: "/student/store" });
+          return;
+        }
         const targetRole = row.kind === "coach" ? "coach" : "student";
         navigate({ to: "/register", search: { role: targetRole } });
       }, 1200);
+
 
     })();
     return () => {
