@@ -16,7 +16,7 @@ interface Row {
   price: number;
   image_url: string | null;
   coach_id: string;
-  coaches?: { name: string | null } | null;
+  coaches?: { profile?: { name: string | null } | null } | null;
 }
 
 function AdminProfessionalProducts() {
@@ -27,10 +27,11 @@ function AdminProfessionalProducts() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("professional_products" as never)
-      .select("id,name,status,price,image_url,coach_id,coaches(name)" as never)
+      .select("id,name,status,price,image_url,coach_id,coaches(profile:profiles(name))" as never)
       .order("created_at" as never, { ascending: false });
+    if (error) console.error("[admin pro products]", error);
     setRows((data as unknown as Row[]) || []);
     setLoading(false);
   };
@@ -66,7 +67,7 @@ function AdminProfessionalProducts() {
               {p.image_url ? <img src={p.image_url} className="h-20 w-20 rounded object-cover" /> : <div className="h-20 w-20 rounded bg-white/5" />}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{p.name}</p>
-                <p className="text-[11px] text-white/50">{p.coaches?.name || "Profissional"} · R$ {Number(p.price).toFixed(2)}</p>
+                <p className="text-[11px] text-white/50">{p.coaches?.profile?.name || "Profissional"} · R$ {Number(p.price).toFixed(2)}</p>
                 <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary"><Eye className="h-3.5 w-3.5" /> Abrir para revisar</span>
               </div>
             </button>
@@ -79,7 +80,7 @@ function AdminProfessionalProducts() {
         <div className="space-y-1">
           {history.slice(0, 50).map((p) => (
             <button key={p.id} onClick={() => setOpenId(p.id)} className="w-full flex items-center justify-between rounded bg-white/5 px-3 py-2 text-xs hover:bg-white/10">
-              <span className="text-white truncate">{p.coaches?.name || "—"} · {p.name}</span>
+              <span className="text-white truncate">{p.coaches?.profile?.name || "—"} · {p.name}</span>
               <span className={p.status === "approved" ? "text-green-400" : p.status === "rejected" ? "text-red-400" : "text-white/50"}>{p.status}</span>
             </button>
           ))}

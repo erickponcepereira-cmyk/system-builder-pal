@@ -8040,15 +8040,19 @@ export type Database = {
         Returns: string
       }
       create_partner_product_order: {
-        Args: { _payment_method?: string; _professional_product_id: string }
+        Args: {
+          _buyer_student_id?: string
+          _payment_method?: string
+          _professional_product_id: string
+        }
         Returns: string
       }
       create_scheduled_professional_order: {
         Args: {
+          _buyer_student_id?: string
           _payment_method?: string
           _professional_product_id: string
           _starts_at: string
-          _student_id?: string
         }
         Returns: string
       }
