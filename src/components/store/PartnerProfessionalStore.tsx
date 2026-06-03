@@ -279,28 +279,39 @@ export function PartnerProfessionalStore({ kind }: { kind: Kind }) {
                   onChange={setSlot}
                 />
               )}
-              {selected.kind === "partner" ? (
-                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80">
-                  Compras de produtos de empresas parceiras acontecem na loja principal.
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    disabled={buying}
-                    onClick={() => buy("pix")}
-                    className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {buying ? "Processando..." : "Comprar com PIX"}
-                  </button>
-                  <button
-                    disabled={buying}
-                    onClick={() => buy("card")}
-                    className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
-                  >
-                    {buying ? "..." : "Comprar com Cartão"}
-                  </button>
+              {selected.kind === "partner" && (
+                <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-primary">
+                    E-mail do aluno indicado
+                  </label>
+                  <input
+                    type="email"
+                    value={studentEmail}
+                    onChange={(e) => setStudentEmail(e.target.value)}
+                    placeholder="aluno@exemplo.com"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                  <p className="text-[11px] text-foreground/60">
+                    O pedido será registrado em nome desse aluno. Comissões de rede seguem o coach dele.
+                  </p>
                 </div>
               )}
+              <div className="flex gap-2">
+                <button
+                  disabled={buying}
+                  onClick={() => buy("pix")}
+                  className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {buying ? "Processando..." : "Comprar com PIX"}
+                </button>
+                <button
+                  disabled={buying}
+                  onClick={() => buy("card")}
+                  className="flex-1 rounded-xl border border-primary/40 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-50"
+                >
+                  {buying ? "..." : "Comprar com Cartão"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
