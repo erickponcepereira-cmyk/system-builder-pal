@@ -440,13 +440,47 @@ function CoachCoursePage() {
               description="Ativação Coach - Anual"
               defaultPayer={{ email: userEmail, name: userName }}
               initialMethod="pix"
-              onApproved={() => { toast.success("Pagamento confirmado!"); setShowCheckout(false); }}
+              onApproved={async () => { toast.success("Pagamento confirmado!"); setShowCheckout(false); await loadAll(); }}
             />
           ) : (
             <div className="flex items-center justify-center p-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal: cadastro como coach */}
+      <Dialog open={showApply} onOpenChange={setShowApply}>
+        <DialogContent className="max-w-md border-white/10 bg-[#1A1A1A] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Cadastro de Coach</DialogTitle>
+            <DialogDescription className="text-white/70">
+              Sua Ativação já foi paga. Preencha abaixo para entrar oficialmente na rede; o curso e o pagamento serão pulados.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <CoachSelector value={selectedUpline} onChange={setSelectedUpline} label="Coach da rede onde vou entrar *" />
+            <textarea
+              value={motivation}
+              onChange={(e) => setMotivation(e.target.value)}
+              placeholder="Por que você quer se tornar Coach FitMind?"
+              rows={4}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary"
+            />
+            <textarea
+              value={experience}
+              onChange={(e) => setExperience(e.target.value)}
+              placeholder="Experiência com treinos, vendas ou acompanhamento de pessoas (opcional)"
+              rows={3}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary"
+            />
+            <Button onClick={submitApplication} disabled={submitting} className="w-full gap-2">
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Enviar inscrição
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
