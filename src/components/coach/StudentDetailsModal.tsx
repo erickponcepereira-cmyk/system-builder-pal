@@ -6,8 +6,10 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { createAssessmentShare } from "@/lib/assessment-share.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { getStudentAttendanceDetail, type StudentCheckin, type StudentPurchase } from "@/lib/coach-attendance.functions";
+import { WindowMethod } from "@/components/student/WindowMethod";
+import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
-type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras";
+type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas";
 
 interface Props {
   studentId: string;
@@ -131,6 +133,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
     { id: "frequencia", label: "Frequência", icon: CalendarCheck },
     { id: "avaliacoes", label: "Avaliações", icon: Activity },
     { id: "anamnese", label: "Anamnese", icon: ClipboardList },
+    { id: "janelas", label: "Janelas", icon: ClipboardList },
     { id: "evolucao", label: "Evolução", icon: TrendingUp },
     { id: "compras", label: "Compras", icon: ShoppingBag },
   ];
@@ -394,6 +397,18 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                   {a.objective && <p className="mt-1 text-xs text-white/60">Objetivo: <span className="text-white">{a.objective}</span></p>}
                 </div>
               ))}
+            </div>
+          ) : tab === "janelas" ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-bold text-primary mb-1">Método das Janelas — Registro do dia</p>
+                <p className="text-[11px] text-white/60">Preencha o registro de hoje. Ele fica vinculado automaticamente ao protocolo do aluno (Meu Protocolo → Método das Janelas).</p>
+              </div>
+              <WindowMethod studentId={studentId} hideExplanation />
+              <div>
+                <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Histórico</p>
+                <WindowMethodHistory studentId={studentId} />
+              </div>
             </div>
           ) : tab === "evolucao" ? (
             <div className="space-y-4">
