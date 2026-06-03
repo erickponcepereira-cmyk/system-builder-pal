@@ -6,7 +6,7 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Clock, ExternalLink,
-  Star, Zap, Sparkles, X, CalendarPlus, Tag,
+  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
