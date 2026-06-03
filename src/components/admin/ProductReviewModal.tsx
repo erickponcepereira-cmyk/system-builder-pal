@@ -108,10 +108,10 @@ export function ProductReviewModal({ table, productId, onClose, onChanged }: Pro
   }
 
   const price = Number(product.price || 0);
-  const cardFeePct = Number(product.card_fee_percentage || 0);
-  const pixFeePct = Number(product.pix_fee_percentage || 0);
-  const taxPct = Number(product.tax_percentage || 0);
-  const sysFee = Number(product.system_fee_fixed || 0);
+  const cardFeePct = product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct;
+  const pixFeePct = product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct;
+  const taxPct = product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct;
+  const sysFee = product.system_fee_fixed != null ? Number(product.system_fee_fixed) : DEFAULT_PARTNER_FEES.systemFeeFixed;
   const cardFees = (price * (cardFeePct + taxPct)) / 100 + sysFee;
   const pixFees = (price * (pixFeePct + taxPct)) / 100 + sysFee;
   const baseCard = Math.max(0, price - cardFees);
