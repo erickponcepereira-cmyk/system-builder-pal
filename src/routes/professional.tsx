@@ -70,6 +70,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   legal_docs: { label: "Documentos", icon: FileText },
   consultations: { label: "Consultas", icon: Calendar },
   products: { label: "Produtos", icon: Package },
+  store: { label: "Loja", icon: ShoppingBag },
   wallet: { label: "Carteira", icon: Wallet },
   network: { label: "Rede", icon: Network },
   settings: { label: "Configurações", icon: Settings },
