@@ -23,6 +23,7 @@ type CardData = {
   since: string | null;
   avatarUrl: string | null;
   validUntil: string | null;
+  partnerBenefit: { partnerName: string } | null;
 };
 
 type ScanEntry = {
