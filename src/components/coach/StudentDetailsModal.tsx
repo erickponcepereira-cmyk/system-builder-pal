@@ -22,7 +22,30 @@ type SubRow = { id: string; status: string; start_date: string; end_date: string
 type TxRow = { id: string; gross_amount: number; status: string; paid_at: string | null; created_at: string; products: { name: string } | null };
 type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; basal_metabolism: number | null; bmi: number | null; client_notes: string | null; professional_notes: string | null };
 type BioRow = { id: string; evaluation_date: string; evaluation_type: string; weight: number | null; fat_percentage: number | null; muscle_percentage: number | null };
-type AnamRow = { id: string; filled_at: string | null; objective: string | null; confirmed_at: string | null };
+type AnamRow = {
+  id: string;
+  filled_at: string | null;
+  objective: string | null;
+  confirmed_at: string | null;
+  gender: string | null;
+  height: number | null;
+  protocol_reason: string | null;
+  preexisting_conditions: string | null;
+  current_medications: string | null;
+  food_allergies: string | null;
+  sleep_hours: string | null;
+  stress_level: string | null;
+  exercises_regularly: boolean | null;
+  additional_observations: string | null;
+  blood_type: string | null;
+  food_intolerances: string | null;
+  has_diabetes: boolean | null;
+  has_hypertension: boolean | null;
+  has_cardiopathy: boolean | null;
+  other_chronic_conditions: string | null;
+  surgical_history: string | null;
+  supplements_used: string | null;
+};
 type WeightRow = { id: string; log_date: string; weight: number; waist_cm: number | null; hip_cm: number | null };
 type PhotoRow = { id: string; photo_url: string; photo_date: string; caption: string | null };
 
@@ -74,7 +97,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
         supabase.from("transactions").select("id,gross_amount,status,paid_at,created_at,products!transactions_product_id_fkey(name)").eq("student_id", studentId).order("created_at", { ascending: false }).limit(50),
         supabase.from("coach_body_assessments").select("id,assessment_date,weight,body_fat,muscle_mass,skeletal_muscle,basal_metabolism,bmi,client_notes,professional_notes").eq("student_id", studentId).order("assessment_date", { ascending: false }),
         supabase.from("bioimpedance_evaluations").select("id,evaluation_date,evaluation_type,weight,fat_percentage,muscle_percentage").eq("student_id", studentId).order("evaluation_date", { ascending: false }),
-        supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at").eq("student_id", studentId).order("filled_at", { ascending: false }),
+        supabase.from("anamnesis_forms").select("id,filled_at,objective,confirmed_at,gender,height,protocol_reason,preexisting_conditions,current_medications,food_allergies,sleep_hours,stress_level,exercises_regularly,additional_observations,blood_type,food_intolerances,has_diabetes,has_hypertension,has_cardiopathy,other_chronic_conditions,surgical_history,supplements_used").eq("student_id", studentId).order("filled_at", { ascending: false }),
         supabase.from("weight_logs").select("id,log_date,weight,waist_cm,hip_cm").eq("student_id", studentId).order("log_date", { ascending: false }).limit(60),
         supabase.from("evolution_photos").select("id,photo_url,photo_date,caption").eq("student_id", studentId).order("photo_date", { ascending: false }).limit(24),
       ]);
@@ -385,16 +408,51 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               )}
             </div>
           ) : tab === "anamnese" ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {anams.length === 0 ? (
                 <p className="py-6 text-center text-xs text-white/40">Nenhuma anamnese.</p>
-              ) : anams.map((a) => (
-                <div key={a.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
+              ) : anams.map((a, idx) => (
+                <div key={a.id} className="rounded-xl border border-white/5 p-3 space-y-3" style={{ backgroundColor: "#0F0F0F" }}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-bold text-white">{fmtBRLong(a.filled_at)}</p>
                     {a.confirmed_at && <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">Assinada</span>}
                   </div>
-                  {a.objective && <p className="mt-1 text-xs text-white/60">Objetivo: <span className="text-white">{a.objective}</span></p>}
+
+                  {idx === 0 && (a.has_diabetes || a.has_hypertension || a.has_cardiopathy || a.other_chronic_conditions) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {a.has_diabetes && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">Diabetes</span>}
+                      {a.has_hypertension && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">Hipertensão</span>}
+                      {a.has_cardiopathy && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">Cardiopatia</span>}
+                      {a.other_chronic_conditions && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-400">{a.other_chronic_conditions}</span>}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Info label="Objetivo" value={a.objective || a.protocol_reason} />
+                    <Info label="Gênero" value={a.gender} />
+                    <Info label="Tipo sanguíneo" value={a.blood_type} />
+                    <Info label="Altura" value={a.height ? `${a.height} cm` : null} />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <Info label="Alergias alimentares" value={a.food_allergies} />
+                    <Info label="Intolerâncias alimentares" value={a.food_intolerances} />
+                    <Info label="Condições preexistentes" value={a.preexisting_conditions} />
+                    <Info label="Medicamentos contínuos" value={a.current_medications} />
+                    <Info label="Suplementos em uso" value={a.supplements_used} />
+                    <Info label="Histórico cirúrgico" value={a.surgical_history} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <Info label="Sono" value={a.sleep_hours} />
+                    <Info label="Estresse" value={a.stress_level} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <Info label="Pratica exercícios" value={a.exercises_regularly == null ? null : a.exercises_regularly ? "Sim" : "Não"} />
+                    <Info label="Observações" value={a.additional_observations} />
+                  </div>
+
+                  <p className="text-[10px] text-white/30">Dados sigilosos médicos não aparecem aqui — apenas para médicos autorizados.</p>
                 </div>
               ))}
             </div>
@@ -482,6 +540,16 @@ function Mini({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-white/5 p-2">
       <p className="text-white/40">{label}</p>
       <p className="font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="rounded-lg bg-white/5 p-2">
+      <p className="text-[10px] uppercase tracking-wide text-white/40">{label}</p>
+      <p className="text-xs text-white">{value}</p>
     </div>
   );
 }
