@@ -13,6 +13,9 @@ export type PatentRule = {
   time_window_months: number;
   min_own_sales_pct: number;
   max_team_sales_pct: number;
+  vp_max_pct: number | null;
+  ve_max_pct: number | null;
+  phase: number | null;
   level: number;
   sort_order: number;
   benefits: string | null;
