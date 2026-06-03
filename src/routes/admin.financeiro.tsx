@@ -107,12 +107,15 @@ function AdminFinanceiro() {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Financeiro</h1>
-        <p className="text-sm text-white/50">
-          Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
-          Clique em um bucket para ver as vendas que originaram os valores.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Financeiro</h1>
+          <p className="text-sm text-white/50">
+            Visão consolidada do que precisa ser pago e do que já foi pago. Cada bucket é independente — carteiras nunca se misturam.
+            Clique em um bucket para ver as vendas que originaram os valores.
+          </p>
+        </div>
+        <ReconcileButton onDone={reload} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 mb-6">
