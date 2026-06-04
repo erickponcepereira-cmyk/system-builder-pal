@@ -407,23 +407,31 @@ export const getAdminTestSalesData = createServerFn({ method: "GET" })
     const [students, coaches, products, digitals, professionals, partnerProducts] = await Promise.all([
       supabaseAdmin.from("students").select("id,profiles:profile_id(name,email)").order("created_at", { ascending: false }).limit(300),
       supabaseAdmin.from("coaches").select("id,referral_code,profiles:profile_id(name,email)").order("created_at", { ascending: false }).limit(300),
-      supabaseAdmin.from("products").select("id,name,price,kind,status,is_active").limit(300),
+      supabaseAdmin.from("products").select("id,name,price,kind,type,product_type,status,is_active,has_challenge_access").eq("status", "active").order("sort_order", { ascending: true }).limit(300),
       supabaseAdmin.from("digital_products").select("id,title,price,status").limit(300),
-      supabaseAdmin.from("professional_products" as never).select("id,name,price,status,is_active_by_professional" as never).limit(300),
-      supabaseAdmin.from("partner_products" as never).select("id,name,price,status,is_active_by_partner" as never).limit(300),
+      supabaseAdmin.from("professional_products" as never).select("id,name,price,status,is_active_by_professional" as never).eq("is_active_by_professional" as never, true as never).limit(300),
+      supabaseAdmin.from("partner_products" as never).select("id,name,price,status,is_active_by_partner" as never).eq("is_active_by_partner" as never, true as never).limit(300),
     ]);
 
+    const criticalError = students.error || coaches.error || products.error;
+    if (criticalError) throw new Error(`Erro ao carregar opções: ${criticalError.message}`);
+
     const productOptions: Option[] = [];
-    ((products.data as any[]) || []).forEach((p) => productOptions.push({
-      id: p.id,
-      label: p.name,
-      detail: p.kind ? `Loja · ${p.kind}` : "Plano/desafio",
-      kind: p.kind ? "store" : "challenge",
-      price: moneyNumber(p.price),
-    }));
-    ((digitals.data as any[]) || []).forEach((p) => productOptions.push({ id: p.id, label: p.title, detail: "Curso digital", kind: "digital", price: moneyNumber(p.price) }));
-    ((professionals.data as any[]) || []).forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: "Profissional", kind: "professional", price: moneyNumber(p.price) }));
-    ((partnerProducts.data as any[]) || []).forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: "Parceiro", kind: "partner", price: moneyNumber(p.price) }));
+    ((products.data as any[]) || [])
+      .filter((p) => p.is_active !== false)
+      .forEach((p) => {
+        const detail = p.product_type || p.type || p.kind || "Plano/desafio";
+        productOptions.push({ id: p.id, label: p.name, detail: `Plano/desafio · ${detail}`, kind: "challenge", price: moneyNumber(p.price) });
+        if (p.kind) productOptions.push({ id: p.id, label: p.name, detail: `Coach → aluno / loja · ${p.kind}`, kind: "store", price: moneyNumber(p.price) });
+        if (p.kind === "digital") productOptions.push({ id: p.id, label: p.name, detail: "Curso digital · produtos", kind: "digital", price: moneyNumber(p.price) });
+      });
+    ((digitals.data as any[]) || [])
+      .filter((p) => !p.status || p.status === "active" || p.status === "approved")
+      .forEach((p) => productOptions.push({ id: p.id, label: p.title, detail: "Curso digital", kind: "digital", price: moneyNumber(p.price) }));
+    ((professionals.data as any[]) || [])
+      .forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: `Profissional · ${p.status || "ativo"}`, kind: "professional", price: moneyNumber(p.price) }));
+    ((partnerProducts.data as any[]) || [])
+      .forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: `Parceiro · ${p.status || "ativo"}`, kind: "partner", price: moneyNumber(p.price) }));
 
     return {
       students: ((students.data as any[]) || []).map((s) => ({ id: s.id, label: s.profiles?.name || "Aluno", detail: s.profiles?.email || null })),
