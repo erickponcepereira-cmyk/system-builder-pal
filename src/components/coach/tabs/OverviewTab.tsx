@@ -78,14 +78,11 @@ export function OverviewTab({
     { label: "Alunos ativos", value: maskNum(data.students), change: "", icon: Users },
     { label: "Vendas/mês", value: maskMoney(data.salesMonth), change: "", icon: TrendingUp },
     { label: "Comissões/mês", value: maskMoney(data.commissionsMonth), change: "", icon: BarChart3 },
-    { label: "Saldo", value: maskMoney(data.balance), change: "Disponível", icon: Wallet },
-  ];
-
   const [saleOpen, setSaleOpen] = useState(false);
+  void saleOpen; void setSaleOpen;
 
   return (
     <>
-      <NewSaleModal open={saleOpen} onClose={() => setSaleOpen(false)} />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Olá, {coachName}! 💪</h1>
@@ -99,9 +96,6 @@ export function OverviewTab({
           >
             {statsVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </button>
-          <Button size="sm" onClick={() => setSaleOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nova venda
-          </Button>
         </div>
       </div>
 
