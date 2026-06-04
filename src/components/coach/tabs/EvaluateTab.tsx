@@ -101,14 +101,10 @@ export function EvaluateTab() {
       website: c.website || "",
     });
 
-    // Master coach? (has master_coach badge)
-    const { data: badge } = await supabase
-      .from("coach_badges" as never)
-      .select("id" as never)
-      .eq("coach_id" as never, coach.id as never)
-      .eq("badge_key" as never, "master_coach" as never)
-      .maybeSingle();
-    const masterFlag = !!badge;
+    // Master coach? Uses the official category rule shared with sales/network flows.
+    const { data: masterResult } = await supabase
+      .rpc("is_master_coach" as never, { _coach_id: coach.id } as never);
+    const masterFlag = !!masterResult;
     setIsMaster(masterFlag);
 
     // Paginate to bypass Supabase's default 1000-row limit
@@ -149,6 +145,7 @@ export function EvaluateTab() {
 
     setClients(all.map((row) => ({
       id: row.id,
+      coachId: row.coach_id,
       name: row.name,
       gender: row.gender,
       ethnicity: row.ethnicity,
@@ -259,6 +256,7 @@ export function EvaluateTab() {
 
   const saveAssessment = async (assessment: FitMindAssessment, client: FitMindClient) => {
     if (!coachInfo.id) throw new Error("Coach não encontrado");
+    const targetCoachId = (isMaster && (client as any).coachId) ? (client as any).coachId : coachInfo.id;
     const nz = (v: any) => (v === "" || v === undefined ? null : v);
     const num = (v: any) => {
       if (v === "" || v === null || v === undefined) return null;
@@ -271,7 +269,7 @@ export function EvaluateTab() {
     };
     const payload: Record<string, any> = {
       client_id: client.id,
-      coach_id: coachInfo.id,
+      coach_id: targetCoachId,
       assessment_date: assessment.date || new Date().toISOString(),
       method: assessment.method || "bioimpedance",
       age: int(assessment.age),
@@ -369,6 +367,7 @@ export function EvaluateTab() {
         onUpdateClient={async (client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
           if (!client.name?.trim()) throw new Error("Informe o nome do aluno");
+          const targetCoachId = (isMaster && (client as any).coachId) ? (client as any).coachId : coachInfo.id;
           const { data, error } = await supabase
             .from("coach_evaluation_clients" as never)
             .update({
@@ -386,7 +385,7 @@ export function EvaluateTab() {
               avatar_url: client.avatar || null,
             } as never)
             .eq("id" as never, client.id as never)
-            .eq("coach_id" as never, coachInfo.id as never)
+            .eq("coach_id" as never, targetCoachId as never)
             .select("*" as never)
             .single();
           if (error) { toast.error("Erro ao atualizar aluno"); throw error; }
@@ -407,6 +406,8 @@ export function EvaluateTab() {
             groups: updated.groups || [],
             avatar: updated.avatar_url || undefined,
             assessments: client.assessments || [],
+            coachId: (updated as any).coach_id || (client as any).coachId,
+            coachName: (client as any).coachName,
           };
           setClients((current) => current.map((it) => (it.id === mapped.id ? mapped : it)));
           return mapped;
@@ -415,11 +416,12 @@ export function EvaluateTab() {
         onDeleteAssessment={async (assessmentId, reason, client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
           if (!reason?.trim()) throw new Error("Motivo obrigatório");
+          const targetCoachId = (isMaster && (client as any).coachId) ? (client as any).coachId : coachInfo.id;
           const target = client.assessments?.find((a) => a.id === assessmentId);
           const { error: logErr } = await supabase
             .from("coach_assessment_deletions" as never)
             .insert({
-              coach_id: coachInfo.id,
+              coach_id: targetCoachId,
               client_id: client.id,
               client_name: client.name,
               assessment_id: assessmentId,
@@ -432,7 +434,7 @@ export function EvaluateTab() {
             .from("coach_body_assessments" as never)
             .delete()
             .eq("id" as never, assessmentId as never)
-            .eq("coach_id" as never, coachInfo.id as never)
+            .eq("coach_id" as never, targetCoachId as never)
             .select("id" as never);
           if (delErr) { toast.error("Erro ao excluir avaliação"); throw delErr; }
           if (!deletedRows || (deletedRows as any[]).length === 0) {
@@ -452,6 +454,7 @@ export function EvaluateTab() {
         }}
         onEditAssessment={async (updated, client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
+          const targetCoachId = (isMaster && (client as any).coachId) ? (client as any).coachId : coachInfo.id;
           const num = (v: any) => {
             if (v === "" || v === null || v === undefined) return null;
             const n = Number(v);
@@ -484,7 +487,7 @@ export function EvaluateTab() {
             .from("coach_body_assessments" as never)
             .update(payload as never)
             .eq("id" as never, updated.id as never)
-            .eq("coach_id" as never, coachInfo.id as never);
+            .eq("coach_id" as never, targetCoachId as never);
           if (error) { toast.error(error.message || "Erro ao atualizar avaliação"); throw error; }
           toast.success("Avaliação atualizada");
           await loadClients();
