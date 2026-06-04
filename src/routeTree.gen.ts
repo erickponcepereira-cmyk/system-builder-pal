@@ -26,6 +26,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentIndexRouteImport } from './routes/student.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as StudentWorkoutRouteImport } from './routes/student.workout'
 import { Route as StudentSupportRouteImport } from './routes/student.support'
 import { Route as StudentStoreRouteImport } from './routes/student.store'
 import { Route as StudentProtocolRouteImport } from './routes/student.protocol'
@@ -181,6 +182,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const StudentWorkoutRoute = StudentWorkoutRouteImport.update({
+  id: '/workout',
+  path: '/workout',
+  getParentRoute: () => StudentRoute,
 } as any)
 const StudentSupportRoute = StudentSupportRouteImport.update({
   id: '/support',
@@ -616,6 +622,7 @@ export interface FileRoutesByFullPath {
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
   '/student/support': typeof StudentSupportRoute
+  '/student/workout': typeof StudentWorkoutRoute
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
@@ -703,6 +710,7 @@ export interface FileRoutesByTo {
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
   '/student/support': typeof StudentSupportRoute
+  '/student/workout': typeof StudentWorkoutRoute
   '/admin': typeof AdminIndexRoute
   '/student': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
@@ -793,6 +801,7 @@ export interface FileRoutesById {
   '/student/protocol': typeof StudentProtocolRoute
   '/student/store': typeof StudentStoreRoute
   '/student/support': typeof StudentSupportRoute
+  '/student/workout': typeof StudentWorkoutRoute
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
@@ -884,6 +893,7 @@ export interface FileRouteTypes {
     | '/student/protocol'
     | '/student/store'
     | '/student/support'
+    | '/student/workout'
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
@@ -971,6 +981,7 @@ export interface FileRouteTypes {
     | '/student/protocol'
     | '/student/store'
     | '/student/support'
+    | '/student/workout'
     | '/admin'
     | '/student'
     | '/admin/coaches/inactivity'
@@ -1060,6 +1071,7 @@ export interface FileRouteTypes {
     | '/student/protocol'
     | '/student/store'
     | '/student/support'
+    | '/student/workout'
     | '/admin/'
     | '/student/'
     | '/admin/coaches/inactivity'
@@ -1225,6 +1237,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/student/workout': {
+      id: '/student/workout'
+      path: '/workout'
+      fullPath: '/student/workout'
+      preLoaderRoute: typeof StudentWorkoutRouteImport
+      parentRoute: typeof StudentRoute
     }
     '/student/support': {
       id: '/student/support'
@@ -1855,6 +1874,7 @@ interface StudentRouteChildren {
   StudentProtocolRoute: typeof StudentProtocolRoute
   StudentStoreRoute: typeof StudentStoreRoute
   StudentSupportRoute: typeof StudentSupportRoute
+  StudentWorkoutRoute: typeof StudentWorkoutRoute
   StudentIndexRoute: typeof StudentIndexRoute
 }
 
@@ -1878,6 +1898,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentProtocolRoute: StudentProtocolRoute,
   StudentStoreRoute: StudentStoreRoute,
   StudentSupportRoute: StudentSupportRoute,
+  StudentWorkoutRoute: StudentWorkoutRoute,
   StudentIndexRoute: StudentIndexRoute,
 }
 
