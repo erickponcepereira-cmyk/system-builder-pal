@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Award, ChevronDown, ChevronRight, Dot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type NetworkRankMedal, type NetworkRankPatent } from "@/lib/network-ranking.functions";
 import { type CoachContext } from "@/routes/coach";
-import CoachNetworkModal, { type CoachNetworkModalData } from "@/components/coach/CoachNetworkModal";
+import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 
 function PatentTag({ patent }: { patent: NetworkRankPatent }) {
   if (!patent) return null;
