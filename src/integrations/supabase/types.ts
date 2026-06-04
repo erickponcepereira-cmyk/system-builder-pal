@@ -6983,6 +6983,9 @@ export type Database = {
           updated_at: string
           water_goal_ml: number | null
           weight_goal: number | null
+          workout_goal: string | null
+          workout_level: string | null
+          workout_name: string | null
           workout_plan: Json
         }
         Insert: {
@@ -7003,6 +7006,9 @@ export type Database = {
           updated_at?: string
           water_goal_ml?: number | null
           weight_goal?: number | null
+          workout_goal?: string | null
+          workout_level?: string | null
+          workout_name?: string | null
           workout_plan?: Json
         }
         Update: {
@@ -7023,6 +7029,9 @@ export type Database = {
           updated_at?: string
           water_goal_ml?: number | null
           weight_goal?: number | null
+          workout_goal?: string | null
+          workout_level?: string | null
+          workout_name?: string | null
           workout_plan?: Json
         }
         Relationships: [

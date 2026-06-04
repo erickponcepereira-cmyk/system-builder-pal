@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen, Pencil, X, Sparkles } from "lucide-react";
+import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen, Pencil, X, Sparkles, Zap, Award } from "lucide-react";
 import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/components/workouts/WorkoutTemplatesPanel";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { calcWaterGoalMl, describeWaterFormula, calcAgeFromBirthdate } from "@/lib/water-goal";
+import { syncProtocolWorkout } from "@/lib/workouts.functions";
 
 type Student = {
   id: string;
@@ -41,6 +43,9 @@ type Protocol = {
   weight_goal: number | null;
   general_notes: string;
   workout_plan: WorkoutItem[];
+  workout_name: string;
+  workout_goal: WorkoutTemplate["goal"];
+  workout_level: NonNullable<WorkoutTemplate["level"]>;
 };
 
 const RESTRICTION_OPTIONS = [
@@ -69,6 +74,9 @@ const emptyProtocol = (): Protocol => ({
   weight_goal: null,
   general_notes: "",
   workout_plan: [],
+  workout_name: "Treino Prescrito",
+  workout_goal: "general",
+  workout_level: "iniciante",
 });
 
 export function ProtocolTab() {
@@ -179,6 +187,9 @@ export function ProtocolTab() {
     setProtocol((p) => ({
       ...p,
       workout_plan: mode === "replace" ? [...t.items] : [...p.workout_plan, ...t.items],
+      workout_name: mode === "replace" ? t.name : p.workout_name,
+      workout_goal: mode === "replace" ? t.goal : p.workout_goal,
+      workout_level: mode === "replace" ? (t.level || "iniciante") : p.workout_level,
     }));
     setTemplatePickerOpen(false);
     toast.success(`Treino "${t.name}" aplicado.`);
@@ -265,6 +276,9 @@ export function ProtocolTab() {
         weight_goal: d.weight_goal ?? s.goal_weight,
         general_notes: d.general_notes || "",
         workout_plan: d.workout_plan || [],
+        workout_name: d.workout_name || "Treino Prescrito",
+        workout_goal: (d.workout_goal as Protocol["workout_goal"]) || "general",
+        workout_level: (d.workout_level as Protocol["workout_level"]) || "iniciante",
       });
     } else {
       setProtocol({ ...emptyProtocol(), weight_goal: s.goal_weight });
@@ -318,6 +332,8 @@ export function ProtocolTab() {
     setLoading(false);
   };
 
+  const syncWorkoutFn = useServerFn(syncProtocolWorkout);
+
   const save = async () => {
     if (!selected || !coachId) return;
     setSaving(true);
@@ -335,6 +351,9 @@ export function ProtocolTab() {
       weight_goal: protocol.weight_goal,
       general_notes: protocol.general_notes.slice(0, 5000),
       workout_plan: protocol.workout_plan,
+      workout_name: protocol.workout_name || "Treino Prescrito",
+      workout_goal: protocol.workout_goal,
+      workout_level: protocol.workout_level,
     };
     const onConflict = selected.external ? "evaluation_client_id" : "student_id";
     const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict } as never);
@@ -346,8 +365,24 @@ export function ProtocolTab() {
       };
       if (protocol.weight_goal != null) studentPatch.goal_weight = protocol.weight_goal;
       await supabase.from("students").update(studentPatch).eq("id", selected.id);
-    }
 
+      // Sync prescribed workout into the gamified workout_plans pipeline
+      // so it shows in the student's "Meu Treino" home, not only in the protocol view.
+      const items = protocol.workout_plan.filter((w) => w.name.trim());
+      if (items.length > 0) {
+        try {
+          await syncWorkoutFn({
+            data: {
+              student_record_id: selected.id,
+              name: protocol.workout_name || "Treino Prescrito",
+              items: items.map((w) => ({ name: w.name, sets: w.sets, reps: w.reps, rest: w.rest, notes: w.notes })),
+            },
+          });
+        } catch (e: any) {
+          console.warn("sync workout failed", e?.message);
+        }
+      }
+    }
 
     setSaving(false);
     if (error) { console.error(error); toast.error("Erro ao salvar protocolo"); return; }
@@ -581,27 +616,64 @@ export function ProtocolTab() {
 
           {!loading && section === "workout" && (
             <div className="space-y-4">
-              <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-                <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
-                  <h2 className="text-sm font-bold text-white">Treino prescrito</h2>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => setTemplatePickerOpen(true)} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15"><BookOpen className="h-3 w-3" /> Usar template</button>
-                    <button onClick={() => setSaveTemplateOpen(true)} disabled={protocol.workout_plan.length === 0} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs text-white disabled:opacity-40"><Save className="h-3 w-3" /> Salvar template</button>
-                    <button onClick={() => addWorkout()} className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"><Plus className="h-3 w-3" /> Exercício</button>
+              {/* Header bonito com nome, objetivo e nível */}
+              <div className="overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-orange-500/5 to-transparent p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/25">
+                    <Dumbbell className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Treino prescrito</p>
+                    <p className="text-[11px] text-white/55">Vai aparecer no app do aluno em "Meu Treino" 🏆</p>
                   </div>
                 </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/40">Nome</label>
+                    <input value={protocol.workout_name} onChange={(e) => setProtocol((p) => ({ ...p, workout_name: e.target.value }))} placeholder="Ex: Treino A — Peito e Tríceps" className="mt-1 w-full rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-white outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/40 flex items-center gap-1"><Target className="h-3 w-3" /> Para que serve</label>
+                    <select value={protocol.workout_goal} onChange={(e) => setProtocol((p) => ({ ...p, workout_goal: e.target.value as Protocol["workout_goal"] }))} className="mt-1 w-full rounded-lg bg-white/10 px-3 py-2 text-sm text-white outline-none">
+                      {Object.entries(GOAL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-white/40 flex items-center gap-1"><Zap className="h-3 w-3" /> Nível</label>
+                    <select value={protocol.workout_level} onChange={(e) => setProtocol((p) => ({ ...p, workout_level: e.target.value as Protocol["workout_level"] }))} className="mt-1 w-full rounded-lg bg-white/10 px-3 py-2 text-sm text-white outline-none">
+                      <option value="iniciante">Iniciante</option>
+                      <option value="intermediario">Intermediário</option>
+                      <option value="avancado">Avançado</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">{GOAL_LABELS[protocol.workout_goal]}</span>
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/80 capitalize">{protocol.workout_level}</span>
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">{protocol.workout_plan.length} exercício{protocol.workout_plan.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <button onClick={() => setTemplatePickerOpen(true)} className="flex items-center gap-1 rounded-full bg-primary/20 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/30"><BookOpen className="h-3.5 w-3.5" /> Importar dos treinos prontos</button>
+                  <button onClick={() => setSaveTemplateOpen(true)} disabled={protocol.workout_plan.length === 0} className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15 disabled:opacity-40"><Save className="h-3.5 w-3.5" /> Salvar como template</button>
+                  <button onClick={() => addWorkout()} className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15"><Plus className="h-3.5 w-3.5" /> Exercício</button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-white/60">Exercícios</h3>
                 <div className="space-y-2">
-                  {protocol.workout_plan.length === 0 && <p className="text-xs text-white/40">Nenhum exercício. Use a aba “Biblioteca” para selecionar.</p>}
+                  {protocol.workout_plan.length === 0 && <p className="rounded-xl border border-dashed border-white/10 py-6 text-center text-xs text-white/40">Nenhum exercício ainda. Importe dos treinos prontos ou adicione da biblioteca abaixo.</p>}
                   {protocol.workout_plan.map((w, idx) => (
-                    <div key={idx} className="rounded-xl bg-white/5 p-3">
-                      <div className="mb-2 grid grid-cols-[1fr_auto] gap-2">
-                        <input value={w.name} onChange={(e) => updateWorkout(idx, { name: e.target.value })} placeholder="Exercício" className="rounded bg-white/10 px-2 py-1.5 text-sm text-white" />
-                        <button onClick={() => removeWorkout(idx)} className="rounded bg-red-500/10 px-2 text-red-400 hover:bg-red-500/20"><Trash2 className="h-3.5 w-3.5" /></button>
+                    <div key={idx} className="rounded-xl border border-white/5 bg-white/[0.04] p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold text-primary">{idx + 1}</span>
+                        <input value={w.name} onChange={(e) => updateWorkout(idx, { name: e.target.value })} placeholder="Exercício" className="flex-1 rounded bg-white/10 px-2 py-1.5 text-sm font-semibold text-white outline-none" />
+                        <button onClick={() => removeWorkout(idx)} className="rounded bg-red-500/10 px-2 py-1.5 text-red-400 hover:bg-red-500/20"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <input value={w.sets} onChange={(e) => updateWorkout(idx, { sets: e.target.value })} placeholder="Séries" className="rounded bg-black/30 px-2 py-1.5 text-xs text-white" />
                         <input value={w.reps} onChange={(e) => updateWorkout(idx, { reps: e.target.value })} placeholder="Reps" className="rounded bg-black/30 px-2 py-1.5 text-xs text-white" />
-                        <input value={w.rest} onChange={(e) => updateWorkout(idx, { rest: e.target.value })} placeholder="Descanso" className="rounded bg-black/30 px-2 py-1.5 text-xs text-white" />
+                        <input value={w.rest} onChange={(e) => updateWorkout(idx, { rest: e.target.value })} placeholder="Descanso (seg)" className="rounded bg-black/30 px-2 py-1.5 text-xs text-white" />
                       </div>
                       <input value={w.notes} onChange={(e) => updateWorkout(idx, { notes: e.target.value })} placeholder="Observações" className="mt-2 w-full rounded bg-black/30 px-2 py-1.5 text-xs text-white" />
                     </div>
@@ -610,9 +682,10 @@ export function ProtocolTab() {
               </div>
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-white/60">Adicionar da biblioteca</h3>
                 <div className="mb-3 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
                   <Search className="h-4 w-4 text-white/40" />
-                  <input value={libQuery} onChange={(e) => setLibQuery(e.target.value)} placeholder="Buscar na biblioteca para adicionar" className="w-full bg-transparent text-sm text-white outline-none" />
+                  <input value={libQuery} onChange={(e) => setLibQuery(e.target.value)} placeholder="Buscar exercício" className="w-full bg-transparent text-sm text-white outline-none" />
                 </div>
                 <div className="max-h-72 space-y-1 overflow-y-auto">
                   {filteredLib.map((e) => (
@@ -621,11 +694,12 @@ export function ProtocolTab() {
                       <span className="text-white/40">{e.muscle_group} · {e.equipment}</span>
                     </button>
                   ))}
-                  {filteredLib.length === 0 && <p className="py-4 text-center text-xs text-white/40">Nenhum exercício na biblioteca. Cadastre na aba Biblioteca.</p>}
+                  {filteredLib.length === 0 && <p className="py-4 text-center text-xs text-white/40">Nenhum exercício na biblioteca. Cadastre na aba "Criar exercícios".</p>}
                 </div>
               </div>
             </div>
           )}
+
 
           {!loading && section === "health" && (
             <div className="space-y-4">
