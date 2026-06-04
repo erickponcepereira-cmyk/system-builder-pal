@@ -1102,7 +1102,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       <div
         className="fm-card"
         style={{ cursor: "pointer" }}
-        onClick={() => { setEntryIntent("browse"); setScreen("select-client"); }}
+        onClick={() => { setEntryIntent("browse"); setScopeFilter("mine"); setScreen("select-client"); }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
@@ -1123,12 +1123,45 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               Meus Alunos
             </div>
             <div style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
-              {clients.length} alunos cadastrados
+              {myClients.length} alunos cadastrados
             </div>
           </div>
           <ChevronRight color="var(--muted-foreground)" />
         </div>
       </div>
+
+      {hasOtherCoachClients && (
+        <div
+          className="fm-card"
+          style={{ cursor: "pointer", marginTop: 12 }}
+          onClick={() => { setEntryIntent("browse"); setScopeFilter("all"); setScreen("select-client"); }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                background: "var(--fm-primary-light)",
+                borderRadius: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Users size={24} color="var(--fm-primary)" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "var(--foreground)", fontWeight: 700, fontSize: 16 }}>
+                Todos os Alunos
+              </div>
+              <div style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
+                {clients.length} alunos (rede completa)
+              </div>
+            </div>
+            <ChevronRight color="var(--muted-foreground)" />
+          </div>
+        </div>
+      )}
 
       <div style={{ marginTop: 24, padding: "12px 0" }}>
         <div
