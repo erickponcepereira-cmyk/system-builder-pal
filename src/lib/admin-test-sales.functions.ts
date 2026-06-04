@@ -69,8 +69,16 @@ async function getProduct(input: SimulateInput) {
       .select("id,title,price,status")
       .eq("id", input.productId)
       .maybeSingle();
-    if (error || !data) throw new Error(error?.message || "Curso não encontrado");
-    return { id: data.id, title: data.title, price: moneyNumber(data.price), productId: null, digitalProductId: data.id, professionalProductId: null, partnerProductId: null };
+    if (error) throw new Error(error.message);
+    if (data) return { id: data.id, title: data.title, price: moneyNumber(data.price), productId: null, digitalProductId: data.id, professionalProductId: null, partnerProductId: null };
+
+    const { data: productData, error: productError } = await supabaseAdmin
+      .from("products")
+      .select("id,name,price,status,is_active,kind")
+      .eq("id", input.productId)
+      .maybeSingle();
+    if (productError || !productData) throw new Error(productError?.message || "Curso não encontrado");
+    return { id: productData.id, title: productData.name, price: moneyNumber(productData.price), productId: productData.id, digitalProductId: null, professionalProductId: null, partnerProductId: null };
   }
 
   if (input.kind === "professional") {
