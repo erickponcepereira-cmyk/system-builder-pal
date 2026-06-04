@@ -56,13 +56,32 @@ export function NetworkRankingTab() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-xs font-bold text-white/70">#{index + 1}</div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-white">{r.name}{r.isYou ? " (você)" : ""}</p>
-                  <p className="truncate text-[11px] text-white/45">L{r.level} · {r.directStudents} alunos · {r.downlineCoaches} downlines</p>
+                  {r.categories && r.categories.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {r.categories.map((c) => (
+                        <span key={c} className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-white/60">{c}</span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-1 truncate text-[11px] text-white/45">L{r.level} · {r.directStudents} alunos · {r.downlineCoaches} downlines</p>
                 </div>
-                <div className="text-right">
-                  <p className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
+                <div className="flex flex-col items-end gap-1">
+                  {r.patent && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-bold"
+                      style={{
+                        color: r.patent.color || "#fff",
+                        backgroundColor: r.patent.color ? `${r.patent.color}20` : "rgba(255,255,255,0.08)",
+                        borderColor: r.patent.color ? `${r.patent.color}55` : "rgba(255,255,255,0.15)",
+                      }}
+                    >
+                      {r.patent.icon ? <span>{r.patent.icon}</span> : <Trophy className="h-3 w-3" />} {r.patent.name}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-[11px] font-bold text-primary">
                     {r.medal?.icon ? <span>{r.medal.icon}</span> : <Award className="h-3 w-3" />} {r.medal?.name || "Sem medalha"}
-                  </p>
-                  <p className="mt-1 text-[10px] text-white/35">produção individual</p>
+                  </span>
+                  <span className="text-[10px] text-white/35">medalha do mês</span>
                 </div>
               </div>
             ))}
