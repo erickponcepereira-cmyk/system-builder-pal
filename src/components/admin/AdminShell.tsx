@@ -43,6 +43,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/partner-orders", label: "Pedidos de Parceiros", icon: Stethoscope, perm: "partner_orders" },
 
   { to: "/admin/career", label: "Carreira", icon: Trophy, perm: "career" },
+  { to: "/admin/network-ranking", label: "Ranking de Redes", icon: Trophy, perm: "reports" },
   { to: "/admin/network-unlock", label: "Liberação da Rede", icon: Trophy, perm: "career" },
   { to: "/admin/network-unlock-history", label: "Histórico Liberação", icon: BarChart3, perm: "career" },
   { to: "/admin/library", label: "Biblioteca", icon: Dumbbell, perm: "library" },

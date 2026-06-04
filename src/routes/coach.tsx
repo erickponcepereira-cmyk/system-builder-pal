@@ -17,6 +17,7 @@ import { NetworkTab } from "@/components/coach/tabs/NetworkTab";
 import { CoachProfileTab } from "@/components/coach/tabs/CoachProfileTab";
 import { CoachStudentsTab } from "@/components/coach/tabs/CoachStudentsTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
+import { NetworkRankingTab } from "@/components/coach/tabs/NetworkRankingTab";
 import { PhysicalStoreTab } from "@/components/coach/tabs/StoreTab";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
@@ -47,7 +48,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-type Tab = "overview" | "network" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
+type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
 
 
 export const money = (value: number | null | undefined) =>
@@ -283,6 +284,7 @@ function CoachDashboard() {
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
     { id: "tree", label: "Árvore da Rede", icon: Network },
+    { id: "networkRanking", label: "Ranking da Rede", icon: Trophy },
     { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
     ...(canApprovePartners ? [{ id: "partnerApprovals" as Tab, label: "Aprovar Parceiros", icon: ClipboardCheck }] : []),
@@ -488,6 +490,7 @@ function CoachDashboard() {
           {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
+          {activeTab === "networkRanking" && <NetworkRankingTab />}
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
           {activeTab === "partnerApprovals" && canApprovePartners && <PartnersApprovalTab />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
