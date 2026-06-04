@@ -54,14 +54,18 @@ function PeopleList({ people }: { people: CoachModalPersonRef[] }) {
   return (
     <ul className="space-y-1.5">
       {people.map((p) => (
-        <li key={p.id} className="flex items-center justify-between rounded-lg bg-black/30 px-3 py-2">
-          <span className="truncate text-sm text-white">{p.name}</span>
-          {p.email ? <span className="ml-3 truncate text-[11px] text-white/40">{p.email}</span> : null}
+        <li key={p.id} className="flex items-center justify-between gap-3 rounded-lg bg-black/30 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm text-white">{p.name}</p>
+            {p.specialty && <p className="truncate text-[10px] font-semibold text-primary/80">{p.specialty}</p>}
+          </div>
+          {p.email ? <span className="ml-3 shrink-0 truncate text-[11px] text-white/40">{p.email}</span> : null}
         </li>
       ))}
     </ul>
   );
 }
+
 
 function TopProducts({ items }: { items: CoachModalTopProduct[] }) {
   if (!items.length) return <p className="text-xs text-white/40">Sem vendas no período.</p>;

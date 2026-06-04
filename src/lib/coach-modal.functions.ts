@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-export type CoachModalPersonRef = { id: string; name: string; email: string | null };
+export type CoachModalPersonRef = { id: string; name: string; email: string | null; specialty?: string | null };
 
 export type CoachModalProduct = {
   id: string;
@@ -210,10 +210,17 @@ export const getCoachModalData = createServerFn({ method: "GET" })
       const profileIds = studentRows.map((s) => s.profile_id);
       const [{ data: ps }, { data: pros }] = await Promise.all([
         supabaseAdmin.from("partners").select("id, profile_id, fantasy_name, profiles!partners_profile_id_fkey(name,email)").in("profile_id", profileIds),
-        supabaseAdmin.from("coaches").select("id, profile_id, is_professional, profiles!coaches_profile_id_fkey(name,email)").in("profile_id", profileIds).eq("is_professional", true),
+        supabaseAdmin.from("coaches").select("id, profile_id, is_professional, specialty_key, specialty_custom_description, profiles!coaches_profile_id_fkey(name,email)").in("profile_id", profileIds).eq("is_professional", true),
       ]);
       const partnerRows = (ps as any[] | null) || [];
       const proRows = (pros as any[] | null) || [];
+      // Resolve specialty labels
+      const specKeys = Array.from(new Set(proRows.map((p) => p.specialty_key).filter(Boolean)));
+      const specLabel = new Map<string, string>();
+      if (specKeys.length) {
+        const { data: specs } = await supabaseAdmin.from("professional_specialties").select("key,label").in("key", specKeys);
+        ((specs as Array<{ key: string; label: string }> | null) || []).forEach((s) => specLabel.set(s.key, s.label));
+      }
       referredPartners = {
         count: partnerRows.length,
         people: partnerRows.map((p) => ({
@@ -228,8 +235,10 @@ export const getCoachModalData = createServerFn({ method: "GET" })
           id: p.id,
           name: p.profiles?.name || "Profissional",
           email: p.profiles?.email || null,
+          specialty: (p.specialty_key && specLabel.get(p.specialty_key)) || p.specialty_custom_description || null,
         })),
       };
+
     }
 
     // Professional products
