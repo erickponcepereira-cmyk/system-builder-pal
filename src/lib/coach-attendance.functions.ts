@@ -152,7 +152,9 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
       const lastTxPaid = sTxs[0]?.paid_at || null;
       const lastStorePaid = sStoreOrders[0]?.updated_at || sStoreOrders[0]?.created_at || null;
       const lastPurchase = [lastTxPaid, lastStorePaid].filter(Boolean).sort().at(-1) || null;
-      const lastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
+      const authLastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
+      const profileLastLogin = s.profiles?.last_app_login_at ?? null;
+      const lastSignIn = [authLastSignIn, profileLastLogin].filter(Boolean).sort().at(-1) || null;
 
       // Activity = max(lastCheckin, lastSignIn, lastPurchase)
       const candidates = [lastCheckinAt, lastSignIn, lastPurchase].filter(Boolean) as string[];
