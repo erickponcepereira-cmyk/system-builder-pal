@@ -22,6 +22,9 @@ type Option = { id: string; label: string; detail?: string | null; kind?: SaleKi
 type SaleKind = "store" | "digital" | "challenge" | "professional" | "partner";
 type SaleRow = SimulatedSaleRow;
 
+const selectClass = "h-12 w-full rounded-lg border border-white/15 bg-black/50 px-3 text-sm font-semibold text-white outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50";
+const panelClass = "rounded-2xl border border-white/10 bg-card/95 p-4 shadow-xl shadow-black/20";
+
 const saleKindLabels: Record<SaleKind, string> = {
   store: "Coach → aluno / loja",
   digital: "Curso digital",
@@ -66,10 +69,17 @@ function AdminTestSalesPage() {
   useEffect(() => { void reload(); }, []);
 
   const filteredProducts = useMemo(() => (options?.products || []).filter((p) => p.kind === kind), [kind, options?.products]);
+  const selectedProduct = useMemo(() => filteredProducts.find((p) => p.id === productId) || null, [filteredProducts, productId]);
 
   useEffect(() => {
     if (filteredProducts.length && !filteredProducts.some((p) => p.id === productId)) setProductId(filteredProducts[0].id);
+    if (!filteredProducts.length && productId) setProductId("");
   }, [filteredProducts, productId]);
+
+  useEffect(() => {
+    if (!options) return;
+    if (!buyerStudentId && options.students[0]) setBuyerStudentId(options.students[0].id);
+  }, [buyerStudentId, options]);
 
   const submit = async () => {
     if (!buyerStudentId || !productId) return toast.error("Selecione aluno e produto");
