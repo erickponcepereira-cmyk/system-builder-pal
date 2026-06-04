@@ -30,6 +30,7 @@ import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyBadges } from "@/lib/coach-badges.functions";
 import { getIndividualCareer } from "@/lib/coach-medals.functions";
+import { getCareerProgress } from "@/lib/coach-career.functions";
 import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
 
 
