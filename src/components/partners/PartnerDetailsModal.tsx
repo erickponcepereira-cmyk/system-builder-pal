@@ -102,7 +102,7 @@ export function PartnerDetailsModal({
   const waUrl = data?.partner?.whatsapp ? `https://wa.me/${String(data.partner.whatsapp).replace(/\D/g, "")}` : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4">
       <div
         className="w-full max-w-3xl max-h-[95vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl text-white"
         style={{ backgroundColor: "#111" }}
