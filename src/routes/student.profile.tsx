@@ -59,6 +59,8 @@ function ProfilePage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
+  const [referralCode, setReferralCode] = useState("ALUNO2026");
+  const [referralModalOpen, setReferralModalOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("50");
   const [pixKey, setPixKey] = useState("");
