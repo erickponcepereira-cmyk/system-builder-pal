@@ -7443,6 +7443,62 @@ export type Database = {
           },
         ]
       }
+      test_simulated_sales: {
+        Row: {
+          buyer_student_id: string | null
+          created_at: string
+          created_by_admin_profile_id: string | null
+          flow_summary: Json
+          gross_amount: number | null
+          id: string
+          label: string | null
+          product_ref: string | null
+          reverted_at: string | null
+          seller_coach_id: string | null
+          source_id: string
+          source_kind: string
+          wallets_snapshot: Json
+        }
+        Insert: {
+          buyer_student_id?: string | null
+          created_at?: string
+          created_by_admin_profile_id?: string | null
+          flow_summary?: Json
+          gross_amount?: number | null
+          id?: string
+          label?: string | null
+          product_ref?: string | null
+          reverted_at?: string | null
+          seller_coach_id?: string | null
+          source_id: string
+          source_kind: string
+          wallets_snapshot?: Json
+        }
+        Update: {
+          buyer_student_id?: string | null
+          created_at?: string
+          created_by_admin_profile_id?: string | null
+          flow_summary?: Json
+          gross_amount?: number | null
+          id?: string
+          label?: string | null
+          product_ref?: string | null
+          reverted_at?: string | null
+          seller_coach_id?: string | null
+          source_id?: string
+          source_kind?: string
+          wallets_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_simulated_sales_created_by_admin_profile_id_fkey"
+            columns: ["created_by_admin_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_professional_assignments: {
         Row: {
           assigned_coach_id: string | null
