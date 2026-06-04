@@ -1,0 +1,677 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus } from "lucide-react";
+import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory } from "@/lib/workouts.functions";
+import { toast } from "sonner";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+
+export const Route = createFileRoute("/student/workout")({
+  head: () => ({ meta: [{ title: "Meu Treino — FitMind Club" }] }),
+  component: WorkoutPage,
+});
+
+type Plan = {
+  id: string;
+  name: string;
+  day_of_week: number | null;
+  notes: string | null;
+  workout_exercises: Array<{
+    id: string;
+    order_index: number;
+    exercise_name: string;
+    sets: number;
+    reps: string | null;
+    load_kg: number | null;
+    rest_seconds: number;
+    equipment_config: string | null;
+    media_url: string | null;
+    notes: string | null;
+    is_cardio: boolean;
+    cardio_duration_min: number | null;
+    cardio_pace: string | null;
+    cardio_speed: number | null;
+    cardio_elevation: number | null;
+  }>;
+};
+
+const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function WorkoutPage() {
+  const navigate = useNavigate();
+  const [view, setView] = useState<"home" | "active" | "history">("home");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [activePlan, setActivePlan] = useState<Plan | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const listFn = useServerFn(listWorkoutPlans);
+
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const data = (await listFn({ data: {} })) as Plan[];
+      data.forEach((p) => p.workout_exercises?.sort((a, b) => a.order_index - b.order_index));
+      setPlans(data);
+    } catch (e) {
+      toast.error("Erro ao carregar treinos");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    reload();
+  }, []);
+
+  if (view === "active" && activePlan) {
+    return <ActiveSession plan={activePlan} onExit={() => { setActivePlan(null); setView("home"); reload(); }} />;
+  }
+  if (view === "history") {
+    return <HistoryView onBack={() => setView("home")} />;
+  }
+
+  return (
+    <div className="space-y-4 p-4 pb-8">
+      <header className="flex items-center gap-3">
+        <button onClick={() => navigate({ to: "/student" })} className="rounded-full bg-white/5 p-2 text-white/70">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-white">Meu Treino</h1>
+          <p className="text-[11px] text-white/45">Treine, evolua, conquiste 🏆</p>
+        </div>
+        <button onClick={() => setView("history")} className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary">
+          <History className="h-3.5 w-3.5" /> Histórico
+        </button>
+      </header>
+
+      {loading ? (
+        <p className="py-12 text-center text-sm text-white/50">Carregando...</p>
+      ) : plans.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+          <Dumbbell className="mx-auto h-10 w-10 text-white/30" />
+          <p className="mt-3 text-sm font-semibold text-white">Nenhum treino configurado</p>
+          <p className="mt-1 text-[11px] text-white/50">
+            Peça ao seu coach para configurar um plano de treino para você.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {plans.map((p) => (
+            <div key={p.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white">{p.name}</p>
+                  <p className="mt-1 text-[11px] text-white/45">
+                    {p.day_of_week !== null ? `Dia: ${DAYS[p.day_of_week]} · ` : ""}
+                    {p.workout_exercises.length} exercícios
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setActivePlan(p); setView("active"); }}
+                  className="flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
+                >
+                  <Play className="h-3.5 w-3.5" /> Iniciar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Link to="/student" className="block text-center text-[11px] text-white/40 underline">Voltar para início</Link>
+    </div>
+  );
+}
+
+/* ------------------------- ACTIVE SESSION ------------------------- */
+function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
+  const startFn = useServerFn(startWorkoutSession);
+  const logSetFn = useServerFn(logSet);
+  const logCardioFn = useServerFn(logCardio);
+  const finishFn = useServerFn(finishWorkoutSession);
+
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [globalSec, setGlobalSec] = useState(0);
+  const [running, setRunning] = useState(true);
+  const [completedSets, setCompletedSets] = useState<Record<string, number>>({}); // exerciseId -> sets done
+  const [loads, setLoads] = useState<Record<string, number>>({}); // exerciseId -> current load
+  const [reps, setReps] = useState<Record<string, number>>({});
+  const [restRemaining, setRestRemaining] = useState<number | null>(null);
+  const [restMax, setRestMax] = useState<number>(60);
+  const [restExceeded, setRestExceeded] = useState(false);
+  const [summary, setSummary] = useState<{ xp: number; total: number; achievements: string[]; durationSec: number } | null>(null);
+
+  // cardio state
+  const [cardio, setCardio] = useState<Record<string, { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean }>>({});
+
+  useEffect(() => {
+    (async () => {
+      const r = (await startFn({ data: { plan_id: plan.id } })) as { id: string };
+      setSessionId(r.id);
+    })();
+  }, [plan.id, startFn]);
+
+  // Global timer
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setGlobalSec((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  // Rest timer countdown
+  useEffect(() => {
+    if (restRemaining === null) return;
+    const t = setInterval(() => {
+      setRestRemaining((r) => (r === null ? null : r - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [restRemaining !== null]);
+
+  useEffect(() => {
+    if (restRemaining !== null && restRemaining < 0 && !restExceeded) setRestExceeded(true);
+  }, [restRemaining, restExceeded]);
+
+  const totalUnits = useMemo(() => plan.workout_exercises.reduce((s, e) => s + (e.is_cardio ? 1 : e.sets), 0), [plan]);
+  const doneUnits = useMemo(() => {
+    let n = 0;
+    plan.workout_exercises.forEach((e) => {
+      if (e.is_cardio) n += cardio[e.id]?.done ? 1 : 0;
+      else n += Math.min(completedSets[e.id] || 0, e.sets);
+    });
+    return n;
+  }, [plan, completedSets, cardio]);
+  const completionPct = totalUnits ? Math.round((doneUnits / totalUnits) * 100) : 0;
+
+  const fmt = (s: number) => {
+    const sign = s < 0 ? "-" : "";
+    const a = Math.abs(s);
+    const m = Math.floor(a / 60);
+    const ss = a % 60;
+    return `${sign}${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  };
+
+  const skipRest = () => { setRestRemaining(null); setRestExceeded(false); };
+
+  const completeSet = async (ex: Plan["workout_exercises"][number]) => {
+    if (!sessionId) return;
+    const setNumber = (completedSets[ex.id] || 0) + 1;
+    const load = loads[ex.id] ?? ex.load_kg ?? 0;
+    const repsDone = reps[ex.id] ?? parseInt(ex.reps || "0", 10) || 0;
+    try {
+      await logSetFn({
+        data: {
+          session_id: sessionId,
+          exercise_id: ex.id,
+          set_number: setNumber,
+          reps_done: repsDone,
+          load_kg: load,
+          rest_seconds_actual: null,
+          rest_exceeded: false,
+        },
+      });
+      setCompletedSets((c) => ({ ...c, [ex.id]: setNumber }));
+      if (setNumber < ex.sets) {
+        setRestMax(ex.rest_seconds);
+        setRestRemaining(ex.rest_seconds);
+        setRestExceeded(false);
+      }
+    } catch (e) {
+      toast.error("Erro ao registrar série");
+    }
+  };
+
+  const completeCardio = async (ex: Plan["workout_exercises"][number]) => {
+    if (!sessionId) return;
+    const c = cardio[ex.id] || { duration: "", pace: "", speed: "", elevation: "", distance: "", done: false };
+    try {
+      await logCardioFn({
+        data: {
+          session_id: sessionId,
+          exercise_id: ex.id,
+          duration_min: c.duration ? Number(c.duration) : null,
+          distance_km: c.distance ? Number(c.distance) : null,
+          pace: c.pace || null,
+          speed: c.speed ? Number(c.speed) : null,
+          elevation: c.elevation ? Number(c.elevation) : null,
+          calories: null,
+        },
+      });
+      setCardio((m) => ({ ...m, [ex.id]: { ...c, done: true } }));
+    } catch {
+      toast.error("Erro ao registrar cardio");
+    }
+  };
+
+  const finish = async () => {
+    if (!sessionId) return;
+    try {
+      const r = (await finishFn({
+        data: { session_id: sessionId, total_seconds: globalSec, completion_pct: completionPct, notes: null },
+      })) as { xp: number; totalSessions: number; newAchievements: string[] };
+      setSummary({ xp: r.xp, total: r.totalSessions, achievements: r.newAchievements, durationSec: globalSec });
+      setRunning(false);
+    } catch {
+      toast.error("Erro ao finalizar");
+    }
+  };
+
+  if (summary) {
+    return (
+      <div className="space-y-5 p-5 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-4xl shadow-xl shadow-primary/40">
+          🏆
+        </div>
+        <h2 className="text-2xl font-extrabold text-white">Treino concluído!</h2>
+        <p className="text-sm text-white/60">Você completou {completionPct}% do treino</p>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Stat icon={<Flame className="h-4 w-4" />} label="XP" value={`+${summary.xp}`} />
+          <Stat icon={<Clock className="h-4 w-4" />} label="Tempo" value={fmt(summary.durationSec)} />
+          <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(summary.total)} />
+        </div>
+
+        {summary.achievements.length > 0 && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Nova Conquista!</p>
+            <p className="mt-1 text-sm text-white">{summary.achievements.join(" · ")}</p>
+          </div>
+        )}
+
+        <button onClick={onExit} className="w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground">
+          Voltar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 p-4 pb-32">
+      <header className="flex items-center gap-3">
+        <button onClick={onExit} className="rounded-full bg-white/5 p-2 text-white/70">
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-bold text-white">{plan.name}</p>
+          <p className="text-[11px] text-white/45">{completionPct}% · {doneUnits}/{totalUnits} concluídos</p>
+        </div>
+        <button onClick={() => setRunning((r) => !r)} className="rounded-full bg-white/5 p-2 text-white/70">
+          {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </button>
+        <div className="rounded-full bg-primary/15 px-3 py-1.5 font-mono text-xs font-bold text-primary tabular-nums">
+          {fmt(globalSec)}
+        </div>
+      </header>
+
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+        <div className="h-full bg-gradient-to-r from-primary to-orange-500 transition-all" style={{ width: `${completionPct}%` }} />
+      </div>
+
+      {/* Rest timer banner */}
+      {restRemaining !== null && (
+        <div
+          className={`sticky top-0 z-10 flex items-center justify-between rounded-2xl p-3 ${
+            restExceeded ? "animate-pulse bg-red-500/30 border border-red-500" : "bg-primary/15 border border-primary/30"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Clock className={`h-5 w-5 ${restExceeded ? "text-red-400" : "text-primary"}`} />
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-wider text-white/60">Descanso</p>
+              <p className={`font-mono text-lg font-bold tabular-nums ${restExceeded ? "text-red-300" : "text-white"}`}>
+                {fmt(restRemaining)}
+              </p>
+            </div>
+          </div>
+          <button onClick={skipRest} className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white">
+            Pular
+          </button>
+        </div>
+      )}
+
+      {plan.workout_exercises.map((ex) => (
+        <ExerciseCard
+          key={ex.id}
+          ex={ex}
+          done={completedSets[ex.id] || 0}
+          load={loads[ex.id] ?? ex.load_kg ?? 0}
+          reps={reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0)}
+          cardio={cardio[ex.id]}
+          onChangeLoad={(v) => setLoads((m) => ({ ...m, [ex.id]: v }))}
+          onChangeReps={(v) => setReps((m) => ({ ...m, [ex.id]: v }))}
+          onChangeCardio={(patch) =>
+            setCardio((m) => ({ ...m, [ex.id]: { duration: "", pace: "", speed: "", elevation: "", distance: "", done: false, ...m[ex.id], ...patch } }))
+          }
+          onCompleteSet={() => completeSet(ex)}
+          onCompleteCardio={() => completeCardio(ex)}
+        />
+      ))}
+
+      <button
+        onClick={finish}
+        className="fixed bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-orange-500 px-8 py-3 text-sm font-bold text-white shadow-xl shadow-primary/30"
+      >
+        Finalizar Treino
+      </button>
+    </div>
+  );
+}
+
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">{icon}</div>
+      <p className="mt-1.5 text-[10px] uppercase text-white/40">{label}</p>
+      <p className="text-sm font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
+function ExerciseCard({
+  ex,
+  done,
+  load,
+  reps,
+  cardio,
+  onChangeLoad,
+  onChangeReps,
+  onChangeCardio,
+  onCompleteSet,
+  onCompleteCardio,
+}: {
+  ex: Plan["workout_exercises"][number];
+  done: number;
+  load: number;
+  reps: number;
+  cardio?: { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean };
+  onChangeLoad: (v: number) => void;
+  onChangeReps: (v: number) => void;
+  onChangeCardio: (p: Partial<{ duration: string; pace: string; speed: string; elevation: string; distance: string }>) => void;
+  onCompleteSet: () => void;
+  onCompleteCardio: () => void;
+}) {
+  const isComplete = ex.is_cardio ? cardio?.done : done >= ex.sets;
+  return (
+    <div className={`rounded-2xl border p-3 ${isComplete ? "border-primary/30 bg-primary/5" : "border-white/10 bg-white/5"}`}>
+      <div className="flex items-start gap-3">
+        {ex.media_url ? (
+          <img src={ex.media_url} alt="" className="h-14 w-14 rounded-xl object-cover" />
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/5">
+            <Dumbbell className="h-5 w-5 text-white/40" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-white">{ex.exercise_name}</p>
+          {ex.is_cardio ? (
+            <p className="text-[11px] text-white/45">
+              Cardio {ex.cardio_duration_min ? `· ${ex.cardio_duration_min}min` : ""}
+              {ex.cardio_pace ? ` · pace ${ex.cardio_pace}` : ""}
+            </p>
+          ) : (
+            <p className="text-[11px] text-white/45">
+              {ex.sets} séries · {ex.reps || "—"} reps · {ex.rest_seconds}s descanso
+            </p>
+          )}
+          {ex.equipment_config && <p className="mt-0.5 text-[10px] text-white/40">⚙ {ex.equipment_config}</p>}
+          {ex.notes && <p className="mt-0.5 text-[10px] italic text-white/40">{ex.notes}</p>}
+        </div>
+        {isComplete && <Check className="h-5 w-5 shrink-0 text-primary" />}
+      </div>
+
+      {!ex.is_cardio && (
+        <>
+          <div className="mt-3 flex items-center gap-2">
+            <NumInput label="Carga (kg)" value={load} onChange={onChangeLoad} step={2.5} />
+            <NumInput label="Reps" value={reps} onChange={onChangeReps} step={1} />
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex flex-1 gap-1">
+              {Array.from({ length: ex.sets }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 flex-1 rounded-full ${i < done ? "bg-primary" : "bg-white/10"}`}
+                />
+              ))}
+            </div>
+            <button
+              disabled={done >= ex.sets}
+              onClick={onCompleteSet}
+              className="rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground disabled:opacity-40"
+            >
+              + Série {done + 1}
+            </button>
+          </div>
+        </>
+      )}
+
+      {ex.is_cardio && !cardio?.done && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <TextField label="Duração (min)" value={cardio?.duration ?? ""} onChange={(v) => onChangeCardio({ duration: v })} />
+          <TextField label="Distância (km)" value={cardio?.distance ?? ""} onChange={(v) => onChangeCardio({ distance: v })} />
+          <TextField label="Pace" value={cardio?.pace ?? ""} onChange={(v) => onChangeCardio({ pace: v })} placeholder="5:30" />
+          <TextField label="Velocidade" value={cardio?.speed ?? ""} onChange={(v) => onChangeCardio({ speed: v })} />
+          <TextField label="Elevação" value={cardio?.elevation ?? ""} onChange={(v) => onChangeCardio({ elevation: v })} />
+          <button onClick={onCompleteCardio} className="rounded-xl bg-primary px-3 py-2 text-[11px] font-bold text-primary-foreground">
+            Concluir cardio
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NumInput({ label, value, onChange, step }: { label: string; value: number; onChange: (v: number) => void; step: number }) {
+  return (
+    <div className="flex-1">
+      <p className="mb-1 text-[9px] uppercase tracking-wider text-white/40">{label}</p>
+      <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+        <button onClick={() => onChange(Math.max(0, value - step))} className="h-7 w-7 rounded-lg bg-white/10 text-sm font-bold text-white">−</button>
+        <input
+          type="number"
+          value={value || ""}
+          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          className="w-full bg-transparent text-center text-sm font-bold text-white outline-none"
+        />
+        <button onClick={() => onChange(value + step)} className="h-7 w-7 rounded-lg bg-white/10 text-sm font-bold text-white">+</button>
+      </div>
+    </div>
+  );
+}
+
+function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div>
+      <p className="mb-1 text-[9px] uppercase tracking-wider text-white/40">{label}</p>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-xl bg-white/5 px-2 py-1.5 text-sm text-white outline-none placeholder:text-white/30"
+      />
+    </div>
+  );
+}
+
+/* ------------------------- HISTORY VIEW ------------------------- */
+function HistoryView({ onBack }: { onBack: () => void }) {
+  const histFn = useServerFn(getWorkoutHistory);
+  const [data, setData] = useState<{
+    sessions: Array<{ id: string; started_at: string; ended_at: string | null; total_seconds: number | null; completion_pct: number; xp_earned: number; workout_plans: { name: string } | { name: string }[] }>;
+    logs: Array<{ exercise_id: string; load_kg: number | null; completed_at: string; workout_exercises: { exercise_name: string } | { exercise_name: string }[] }>;
+    achievements: Array<{ id: string; title: string; icon: string | null; earned_at: string }>;
+  } | null>(null);
+  const [tab, setTab] = useState<"calendar" | "evolution" | "achievements">("calendar");
+
+  useEffect(() => {
+    (async () => {
+      const r = await histFn({ data: {} });
+      setData(r as never);
+    })();
+  }, []);
+
+  const completed = data?.sessions.filter((s) => s.ended_at) || [];
+  const totalDays = completed.length;
+  const firstStart = completed.length ? new Date(completed[completed.length - 1].started_at) : null;
+  const daysSinceStart = firstStart ? Math.floor((Date.now() - firstStart.getTime()) / 86400000) + 1 : 0;
+
+  const streak = useMemo(() => {
+    const dates = new Set(completed.map((s) => new Date(s.started_at).toISOString().slice(0, 10)));
+    let s = 0;
+    const d = new Date();
+    for (;;) {
+      const key = d.toISOString().slice(0, 10);
+      if (dates.has(key)) { s++; d.setDate(d.getDate() - 1); } else break;
+    }
+    return s;
+  }, [completed]);
+
+  // Group logs by exercise for load evolution
+  const loadByExercise = useMemo(() => {
+    if (!data) return {};
+    const map: Record<string, Array<{ date: string; load: number }>> = {};
+    data.logs.forEach((l) => {
+      const name = (Array.isArray(l.workout_exercises) ? l.workout_exercises[0]?.exercise_name : l.workout_exercises?.exercise_name) || "Exercício";
+      if (l.load_kg == null) return;
+      const date = new Date(l.completed_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      (map[name] ||= []).push({ date, load: Number(l.load_kg) });
+    });
+    return map;
+  }, [data]);
+
+  return (
+    <div className="space-y-4 p-4 pb-8">
+      <header className="flex items-center gap-3">
+        <button onClick={onBack} className="rounded-full bg-white/5 p-2 text-white/70">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <h1 className="text-lg font-bold text-white">Acompanhamento</h1>
+      </header>
+
+      <div className="grid grid-cols-3 gap-2">
+        <Stat icon={<Flame className="h-4 w-4" />} label="Streak" value={`${streak}d`} />
+        <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(totalDays)} />
+        <Stat icon={<CalendarIcon className="h-4 w-4" />} label="Dias ativo" value={String(daysSinceStart)} />
+      </div>
+
+      <div className="flex gap-2 rounded-full bg-white/5 p-1">
+        {(["calendar", "evolution", "achievements"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-full px-3 py-2 text-[11px] font-bold ${tab === t ? "bg-primary text-primary-foreground" : "text-white/60"}`}
+          >
+            {t === "calendar" ? "Calendário" : t === "evolution" ? "Evolução" : "Conquistas"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "calendar" && <CalendarView sessions={completed} />}
+
+      {tab === "evolution" && (
+        <div className="space-y-4">
+          {Object.keys(loadByExercise).length === 0 ? (
+            <p className="py-8 text-center text-xs text-white/40">Sem dados de carga ainda.</p>
+          ) : (
+            Object.entries(loadByExercise).slice(0, 6).map(([name, points]) => (
+              <div key={name} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-xs font-bold text-white">{name}</p>
+                <div className="h-32">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={points}>
+                      <XAxis dataKey="date" stroke="#666" fontSize={9} />
+                      <YAxis stroke="#666" fontSize={9} />
+                      <Tooltip contentStyle={{ background: "#1a1a1a", border: "none", fontSize: 11 }} />
+                      <Line type="monotone" dataKey="load" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === "achievements" && (
+        <div className="grid grid-cols-2 gap-2">
+          {data?.achievements.length === 0 && <p className="col-span-2 py-8 text-center text-xs text-white/40">Sem conquistas ainda.</p>}
+          {data?.achievements.map((a) => (
+            <div key={a.id} className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 to-transparent p-3 text-center">
+              <p className="text-2xl">{a.icon || "🏆"}</p>
+              <p className="mt-1 text-xs font-bold text-white">{a.title}</p>
+              <p className="text-[9px] text-white/40">{new Date(a.earned_at).toLocaleDateString("pt-BR")}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <p className="mb-2 text-xs font-bold text-white">Sessões recentes</p>
+        {completed.slice(0, 10).map((s) => {
+          const planName = Array.isArray(s.workout_plans) ? s.workout_plans[0]?.name : s.workout_plans?.name;
+          return (
+            <div key={s.id} className="flex items-center justify-between border-t border-white/5 py-2 text-[11px] first:border-t-0">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-white">{planName || "Treino"}</p>
+                <p className="text-white/40">{new Date(s.started_at).toLocaleString("pt-BR")}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-primary">{s.completion_pct}%</p>
+                <p className="text-white/40">+{s.xp_earned} XP</p>
+              </div>
+            </div>
+          );
+        })}
+        {completed.length === 0 && <p className="py-2 text-center text-[11px] text-white/40">Nenhuma sessão concluída.</p>}
+      </div>
+    </div>
+  );
+}
+
+function CalendarView({ sessions }: { sessions: Array<{ started_at: string; completion_pct: number }> }) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const byDay: Record<number, number> = {};
+  sessions.forEach((s) => {
+    const d = new Date(s.started_at);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      byDay[d.getDate()] = Math.max(byDay[d.getDate()] || 0, s.completion_pct);
+    }
+  });
+
+  const cells: Array<number | null> = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <p className="mb-2 text-center text-xs font-bold text-white">
+        {now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+      </p>
+      <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-white/40">
+        {DAYS.map((d) => <div key={d}>{d}</div>)}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          const pct = d ? byDay[d] : undefined;
+          return (
+            <div
+              key={i}
+              className={`aspect-square rounded-lg text-[10px] font-bold flex items-center justify-center ${
+                pct !== undefined
+                  ? pct >= 100 ? "bg-primary text-primary-foreground" : "bg-primary/40 text-white"
+                  : d ? "bg-white/5 text-white/50" : ""
+              }`}
+            >
+              {d || ""}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-center text-[9px] text-white/40">Verde escuro = treino 100% concluído</p>
+    </div>
+  );
+}
