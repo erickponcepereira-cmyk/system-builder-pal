@@ -219,8 +219,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                     </button>
                   </div>
                 ) : (
-                  <label className="flex h-24 cursor-pointer items-center justify-center rounded border border-dashed border-white/20">
+                  <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
+                    <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
                     <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
                   </label>
                 )}
