@@ -76,30 +76,31 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       if (kind === "partner") {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,price,section_id,category_id,partner_id,partners(fantasy_name)")
+          .select("id,name,description,image_url,price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true);
         if (error) console.error("[partner store]", error);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
             id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price),
             section_id: r.section_id, category_id: r.category_id,
             seller: r.partners?.fantasy_name || "Parceiro",
             kind: "partner",
+            coachCommissionPct: r.coach_commission_percentage ?? null,
           })),
         );
       } else {
         const { data, error } = await supabase
           .from("professional_products" as never)
           .select(
-            "id,name,description,image_url,price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+            "id,name,description,image_url,price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
           )
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true);
         if (error) console.error("[pp store]", error);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
             id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price),
             section_id: r.section_id, category_id: r.category_id,
             seller: r.coaches?.profile?.name || "Profissional",
@@ -107,6 +108,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             isSchedulable: !!r.is_schedulable,
             professionalCoachId: r.coach_id,
             durationMinutes: r.default_duration_minutes ?? 30,
+            coachCommissionPct: r.coach_commission_percentage ?? null,
           })),
         );
       }
