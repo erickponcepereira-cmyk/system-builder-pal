@@ -39,9 +39,10 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
     (async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id,current_weight,goal_weight,completed_coach_course,created_at,profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state)")
+        .select("id,profile_id,current_weight,goal_weight,completed_coach_course,created_at,profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state)")
         .eq("coach_id", coachId)
         .order("created_at", { ascending: false });
+
       if (error) toast.error("Erro ao carregar alunos da base");
       const rows = ((data || []) as unknown) as StudentRow[];
       setStudents(rows);
