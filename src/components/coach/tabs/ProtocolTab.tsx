@@ -608,12 +608,50 @@ export function ProtocolTab() {
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-3 text-sm font-bold text-white">Metas</h2>
+
+                {/* Meta de água — automática */}
+                <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                      <Sparkles className="h-3.5 w-3.5" /> Meta de água (cálculo automático)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const auto = calcWaterGoalMl(lastBioWeight ?? selected.current_weight, studentAge);
+                        if (auto) setProtocol((p) => ({ ...p, water_goal_ml: auto }));
+                        setWaterOverride(false);
+                      }}
+                      className="rounded bg-white/10 px-2 py-1 text-[10px] text-white hover:bg-white/20"
+                    >
+                      Recalcular
+                    </button>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-white/60">
+                    {describeWaterFormula(lastBioWeight ?? selected.current_weight, studentAge)}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Droplet className="h-4 w-4 text-primary" />
+                    <input
+                      type="number"
+                      value={protocol.water_goal_ml ?? ""}
+                      onChange={(e) => { setWaterOverride(true); setProtocol((p) => ({ ...p, water_goal_ml: e.target.value === "" ? null : Number(e.target.value) })); }}
+                      className="w-28 rounded bg-white/10 px-2 py-1.5 text-sm text-white"
+                    />
+                    <span className="text-xs text-white/40">ml/dia</span>
+                    {waterOverride && <span className="ml-2 rounded bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold text-yellow-400">Manual</span>}
+                  </div>
+                  {!lastBioWeight && !selected.current_weight && (
+                    <p className="mt-1 text-[10px] text-yellow-400">⚠ Sem peso registrado — faça uma bioimpedância ou ajuste manualmente.</p>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field icon={Droplet} label="Água / dia" suffix="ml" value={protocol.water_goal_ml ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, water_goal_ml: v === "" ? null : Number(v) }))} />
                   <Field icon={Target} label="Meta de peso" suffix="kg" value={protocol.weight_goal ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, weight_goal: v === "" ? null : Number(v) }))} step="0.1" />
                 </div>
                 <p className="mt-2 text-[10px] text-white/40">A meta de calorias é definida apenas no painel do nutricionista.</p>
               </div>
+
 
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
