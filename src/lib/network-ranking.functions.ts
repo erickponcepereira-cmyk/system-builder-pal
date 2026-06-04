@@ -282,17 +282,18 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
   return revenue;
 }
 
-async function loadMedalRules(supabaseAdmin: any) {
+async function loadMedalRules(supabaseAdmin: any, kind: "monthly" | "cumulative" = "monthly") {
   const { data } = await supabaseAdmin
     .from("career_medal_rules")
     .select("key,display_name,threshold,icon,sort_order,kind,is_active")
     .eq("is_active", true)
     .order("threshold", { ascending: true });
   const rows = ((data as Array<{ key: string; display_name: string; threshold: number; icon: string | null; kind: string | null }> | null) || [])
-    .filter((r) => !r.kind || r.kind === "monthly")
+    .filter((r) => (kind === "monthly" ? (!r.kind || r.kind === "monthly") : r.kind === "cumulative"))
     .map((r) => ({ key: r.key, name: r.display_name, icon: r.icon, threshold: Number(r.threshold) || 0 }));
   return rows;
 }
+
 
 function medalFor(value: number, rules: Array<{ key: string; name: string; icon: string | null; threshold: number }>) {
   let medal: NetworkRankMedal = null;
@@ -323,8 +324,8 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
     const downline = collectDownline(coachId, byUpline, me);
     const allIds = downline.map((d) => d.coach.id);
     if (me?.upline_coach_id && byId.has(me.upline_coach_id)) allIds.push(me.upline_coach_id);
-    const monthRevenue = await loadRevenueByCoach(supabaseAdmin, allIds, firstOfMonthDate(), todayDate());
-    const medalRules = await loadMedalRules(supabaseAdmin);
+    const lifetimeRevenue = await loadRevenueByCoach(supabaseAdmin, allIds, "2000-01-01", todayDate());
+    const medalRules = await loadMedalRules(supabaseAdmin, "cumulative");
     const patentRules = await loadPatentRules(supabaseAdmin);
     const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
     const windowsRevenueByCoach = new Map<number, Map<string, number>>();
@@ -335,9 +336,10 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
     }));
 
     const enrich = (c: CoachRow) => {
-      const own = monthRevenue.get(c.id) || 0;
+      const own = lifetimeRevenue.get(c.id) || 0;
       return {
         coachId: c.id,
+
         name: coachName(c),
         email: coachEmail(c),
         directStudents: breakdown(c.id),
