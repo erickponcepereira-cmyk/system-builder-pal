@@ -122,7 +122,96 @@ async function loadBase(supabaseAdmin: any) {
   const coachProfileIds = new Set(coaches.map((c) => c.profile_id));
   const professionalProfileIds = new Set(coaches.filter((c) => !!c.is_professional).map((c) => c.profile_id));
   const partnerProfileIds = new Set(((partnersRaw as Array<{ profile_id: string }> | null) || []).map((p) => p.profile_id));
-  return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds };
+  const studentProfileIds = new Set(students.map((s) => s.profile_id));
+  return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds };
+}
+
+function categoriesForCoach(
+  coach: CoachRow,
+  studentProfileIds: Set<string>,
+  professionalProfileIds: Set<string>,
+  partnerProfileIds: Set<string>,
+): string[] {
+  const cats: string[] = ["Coach"];
+  if (studentProfileIds.has(coach.profile_id)) cats.push("Aluno");
+  if (professionalProfileIds.has(coach.profile_id)) cats.push("Profissional");
+  if (partnerProfileIds.has(coach.profile_id)) cats.push("Parceiro");
+  return cats;
+}
+
+type PatentRule = {
+  key: string;
+  display_name: string;
+  badge_color: string | null;
+  badge_icon: string | null;
+  required_revenue: number;
+  time_window_months: number;
+  min_own_sales_pct: number;
+  vp_max_pct: number | null;
+  level: number;
+};
+
+async function loadPatentRules(supabaseAdmin: any): Promise<PatentRule[]> {
+  const { data } = await supabaseAdmin
+    .from("patent_rules")
+    .select("key,display_name,badge_color,badge_icon,required_revenue,time_window_months,min_own_sales_pct,vp_max_pct,level,is_active")
+    .eq("is_active", true)
+    .not("key", "is", null)
+    .order("level", { ascending: true });
+  return ((data as any[] | null) || []).map((r) => ({
+    key: r.key,
+    display_name: r.display_name,
+    badge_color: r.badge_color,
+    badge_icon: r.badge_icon,
+    required_revenue: Number(r.required_revenue) || 0,
+    time_window_months: Number(r.time_window_months) || 1,
+    min_own_sales_pct: Number(r.min_own_sales_pct) || 0,
+    vp_max_pct: r.vp_max_pct == null ? null : Number(r.vp_max_pct),
+    level: Number(r.level) || 0,
+  }));
+}
+
+function monthsAgoDate(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+
+function todayDate(): string { return new Date().toISOString().slice(0, 10); }
+
+function descendantsOf(coachId: string, byUpline: Map<string, CoachRow[]>): string[] {
+  const out: string[] = [];
+  const q = (byUpline.get(coachId) || []).map((c) => c.id);
+  while (q.length) {
+    const id = q.shift()!;
+    out.push(id);
+    (byUpline.get(id) || []).forEach((c) => q.push(c.id));
+  }
+  return out;
+}
+
+function patentForCoach(
+  coachId: string,
+  patents: PatentRule[],
+  windowsRevenueByCoach: Map<number, Map<string, number>>,
+  byUpline: Map<string, CoachRow[]>,
+): NetworkRankPatent {
+  let current: PatentRule | null = null;
+  const descIds = descendantsOf(coachId, byUpline);
+  for (const p of patents) {
+    const rev = windowsRevenueByCoach.get(p.time_window_months);
+    if (!rev) continue;
+    const own = rev.get(coachId) || 0;
+    const team = descIds.reduce((s, id) => s + (rev.get(id) || 0), 0);
+    if (p.required_revenue === 0) { current = p; continue; }
+    const vpMax = p.vp_max_pct != null ? p.vp_max_pct : p.min_own_sales_pct;
+    const cap = (p.required_revenue * (vpMax || 100)) / 100;
+    const cappedOwn = Math.min(own, cap);
+    const qualifying = cappedOwn + team;
+    if (qualifying >= p.required_revenue) current = p; else break;
+  }
+  if (!current) return null;
+  return { key: current.key, name: current.display_name, color: current.badge_color, icon: current.badge_icon, level: current.level };
 }
 
 function breakdownForCoach(
