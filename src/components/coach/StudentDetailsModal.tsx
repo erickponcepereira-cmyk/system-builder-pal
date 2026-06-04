@@ -514,3 +514,90 @@ function Info({ label, value }: { label: string; value: string | null | undefine
     </div>
   );
 }
+
+function EvolutionPhotos({ photos }: { photos: PhotoRow[] }) {
+  const [signed, setSigned] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (async () => {
+      const out: Record<string, string> = {};
+      await Promise.all(photos.map(async (p) => {
+        // photo_url can be a storage path (private bucket) or a full URL (legacy)
+        if (/^https?:\/\//i.test(p.photo_url)) { out[p.id] = p.photo_url; return; }
+        const { data } = await supabase.storage.from("evolution-photos").createSignedUrl(p.photo_url, 60 * 60);
+        if (data?.signedUrl) out[p.id] = data.signedUrl;
+      }));
+      setSigned(out);
+    })();
+  }, [photos]);
+  return (
+    <div>
+      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Fotos de evolução</p>
+      {photos.length === 0 ? (
+        <p className="text-xs text-white/40">Aluno ainda não enviou fotos.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((p) => {
+            const url = signed[p.id];
+            return (
+              <a key={p.id} href={url || "#"} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border border-white/5">
+                {url ? (
+                  <img src={url} alt={p.caption || ""} loading="lazy" className="aspect-square w-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="aspect-square w-full bg-white/5 animate-pulse" />
+                )}
+                <p className="bg-black/50 p-1 text-center text-[10px] text-white/70">{new Date(p.photo_date).toLocaleDateString("pt-BR")}</p>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type PurchaseStatusFilter = "all" | "paid" | "pending" | "cancelled";
+function PurchasesTab({ txs }: { txs: TxRow[] }) {
+  const [filter, setFilter] = useState<PurchaseStatusFilter>("all");
+  const normalize = (s: string): PurchaseStatusFilter => {
+    const v = (s || "").toLowerCase();
+    if (v === "paid" || v === "pago") return "paid";
+    if (v === "pending" || v === "pendente" || v === "processing") return "pending";
+    if (v === "cancelled" || v === "canceled" || v === "cancelado" || v === "refused" || v === "failed") return "cancelled";
+    return "pending";
+  };
+  const filtered = filter === "all" ? txs : txs.filter((t) => normalize(t.status) === filter);
+  const chip = (id: PurchaseStatusFilter, label: string) => (
+    <button key={id} onClick={() => setFilter(id)} className={`rounded-lg px-3 py-1 text-[11px] font-bold ${filter === id ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>{label}</button>
+  );
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {chip("all", "Todos")}
+        {chip("paid", "Pago")}
+        {chip("pending", "Pendente")}
+        {chip("cancelled", "Cancelado")}
+      </div>
+      <div className="space-y-2">
+        {filtered.length === 0 ? (
+          <p className="py-6 text-center text-xs text-white/40">Nenhuma compra.</p>
+        ) : filtered.map((t) => {
+          const st = normalize(t.status);
+          const style = st === "paid"
+            ? { border: "border-emerald-500/40", bg: "bg-emerald-500/10", text: "text-emerald-400", label: "Pago" }
+            : st === "pending"
+              ? { border: "border-amber-500/40", bg: "bg-amber-500/10", text: "text-amber-400", label: "Pendente" }
+              : { border: "border-red-500/40", bg: "bg-red-500/10", text: "text-red-400", label: "Cancelado" };
+          return (
+            <div key={t.id} className={`flex items-center justify-between gap-3 rounded-xl border ${style.border} ${style.bg} p-3`}>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-white">{t.products?.name || "Compra"}</p>
+                <p className="text-[11px] text-white/60">{t.paid_at ? new Date(t.paid_at).toLocaleDateString("pt-BR") : new Date(t.created_at).toLocaleDateString("pt-BR")} · <span className={`font-bold ${style.text}`}>{style.label}</span></p>
+              </div>
+              <p className="text-sm font-bold text-white">R$ {Number(t.gross_amount || 0).toFixed(2).replace(".", ",")}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
