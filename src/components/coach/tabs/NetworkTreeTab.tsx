@@ -100,7 +100,9 @@ function TreeNode({ node, expanded, toggle, onOpen, clickable }: { node: CoachTr
               <p className="truncate text-sm font-semibold text-white">{node.name}</p>
               <Classifications items={node.classifications} />
               <Categories items={node.categories} />
-              <p className="mt-1 text-[11px] text-white/45">L{node.level} · {node.directStudents.total} alunos · {node.childCoaches} coaches abaixo</p>
+              <div className="mt-1 text-[11px] text-white/45">L{node.level}</div>
+              <StudentsBreakdown b={node.directStudents} downlineCoaches={node.childCoaches} />
+
             </div>
             <div className="flex flex-col items-end gap-1">
               <PatentTag patent={node.patent} />
