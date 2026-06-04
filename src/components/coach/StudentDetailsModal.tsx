@@ -477,56 +477,9 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               </div>
             </div>
           ) : tab === "evolucao" ? (
-            <div className="space-y-4">
-              <div>
-                <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Histórico de peso</p>
-                {weights.length === 0 ? (
-                  <p className="text-xs text-white/40">Sem registros.</p>
-                ) : (
-                  <div className="overflow-x-auto rounded-xl border border-white/5">
-                    <table className="w-full text-xs">
-                      <thead className="bg-white/5 text-left text-white/50">
-                        <tr><th className="p-2">Data</th><th className="p-2">Peso</th><th className="p-2">Cintura</th><th className="p-2">Quadril</th></tr>
-                      </thead>
-                      <tbody>
-                        {weights.map((w) => (
-                          <tr key={w.id} className="border-t border-white/5 text-white/80"><td className="p-2">{fmtBR(w.log_date)}</td><td className="p-2">{w.weight} kg</td><td className="p-2">{w.waist_cm ? `${w.waist_cm}cm` : "—"}</td><td className="p-2">{w.hip_cm ? `${w.hip_cm}cm` : "—"}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Fotos de evolução</p>
-                {photos.length === 0 ? (
-                  <p className="text-xs text-white/40">Aluno ainda não enviou fotos.</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {photos.map((p) => (
-                      <a key={p.id} href={p.photo_url} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border border-white/5">
-                        <img src={p.photo_url} alt={p.caption || ""} loading="lazy" className="aspect-square w-full object-cover transition group-hover:scale-105" />
-                        <p className="bg-black/50 p-1 text-center text-[10px] text-white/70">{fmtBR(p.photo_date)}</p>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <EvolutionPhotos photos={photos} />
           ) : (
-            <div className="space-y-2">
-              {txs.length === 0 ? (
-                <p className="py-6 text-center text-xs text-white/40">Nenhuma compra registrada.</p>
-              ) : txs.map((t) => (
-                <div key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-white">{t.products?.name || "Compra"}</p>
-                    <p className="text-[11px] text-white/45">{fmtBR(t.paid_at || t.created_at)} · <span className={t.status === "paid" ? "text-success" : "text-white/40"}>{t.status}</span></p>
-                  </div>
-                  <p className="text-sm font-bold text-white">{money(t.gross_amount)}</p>
-                </div>
-              ))}
-            </div>
+            <PurchasesTab txs={txs} />
           )}
         </div>
       </div>
