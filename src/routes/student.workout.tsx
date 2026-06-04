@@ -339,7 +339,10 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
           onChangeLoad={(v) => setLoads((m) => ({ ...m, [ex.id]: v }))}
           onChangeReps={(v) => setReps((m) => ({ ...m, [ex.id]: v }))}
           onChangeCardio={(patch) =>
-            setCardio((m) => ({ ...m, [ex.id]: { duration: "", pace: "", speed: "", elevation: "", distance: "", done: false, ...m[ex.id], ...patch } }))
+            setCardio((m) => {
+              const prev = m[ex.id] ?? { duration: "", pace: "", speed: "", elevation: "", distance: "", done: false };
+              return { ...m, [ex.id]: { ...prev, ...patch } };
+            })
           }
           onCompleteSet={() => completeSet(ex)}
           onCompleteCardio={() => completeCardio(ex)}
