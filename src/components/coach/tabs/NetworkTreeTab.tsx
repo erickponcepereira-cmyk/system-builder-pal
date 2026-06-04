@@ -40,6 +40,22 @@ function Categories({ items }: { items: string[] }) {
   );
 }
 
+function Classifications({ items }: { items: string[] }) {
+  if (!items?.length) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {items.map((t) => (
+        <span
+          key={t}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${t === "Aluno" ? "bg-white/10 text-white/70" : t === "Aluno Coach" ? "bg-primary/20 text-primary" : t === "Profissional" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}
+        >
+          {t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function TreeNode({ node, expanded, toggle, onOpen, clickable }: { node: CoachTreeNode; expanded: Record<string, boolean>; toggle: (id: string) => void; onOpen: (n: CoachTreeNode) => void; clickable: boolean }) {
   const isOpen = expanded[node.coachId] ?? node.level <= 2;
   const hasChildren = node.children.length > 0;
@@ -61,6 +77,7 @@ function TreeNode({ node, expanded, toggle, onOpen, clickable }: { node: CoachTr
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{node.name}</p>
+              <Classifications items={node.classifications} />
               <Categories items={node.categories} />
               <p className="mt-1 text-[11px] text-white/45">L{node.level} · {node.directStudents.total} alunos · {node.childCoaches} coaches abaixo</p>
             </div>
@@ -111,11 +128,12 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
                 <p className="mb-2 text-xs font-bold uppercase text-white/35">Acima de você</p>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-white">{data.upline.name}</p>
-                      <Categories items={data.upline.categories} />
-                      <p className="mt-1 text-[11px] text-white/45">{data.upline.directStudents.total} alunos · {data.upline.childCoaches} coaches diretos</p>
-                    </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-white">{data.upline.name}</p>
+                    <Classifications items={data.upline.classifications} />
+                    <Categories items={data.upline.categories} />
+                    <p className="mt-1 text-[11px] text-white/45">{data.upline.directStudents.total} alunos · {data.upline.childCoaches} coaches diretos</p>
+                  </div>
                     <div className="flex flex-col items-end gap-1">
                       <PatentTag patent={data.upline.patent} />
                       <MedalTag medal={data.upline.medal} />
@@ -129,6 +147,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-white">{data.me.name} (você)</p>
+                    <Classifications items={data.me.classifications} />
                     <Categories items={data.me.categories} />
                     <p className="mt-1 text-[11px] text-white/55">{data.me.directStudents.total} alunos · {data.totals.downlineCoaches} coaches na rede abaixo</p>
                   </div>
