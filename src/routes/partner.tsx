@@ -774,10 +774,13 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
       <Field label="Foto / Logo">
         <div className="flex items-center gap-3">
           {form.photo_url && <img src={form.photo_url} className="h-16 w-16 rounded-full object-cover" />}
-          <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Trocar foto"}
-            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "photo_url")} />
-          </label>
+          <div>
+            <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Trocar foto"}
+              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "photo_url")} />
+            </label>
+            <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
+          </div>
         </div>
       </Field>
       <Field label="Nome fantasia"><input className="field-input" value={form.fantasy_name} onChange={e => setForm({ ...form, fantasy_name: e.target.value })} /></Field>
