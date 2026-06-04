@@ -47,8 +47,6 @@ type ProdutoT = {
   nutritionist_fee: number;
 };
 
-const TAXA_IMP_PESSOA = 6.0;
-
 // ─── SELETORES POR MÉTODO ───────────────────────────────────────────
 function getCoachCommission(p: ProdutoT, method: PayMethod) {
   return method === "pix" ? p.coach_real_commission : p.coach_real_commission_card;
@@ -518,7 +516,6 @@ function AbaGanhos({ nodes, vendasCoach, produtoSel, payMethod, setPayMethod }: 
   payMethod: PayMethod;
   setPayMethod: (m: PayMethod) => void;
 }) {
-  const bd = produtoSel ? getBreakdown(produtoSel, payMethod) : null;
   const [l1, l2, l3] = produtoSel ? getNetworkCommissions(produtoSel, payMethod) : [0, 0, 0];
   const perSaleNetwork = [l1, l2, l3];
   const coachPerSale = produtoSel ? getCoachCommission(produtoSel, payMethod) : 0;
@@ -629,31 +626,6 @@ function AbaGanhos({ nodes, vendasCoach, produtoSel, payMethod, setPayMethod }: 
         </div>
       )}
 
-      {produtoSel && bd && (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Taxas e comissões deste produto</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-zinc-500">
-            {([
-              ["Taxa PIX",              fmtp(produtoSel.pix_fee_pct)],
-              ["Taxa Cartão (1x)",       fmtp(produtoSel.card_fee_pct)],
-              ["Imposto empresa",        fmtp(produtoSel.tax_pct_real)],
-              ["Custo produto (slots)",  fmt(produtoSel.product_cost_slots)],
-              ["Plataforma/Sistema PIX", fmt(produtoSel.platform_fee_pix)],
-              ["Plataforma/Sistema Cart",fmt(produtoSel.platform_fee_card)],
-              ...(produtoSel.nutritionist_fee > 0 ? [["Nutricionista", fmt(produtoSel.nutritionist_fee)] as [string, string]] : []),
-              ["Comissão coach PIX",     fmt(produtoSel.coach_real_commission)],
-              ["Comissão coach Cartão",  fmt(produtoSel.coach_real_commission_card)],
-              ["Rede L1 / L2 / L3 PIX",  `${fmt(produtoSel.network_l1_real)} / ${fmt(produtoSel.network_l2_real)} / ${fmt(produtoSel.network_l3_real)}`],
-              ["Rede L1 / L2 / L3 Cart", `${fmt(produtoSel.network_l1_real_card)} / ${fmt(produtoSel.network_l2_real_card)} / ${fmt(produtoSel.network_l3_real_card)}`],
-              ["Imposto pessoal",        fmtp(TAXA_IMP_PESSOA)],
-            ] as [string, string][]).map(([l, v]) => (
-              <div key={l} className="flex justify-between">
-                <span>{l}</span><span className="font-medium text-zinc-400">{v}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
