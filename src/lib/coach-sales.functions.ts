@@ -8,6 +8,7 @@ export type SaleClient = {
   name: string;
   email: string | null;
   phone: string | null;
+  coachName?: string | null;
 };
 
 export type SaleProduct = {
