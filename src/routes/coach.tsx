@@ -30,6 +30,7 @@ import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyBadges } from "@/lib/coach-badges.functions";
 import { getIndividualCareer } from "@/lib/coach-medals.functions";
+import { getCareerProgress } from "@/lib/coach-career.functions";
 import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
 
 
@@ -254,9 +255,11 @@ function CoachDashboard() {
       .catch(() => setCanApprovePartners(false));
   }, [isAdmin, coachRowId]);
 
-  // Última medalha conquistada (para exibir no card do perfil)
+  // Patente atual (Ordem dos Construtores) + última medalha individual
   const fetchCareer = useServerFn(getIndividualCareer);
+  const fetchProgress = useServerFn(getCareerProgress);
   const [latestMedal, setLatestMedal] = useState<{ name: string; key: string } | null>(null);
+  const [teamPatent, setTeamPatent] = useState<{ name: string; color: string } | null>(null);
   useEffect(() => {
     if (!coachRowId) return;
     fetchCareer()
@@ -267,6 +270,13 @@ function CoachDashboard() {
         setLatestMedal({ name: rule?.display_name || e.medal_key, key: e.medal_key });
       })
       .catch(() => setLatestMedal(null));
+    fetchProgress()
+      .then((p) => {
+        const cur = p.patents.find((x) => x.key === p.currentPatentKey);
+        if (cur) setTeamPatent({ name: cur.display_name, color: cur.badge_color || "#FF4230" });
+        else setTeamPatent(null);
+      })
+      .catch(() => setTeamPatent(null));
   }, [coachRowId]);
 
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
@@ -336,12 +346,20 @@ function CoachDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">{coachName}</p>
-              {(() => {
-                const validPatents = ["coach","senior_coach","manager","senior_manager","director","senior_director","master_director"] as const;
-                const p = (coachContext?.patent || "coach") as typeof validPatents[number];
-                const safe = validPatents.includes(p) ? p : "coach";
-                return <PatentBadge patent={safe} size="sm" />;
-              })()}
+              {teamPatent ? (
+                <div className="mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5"
+                  style={{ backgroundColor: `${teamPatent.color}20`, border: `1px solid ${teamPatent.color}55` }}>
+                  <Trophy className="h-3 w-3" style={{ color: teamPatent.color }} />
+                  <span className="text-[10px] font-bold truncate" style={{ color: teamPatent.color }}>{teamPatent.name}</span>
+                </div>
+              ) : (
+                (() => {
+                  const validPatents = ["coach","senior_coach","manager","senior_manager","director","senior_director","master_director"] as const;
+                  const p = (coachContext?.patent || "coach") as typeof validPatents[number];
+                  const safe = validPatents.includes(p) ? p : "coach";
+                  return <PatentBadge patent={safe} size="sm" />;
+                })()
+              )}
               {latestMedal && (
                 <p className="mt-1 text-[10px] font-bold text-amber-400 truncate">🏅 {latestMedal.name}</p>
               )}
