@@ -42,13 +42,13 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
 
     const { data: students } = await supabaseAdmin
       .from("students")
-      .select("id, profile_id, profiles!students_profile_id_fkey(name,email,phone,user_id)")
+      .select("id, profile_id, profiles!students_profile_id_fkey(name,email,phone,user_id,last_app_login_at)")
       .eq("coach_id", coach.id);
 
     type StudentRow = {
       id: string;
       profile_id: string;
-      profiles: { name: string; email: string; phone: string | null; user_id: string } | null;
+      profiles: { name: string; email: string; phone: string | null; user_id: string; last_app_login_at: string | null } | null;
     };
     const studentRows = (students as unknown as StudentRow[]) || [];
     if (studentRows.length === 0) return [] as CoachStudentAttendance[];
@@ -152,7 +152,9 @@ export const getCoachAttendance = createServerFn({ method: "GET" })
       const lastTxPaid = sTxs[0]?.paid_at || null;
       const lastStorePaid = sStoreOrders[0]?.updated_at || sStoreOrders[0]?.created_at || null;
       const lastPurchase = [lastTxPaid, lastStorePaid].filter(Boolean).sort().at(-1) || null;
-      const lastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
+      const authLastSignIn = s.profiles?.user_id ? lastSignInMap[s.profiles.user_id] ?? null : null;
+      const profileLastLogin = s.profiles?.last_app_login_at ?? null;
+      const lastSignIn = [authLastSignIn, profileLastLogin].filter(Boolean).sort().at(-1) || null;
 
       // Activity = max(lastCheckin, lastSignIn, lastPurchase)
       const candidates = [lastCheckinAt, lastSignIn, lastPurchase].filter(Boolean) as string[];

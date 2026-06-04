@@ -1,7 +1,10 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 import "../styles.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { touchLastLogin } from "@/lib/last-login.functions";
 
 function NotFoundComponent() {
   return (
@@ -76,6 +79,24 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  useEffect(() => {
+    let done = false;
+    const ping = async () => {
+      if (done) return;
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        done = true;
+        try { await touchLastLogin(); } catch { /* ignore */ }
+      }
+    };
+    ping();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        done = false; ping();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
   return (
     <ThemeProvider>
       <Outlet />

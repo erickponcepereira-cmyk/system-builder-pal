@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { Award, ChevronDown, ChevronRight, Dot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
 import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type NetworkRankMedal, type NetworkRankPatent } from "@/lib/network-ranking.functions";
 import { type CoachContext } from "@/routes/coach";
-import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
+import CoachProfileModal from "@/components/coach/CoachProfileModal";
 
 function PatentTag({ patent }: { patent: NetworkRankPatent }) {
   if (!patent) return null;
@@ -86,7 +85,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
   const [data, setData] = useState<MyNetworkStructure | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
+  const [openCoachId, setOpenCoachId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -96,10 +95,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
   }, [fetchNetwork]);
 
   const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !(p[id] ?? true) }));
-  const openModal = (n: CoachTreeNode) => {
-    if (!n.studentId) { toast.error("Esse coach ainda não possui registro de aluno."); return; }
-    setOpenStudentId(n.studentId);
-  };
+  const openModal = (n: CoachTreeNode) => setOpenCoachId(n.coachId);
 
   return (
     <>
@@ -150,7 +146,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
           </>
         )}
       </div>
-      {openStudentId && <StudentDetailsModal studentId={openStudentId} onClose={() => setOpenStudentId(null)} />}
+      {openCoachId && <CoachProfileModal coachId={openCoachId} onClose={() => setOpenCoachId(null)} />}
     </>
   );
 }

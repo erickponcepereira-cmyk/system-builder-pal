@@ -6176,6 +6176,7 @@ export type Database = {
           id: string
           instagram: string | null
           is_master_admin: boolean
+          last_app_login_at: string | null
           name: string
           neighborhood: string | null
           number: string | null
@@ -6207,6 +6208,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_master_admin?: boolean
+          last_app_login_at?: string | null
           name: string
           neighborhood?: string | null
           number?: string | null
@@ -6238,6 +6240,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_master_admin?: boolean
+          last_app_login_at?: string | null
           name?: string
           neighborhood?: string | null
           number?: string | null
