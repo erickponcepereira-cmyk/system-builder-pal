@@ -185,13 +185,8 @@ function StudentProtocolPage() {
             </section>
           )}
 
-          {/* Notas gerais */}
-          {protocol.general_notes && (
-            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <h2 className="mb-2 text-sm font-bold text-white">Observações do coach</h2>
-              <p className="whitespace-pre-wrap text-xs text-white/70">{protocol.general_notes}</p>
-            </section>
-          )}
+          {/* Observação geral já é exibida no topo */}
+
         </>
       )}
 
