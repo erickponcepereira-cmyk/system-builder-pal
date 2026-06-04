@@ -284,6 +284,7 @@ function CoachDashboard() {
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
     { id: "tree", label: "Árvore da Rede", icon: Network },
+    { id: "networkRanking", label: "Ranking da Rede", icon: Trophy },
     { id: "students", label: "Base de Alunos", icon: UserRound },
     { id: "physicalStore", label: "Loja", icon: ShoppingBag },
     ...(canApprovePartners ? [{ id: "partnerApprovals" as Tab, label: "Aprovar Parceiros", icon: ClipboardCheck }] : []),
