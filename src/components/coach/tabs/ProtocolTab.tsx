@@ -90,6 +90,9 @@ export function ProtocolTab() {
   const [hasBio, setHasBio] = useState(false);
   const [hasAnamnesis, setHasAnamnesis] = useState(false);
   const [lastBioWeight, setLastBioWeight] = useState<number | null>(null);
+  const [studentAge, setStudentAge] = useState<number | null>(null);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [waterOverride, setWaterOverride] = useState(false);
   const [detailsTab, setDetailsTab] = useState<"avaliacoes" | "anamnese" | null>(null);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
