@@ -35,6 +35,7 @@ export type NetworkRankingRow = {
   medal: NetworkRankMedal;
   patent: NetworkRankPatent;
   categories: string[];
+  sponsorName?: string | null;
   isYou?: boolean;
 };
 
