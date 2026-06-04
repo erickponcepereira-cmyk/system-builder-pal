@@ -179,6 +179,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
           {loading ? "Carregando..." : `${students.length} aluno${students.length === 1 ? "" : "s"} ligado${students.length === 1 ? "" : "s"} diretamente ao seu perfil.`}
         </p>
       </div>
+      <CoachAlertsCard coachId={coachId} />
 
       {/* Busca + filtros */}
       <div className="mb-4 space-y-3">
