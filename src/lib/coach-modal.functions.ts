@@ -100,21 +100,6 @@ function windowForPlan(planType: string, durationMonths: number): { start: Date;
   start.setMonth(start.getMonth() - (durationMonths || 1));
   return { start, end: now };
 }
-  topProductsMonth: CoachModalTopProduct[];
-  topProductsAllTime: CoachModalTopProduct[];
-  recruitedCoachesMonth: number;
-  recruitedCoachesAllTime: number;
-  behavioral: {
-    profile: string | null;
-    recommendedProducts: string[];
-  };
-};
-
-function firstOfMonthIso() {
-  const d = new Date();
-  d.setDate(1); d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
 
 export const getCoachModalData = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ coachId: z.string().uuid() }).parse(d))
