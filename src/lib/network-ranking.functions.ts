@@ -50,12 +50,13 @@ export type CoachTreeNode = {
   medal: NetworkRankMedal;
   patent: NetworkRankPatent;
   categories: string[];
+  classifications: string[];
   children: CoachTreeNode[];
 };
 
 export type MyNetworkStructure = {
-  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
-  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
+  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; classifications: string[]; individualRevenue: number } | null;
+  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; classifications: string[]; individualRevenue: number } | null;
   totals: { downlineCoaches: number; directStudents: StudentBreakdown };
   children: CoachTreeNode[];
 };
@@ -153,6 +154,20 @@ function categoriesForCoach(
   if (partnerProfileIds.has(coach.profile_id)) cats.push("Parceiro");
   return cats;
 }
+
+function classificationsForCoach(
+  coach: CoachRow,
+  partnerProfileIds: Set<string>,
+  studentProfileIds: Set<string>,
+): string[] {
+  const out: string[] = [];
+  if (coach.is_professional) out.push("Profissional");
+  else out.push("Aluno Coach");
+  if (partnerProfileIds.has(coach.profile_id)) out.push("Parceiro");
+  if (studentProfileIds.has(coach.profile_id)) out.push("Aluno");
+  return out;
+}
+
 
 
 type PatentRule = {
