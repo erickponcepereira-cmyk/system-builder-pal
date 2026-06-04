@@ -402,6 +402,7 @@ async function listFlowForOrder(sourceKind: string, sourceId: string) {
 export const getAdminTestSalesData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const supabaseAdmin = await getSupabaseAdmin();
     await assertAdmin(context.userId);
     const [students, coaches, products, digitals, professionals, partnerProducts] = await Promise.all([
       supabaseAdmin.from("students").select("id,profiles:profile_id(name,email)").order("created_at", { ascending: false }).limit(300),
@@ -444,6 +445,7 @@ export const simulateAdminTestSale = createServerFn({ method: "POST" })
 export const listAdminTestSales = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SimulatedSaleRow[]> => {
+    const supabaseAdmin = await getSupabaseAdmin();
     await assertAdmin(context.userId);
     const [storeOrders, partnerOrders] = await Promise.all([
       supabaseAdmin
@@ -503,6 +505,7 @@ export const deleteAdminTestSale = createServerFn({ method: "POST" })
 export const resetAdminTestSales = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const supabaseAdmin = await getSupabaseAdmin();
     await assertAdmin(context.userId);
     const [{ data: storeRows }, { data: partnerRows }] = await Promise.all([
       supabaseAdmin.from("store_orders").select("id").contains("metadata", TEST_META as never),
