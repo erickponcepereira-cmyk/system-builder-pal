@@ -701,32 +701,55 @@ export function ProtocolTab() {
           {!loading && section === "library" && (
             <div className="space-y-4">
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-                <h2 className="mb-3 text-sm font-bold text-white">Adicionar exercício à biblioteca</h2>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-bold text-white">
+                    {editingExercise ? `Editando: ${editingExercise.name}` : "Adicionar exercício à biblioteca"}
+                  </h2>
+                  {editingExercise && (
+                    <button onClick={cancelEditExercise} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-[10px] text-white/70 hover:bg-white/20">
+                      <X className="h-3 w-3" /> Cancelar
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <input value={newExercise.name || ""} onChange={(e) => setNewExercise((x) => ({ ...x, name: e.target.value }))} placeholder="Nome *" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
                   <input value={newExercise.muscle_group || ""} onChange={(e) => setNewExercise((x) => ({ ...x, muscle_group: e.target.value }))} placeholder="Grupo muscular" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
                   <input value={newExercise.equipment || ""} onChange={(e) => setNewExercise((x) => ({ ...x, equipment: e.target.value }))} placeholder="Equipamento" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
                   <input value={newExercise.difficulty || ""} onChange={(e) => setNewExercise((x) => ({ ...x, difficulty: e.target.value }))} placeholder="Dificuldade (iniciante/intermediário/avançado)" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
-                  <input value={newExercise.video_url || ""} onChange={(e) => setNewExercise((x) => ({ ...x, video_url: e.target.value }))} placeholder="URL de vídeo" className="rounded bg-white/5 px-3 py-2 text-sm text-white sm:col-span-2" />
+                  <input value={newExercise.video_url || ""} onChange={(e) => setNewExercise((x) => ({ ...x, video_url: e.target.value }))} placeholder="URL de vídeo / GIF / imagem (tamanho recomendado: 800x600px)" className="rounded bg-white/5 px-3 py-2 text-sm text-white sm:col-span-2" />
                   <textarea value={newExercise.description || ""} onChange={(e) => setNewExercise((x) => ({ ...x, description: e.target.value }))} placeholder="Descrição / execução" rows={2} className="rounded bg-white/5 px-3 py-2 text-sm text-white sm:col-span-2" />
                 </div>
-                <button onClick={saveExercise} className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Cadastrar exercício</button>
+                <button onClick={saveExercise} className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                  {editingExercise ? "Salvar alterações" : "Cadastrar exercício"}
+                </button>
               </div>
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-3 text-sm font-bold text-white">Exercícios cadastrados ({library.length})</h2>
-                <div className="max-h-96 space-y-1 overflow-y-auto">
+                <div className="max-h-96 space-y-1.5 overflow-y-auto">
                   {library.map((e) => (
-                    <div key={e.id} className="rounded bg-white/5 p-2 text-xs">
-                      <p className="font-semibold text-white">{e.name}</p>
-                      <p className="text-white/40">{[e.muscle_group, e.equipment, e.difficulty].filter(Boolean).join(" · ")}</p>
-                      {e.video_url && <a href={e.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary"><ExternalLink className="h-3 w-3" /> Vídeo</a>}
+                    <div key={e.id} className="flex items-start justify-between gap-2 rounded bg-white/5 p-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-white">{e.name}</p>
+                        <p className="text-white/40">{[e.muscle_group, e.equipment, e.difficulty].filter(Boolean).join(" · ")}</p>
+                        {e.video_url && <a href={e.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary"><ExternalLink className="h-3 w-3" /> Mídia</a>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button onClick={() => startEditExercise(e)} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-primary/20 hover:text-primary" title="Editar">
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => deleteExercise(e)} className="rounded bg-red-500/10 p-1.5 text-red-400 hover:bg-red-500/20" title="Excluir">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
+                  {library.length === 0 && <p className="py-4 text-center text-white/40">Nenhum exercício cadastrado ainda.</p>}
                 </div>
               </div>
             </div>
           )}
+
 
           {!loading && section === "templates" && (
             <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
