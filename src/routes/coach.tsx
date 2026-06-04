@@ -346,12 +346,20 @@ function CoachDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">{coachName}</p>
-              {(() => {
-                const validPatents = ["coach","senior_coach","manager","senior_manager","director","senior_director","master_director"] as const;
-                const p = (coachContext?.patent || "coach") as typeof validPatents[number];
-                const safe = validPatents.includes(p) ? p : "coach";
-                return <PatentBadge patent={safe} size="sm" />;
-              })()}
+              {teamPatent ? (
+                <div className="mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5"
+                  style={{ backgroundColor: `${teamPatent.color}20`, border: `1px solid ${teamPatent.color}55` }}>
+                  <Trophy className="h-3 w-3" style={{ color: teamPatent.color }} />
+                  <span className="text-[10px] font-bold truncate" style={{ color: teamPatent.color }}>{teamPatent.name}</span>
+                </div>
+              ) : (
+                (() => {
+                  const validPatents = ["coach","senior_coach","manager","senior_manager","director","senior_director","master_director"] as const;
+                  const p = (coachContext?.patent || "coach") as typeof validPatents[number];
+                  const safe = validPatents.includes(p) ? p : "coach";
+                  return <PatentBadge patent={safe} size="sm" />;
+                })()
+              )}
               {latestMedal && (
                 <p className="mt-1 text-[10px] font-bold text-amber-400 truncate">🏅 {latestMedal.name}</p>
               )}
