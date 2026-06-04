@@ -25,6 +25,7 @@ export type PartnerStoreCard = {
   professionalCoachId?: string | null;
   durationMinutes?: number;
   scheduledSlot?: string | null;
+  coachCommissionPct?: number | null;
 };
 
 const money = (v: number) =>
