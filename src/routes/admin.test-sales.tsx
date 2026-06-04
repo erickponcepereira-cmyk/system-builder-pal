@@ -145,30 +145,36 @@ function AdminTestSalesPage() {
         <div className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span>Ambiente administrativo: a venda é marcada como paga e credita carteiras de verdade. Use “Excluir/Zerar” para remover apenas as simulações marcadas como teste.</span></div>
       </section>
 
-      <section className="grid gap-4 rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <section className={panelClass}>
+        <div className="mb-4 grid gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 md:grid-cols-3">
+          <Metric label="Alunos" value={options.students.length} />
+          <Metric label="Coaches" value={options.coaches.length} />
+          <Metric label="Produtos deste tipo" value={filteredProducts.length} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Field label="Tipo de venda">
-            <select value={kind} onChange={(e) => setKind(e.target.value as SaleKind)} className="field">
+            <select value={kind} onChange={(e) => setKind(e.target.value as SaleKind)} className={selectClass}>
               {(Object.keys(saleKindLabels) as SaleKind[]).map((k) => <option key={k} value={k}>{saleKindLabels[k]}</option>)}
             </select>
           </Field>
           <Field label="Aluno comprador">
-            <select value={buyerStudentId} onChange={(e) => setBuyerStudentId(e.target.value)} className="field"><option value="">Selecione...</option>{options.students.map((s) => <option key={s.id} value={s.id}>{s.label} {s.detail ? `— ${s.detail}` : ""}</option>)}</select>
+            <select value={buyerStudentId} onChange={(e) => setBuyerStudentId(e.target.value)} className={selectClass}><option value="">Selecione...</option>{options.students.map((s) => <option key={s.id} value={s.id}>{s.label} {s.detail ? `— ${s.detail}` : ""}</option>)}</select>
           </Field>
           <Field label="Produto">
-            <select value={productId} onChange={(e) => setProductId(e.target.value)} className="field"><option value="">Selecione...</option>{filteredProducts.map((p) => <option key={p.id} value={p.id}>{p.label} — {money(p.price || 0)}</option>)}</select>
+            <select value={productId} onChange={(e) => setProductId(e.target.value)} className={selectClass} disabled={filteredProducts.length === 0}><option value="">{filteredProducts.length ? "Selecione..." : "Nenhum produto neste tipo"}</option>{filteredProducts.map((p) => <option key={p.id} value={p.id}>{p.label} — {money(p.price || 0)}</option>)}</select>
           </Field>
           <Field label="Coach vendedor opcional">
-            <select value={sellerCoachId} onChange={(e) => setSellerCoachId(e.target.value)} className="field"><option value="">Usar coach do aluno</option>{options.coaches.map((c) => <option key={c.id} value={c.id}>{c.label} {c.detail ? `— ${c.detail}` : ""}</option>)}</select>
+            <select value={sellerCoachId} onChange={(e) => setSellerCoachId(e.target.value)} className={selectClass}><option value="">Usar coach do aluno</option>{options.coaches.map((c) => <option key={c.id} value={c.id}>{c.label} {c.detail ? `— ${c.detail}` : ""}</option>)}</select>
           </Field>
           <Field label="Aluno indicador opcional">
-            <select value={referrerStudentId} onChange={(e) => setReferrerStudentId(e.target.value)} className="field"><option value="">Sem indicação aluno→aluno</option>{options.students.filter((s) => s.id !== buyerStudentId).map((s) => <option key={s.id} value={s.id}>{s.label} {s.detail ? `— ${s.detail}` : ""}</option>)}</select>
+            <select value={referrerStudentId} onChange={(e) => setReferrerStudentId(e.target.value)} className={selectClass}><option value="">Sem indicação aluno→aluno</option>{options.students.filter((s) => s.id !== buyerStudentId).map((s) => <option key={s.id} value={s.id}>{s.label} {s.detail ? `— ${s.detail}` : ""}</option>)}</select>
           </Field>
           <Field label="Método">
-            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)} className="field"><option value="pix">PIX</option><option value="credit_card">Crédito</option><option value="debit_card">Débito</option></select>
+            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)} className={selectClass}><option value="pix">PIX</option><option value="credit_card">Crédito</option><option value="debit_card">Débito</option></select>
           </Field>
         </div>
-        <button onClick={submit} disabled={busy || !buyerStudentId || !productId} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50 md:w-auto"><WalletCards className="h-4 w-4" /> {busy ? "Processando..." : "Simular venda paga"}</button>
+        {selectedProduct && <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white/70"><span className="text-white/45">Selecionado:</span> <b className="text-white">{selectedProduct.label}</b> · {money(selectedProduct.price || 0)} · {selectedProduct.detail}</div>}
+        <button onClick={submit} disabled={busy || !buyerStudentId || !productId} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 md:w-auto"><WalletCards className="h-4 w-4" /> {busy ? "Processando..." : "Simular venda paga"}</button>
       </section>
 
       <section className="space-y-3">
