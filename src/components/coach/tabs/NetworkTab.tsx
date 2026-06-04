@@ -1,62 +1,25 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { MinhaRede } from "@/components/coach/MinhaRede";
-import { RankingTable } from "@/components/coach/RankingTable";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyNetworkStructure, type StudentBreakdown } from "@/lib/network-ranking.functions";
+
+const emptyBreakdown: StudentBreakdown = { total: 0, studentOnly: 0, coachStudent: 0, professionalStudent: 0, partnerStudent: 0 };
 
 export function NetworkTab({ referralLink: _referralLink, onCopy: _onCopy }: { referralLink: string; onCopy: () => void }) {
   const [loading, setLoading] = useState(true);
-  const [directs, setDirects] = useState(0);
+  const [directs, setDirects] = useState<StudentBreakdown>(emptyBreakdown);
   const [network, setNetwork] = useState(0);
+  const fetchNetwork = useServerFn(getMyNetworkStructure);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) return;
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", userData.user.id)
-          .maybeSingle();
-        if (!profile?.id) return;
-        const { data: coach } = await supabase
-          .from("coaches")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .maybeSingle();
-        if (!coach?.id) return;
-
-        // Alunos diretos
-        const { count: directCount } = await supabase
-          .from("students")
-          .select("id", { count: "exact", head: true })
-          .eq("coach_id", coach.id);
-
-        // Coaches downline (até 3 níveis)
-        let allCoachIds = [coach.id];
-        let frontier = [coach.id];
-        for (let lvl = 0; lvl < 3 && frontier.length > 0; lvl++) {
-          const { data: children } = await supabase
-            .from("coaches")
-            .select("id")
-            .in("upline_coach_id", frontier);
-          const ids = (children || []).map((c: any) => c.id);
-          if (ids.length === 0) break;
-          allCoachIds = allCoachIds.concat(ids);
-          frontier = ids;
-        }
-
-        // Rede total = todos os alunos dos coaches (eu + downline 3 níveis)
-        const { count: networkCount } = await supabase
-          .from("students")
-          .select("id", { count: "exact", head: true })
-          .in("coach_id", allCoachIds);
-
+        const data = await fetchNetwork();
         if (cancelled) return;
-        setDirects(directCount ?? 0);
-        setNetwork(networkCount ?? 0);
+        setDirects(data.me?.directStudents ?? emptyBreakdown);
+        setNetwork(data.totals.downlineCoaches);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -77,11 +40,14 @@ export function NetworkTab({ referralLink: _referralLink, onCopy: _onCopy }: { r
           {loading ? (
             <Loader2 className="h-6 w-6 animate-spin text-white/30" />
           ) : (
-            <p className="text-3xl font-bold text-white">{directs}</p>
+            <div>
+              <p className="text-3xl font-bold text-white">{directs.total}</p>
+              <p className="mt-1 text-[10px] text-white/45">{directs.studentOnly} aluno · {directs.coachStudent} coach/aluno · {directs.professionalStudent} profissional/aluno · {directs.partnerStudent} parceiro/aluno</p>
+            </div>
           )}
         </div>
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-xs text-white/50 mb-1">Rede total (3 níveis)</p>
+          <p className="text-xs text-white/50 mb-1">Rede total de coaches</p>
           {loading ? (
             <Loader2 className="h-6 w-6 animate-spin text-white/30" />
           ) : (
@@ -92,10 +58,6 @@ export function NetworkTab({ referralLink: _referralLink, onCopy: _onCopy }: { r
 
       <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: "#1A1A1A" }}>
         <MinhaRede />
-      </div>
-
-      <div className="mt-4">
-        <RankingTable />
       </div>
     </>
   );
