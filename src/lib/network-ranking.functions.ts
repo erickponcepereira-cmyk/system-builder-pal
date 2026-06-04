@@ -300,13 +300,15 @@ function medalFor(value: number, rules: Array<{ key: string; name: string; icon:
   return medal;
 }
 
+function firstOfMonthDate() { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); }
+
 export const getMyNetworkStructure = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MyNetworkStructure> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return { me: null, upline: null, totals: { downlineCoaches: 0, directStudents: emptyBreakdown() }, children: [] };
-    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds } = await loadBase(supabaseAdmin);
+    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const studentsByCoach = new Map<string, StudentRow[]>();
@@ -316,24 +318,48 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
       studentsByCoach.set(s.coach_id, arr);
     });
     const breakdown = (id: string) => breakdownForCoach(id, studentsByCoach, coachProfileIds, professionalProfileIds, partnerProfileIds);
-    const toSummary = (c: CoachRow | undefined | null) => c ? { coachId: c.id, name: coachName(c), email: coachEmail(c), directStudents: breakdown(c.id), childCoaches: (byUpline.get(c.id) || []).length } : null;
+
+    const me = byId.get(coachId) || null;
+    const downline = collectDownline(coachId, byUpline, me);
+    const allIds = downline.map((d) => d.coach.id);
+    if (me?.upline_coach_id && byId.has(me.upline_coach_id)) allIds.push(me.upline_coach_id);
+    const monthRevenue = await loadRevenueByCoach(supabaseAdmin, allIds, firstOfMonthDate(), todayDate());
+    const medalRules = await loadMedalRules(supabaseAdmin);
+    const patentRules = await loadPatentRules(supabaseAdmin);
+    const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
+    const windowsRevenueByCoach = new Map<number, Map<string, number>>();
+    const today = todayDate();
+    await Promise.all(distinctWindows.map(async (months) => {
+      const rev = await loadRevenueByCoach(supabaseAdmin, allIds, monthsAgoDate(months), today);
+      windowsRevenueByCoach.set(months, rev);
+    }));
+
+    const enrich = (c: CoachRow) => {
+      const own = monthRevenue.get(c.id) || 0;
+      return {
+        coachId: c.id,
+        name: coachName(c),
+        email: coachEmail(c),
+        directStudents: breakdown(c.id),
+        childCoaches: (byUpline.get(c.id) || []).length,
+        individualRevenue: own,
+        medal: medalFor(own, medalRules),
+        patent: patentForCoach(c.id, patentRules, windowsRevenueByCoach, byUpline),
+        categories: categoriesForCoach(c as any, partnerProfileIds, masterCoachIds, specialtyLabels),
+      };
+    };
     const toNode = (c: CoachRow, level: number): CoachTreeNode => ({
-      coachId: c.id,
-      name: coachName(c),
-      email: coachEmail(c),
+      ...enrich(c),
       level,
-      directStudents: breakdown(c.id),
-      childCoaches: (byUpline.get(c.id) || []).length,
       children: (byUpline.get(c.id) || []).map((child) => toNode(child, level + 1)),
     });
-    const me = byId.get(coachId) || null;
-    const downline = collectDownline(coachId, byUpline);
+
     const totalDirect = emptyBreakdown();
     addBreakdown(totalDirect, breakdown(coachId));
     return {
-      me: toSummary(me),
-      upline: toSummary(me?.upline_coach_id ? byId.get(me.upline_coach_id) : null),
-      totals: { downlineCoaches: downline.length, directStudents: totalDirect },
+      me: me ? enrich(me) : null,
+      upline: me?.upline_coach_id && byId.has(me.upline_coach_id) ? enrich(byId.get(me.upline_coach_id)!) : null,
+      totals: { downlineCoaches: downline.length - 1, directStudents: totalDirect },
       children: (byUpline.get(coachId) || []).map((child) => toNode(child, 1)),
     };
   });
@@ -345,7 +371,7 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return [];
-    const { coaches, students, studentProfileIds, professionalProfileIds, partnerProfileIds } = await loadBase(supabaseAdmin);
+    const { coaches, students, partnerProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const me = byId.get(coachId);
@@ -375,11 +401,12 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
         networkRevenue: 0,
         medal: medalFor(revenue.get(coach.id) || 0, medalRules),
         patent: patentForCoach(coach.id, patentRules, windowsRevenueByCoach, byUpline),
-        categories: categoriesForCoach(coach, studentProfileIds, professionalProfileIds, partnerProfileIds),
+        categories: categoriesForCoach(coach as any, partnerProfileIds, masterCoachIds, specialtyLabels),
         isYou: coach.id === coachId,
       }))
       .sort((a, b) => b.individualRevenue - a.individualRevenue || a.level - b.level || a.name.localeCompare(b.name));
   });
+
 
 export const getAdminNetworkRankingFilters = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
