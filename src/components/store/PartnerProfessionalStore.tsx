@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Loader2, ShoppingBag } from "lucide-react";
+import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
+import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 
 type Kind = "partner" | "professional";
 
