@@ -124,12 +124,14 @@ async function getCoachUplines(coachId: string | null | undefined) {
 }
 
 async function profileIdForCoach(coachId: string | null | undefined) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (!coachId) return null;
   const { data } = await supabaseAdmin.from("coaches").select("profile_id").eq("id", coachId).maybeSingle();
   return (data as any)?.profile_id || null;
 }
 
 async function subtractWallet(profileId: string | null, amount: number) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (!profileId || amount <= 0) return;
   const { data } = await supabaseAdmin
     .from("wallets")
@@ -149,6 +151,7 @@ async function subtractWallet(profileId: string | null, amount: number) {
 }
 
 async function subtractAdminWallet(amount: number) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (amount <= 0) return;
   const { data } = await supabaseAdmin
     .from("admin_system_wallet")
