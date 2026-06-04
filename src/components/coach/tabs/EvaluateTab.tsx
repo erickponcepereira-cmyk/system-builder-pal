@@ -21,6 +21,7 @@ export function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
+  const [isMaster, setIsMaster] = useState(false);
 
 
   // Listen for popup connect completion
