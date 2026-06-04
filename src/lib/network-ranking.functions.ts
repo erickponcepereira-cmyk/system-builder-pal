@@ -324,8 +324,8 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
     const downline = collectDownline(coachId, byUpline, me);
     const allIds = downline.map((d) => d.coach.id);
     if (me?.upline_coach_id && byId.has(me.upline_coach_id)) allIds.push(me.upline_coach_id);
-    const monthRevenue = await loadRevenueByCoach(supabaseAdmin, allIds, firstOfMonthDate(), todayDate());
-    const medalRules = await loadMedalRules(supabaseAdmin);
+    const lifetimeRevenue = await loadRevenueByCoach(supabaseAdmin, allIds, "2000-01-01", todayDate());
+    const medalRules = await loadMedalRules(supabaseAdmin, "cumulative");
     const patentRules = await loadPatentRules(supabaseAdmin);
     const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
     const windowsRevenueByCoach = new Map<number, Map<string, number>>();
@@ -336,9 +336,10 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
     }));
 
     const enrich = (c: CoachRow) => {
-      const own = monthRevenue.get(c.id) || 0;
+      const own = lifetimeRevenue.get(c.id) || 0;
       return {
         coachId: c.id,
+
         name: coachName(c),
         email: coachEmail(c),
         directStudents: breakdown(c.id),
