@@ -425,6 +425,7 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
         medal: medalFor(revenue.get(coach.id) || 0, medalRules),
         patent: patentForCoach(coach.id, patentRules, windowsRevenueByCoach, byUpline),
         categories: categoriesForCoach(coach as any, partnerProfileIds, masterCoachIds, specialtyLabels),
+        sponsorName: level >= 2 && coach.upline_coach_id && byId.has(coach.upline_coach_id) ? coachName(byId.get(coach.upline_coach_id)!) : null,
         isYou: coach.id === coachId,
       }))
       .sort((a, b) => b.individualRevenue - a.individualRevenue || a.level - b.level || a.name.localeCompare(b.name));
