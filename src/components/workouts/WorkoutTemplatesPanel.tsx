@@ -155,20 +155,22 @@ export function WorkoutTemplatesPanel({ mode, coachId }: Props) {
           {filtered.map((t) => {
             const canEdit = mode === "admin" || t.created_by_coach_id === coachId;
             return (
-              <div key={t.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-bold">{t.name}</h3>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">{GOAL_LABELS[t.goal]}</span>
-                      {t.level && <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/70">{t.level}</span>}
-                      {t.is_global && <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-400">Global</span>}
-                      {!t.is_global && <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-400">Meu</span>}
+              <div key={t.id} className="rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-primary/40 hover:bg-white/[0.07]">
+                <button onClick={() => setViewing(t)} className="block w-full text-left">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-bold">{t.name}</h3>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">{GOAL_LABELS[t.goal]}</span>
+                        {t.level && <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/70">{t.level}</span>}
+                        {t.is_global && <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-400">Global</span>}
+                        {!t.is_global && <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-400">Meu</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                {t.description && <p className="mt-2 line-clamp-2 text-xs text-white/60">{t.description}</p>}
-                <p className="mt-2 text-[11px] text-white/40">{t.items?.length || 0} exercício{(t.items?.length || 0) !== 1 ? "s" : ""}</p>
+                  {t.description && <p className="mt-2 line-clamp-2 text-xs text-white/60">{t.description}</p>}
+                  <p className="mt-2 text-[11px] text-primary">{t.items?.length || 0} exercício{(t.items?.length || 0) !== 1 ? "s" : ""} · Ver detalhes →</p>
+                </button>
                 {canEdit && (
                   <div className="mt-3 flex gap-2">
                     <button onClick={() => openEdit(t)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-xs"><Pencil className="h-3.5 w-3.5" /> Editar</button>
@@ -178,6 +180,42 @@ export function WorkoutTemplatesPanel({ mode, coachId }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {viewing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setViewing(null)}>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-white">{viewing.name}</h2>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">{GOAL_LABELS[viewing.goal]}</span>
+                  {viewing.level && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/80 capitalize">{viewing.level}</span>}
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">{viewing.items?.length || 0} exercícios</span>
+                </div>
+              </div>
+              <button onClick={() => setViewing(null)} className="text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+            {viewing.description && <p className="mb-4 text-sm text-white/70 whitespace-pre-wrap">{viewing.description}</p>}
+            <div className="space-y-2">
+              {(viewing.items || []).map((it, i) => (
+                <div key={i} className="rounded-xl border border-white/5 bg-white/5 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-[11px] font-bold text-primary">{i + 1}</span>
+                    <p className="flex-1 text-sm font-semibold text-white">{it.name}</p>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-white/70">
+                    <div className="rounded bg-black/30 px-2 py-1"><span className="text-white/40">Séries:</span> {it.sets || "—"}</div>
+                    <div className="rounded bg-black/30 px-2 py-1"><span className="text-white/40">Reps:</span> {it.reps || "—"}</div>
+                    <div className="rounded bg-black/30 px-2 py-1"><span className="text-white/40">Desc.:</span> {it.rest || "—"}</div>
+                  </div>
+                  {it.notes && <p className="mt-2 text-[11px] text-white/55">📝 {it.notes}</p>}
+                </div>
+              ))}
+              {(!viewing.items || viewing.items.length === 0) && <p className="py-6 text-center text-xs text-white/40">Sem exercícios.</p>}
+            </div>
+          </div>
         </div>
       )}
 
