@@ -330,7 +330,7 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return [];
-    const { coaches, students } = await loadBase(supabaseAdmin);
+    const { coaches, students, studentProfileIds, professionalProfileIds, partnerProfileIds } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const me = byId.get(coachId);
@@ -338,6 +338,14 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
     const ids = rankingCoaches.map((r) => r.coach.id);
     const revenue = await loadRevenueByCoach(supabaseAdmin, ids, data.from, data.to);
     const medalRules = await loadMedalRules(supabaseAdmin);
+    const patentRules = await loadPatentRules(supabaseAdmin);
+    const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
+    const windowsRevenueByCoach = new Map<number, Map<string, number>>();
+    const today = todayDate();
+    await Promise.all(distinctWindows.map(async (months) => {
+      const rev = await loadRevenueByCoach(supabaseAdmin, ids, monthsAgoDate(months), today);
+      windowsRevenueByCoach.set(months, rev);
+    }));
     const studentsByCoach = new Map<string, number>();
     students.forEach((s) => studentsByCoach.set(s.coach_id, (studentsByCoach.get(s.coach_id) || 0) + 1));
     return rankingCoaches
@@ -351,6 +359,8 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
         individualRevenue: revenue.get(coach.id) || 0,
         networkRevenue: 0,
         medal: medalFor(revenue.get(coach.id) || 0, medalRules),
+        patent: patentForCoach(coach.id, patentRules, windowsRevenueByCoach, byUpline),
+        categories: categoriesForCoach(coach, studentProfileIds, professionalProfileIds, partnerProfileIds),
         isYou: coach.id === coachId,
       }))
       .sort((a, b) => b.individualRevenue - a.individualRevenue || a.level - b.level || a.name.localeCompare(b.name));
