@@ -361,6 +361,48 @@ export const getCoachModalData = createServerFn({ method: "GET" })
     const recruitedCoachesAllTime = downRows.length;
     const recruitedCoachesMonth = downRows.filter((r) => r.created_at && r.created_at >= fromMonth).length;
 
+    // Rewards (Premiações) — same logic as getCoachRewards, scoped to this coachId
+    const { data: planRows } = await supabaseAdmin
+      .from("career_plan_config")
+      .select("id,name,description,plan_type,duration_months,min_monthly_points,required_period_points,reward_description,reward_details,reward_image_url,is_active")
+      .eq("is_active", true);
+    const planList = (planRows as Array<{
+      id: string; name: string; description: string | null;
+      plan_type: string; duration_months: number;
+      min_monthly_points: number; required_period_points: number;
+      reward_description: string | null; reward_details: string | null;
+      reward_image_url: string | null;
+    }> | null) || [];
+    const rewards: CoachModalRewardPlan[] = [];
+    for (const p of planList) {
+      const target = p.plan_type === "monthly_challenge"
+        ? Number(p.min_monthly_points) || 0
+        : Number(p.required_period_points) || 0;
+      const { start, end } = windowForPlan(p.plan_type, p.duration_months);
+      const { data: pts } = await supabaseAdmin
+        .from("coach_points_log")
+        .select("points")
+        .eq("coach_id", coachId)
+        .gte("created_at", start.toISOString())
+        .lt("created_at", end.toISOString());
+      const current = ((pts as { points: number }[] | null) || []).reduce((s, r) => s + (Number(r.points) || 0), 0);
+      rewards.push({
+        id: p.id, name: p.name, description: p.description,
+        planType: p.plan_type as "period" | "monthly_challenge",
+        durationMonths: Number(p.duration_months) || 1,
+        rewardDescription: p.reward_description,
+        rewardDetails: p.reward_details,
+        rewardImageUrl: p.reward_image_url,
+        targetPoints: target,
+        currentPoints: current,
+        pctComplete: target > 0 ? Math.min(100, (current / target) * 100) : 0,
+        periodStartIso: start.toISOString(),
+        periodEndIso: end.toISOString(),
+        achieved: target > 0 && current >= target,
+      });
+    }
+    rewards.sort((a, b) => (a.planType === b.planType ? 0 : a.planType === "monthly_challenge" ? -1 : 1));
+
     return {
       coach: {
         id: coachId,
@@ -384,6 +426,8 @@ export const getCoachModalData = createServerFn({ method: "GET" })
       clients: { active: activeCount, inactive: inactiveCount, total: studentIds.length },
       directNetwork,
       goals,
+      rewards,
+      referredCoaches,
       referredPartners,
       referredProfessionals,
       products,
