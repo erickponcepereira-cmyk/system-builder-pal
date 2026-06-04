@@ -273,6 +273,9 @@ export function ProtocolTab() {
         weight_goal: d.weight_goal ?? s.goal_weight,
         general_notes: d.general_notes || "",
         workout_plan: d.workout_plan || [],
+        workout_name: d.workout_name || "Treino Prescrito",
+        workout_goal: (d.workout_goal as Protocol["workout_goal"]) || "general",
+        workout_level: (d.workout_level as Protocol["workout_level"]) || "iniciante",
       });
     } else {
       setProtocol({ ...emptyProtocol(), weight_goal: s.goal_weight });
