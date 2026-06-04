@@ -176,6 +176,7 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
             />
           </div>
           <h2 className="text-lg font-bold text-white">{coach?.name || "Coach"}</h2>
+          <p className="text-[10px] text-white/40">Foto recomendada: 512×512px (1:1)</p>
           <p className="mt-1 flex items-center gap-1.5 text-xs text-white/50"><Mail className="h-3 w-3" />{coach?.email || "E-mail não informado"}</p>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl bg-white/5 p-3"><p className="text-[10px] text-white/40">Alunos ativos</p><p className="text-lg font-bold text-white">{coach?.totalActiveStudents || 0}</p></div>
