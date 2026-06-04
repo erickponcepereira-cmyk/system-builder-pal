@@ -477,36 +477,26 @@ export const listAdminTestSales = createServerFn({ method: "GET" })
 
 export const deleteAdminTestSale = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => input as { sourceKind: "store_order" | "partner_product_order"; id: string })
+  .inputValidator((input: unknown) => input as DeleteInput)
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    if (data.sourceKind === "partner_product_order") {
-      const { data: order } = await supabaseAdmin.from("partner_product_orders" as never).select("metadata" as never).eq("id" as never, data.id as never).maybeSingle();
-      if (!(order as any)?.metadata?.test_simulation) throw new Error("Este pedido não é uma simulação");
-      await supabaseAdmin.from("partner_product_orders" as never).delete().eq("id" as never, data.id as never);
-      return { ok: true };
-    }
-
-    const { data: order } = await supabaseAdmin.from("store_orders").select("metadata").eq("id", data.id).maybeSingle();
-    if (!(order as any)?.metadata?.test_simulation) throw new Error("Este pedido não é uma simulação");
-    const { data: txs } = await supabaseAdmin.from("transactions").select("id").filter("metadata->>store_order_id", "eq", data.id);
-    const txIds = ((txs as any[]) || []).map((t) => t.id);
-    if (txIds.length) {
-      await supabaseAdmin.from("commissions").delete().in("transaction_id", txIds);
-      await supabaseAdmin.from("transactions").delete().in("id", txIds);
-    }
-    await supabaseAdmin.from("store_order_items").delete().eq("order_id", data.id);
-    await supabaseAdmin.from("store_orders").delete().eq("id", data.id);
-    return { ok: true };
+    return deleteSimulation(data);
   });
 
 export const resetAdminTestSales = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const rows = await listAdminTestSales();
+    const [{ data: storeRows }, { data: partnerRows }] = await Promise.all([
+      supabaseAdmin.from("store_orders").select("id").contains("metadata", TEST_META as never),
+      supabaseAdmin.from("partner_product_orders" as never).select("id" as never).contains("metadata" as never, TEST_META as never),
+    ]);
+    const rows: DeleteInput[] = [
+      ...(((storeRows as any[]) || []).map((row) => ({ id: row.id, sourceKind: "store_order" as const }))),
+      ...(((partnerRows as any[]) || []).map((row) => ({ id: row.id, sourceKind: "partner_product_order" as const }))),
+    ];
     for (const row of rows) {
-      await deleteAdminTestSale({ data: { id: row.id, sourceKind: row.kind === "professional" || row.kind === "partner" ? "partner_product_order" : "store_order" } });
+      await deleteSimulation(row);
     }
     return { deleted: rows.length };
   });
