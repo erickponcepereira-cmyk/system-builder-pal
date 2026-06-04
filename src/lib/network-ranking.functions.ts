@@ -45,15 +45,20 @@ export type CoachTreeNode = {
   level: number;
   directStudents: StudentBreakdown;
   childCoaches: number;
+  individualRevenue: number;
+  medal: NetworkRankMedal;
+  patent: NetworkRankPatent;
+  categories: string[];
   children: CoachTreeNode[];
 };
 
 export type MyNetworkStructure = {
-  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number } | null;
-  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number } | null;
+  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
+  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
   totals: { downlineCoaches: number; directStudents: StudentBreakdown };
   children: CoachTreeNode[];
 };
+
 
 const DateRangeSchema = z.object({
   from: z.string().min(10).max(10),
