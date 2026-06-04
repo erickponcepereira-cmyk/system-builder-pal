@@ -150,7 +150,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
           </>
         )}
       </div>
-      {modal && <CoachNetworkModal data={modal} onClose={() => setModal(null)} />}
+      {openStudentId && <StudentDetailsModal studentId={openStudentId} onClose={() => setOpenStudentId(null)} />}
     </>
   );
 }
