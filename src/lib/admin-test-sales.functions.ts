@@ -36,6 +36,7 @@ const TEST_META = { test_simulation: true, source: "admin_test_sale" } as const;
 type DeleteInput = { sourceKind: "store_order" | "partner_product_order"; id: string };
 
 async function assertAdmin(userId: string) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("profiles")
     .select("role")
@@ -61,6 +62,7 @@ function buildOrderMeta(input: SimulateInput, extras: Record<string, unknown> = 
 }
 
 async function getProduct(input: SimulateInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (input.kind === "digital") {
     const { data, error } = await supabaseAdmin
       .from("digital_products")
@@ -103,6 +105,7 @@ async function getProduct(input: SimulateInput) {
 }
 
 async function getCoachUplines(coachId: string | null | undefined) {
+  const supabaseAdmin = await getSupabaseAdmin();
   let l1: string | null = null;
   let l2: string | null = null;
   let l3: string | null = null;
