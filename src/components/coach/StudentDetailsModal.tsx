@@ -92,7 +92,24 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
         .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state)")
         .eq("id", studentId)
         .maybeSingle();
-      setProfile(((student as unknown as { profiles: Profile })?.profiles) || null);
+      const stu = (student as unknown as { profile_id: string; profiles: Profile }) || null;
+      setProfile(stu?.profiles || null);
+
+      // Classificação (Aluno / Aluno Coach / Profissional / Parceiro)
+      const tags: string[] = ["Aluno"];
+      if (stu?.profile_id) {
+        const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+          supabase.from("coaches").select("id,is_professional").eq("profile_id", stu.profile_id).maybeSingle(),
+          supabase.from("partners").select("id").eq("profile_id", stu.profile_id).maybeSingle(),
+        ]);
+        if (coachRow) {
+          if ((coachRow as { is_professional: boolean | null }).is_professional) tags.push("Profissional");
+          else tags.push("Aluno Coach");
+        }
+        if (partnerRow) tags.push("Parceiro");
+      }
+      setClassifications(tags);
+
 
       const [subRes, txRes, bodyRes, bioRes, anamRes, wRes, pRes] = await Promise.all([
         supabase.from("subscriptions").select("id,status,start_date,end_date,products!subscriptions_product_id_fkey(id,name,price)").eq("student_id", studentId).order("end_date", { ascending: false }),
