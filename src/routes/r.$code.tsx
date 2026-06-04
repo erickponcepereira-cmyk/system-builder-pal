@@ -92,8 +92,7 @@ function ReferralLandingPage() {
           navigate({ to: "/student/store" });
           return;
         }
-        const targetRole = row.kind === "coach" ? "coach" : "student";
-        navigate({ to: "/register", search: { role: targetRole } });
+        navigate({ to: "/register" });
       }, 1200);
 
 
