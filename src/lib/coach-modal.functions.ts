@@ -35,6 +35,7 @@ export type CoachModalData = {
     isHbl: boolean;
     specialtyLabel: string | null;
     categories: string[];
+    classifications: string[];
   };
   patent: { name: string; color: string | null; achievedAt: string | null } | null;
   medal: { name: string; achievedAt: string | null } | null;
@@ -104,6 +105,20 @@ export const getCoachModalData = createServerFn({ method: "GET" })
     if (specialtyLabel) categories.push(specialtyLabel);
     if (isHbl) categories.push("Coach HBL");
     if (isPartner) categories.push("Parceiro");
+
+    // Classificações pessoais (Aluno / Aluno Coach / Profissional / Parceiro)
+    const { data: ownStudent } = await supabaseAdmin
+      .from("students")
+      .select("id")
+      .eq("profile_id", profileId)
+      .limit(1)
+      .maybeSingle();
+    const classifications: string[] = [];
+    if ((coach as any).is_professional) classifications.push("Profissional");
+    else classifications.push("Aluno Coach");
+    if (isPartner) classifications.push("Parceiro");
+    if (ownStudent) classifications.push("Aluno");
+
 
     // Patent and medal history
     const [{ data: patentAch }, { data: medalAch }] = await Promise.all([
@@ -319,6 +334,7 @@ export const getCoachModalData = createServerFn({ method: "GET" })
         isHbl,
         specialtyLabel,
         categories,
+        classifications,
       },
       patent,
       medal,

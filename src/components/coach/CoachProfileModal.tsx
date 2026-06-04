@@ -140,6 +140,18 @@ export default function CoachProfileModal({ coachId, onClose }: { coachId: strin
                     {data.coach.email ? <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{data.coach.email}</span> : null}
                     {data.coach.phone ? <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{data.coach.phone}</span> : null}
                   </div>
+                  {data.coach.classifications?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {data.coach.classifications.map((t) => (
+                        <span
+                          key={t}
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${t === "Aluno" ? "bg-white/10 text-white/70" : t === "Aluno Coach" ? "bg-primary/20 text-primary" : t === "Profissional" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {data.coach.categories.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {data.coach.categories.map((c) => (

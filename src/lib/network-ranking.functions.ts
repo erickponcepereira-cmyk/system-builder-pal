@@ -50,12 +50,13 @@ export type CoachTreeNode = {
   medal: NetworkRankMedal;
   patent: NetworkRankPatent;
   categories: string[];
+  classifications: string[];
   children: CoachTreeNode[];
 };
 
 export type MyNetworkStructure = {
-  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
-  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
+  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; classifications: string[]; individualRevenue: number } | null;
+  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; classifications: string[]; individualRevenue: number } | null;
   totals: { downlineCoaches: number; directStudents: StudentBreakdown };
   children: CoachTreeNode[];
 };
@@ -153,6 +154,20 @@ function categoriesForCoach(
   if (partnerProfileIds.has(coach.profile_id)) cats.push("Parceiro");
   return cats;
 }
+
+function classificationsForCoach(
+  coach: CoachRow,
+  partnerProfileIds: Set<string>,
+  studentProfileIds: Set<string>,
+): string[] {
+  const out: string[] = [];
+  if (coach.is_professional) out.push("Profissional");
+  else out.push("Aluno Coach");
+  if (partnerProfileIds.has(coach.profile_id)) out.push("Parceiro");
+  if (studentProfileIds.has(coach.profile_id)) out.push("Aluno");
+  return out;
+}
+
 
 
 type PatentRule = {
@@ -310,7 +325,7 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return { me: null, upline: null, totals: { downlineCoaches: 0, directStudents: emptyBreakdown() }, children: [] };
-    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
+    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const studentsByCoach = new Map<string, StudentRow[]>();
@@ -352,6 +367,7 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
         medal: medalFor(own, medalRules),
         patent: patentForCoach(c.id, patentRules, windowsRevenueByCoach, byUpline),
         categories: categoriesForCoach(c as any, partnerProfileIds, masterCoachIds, specialtyLabels),
+        classifications: classificationsForCoach(c, partnerProfileIds, studentProfileIds),
       };
     };
     const toNode = (c: CoachRow, level: number): CoachTreeNode => ({
