@@ -295,7 +295,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             onClick={(e) => e.stopPropagation()}
             className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
           >
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-muted">
+            <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
               {selected.image_url ? (
                 <img src={selected.image_url} alt={selected.name} className="h-full w-full object-cover" />
               ) : (
@@ -330,6 +330,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   onChange={setSlot}
                 />
               )}
+              <CommissionBreakdown price={selected.price} pct={selected.coachCommissionPct} />
               {mode === "reseller" && (
                 <div className="space-y-1 rounded-xl border border-primary/30 bg-primary/5 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
