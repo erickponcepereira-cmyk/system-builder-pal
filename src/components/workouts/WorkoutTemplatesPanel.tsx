@@ -37,6 +37,7 @@ export function WorkoutTemplatesPanel({ mode, coachId }: Props) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null);
+  const [viewing, setViewing] = useState<WorkoutTemplate | null>(null);
   const [filterGoal, setFilterGoal] = useState<string>("all");
   const [search, setSearch] = useState("");
 
