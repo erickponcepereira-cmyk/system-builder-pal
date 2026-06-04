@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { applyApproval } from "@/lib/mercadopago-impl.server";
 
 type SaleKind = "store" | "digital" | "challenge" | "professional" | "partner";
 type SimulateInput = {
@@ -269,6 +268,7 @@ async function createStoreSimulation(input: SimulateInput) {
     .single();
   if (txErr || !tx) throw new Error(txErr?.message || "Falha ao criar transação de teste");
 
+  const { applyApproval } = await import("@/lib/mercadopago-impl.server");
   await applyApproval("store_order", (order as any).id);
   return { sourceKind: "store_order", sourceId: (order as any).id, orderNumber: (order as any).order_number };
 }
@@ -342,6 +342,7 @@ async function createPartnerSimulation(input: SimulateInput) {
     .single();
   if (error || !order) throw new Error(error?.message || "Falha ao criar pedido profissional/parceiro");
 
+  const { applyApproval } = await import("@/lib/mercadopago-impl.server");
   await applyApproval("partner_product_order", (order as any).id);
   return { sourceKind: "partner_product_order", sourceId: (order as any).id, orderNumber: (order as any).order_number };
 }
