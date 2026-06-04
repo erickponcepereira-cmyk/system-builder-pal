@@ -7,6 +7,7 @@ import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { useServerFn } from "@tanstack/react-start";
 import { getCoachStudentsTokens } from "@/lib/challenge-tokens.functions";
 import { CLASSIFICATION_LABEL, classifyByProfile, type StudentClassification } from "@/lib/student-classifications";
+import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 
 type StudentRow = {
   id: string;
@@ -178,6 +179,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
           {loading ? "Carregando..." : `${students.length} aluno${students.length === 1 ? "" : "s"} ligado${students.length === 1 ? "" : "s"} diretamente ao seu perfil.`}
         </p>
       </div>
+      <CoachAlertsCard coachId={coachId} />
 
       {/* Busca + filtros */}
       <div className="mb-4 space-y-3">

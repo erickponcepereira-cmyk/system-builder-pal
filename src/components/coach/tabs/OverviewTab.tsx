@@ -5,6 +5,7 @@ import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { supabase } from "@/integrations/supabase/client";
 import { RewardsPanel } from "@/components/coach/RewardsPanel";
+import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -99,6 +100,7 @@ export function OverviewTab({
           </button>
         </div>
       </div>
+      {coachId && <CoachAlertsCard coachId={coachId} />}
 
       {/* Stats */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
