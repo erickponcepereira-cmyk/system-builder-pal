@@ -172,7 +172,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
                     <p className="truncate text-sm font-bold text-white">{data.me.name} (você)</p>
                     <Classifications items={data.me.classifications} />
                     <Categories items={data.me.categories} />
-                    <p className="mt-1 text-[11px] text-white/55">{data.me.directStudents.total} alunos · {data.totals.downlineCoaches} coaches na rede abaixo</p>
+                    <StudentsBreakdown b={data.me.directStudents} downlineCoaches={data.totals.downlineCoaches} downlineLabel="coaches na rede abaixo" />
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <PatentTag patent={data.me.patent} />
