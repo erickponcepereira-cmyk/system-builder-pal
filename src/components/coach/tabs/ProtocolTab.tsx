@@ -377,20 +377,57 @@ export function ProtocolTab() {
 
   const saveExercise = async () => {
     if (!coachId || !newExercise.name?.trim()) { toast.error("Informe o nome do exercício"); return; }
-    const { data, error } = await supabase.from("exercise_library" as never).insert({
+    const payload = {
       name: newExercise.name.trim(),
       muscle_group: newExercise.muscle_group || null,
       equipment: newExercise.equipment || null,
       difficulty: newExercise.difficulty || null,
       description: newExercise.description || null,
       video_url: newExercise.video_url || null,
-      created_by_coach_id: coachId,
-    } as never).select("*" as never).single();
+    };
+    if (editingExercise) {
+      const { data, error } = await supabase.from("exercise_library" as never).update(payload as never).eq("id" as never, editingExercise.id as never).select("*" as never).single();
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      setLibrary((cur) => cur.map((e) => e.id === editingExercise.id ? (data as any) : e).sort((a, b) => a.name.localeCompare(b.name)));
+      setEditingExercise(null);
+      setNewExercise({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
+      toast.success("Exercício atualizado");
+      return;
+    }
+    const { data, error } = await supabase.from("exercise_library" as never).insert({ ...payload, created_by_coach_id: coachId } as never).select("*" as never).single();
     if (error) { toast.error("Erro ao salvar exercício"); return; }
     setLibrary((cur) => [...cur, data as any].sort((a, b) => a.name.localeCompare(b.name)));
     setNewExercise({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
     toast.success("Exercício adicionado");
   };
+
+  const startEditExercise = (e: Exercise) => {
+    setEditingExercise(e);
+    setNewExercise({
+      name: e.name,
+      muscle_group: e.muscle_group || "",
+      equipment: e.equipment || "",
+      difficulty: e.difficulty || "",
+      description: e.description || "",
+      video_url: e.video_url || "",
+    });
+    setSection("library");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEditExercise = () => {
+    setEditingExercise(null);
+    setNewExercise({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
+  };
+
+  const deleteExercise = async (e: Exercise) => {
+    if (!confirm(`Excluir "${e.name}"?`)) return;
+    const { error } = await supabase.from("exercise_library" as never).delete().eq("id" as never, e.id as never);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    setLibrary((cur) => cur.filter((x) => x.id !== e.id));
+    toast.success("Excluído");
+  };
+
 
   return (
     <div>
