@@ -210,15 +210,17 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     body = (
       <div className="space-y-3">
         <h2 className="text-base font-bold text-white">Seções</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {visibleSections.map((s) => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)} className="group overflow-hidden rounded-xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A" }}>
-              {s.image_url ? (
-                <img src={s.image_url} alt={s.name} className="h-28 w-full object-cover transition group-hover:scale-105" />
-              ) : (
-                <div className="h-28 w-full bg-white/5" />
-              )}
-              <p className="p-3 text-sm font-bold text-white">{s.name}</p>
+            <button key={s.id} onClick={() => setActiveSection(s.id)} className="group overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent" style={{ backgroundColor: "#1A1A1A" }}>
+              <div className="aspect-square w-full overflow-hidden bg-white/5">
+                {s.image_url ? (
+                  <img src={s.image_url} alt={s.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
+                )}
+              </div>
+              <p className="px-3 py-2 text-sm font-bold text-white">{s.name}</p>
             </button>
           ))}
         </div>
@@ -235,15 +237,17 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={() => setActiveSection(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
           <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {visibleCats.map((c) => (
-              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="group overflow-hidden rounded-xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A" }}>
-                {c.image_url ? (
-                  <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover transition group-hover:scale-105" />
-                ) : (
-                  <div className="h-28 w-full bg-white/5" />
-                )}
-                <p className="p-3 text-sm font-bold text-white">{c.name}</p>
+              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="group overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent" style={{ backgroundColor: "#1A1A1A" }}>
+                <div className="aspect-square w-full overflow-hidden bg-white/5">
+                  {c.image_url ? (
+                    <img src={c.image_url} alt={c.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-7 w-7 text-white/30" /></div>
+                  )}
+                </div>
+                <p className="px-3 py-2 text-sm font-bold text-white">{c.name}</p>
               </button>
             ))}
           </div>
@@ -256,17 +260,19 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {items.map((p) => (
-              <button key={p.id} onClick={() => setSelected(p)} className="rounded-xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} className="mb-2 h-32 w-full rounded object-cover" />
-                ) : (
-                  <div className="mb-2 flex h-32 w-full items-center justify-center rounded bg-white/5"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
-                )}
+              <button key={p.id} onClick={() => setSelected(p)} className="rounded-2xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
+                <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-white/5">
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <ShoppingBag className="h-8 w-8 text-white/30" />
+                  )}
+                </div>
                 <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
-                <p className="text-sm font-bold text-white line-clamp-2">{p.name}</p>
-                <p className="mt-2 text-base font-bold text-primary">{money(p.price)}</p>
+                <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
+                <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
               </button>
             ))}
             {items.length === 0 && <p className="col-span-full text-sm text-white/50">Nenhum produto nesta subcategoria.</p>}
