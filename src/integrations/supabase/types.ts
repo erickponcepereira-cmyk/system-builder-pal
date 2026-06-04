@@ -3089,6 +3089,7 @@ export type Database = {
       }
       exercise_library: {
         Row: {
+          body_focus: string | null
           created_at: string
           created_by_coach_id: string | null
           description: string | null
@@ -3105,6 +3106,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          body_focus?: string | null
           created_at?: string
           created_by_coach_id?: string | null
           description?: string | null
@@ -3121,6 +3123,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          body_focus?: string | null
           created_at?: string
           created_by_coach_id?: string | null
           description?: string | null
