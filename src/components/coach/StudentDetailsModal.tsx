@@ -81,6 +81,8 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [showProNotes, setShowProNotes] = useState<Set<string>>(new Set());
+  const [classifications, setClassifications] = useState<string[]>([]);
+
 
   useEffect(() => {
     (async () => {
@@ -90,7 +92,24 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
         .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state)")
         .eq("id", studentId)
         .maybeSingle();
-      setProfile(((student as unknown as { profiles: Profile })?.profiles) || null);
+      const stu = (student as unknown as { profile_id: string; profiles: Profile }) || null;
+      setProfile(stu?.profiles || null);
+
+      // Classificação (Aluno / Aluno Coach / Profissional / Parceiro)
+      const tags: string[] = ["Aluno"];
+      if (stu?.profile_id) {
+        const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+          supabase.from("coaches").select("id,is_professional").eq("profile_id", stu.profile_id).maybeSingle(),
+          supabase.from("partners").select("id").eq("profile_id", stu.profile_id).maybeSingle(),
+        ]);
+        if (coachRow) {
+          if ((coachRow as { is_professional: boolean | null }).is_professional) tags.push("Profissional");
+          else tags.push("Aluno Coach");
+        }
+        if (partnerRow) tags.push("Parceiro");
+      }
+      setClassifications(tags);
+
 
       const [subRes, txRes, bodyRes, bioRes, anamRes, wRes, pRes] = await Promise.all([
         supabase.from("subscriptions").select("id,status,start_date,end_date,products!subscriptions_product_id_fkey(id,name,price)").eq("student_id", studentId).order("end_date", { ascending: false }),
@@ -207,6 +226,12 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/50" /></div>
           ) : tab === "resumo" ? (
             <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {classifications.map((c) => (
+                  <span key={c} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${c === "Aluno" ? "bg-white/10 text-white/70" : c === "Aluno Coach" ? "bg-primary/20 text-primary" : c === "Profissional" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>{c}</span>
+                ))}
+              </div>
+
               <Card title="Plano ativo de maior valor" icon={<Crown className="h-4 w-4 text-primary" />}>
                 {mostExpensivePlan ? (
                   <div className="flex items-center justify-between gap-3">
