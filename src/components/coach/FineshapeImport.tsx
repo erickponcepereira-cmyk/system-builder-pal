@@ -294,7 +294,7 @@ export default function FineshapeImport({ coachId, onDone }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2 border-orange-500/40 text-orange-300 hover:bg-orange-500/10">
-          <Upload className="w-4 h-4" /> Importar Fineshape
+          <Upload className="w-4 h-4" /> Importar
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg bg-zinc-950 border-white/10 text-white">
