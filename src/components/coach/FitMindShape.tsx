@@ -384,6 +384,15 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [step, setStep] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("");
+  const [scopeFilter, setScopeFilter] = useState<"mine" | "all">("mine");
+  const myClients = useMemo(
+    () => clients.filter((c) => !c.coachId || c.coachId === coach.id),
+    [clients, coach.id],
+  );
+  const hasOtherCoachClients = useMemo(
+    () => clients.some((c) => c.coachId && c.coachId !== coach.id),
+    [clients, coach.id],
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
@@ -1093,7 +1102,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
       <div
         className="fm-card"
         style={{ cursor: "pointer" }}
-        onClick={() => { setEntryIntent("browse"); setScreen("select-client"); }}
+        onClick={() => { setEntryIntent("browse"); setScopeFilter("mine"); setScreen("select-client"); }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
@@ -1114,12 +1123,45 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               Meus Alunos
             </div>
             <div style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
-              {clients.length} alunos cadastrados
+              {myClients.length} alunos cadastrados
             </div>
           </div>
           <ChevronRight color="var(--muted-foreground)" />
         </div>
       </div>
+
+      {hasOtherCoachClients && (
+        <div
+          className="fm-card"
+          style={{ cursor: "pointer", marginTop: 12 }}
+          onClick={() => { setEntryIntent("browse"); setScopeFilter("all"); setScreen("select-client"); }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                background: "var(--fm-primary-light)",
+                borderRadius: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Users size={24} color="var(--fm-primary)" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "var(--foreground)", fontWeight: 700, fontSize: 16 }}>
+                Todos os Alunos
+              </div>
+              <div style={{ color: "var(--muted-foreground)", fontSize: 13 }}>
+                {clients.length} alunos (rede completa)
+              </div>
+            </div>
+            <ChevronRight color="var(--muted-foreground)" />
+          </div>
+        </div>
+      )}
 
       <div style={{ marginTop: 24, padding: "12px 0" }}>
         <div
@@ -1191,7 +1233,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: SELEÇÃO DE ALUNO
   // ────────────────────────────────────────────────────────
   const SelectClientScreen = () => {
-    const filtered = clients.filter(
+    const scopedClients =
+      scopeFilter === "mine" ? myClients : clients;
+    const filtered = scopedClients.filter(
       (c) => {
         const matchesText =
           c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1225,7 +1269,43 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
 
+        {hasOtherCoachClients && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button
+              onClick={() => setScopeFilter("mine")}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: scopeFilter === "mine" ? "var(--fm-primary)" : "var(--card)",
+                color: scopeFilter === "mine" ? "#fff" : "var(--foreground)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Meus Alunos ({myClients.length})
+            </button>
+            <button
+              onClick={() => setScopeFilter("all")}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: scopeFilter === "all" ? "var(--fm-primary)" : "var(--card)",
+                color: scopeFilter === "all" ? "#fff" : "var(--foreground)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Todos os Alunos ({clients.length})
+            </button>
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+
           <div style={{ flex: 1, position: "relative" }}>
             <Search
               size={16}
