@@ -74,6 +74,9 @@ const emptyProtocol = (): Protocol => ({
   weight_goal: null,
   general_notes: "",
   workout_plan: [],
+  workout_name: "Treino Prescrito",
+  workout_goal: "general",
+  workout_level: "iniciante",
 });
 
 export function ProtocolTab() {
