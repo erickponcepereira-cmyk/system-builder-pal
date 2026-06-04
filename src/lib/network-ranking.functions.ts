@@ -45,15 +45,20 @@ export type CoachTreeNode = {
   level: number;
   directStudents: StudentBreakdown;
   childCoaches: number;
+  individualRevenue: number;
+  medal: NetworkRankMedal;
+  patent: NetworkRankPatent;
+  categories: string[];
   children: CoachTreeNode[];
 };
 
 export type MyNetworkStructure = {
-  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number } | null;
-  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number } | null;
+  me: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
+  upline: { coachId: string; name: string; email: string; directStudents: StudentBreakdown; childCoaches: number; patent: NetworkRankPatent; medal: NetworkRankMedal; categories: string[]; individualRevenue: number } | null;
   totals: { downlineCoaches: number; directStudents: StudentBreakdown };
   children: CoachTreeNode[];
 };
+
 
 const DateRangeSchema = z.object({
   from: z.string().min(10).max(10),
@@ -112,32 +117,42 @@ function collectDownline(rootCoachId: string, byUpline: Map<string, CoachRow[]>,
 }
 
 async function loadBase(supabaseAdmin: any) {
-  const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }] = await Promise.all([
-    supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,profiles!coaches_profile_id_fkey(name,email)"),
+  const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }, { data: mastersRaw }, { data: specsRaw }] = await Promise.all([
+    supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,specialty_key,herbalife_portal_url,profiles!coaches_profile_id_fkey(name,email)"),
     supabaseAdmin.from("students").select("id,coach_id,profile_id"),
     supabaseAdmin.from("partners").select("profile_id"),
+    supabaseAdmin.from("master_coaches").select("coach_id,status"),
+    supabaseAdmin.from("professional_specialties").select("key,label"),
   ]);
-  const coaches = ((coachesRaw as CoachRow[] | null) || []).filter((c) => !!c.id);
+  const coaches = ((coachesRaw as Array<CoachRow & { specialty_key?: string | null; herbalife_portal_url?: string | null }> | null) || []).filter((c) => !!c.id);
   const students = ((studentsRaw as StudentRow[] | null) || []).filter((s) => !!s.coach_id);
   const coachProfileIds = new Set(coaches.map((c) => c.profile_id));
   const professionalProfileIds = new Set(coaches.filter((c) => !!c.is_professional).map((c) => c.profile_id));
   const partnerProfileIds = new Set(((partnersRaw as Array<{ profile_id: string }> | null) || []).map((p) => p.profile_id));
   const studentProfileIds = new Set(students.map((s) => s.profile_id));
-  return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds };
+  const masterCoachIds = new Set(((mastersRaw as Array<{ coach_id: string; status: string | null }> | null) || []).filter((m) => (m.status || "active") === "active").map((m) => m.coach_id));
+  const specialtyLabels = new Map<string, string>();
+  ((specsRaw as Array<{ key: string; label: string }> | null) || []).forEach((s) => specialtyLabels.set(s.key, s.label));
+  return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds, masterCoachIds, specialtyLabels };
 }
 
 function categoriesForCoach(
-  coach: CoachRow,
-  studentProfileIds: Set<string>,
-  professionalProfileIds: Set<string>,
+  coach: CoachRow & { specialty_key?: string | null; herbalife_portal_url?: string | null },
   partnerProfileIds: Set<string>,
+  masterCoachIds: Set<string>,
+  specialtyLabels: Map<string, string>,
 ): string[] {
-  const cats: string[] = ["Coach"];
-  if (studentProfileIds.has(coach.profile_id)) cats.push("Aluno");
-  if (professionalProfileIds.has(coach.profile_id)) cats.push("Profissional");
+  const cats: string[] = [];
+  if (masterCoachIds.has(coach.id)) cats.push("Master Coach");
+  if (coach.specialty_key) {
+    const label = specialtyLabels.get(coach.specialty_key);
+    if (label) cats.push(label);
+  }
+  if (coach.herbalife_portal_url && coach.herbalife_portal_url.trim()) cats.push("Coach HBL");
   if (partnerProfileIds.has(coach.profile_id)) cats.push("Parceiro");
   return cats;
 }
+
 
 type PatentRule = {
   key: string;
@@ -285,13 +300,15 @@ function medalFor(value: number, rules: Array<{ key: string; name: string; icon:
   return medal;
 }
 
+function firstOfMonthDate() { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10); }
+
 export const getMyNetworkStructure = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MyNetworkStructure> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return { me: null, upline: null, totals: { downlineCoaches: 0, directStudents: emptyBreakdown() }, children: [] };
-    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds } = await loadBase(supabaseAdmin);
+    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const studentsByCoach = new Map<string, StudentRow[]>();
@@ -301,24 +318,48 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
       studentsByCoach.set(s.coach_id, arr);
     });
     const breakdown = (id: string) => breakdownForCoach(id, studentsByCoach, coachProfileIds, professionalProfileIds, partnerProfileIds);
-    const toSummary = (c: CoachRow | undefined | null) => c ? { coachId: c.id, name: coachName(c), email: coachEmail(c), directStudents: breakdown(c.id), childCoaches: (byUpline.get(c.id) || []).length } : null;
+
+    const me = byId.get(coachId) || null;
+    const downline = collectDownline(coachId, byUpline, me);
+    const allIds = downline.map((d) => d.coach.id);
+    if (me?.upline_coach_id && byId.has(me.upline_coach_id)) allIds.push(me.upline_coach_id);
+    const monthRevenue = await loadRevenueByCoach(supabaseAdmin, allIds, firstOfMonthDate(), todayDate());
+    const medalRules = await loadMedalRules(supabaseAdmin);
+    const patentRules = await loadPatentRules(supabaseAdmin);
+    const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
+    const windowsRevenueByCoach = new Map<number, Map<string, number>>();
+    const today = todayDate();
+    await Promise.all(distinctWindows.map(async (months) => {
+      const rev = await loadRevenueByCoach(supabaseAdmin, allIds, monthsAgoDate(months), today);
+      windowsRevenueByCoach.set(months, rev);
+    }));
+
+    const enrich = (c: CoachRow) => {
+      const own = monthRevenue.get(c.id) || 0;
+      return {
+        coachId: c.id,
+        name: coachName(c),
+        email: coachEmail(c),
+        directStudents: breakdown(c.id),
+        childCoaches: (byUpline.get(c.id) || []).length,
+        individualRevenue: own,
+        medal: medalFor(own, medalRules),
+        patent: patentForCoach(c.id, patentRules, windowsRevenueByCoach, byUpline),
+        categories: categoriesForCoach(c as any, partnerProfileIds, masterCoachIds, specialtyLabels),
+      };
+    };
     const toNode = (c: CoachRow, level: number): CoachTreeNode => ({
-      coachId: c.id,
-      name: coachName(c),
-      email: coachEmail(c),
+      ...enrich(c),
       level,
-      directStudents: breakdown(c.id),
-      childCoaches: (byUpline.get(c.id) || []).length,
       children: (byUpline.get(c.id) || []).map((child) => toNode(child, level + 1)),
     });
-    const me = byId.get(coachId) || null;
-    const downline = collectDownline(coachId, byUpline);
+
     const totalDirect = emptyBreakdown();
     addBreakdown(totalDirect, breakdown(coachId));
     return {
-      me: toSummary(me),
-      upline: toSummary(me?.upline_coach_id ? byId.get(me.upline_coach_id) : null),
-      totals: { downlineCoaches: downline.length, directStudents: totalDirect },
+      me: me ? enrich(me) : null,
+      upline: me?.upline_coach_id && byId.has(me.upline_coach_id) ? enrich(byId.get(me.upline_coach_id)!) : null,
+      totals: { downlineCoaches: downline.length - 1, directStudents: totalDirect },
       children: (byUpline.get(coachId) || []).map((child) => toNode(child, 1)),
     };
   });
@@ -330,7 +371,7 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return [];
-    const { coaches, students, studentProfileIds, professionalProfileIds, partnerProfileIds } = await loadBase(supabaseAdmin);
+    const { coaches, students, partnerProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const me = byId.get(coachId);
@@ -360,11 +401,12 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
         networkRevenue: 0,
         medal: medalFor(revenue.get(coach.id) || 0, medalRules),
         patent: patentForCoach(coach.id, patentRules, windowsRevenueByCoach, byUpline),
-        categories: categoriesForCoach(coach, studentProfileIds, professionalProfileIds, partnerProfileIds),
+        categories: categoriesForCoach(coach as any, partnerProfileIds, masterCoachIds, specialtyLabels),
         isYou: coach.id === coachId,
       }))
       .sort((a, b) => b.individualRevenue - a.individualRevenue || a.level - b.level || a.name.localeCompare(b.name));
   });
+
 
 export const getAdminNetworkRankingFilters = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Award, Search, Trophy, Users } from "lucide-react";
+import { Award, Search } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyNetworkRanking, type NetworkRankingRow } from "@/lib/network-ranking.functions";
 
@@ -75,14 +75,15 @@ export function NetworkRankingTab() {
                         borderColor: r.patent.color ? `${r.patent.color}55` : "rgba(255,255,255,0.15)",
                       }}
                     >
-                      {r.patent.icon ? <span>{r.patent.icon}</span> : <Trophy className="h-3 w-3" />} {r.patent.name}
+                      {r.patent.name}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-[11px] font-bold text-primary">
-                    {r.medal?.icon ? <span>{r.medal.icon}</span> : <Award className="h-3 w-3" />} {r.medal?.name || "Sem medalha"}
+                    <Award className="h-3 w-3" /> {r.medal?.name || "Sem medalha"}
                   </span>
                   <span className="text-[10px] text-white/35">medalha do mês</span>
                 </div>
+
               </div>
             ))}
           </div>
