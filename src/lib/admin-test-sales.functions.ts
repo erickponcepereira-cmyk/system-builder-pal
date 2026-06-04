@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+async function getSupabaseAdmin() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
 
 type SaleKind = "store" | "digital" | "challenge" | "professional" | "partner";
 type SimulateInput = {
@@ -32,6 +36,7 @@ const TEST_META = { test_simulation: true, source: "admin_test_sale" } as const;
 type DeleteInput = { sourceKind: "store_order" | "partner_product_order"; id: string };
 
 async function assertAdmin(userId: string) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("profiles")
     .select("role")
@@ -57,14 +62,23 @@ function buildOrderMeta(input: SimulateInput, extras: Record<string, unknown> = 
 }
 
 async function getProduct(input: SimulateInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (input.kind === "digital") {
     const { data, error } = await supabaseAdmin
       .from("digital_products")
       .select("id,title,price,status")
       .eq("id", input.productId)
       .maybeSingle();
-    if (error || !data) throw new Error(error?.message || "Curso não encontrado");
-    return { id: data.id, title: data.title, price: moneyNumber(data.price), productId: null, digitalProductId: data.id, professionalProductId: null, partnerProductId: null };
+    if (error) throw new Error(error.message);
+    if (data) return { id: data.id, title: data.title, price: moneyNumber(data.price), productId: null, digitalProductId: data.id, professionalProductId: null, partnerProductId: null };
+
+    const { data: productData, error: productError } = await supabaseAdmin
+      .from("products")
+      .select("id,name,price,status,is_active,kind")
+      .eq("id", input.productId)
+      .maybeSingle();
+    if (productError || !productData) throw new Error(productError?.message || "Curso não encontrado");
+    return { id: productData.id, title: productData.name, price: moneyNumber(productData.price), productId: productData.id, digitalProductId: null, professionalProductId: null, partnerProductId: null };
   }
 
   if (input.kind === "professional") {
@@ -99,6 +113,7 @@ async function getProduct(input: SimulateInput) {
 }
 
 async function getCoachUplines(coachId: string | null | undefined) {
+  const supabaseAdmin = await getSupabaseAdmin();
   let l1: string | null = null;
   let l2: string | null = null;
   let l3: string | null = null;
@@ -117,12 +132,14 @@ async function getCoachUplines(coachId: string | null | undefined) {
 }
 
 async function profileIdForCoach(coachId: string | null | undefined) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (!coachId) return null;
   const { data } = await supabaseAdmin.from("coaches").select("profile_id").eq("id", coachId).maybeSingle();
   return (data as any)?.profile_id || null;
 }
 
 async function subtractWallet(profileId: string | null, amount: number) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (!profileId || amount <= 0) return;
   const { data } = await supabaseAdmin
     .from("wallets")
@@ -142,6 +159,7 @@ async function subtractWallet(profileId: string | null, amount: number) {
 }
 
 async function subtractAdminWallet(amount: number) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (amount <= 0) return;
   const { data } = await supabaseAdmin
     .from("admin_system_wallet")
@@ -160,12 +178,14 @@ async function subtractAdminWallet(amount: number) {
 }
 
 async function profileIdForPartner(partnerId: string | null | undefined) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (!partnerId) return null;
   const { data } = await supabaseAdmin.from("partners" as never).select("profile_id" as never).eq("id" as never, partnerId as never).maybeSingle();
   return (data as any)?.profile_id || null;
 }
 
 async function deleteSimulation(data: DeleteInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (data.sourceKind === "partner_product_order") {
     const { data: order } = await supabaseAdmin
       .from("partner_product_orders" as never)
@@ -199,6 +219,7 @@ async function deleteSimulation(data: DeleteInput) {
 }
 
 async function createStoreSimulation(input: SimulateInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const product = await getProduct(input);
   const { data: student } = await supabaseAdmin
     .from("students")
@@ -274,6 +295,7 @@ async function createStoreSimulation(input: SimulateInput) {
 }
 
 async function getFallbackProductId() {
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data } = await supabaseAdmin
     .from("products")
     .select("id")
@@ -286,6 +308,7 @@ async function getFallbackProductId() {
 }
 
 async function createPartnerSimulation(input: SimulateInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const product = await getProduct(input);
   const { data: student } = await supabaseAdmin
     .from("students")
@@ -348,6 +371,7 @@ async function createPartnerSimulation(input: SimulateInput) {
 }
 
 async function listFlowForOrder(sourceKind: string, sourceId: string) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (sourceKind === "partner_product_order") {
     const { data: order } = await supabaseAdmin
       .from("partner_product_orders" as never)
@@ -386,27 +410,36 @@ async function listFlowForOrder(sourceKind: string, sourceId: string) {
 export const getAdminTestSalesData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const supabaseAdmin = await getSupabaseAdmin();
     await assertAdmin(context.userId);
     const [students, coaches, products, digitals, professionals, partnerProducts] = await Promise.all([
       supabaseAdmin.from("students").select("id,profiles:profile_id(name,email)").order("created_at", { ascending: false }).limit(300),
       supabaseAdmin.from("coaches").select("id,referral_code,profiles:profile_id(name,email)").order("created_at", { ascending: false }).limit(300),
-      supabaseAdmin.from("products").select("id,name,price,kind,status,is_active").limit(300),
+      supabaseAdmin.from("products").select("id,name,price,kind,type,product_type,status,is_active,has_challenge_access").eq("status", "active").order("sort_order", { ascending: true }).limit(300),
       supabaseAdmin.from("digital_products").select("id,title,price,status").limit(300),
-      supabaseAdmin.from("professional_products" as never).select("id,name,price,status,is_active_by_professional" as never).limit(300),
-      supabaseAdmin.from("partner_products" as never).select("id,name,price,status,is_active_by_partner" as never).limit(300),
+      supabaseAdmin.from("professional_products" as never).select("id,name,price,status,is_active_by_professional" as never).eq("is_active_by_professional" as never, true as never).limit(300),
+      supabaseAdmin.from("partner_products" as never).select("id,name,price,status,is_active_by_partner" as never).eq("is_active_by_partner" as never, true as never).limit(300),
     ]);
 
+    const criticalError = students.error || coaches.error || products.error;
+    if (criticalError) throw new Error(`Erro ao carregar opções: ${criticalError.message}`);
+
     const productOptions: Option[] = [];
-    ((products.data as any[]) || []).forEach((p) => productOptions.push({
-      id: p.id,
-      label: p.name,
-      detail: p.kind ? `Loja · ${p.kind}` : "Plano/desafio",
-      kind: p.kind ? "store" : "challenge",
-      price: moneyNumber(p.price),
-    }));
-    ((digitals.data as any[]) || []).forEach((p) => productOptions.push({ id: p.id, label: p.title, detail: "Curso digital", kind: "digital", price: moneyNumber(p.price) }));
-    ((professionals.data as any[]) || []).forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: "Profissional", kind: "professional", price: moneyNumber(p.price) }));
-    ((partnerProducts.data as any[]) || []).forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: "Parceiro", kind: "partner", price: moneyNumber(p.price) }));
+    ((products.data as any[]) || [])
+      .filter((p) => p.is_active !== false)
+      .forEach((p) => {
+        const detail = p.product_type || p.type || p.kind || "Plano/desafio";
+        productOptions.push({ id: p.id, label: p.name, detail: `Plano/desafio · ${detail}`, kind: "challenge", price: moneyNumber(p.price) });
+        if (p.kind) productOptions.push({ id: p.id, label: p.name, detail: `Coach → aluno / loja · ${p.kind}`, kind: "store", price: moneyNumber(p.price) });
+        if (p.kind === "digital") productOptions.push({ id: p.id, label: p.name, detail: "Curso digital · produtos", kind: "digital", price: moneyNumber(p.price) });
+      });
+    ((digitals.data as any[]) || [])
+      .filter((p) => !p.status || p.status === "active" || p.status === "approved")
+      .forEach((p) => productOptions.push({ id: p.id, label: p.title, detail: "Curso digital", kind: "digital", price: moneyNumber(p.price) }));
+    ((professionals.data as any[]) || [])
+      .forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: `Profissional · ${p.status || "ativo"}`, kind: "professional", price: moneyNumber(p.price) }));
+    ((partnerProducts.data as any[]) || [])
+      .forEach((p) => productOptions.push({ id: p.id, label: p.name, detail: `Parceiro · ${p.status || "ativo"}`, kind: "partner", price: moneyNumber(p.price) }));
 
     return {
       students: ((students.data as any[]) || []).map((s) => ({ id: s.id, label: s.profiles?.name || "Aluno", detail: s.profiles?.email || null })),
@@ -428,6 +461,7 @@ export const simulateAdminTestSale = createServerFn({ method: "POST" })
 export const listAdminTestSales = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SimulatedSaleRow[]> => {
+    const supabaseAdmin = await getSupabaseAdmin();
     await assertAdmin(context.userId);
     const [storeOrders, partnerOrders] = await Promise.all([
       supabaseAdmin
@@ -487,6 +521,7 @@ export const deleteAdminTestSale = createServerFn({ method: "POST" })
 export const resetAdminTestSales = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const supabaseAdmin = await getSupabaseAdmin();
     await assertAdmin(context.userId);
     const [{ data: storeRows }, { data: partnerRows }] = await Promise.all([
       supabaseAdmin.from("store_orders").select("id").contains("metadata", TEST_META as never),
