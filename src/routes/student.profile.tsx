@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X } from "lucide-react";
+import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
+import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 
 export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
@@ -58,6 +59,8 @@ function ProfilePage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
+  const [referralCode, setReferralCode] = useState("ALUNO2026");
+  const [referralModalOpen, setReferralModalOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("50");
   const [pixKey, setPixKey] = useState("");
@@ -96,6 +99,7 @@ function ProfilePage() {
       if (!student?.id) return;
       setStudentId(student.id);
       setReferralLink(student.referral_link || `/r/${student.referral_code || "ALUNO2026"}`);
+      setReferralCode(student.referral_code || "ALUNO2026");
       const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned").eq("student_id", student.id).maybeSingle();
       setWallet({
         available_balance: Number(walletData?.available_balance || 0),
@@ -297,6 +301,13 @@ function ProfilePage() {
         {wallet.available_balance < 50 && (
           <p className="mt-2 text-center text-[10px] text-white/40">Saque mínimo R$ 50,00</p>
         )}
+        <button
+          onClick={() => setReferralModalOpen(true)}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/20"
+        >
+          <Gift className="h-4 w-4" />
+          Indique e ganhe
+        </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -408,6 +419,12 @@ function ProfilePage() {
       </button>
 
       <p className="text-center text-[10px] text-white/20 mt-2">FitMind Club v1.0.0</p>
+
+      <StudentReferralModal
+        open={referralModalOpen}
+        onClose={() => setReferralModalOpen(false)}
+        referralCode={referralCode}
+      />
 
       {withdrawOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm">

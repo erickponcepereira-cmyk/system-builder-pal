@@ -29,6 +29,7 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyBadges } from "@/lib/coach-badges.functions";
+import { getIndividualCareer } from "@/lib/coach-medals.functions";
 import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
 
 
@@ -253,6 +254,21 @@ function CoachDashboard() {
       .catch(() => setCanApprovePartners(false));
   }, [isAdmin, coachRowId]);
 
+  // Última medalha conquistada (para exibir no card do perfil)
+  const fetchCareer = useServerFn(getIndividualCareer);
+  const [latestMedal, setLatestMedal] = useState<{ name: string; key: string } | null>(null);
+  useEffect(() => {
+    if (!coachRowId) return;
+    fetchCareer()
+      .then((c) => {
+        const e = c.earned?.[0];
+        if (!e) { setLatestMedal(null); return; }
+        const rule = [...c.monthlyRules, ...c.cumulativeRules].find((r) => r.key === e.medal_key);
+        setLatestMedal({ name: rule?.display_name || e.medal_key, key: e.medal_key });
+      })
+      .catch(() => setLatestMedal(null));
+  }, [coachRowId]);
+
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
@@ -320,7 +336,15 @@ function CoachDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">{coachName}</p>
-              <PatentBadge patent="senior_coach" size="sm" />
+              {(() => {
+                const validPatents = ["coach","senior_coach","manager","senior_manager","director","senior_director","master_director"] as const;
+                const p = (coachContext?.patent || "coach") as typeof validPatents[number];
+                const safe = validPatents.includes(p) ? p : "coach";
+                return <PatentBadge patent={safe} size="sm" />;
+              })()}
+              {latestMedal && (
+                <p className="mt-1 text-[10px] font-bold text-amber-400 truncate">🏅 {latestMedal.name}</p>
+              )}
             </div>
           </div>
         </div>

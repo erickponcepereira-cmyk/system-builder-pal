@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, Wallet, Plus, BarChart3, Copy, Share2, Eye, EyeOff } from "lucide-react";
+import { Users, TrendingUp, Wallet, BarChart3, Copy, Share2, Eye, EyeOff } from "lucide-react";
 import { GoalsCard } from "@/components/coach/GoalsCard";
 import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
-import { NewSaleModal } from "@/components/coach/NewSaleModal";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { supabase } from "@/integrations/supabase/client";
 import { RewardsPanel } from "@/components/coach/RewardsPanel";
@@ -83,11 +81,9 @@ export function OverviewTab({
     { label: "Saldo", value: maskMoney(data.balance), change: "Disponível", icon: Wallet },
   ];
 
-  const [saleOpen, setSaleOpen] = useState(false);
 
   return (
     <>
-      <NewSaleModal open={saleOpen} onClose={() => setSaleOpen(false)} />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Olá, {coachName}! 💪</h1>
@@ -101,9 +97,6 @@ export function OverviewTab({
           >
             {statsVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </button>
-          <Button size="sm" onClick={() => setSaleOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nova venda
-          </Button>
         </div>
       </div>
 
