@@ -329,6 +329,8 @@ export function ProtocolTab() {
     setLoading(false);
   };
 
+  const syncWorkoutFn = useServerFn(syncProtocolWorkout);
+
   const save = async () => {
     if (!selected || !coachId) return;
     setSaving(true);
@@ -346,6 +348,9 @@ export function ProtocolTab() {
       weight_goal: protocol.weight_goal,
       general_notes: protocol.general_notes.slice(0, 5000),
       workout_plan: protocol.workout_plan,
+      workout_name: protocol.workout_name || "Treino Prescrito",
+      workout_goal: protocol.workout_goal,
+      workout_level: protocol.workout_level,
     };
     const onConflict = selected.external ? "evaluation_client_id" : "student_id";
     const { error } = await supabase.from("student_protocols" as never).upsert(payload as never, { onConflict } as never);
@@ -357,8 +362,24 @@ export function ProtocolTab() {
       };
       if (protocol.weight_goal != null) studentPatch.goal_weight = protocol.weight_goal;
       await supabase.from("students").update(studentPatch).eq("id", selected.id);
-    }
 
+      // Sync prescribed workout into the gamified workout_plans pipeline
+      // so it shows in the student's "Meu Treino" home, not only in the protocol view.
+      const items = protocol.workout_plan.filter((w) => w.name.trim());
+      if (items.length > 0) {
+        try {
+          await syncWorkoutFn({
+            data: {
+              student_record_id: selected.id,
+              name: protocol.workout_name || "Treino Prescrito",
+              items: items.map((w) => ({ name: w.name, sets: w.sets, reps: w.reps, rest: w.rest, notes: w.notes })),
+            },
+          });
+        } catch (e: any) {
+          console.warn("sync workout failed", e?.message);
+        }
+      }
+    }
 
     setSaving(false);
     if (error) { console.error(error); toast.error("Erro ao salvar protocolo"); return; }
