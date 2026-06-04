@@ -196,7 +196,7 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
     if (!sessionId) return;
     const setNumber = (completedSets[ex.id] || 0) + 1;
     const load = loads[ex.id] ?? ex.load_kg ?? 0;
-    const repsDone = reps[ex.id] ?? parseInt(ex.reps || "0", 10) || 0;
+    const repsDone = reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0);
     try {
       await logSetFn({
         data: {
