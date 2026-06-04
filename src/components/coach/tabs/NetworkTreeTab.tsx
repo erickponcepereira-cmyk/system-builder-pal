@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Award, ChevronDown, ChevronRight, Dot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type NetworkRankMedal, type NetworkRankPatent } from "@/lib/network-ranking.functions";
 import { type CoachContext } from "@/routes/coach";
-import CoachNetworkModal, { type CoachNetworkModalData } from "@/components/coach/CoachNetworkModal";
+import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 
 function PatentTag({ patent }: { patent: NetworkRankPatent }) {
   if (!patent) return null;
@@ -85,7 +86,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
   const [data, setData] = useState<MyNetworkStructure | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<CoachNetworkModalData | null>(null);
+  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -95,17 +96,10 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
   }, [fetchNetwork]);
 
   const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !(p[id] ?? true) }));
-  const openModal = (n: CoachTreeNode) => setModal({
-    coachId: n.coachId,
-    name: n.name,
-    email: n.email,
-    categories: n.categories,
-    patent: n.patent,
-    medal: n.medal,
-    directStudents: n.directStudents.total,
-    childCoaches: n.childCoaches,
-    children: n.children,
-  });
+  const openModal = (n: CoachTreeNode) => {
+    if (!n.studentId) { toast.error("Esse coach ainda não possui registro de aluno."); return; }
+    setOpenStudentId(n.studentId);
+  };
 
   return (
     <>
@@ -156,7 +150,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
           </>
         )}
       </div>
-      {modal && <CoachNetworkModal data={modal} onClose={() => setModal(null)} />}
+      {openStudentId && <StudentDetailsModal studentId={openStudentId} onClose={() => setOpenStudentId(null)} />}
     </>
   );
 }
