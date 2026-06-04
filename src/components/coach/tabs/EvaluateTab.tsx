@@ -345,9 +345,19 @@ export function EvaluateTab() {
       )}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
-
-          <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+            {isMaster && (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/40">
+                Master Coach · acesso a todos os alunos
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-white/50">
+            {isMaster
+              ? "Você pode avaliar alunos de qualquer coach da rede. O coach titular aparece no card do aluno."
+              : "Registre bioimpedância, anamnese e evolução"}
+          </p>
         </div>
         {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}
       </div>
