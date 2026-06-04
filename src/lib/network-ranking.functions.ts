@@ -325,7 +325,7 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { coachId } = await resolveProfileAndCoach(supabaseAdmin, context.userId);
     if (!coachId) return { me: null, upline: null, totals: { downlineCoaches: 0, directStudents: emptyBreakdown() }, children: [] };
-    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
+    const { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds, masterCoachIds, specialtyLabels } = await loadBase(supabaseAdmin);
     const byUpline = buildByUpline(coaches);
     const byId = new Map(coaches.map((c) => [c.id, c]));
     const studentsByCoach = new Map<string, StudentRow[]>();
@@ -367,6 +367,7 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
         medal: medalFor(own, medalRules),
         patent: patentForCoach(c.id, patentRules, windowsRevenueByCoach, byUpline),
         categories: categoriesForCoach(c as any, partnerProfileIds, masterCoachIds, specialtyLabels),
+        classifications: classificationsForCoach(c, partnerProfileIds, studentProfileIds),
       };
     };
     const toNode = (c: CoachRow, level: number): CoachTreeNode => ({
