@@ -460,26 +460,81 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               {numField("bodyAge", "Idade corporal", "anos")}
               {numField("bodyWater", "Água corporal", "%")}
               {numField("boneMass", "Massa óssea", "%")}
-              {numField("systolicBP", "PA sistólica", "mmHg")}
-              {numField("diastolicBP", "PA diastólica", "mmHg")}
-              {numField("heartRate", "Freq. cardíaca", "bpm")}
-              {numField("bloodGlucose", "Glicemia", "mg/dL")}
+            </div>
+
+            {/* Fotos da avaliação */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, color: "#cbd5e1", marginBottom: 6 }}>
+                Fotos da avaliação <span style={{ opacity: 0.6 }}>(recomendado 1080×1440px · 3:4)</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {([
+                  { key: "front", label: "Frente" },
+                  { key: "back", label: "Costas" },
+                  { key: "rightSide", label: "Lat. direita" },
+                  { key: "leftSide", label: "Lat. esquerda" },
+                ] as const).map((v) => {
+                  const photo = (editForm.photos as any)?.[v.key] as string | undefined;
+                  const inputId = `edit-photo-${v.key}`;
+                  return (
+                    <div key={v.key}>
+                      <label htmlFor={inputId} style={{ display: "block", cursor: "pointer", aspectRatio: "3 / 4", borderRadius: 8, border: "1px dashed rgba(255,255,255,0.2)", background: "#0A0A0A", overflow: "hidden", position: "relative" }}>
+                        {photo ? (
+                          <img src={photo} alt={v.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#64748b", fontSize: 11, textAlign: "center", padding: 6 }}>
+                            {v.label}<br />Toque para anexar
+                          </div>
+                        )}
+                        <input
+                          id={inputId}
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const dataUrl = String(reader.result || "");
+                              setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: dataUrl } as any }));
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "#94a3b8" }}>
+                        <span>{v.label}</span>
+                        {photo && (
+                          <button
+                            type="button"
+                            onClick={() => setEditForm((f) => ({ ...f, photos: { ...(f.photos || {}), [v.key]: undefined } as any }))}
+                            style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontSize: 10 }}
+                          >
+                            Remover
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginTop: 10 }}>
               <span>Notas do profissional</span>
               <textarea
                 rows={3}
-                value={editForm.professionalNotes || ""}
+                value={editForm.professionalNotes ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, professionalNotes: e.target.value }))}
                 style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13, resize: "vertical" }}
               />
             </label>
             <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginTop: 10 }}>
-              <span>Notas do cliente</span>
+              <span>Notas do aluno</span>
               <textarea
                 rows={3}
-                value={editForm.clientNotes || ""}
+                value={editForm.clientNotes ?? ""}
                 onChange={(e) => setEditForm((f) => ({ ...f, clientNotes: e.target.value }))}
                 style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13, resize: "vertical" }}
               />

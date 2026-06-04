@@ -21,6 +21,7 @@ export function EvaluateTab() {
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
+  const [isMaster, setIsMaster] = useState(false);
 
 
   // Listen for popup connect completion
@@ -99,23 +100,53 @@ export function EvaluateTab() {
       tiktok: c.tiktok || "",
       website: c.website || "",
     });
+
+    // Master coach? (has master_coach badge)
+    const { data: badge } = await supabase
+      .from("coach_badges" as never)
+      .select("id" as never)
+      .eq("coach_id" as never, coach.id as never)
+      .eq("badge_key" as never, "master_coach" as never)
+      .maybeSingle();
+    const masterFlag = !!badge;
+    setIsMaster(masterFlag);
+
     // Paginate to bypass Supabase's default 1000-row limit
     const PAGE = 1000;
     let from = 0;
     const all: any[] = [];
     while (true) {
-      const { data, error } = await supabase
+      let q = supabase
         .from("coach_evaluation_clients" as never)
         .select("*, coach_body_assessments(*)" as never)
-        .eq("coach_id" as never, coach.id as never)
         .order("created_at" as never, { ascending: false })
         .range(from, from + PAGE - 1);
+      if (!masterFlag) {
+        q = q.eq("coach_id" as never, coach.id as never);
+      }
+      const { data, error } = await q;
       if (error) return toast.error("Erro ao carregar alunos da avaliação");
       const rows = (data as any[]) || [];
       all.push(...rows);
       if (rows.length < PAGE) break;
       from += PAGE;
     }
+
+    // Build coachId -> coachName map (only needed for master view)
+    const coachNameById = new Map<string, string>();
+    if (masterFlag) {
+      const otherCoachIds = Array.from(new Set(all.map((r) => r.coach_id).filter((id) => id && id !== coach.id)));
+      if (otherCoachIds.length) {
+        const { data: coachesData } = await supabase
+          .from("coaches")
+          .select("id, profiles!coaches_profile_id_fkey(name)")
+          .in("id", otherCoachIds);
+        ((coachesData as any[]) || []).forEach((cc) => {
+          coachNameById.set(cc.id, cc.profiles?.name || "Coach");
+        });
+      }
+    }
+
     setClients(all.map((row) => ({
       id: row.id,
       name: row.name,
@@ -131,6 +162,7 @@ export function EvaluateTab() {
       groups: row.groups || [],
       avatar: row.avatar_url || undefined,
       assessments: (row.coach_body_assessments || []).map(mapAssessment),
+      coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
     })));
   };
 
@@ -313,9 +345,19 @@ export function EvaluateTab() {
       )}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
-
-          <p className="text-sm text-white/50">Registre bioimpedância, anamnese e evolução</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-white">Avaliar Aluno</h1>
+            {isMaster && (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-primary/15 text-primary border border-primary/40">
+                Master Coach · acesso a todos os alunos
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-white/50">
+            {isMaster
+              ? "Você pode avaliar alunos de qualquer coach da rede. O coach titular aparece no card do aluno."
+              : "Registre bioimpedância, anamnese e evolução"}
+          </p>
         </div>
         {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}
       </div>
@@ -434,12 +476,9 @@ export function EvaluateTab() {
             body_age: int(updated.bodyAge),
             body_water: num(updated.bodyWater),
             bone_mass: num(updated.boneMass),
-            systolic_bp: int(updated.systolicBP),
-            diastolic_bp: int(updated.diastolicBP),
-            heart_rate: int(updated.heartRate),
-            blood_glucose: num(updated.bloodGlucose),
             client_notes: nz(updated.clientNotes),
             professional_notes: nz(updated.professionalNotes),
+            photos: updated.photos || {},
           };
           const { error } = await supabase
             .from("coach_body_assessments" as never)
