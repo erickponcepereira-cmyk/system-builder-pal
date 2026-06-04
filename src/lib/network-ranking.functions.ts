@@ -282,17 +282,18 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
   return revenue;
 }
 
-async function loadMedalRules(supabaseAdmin: any) {
+async function loadMedalRules(supabaseAdmin: any, kind: "monthly" | "cumulative" = "monthly") {
   const { data } = await supabaseAdmin
     .from("career_medal_rules")
     .select("key,display_name,threshold,icon,sort_order,kind,is_active")
     .eq("is_active", true)
     .order("threshold", { ascending: true });
   const rows = ((data as Array<{ key: string; display_name: string; threshold: number; icon: string | null; kind: string | null }> | null) || [])
-    .filter((r) => !r.kind || r.kind === "monthly")
+    .filter((r) => (kind === "monthly" ? (!r.kind || r.kind === "monthly") : r.kind === "cumulative"))
     .map((r) => ({ key: r.key, name: r.display_name, icon: r.icon, threshold: Number(r.threshold) || 0 }));
   return rows;
 }
+
 
 function medalFor(value: number, rules: Array<{ key: string; name: string; icon: string | null; threshold: number }>) {
   let medal: NetworkRankMedal = null;
