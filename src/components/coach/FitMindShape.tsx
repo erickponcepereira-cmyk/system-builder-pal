@@ -1269,7 +1269,43 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
           </div>
         </div>
 
+        {hasOtherCoachClients && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button
+              onClick={() => setScopeFilter("mine")}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: scopeFilter === "mine" ? "var(--fm-primary)" : "var(--card)",
+                color: scopeFilter === "mine" ? "#fff" : "var(--foreground)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Meus Alunos ({myClients.length})
+            </button>
+            <button
+              onClick={() => setScopeFilter("all")}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border)",
+                background: scopeFilter === "all" ? "var(--fm-primary)" : "var(--card)",
+                color: scopeFilter === "all" ? "#fff" : "var(--foreground)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Todos os Alunos ({clients.length})
+            </button>
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+
           <div style={{ flex: 1, position: "relative" }}>
             <Search
               size={16}
