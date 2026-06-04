@@ -100,23 +100,53 @@ export function EvaluateTab() {
       tiktok: c.tiktok || "",
       website: c.website || "",
     });
+
+    // Master coach? (has master_coach badge)
+    const { data: badge } = await supabase
+      .from("coach_badges" as never)
+      .select("id" as never)
+      .eq("coach_id" as never, coach.id as never)
+      .eq("badge_key" as never, "master_coach" as never)
+      .maybeSingle();
+    const masterFlag = !!badge;
+    setIsMaster(masterFlag);
+
     // Paginate to bypass Supabase's default 1000-row limit
     const PAGE = 1000;
     let from = 0;
     const all: any[] = [];
     while (true) {
-      const { data, error } = await supabase
+      let q = supabase
         .from("coach_evaluation_clients" as never)
         .select("*, coach_body_assessments(*)" as never)
-        .eq("coach_id" as never, coach.id as never)
         .order("created_at" as never, { ascending: false })
         .range(from, from + PAGE - 1);
+      if (!masterFlag) {
+        q = q.eq("coach_id" as never, coach.id as never);
+      }
+      const { data, error } = await q;
       if (error) return toast.error("Erro ao carregar alunos da avaliação");
       const rows = (data as any[]) || [];
       all.push(...rows);
       if (rows.length < PAGE) break;
       from += PAGE;
     }
+
+    // Build coachId -> coachName map (only needed for master view)
+    const coachNameById = new Map<string, string>();
+    if (masterFlag) {
+      const otherCoachIds = Array.from(new Set(all.map((r) => r.coach_id).filter((id) => id && id !== coach.id)));
+      if (otherCoachIds.length) {
+        const { data: coachesData } = await supabase
+          .from("coaches")
+          .select("id, profiles!coaches_profile_id_fkey(name)")
+          .in("id", otherCoachIds);
+        ((coachesData as any[]) || []).forEach((cc) => {
+          coachNameById.set(cc.id, cc.profiles?.name || "Coach");
+        });
+      }
+    }
+
     setClients(all.map((row) => ({
       id: row.id,
       name: row.name,
@@ -132,6 +162,7 @@ export function EvaluateTab() {
       groups: row.groups || [],
       avatar: row.avatar_url || undefined,
       assessments: (row.coach_body_assessments || []).map(mapAssessment),
+      coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
     })));
   };
 
