@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ShieldCheck, Trophy, Quote, Coins, Calendar, Users } from "lucide-react";
+import { Bell, ShieldCheck, Trophy, Quote, Coins, Calendar, Users, Dumbbell, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -193,6 +193,19 @@ function StudentHome() {
           </div>
         </div>
       </div>
+
+      {/* Meu Treino */}
+      <Link to="/student/workout" className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 transition-transform hover:scale-[1.01]">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20">
+          <Dumbbell className="h-6 w-6 text-primary" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-white">Meu Treino</p>
+          <p className="text-[11px] text-white/55">Iniciar treino, evolução e conquistas 🏆</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-white/40" />
+      </Link>
+
 
       {/* Carteirinha real */}
       {card && (
