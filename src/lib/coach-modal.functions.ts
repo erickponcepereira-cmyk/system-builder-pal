@@ -4,6 +4,23 @@ import { z } from "zod";
 
 export type CoachModalPersonRef = { id: string; name: string; email: string | null; specialty?: string | null };
 
+export type CoachModalRewardPlan = {
+  id: string;
+  name: string;
+  description: string | null;
+  planType: "period" | "monthly_challenge";
+  durationMonths: number;
+  rewardDescription: string | null;
+  rewardDetails: string | null;
+  rewardImageUrl: string | null;
+  targetPoints: number;
+  currentPoints: number;
+  pctComplete: number;
+  periodStartIso: string;
+  periodEndIso: string;
+  achieved: boolean;
+};
+
 export type CoachModalProduct = {
   id: string;
   name: string;
