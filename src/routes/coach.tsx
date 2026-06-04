@@ -17,6 +17,7 @@ import { NetworkTab } from "@/components/coach/tabs/NetworkTab";
 import { CoachProfileTab } from "@/components/coach/tabs/CoachProfileTab";
 import { CoachStudentsTab } from "@/components/coach/tabs/CoachStudentsTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
+import { NetworkRankingTab } from "@/components/coach/tabs/NetworkRankingTab";
 import { PhysicalStoreTab } from "@/components/coach/tabs/StoreTab";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
