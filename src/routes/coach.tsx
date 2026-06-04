@@ -254,6 +254,21 @@ function CoachDashboard() {
       .catch(() => setCanApprovePartners(false));
   }, [isAdmin, coachRowId]);
 
+  // Última medalha conquistada (para exibir no card do perfil)
+  const fetchCareer = useServerFn(getIndividualCareer);
+  const [latestMedal, setLatestMedal] = useState<{ name: string; key: string } | null>(null);
+  useEffect(() => {
+    if (!coachRowId) return;
+    fetchCareer()
+      .then((c) => {
+        const e = c.earned?.[0];
+        if (!e) { setLatestMedal(null); return; }
+        const rule = [...c.monthlyRules, ...c.cumulativeRules].find((r) => r.key === e.medal_key);
+        setLatestMedal({ name: rule?.display_name || e.medal_key, key: e.medal_key });
+      })
+      .catch(() => setLatestMedal(null));
+  }, [coachRowId]);
+
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
     { id: "overview", label: "Visão Geral", icon: BarChart3 },
     { id: "network", label: "Minha Rede", icon: Users },
