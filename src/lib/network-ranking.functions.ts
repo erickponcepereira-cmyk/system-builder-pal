@@ -40,6 +40,7 @@ export type NetworkRankingRow = {
 
 export type CoachTreeNode = {
   coachId: string;
+  studentId: string | null;
   name: string;
   email: string;
   level: number;
