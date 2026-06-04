@@ -1,9 +1,30 @@
 import { useEffect, useState } from "react";
 import { Award, ChevronDown, ChevronRight, Dot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type NetworkRankMedal, type NetworkRankPatent } from "@/lib/network-ranking.functions";
+import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type NetworkRankMedal, type NetworkRankPatent, type StudentBreakdown } from "@/lib/network-ranking.functions";
 import { type CoachContext } from "@/routes/coach";
 import CoachProfileModal from "@/components/coach/CoachProfileModal";
+
+function StudentsBreakdown({ b, downlineCoaches, downlineLabel = "coaches abaixo" }: { b: StudentBreakdown; downlineCoaches: number; downlineLabel?: string }) {
+  const parts: Array<{ label: string; value: number; cls: string }> = [
+    { label: "Aluno", value: b.studentOnly, cls: "bg-white/10 text-white/70" },
+    { label: "Aluno Coach", value: b.coachStudent, cls: "bg-primary/20 text-primary" },
+    { label: "Aluno Profissional", value: b.professionalStudent, cls: "bg-emerald-500/15 text-emerald-400" },
+    { label: "Aluno Parceiro", value: b.partnerStudent, cls: "bg-amber-500/15 text-amber-400" },
+  ];
+  return (
+    <div className="mt-1 space-y-1">
+      <p className="text-[11px] text-white/55">{b.total} alunos · {downlineCoaches} {downlineLabel}</p>
+      <div className="flex flex-wrap gap-1">
+        {parts.map((p) => (
+          <span key={p.label} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${p.cls}`}>
+            {p.value} {p.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function PatentTag({ patent }: { patent: NetworkRankPatent }) {
   if (!patent) return null;
@@ -79,7 +100,9 @@ function TreeNode({ node, expanded, toggle, onOpen, clickable }: { node: CoachTr
               <p className="truncate text-sm font-semibold text-white">{node.name}</p>
               <Classifications items={node.classifications} />
               <Categories items={node.categories} />
-              <p className="mt-1 text-[11px] text-white/45">L{node.level} · {node.directStudents.total} alunos · {node.childCoaches} coaches abaixo</p>
+              <div className="mt-1 text-[11px] text-white/45">L{node.level}</div>
+              <StudentsBreakdown b={node.directStudents} downlineCoaches={node.childCoaches} />
+
             </div>
             <div className="flex flex-col items-end gap-1">
               <PatentTag patent={node.patent} />
@@ -132,7 +155,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
                     <p className="truncate text-sm font-bold text-white">{data.upline.name}</p>
                     <Classifications items={data.upline.classifications} />
                     <Categories items={data.upline.categories} />
-                    <p className="mt-1 text-[11px] text-white/45">{data.upline.directStudents.total} alunos · {data.upline.childCoaches} coaches diretos</p>
+                    <StudentsBreakdown b={data.upline.directStudents} downlineCoaches={data.upline.childCoaches} downlineLabel="coaches diretos" />
                   </div>
                     <div className="flex flex-col items-end gap-1">
                       <PatentTag patent={data.upline.patent} />
@@ -149,7 +172,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
                     <p className="truncate text-sm font-bold text-white">{data.me.name} (você)</p>
                     <Classifications items={data.me.classifications} />
                     <Categories items={data.me.categories} />
-                    <p className="mt-1 text-[11px] text-white/55">{data.me.directStudents.total} alunos · {data.totals.downlineCoaches} coaches na rede abaixo</p>
+                    <StudentsBreakdown b={data.me.directStudents} downlineCoaches={data.totals.downlineCoaches} downlineLabel="coaches na rede abaixo" />
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <PatentTag patent={data.me.patent} />
