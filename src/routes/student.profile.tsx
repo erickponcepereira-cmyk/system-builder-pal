@@ -99,6 +99,7 @@ function ProfilePage() {
       if (!student?.id) return;
       setStudentId(student.id);
       setReferralLink(student.referral_link || `/r/${student.referral_code || "ALUNO2026"}`);
+      setReferralCode(student.referral_code || "ALUNO2026");
       const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned").eq("student_id", student.id).maybeSingle();
       setWallet({
         available_balance: Number(walletData?.available_balance || 0),
