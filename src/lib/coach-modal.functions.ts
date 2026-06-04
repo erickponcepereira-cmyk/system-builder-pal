@@ -248,18 +248,22 @@ export const getCoachModalData = createServerFn({ method: "GET" })
       },
     };
 
-    // Partners & professionals he referred
-    // Heuristic: partners/professionals whose profile is a student of this coach
+    // Partners, professionals & coaches he referred
+    // Heuristic: their profile is a student of this coach
     let referredPartners: CoachModalData["referredPartners"] = { count: 0, people: [] };
     let referredProfessionals: CoachModalData["referredProfessionals"] = { count: 0, people: [] };
+    let referredCoaches: CoachModalData["referredCoaches"] = { count: 0, people: [] };
     if (studentRows.length) {
-      const profileIds = studentRows.map((s) => s.profile_id);
-      const [{ data: ps }, { data: pros }] = await Promise.all([
+      const profileIds = studentRows.map((s) => s.profile_id).filter((p) => p !== profileId);
+      const [{ data: ps }, { data: allCoaches }] = await Promise.all([
         supabaseAdmin.from("partners").select("id, profile_id, fantasy_name, profiles!partners_profile_id_fkey(name,email)").in("profile_id", profileIds),
-        supabaseAdmin.from("coaches").select("id, profile_id, is_professional, specialty_key, specialty_custom_description, profiles!coaches_profile_id_fkey(name,email)").in("profile_id", profileIds).eq("is_professional", true),
+        supabaseAdmin.from("coaches").select("id, profile_id, is_professional, specialty_key, specialty_custom_description, profiles!coaches_profile_id_fkey(name,email)").in("profile_id", profileIds),
       ]);
       const partnerRows = (ps as any[] | null) || [];
-      const proRows = (pros as any[] | null) || [];
+      const coachRows = (allCoaches as any[] | null) || [];
+      const partnerProfileSet2 = new Set(partnerRows.map((p) => p.profile_id));
+      const proRows = coachRows.filter((c) => c.is_professional);
+      const plainCoachRows = coachRows.filter((c) => !c.is_professional && !partnerProfileSet2.has(c.profile_id));
       // Resolve specialty labels
       const specKeys = Array.from(new Set(proRows.map((p) => p.specialty_key).filter(Boolean)));
       const specLabel = new Map<string, string>();
@@ -284,8 +288,16 @@ export const getCoachModalData = createServerFn({ method: "GET" })
           specialty: (p.specialty_key && specLabel.get(p.specialty_key)) || p.specialty_custom_description || null,
         })),
       };
-
+      referredCoaches = {
+        count: plainCoachRows.length,
+        people: plainCoachRows.map((c) => ({
+          id: c.id,
+          name: c.profiles?.name || "Coach",
+          email: c.profiles?.email || null,
+        })),
+      };
     }
+
 
     // Professional products
     let products: CoachModalProduct[] = [];
