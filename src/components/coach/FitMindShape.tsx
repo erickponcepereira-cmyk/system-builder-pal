@@ -157,6 +157,8 @@ export interface FitMindClient {
   groups: string[];
   avatar?: string;
   assessments?: FitMindAssessment[];
+  // ID do coach titular do aluno (usado para Master Coach avaliar alunos de outros coaches)
+  coachId?: string;
   // Master Coach: nome do coach titular do aluno (quando exibido para um master)
   coachName?: string;
 }
