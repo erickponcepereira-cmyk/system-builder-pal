@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen } from "lucide-react";
+import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen, Pencil, X, Sparkles } from "lucide-react";
 import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/components/workouts/WorkoutTemplatesPanel";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
+import { calcWaterGoalMl, describeWaterFormula, calcAgeFromBirthdate } from "@/lib/water-goal";
 
 type Student = {
   id: string;
@@ -89,6 +90,9 @@ export function ProtocolTab() {
   const [hasBio, setHasBio] = useState(false);
   const [hasAnamnesis, setHasAnamnesis] = useState(false);
   const [lastBioWeight, setLastBioWeight] = useState<number | null>(null);
+  const [studentAge, setStudentAge] = useState<number | null>(null);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [waterOverride, setWaterOverride] = useState(false);
   const [detailsTab, setDetailsTab] = useState<"avaliacoes" | "anamnese" | null>(null);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -266,6 +270,8 @@ export function ProtocolTab() {
       setProtocol({ ...emptyProtocol(), weight_goal: s.goal_weight });
     }
 
+    let bioWeight: number | null = null;
+    let age: number | null = null;
     if (!s.external) {
       const { data: bio } = await supabase
         .from("coach_body_assessments")
@@ -275,13 +281,38 @@ export function ProtocolTab() {
         .limit(1)
         .maybeSingle();
       setHasBio(!!bio);
-      setLastBioWeight(bio?.weight ?? null);
+      bioWeight = (bio as any)?.weight ?? null;
+      setLastBioWeight(bioWeight);
       const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
       setHasAnamnesis(!!an);
+      if (s.profile_id) {
+        const { data: p } = await supabase.from("profiles").select("birthdate").eq("id", s.profile_id).maybeSingle();
+        age = calcAgeFromBirthdate((p as any)?.birthdate);
+      }
     } else {
       setHasBio(false);
       setHasAnamnesis(false);
       setLastBioWeight(null);
+      const { data: ec } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("birth_date, current_weight" as never)
+        .eq("id" as never, s.id as never)
+        .maybeSingle();
+      age = calcAgeFromBirthdate((ec as any)?.birth_date);
+      bioWeight = (ec as any)?.current_weight ?? null;
+      setLastBioWeight(bioWeight);
+    }
+    setStudentAge(age);
+
+    // Se não há valor salvo, auto-calcula com peso + idade
+    const weightForCalc = bioWeight ?? s.current_weight ?? null;
+    const auto = calcWaterGoalMl(weightForCalc, age);
+    const existingWater = (data as any)?.water_goal_ml;
+    if (!existingWater && auto) {
+      setProtocol((p) => ({ ...p, water_goal_ml: auto }));
+      setWaterOverride(false);
+    } else {
+      setWaterOverride(!!existingWater && auto != null && existingWater !== auto);
     }
 
     setLoading(false);
@@ -346,20 +377,57 @@ export function ProtocolTab() {
 
   const saveExercise = async () => {
     if (!coachId || !newExercise.name?.trim()) { toast.error("Informe o nome do exercício"); return; }
-    const { data, error } = await supabase.from("exercise_library" as never).insert({
+    const payload = {
       name: newExercise.name.trim(),
       muscle_group: newExercise.muscle_group || null,
       equipment: newExercise.equipment || null,
       difficulty: newExercise.difficulty || null,
       description: newExercise.description || null,
       video_url: newExercise.video_url || null,
-      created_by_coach_id: coachId,
-    } as never).select("*" as never).single();
+    };
+    if (editingExercise) {
+      const { data, error } = await supabase.from("exercise_library" as never).update(payload as never).eq("id" as never, editingExercise.id as never).select("*" as never).single();
+      if (error) { toast.error("Erro ao atualizar"); return; }
+      setLibrary((cur) => cur.map((e) => e.id === editingExercise.id ? (data as any) : e).sort((a, b) => a.name.localeCompare(b.name)));
+      setEditingExercise(null);
+      setNewExercise({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
+      toast.success("Exercício atualizado");
+      return;
+    }
+    const { data, error } = await supabase.from("exercise_library" as never).insert({ ...payload, created_by_coach_id: coachId } as never).select("*" as never).single();
     if (error) { toast.error("Erro ao salvar exercício"); return; }
     setLibrary((cur) => [...cur, data as any].sort((a, b) => a.name.localeCompare(b.name)));
     setNewExercise({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
     toast.success("Exercício adicionado");
   };
+
+  const startEditExercise = (e: Exercise) => {
+    setEditingExercise(e);
+    setNewExercise({
+      name: e.name,
+      muscle_group: e.muscle_group || "",
+      equipment: e.equipment || "",
+      difficulty: e.difficulty || "",
+      description: e.description || "",
+      video_url: e.video_url || "",
+    });
+    setSection("library");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEditExercise = () => {
+    setEditingExercise(null);
+    setNewExercise({ name: "", muscle_group: "", equipment: "", difficulty: "", description: "", video_url: "" });
+  };
+
+  const deleteExercise = async (e: Exercise) => {
+    if (!confirm(`Excluir "${e.name}"?`)) return;
+    const { error } = await supabase.from("exercise_library" as never).delete().eq("id" as never, e.id as never);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    setLibrary((cur) => cur.filter((x) => x.id !== e.id));
+    toast.success("Excluído");
+  };
+
 
   return (
     <div>
@@ -434,7 +502,7 @@ export function ProtocolTab() {
             <TabBtn active={section === "health"} onClick={() => setSection("health")} icon={Heart} label="Saúde & metas" />
             <TabBtn active={section === "workout"} onClick={() => setSection("workout")} icon={Dumbbell} label="Treino" />
             <TabBtn active={section === "templates"} onClick={() => setSection("templates")} icon={BookOpen} label="Treinos prontos" />
-            <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Biblioteca" />
+            <TabBtn active={section === "library"} onClick={() => setSection("library")} icon={Library} label="Criar exercícios" />
             {isNutritionist && <TabBtn active={section === "meal"} onClick={() => setSection("meal")} icon={Utensils} label="Alimentação" />}
           </div>
 
@@ -577,12 +645,50 @@ export function ProtocolTab() {
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-3 text-sm font-bold text-white">Metas</h2>
+
+                {/* Meta de água — automática */}
+                <div className="mb-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                      <Sparkles className="h-3.5 w-3.5" /> Meta de água (cálculo automático)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const auto = calcWaterGoalMl(lastBioWeight ?? selected.current_weight, studentAge);
+                        if (auto) setProtocol((p) => ({ ...p, water_goal_ml: auto }));
+                        setWaterOverride(false);
+                      }}
+                      className="rounded bg-white/10 px-2 py-1 text-[10px] text-white hover:bg-white/20"
+                    >
+                      Recalcular
+                    </button>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-white/60">
+                    {describeWaterFormula(lastBioWeight ?? selected.current_weight, studentAge)}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Droplet className="h-4 w-4 text-primary" />
+                    <input
+                      type="number"
+                      value={protocol.water_goal_ml ?? ""}
+                      onChange={(e) => { setWaterOverride(true); setProtocol((p) => ({ ...p, water_goal_ml: e.target.value === "" ? null : Number(e.target.value) })); }}
+                      className="w-28 rounded bg-white/10 px-2 py-1.5 text-sm text-white"
+                    />
+                    <span className="text-xs text-white/40">ml/dia</span>
+                    {waterOverride && <span className="ml-2 rounded bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold text-yellow-400">Manual</span>}
+                  </div>
+                  {!lastBioWeight && !selected.current_weight && (
+                    <p className="mt-1 text-[10px] text-yellow-400">⚠ Sem peso registrado — faça uma bioimpedância ou ajuste manualmente.</p>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field icon={Droplet} label="Água / dia" suffix="ml" value={protocol.water_goal_ml ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, water_goal_ml: v === "" ? null : Number(v) }))} />
                   <Field icon={Target} label="Meta de peso" suffix="kg" value={protocol.weight_goal ?? ""} onChange={(v) => setProtocol((p) => ({ ...p, weight_goal: v === "" ? null : Number(v) }))} step="0.1" />
                 </div>
                 <p className="mt-2 text-[10px] text-white/40">A meta de calorias é definida apenas no painel do nutricionista.</p>
               </div>
+
 
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
@@ -595,32 +701,55 @@ export function ProtocolTab() {
           {!loading && section === "library" && (
             <div className="space-y-4">
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-                <h2 className="mb-3 text-sm font-bold text-white">Adicionar exercício à biblioteca</h2>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-bold text-white">
+                    {editingExercise ? `Editando: ${editingExercise.name}` : "Adicionar exercício à biblioteca"}
+                  </h2>
+                  {editingExercise && (
+                    <button onClick={cancelEditExercise} className="flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-[10px] text-white/70 hover:bg-white/20">
+                      <X className="h-3 w-3" /> Cancelar
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <input value={newExercise.name || ""} onChange={(e) => setNewExercise((x) => ({ ...x, name: e.target.value }))} placeholder="Nome *" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
                   <input value={newExercise.muscle_group || ""} onChange={(e) => setNewExercise((x) => ({ ...x, muscle_group: e.target.value }))} placeholder="Grupo muscular" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
                   <input value={newExercise.equipment || ""} onChange={(e) => setNewExercise((x) => ({ ...x, equipment: e.target.value }))} placeholder="Equipamento" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
                   <input value={newExercise.difficulty || ""} onChange={(e) => setNewExercise((x) => ({ ...x, difficulty: e.target.value }))} placeholder="Dificuldade (iniciante/intermediário/avançado)" className="rounded bg-white/5 px-3 py-2 text-sm text-white" />
-                  <input value={newExercise.video_url || ""} onChange={(e) => setNewExercise((x) => ({ ...x, video_url: e.target.value }))} placeholder="URL de vídeo" className="rounded bg-white/5 px-3 py-2 text-sm text-white sm:col-span-2" />
+                  <input value={newExercise.video_url || ""} onChange={(e) => setNewExercise((x) => ({ ...x, video_url: e.target.value }))} placeholder="URL de vídeo / GIF / imagem (tamanho recomendado: 800x600px)" className="rounded bg-white/5 px-3 py-2 text-sm text-white sm:col-span-2" />
                   <textarea value={newExercise.description || ""} onChange={(e) => setNewExercise((x) => ({ ...x, description: e.target.value }))} placeholder="Descrição / execução" rows={2} className="rounded bg-white/5 px-3 py-2 text-sm text-white sm:col-span-2" />
                 </div>
-                <button onClick={saveExercise} className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Cadastrar exercício</button>
+                <button onClick={saveExercise} className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+                  {editingExercise ? "Salvar alterações" : "Cadastrar exercício"}
+                </button>
               </div>
 
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
                 <h2 className="mb-3 text-sm font-bold text-white">Exercícios cadastrados ({library.length})</h2>
-                <div className="max-h-96 space-y-1 overflow-y-auto">
+                <div className="max-h-96 space-y-1.5 overflow-y-auto">
                   {library.map((e) => (
-                    <div key={e.id} className="rounded bg-white/5 p-2 text-xs">
-                      <p className="font-semibold text-white">{e.name}</p>
-                      <p className="text-white/40">{[e.muscle_group, e.equipment, e.difficulty].filter(Boolean).join(" · ")}</p>
-                      {e.video_url && <a href={e.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary"><ExternalLink className="h-3 w-3" /> Vídeo</a>}
+                    <div key={e.id} className="flex items-start justify-between gap-2 rounded bg-white/5 p-2 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-white">{e.name}</p>
+                        <p className="text-white/40">{[e.muscle_group, e.equipment, e.difficulty].filter(Boolean).join(" · ")}</p>
+                        {e.video_url && <a href={e.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary"><ExternalLink className="h-3 w-3" /> Mídia</a>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button onClick={() => startEditExercise(e)} className="rounded bg-white/10 p-1.5 text-white/70 hover:bg-primary/20 hover:text-primary" title="Editar">
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => deleteExercise(e)} className="rounded bg-red-500/10 p-1.5 text-red-400 hover:bg-red-500/20" title="Excluir">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
+                  {library.length === 0 && <p className="py-4 text-center text-white/40">Nenhum exercício cadastrado ainda.</p>}
                 </div>
               </div>
             </div>
           )}
+
 
           {!loading && section === "templates" && (
             <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>

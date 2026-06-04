@@ -129,6 +129,11 @@ function StudentProtocolPage() {
               <Meta icon={Droplet} label="Água" value={protocol.water_goal_ml ? `${(protocol.water_goal_ml / 1000).toFixed(1)}` : "—"} suffix="L" />
               <Meta icon={Target} label="Peso" value={protocol.weight_goal ? `${protocol.weight_goal}` : "—"} suffix="kg" />
             </div>
+            {protocol.water_goal_ml && (
+              <p className="mt-2 text-[10px] text-white/40">
+                💧 Cálculo automático baseado no seu peso e idade (bioimpedância + perfil).
+              </p>
+            )}
           </section>
 
           {/* Restrições */}
@@ -144,6 +149,18 @@ function StudentProtocolPage() {
               </div>
             </section>
           )}
+
+          {/* Observação geral — sempre visível quando existe */}
+          {protocol.general_notes && protocol.general_notes.trim() && (
+            <section className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-bold text-white">Observação geral do coach</h2>
+              </div>
+              <p className="whitespace-pre-wrap text-xs text-white/80">{protocol.general_notes}</p>
+            </section>
+          )}
+
 
 
 
@@ -168,13 +185,8 @@ function StudentProtocolPage() {
             </section>
           )}
 
-          {/* Notas gerais */}
-          {protocol.general_notes && (
-            <section className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <h2 className="mb-2 text-sm font-bold text-white">Observações do coach</h2>
-              <p className="whitespace-pre-wrap text-xs text-white/70">{protocol.general_notes}</p>
-            </section>
-          )}
+          {/* Observação geral já é exibida no topo */}
+
         </>
       )}
 
