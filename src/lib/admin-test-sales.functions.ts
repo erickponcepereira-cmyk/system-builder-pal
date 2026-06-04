@@ -15,7 +15,7 @@ type SimulateInput = {
 
 type Option = { id: string; label: string; detail?: string | null; kind?: SaleKind; price?: number };
 
-type SimulatedSaleRow = {
+export type SimulatedSaleRow = {
   id: string;
   orderNumber: string;
   kind: string;
@@ -125,7 +125,45 @@ async function profileIdForCoach(coachId: string | null | undefined) {
 
 async function subtractWallet(profileId: string | null, amount: number) {
   if (!profileId || amount <= 0) return;
-  await supabaseAdmin.rpc("exec_sql" as never, {} as never).throwOnError?.();
+  const { data } = await supabaseAdmin
+    .from("wallets")
+    .select("available_balance,total_earned")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const row = data as any;
+  if (!row) return;
+  await supabaseAdmin
+    .from("wallets")
+    .update({
+      available_balance: Math.max(0, moneyNumber(row.available_balance) - amount),
+      total_earned: Math.max(0, moneyNumber(row.total_earned) - amount),
+      updated_at: new Date().toISOString(),
+    } as never)
+    .eq("profile_id", profileId);
+}
+
+async function subtractAdminWallet(amount: number) {
+  if (amount <= 0) return;
+  const { data } = await supabaseAdmin
+    .from("admin_system_wallet")
+    .select("available_balance,total_earned")
+    .eq("id", true)
+    .maybeSingle();
+  const row = data as any;
+  await supabaseAdmin
+    .from("admin_system_wallet")
+    .update({
+      available_balance: Math.max(0, moneyNumber(row?.available_balance) - amount),
+      total_earned: Math.max(0, moneyNumber(row?.total_earned) - amount),
+      updated_at: new Date().toISOString(),
+    } as never)
+    .eq("id", true);
+}
+
+async function profileIdForPartner(partnerId: string | null | undefined) {
+  if (!partnerId) return null;
+  const { data } = await supabaseAdmin.from("partners" as never).select("profile_id" as never).eq("id" as never, partnerId as never).maybeSingle();
+  return (data as any)?.profile_id || null;
 }
 
 async function createStoreSimulation(input: SimulateInput) {
