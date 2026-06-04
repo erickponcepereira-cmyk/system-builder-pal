@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type StudentRoleFlags = { isCoach: boolean; isProfessional: boolean; isPartner: boolean };
+
 async function resolveStudentByUser(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: profile } = await supabaseAdmin
@@ -18,7 +20,6 @@ async function resolveStudentByUser(userId: string) {
   if (raw === "M" || raw === "F" || raw === "O") {
     gender = raw;
   } else {
-    // Fallback: tentar inferir pela anamnese
     const { data: anamnesis } = await supabaseAdmin
       .from("anamnesis_forms")
       .select("gender, filled_at" as never)
@@ -34,7 +35,19 @@ async function resolveStudentByUser(userId: string) {
         : null;
   }
 
-  return { id: s.id, coach_id: s.coach_id, profile_id: s.profile_id, gender };
+  // Verifica se o aluno também é coach/profissional/parceiro (não pode participar do desafio)
+  const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+    supabaseAdmin.from("coaches").select("id, is_professional").eq("profile_id", p.id).maybeSingle(),
+    supabaseAdmin.from("partners").select("id").eq("profile_id", p.id).maybeSingle(),
+  ]);
+  const cr = coachRow as unknown as { id: string; is_professional: boolean | null } | null;
+  const roleFlags: StudentRoleFlags = {
+    isCoach: !!cr && !cr.is_professional,
+    isProfessional: !!cr && !!cr.is_professional,
+    isPartner: !!partnerRow,
+  };
+
+  return { id: s.id, coach_id: s.coach_id, profile_id: s.profile_id, gender, roleFlags };
 }
 
 export type CurrentTurma = {
