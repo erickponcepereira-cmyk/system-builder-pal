@@ -159,7 +159,7 @@ function RewardDetailsModal({ planId, initial, onClose }: { planId: string; init
             <div className="mb-4 rounded-xl p-3" style={{ backgroundColor: `${accent}10`, border: `1px solid ${accent}30` }}>
               <p className="flex items-center gap-2 text-sm font-bold text-white"><Sparkles className="h-4 w-4" style={{ color: accent }} /> {plan.rewardDescription}</p>
               {plan.rewardDetails && <p className="mt-1 text-xs text-white/60">{plan.rewardDetails}</p>}
-              {plan.rewardValue > 0 && <p className="mt-1 text-[11px] text-white/40">Valor estimado: {fmtMoney(plan.rewardValue)}</p>}
+              
             </div>
           )}
 
