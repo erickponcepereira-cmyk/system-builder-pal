@@ -301,6 +301,13 @@ function ProfilePage() {
         {wallet.available_balance < 50 && (
           <p className="mt-2 text-center text-[10px] text-white/40">Saque mínimo R$ 50,00</p>
         )}
+        <button
+          onClick={() => setReferralModalOpen(true)}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/20"
+        >
+          <Gift className="h-4 w-4" />
+          Indique e ganhe
+        </button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
