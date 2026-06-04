@@ -1,61 +1,113 @@
-Esse é um conjunto grande de mudanças que toca várias áreas (base de alunos, modais, desafio, home). Vou organizar em fases para validar antes de implementar.
 
-## Fase 1 — Base de Alunos (CoachStudentsTab)
+# Protocolo & Treino — Plano de implementação
 
-1. **Cabeçalho com total** — adicionar contador "X alunos" ao lado do título.
-2. **Busca por nome** — campo de busca com filtro client-side.
-3. **Filtro por classificação** — chips: Todos / Aluno · Aluno Coach · Aluno Profissional · Aluno Parceiro.
-   - Buscar `coaches.is_professional`, `partners` e `students` por `profile_id` (mesma lógica já usada em `network-ranking.functions.ts`) para classificar cada aluno.
-4. **Ordenação/seções** — adicionar toggles:
-   - "Últimos cadastrados" (default, por `created_at desc`).
-   - "Sem bioimpedância" (sem `coach_body_assessments`).
-   - "Com moedas e sem desafio ativo" (saldo `tokenBalance > 0` e sem participação ativa no desafio).
+Vou dividir em 4 frentes. É um escopo grande, então confirme antes de eu começar.
 
-## Fase 2 — Alertas para o Coach
+## 1. Saúde e Metas — Cálculo automático de água
 
-5. **Alerta no topo da Base de Alunos**: "X alunos entraram há mais de Y dias e ainda não fizeram avaliação!" (Y = 14 dias por padrão).
-6. **Alerta na Home do Coach**: mesmo alerta + "Novo aluno cadastrado: NOME" (últimas 48h).
-   - Usar um componente novo `CoachAlertsCard` na home.
+Na tela `student.health.tsx`, substituir o campo manual de "Meta de água" por cálculo automático baseado em:
+- **Peso** (puxado da última bioimpedância FitMindShape ou da tabela `students`)
+- **Idade** (puxada do `profiles.birth_date`)
 
-## Fase 3 — Modais (regra geral)
+Fórmula:
+- Até 17 anos: `peso × 40ml + 1000ml` (fixo: exercício + calor regional)
+- 18 a 64 anos: `peso × 35ml + 1000ml`
+- 65+ anos: `peso × 30ml + 1000ml`
 
-7. **Desabilitar clique-fora-fecha** em TODOS os modais:
-   - `StudentDetailsModal`, `CoachProfileModal`, `PartnerDetailsModal`, `ProfessionalStudentDetailsModal`, `ClientDetailsModal`, `NewSaleModal`, `NewStudentModal`, `StudentReferralModal`, `FreebieDetailModal`, `ProductDetailModal`, `ProductReviewModal`, e o modal de "Trocar coach" em `admin.students.tsx`.
-   - Para os que usam `<Dialog>` do shadcn: adicionar `onPointerDownOutside={(e) => e.preventDefault()}` e `onInteractOutside={(e) => e.preventDefault()}` no `DialogContent`.
-   - Para os modais custom (div overlay com `onClick={onClose}`): remover o handler do backdrop.
+Mostrar o cálculo explicado ("Seu peso 75kg × 35ml + 1000ml = 3625ml/dia") para transparência.
 
-## Fase 4 — StudentDetailsModal (aba Evolução)
+## 2. Renomeações e ajustes pequenos
 
-8. **Remover bloco "Histórico de peso"** da aba Evolução.
-9. **Corrigir fotos corrompidas** — investigar: provavelmente está usando URL pública direta em vez de `createSignedUrl`, ou o bucket é privado. Vou abrir o arquivo, identificar e gerar URLs assinadas via `supabase.storage.from(bucket).createSignedUrl(path, 3600)`.
+- "Biblioteca" → "Criar exercícios" (no menu do coach/profissional)
+- **Ficha do aluno (resumo)**: exibir bloco de **Restrições** e **Observação geral** (campos já existem na anamnese — só puxar e exibir).
+- **Biblioteca atual**: permitir editar exercícios prontos (apenas exercícios individuais, não treinos completos).
 
-## Fase 5 — StudentDetailsModal (aba Compras)
+## 3. Configuração de Treino (lado coach/profissional)
 
-10. **Cores por status**: verde = pago, amarelo = pendente, vermelho = cancelado. Aplicar em badge/borda.
-11. **Filtro** por status (chips: Todos · Pagos · Pendentes · Cancelados).
+Reformular o construtor de treino para:
+- Seletor por **nome do treino** + **dia da semana** (ex: "Treino A — Segunda", "Treino B — Quarta")
+- Cada exercício: séries, repetições, carga sugerida, **tempo de descanso**, configuração do aparelho, GIF/imagem/link demonstrativo, observações
+- Bloco separado para **Cardio** com pace/velocidade/elevação configuráveis
 
-## Fase 6 — Desafio: bloquear coaches
+## 4. Painel "Meu Treino" (aluno) — Gamificado
 
-12. Na rota `student.challenge.tsx`, antes de renderizar o conteúdo:
-    - Buscar `coaches` por `profile_id` do usuário logado.
-    - Se existir registro (independente de `is_professional`) OU se for `partners` → renderizar tela bloqueada com mensagem: "Você é coach (ou profissional/parceiro) e não pode participar do desafio. O desafio é exclusivo para alunos."
-    - Garantir que `purchase token earn` no backend (cross-sales / challenge-tokens) também não credite moedas para essas pessoas — adicionar guard.
+Nova rota `student.workout.tsx` com fluxo completo:
+
+### Execução do treino
+- Lista treinos da semana → aluno escolhe o do dia → **botão Iniciar**
+- Cronômetro global de tempo total de treino
+- Para cada exercício:
+  - Mostra GIF/imagem/link, configuração do aparelho, séries × reps
+  - Campo para anexar **carga utilizada** (registra histórico de evolução)
+  - Botão **Iniciar descanso** → cronômetro regressivo até o tempo limite
+    - Verde → amarelo → **vermelho piscando** quando ultrapassa o limite
+  - Botão **Concluir exercício**
+- Bloco cardio: registrar pace, velocidade, elevação ao concluir
+- **Concluir treino** → resumo gamificado:
+  - Tempo total, tempo por exercício, cardio realizado
+  - XP ganho, streak (dias consecutivos), badges desbloqueadas
+  - Comparação de carga vs treino anterior (evolução)
+
+### Acompanhamento
+- **Calendário** com dias treinados marcados (% concluído por dia, cor por intensidade)
+- **Histórico** de treinos concluídos
+- **Meta de dias/semana** (ex: 4x/semana) com barra de progresso
+- **Evolução de carga** por exercício (gráfico de linha)
+- **Contador "X dias desde início do treino"** com taxa de adesão
+
+### Gamificação
+- XP por treino concluído, bônus por streak
+- Badges: "Primeira semana completa", "30 dias", "Aumentou carga 3x seguidas", etc.
+- Nível visual (barra de progresso)
+
+## 5. Visão Coach / Profissional
+
+- Na ficha do aluno, nova aba **"Acompanhamento de Treino"** com:
+  - Calendário do aluno (dias treinados)
+  - Histórico de treinos com tempos e cargas
+  - Gráficos de evolução de carga
+  - Taxa de adesão / streak atual
+- Mesmo painel disponível para Profissional acompanhar seus alunos.
+
+---
 
 ## Detalhes técnicos
 
-- **Classificação reutilizável**: extrair `classifyStudentRow(row, sets)` em `src/lib/student-classifications.ts` (puro, client-side) usando os mesmos critérios já adotados na árvore: Aluno (sempre), e adicionalmente Aluno Coach / Profissional / Parceiro quando o `profile_id` aparecer em `coaches` (com flag) ou `partners`.
-- **Carregar conjuntos uma vez** no `CoachStudentsTab` em paralelo com a query de students.
-- **Bloqueio de moedas no backend**: editar `challenge-tokens.functions.ts` (ou função equivalente que credita) para retornar 0 / não inserir quando o aluno também é coach/profissional/parceiro.
-- **Fotos**: confirmar bucket (provavelmente `assessment-photos`) e trocar `getPublicUrl` por `createSignedUrl` se o bucket for privado.
+### Banco de dados (novas tabelas)
 
-## Arquivos a editar (resumo)
+```text
+workout_plans        — treino criado pelo coach/profissional (nome, dia_semana, aluno_id, criado_por)
+workout_exercises    — exercícios de cada plano (ordem, exercise_id, séries, reps, carga_sugerida, descanso_seg, config_aparelho, obs)
+workout_sessions     — execução de um treino pelo aluno (started_at, finished_at, plan_id)
+workout_session_logs — log por exercício (carga_usada, tempo_execucao, tempo_descanso, concluido)
+workout_cardio_logs  — pace, velocidade, elevação por sessão
+workout_achievements — badges desbloqueadas
+```
 
-- `src/components/coach/tabs/CoachStudentsTab.tsx` (busca, total, filtros, ordenações, alerta)
-- `src/components/coach/StudentDetailsModal.tsx` (remover histórico de peso, corrigir fotos, filtros/cores em compras, sem click-out)
-- `src/components/coach/CoachProfileModal.tsx` e demais modais listados (sem click-out)
-- `src/routes/student.challenge.tsx` (bloqueio de coach)
-- `src/lib/challenge-tokens.functions.ts` (bloqueio de crédito server-side)
-- `src/routes/coach.tsx` ou home do coach (`CoachAlertsCard` novo)
-- `src/lib/student-classifications.ts` (novo helper)
+Todas com RLS: aluno vê só as suas; coach/profissional vê dos seus alunos (+ master coach vê todos).
 
-Posso seguir com tudo nessa ordem?
+### Stack
+- TanStack Router (novas rotas), createServerFn para CRUD
+- Recharts para gráficos de evolução
+- date-fns para cálculo de streaks/calendário
+- Framer-motion para animações gamificadas (XP, badges)
+
+---
+
+## Sugestão de entrega
+
+Como é grande, sugiro entregar **em 2 etapas**:
+
+**Etapa 1 (agora):**
+- Cálculo automático de água
+- Renomeações (biblioteca → criar exercícios)
+- Ficha do aluno mostrando restrições/observação
+- Editar exercícios prontos na biblioteca
+- Schema do banco + Configuração de Treino (coach/profissional cria treinos)
+
+**Etapa 2 (próxima mensagem):**
+- Painel "Meu Treino" do aluno completo (execução + gamificação)
+- Calendário, histórico, gráficos de evolução
+- Visão de acompanhamento para coach/profissional
+
+Posso seguir assim, ou prefere tudo de uma vez (vai gerar uma resposta bem grande e mais propensa a bugs)?
