@@ -481,6 +481,7 @@ export const getAdminNetworkRanking = createServerFn({ method: "POST" })
         medal: null,
         patent: null,
         categories: [],
+        sponsorName: level >= 2 && coach.upline_coach_id && byId.has(coach.upline_coach_id) ? coachName(byId.get(coach.upline_coach_id)!) : null,
       }))
       .sort((a, b) => (b.individualRevenue + b.networkRevenue) - (a.individualRevenue + a.networkRevenue) || b.individualRevenue - a.individualRevenue || a.name.localeCompare(b.name));
   });
