@@ -103,6 +103,9 @@ function AdminNetworkRanking() {
                   <td className="px-4 py-3">
                     <p className="font-bold text-white">{r.name}</p>
                     <p className="text-[11px] text-white/40">{r.email}</p>
+                    {r.sponsorName && (
+                      <p className="text-[11px] text-white/50">Trazido por <span className="font-semibold text-primary/80">{r.sponsorName}</span></p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right text-white/70">{r.directStudents}</td>
                   <td className="px-4 py-3 text-right text-white/70">{r.downlineCoaches}</td>

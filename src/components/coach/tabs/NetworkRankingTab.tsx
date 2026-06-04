@@ -56,6 +56,9 @@ export function NetworkRankingTab() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-xs font-bold text-white/70">#{index + 1}</div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-white">{r.name}{r.isYou ? " (você)" : ""}</p>
+                  {r.sponsorName && (
+                    <p className="mt-0.5 truncate text-[10px] text-white/50">Trazido por <span className="font-semibold text-primary/80">{r.sponsorName}</span></p>
+                  )}
                   {r.categories && r.categories.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {r.categories.map((c) => (
