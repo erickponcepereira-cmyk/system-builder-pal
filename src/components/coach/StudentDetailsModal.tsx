@@ -178,7 +178,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   }, [tab, attData, attLoading, fetchAttendance, studentId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3">
       <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-white/10 max-h-[92vh] overflow-hidden" style={{ backgroundColor: "#141414" }} onClick={(e) => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-3 border-b border-white/5 p-4">
           <div className="min-w-0">
@@ -477,56 +477,9 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               </div>
             </div>
           ) : tab === "evolucao" ? (
-            <div className="space-y-4">
-              <div>
-                <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Histórico de peso</p>
-                {weights.length === 0 ? (
-                  <p className="text-xs text-white/40">Sem registros.</p>
-                ) : (
-                  <div className="overflow-x-auto rounded-xl border border-white/5">
-                    <table className="w-full text-xs">
-                      <thead className="bg-white/5 text-left text-white/50">
-                        <tr><th className="p-2">Data</th><th className="p-2">Peso</th><th className="p-2">Cintura</th><th className="p-2">Quadril</th></tr>
-                      </thead>
-                      <tbody>
-                        {weights.map((w) => (
-                          <tr key={w.id} className="border-t border-white/5 text-white/80"><td className="p-2">{fmtBR(w.log_date)}</td><td className="p-2">{w.weight} kg</td><td className="p-2">{w.waist_cm ? `${w.waist_cm}cm` : "—"}</td><td className="p-2">{w.hip_cm ? `${w.hip_cm}cm` : "—"}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Fotos de evolução</p>
-                {photos.length === 0 ? (
-                  <p className="text-xs text-white/40">Aluno ainda não enviou fotos.</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {photos.map((p) => (
-                      <a key={p.id} href={p.photo_url} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border border-white/5">
-                        <img src={p.photo_url} alt={p.caption || ""} loading="lazy" className="aspect-square w-full object-cover transition group-hover:scale-105" />
-                        <p className="bg-black/50 p-1 text-center text-[10px] text-white/70">{fmtBR(p.photo_date)}</p>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <EvolutionPhotos photos={photos} />
           ) : (
-            <div className="space-y-2">
-              {txs.length === 0 ? (
-                <p className="py-6 text-center text-xs text-white/40">Nenhuma compra registrada.</p>
-              ) : txs.map((t) => (
-                <div key={t.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-white">{t.products?.name || "Compra"}</p>
-                    <p className="text-[11px] text-white/45">{fmtBR(t.paid_at || t.created_at)} · <span className={t.status === "paid" ? "text-success" : "text-white/40"}>{t.status}</span></p>
-                  </div>
-                  <p className="text-sm font-bold text-white">{money(t.gross_amount)}</p>
-                </div>
-              ))}
-            </div>
+            <PurchasesTab txs={txs} />
           )}
         </div>
       </div>
@@ -558,6 +511,93 @@ function Info({ label, value }: { label: string; value: string | null | undefine
     <div className="rounded-lg bg-white/5 p-2">
       <p className="text-[10px] uppercase tracking-wide text-white/40">{label}</p>
       <p className="text-xs text-white">{value}</p>
+    </div>
+  );
+}
+
+function EvolutionPhotos({ photos }: { photos: PhotoRow[] }) {
+  const [signed, setSigned] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (async () => {
+      const out: Record<string, string> = {};
+      await Promise.all(photos.map(async (p) => {
+        // photo_url can be a storage path (private bucket) or a full URL (legacy)
+        if (/^https?:\/\//i.test(p.photo_url)) { out[p.id] = p.photo_url; return; }
+        const { data } = await supabase.storage.from("evolution-photos").createSignedUrl(p.photo_url, 60 * 60);
+        if (data?.signedUrl) out[p.id] = data.signedUrl;
+      }));
+      setSigned(out);
+    })();
+  }, [photos]);
+  return (
+    <div>
+      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Fotos de evolução</p>
+      {photos.length === 0 ? (
+        <p className="text-xs text-white/40">Aluno ainda não enviou fotos.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((p) => {
+            const url = signed[p.id];
+            return (
+              <a key={p.id} href={url || "#"} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border border-white/5">
+                {url ? (
+                  <img src={url} alt={p.caption || ""} loading="lazy" className="aspect-square w-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="aspect-square w-full bg-white/5 animate-pulse" />
+                )}
+                <p className="bg-black/50 p-1 text-center text-[10px] text-white/70">{new Date(p.photo_date).toLocaleDateString("pt-BR")}</p>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type PurchaseStatusFilter = "all" | "paid" | "pending" | "cancelled";
+function PurchasesTab({ txs }: { txs: TxRow[] }) {
+  const [filter, setFilter] = useState<PurchaseStatusFilter>("all");
+  const normalize = (s: string): PurchaseStatusFilter => {
+    const v = (s || "").toLowerCase();
+    if (v === "paid" || v === "pago") return "paid";
+    if (v === "pending" || v === "pendente" || v === "processing") return "pending";
+    if (v === "cancelled" || v === "canceled" || v === "cancelado" || v === "refused" || v === "failed") return "cancelled";
+    return "pending";
+  };
+  const filtered = filter === "all" ? txs : txs.filter((t) => normalize(t.status) === filter);
+  const chip = (id: PurchaseStatusFilter, label: string) => (
+    <button key={id} onClick={() => setFilter(id)} className={`rounded-lg px-3 py-1 text-[11px] font-bold ${filter === id ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>{label}</button>
+  );
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {chip("all", "Todos")}
+        {chip("paid", "Pago")}
+        {chip("pending", "Pendente")}
+        {chip("cancelled", "Cancelado")}
+      </div>
+      <div className="space-y-2">
+        {filtered.length === 0 ? (
+          <p className="py-6 text-center text-xs text-white/40">Nenhuma compra.</p>
+        ) : filtered.map((t) => {
+          const st = normalize(t.status);
+          const style = st === "paid"
+            ? { border: "border-emerald-500/40", bg: "bg-emerald-500/10", text: "text-emerald-400", label: "Pago" }
+            : st === "pending"
+              ? { border: "border-amber-500/40", bg: "bg-amber-500/10", text: "text-amber-400", label: "Pendente" }
+              : { border: "border-red-500/40", bg: "bg-red-500/10", text: "text-red-400", label: "Cancelado" };
+          return (
+            <div key={t.id} className={`flex items-center justify-between gap-3 rounded-xl border ${style.border} ${style.bg} p-3`}>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-white">{t.products?.name || "Compra"}</p>
+                <p className="text-[11px] text-white/60">{t.paid_at ? new Date(t.paid_at).toLocaleDateString("pt-BR") : new Date(t.created_at).toLocaleDateString("pt-BR")} · <span className={`font-bold ${style.text}`}>{style.label}</span></p>
+              </div>
+              <p className="text-sm font-bold text-white">R$ {Number(t.gross_amount || 0).toFixed(2).replace(".", ",")}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,39 +1,61 @@
-## Novo Modal de Coach (substituindo StudentDetailsModal na Árvore da Rede)
+Esse é um conjunto grande de mudanças que toca várias áreas (base de alunos, modais, desafio, home). Vou organizar em fases para validar antes de implementar.
 
-Criar um modal dedicado para Coach com informações ricas, usado ao clicar em um coach na Árvore da Rede (1ª linha) e também onde fizer sentido (ranking da rede).
+## Fase 1 — Base de Alunos (CoachStudentsTab)
 
-### Conteúdo do modal
+1. **Cabeçalho com total** — adicionar contador "X alunos" ao lado do título.
+2. **Busca por nome** — campo de busca com filtro client-side.
+3. **Filtro por classificação** — chips: Todos / Aluno · Aluno Coach · Aluno Profissional · Aluno Parceiro.
+   - Buscar `coaches.is_professional`, `partners` e `students` por `profile_id` (mesma lógica já usada em `network-ranking.functions.ts`) para classificar cada aluno.
+4. **Ordenação/seções** — adicionar toggles:
+   - "Últimos cadastrados" (default, por `created_at desc`).
+   - "Sem bioimpedância" (sem `coach_body_assessments`).
+   - "Com moedas e sem desafio ativo" (saldo `tokenBalance > 0` e sem participação ativa no desafio).
 
-1. **Header** — nome, foto, patente oficial, categorias (Master Coach, Nutricionista, Coach HBL, Parceiro, Profissional), último login no app, data de cadastro.
-2. **Clientes** — ativos e inativos baseado em `student_attendance` (mesma lógica do painel de Frequência do Aluno).
-3. **Patente** — patente atual + data da última patente atingida (a partir de `coach_patent_history` ou equivalente; se não existir histórico, mostrar "sem registro").
-4. **Medalha** — última medalha cumulativa atingida + data (a partir de `coach_medal_history` ou snapshot mais recente).
-5. **Rede vinculada (diretos)** — total separado por: Coach comum, Coach Profissional, Coach Parceiro.
-6. **Metas do mês** — Viagem (alunos ativos / meta) e Jantar (vendas / meta) com % concluído.
-7. **Parceiros & Profissionais trazidos** — contagem clicável; ao clicar abre lista com nomes (drill-down inline).
-8. **Se Coach Profissional** — lista de produtos cadastrados (nome, preço, status).
-9. **Última venda** — data + valor + produto.
-10. **Produtos mais vendidos** — resumo top 5, com filtro: Mês atual / Tempo todo.
-11. **Coaches trazidos** — contagem com filtro: Último mês / Tempo todo.
-12. **Último login** — data/hora do último acesso ao app.
-13. **Perfil comportamental** — seção placeholder ("Em breve") com card vazio + lista de "Produtos recomendados para venda" também vazia/placeholder, pronto para receber dados futuros.
+## Fase 2 — Alertas para o Coach
 
-### Mudanças técnicas
+5. **Alerta no topo da Base de Alunos**: "X alunos entraram há mais de Y dias e ainda não fizeram avaliação!" (Y = 14 dias por padrão).
+6. **Alerta na Home do Coach**: mesmo alerta + "Novo aluno cadastrado: NOME" (últimas 48h).
+   - Usar um componente novo `CoachAlertsCard` na home.
 
-**Banco**
-- Migration: adicionar coluna `last_app_login_at timestamptz` em `profiles` (se não existir).
-- Migration: criar trigger/função RPC `touch_last_login()` simples (ou apenas update via server fn).
-- Garantir tabelas de histórico de patente/medalha: usar as existentes; se ausentes, fazer fallback no servidor (último snapshot calculado).
+## Fase 3 — Modais (regra geral)
 
-**Server**
-- `src/lib/coach-modal.functions.ts` (novo): `getCoachModalData(coachId)` que retorna todos os dados acima em um único payload (clientes ativos/inativos, patente+data, medalha+data, breakdown da rede direta, metas do mês, parceiros/profissionais trazidos com nomes, produtos do profissional, última venda, top produtos mês/total, coaches trazidos mês/total, último login, behavioral profile = null).
-- `src/lib/last-login.functions.ts` (novo): `touchLastLogin()` server fn (com `requireSupabaseAuth`) que atualiza `profiles.last_app_login_at = now()`.
+7. **Desabilitar clique-fora-fecha** em TODOS os modais:
+   - `StudentDetailsModal`, `CoachProfileModal`, `PartnerDetailsModal`, `ProfessionalStudentDetailsModal`, `ClientDetailsModal`, `NewSaleModal`, `NewStudentModal`, `StudentReferralModal`, `FreebieDetailModal`, `ProductDetailModal`, `ProductReviewModal`, e o modal de "Trocar coach" em `admin.students.tsx`.
+   - Para os que usam `<Dialog>` do shadcn: adicionar `onPointerDownOutside={(e) => e.preventDefault()}` e `onInteractOutside={(e) => e.preventDefault()}` no `DialogContent`.
+   - Para os modais custom (div overlay com `onClick={onClose}`): remover o handler do backdrop.
 
-**Frontend**
-- `src/components/coach/CoachProfileModal.tsx` (novo): modal completo com seções acima e tabs internas (Visão geral / Rede / Produtos / Vendas / Perfil).
-- `src/components/coach/tabs/NetworkTreeTab.tsx`: voltar a abrir o **novo** `CoachProfileModal` (não o StudentDetailsModal) — usar `coachId` em vez de `studentId`.
-- Hook de último login: disparar `touchLastLogin()` uma vez por sessão no shell de cada role (coach/student/admin/professional/partner) — via `useEffect` no componente raiz do shell.
-- Aba de Frequência do Aluno (`student_attendance` view): usar `profiles.last_app_login_at` como "último acesso" do aluno.
+## Fase 4 — StudentDetailsModal (aba Evolução)
 
-### Fora de escopo (placeholder)
-- O modelo de "Perfil comportamental" e recomendações é apenas UI/placeholder agora, sem lógica.
+8. **Remover bloco "Histórico de peso"** da aba Evolução.
+9. **Corrigir fotos corrompidas** — investigar: provavelmente está usando URL pública direta em vez de `createSignedUrl`, ou o bucket é privado. Vou abrir o arquivo, identificar e gerar URLs assinadas via `supabase.storage.from(bucket).createSignedUrl(path, 3600)`.
+
+## Fase 5 — StudentDetailsModal (aba Compras)
+
+10. **Cores por status**: verde = pago, amarelo = pendente, vermelho = cancelado. Aplicar em badge/borda.
+11. **Filtro** por status (chips: Todos · Pagos · Pendentes · Cancelados).
+
+## Fase 6 — Desafio: bloquear coaches
+
+12. Na rota `student.challenge.tsx`, antes de renderizar o conteúdo:
+    - Buscar `coaches` por `profile_id` do usuário logado.
+    - Se existir registro (independente de `is_professional`) OU se for `partners` → renderizar tela bloqueada com mensagem: "Você é coach (ou profissional/parceiro) e não pode participar do desafio. O desafio é exclusivo para alunos."
+    - Garantir que `purchase token earn` no backend (cross-sales / challenge-tokens) também não credite moedas para essas pessoas — adicionar guard.
+
+## Detalhes técnicos
+
+- **Classificação reutilizável**: extrair `classifyStudentRow(row, sets)` em `src/lib/student-classifications.ts` (puro, client-side) usando os mesmos critérios já adotados na árvore: Aluno (sempre), e adicionalmente Aluno Coach / Profissional / Parceiro quando o `profile_id` aparecer em `coaches` (com flag) ou `partners`.
+- **Carregar conjuntos uma vez** no `CoachStudentsTab` em paralelo com a query de students.
+- **Bloqueio de moedas no backend**: editar `challenge-tokens.functions.ts` (ou função equivalente que credita) para retornar 0 / não inserir quando o aluno também é coach/profissional/parceiro.
+- **Fotos**: confirmar bucket (provavelmente `assessment-photos`) e trocar `getPublicUrl` por `createSignedUrl` se o bucket for privado.
+
+## Arquivos a editar (resumo)
+
+- `src/components/coach/tabs/CoachStudentsTab.tsx` (busca, total, filtros, ordenações, alerta)
+- `src/components/coach/StudentDetailsModal.tsx` (remover histórico de peso, corrigir fotos, filtros/cores em compras, sem click-out)
+- `src/components/coach/CoachProfileModal.tsx` e demais modais listados (sem click-out)
+- `src/routes/student.challenge.tsx` (bloqueio de coach)
+- `src/lib/challenge-tokens.functions.ts` (bloqueio de crédito server-side)
+- `src/routes/coach.tsx` ou home do coach (`CoachAlertsCard` novo)
+- `src/lib/student-classifications.ts` (novo helper)
+
+Posso seguir com tudo nessa ordem?

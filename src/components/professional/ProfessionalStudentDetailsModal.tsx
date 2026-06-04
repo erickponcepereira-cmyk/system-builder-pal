@@ -63,7 +63,7 @@ export default function ProfessionalStudentDetailsModal({ studentId, onClose }: 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3">
       <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10" style={{ backgroundColor: "#141414" }} onClick={(e) => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-3 border-b border-white/5 p-4">
           <div className="min-w-0">

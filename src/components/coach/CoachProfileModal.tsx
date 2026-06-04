@@ -108,7 +108,7 @@ export default function CoachProfileModal({ coachId, onClose }: { coachId: strin
   }, [coachId, fetchData]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
       <div
         className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-white/10 sm:rounded-3xl"
         style={{ backgroundColor: "#0F0F0F" }}

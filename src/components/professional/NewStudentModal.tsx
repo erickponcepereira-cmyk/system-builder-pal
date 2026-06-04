@@ -68,7 +68,7 @@ export function NewStudentModal({ coachId, onClose, onCreated }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">Novo aluno</h2>

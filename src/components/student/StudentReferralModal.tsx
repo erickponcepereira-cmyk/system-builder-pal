@@ -89,7 +89,6 @@ export function StudentReferralModal({
   return (
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}

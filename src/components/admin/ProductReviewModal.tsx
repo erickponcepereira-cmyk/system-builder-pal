@@ -125,7 +125,6 @@ export function ProductReviewModal({ table, productId, onClose, onChanged }: Pro
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-      onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
