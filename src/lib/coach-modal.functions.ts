@@ -67,10 +67,39 @@ export type CoachModalData = {
     travel: { current: number; target: number; pct: number; label: string };
     dinner: { current: number; target: number; pct: number; label: string };
   };
+  rewards: CoachModalRewardPlan[];
+  referredCoaches: { count: number; people: CoachModalPersonRef[] };
   referredPartners: { count: number; people: CoachModalPersonRef[] };
   referredProfessionals: { count: number; people: CoachModalPersonRef[] };
   products: CoachModalProduct[];
   lastSale: { at: string; amount: number; productName: string | null } | null;
+  topProductsMonth: CoachModalTopProduct[];
+  topProductsAllTime: CoachModalTopProduct[];
+  recruitedCoachesMonth: number;
+  recruitedCoachesAllTime: number;
+  behavioral: {
+    profile: string | null;
+    recommendedProducts: string[];
+  };
+};
+
+function firstOfMonthIso() {
+  const d = new Date();
+  d.setDate(1); d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function windowForPlan(planType: string, durationMonths: number): { start: Date; end: Date } {
+  const now = new Date();
+  if (planType === "monthly_challenge") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return { start, end };
+  }
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - (durationMonths || 1));
+  return { start, end: now };
+}
   topProductsMonth: CoachModalTopProduct[];
   topProductsAllTime: CoachModalTopProduct[];
   recruitedCoachesMonth: number;
