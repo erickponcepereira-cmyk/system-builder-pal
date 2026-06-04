@@ -21,6 +21,7 @@ export type StudentBreakdown = {
 };
 
 export type NetworkRankMedal = { key: string; name: string; icon: string | null; threshold: number } | null;
+export type NetworkRankPatent = { key: string; name: string; color: string | null; icon: string | null; level: number } | null;
 
 export type NetworkRankingRow = {
   coachId: string;
@@ -32,6 +33,8 @@ export type NetworkRankingRow = {
   individualRevenue: number;
   networkRevenue: number;
   medal: NetworkRankMedal;
+  patent: NetworkRankPatent;
+  categories: string[];
   isYou?: boolean;
 };
 
