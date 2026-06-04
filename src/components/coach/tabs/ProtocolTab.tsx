@@ -270,6 +270,8 @@ export function ProtocolTab() {
       setProtocol({ ...emptyProtocol(), weight_goal: s.goal_weight });
     }
 
+    let bioWeight: number | null = null;
+    let age: number | null = null;
     if (!s.external) {
       const { data: bio } = await supabase
         .from("coach_body_assessments")
@@ -279,13 +281,38 @@ export function ProtocolTab() {
         .limit(1)
         .maybeSingle();
       setHasBio(!!bio);
-      setLastBioWeight(bio?.weight ?? null);
+      bioWeight = (bio as any)?.weight ?? null;
+      setLastBioWeight(bioWeight);
       const { data: an } = await supabase.from("anamnesis_forms").select("id").eq("student_id", s.id).limit(1).maybeSingle();
       setHasAnamnesis(!!an);
+      if (s.profile_id) {
+        const { data: p } = await supabase.from("profiles").select("birthdate").eq("id", s.profile_id).maybeSingle();
+        age = calcAgeFromBirthdate((p as any)?.birthdate);
+      }
     } else {
       setHasBio(false);
       setHasAnamnesis(false);
       setLastBioWeight(null);
+      const { data: ec } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("birth_date, current_weight" as never)
+        .eq("id" as never, s.id as never)
+        .maybeSingle();
+      age = calcAgeFromBirthdate((ec as any)?.birth_date);
+      bioWeight = (ec as any)?.current_weight ?? null;
+      setLastBioWeight(bioWeight);
+    }
+    setStudentAge(age);
+
+    // Se não há valor salvo, auto-calcula com peso + idade
+    const weightForCalc = bioWeight ?? s.current_weight ?? null;
+    const auto = calcWaterGoalMl(weightForCalc, age);
+    const existingWater = (data as any)?.water_goal_ml;
+    if (!existingWater && auto) {
+      setProtocol((p) => ({ ...p, water_goal_ml: auto }));
+      setWaterOverride(false);
+    } else {
+      setWaterOverride(!!existingWater && auto != null && existingWater !== auto);
     }
 
     setLoading(false);
