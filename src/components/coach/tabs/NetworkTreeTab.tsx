@@ -155,7 +155,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
                     <p className="truncate text-sm font-bold text-white">{data.upline.name}</p>
                     <Classifications items={data.upline.classifications} />
                     <Categories items={data.upline.categories} />
-                    <p className="mt-1 text-[11px] text-white/45">{data.upline.directStudents.total} alunos · {data.upline.childCoaches} coaches diretos</p>
+                    <StudentsBreakdown b={data.upline.directStudents} downlineCoaches={data.upline.childCoaches} downlineLabel="coaches diretos" />
                   </div>
                     <div className="flex flex-col items-end gap-1">
                       <PatentTag patent={data.upline.patent} />
