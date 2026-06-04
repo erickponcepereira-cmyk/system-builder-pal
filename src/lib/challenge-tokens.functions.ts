@@ -180,6 +180,11 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
       await logAttempt({ studentId: null, success: false, errorCode: "student_not_found", errorMessage: "Aluno não encontrado." });
       return { ok: false, error: "Aluno não encontrado." };
     }
+    if (student.roleFlags.isCoach || student.roleFlags.isProfessional || student.roleFlags.isPartner) {
+      const reason = student.roleFlags.isProfessional ? "coach_is_professional" : student.roleFlags.isCoach ? "coach_is_coach" : "coach_is_partner";
+      await logAttempt({ studentId: student.id, success: false, errorCode: reason, errorMessage: "Coaches, profissionais e parceiros não podem participar do desafio." });
+      return { ok: false, error: "Coaches, profissionais e parceiros não podem participar do desafio. Esta funcionalidade é exclusiva para alunos." };
+    }
     if (!student.gender) {
       await logAttempt({ studentId: student.id, success: false, errorCode: "missing_gender", errorMessage: "Gênero ausente no perfil." });
       return { ok: false, error: "Complete o seu perfil (gênero) antes de entrar no desafio." };
