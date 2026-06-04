@@ -1233,7 +1233,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // TELA: SELEÇÃO DE ALUNO
   // ────────────────────────────────────────────────────────
   const SelectClientScreen = () => {
-    const filtered = clients.filter(
+    const scopedClients =
+      scopeFilter === "mine" ? myClients : clients;
+    const filtered = scopedClients.filter(
       (c) => {
         const matchesText =
           c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
