@@ -202,6 +202,7 @@ export function NewSaleModal({ open, onClose }: { open: boolean; onClose: () => 
                       <div>
                         <p className="text-sm font-medium text-white">{c.name}</p>
                         {c.email && <p className="text-[11px] text-white/40">{c.email}</p>}
+                        {c.coachName && <p className="text-[10px] text-primary/80 mt-0.5">Coach titular: {c.coachName}</p>}
                       </div>
                       <ChevronRightIcon />
                     </button>
