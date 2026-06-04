@@ -67,8 +67,8 @@ export type ChallengeTokenSummary = {
   totalConsumed: number;
   currentTurma: CurrentTurma | null;
   alreadyEnrolledInCurrent: boolean;
-  // Próximas turmas em janela aberta de pesagem inicial onde o aluno NÃO está inscrito.
   joinableTurmas: CurrentTurma[];
+  blocked: false | { reason: "aluno_coach" | "aluno_profissional" | "aluno_parceiro" };
 };
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
