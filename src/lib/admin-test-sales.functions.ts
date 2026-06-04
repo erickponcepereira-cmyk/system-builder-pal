@@ -287,6 +287,7 @@ async function createStoreSimulation(input: SimulateInput) {
 }
 
 async function getFallbackProductId() {
+  const supabaseAdmin = await getSupabaseAdmin();
   const { data } = await supabaseAdmin
     .from("products")
     .select("id")
@@ -299,6 +300,7 @@ async function getFallbackProductId() {
 }
 
 async function createPartnerSimulation(input: SimulateInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const product = await getProduct(input);
   const { data: student } = await supabaseAdmin
     .from("students")
@@ -361,6 +363,7 @@ async function createPartnerSimulation(input: SimulateInput) {
 }
 
 async function listFlowForOrder(sourceKind: string, sourceId: string) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (sourceKind === "partner_product_order") {
     const { data: order } = await supabaseAdmin
       .from("partner_product_orders" as never)
