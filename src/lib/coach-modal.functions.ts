@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-export type CoachModalPersonRef = { id: string; name: string; email: string | null };
+export type CoachModalPersonRef = { id: string; name: string; email: string | null; specialty?: string | null };
 
 export type CoachModalProduct = {
   id: string;
