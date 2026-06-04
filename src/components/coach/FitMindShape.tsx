@@ -1360,6 +1360,11 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
                   {c.email} · {c.groups?.join(", ")}
                 </div>
+                {c.coachName && (
+                  <div style={{ fontSize: 11, color: "var(--fm-primary)", fontWeight: 600, marginTop: 2 }}>
+                    Coach: {c.coachName}
+                  </div>
+                )}
               </div>
               {c.whatsapp && (
                 <a
