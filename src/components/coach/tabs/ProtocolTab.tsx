@@ -187,6 +187,9 @@ export function ProtocolTab() {
     setProtocol((p) => ({
       ...p,
       workout_plan: mode === "replace" ? [...t.items] : [...p.workout_plan, ...t.items],
+      workout_name: mode === "replace" ? t.name : p.workout_name,
+      workout_goal: mode === "replace" ? t.goal : p.workout_goal,
+      workout_level: mode === "replace" ? (t.level || "iniciante") : p.workout_level,
     }));
     setTemplatePickerOpen(false);
     toast.success(`Treino "${t.name}" aplicado.`);
