@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart3, User, LogOut,
   Menu, X, Trophy, ClipboardList, CalendarCheck, CalendarDays,
-  ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils, ClipboardCheck,
+  ShoppingBag, Gift, Network, UserRound, Repeat, Award, Utensils, ClipboardCheck, Dumbbell,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
