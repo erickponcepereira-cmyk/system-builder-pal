@@ -7,6 +7,7 @@ import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { useServerFn } from "@tanstack/react-start";
 import { getCoachStudentsTokens } from "@/lib/challenge-tokens.functions";
 import { CLASSIFICATION_LABEL, classifyByProfile, type StudentClassification } from "@/lib/student-classifications";
+import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 
 type StudentRow = {
   id: string;
