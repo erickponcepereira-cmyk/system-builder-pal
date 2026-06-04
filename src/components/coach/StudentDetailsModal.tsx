@@ -81,6 +81,8 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [showProNotes, setShowProNotes] = useState<Set<string>>(new Set());
+  const [classifications, setClassifications] = useState<string[]>([]);
+
 
   useEffect(() => {
     (async () => {
