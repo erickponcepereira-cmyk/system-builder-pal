@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { X, Award, Users, Briefcase, ShoppingBag, Trophy, Sparkles, Clock, ChevronDown, ChevronRight, UserCheck, Mail, Phone } from "lucide-react";
+import { X, Award, Users, Briefcase, ShoppingBag, Trophy, Sparkles, Clock, ChevronDown, ChevronRight, UserCheck, Mail, Phone, Eye, EyeOff, Plane, Utensils, CheckCircle2 } from "lucide-react";
 import { getCoachModalData, type CoachModalData, type CoachModalPersonRef, type CoachModalTopProduct } from "@/lib/coach-modal.functions";
 
 function money(v: number | null | undefined) {
@@ -92,10 +92,12 @@ export default function CoachProfileModal({ coachId, onClose }: { coachId: strin
   const [data, setData] = useState<CoachModalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openCoaches, setOpenCoaches] = useState(false);
   const [openPartners, setOpenPartners] = useState(false);
   const [openPros, setOpenPros] = useState(false);
   const [topFilter, setTopFilter] = useState<"month" | "all">("month");
   const [coachesFilter, setCoachesFilter] = useState<"month" | "all">("month");
+  const [revealRewards, setRevealRewards] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -204,29 +206,95 @@ export default function CoachProfileModal({ coachId, onClose }: { coachId: strin
               </div>
             </Section>
 
-            {/* Goals */}
-            <Section title="Metas do mês" icon={<Sparkles className="h-4 w-4 text-primary" />}>
-              <div className="space-y-3">
-                <div>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="text-white/70">{data.goals.travel.label}</span>
-                    <span className="font-bold text-white">{data.goals.travel.current}/{data.goals.travel.target} ({data.goals.travel.pct}%)</span>
-                  </div>
-                  <ProgressBar pct={data.goals.travel.pct} />
+            {/* Premiações */}
+            <Section
+              title="Premiações"
+              icon={<Trophy className="h-4 w-4 text-primary" />}
+              right={
+                <button
+                  onClick={() => setRevealRewards((v) => !v)}
+                  className="rounded-lg bg-white/5 p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+                  title={revealRewards ? "Ocultar progresso" : "Mostrar progresso"}
+                  type="button"
+                >
+                  {revealRewards ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                </button>
+              }
+            >
+              {data.rewards.length === 0 ? (
+                <p className="text-xs text-white/40">Nenhuma premiação ativa.</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.rewards.map((r) => {
+                    const Icon = r.planType === "monthly_challenge" ? Utensils : Plane;
+                    const accent = r.planType === "monthly_challenge" ? "#F59E0B" : "#22D3EE";
+                    const pct = Math.round(r.pctComplete);
+                    return (
+                      <div
+                        key={r.id}
+                        className="relative overflow-hidden rounded-2xl p-4"
+                        style={{ backgroundColor: "#0F0F0F", border: `1px solid ${accent}30` }}
+                      >
+                        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-20" style={{ backgroundColor: accent }} />
+                        <div className="relative">
+                          <div className="mb-2 flex items-center gap-2">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}25`, border: `1px solid ${accent}55` }}>
+                              <Icon className="h-5 w-5" style={{ color: accent }} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] uppercase tracking-wider font-bold text-white/40">
+                                {r.planType === "monthly_challenge" ? "Mensal" : `${r.durationMonths} meses`}
+                              </p>
+                              <p className="truncate text-sm font-bold text-white">{r.name}</p>
+                            </div>
+                            {r.achieved && (
+                              <span className="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                                <CheckCircle2 className="h-3 w-3" /> OK
+                              </span>
+                            )}
+                          </div>
+                          {r.rewardDescription && (
+                            <p className="mb-3 line-clamp-2 text-[11px] text-white/60">🎁 {r.rewardDescription}</p>
+                          )}
+                          <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                            <span className="text-white/60">Progresso</span>
+                            <span className="font-bold text-white font-mono">
+                              {revealRewards ? `${r.currentPoints} / ${r.targetPoints} pts` : "•••"}
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "#252525" }}>
+                            <div
+                              className="h-full transition-all"
+                              style={{ width: `${revealRewards ? pct : 0}%`, background: `linear-gradient(90deg, ${accent}, ${accent}aa)` }}
+                            />
+                          </div>
+                          <p className="mt-1.5 text-[10px] text-white/40">
+                            {revealRewards ? `${pct}% concluído` : "Toque no olho para revelar"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="text-white/70">{data.goals.dinner.label}</span>
-                    <span className="font-bold text-white">{money(data.goals.dinner.current)} / {money(data.goals.dinner.target)} ({data.goals.dinner.pct}%)</span>
-                  </div>
-                  <ProgressBar pct={data.goals.dinner.pct} />
-                </div>
-              </div>
+              )}
             </Section>
 
             {/* Referred */}
             <Section title="Trazidos para a rede" icon={<Briefcase className="h-4 w-4 text-primary" />}>
               <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenCoaches((v) => !v)}
+                  className="flex w-full items-center justify-between rounded-lg bg-black/30 px-3 py-2 text-left hover:bg-black/40"
+                >
+                  <span className="text-sm text-white">Coachs trazidos</span>
+                  <span className="flex items-center gap-2 text-sm font-bold text-primary">
+                    {data.referredCoaches.count}
+                    {openCoaches ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  </span>
+                </button>
+                {openCoaches && <PeopleList people={data.referredCoaches.people} />}
+
                 <button
                   type="button"
                   onClick={() => setOpenPartners((v) => !v)}
@@ -254,6 +322,7 @@ export default function CoachProfileModal({ coachId, onClose }: { coachId: strin
                 {openPros && <PeopleList people={data.referredProfessionals.people} />}
               </div>
             </Section>
+
 
             {/* Professional products */}
             {data.coach.isProfessional && (

@@ -4,6 +4,23 @@ import { z } from "zod";
 
 export type CoachModalPersonRef = { id: string; name: string; email: string | null; specialty?: string | null };
 
+export type CoachModalRewardPlan = {
+  id: string;
+  name: string;
+  description: string | null;
+  planType: "period" | "monthly_challenge";
+  durationMonths: number;
+  rewardDescription: string | null;
+  rewardDetails: string | null;
+  rewardImageUrl: string | null;
+  targetPoints: number;
+  currentPoints: number;
+  pctComplete: number;
+  periodStartIso: string;
+  periodEndIso: string;
+  achieved: boolean;
+};
+
 export type CoachModalProduct = {
   id: string;
   name: string;
@@ -50,6 +67,8 @@ export type CoachModalData = {
     travel: { current: number; target: number; pct: number; label: string };
     dinner: { current: number; target: number; pct: number; label: string };
   };
+  rewards: CoachModalRewardPlan[];
+  referredCoaches: { count: number; people: CoachModalPersonRef[] };
   referredPartners: { count: number; people: CoachModalPersonRef[] };
   referredProfessionals: { count: number; people: CoachModalPersonRef[] };
   products: CoachModalProduct[];
@@ -68,6 +87,18 @@ function firstOfMonthIso() {
   const d = new Date();
   d.setDate(1); d.setHours(0, 0, 0, 0);
   return d.toISOString();
+}
+
+function windowForPlan(planType: string, durationMonths: number): { start: Date; end: Date } {
+  const now = new Date();
+  if (planType === "monthly_challenge") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return { start, end };
+  }
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - (durationMonths || 1));
+  return { start, end: now };
 }
 
 export const getCoachModalData = createServerFn({ method: "GET" })
@@ -217,18 +248,22 @@ export const getCoachModalData = createServerFn({ method: "GET" })
       },
     };
 
-    // Partners & professionals he referred
-    // Heuristic: partners/professionals whose profile is a student of this coach
+    // Partners, professionals & coaches he referred
+    // Heuristic: their profile is a student of this coach
     let referredPartners: CoachModalData["referredPartners"] = { count: 0, people: [] };
     let referredProfessionals: CoachModalData["referredProfessionals"] = { count: 0, people: [] };
+    let referredCoaches: CoachModalData["referredCoaches"] = { count: 0, people: [] };
     if (studentRows.length) {
-      const profileIds = studentRows.map((s) => s.profile_id);
-      const [{ data: ps }, { data: pros }] = await Promise.all([
+      const profileIds = studentRows.map((s) => s.profile_id).filter((p) => p !== profileId);
+      const [{ data: ps }, { data: allCoaches }] = await Promise.all([
         supabaseAdmin.from("partners").select("id, profile_id, fantasy_name, profiles!partners_profile_id_fkey(name,email)").in("profile_id", profileIds),
-        supabaseAdmin.from("coaches").select("id, profile_id, is_professional, specialty_key, specialty_custom_description, profiles!coaches_profile_id_fkey(name,email)").in("profile_id", profileIds).eq("is_professional", true),
+        supabaseAdmin.from("coaches").select("id, profile_id, is_professional, specialty_key, specialty_custom_description, profiles!coaches_profile_id_fkey(name,email)").in("profile_id", profileIds),
       ]);
       const partnerRows = (ps as any[] | null) || [];
-      const proRows = (pros as any[] | null) || [];
+      const coachRows = (allCoaches as any[] | null) || [];
+      const partnerProfileSet2 = new Set(partnerRows.map((p) => p.profile_id));
+      const proRows = coachRows.filter((c) => c.is_professional);
+      const plainCoachRows = coachRows.filter((c) => !c.is_professional && !partnerProfileSet2.has(c.profile_id));
       // Resolve specialty labels
       const specKeys = Array.from(new Set(proRows.map((p) => p.specialty_key).filter(Boolean)));
       const specLabel = new Map<string, string>();
@@ -253,8 +288,16 @@ export const getCoachModalData = createServerFn({ method: "GET" })
           specialty: (p.specialty_key && specLabel.get(p.specialty_key)) || p.specialty_custom_description || null,
         })),
       };
-
+      referredCoaches = {
+        count: plainCoachRows.length,
+        people: plainCoachRows.map((c) => ({
+          id: c.id,
+          name: c.profiles?.name || "Coach",
+          email: c.profiles?.email || null,
+        })),
+      };
     }
+
 
     // Professional products
     let products: CoachModalProduct[] = [];
@@ -318,6 +361,48 @@ export const getCoachModalData = createServerFn({ method: "GET" })
     const recruitedCoachesAllTime = downRows.length;
     const recruitedCoachesMonth = downRows.filter((r) => r.created_at && r.created_at >= fromMonth).length;
 
+    // Rewards (Premiações) — same logic as getCoachRewards, scoped to this coachId
+    const { data: planRows } = await supabaseAdmin
+      .from("career_plan_config")
+      .select("id,name,description,plan_type,duration_months,min_monthly_points,required_period_points,reward_description,reward_details,reward_image_url,is_active")
+      .eq("is_active", true);
+    const planList = (planRows as Array<{
+      id: string; name: string; description: string | null;
+      plan_type: string; duration_months: number;
+      min_monthly_points: number; required_period_points: number;
+      reward_description: string | null; reward_details: string | null;
+      reward_image_url: string | null;
+    }> | null) || [];
+    const rewards: CoachModalRewardPlan[] = [];
+    for (const p of planList) {
+      const target = p.plan_type === "monthly_challenge"
+        ? Number(p.min_monthly_points) || 0
+        : Number(p.required_period_points) || 0;
+      const { start, end } = windowForPlan(p.plan_type, p.duration_months);
+      const { data: pts } = await supabaseAdmin
+        .from("coach_points_log")
+        .select("points")
+        .eq("coach_id", coachId)
+        .gte("created_at", start.toISOString())
+        .lt("created_at", end.toISOString());
+      const current = ((pts as { points: number }[] | null) || []).reduce((s, r) => s + (Number(r.points) || 0), 0);
+      rewards.push({
+        id: p.id, name: p.name, description: p.description,
+        planType: p.plan_type as "period" | "monthly_challenge",
+        durationMonths: Number(p.duration_months) || 1,
+        rewardDescription: p.reward_description,
+        rewardDetails: p.reward_details,
+        rewardImageUrl: p.reward_image_url,
+        targetPoints: target,
+        currentPoints: current,
+        pctComplete: target > 0 ? Math.min(100, (current / target) * 100) : 0,
+        periodStartIso: start.toISOString(),
+        periodEndIso: end.toISOString(),
+        achieved: target > 0 && current >= target,
+      });
+    }
+    rewards.sort((a, b) => (a.planType === b.planType ? 0 : a.planType === "monthly_challenge" ? -1 : 1));
+
     return {
       coach: {
         id: coachId,
@@ -341,6 +426,8 @@ export const getCoachModalData = createServerFn({ method: "GET" })
       clients: { active: activeCount, inactive: inactiveCount, total: studentIds.length },
       directNetwork,
       goals,
+      rewards,
+      referredCoaches,
       referredPartners,
       referredProfessionals,
       products,
