@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, BadgeDollarSign, Loader2, RefreshCcw, Trash2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import {
   listAdminTestSales,
   resetAdminTestSales,
   simulateAdminTestSale,
+  type SimulatedSaleRow,
 } from "@/lib/admin-test-sales.functions";
 
 export const Route = createFileRoute("/admin/test-sales")({
@@ -18,7 +20,7 @@ export const Route = createFileRoute("/admin/test-sales")({
 
 type Option = { id: string; label: string; detail?: string | null; kind?: SaleKind; price?: number };
 type SaleKind = "store" | "digital" | "challenge" | "professional" | "partner";
-type SaleRow = Awaited<ReturnType<typeof listAdminTestSales>>[number];
+type SaleRow = SimulatedSaleRow;
 
 const saleKindLabels: Record<SaleKind, string> = {
   store: "Coach → aluno / loja",
@@ -167,7 +169,7 @@ function AdminTestSalesPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="grid gap-1 text-xs font-medium text-white/55"><span>{label}</span>{children}</label>;
 }
 
