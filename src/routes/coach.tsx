@@ -255,9 +255,11 @@ function CoachDashboard() {
       .catch(() => setCanApprovePartners(false));
   }, [isAdmin, coachRowId]);
 
-  // Última medalha conquistada (para exibir no card do perfil)
+  // Patente atual (Ordem dos Construtores) + última medalha individual
   const fetchCareer = useServerFn(getIndividualCareer);
+  const fetchProgress = useServerFn(getCareerProgress);
   const [latestMedal, setLatestMedal] = useState<{ name: string; key: string } | null>(null);
+  const [teamPatent, setTeamPatent] = useState<{ name: string; color: string } | null>(null);
   useEffect(() => {
     if (!coachRowId) return;
     fetchCareer()
@@ -268,6 +270,13 @@ function CoachDashboard() {
         setLatestMedal({ name: rule?.display_name || e.medal_key, key: e.medal_key });
       })
       .catch(() => setLatestMedal(null));
+    fetchProgress()
+      .then((p) => {
+        const cur = p.patents.find((x) => x.key === p.currentPatentKey);
+        if (cur) setTeamPatent({ name: cur.display_name, color: cur.badge_color || "#FF4230" });
+        else setTeamPatent(null);
+      })
+      .catch(() => setTeamPatent(null));
   }, [coachRowId]);
 
   const navItems: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
