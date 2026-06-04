@@ -30,6 +30,8 @@ type SimulatedSaleRow = {
 
 const TEST_META = { test_simulation: true, source: "admin_test_sale" } as const;
 
+type DeleteInput = { sourceKind: "store_order" | "partner_product_order"; id: string };
+
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("profiles")
@@ -113,6 +115,17 @@ async function getCoachUplines(coachId: string | null | undefined) {
     l3 = (c3 as any)?.upline_coach_id || null;
   }
   return { l1, l2, l3 };
+}
+
+async function profileIdForCoach(coachId: string | null | undefined) {
+  if (!coachId) return null;
+  const { data } = await supabaseAdmin.from("coaches").select("profile_id").eq("id", coachId).maybeSingle();
+  return (data as any)?.profile_id || null;
+}
+
+async function subtractWallet(profileId: string | null, amount: number) {
+  if (!profileId || amount <= 0) return;
+  await supabaseAdmin.rpc("exec_sql" as never, {} as never).throwOnError?.();
 }
 
 async function createStoreSimulation(input: SimulateInput) {
