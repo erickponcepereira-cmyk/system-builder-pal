@@ -56,15 +56,34 @@ export const listCoachClients = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<SaleClient[]> => {
     const coachId = await getCoachIdForUser(context.userId);
     if (!coachId) return [];
-    const { data } = await supabaseAdmin
+    // Master coach? Then list ALL students in the system (not limited to network).
+    const { data: master } = await supabaseAdmin
+      .rpc("is_master_coach" as never, { _coach_id: coachId } as never);
+    const isMaster = !!master;
+    let query = supabaseAdmin
       .from("students")
-      .select("id, profiles:profile_id(name,email,phone)")
-      .eq("coach_id", coachId);
-    return (data || []).map((s: any) => ({
+      .select("id, coach_id, profiles:profile_id(name,email,phone)");
+    if (!isMaster) query = query.eq("coach_id", coachId);
+    const { data } = await query;
+    const rows = (data || []) as any[];
+    // For master view, resolve coach names for cross-coach clients
+    const coachNameById = new Map<string, string>();
+    if (isMaster) {
+      const otherCoachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter((id) => id && id !== coachId)));
+      if (otherCoachIds.length) {
+        const { data: coachesData } = await supabaseAdmin
+          .from("coaches")
+          .select("id, profiles!coaches_profile_id_fkey(name)")
+          .in("id", otherCoachIds);
+        ((coachesData as any[]) || []).forEach((cc) => coachNameById.set(cc.id, cc.profiles?.name || "Coach"));
+      }
+    }
+    return rows.map((s) => ({
       id: s.id,
       name: s.profiles?.name || "Cliente",
       email: s.profiles?.email || null,
       phone: s.profiles?.phone || null,
+      coachName: isMaster && s.coach_id !== coachId ? (coachNameById.get(s.coach_id) || "Outro coach") : null,
     }));
   });
 
