@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type StudentRoleFlags = { isCoach: boolean; isProfessional: boolean; isPartner: boolean };
+
 async function resolveStudentByUser(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: profile } = await supabaseAdmin
@@ -18,7 +20,6 @@ async function resolveStudentByUser(userId: string) {
   if (raw === "M" || raw === "F" || raw === "O") {
     gender = raw;
   } else {
-    // Fallback: tentar inferir pela anamnese
     const { data: anamnesis } = await supabaseAdmin
       .from("anamnesis_forms")
       .select("gender, filled_at" as never)
@@ -34,7 +35,19 @@ async function resolveStudentByUser(userId: string) {
         : null;
   }
 
-  return { id: s.id, coach_id: s.coach_id, profile_id: s.profile_id, gender };
+  // Verifica se o aluno também é coach/profissional/parceiro (não pode participar do desafio)
+  const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+    supabaseAdmin.from("coaches").select("id, is_professional").eq("profile_id", p.id).maybeSingle(),
+    supabaseAdmin.from("partners").select("id").eq("profile_id", p.id).maybeSingle(),
+  ]);
+  const cr = coachRow as unknown as { id: string; is_professional: boolean | null } | null;
+  const roleFlags: StudentRoleFlags = {
+    isCoach: !!cr && !cr.is_professional,
+    isProfessional: !!cr && !!cr.is_professional,
+    isPartner: !!partnerRow,
+  };
+
+  return { id: s.id, coach_id: s.coach_id, profile_id: s.profile_id, gender, roleFlags };
 }
 
 export type CurrentTurma = {
@@ -54,8 +67,8 @@ export type ChallengeTokenSummary = {
   totalConsumed: number;
   currentTurma: CurrentTurma | null;
   alreadyEnrolledInCurrent: boolean;
-  // Próximas turmas em janela aberta de pesagem inicial onde o aluno NÃO está inscrito.
   joinableTurmas: CurrentTurma[];
+  blocked: false | { reason: "aluno_coach" | "aluno_profissional" | "aluno_parceiro" };
 };
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -100,8 +113,15 @@ export const getMyChallengeTokens = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const student = await resolveStudentByUser(context.userId);
     if (!student) {
-      return { balance: 0, totalEarned: 0, totalConsumed: 0, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [] };
+      return { balance: 0, totalEarned: 0, totalConsumed: 0, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [], blocked: false };
     }
+
+    const blocked: ChallengeTokenSummary["blocked"] =
+      student.roleFlags.isProfessional ? { reason: "aluno_profissional" } :
+      student.roleFlags.isCoach ? { reason: "aluno_coach" } :
+      student.roleFlags.isPartner ? { reason: "aluno_parceiro" } :
+      false;
+
     const { data: tokens } = await supabaseAdmin
       .from("student_challenge_tokens")
       .select("id, consumed_at")
@@ -111,11 +131,15 @@ export const getMyChallengeTokens = createServerFn({ method: "GET" })
     const totalConsumed = rows.filter((r) => !!r.consumed_at).length;
     const balance = totalEarned - totalConsumed;
 
+    if (blocked) {
+      return { balance, totalEarned, totalConsumed, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [], blocked };
+    }
+
     const { joinable, enrolledCompIds } = await loadJoinableTurmas(student.id);
     const currentTurma = joinable[0] || null;
     const alreadyEnrolledInCurrent = currentTurma ? enrolledCompIds.has(currentTurma.competitionId) : false;
 
-    return { balance, totalEarned, totalConsumed, currentTurma, alreadyEnrolledInCurrent, joinableTurmas: joinable };
+    return { balance, totalEarned, totalConsumed, currentTurma, alreadyEnrolledInCurrent, joinableTurmas: joinable, blocked: false };
   });
 
 export const joinChallengeWithToken = createServerFn({ method: "POST" })
@@ -155,6 +179,11 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
     if (!student) {
       await logAttempt({ studentId: null, success: false, errorCode: "student_not_found", errorMessage: "Aluno não encontrado." });
       return { ok: false, error: "Aluno não encontrado." };
+    }
+    if (student.roleFlags.isCoach || student.roleFlags.isProfessional || student.roleFlags.isPartner) {
+      const reason = student.roleFlags.isProfessional ? "coach_is_professional" : student.roleFlags.isCoach ? "coach_is_coach" : "coach_is_partner";
+      await logAttempt({ studentId: student.id, success: false, errorCode: reason, errorMessage: "Coaches, profissionais e parceiros não podem participar do desafio." });
+      return { ok: false, error: "Coaches, profissionais e parceiros não podem participar do desafio. Esta funcionalidade é exclusiva para alunos." };
     }
     if (!student.gender) {
       await logAttempt({ studentId: student.id, success: false, errorCode: "missing_gender", errorMessage: "Gênero ausente no perfil." });
