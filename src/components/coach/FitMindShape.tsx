@@ -2452,6 +2452,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                       >
                         <Camera size={14} />{" "}
                         {photo ? "Trocar foto" : "Toque para adicionar"}
+                        {!photo && <span style={{ opacity: 0.6, marginLeft: 4 }}>· 1080×1440px</span>}
                       </div>
                     </div>
                     <input

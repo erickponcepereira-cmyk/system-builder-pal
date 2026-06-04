@@ -267,21 +267,24 @@ export function StoreItemsManager() {
             <div>
               <label className="text-xs text-white/60 mb-1 block">Imagem</label>
               <div className="flex items-center gap-3">
-                <div className="h-24 w-32 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden">
+                <div className="h-24 w-24 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden">
                   {editing.image_url ? (
                     <img src={editing.image_url} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <ImageIcon className="h-6 w-6 text-white/20" />
                   )}
                 </div>
-                <label className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 cursor-pointer">
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  {uploading ? "Enviando..." : "Enviar imagem"}
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
-                </label>
-                {editing.image_url && (
-                  <button onClick={() => setEditing({ ...editing, image_url: null })} className="text-xs text-red-400 hover:underline">Remover</button>
-                )}
+                <div className="flex flex-col gap-1">
+                  <label className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 cursor-pointer w-fit">
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    {uploading ? "Enviando..." : "Enviar imagem"}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+                  </label>
+                  <p className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</p>
+                  {editing.image_url && (
+                    <button onClick={() => setEditing({ ...editing, image_url: null })} className="text-xs text-red-400 hover:underline w-fit">Remover</button>
+                  )}
+                </div>
               </div>
             </div>
 

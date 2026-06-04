@@ -165,10 +165,13 @@ export function SettingsTab({ coachId, profileId }: Props) {
             <div className="h-20 w-20 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
               {avatarUrl ? <img src={avatarUrl} alt="Foto" className="h-full w-full object-cover" /> : <Camera className="h-6 w-6 text-white/40" />}
             </div>
-            <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10">
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
-              Trocar foto
-            </label>
+            <div>
+              <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
+                Trocar foto
+              </label>
+              <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
+            </div>
           </div>
 
           <Field label="Título / Headline" hint="Aparece ao lado do seu nome (ex: 'Nutricionista Esportiva — Performance & Estética')">

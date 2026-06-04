@@ -166,7 +166,7 @@ function EditProfilePage() {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
           />
         </div>
-        <p className="text-[11px] text-white/40">Toque na câmera para trocar a foto</p>
+        <p className="text-[11px] text-white/40">Toque na câmera para trocar a foto · Recomendado: 512×512px (1:1)</p>
       </div>
 
       {/* Form */}

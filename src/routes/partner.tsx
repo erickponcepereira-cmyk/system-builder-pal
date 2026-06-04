@@ -369,8 +369,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 {editing.image_url ? (
                   <div className="relative"><img src={editing.image_url} className="h-32 w-full rounded object-cover" /><button onClick={() => setEditing({ ...editing, image_url: "" })} className="absolute top-1 right-1 bg-black/70 rounded p-1"><X className="h-3 w-3 text-white" /></button></div>
                 ) : (
-                  <label className="flex h-24 cursor-pointer items-center justify-center rounded border border-dashed border-white/20">
+                  <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
                     {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
+                    <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
                     <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
                   </label>
                 )}
@@ -590,8 +591,9 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
             </div>
           </div>
         ) : (
-          <label className="flex h-24 cursor-pointer items-center justify-center rounded border border-dashed border-white/20">
+          <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
             {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
+            <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
             <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} disabled={posts.length >= 30} />
           </label>
         )}
@@ -772,10 +774,13 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
       <Field label="Foto / Logo">
         <div className="flex items-center gap-3">
           {form.photo_url && <img src={form.photo_url} className="h-16 w-16 rounded-full object-cover" />}
-          <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Trocar foto"}
-            <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "photo_url")} />
-          </label>
+          <div>
+            <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Trocar foto"}
+              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "photo_url")} />
+            </label>
+            <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
+          </div>
         </div>
       </Field>
       <Field label="Nome fantasia"><input className="field-input" value={form.fantasy_name} onChange={e => setForm({ ...form, fantasy_name: e.target.value })} /></Field>
