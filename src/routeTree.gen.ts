@@ -52,6 +52,7 @@ import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-ch
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminTestSalesRouteImport } from './routes/admin.test-sales'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-reports'
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
@@ -309,6 +310,11 @@ const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTestSalesRoute = AdminTestSalesRouteImport.update({
+  id: '/test-sales',
+  path: '/test-sales',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
@@ -576,6 +582,7 @@ export interface FileRoutesByFullPath {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -661,6 +668,7 @@ export interface FileRoutesByTo {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -749,6 +757,7 @@ export interface FileRoutesById {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -838,6 +847,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
     | '/invite/$token'
@@ -923,6 +933,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
     | '/invite/$token'
@@ -1010,6 +1021,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
     | '/invite/$token'
@@ -1384,6 +1396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/test-sales': {
+      id: '/admin/test-sales'
+      path: '/test-sales'
+      fullPath: '/admin/test-sales'
+      preLoaderRoute: typeof AdminTestSalesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/students': {
       id: '/admin/students'
       path: '/students'
@@ -1726,6 +1745,7 @@ interface AdminRouteChildren {
   AdminStoreRoute: typeof AdminStoreRoute
   AdminStoreReportsRoute: typeof AdminStoreReportsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminTestSalesRoute: typeof AdminTestSalesRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -1763,6 +1783,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminStoreRoute: AdminStoreRoute,
   AdminStoreReportsRoute: AdminStoreReportsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
+  AdminTestSalesRoute: AdminTestSalesRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -1876,3 +1897,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
