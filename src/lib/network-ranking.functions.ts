@@ -120,11 +120,12 @@ function collectDownline(rootCoachId: string, byUpline: Map<string, CoachRow[]>,
 }
 
 async function loadBase(supabaseAdmin: any) {
-  const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }, { data: mastersRaw }, { data: specsRaw }] = await Promise.all([
+  const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }, { data: mastersRaw }, { data: masterBadgesRaw }, { data: specsRaw }] = await Promise.all([
     supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,specialty_key,herbalife_portal_url,profiles!coaches_profile_id_fkey(name,email)"),
     supabaseAdmin.from("students").select("id,coach_id,profile_id"),
     supabaseAdmin.from("partners").select("profile_id"),
     supabaseAdmin.from("master_coaches").select("coach_id,status"),
+    supabaseAdmin.from("coach_badges").select("coach_id").eq("badge_key", "master_coach"),
     supabaseAdmin.from("professional_specialties").select("key,label"),
   ]);
   const coaches = ((coachesRaw as Array<CoachRow & { specialty_key?: string | null; herbalife_portal_url?: string | null }> | null) || []).filter((c) => !!c.id);
@@ -133,7 +134,9 @@ async function loadBase(supabaseAdmin: any) {
   const professionalProfileIds = new Set(coaches.filter((c) => !!c.is_professional).map((c) => c.profile_id));
   const partnerProfileIds = new Set(((partnersRaw as Array<{ profile_id: string }> | null) || []).map((p) => p.profile_id));
   const studentProfileIds = new Set(students.map((s) => s.profile_id));
-  const masterCoachIds = new Set(((mastersRaw as Array<{ coach_id: string; status: string | null }> | null) || []).filter((m) => (m.status || "active") === "active").map((m) => m.coach_id));
+  const masterCoachIds = new Set<string>();
+  ((mastersRaw as Array<{ coach_id: string; status: string | null }> | null) || []).filter((m) => (m.status || "active") === "active").forEach((m) => masterCoachIds.add(m.coach_id));
+  ((masterBadgesRaw as Array<{ coach_id: string }> | null) || []).forEach((b) => masterCoachIds.add(b.coach_id));
   const specialtyLabels = new Map<string, string>();
   ((specsRaw as Array<{ key: string; label: string }> | null) || []).forEach((s) => specialtyLabels.set(s.key, s.label));
   return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds, masterCoachIds, specialtyLabels };
