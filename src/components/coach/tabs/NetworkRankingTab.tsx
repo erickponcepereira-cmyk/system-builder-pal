@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Award, Search, Trophy, Users } from "lucide-react";
+import { Award, Search } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyNetworkRanking, type NetworkRankingRow } from "@/lib/network-ranking.functions";
 
