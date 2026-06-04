@@ -413,6 +413,8 @@ export const getAdminNetworkRanking = createServerFn({ method: "POST" })
         individualRevenue: revenue.get(coach.id) || 0,
         networkRevenue: networkRevenue(coach.id),
         medal: null,
+        patent: null,
+        categories: [],
       }))
       .sort((a, b) => (b.individualRevenue + b.networkRevenue) - (a.individualRevenue + a.networkRevenue) || b.individualRevenue - a.individualRevenue || a.name.localeCompare(b.name));
   });
