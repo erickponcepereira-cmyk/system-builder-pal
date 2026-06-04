@@ -186,7 +186,11 @@ function AdminTestSalesPage() {
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="grid gap-1 text-xs font-medium text-white/55"><span>{label}</span>{children}</label>;
+  return <label className="grid gap-2 text-xs font-semibold text-white/70"><span>{label}</span>{children}</label>;
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div><p className="text-[11px] uppercase tracking-wide text-white/45">{label}</p><p className="text-lg font-bold text-white">{value}</p></div>;
 }
 
 function SaleCard({ row, onDelete, busy }: { row: SaleRow; onDelete: () => void; busy: boolean }) {
