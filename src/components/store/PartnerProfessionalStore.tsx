@@ -397,9 +397,105 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
               onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); }}
             />
+            <PayLinkShare orderNumber={payOrder.number} clientName={resellerStudent?.name} />
           </div>
         </div>
       )}
     </>
+  );
+}
+
+function PayLinkShare({ orderNumber, clientName }: { orderNumber: string; clientName?: string | null }) {
+  if (typeof window === "undefined") return null;
+  const payLink = `${window.location.origin}/pay/${orderNumber}`;
+  const waMsg = encodeURIComponent(
+    `Olá ${clientName || ""}! Segue o link para finalizar seu pagamento:\n\n${payLink}`,
+  );
+  const waUrl = `https://wa.me/?text=${waMsg}`;
+  return (
+    <div className="mt-4 space-y-3 rounded-xl bg-white/5 p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Link de pagamento do cliente</p>
+      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/40 px-3 py-2">
+        <span className="flex-1 truncate font-mono text-[11px] text-primary">{payLink}</span>
+        <button
+          onClick={() => { navigator.clipboard.writeText(payLink); toast.success("Link copiado!"); }}
+          className="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20"
+        >
+          Copiar
+        </button>
+      </div>
+      <a
+        href={waUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white hover:bg-[#20bd5a]"
+      >
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.522 5.845L.044 23.956l6.277-1.643A11.935 11.935 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.79 9.79 0 01-4.99-1.364l-.358-.212-3.724.976.993-3.631-.233-.374A9.786 9.786 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z" />
+        </svg>
+        {clientName ? `Enviar pelo WhatsApp para ${clientName}` : "Enviar pelo WhatsApp"}
+      </a>
+    </div>
+  );
+}
+
+function CommissionBreakdown({ price, pct }: { price: number; pct?: number | null }) {
+  const [open, setOpen] = useState(false);
+  if (!pct || pct <= 0 || price <= 0) return null;
+  const cPct = pct as CoachCommissionPct;
+  const pix = computeFromCharge(price, cPct, "pix");
+  const card = computeFromCharge(price, cPct, "card");
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const cells = [
+    { label: "Você", pixV: pix.coachNet, cardV: card.coachNet },
+    { label: "Nível 1", pixV: pix.networkL1, cardV: card.networkL1 },
+    { label: "Nível 2", pixV: pix.networkL2, cardV: card.networkL2 },
+    { label: "Nível 3", pixV: pix.networkL3, cardV: card.networkL3 },
+  ];
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="mb-3 flex w-full items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Comissões deste produto</p>
+        </div>
+        {open ? <EyeOff className="h-4 w-4 text-primary" /> : <Eye className="h-4 w-4 text-primary" />}
+      </button>
+      {open && (
+        <>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs">
+            {cells.map((c) => (
+              <div key={c.label} className="rounded-lg bg-card p-2">
+                <p className="text-muted-foreground">{c.label}</p>
+                <div className="mt-1 space-y-0.5">
+                  <p className="flex items-center justify-between gap-1 text-[10px]">
+                    <span className="text-muted-foreground">PIX</span>
+                    <span className="font-bold text-foreground">{fmt(c.pixV)}</span>
+                  </p>
+                  <p className="flex items-center justify-between gap-1 text-[10px]">
+                    <span className="text-muted-foreground">Cartão</span>
+                    <span className="font-bold text-foreground">{fmt(c.cardV)}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 rounded-lg bg-card p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Sua comissão estimada (PIX)</span>
+              <span className="font-bold text-primary">{fmt(pix.coachNet)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Sua comissão estimada (Cartão)</span>
+              <span className="font-bold text-primary">{fmt(card.coachNet)}</span>
+            </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Cálculo sobre o valor líquido (preço − taxa de cartão/pix, imposto e taxa do sistema). PIX não tem taxa de cartão, por isso a comissão é maior.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
