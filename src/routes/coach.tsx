@@ -25,6 +25,7 @@ import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
+import { WorkoutPlansTab } from "@/components/coach/tabs/WorkoutPlansTab";
 import { PartnersApprovalTab } from "@/components/coach/tabs/PartnersApprovalTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
@@ -48,7 +49,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
+type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
 
 
 export const money = (value: number | null | undefined) =>
@@ -291,6 +292,7 @@ function CoachDashboard() {
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
+    { id: "workouts", label: "Treinos & Evolução", icon: Dumbbell },
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
@@ -496,6 +498,7 @@ function CoachDashboard() {
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "protocol" && <ProtocolTab />}
+          {activeTab === "workouts" && <WorkoutPlansTab />}
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "reports" && <CoachReports />}
          {activeTab === "fitmind_calendar" && <div className="p-4"><FitmindCalendar /></div>}
