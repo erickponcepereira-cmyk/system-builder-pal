@@ -128,7 +128,7 @@ function StudentEvolution() {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-foreground">Fotos de evolução</h2>
-            <p className="text-[11px] text-muted-foreground">Até {MAX_PHOTOS} fotos, máx {MAX_PER_WEEK}/semana · toque para ver e comparar</p>
+            <p className="text-[11px] text-muted-foreground">Até {MAX_PHOTOS} fotos, máx {MAX_PER_WEEK}/semana · toque para ver e comparar · recomendado 1080×1440px (3:4)</p>
           </div>
           <Camera className="h-5 w-5 text-primary" />
         </div>
