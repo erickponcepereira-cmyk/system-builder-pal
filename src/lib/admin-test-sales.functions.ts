@@ -170,12 +170,14 @@ async function subtractAdminWallet(amount: number) {
 }
 
 async function profileIdForPartner(partnerId: string | null | undefined) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (!partnerId) return null;
   const { data } = await supabaseAdmin.from("partners" as never).select("profile_id" as never).eq("id" as never, partnerId as never).maybeSingle();
   return (data as any)?.profile_id || null;
 }
 
 async function deleteSimulation(data: DeleteInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   if (data.sourceKind === "partner_product_order") {
     const { data: order } = await supabaseAdmin
       .from("partner_product_orders" as never)
@@ -209,6 +211,7 @@ async function deleteSimulation(data: DeleteInput) {
 }
 
 async function createStoreSimulation(input: SimulateInput) {
+  const supabaseAdmin = await getSupabaseAdmin();
   const product = await getProduct(input);
   const { data: student } = await supabaseAdmin
     .from("students")
