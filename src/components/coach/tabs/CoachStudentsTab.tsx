@@ -9,6 +9,7 @@ import { getCoachStudentsTokens } from "@/lib/challenge-tokens.functions";
 
 type StudentRow = {
   id: string;
+  profile_id: string;
   current_weight: number | null;
   goal_weight: number | null;
   completed_coach_course: boolean | null;
@@ -20,7 +21,9 @@ type ExtraInfo = {
   topPlan: { name: string; price: number | null } | null;
   lastAssessmentDate: string | null;
   tokenBalance: number;
+  tags: string[];
 };
+
 
 const fmtBR = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
 
