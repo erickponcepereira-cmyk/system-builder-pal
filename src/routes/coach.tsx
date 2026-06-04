@@ -490,6 +490,7 @@ function CoachDashboard() {
           {activeTab === "profile" && <CoachProfileTab coach={coachContext} onSaved={reloadCoach} onLocalChange={setCoachContext} />}
           {activeTab === "students" && <CoachStudentsTab coachId={coachContext?.coachId || ""} />}
           {activeTab === "tree" && <NetworkTreeTab coach={coachContext} />}
+          {activeTab === "networkRanking" && <NetworkRankingTab />}
           {activeTab === "physicalStore" && <PhysicalStoreTab hasUpline={!!coachContext?.uplineCoachId} />}
           {activeTab === "partnerApprovals" && canApprovePartners && <PartnersApprovalTab />}
           {activeTab === "benefits" && <CoachBenefitsTab />}
