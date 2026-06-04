@@ -92,10 +92,12 @@ export default function CoachProfileModal({ coachId, onClose }: { coachId: strin
   const [data, setData] = useState<CoachModalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openCoaches, setOpenCoaches] = useState(false);
   const [openPartners, setOpenPartners] = useState(false);
   const [openPros, setOpenPros] = useState(false);
   const [topFilter, setTopFilter] = useState<"month" | "all">("month");
   const [coachesFilter, setCoachesFilter] = useState<"month" | "all">("month");
+  const [revealRewards, setRevealRewards] = useState(false);
 
   useEffect(() => {
     let active = true;
