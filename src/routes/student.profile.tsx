@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X } from "lucide-react";
+import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
+import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 
 export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
