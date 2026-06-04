@@ -86,7 +86,7 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
   const [data, setData] = useState<MyNetworkStructure | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<CoachNetworkModalData | null>(null);
+  const [openStudentId, setOpenStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -96,17 +96,10 @@ export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }
   }, [fetchNetwork]);
 
   const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !(p[id] ?? true) }));
-  const openModal = (n: CoachTreeNode) => setModal({
-    coachId: n.coachId,
-    name: n.name,
-    email: n.email,
-    categories: n.categories,
-    patent: n.patent,
-    medal: n.medal,
-    directStudents: n.directStudents.total,
-    childCoaches: n.childCoaches,
-    children: n.children,
-  });
+  const openModal = (n: CoachTreeNode) => {
+    if (!n.studentId) { toast.error("Esse coach ainda não possui registro de aluno."); return; }
+    setOpenStudentId(n.studentId);
+  };
 
   return (
     <>
