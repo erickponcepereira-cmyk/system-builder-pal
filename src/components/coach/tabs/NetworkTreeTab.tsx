@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Dot, Users } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMyNetworkStructure, type CoachTreeNode, type StudentBreakdown } from "@/lib/network-ranking.functions";
+import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type StudentBreakdown } from "@/lib/network-ranking.functions";
 import { type CoachContext } from "@/routes/coach";
 
 function Breakdown({ data }: { data: StudentBreakdown }) {
@@ -49,7 +49,7 @@ function TreeNode({ node, expanded, toggle }: { node: CoachTreeNode; expanded: R
 
 export function NetworkTreeTab({ coach: _coach }: { coach: CoachContext | null }) {
   const fetchNetwork = useServerFn(getMyNetworkStructure);
-  const [data, setData] = useState<Awaited<ReturnType<typeof getMyNetworkStructure>> | null>(null);
+  const [data, setData] = useState<MyNetworkStructure | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
