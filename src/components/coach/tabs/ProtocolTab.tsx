@@ -43,6 +43,9 @@ type Protocol = {
   weight_goal: number | null;
   general_notes: string;
   workout_plan: WorkoutItem[];
+  workout_name: string;
+  workout_goal: WorkoutTemplate["goal"];
+  workout_level: NonNullable<WorkoutTemplate["level"]>;
 };
 
 const RESTRICTION_OPTIONS = [
