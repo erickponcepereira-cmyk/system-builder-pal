@@ -166,6 +166,39 @@ async function profileIdForPartner(partnerId: string | null | undefined) {
   return (data as any)?.profile_id || null;
 }
 
+async function deleteSimulation(data: DeleteInput) {
+  if (data.sourceKind === "partner_product_order") {
+    const { data: order } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("metadata,system_fee,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,selling_coach_id,upline_l1_coach_id,upline_l2_coach_id,upline_l3_coach_id,professional_coach_id,partner_id" as never)
+      .eq("id" as never, data.id as never)
+      .maybeSingle();
+    const row = order as any;
+    if (!row?.metadata?.test_simulation) throw new Error("Este pedido não é uma simulação");
+    await subtractAdminWallet(moneyNumber(row.system_fee));
+    await subtractWallet(await profileIdForCoach(row.selling_coach_id), moneyNumber(row.coach_net_amount));
+    await subtractWallet(await profileIdForCoach(row.upline_l1_coach_id), moneyNumber(row.network_l1_amount));
+    await subtractWallet(await profileIdForCoach(row.upline_l2_coach_id), moneyNumber(row.network_l2_amount));
+    await subtractWallet(await profileIdForCoach(row.upline_l3_coach_id), moneyNumber(row.network_l3_amount));
+    await subtractWallet(await profileIdForCoach(row.professional_coach_id), moneyNumber(row.partner_net_amount));
+    await subtractWallet(await profileIdForPartner(row.partner_id), moneyNumber(row.partner_net_amount));
+    await supabaseAdmin.from("partner_product_orders" as never).delete().eq("id" as never, data.id as never);
+    return { ok: true };
+  }
+
+  const { data: order } = await supabaseAdmin.from("store_orders").select("metadata").eq("id", data.id).maybeSingle();
+  if (!(order as any)?.metadata?.test_simulation) throw new Error("Este pedido não é uma simulação");
+  const { data: txs } = await supabaseAdmin.from("transactions").select("id").filter("metadata->>store_order_id", "eq", data.id);
+  const txIds = ((txs as any[]) || []).map((t) => t.id);
+  if (txIds.length) {
+    await supabaseAdmin.from("commissions").delete().in("transaction_id", txIds);
+    await supabaseAdmin.from("transactions").delete().in("id", txIds);
+  }
+  await supabaseAdmin.from("store_order_items").delete().eq("order_id", data.id);
+  await supabaseAdmin.from("store_orders").delete().eq("id", data.id);
+  return { ok: true };
+}
+
 async function createStoreSimulation(input: SimulateInput) {
   const product = await getProduct(input);
   const { data: student } = await supabaseAdmin
