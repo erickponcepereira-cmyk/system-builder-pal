@@ -117,32 +117,42 @@ function collectDownline(rootCoachId: string, byUpline: Map<string, CoachRow[]>,
 }
 
 async function loadBase(supabaseAdmin: any) {
-  const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }] = await Promise.all([
-    supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,profiles!coaches_profile_id_fkey(name,email)"),
+  const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }, { data: mastersRaw }, { data: specsRaw }] = await Promise.all([
+    supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,specialty_key,herbalife_portal_url,profiles!coaches_profile_id_fkey(name,email)"),
     supabaseAdmin.from("students").select("id,coach_id,profile_id"),
     supabaseAdmin.from("partners").select("profile_id"),
+    supabaseAdmin.from("master_coaches").select("coach_id,status"),
+    supabaseAdmin.from("professional_specialties").select("key,label"),
   ]);
-  const coaches = ((coachesRaw as CoachRow[] | null) || []).filter((c) => !!c.id);
+  const coaches = ((coachesRaw as Array<CoachRow & { specialty_key?: string | null; herbalife_portal_url?: string | null }> | null) || []).filter((c) => !!c.id);
   const students = ((studentsRaw as StudentRow[] | null) || []).filter((s) => !!s.coach_id);
   const coachProfileIds = new Set(coaches.map((c) => c.profile_id));
   const professionalProfileIds = new Set(coaches.filter((c) => !!c.is_professional).map((c) => c.profile_id));
   const partnerProfileIds = new Set(((partnersRaw as Array<{ profile_id: string }> | null) || []).map((p) => p.profile_id));
   const studentProfileIds = new Set(students.map((s) => s.profile_id));
-  return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds };
+  const masterCoachIds = new Set(((mastersRaw as Array<{ coach_id: string; status: string | null }> | null) || []).filter((m) => (m.status || "active") === "active").map((m) => m.coach_id));
+  const specialtyLabels = new Map<string, string>();
+  ((specsRaw as Array<{ key: string; label: string }> | null) || []).forEach((s) => specialtyLabels.set(s.key, s.label));
+  return { coaches, students, coachProfileIds, professionalProfileIds, partnerProfileIds, studentProfileIds, masterCoachIds, specialtyLabels };
 }
 
 function categoriesForCoach(
-  coach: CoachRow,
-  studentProfileIds: Set<string>,
-  professionalProfileIds: Set<string>,
+  coach: CoachRow & { specialty_key?: string | null; herbalife_portal_url?: string | null },
   partnerProfileIds: Set<string>,
+  masterCoachIds: Set<string>,
+  specialtyLabels: Map<string, string>,
 ): string[] {
-  const cats: string[] = ["Coach"];
-  if (studentProfileIds.has(coach.profile_id)) cats.push("Aluno");
-  if (professionalProfileIds.has(coach.profile_id)) cats.push("Profissional");
+  const cats: string[] = [];
+  if (masterCoachIds.has(coach.id)) cats.push("Master Coach");
+  if (coach.specialty_key) {
+    const label = specialtyLabels.get(coach.specialty_key);
+    if (label) cats.push(label);
+  }
+  if (coach.herbalife_portal_url && coach.herbalife_portal_url.trim()) cats.push("Coach HBL");
   if (partnerProfileIds.has(coach.profile_id)) cats.push("Parceiro");
   return cats;
 }
+
 
 type PatentRule = {
   key: string;
