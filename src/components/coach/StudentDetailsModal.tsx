@@ -226,6 +226,12 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/50" /></div>
           ) : tab === "resumo" ? (
             <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {classifications.map((c) => (
+                  <span key={c} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${c === "Aluno" ? "bg-white/10 text-white/70" : c === "Aluno Coach" ? "bg-primary/20 text-primary" : c === "Profissional" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>{c}</span>
+                ))}
+              </div>
+
               <Card title="Plano ativo de maior valor" icon={<Crown className="h-4 w-4 text-primary" />}>
                 {mostExpensivePlan ? (
                   <div className="flex items-center justify-between gap-3">
