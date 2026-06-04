@@ -336,11 +336,14 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
       windowsRevenueByCoach.set(months, rev);
     }));
 
+    const profileToStudent = new Map<string, string>();
+    students.forEach((s) => { if (!profileToStudent.has(s.profile_id)) profileToStudent.set(s.profile_id, s.id); });
+
     const enrich = (c: CoachRow) => {
       const own = lifetimeRevenue.get(c.id) || 0;
       return {
         coachId: c.id,
-
+        studentId: profileToStudent.get(c.profile_id) ?? null,
         name: coachName(c),
         email: coachEmail(c),
         directStudents: breakdown(c.id),
