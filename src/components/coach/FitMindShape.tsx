@@ -385,6 +385,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("");
   const [scopeFilter, setScopeFilter] = useState<"mine" | "all">("mine");
+  const myClients = useMemo(
+    () => clients.filter((c) => !c.coachId || c.coachId === coach.id),
+    [clients, coach.id],
+  );
+  const hasOtherCoachClients = useMemo(
+    () => clients.some((c) => c.coachId && c.coachId !== coach.id),
+    [clients, coach.id],
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
