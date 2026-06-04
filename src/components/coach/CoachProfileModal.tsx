@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { X, Award, Users, Briefcase, ShoppingBag, Trophy, Sparkles, Clock, ChevronDown, ChevronRight, UserCheck, Mail, Phone } from "lucide-react";
+import { X, Award, Users, Briefcase, ShoppingBag, Trophy, Sparkles, Clock, ChevronDown, ChevronRight, UserCheck, Mail, Phone, Eye, EyeOff, Plane, Utensils, CheckCircle2 } from "lucide-react";
 import { getCoachModalData, type CoachModalData, type CoachModalPersonRef, type CoachModalTopProduct } from "@/lib/coach-modal.functions";
 
 function money(v: number | null | undefined) {
