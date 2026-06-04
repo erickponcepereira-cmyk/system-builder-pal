@@ -83,14 +83,36 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
         tokenBalances = new Map(balRows.map((b) => [b.studentId, b.balance]));
       } catch (e) { console.warn("tokens fetch failed", e); }
 
-      ids.forEach((id) => {
-        ex[id] = {
-          topPlan: topPlanByStudent.get(id) || null,
-          lastAssessmentDate: lastAssessByStudent.get(id) || null,
-          tokenBalance: tokenBalances.get(id) || 0,
+      // Tags de classificação (Aluno / Aluno Coach / Profissional / Parceiro)
+      const profileIds = rows.map((r) => r.profile_id).filter(Boolean);
+      const coachByProfile = new Map<string, { is_professional: boolean | null }>();
+      const partnerProfiles = new Set<string>();
+      if (profileIds.length) {
+        const [cRes, pRes] = await Promise.all([
+          supabase.from("coaches").select("profile_id,is_professional").in("profile_id", profileIds),
+          supabase.from("partners").select("profile_id").in("profile_id", profileIds),
+        ]);
+        ((cRes.data || []) as Array<{ profile_id: string; is_professional: boolean | null }>).forEach((c) => coachByProfile.set(c.profile_id, { is_professional: c.is_professional }));
+        ((pRes.data || []) as Array<{ profile_id: string }>).forEach((p) => partnerProfiles.add(p.profile_id));
+      }
+
+      rows.forEach((r) => {
+        const tags: string[] = ["Aluno"];
+        const c = coachByProfile.get(r.profile_id);
+        if (c) {
+          if (c.is_professional) tags.push("Profissional");
+          else tags.push("Aluno Coach");
+        }
+        if (partnerProfiles.has(r.profile_id)) tags.push("Parceiro");
+        ex[r.id] = {
+          topPlan: topPlanByStudent.get(r.id) || null,
+          lastAssessmentDate: lastAssessByStudent.get(r.id) || null,
+          tokenBalance: tokenBalances.get(r.id) || 0,
+          tags,
         };
       });
       setExtras(ex);
+
     })();
   }, [coachId]);
 
