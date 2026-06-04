@@ -78,8 +78,9 @@ export function OverviewTab({
     { label: "Alunos ativos", value: maskNum(data.students), change: "", icon: Users },
     { label: "Vendas/mês", value: maskMoney(data.salesMonth), change: "", icon: TrendingUp },
     { label: "Comissões/mês", value: maskMoney(data.commissionsMonth), change: "", icon: BarChart3 },
-  const [saleOpen, setSaleOpen] = useState(false);
-  void saleOpen; void setSaleOpen;
+    { label: "Saldo", value: maskMoney(data.balance), change: "Disponível", icon: Wallet },
+  ];
+
 
   return (
     <>
