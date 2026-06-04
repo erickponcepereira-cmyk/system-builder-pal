@@ -113,8 +113,15 @@ export const getMyChallengeTokens = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const student = await resolveStudentByUser(context.userId);
     if (!student) {
-      return { balance: 0, totalEarned: 0, totalConsumed: 0, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [] };
+      return { balance: 0, totalEarned: 0, totalConsumed: 0, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [], blocked: false };
     }
+
+    const blocked: ChallengeTokenSummary["blocked"] =
+      student.roleFlags.isProfessional ? { reason: "aluno_profissional" } :
+      student.roleFlags.isCoach ? { reason: "aluno_coach" } :
+      student.roleFlags.isPartner ? { reason: "aluno_parceiro" } :
+      false;
+
     const { data: tokens } = await supabaseAdmin
       .from("student_challenge_tokens")
       .select("id, consumed_at")
@@ -124,11 +131,15 @@ export const getMyChallengeTokens = createServerFn({ method: "GET" })
     const totalConsumed = rows.filter((r) => !!r.consumed_at).length;
     const balance = totalEarned - totalConsumed;
 
+    if (blocked) {
+      return { balance, totalEarned, totalConsumed, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [], blocked };
+    }
+
     const { joinable, enrolledCompIds } = await loadJoinableTurmas(student.id);
     const currentTurma = joinable[0] || null;
     const alreadyEnrolledInCurrent = currentTurma ? enrolledCompIds.has(currentTurma.competitionId) : false;
 
-    return { balance, totalEarned, totalConsumed, currentTurma, alreadyEnrolledInCurrent, joinableTurmas: joinable };
+    return { balance, totalEarned, totalConsumed, currentTurma, alreadyEnrolledInCurrent, joinableTurmas: joinable, blocked: false };
   });
 
 export const joinChallengeWithToken = createServerFn({ method: "POST" })
