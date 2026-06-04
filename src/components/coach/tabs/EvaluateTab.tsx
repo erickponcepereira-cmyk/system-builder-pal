@@ -476,12 +476,9 @@ export function EvaluateTab() {
             body_age: int(updated.bodyAge),
             body_water: num(updated.bodyWater),
             bone_mass: num(updated.boneMass),
-            systolic_bp: int(updated.systolicBP),
-            diastolic_bp: int(updated.diastolicBP),
-            heart_rate: int(updated.heartRate),
-            blood_glucose: num(updated.bloodGlucose),
             client_notes: nz(updated.clientNotes),
             professional_notes: nz(updated.professionalNotes),
+            photos: updated.photos || {},
           };
           const { error } = await supabase
             .from("coach_body_assessments" as never)
