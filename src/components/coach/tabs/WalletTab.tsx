@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Wallet, X, Crown, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info } from "lucide-react";
+import { Wallet, X, Crown, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info, Trophy, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions";
+import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
+import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
+import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+
 
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
