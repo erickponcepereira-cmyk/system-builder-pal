@@ -588,6 +588,33 @@ function EvolutionPhotos({ photos }: { photos: PhotoRow[] }) {
   );
 }
 
+function WaterHistoryPanel({ history, goalMl }: { history: { date: string; total_ml: number }[]; goalMl: number }) {
+  return (
+    <div>
+      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">
+        Histórico de hidratação · meta {(goalMl / 1000).toFixed(1)} L/dia (últimos 30 dias)
+      </p>
+      {history.length === 0 ? (
+        <p className="text-xs text-white/40">Aluno ainda não registrou consumo de água.</p>
+      ) : (
+        <ul className="space-y-1">
+          {history.map((d) => {
+            const reached = d.total_ml >= goalMl;
+            return (
+              <li key={d.date} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5 text-xs">
+                <span className="text-white/80">{new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}</span>
+                <span className={`font-bold ${reached ? "text-emerald-400" : "text-white/70"}`}>
+                  {(d.total_ml / 1000).toFixed(2)} L {reached ? "✓" : ""}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 type PurchaseStatusFilter = "all" | "paid" | "pending" | "cancelled";
 function PurchasesTab({ txs }: { txs: TxRow[] }) {
   const [filter, setFilter] = useState<PurchaseStatusFilter>("all");
