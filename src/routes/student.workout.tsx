@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus } from "lucide-react";
-import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory } from "@/lib/workouts.functions";
+import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig } from "@/lib/workouts.functions";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
