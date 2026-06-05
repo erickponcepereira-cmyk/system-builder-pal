@@ -985,9 +985,17 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
   const [loading, setLoading] = useState(false);
   const [canManage, setCanManage] = useState(false);
+  const [myRegStatus, setMyRegStatus] = useState<"registered" | "attended" | "no_show" | null>(null);
+  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
   const fetchAttendees = useServerFn(getEventAttendees);
+  const callToggleReg = useServerFn(toggleMyRegistration);
+  const callGetMyReg = useServerFn(getMyRegistration);
+  const callGetRegs = useServerFn(getEventRegistrations);
+  const callSetRegStatus = useServerFn(setRegistrationStatus);
+  const callFinalize = useServerFn(finalizeEventAttendance);
 
   const reload = async () => {
     try {
@@ -998,9 +1006,22 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     }
   };
 
+  const reloadRegs = async () => {
+    try {
+      const r = await callGetRegs({ data: { eventId } });
+      setRegistrations(r);
+    } catch {
+      setRegistrations([]);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       await reload();
+      try {
+        const r = await callGetMyReg({ data: { eventId } });
+        setMyRegStatus(r.status);
+      } catch { /* noop */ }
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
       const { data: profile } = await supabase
@@ -1008,7 +1029,6 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
       if (!profile) return;
       setMyProfileId(profile.id);
 
-      // Permission: admin OR event_creator badge OR responsible coach of this event
       const { data: adminCheck } = await supabase.rpc("is_admin" as never, { _user_id: userData.user.id } as never);
       if (adminCheck === true) { setCanManage(true); return; }
       const { data: coach } = await supabase
@@ -1027,7 +1047,25 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, responsibleCoachId]);
 
+  useEffect(() => {
+    if (showRoster && canManage) reloadRegs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRoster, canManage, eventId]);
+
   const mine = attendees.find((a) => a.profile_id === myProfileId);
+
+  const toggleQueroIr = async () => {
+    setLoading(true);
+    try {
+      const r = await callToggleReg({ data: { eventId } });
+      setMyRegStatus(r.registered ? "registered" : null);
+      toast.success(r.registered ? "Inscrição confirmada — você receberá lembretes!" : "Inscrição cancelada.");
+    } catch (e) {
+      toast.error((e as Error).message || "Não foi possível atualizar inscrição.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const markPresent = async () => {
     if (!myProfileId) { toast.error("Faça login para marcar presença."); return; }
@@ -1068,6 +1106,41 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     "Aluno Coach":        "bg-primary/20 text-primary",
     "Aluno Parceiro":     "bg-blue-500/20 text-blue-300",
     "Aluno Profissional": "bg-emerald-500/20 text-emerald-300",
+  };
+
+  const STATUS_STYLES: Record<"registered" | "attended" | "no_show", { label: string; cls: string }> = {
+    registered: { label: "Inscrito", cls: "bg-blue-500/20 text-blue-300" },
+    attended:   { label: "Compareceu", cls: "bg-emerald-500/20 text-emerald-300" },
+    no_show:    { label: "Faltou", cls: "bg-red-500/20 text-red-300" },
+  };
+
+  const cycleStatus = async (reg: RegistrationRow) => {
+    const next: RegistrationStatusLite = reg.status === "registered" ? "attended"
+      : reg.status === "attended" ? "no_show" : "registered";
+    try {
+      await callSetRegStatus({ data: { registrationId: reg.id, status: next } });
+      setRegistrations((prev) => prev.map((r) => r.id === reg.id ? { ...r, status: next } : r));
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao atualizar status.");
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!confirm("Finalizar evento? Todos os inscritos que não escanearam o QR serão marcados como 'Faltou' (editável depois).")) return;
+    try {
+      const r = await callFinalize({ data: { eventId } });
+      toast.success(`Evento finalizado — ${r.marked} marcado(s) como 'Faltou'.`);
+      reloadRegs();
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao finalizar.");
+    }
+  };
+
+  const regCounts = {
+    total: registrations.length,
+    registered: registrations.filter((r) => r.status === "registered").length,
+    attended: registrations.filter((r) => r.status === "attended").length,
+    no_show: registrations.filter((r) => r.status === "no_show").length,
   };
 
   return (
