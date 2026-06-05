@@ -261,37 +261,53 @@ export interface MinisteredReport {
 export const getCoachMinisteredReport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({ from: z.string().optional(), to: z.string().optional() }).parse(input ?? {}),
+    z.object({
+      from: z.string().optional(),
+      to: z.string().optional(),
+      scope: z.enum(["ministered", "created"]).optional(),
+    }).parse(input ?? {}),
   )
-  .handler(async ({ data, context }): Promise<MinisteredReport> => {
+  .handler(async ({ data, context }): Promise<MinisteredReport & { can_view_created: boolean; scope: "ministered" | "created" }> => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const empty: MinisteredReport = {
-      summary: { events_count: 0, attendees_total: 0, last_event: null },
-      events: [],
-      top_participants: [],
-      top_referring_coaches: [],
-    };
-
     const { data: prof } = await supabase
       .from("profiles").select("id").eq("user_id", userId).maybeSingle();
-    if (!prof) return empty;
-    const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id").eq("profile_id", (prof as { id: string }).id).maybeSingle();
-    if (!coach) return empty;
-    const coachId = (coach as { id: string }).id;
+    const profileId = (prof as { id: string } | null)?.id || null;
+    const coachRes = profileId
+      ? await supabaseAdmin.from("coaches").select("id").eq("profile_id", profileId).maybeSingle()
+      : { data: null as { id: string } | null };
+    const coachId = (coachRes.data as { id: string } | null)?.id || null;
+
+    let canViewCreated = false;
+    if (coachId) {
+      const { data: badge } = await supabaseAdmin
+        .from("coach_badges").select("badge_key")
+        .eq("coach_id", coachId).eq("badge_key", "event_creator" as never).maybeSingle();
+      canViewCreated = !!badge;
+    }
+    const scope: "ministered" | "created" =
+      data.scope === "created" && canViewCreated ? "created" : "ministered";
+
+    const empty: MinisteredReport & { can_view_created: boolean; scope: "ministered" | "created" } = {
+      summary: { events_count: 0, attendees_total: 0, last_event: null },
+      events: [], top_participants: [], top_referring_coaches: [],
+      can_view_created: canViewCreated, scope,
+    };
+    if (!coachId || !profileId) return empty;
 
     let q = supabaseAdmin
       .from("fitmind_events")
       .select("id,title,starts_at,category")
-      .eq("responsible_coach_id", coachId)
       .order("starts_at", { ascending: false });
+    if (scope === "created") q = q.eq("created_by", profileId);
+    else q = q.eq("responsible_coach_id", coachId);
     if (data.from) q = q.gte("starts_at", data.from);
     if (data.to) q = q.lte("starts_at", data.to);
     const { data: events } = await q;
     const evList = (events || []) as Array<{ id: string; title: string; starts_at: string; category: string }>;
     if (!evList.length) return empty;
+
 
     const evIds = evList.map((e) => e.id);
     const { data: attRaw } = await supabaseAdmin
