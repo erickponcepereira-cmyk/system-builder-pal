@@ -632,6 +632,42 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
   );
 }
 
+function AchievementReveal({ achievement, onClose }: { achievement: { code: string; title: string; icon: string | null }; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-6 animate-fade-in" onClick={onClose}>
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        {/* burst rays */}
+        <div className="absolute inset-0 -m-20 animate-pulse opacity-60" aria-hidden>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/40 via-orange-500/30 to-yellow-400/20 blur-3xl" />
+        </div>
+        {/* sparkles */}
+        {Array.from({ length: 12 }).map((_, i) => (
+          <Sparkles
+            key={i}
+            className="absolute h-5 w-5 text-yellow-300 animate-ping"
+            style={{
+              top: `${50 + 45 * Math.sin((i / 12) * Math.PI * 2)}%`,
+              left: `${50 + 45 * Math.cos((i / 12) * Math.PI * 2)}%`,
+              animationDelay: `${i * 90}ms`,
+              animationDuration: "1.6s",
+            }}
+          />
+        ))}
+        <div className="relative flex flex-col items-center gap-4 rounded-3xl border border-primary/40 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] p-8 text-center shadow-[0_0_60px_rgba(255,120,40,0.35)] animate-scale-in">
+          <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/80">Conquista desbloqueada</p>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-5xl shadow-lg shadow-primary/40">
+            {achievement.icon || "🏆"}
+          </div>
+          <h3 className="text-2xl font-extrabold text-white">{achievement.title}</h3>
+          <button onClick={onClose} className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground">
+            Incrível!
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
