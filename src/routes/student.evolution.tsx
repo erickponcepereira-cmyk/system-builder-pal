@@ -417,10 +417,11 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
   return (
     <section className="rounded-2xl bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <button onClick={() => setHistoryOpen(true)} className="flex items-center gap-2 text-left hover:opacity-80" title="Ver histórico">
           <Droplet className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">Hidratação do dia</h2>
-        </div>
+          <span className="text-[10px] text-primary/70 underline">histórico</span>
+        </button>
         <div className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5">
           <Trophy className="h-3 w-3 text-primary" />
           <span className="text-[10px] font-bold text-primary">{streak} dia{streak === 1 ? "" : "s"} seguidos</span>
