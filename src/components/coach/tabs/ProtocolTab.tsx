@@ -197,9 +197,9 @@ export function ProtocolTab() {
     toast.success(`Treino "${t.name}" aplicado.`);
   };
 
-  const enableTemplateAsDay = async (t: WorkoutTemplate, letter: string) => {
-    if (!selected) return toast.error("Selecione um aluno primeiro.");
-    if (selected.external) return toast.error("Esta ação só funciona para alunos do app (não externos).");
+  const enableTemplateAsDay = async (t: WorkoutTemplate, letter: string): Promise<void> => {
+    if (!selected) { toast.error("Selecione um aluno primeiro."); return; }
+    if (selected.external) { toast.error("Esta ação só funciona para alunos do app (não externos)."); return; }
     try {
       const r = (await enableTplFn({ data: { student_record_id: selected.id, template_id: t.id, letter } })) as { plan_name: string };
       toast.success(`"${r.plan_name}" habilitado para ${selected.name}.`);
