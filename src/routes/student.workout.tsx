@@ -952,7 +952,7 @@ function HistoryView({ onBack }: { onBack: () => void }) {
               </div>
               <div className="text-right">
                 <p className="font-bold text-primary">{s.completion_pct}%</p>
-                <p className="text-white/40">+{s.xp_earned} XP</p>
+                <p className="text-white/40">{s.total_seconds ? `${Math.floor((s.total_seconds||0)/60)}min` : ""}</p>
               </div>
             </div>
           );
