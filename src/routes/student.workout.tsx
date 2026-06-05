@@ -810,8 +810,17 @@ function ExerciseCard({
               + Série {done + 1}
             </button>
           </div>
+          {done < ex.sets && (
+            <button
+              onClick={onCompleteExercise}
+              className="mt-2 w-full rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/20"
+            >
+              <Check className="inline h-3 w-3 -mt-0.5 mr-1" /> Marcar exercício como concluído
+            </button>
+          )}
         </>
       )}
+
 
       {ex.is_cardio && !cardio?.done && (
         <div className="mt-3 grid grid-cols-2 gap-2">
