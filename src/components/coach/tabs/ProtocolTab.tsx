@@ -7,7 +7,7 @@ import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/comp
 import { WindowMethod } from "@/components/student/WindowMethod";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { calcWaterGoalMl, describeWaterFormula, calcAgeFromBirthdate } from "@/lib/water-goal";
-import { syncProtocolWorkout } from "@/lib/workouts.functions";
+import { syncProtocolWorkout, enableTemplateForStudent } from "@/lib/workouts.functions";
 
 type Student = {
   id: string;
