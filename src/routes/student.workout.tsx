@@ -104,7 +104,7 @@ function WorkoutPage() {
   useEffect(() => { reload(); }, []);
 
   if (view === "active" && activePlan) {
-    return <ActiveSession plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
+    return <ActiveSession key={activePlan.id} plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
@@ -447,6 +447,36 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
     }
   };
 
+  const completeExercise = async (ex: Plan["workout_exercises"][number]) => {
+    if (!sessionId) return;
+    const already = completedSets[ex.id] || 0;
+    if (already >= ex.sets) return;
+    const load = loads[ex.id] ?? ex.load_kg ?? 0;
+    const repsDone = reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0);
+    const eqConfig = equipment[ex.id] || null;
+    try {
+      for (let n = already + 1; n <= ex.sets; n++) {
+        await logSetFn({
+          data: {
+            session_id: sessionId,
+            exercise_id: ex.id,
+            set_number: n,
+            reps_done: repsDone,
+            load_kg: load,
+            rest_seconds_actual: null,
+            rest_exceeded: false,
+            equipment_config: eqConfig,
+          },
+        });
+      }
+      setCompletedSets((c) => ({ ...c, [ex.id]: ex.sets }));
+      setRestElapsed(null);
+      toast.success(`${ex.exercise_name} concluído!`);
+    } catch {
+      toast.error("Erro ao concluir exercício");
+    }
+  };
+
   const saveEquipment = async (ex: Plan["workout_exercises"][number], value: string) => {
     setEquipment((m) => ({ ...m, [ex.id]: value }));
     try { await saveConfigFn({ data: { exercise_id: ex.id, equipment_config_user: value || null } }); } catch { /* ignore */ }
@@ -619,6 +649,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
           }
           onCompleteSet={() => completeSet(ex)}
           onCompleteCardio={() => completeCardio(ex)}
+          onCompleteExercise={() => completeExercise(ex)}
         />
       ))}
 
@@ -692,6 +723,7 @@ function ExerciseCard({
   onChangeCardio,
   onCompleteSet,
   onCompleteCardio,
+  onCompleteExercise,
 }: {
   ex: Plan["workout_exercises"][number];
   done: number;
@@ -706,6 +738,7 @@ function ExerciseCard({
   onChangeCardio: (p: Partial<{ duration: string; pace: string; speed: string; elevation: string; distance: string }>) => void;
   onCompleteSet: () => void;
   onCompleteCardio: () => void;
+  onCompleteExercise: () => void;
 }) {
   const isComplete = ex.is_cardio ? cardio?.done : done >= ex.sets;
   const restLabel = ex.rest_seconds_max && ex.rest_seconds_max !== ex.rest_seconds
@@ -777,8 +810,17 @@ function ExerciseCard({
               + Série {done + 1}
             </button>
           </div>
+          {done < ex.sets && (
+            <button
+              onClick={onCompleteExercise}
+              className="mt-2 w-full rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/20"
+            >
+              <Check className="inline h-3 w-3 -mt-0.5 mr-1" /> Marcar exercício como concluído
+            </button>
+          )}
         </>
       )}
+
 
       {ex.is_cardio && !cardio?.done && (
         <div className="mt-3 grid grid-cols-2 gap-2">
