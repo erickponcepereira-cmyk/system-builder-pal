@@ -66,6 +66,7 @@ function calcAge(birth: string | null) {
 
 export default function StudentDetailsModal({ studentId, onClose, initialTab = "resumo" }: Props) {
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [photoZoom, setPhotoZoom] = useState(false);
   const fetchAttendance = useServerFn(getStudentAttendanceDetail);
   const [attData, setAttData] = useState<{ checkins: StudentCheckin[]; purchases: StudentPurchase[]; last_sign_in_at: string | null } | null>(null);
   const [attLoading, setAttLoading] = useState(false);
