@@ -1159,11 +1159,26 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
               <QrCode className="h-3.5 w-3.5" /> {showQR ? "Ocultar QR" : "QR de presença"}
             </button>
           )}
+          {canManage && (
+            <button
+              onClick={() => setShowRoster((v) => !v)}
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition inline-flex items-center gap-1.5">
+              <ClipboardCheck className="h-3.5 w-3.5" /> {showRoster ? "Ocultar inscrições" : "Inscrições"}
+            </button>
+          )}
           <button
             onClick={() => setShowList((v) => !v)}
             className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition">
             {showList ? "Ocultar lista" : "Ver lista"}
           </button>
+          {myProfileId && myRegStatus !== "attended" && (
+            <button
+              onClick={toggleQueroIr}
+              disabled={loading}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${myRegStatus === "registered" ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30" : "bg-white/10 text-white/80 hover:bg-white/20"}`}>
+              {myRegStatus === "registered" ? <><HeartOff className="h-3.5 w-3.5" /> Cancelar inscrição</> : <><Heart className="h-3.5 w-3.5" /> Quero ir</>}
+            </button>
+          )}
           {mine ? (
             <button
               onClick={removePresent}
