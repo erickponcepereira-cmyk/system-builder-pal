@@ -28,6 +28,10 @@ interface Props {
   /** "admin" creates global templates; "coach" creates personal ones for the given coach. */
   mode: "admin" | "coach";
   coachId?: string | null;
+  /** When provided, the detail modal shows "Habilitar para aluno" letter buttons (A–E). */
+  onEnableForStudent?: (template: WorkoutTemplate, letter: string) => Promise<void> | void;
+  /** Display name for the targeted student (shown in the modal). */
+  enableStudentName?: string | null;
 }
 
 const EMPTY_ITEM = (): WorkoutTemplateItem => ({ name: "", sets: "", reps: "", rest: "", notes: "" });
