@@ -202,6 +202,23 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
               <button onClick={() => setViewing(null)} className="text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
             {viewing.description && <p className="mb-4 text-sm text-white/70 whitespace-pre-wrap">{viewing.description}</p>}
+            {onEnableForStudent && (
+              <div className="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-3">
+                <p className="text-xs font-bold text-white">Habilitar para {enableStudentName || "o aluno"}</p>
+                <p className="mt-0.5 text-[11px] text-white/60">Cada letra cria um dia de treino separado (A, B, C, D, E). Adicione vários para montar uma semana completa.</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {["A", "B", "C", "D", "E"].map((L) => (
+                    <button
+                      key={L}
+                      onClick={async () => { await onEnableForStudent(viewing, L); setViewing(null); }}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
+                    >
+                      Treino {L}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               {(viewing.items || []).map((it, i) => (
                 <div key={i} className="rounded-xl border border-white/5 bg-white/5 p-3">
