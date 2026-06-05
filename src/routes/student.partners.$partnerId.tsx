@@ -26,6 +26,19 @@ function PartnerProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"info" | "products" | "timeline">("info");
+  const [coupon, setCoupon] = useState<{ token: string; productName: string } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+
+  const generateCoupon = async (product: Product) => {
+    setGenerating(product.id);
+    const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: product.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: product.name });
+  };
+
 
   useEffect(() => {
     (async () => {
