@@ -7,7 +7,9 @@ import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/comp
 import { WindowMethod } from "@/components/student/WindowMethod";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { calcWaterGoalMl, describeWaterFormula, calcAgeFromBirthdate } from "@/lib/water-goal";
-import { syncProtocolWorkout, enableTemplateForStudent } from "@/lib/workouts.functions";
+import { syncProtocolWorkout, enableTemplateForStudent, listStudentWorkoutPlansByRecord, deleteWorkoutPlan } from "@/lib/workouts.functions";
+import { ChevronDown, ChevronRight } from "lucide-react";
+
 
 type Student = {
   id: string;
