@@ -545,7 +545,7 @@ export const listStudentWorkoutPlansByRecord = createServerFn({ method: "POST" }
     if (!studentUserId) return { plans: [] };
     const { data: plans, error } = await supabase
       .from("workout_plans")
-      .select("id, name, day_of_week, notes, created_at, workout_exercises(id, order_index, exercise_name, sets, reps, rest_seconds, rest_seconds_max, notes)")
+      .select("id, name, day_of_week, notes, letter, created_at, workout_exercises(id, order_index, exercise_name, sets, reps, rest_seconds, rest_seconds_max, notes)")
       .eq("student_id", studentUserId)
       .eq("active", true)
       .order("created_at", { ascending: true });
