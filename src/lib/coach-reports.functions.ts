@@ -41,6 +41,25 @@ export type ChallengeRankingRow = {
   final_date: string | null;
 };
 
+export type ReferralTitle = "subcoach" | "influencer" | "none";
+
+export type ReferralSaleRow = {
+  commission_id: string;
+  transaction_id: string | null;
+  paid_at: string | null;
+  amount: number;
+  status: string;
+  product_id: string | null;
+  product_name: string;
+  buyer_id: string | null;
+  buyer_name: string;
+  buyer_email: string;
+  referrer_id: string;
+  referrer_name: string;
+  referrer_email: string;
+  referrer_title: ReferralTitle;
+};
+
 async function resolveCoachId(userId: string): Promise<string | null> {
   const { data: profile } = await supabaseAdmin
     .from("profiles").select("id").eq("user_id", userId).maybeSingle();
