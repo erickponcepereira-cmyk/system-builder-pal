@@ -35,6 +35,7 @@ interface Partner {
   instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   status: string; document: string | null; document_type: string | null;
+  business_area: string | null; specialty: string | null;
   referral_code: string | null; referral_link: string | null;
 }
 
