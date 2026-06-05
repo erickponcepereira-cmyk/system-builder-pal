@@ -148,16 +148,29 @@ export function ConstructorsCareerTab() {
                   const qualifying = w ? cappedOwn + w.teamRevenue : 0;
                   const achievedAt = achievedAtByKey.get(p.key) ?? null;
                   const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue;
-                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} />;
+                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} onClick={() => setModalPatent(p)} />;
                 })}
               </div>
             </div>
           );
         })}
       </div>
+
+      {modalPatent && (
+        <AchievementMembersModal
+          open={!!modalPatent}
+          onClose={() => setModalPatent(null)}
+          kind="patent"
+          achievementKey={modalPatent.key}
+          title={modalPatent.display_name}
+          subtitle={`Patente · Nível ${modalPatent.level}`}
+          accentColor={modalPatent.badge_color || "#FF4230"}
+        />
+      )}
     </>
   );
 }
+
 
 function RevenueRow({ label, current, target, windowMonths, color }: {
   label: string; current: number; target: number; windowMonths: number; color: string;
