@@ -290,4 +290,43 @@ function Field({ label, hint, icon, children }: { label: string; hint?: string; 
   );
 }
 
+function SpecializationsEditor({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [input, setInput] = useState("");
+  const add = (raw: string) => {
+    const t = raw.trim().slice(0, 60);
+    if (!t) return;
+    if (value.includes(t)) return;
+    if (value.length >= 30) return;
+    onChange([...value, t]);
+    setInput("");
+  };
+  return (
+    <div className="rounded-lg bg-white/5 px-3 py-2">
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {value.map((tag, i) => (
+          <span key={i} className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">
+            {tag}
+            <button type="button" onClick={() => onChange(value.filter((_, j) => j !== i))} className="text-primary/70 hover:text-primary">×</button>
+          </span>
+        ))}
+      </div>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            add(input);
+          } else if (e.key === "Backspace" && !input && value.length) {
+            onChange(value.slice(0, -1));
+          }
+        }}
+        onBlur={() => input && add(input)}
+        placeholder="Ex: Emagrecimento, Hipertrofia, Low Carb..."
+        className="w-full bg-transparent text-sm text-white outline-none"
+      />
+    </div>
+  );
+}
+
 export default SettingsTab;
