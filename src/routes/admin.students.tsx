@@ -15,6 +15,7 @@ interface StudentRow {
   current_weight: number | null;
   goal_weight: number | null;
   created_at: string | null;
+  is_influencer: boolean | null;
   profiles: { name: string; email: string; phone: string | null; city: string | null } | null;
   coaches: { id: string; profiles: { name: string } | null } | null;
 }
@@ -41,7 +42,7 @@ function AdminStudents() {
       supabase
         .from("students")
         .select(`
-          id, coach_id, current_weight, goal_weight, created_at,
+          id, coach_id, current_weight, goal_weight, created_at, is_influencer,
           profiles!students_profile_id_fkey(name, email, phone, city),
           coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
         `)
@@ -163,7 +164,12 @@ function AdminStudents() {
                 {filtered.map((r) => (
                   <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/5">
                     <td className="p-3">
-                      <div className="font-medium text-white">{r.profiles?.name}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-white">{r.profiles?.name}</span>
+                        {r.is_influencer && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300">✨ Influencer</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-[11px] text-white/50">
                         <Mail className="h-3 w-3" /> {r.profiles?.email}
                       </div>
@@ -173,12 +179,26 @@ function AdminStudents() {
                     <td className="p-3 text-right text-white">{r.current_weight ? `${r.current_weight} kg` : "—"}</td>
                     <td className="p-3 text-right hidden sm:table-cell text-white/70">{r.goal_weight ? `${r.goal_weight} kg` : "—"}</td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => openEdit(r)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
-                      >
-                        <UserCog className="h-3.5 w-3.5" /> Trocar coach
-                      </button>
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={async () => {
+                            const next = !r.is_influencer;
+                            const { error } = await supabase.from("students").update({ is_influencer: next, influencer_promoted_at: next ? new Date().toISOString() : null } as never).eq("id", r.id);
+                            if (error) return toast.error(error.message);
+                            toast.success(next ? "Promovido a Influencer" : "Título removido");
+                            setRows((cur) => cur.map((x) => x.id === r.id ? { ...x, is_influencer: next } : x));
+                          }}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold ${r.is_influencer ? "bg-fuchsia-500/20 text-fuchsia-300 hover:bg-fuchsia-500/30" : "bg-white/5 text-white/60 hover:bg-white/10"}`}
+                        >
+                          ✨ {r.is_influencer ? "Influencer" : "Promover"}
+                        </button>
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
+                        >
+                          <UserCog className="h-3.5 w-3.5" /> Trocar coach
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Building2, Loader2, MapPin, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ interface PartnerCard {
 }
 
 function PartnersList() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<PartnerCard[]>([]);
   const [openPartner, setOpenPartner] = useState<string | null>(null);
@@ -65,7 +66,7 @@ function PartnersList() {
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-[#0F0F0F] px-4 py-3">
-        <Link to="/student/profile" className="text-white/60"><ArrowLeft className="h-5 w-5" /></Link>
+        <button type="button" onClick={() => router.history.back()} className="text-white/60"><ArrowLeft className="h-5 w-5" /></button>
         <div>
           <h1 className="text-lg font-bold text-white flex items-center gap-2"><Building2 className="h-5 w-5 text-primary" /> Empresas Parceiras</h1>
           <p className="text-xs text-white/50">Benefícios e produtos exclusivos</p>

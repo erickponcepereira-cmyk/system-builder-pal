@@ -8,8 +8,11 @@ export const Route = createFileRoute("/student/support")({ component: StudentSup
 
 type Admin = { name: string; role: string; match: string; phone: string };
 
+const FITMIND_CENTRAL: Admin = { name: "FitMind Club", role: "Central de atendimento", match: "__fitmind__", phone: "5565992947754" };
+
 function StudentSupportPage() {
   const [admins, setAdmins] = useState<Admin[]>([
+    FITMIND_CENTRAL,
     { name: "Erick Ponce Pereira", role: "Administrador — Gestor de Software", match: "erick ponce", phone: "" },
     { name: "Nathan Utuari", role: "Administrador — Fundador", match: "nathan utuari", phone: "" },
   ]);
@@ -24,6 +27,7 @@ function StudentSupportPage() {
       const rows = (data as Array<{ name: string; phone: string | null }>) || [];
       setAdmins((prev) =>
         prev.map((a) => {
+          if (a.match === "__fitmind__") return a;
           const found = rows.find((r) => (r.name || "").toLowerCase().includes(a.match) && r.phone);
           return { ...a, phone: found?.phone || "" };
         }),

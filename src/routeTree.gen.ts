@@ -35,6 +35,7 @@ import { Route as StudentProfessionalTrackRouteImport } from './routes/student.p
 import { Route as StudentPartnersRouteImport } from './routes/student.partners'
 import { Route as StudentPartnerTrackRouteImport } from './routes/student.partner-track'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
+import { Route as StudentMedicalRecordRouteImport } from './routes/student.medical-record'
 import { Route as StudentLibraryRouteImport } from './routes/student.library'
 import { Route as StudentHealthRouteImport } from './routes/student.health'
 import { Route as StudentGroupRouteImport } from './routes/student.group'
@@ -230,6 +231,11 @@ const StudentPartnerTrackRoute = StudentPartnerTrackRouteImport.update({
 const StudentNotificationsRoute = StudentNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentMedicalRecordRoute = StudentMedicalRecordRouteImport.update({
+  id: '/medical-record',
+  path: '/medical-record',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentLibraryRoute = StudentLibraryRouteImport.update({
@@ -636,6 +642,7 @@ export interface FileRoutesByFullPath {
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
+  '/student/medical-record': typeof StudentMedicalRecordRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/partner-track': typeof StudentPartnerTrackRoute
   '/student/partners': typeof StudentPartnersRouteWithChildren
@@ -727,6 +734,7 @@ export interface FileRoutesByTo {
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
+  '/student/medical-record': typeof StudentMedicalRecordRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/partner-track': typeof StudentPartnerTrackRoute
   '/student/partners': typeof StudentPartnersRouteWithChildren
@@ -821,6 +829,7 @@ export interface FileRoutesById {
   '/student/group': typeof StudentGroupRoute
   '/student/health': typeof StudentHealthRoute
   '/student/library': typeof StudentLibraryRoute
+  '/student/medical-record': typeof StudentMedicalRecordRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/partner-track': typeof StudentPartnerTrackRoute
   '/student/partners': typeof StudentPartnersRouteWithChildren
@@ -916,6 +925,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/medical-record'
     | '/student/notifications'
     | '/student/partner-track'
     | '/student/partners'
@@ -1007,6 +1017,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/medical-record'
     | '/student/notifications'
     | '/student/partner-track'
     | '/student/partners'
@@ -1100,6 +1111,7 @@ export interface FileRouteTypes {
     | '/student/group'
     | '/student/health'
     | '/student/library'
+    | '/student/medical-record'
     | '/student/notifications'
     | '/student/partner-track'
     | '/student/partners'
@@ -1337,6 +1349,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/student/notifications'
       preLoaderRoute: typeof StudentNotificationsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/medical-record': {
+      id: '/student/medical-record'
+      path: '/medical-record'
+      fullPath: '/student/medical-record'
+      preLoaderRoute: typeof StudentMedicalRecordRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/library': {
@@ -1929,6 +1948,7 @@ interface StudentRouteChildren {
   StudentGroupRoute: typeof StudentGroupRoute
   StudentHealthRoute: typeof StudentHealthRoute
   StudentLibraryRoute: typeof StudentLibraryRoute
+  StudentMedicalRecordRoute: typeof StudentMedicalRecordRoute
   StudentNotificationsRoute: typeof StudentNotificationsRoute
   StudentPartnerTrackRoute: typeof StudentPartnerTrackRoute
   StudentPartnersRoute: typeof StudentPartnersRouteWithChildren
@@ -1953,6 +1973,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentGroupRoute: StudentGroupRoute,
   StudentHealthRoute: StudentHealthRoute,
   StudentLibraryRoute: StudentLibraryRoute,
+  StudentMedicalRecordRoute: StudentMedicalRecordRoute,
   StudentNotificationsRoute: StudentNotificationsRoute,
   StudentPartnerTrackRoute: StudentPartnerTrackRoute,
   StudentPartnersRoute: StudentPartnersRouteWithChildren,

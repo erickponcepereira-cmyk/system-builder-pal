@@ -88,17 +88,31 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
 
 
 
+  const [studentMeta, setStudentMeta] = useState<{ is_influencer: boolean; is_subcoach: boolean; blood_type: string | null }>({ is_influencer: false, is_subcoach: false, blood_type: null });
+
   useEffect(() => {
     (async () => {
       setLoading(true);
       const { data: student } = await supabase
         .from("students")
-        .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state,user_id)")
+        .select("profile_id, is_influencer, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state,user_id,blood_type)" as never)
         .eq("id", studentId)
         .maybeSingle();
-      const stu = (student as unknown as { profile_id: string; profiles: Profile & { user_id: string | null } }) || null;
+      const stu = (student as unknown as { profile_id: string; is_influencer?: boolean; profiles: Profile & { user_id: string | null; blood_type: string | null } }) || null;
       setProfile(stu?.profiles || null);
       setStudentUserId(stu?.profiles?.user_id || null);
+      // subcoach: ao menos 1 comissão de indicação paga/disponível
+      let isSub = false;
+      try {
+        const { count } = await supabase
+          .from("commissions")
+          .select("id", { count: "exact", head: true })
+          .eq("is_referral", true as never)
+          .eq("referred_by_student_id", studentId as never)
+          .in("status", ["paid", "available"] as never);
+        isSub = (count || 0) > 0;
+      } catch { /* ignore */ }
+      setStudentMeta({ is_influencer: Boolean(stu?.is_influencer), is_subcoach: isSub, blood_type: stu?.profiles?.blood_type || null });
 
 
 
@@ -208,7 +222,15 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-white/10 max-h-[92vh] overflow-hidden" style={{ backgroundColor: "#141414" }} onClick={(e) => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-3 border-b border-white/5 p-4">
           <div className="min-w-0">
-            <h2 className="truncate text-base font-bold text-white">{profile?.name || "Aluno"}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="truncate text-base font-bold text-white">{profile?.name || "Aluno"}</h2>
+              {studentMeta.is_influencer && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300">✨ Influencer</span>
+              )}
+              {studentMeta.is_subcoach && !studentMeta.is_influencer && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">⭐ Subcoach</span>
+              )}
+            </div>
             <p className="truncate text-xs text-white/50">{profile?.email || "—"}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/60">
               {profile?.birthdate && (
@@ -217,6 +239,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 </span>
               )}
               {profile?.city && <span className="rounded-full bg-white/5 px-2 py-0.5">{profile.city}/{profile.state || ""}</span>}
+              {studentMeta.blood_type && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-300">🩸 {studentMeta.blood_type}</span>}
               <WhatsAppButton phone={profile?.phone} size="sm" message={`Olá ${profile?.name?.split(" ")[0] || ""}!`} />
             </div>
           </div>
