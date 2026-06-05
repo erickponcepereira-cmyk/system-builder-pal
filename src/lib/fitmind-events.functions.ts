@@ -107,7 +107,7 @@ export const getEventsReport = createServerFn({ method: "GET" })
     // Permission: admin OR event creator (badge) OR responsible coach of any event
     const { data: isAdminRpc } = await supabase.rpc("is_admin", { _user_id: userId });
     let canView = !!isAdminRpc;
-    let myCoachId: string | null = null;
+    let scopedToCoachId: string | null = null; // when only "responsible coach", scope to their events
     if (!canView) {
       const { data: prof } = await supabase
         .from("profiles").select("id").eq("user_id", userId).maybeSingle();
@@ -115,22 +115,25 @@ export const getEventsReport = createServerFn({ method: "GET" })
         const { data: coach } = await supabaseAdmin
           .from("coaches").select("id").eq("profile_id", (prof as { id: string }).id).maybeSingle();
         if (coach) {
-          myCoachId = (coach as { id: string }).id;
+          const myCoachId = (coach as { id: string }).id;
           const { data: badge } = await supabaseAdmin
             .from("coach_badges")
             .select("badge_key")
             .eq("coach_id", myCoachId)
             .eq("badge_key", "event_creator" as never)
             .maybeSingle();
-          if (badge) canView = true;
-          if (!canView) {
-            // Responsible coach of at least one event
+          if (badge) {
+            canView = true; // creator sees all
+          } else {
             const { data: anyEv } = await supabaseAdmin
               .from("fitmind_events")
               .select("id")
               .eq("responsible_coach_id", myCoachId)
               .limit(1);
-            if (anyEv && anyEv.length) canView = true;
+            if (anyEv && anyEv.length) {
+              canView = true;
+              scopedToCoachId = myCoachId;
+            }
           }
         }
       }
@@ -141,6 +144,7 @@ export const getEventsReport = createServerFn({ method: "GET" })
       .from("fitmind_events")
       .select("id,title,starts_at,category,responsible_coach_id")
       .order("starts_at", { ascending: false });
+    if (scopedToCoachId) q = q.eq("responsible_coach_id", scopedToCoachId);
     if (data.from) q = q.gte("starts_at", data.from);
     if (data.to) q = q.lte("starts_at", data.to);
     const { data: events } = await q;
