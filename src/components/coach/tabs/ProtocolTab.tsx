@@ -219,10 +219,23 @@ export function ProtocolTab() {
     try {
       const r = (await enableTplFn({ data: { student_record_id: selected.id, template_id: t.id, letter } })) as { plan_name: string };
       toast.success(`"${r.plan_name}" habilitado para ${selected.name}.`);
+      await reloadEnabledPlans(selected);
     } catch (e: any) {
       toast.error(e.message || "Erro ao habilitar treino");
     }
   };
+
+  const removeEnabledPlan = async (planId: string, name: string) => {
+    if (!confirm(`Remover "${name}" do aluno?`)) return;
+    try {
+      await deletePlanFn({ data: { id: planId } });
+      toast.success("Treino removido.");
+      setEnabledPlans((curr) => curr.filter((p) => p.id !== planId));
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover treino");
+    }
+  };
+
 
   const saveAsTemplate = async () => {
     if (!coachId) return;
