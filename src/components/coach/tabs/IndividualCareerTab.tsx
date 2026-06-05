@@ -213,11 +213,18 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
 
       <div className="flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+          className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}
         >
-          {earned ? <Icon className="h-5 w-5" style={{ color }} /> : <Lock className="h-4 w-4 text-white/30" />}
+          {rule.image_url ? (
+            <img src={rule.image_url} alt={rule.display_name} className={`h-full w-full object-cover ${earned ? "" : "opacity-50 grayscale"}`} />
+          ) : earned ? (
+            <Icon className="h-5 w-5" style={{ color }} />
+          ) : (
+            <Lock className="h-4 w-4 text-white/30" />
+          )}
         </div>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold" style={{ color: earned ? color : "#fff" }}>{rule.display_name}</span>
