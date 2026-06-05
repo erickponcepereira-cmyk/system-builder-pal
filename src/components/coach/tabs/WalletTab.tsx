@@ -553,8 +553,21 @@ export function WalletTab() {
           </div>
         </div>
       )}
+
+      {modal && (
+        <AchievementMembersModal
+          open={!!modal}
+          onClose={() => setModal(null)}
+          kind={modal.kind}
+          achievementKey={modal.key}
+          title={modal.title}
+          subtitle={modal.subtitle}
+          accentColor={modal.color}
+        />
+      )}
     </>
   );
 }
+
 
 export default WalletTab;
