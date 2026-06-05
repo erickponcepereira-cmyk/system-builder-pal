@@ -216,8 +216,50 @@ export function WalletTab() {
           <p className="text-xl font-bold text-white mt-1 font-mono">{mask(split?.direct.pending ?? 0)}</p>
         </div>
       </div>
+
+      {topMonthlyMedal && (
+        <button
+          type="button"
+          onClick={() => setModal({
+            kind: "medal_monthly",
+            key: topMonthlyMedal!.key,
+            title: topMonthlyMedal!.display_name,
+            subtitle: "Sua medalha do mês",
+            color: TIER_COLOR_WALLET[topMonthlyMedal!.tier || ""] || "#CD7F32",
+          })}
+          className="w-full text-left rounded-2xl p-4 mt-3 transition hover:bg-white/[0.02] relative overflow-hidden"
+          style={{
+            backgroundColor: "#1A1A1A",
+            border: `1px solid ${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}55`,
+          }}
+        >
+          <div
+            className="absolute -right-8 -top-8 h-32 w-32 rounded-full"
+            style={{ backgroundColor: `${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}1A` }}
+          />
+          <div className="relative flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0"
+              style={{
+                backgroundColor: `${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}25`,
+                border: `1px solid ${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}66`,
+              }}
+            >
+              <Medal className="h-6 w-6" style={{ color: TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32" }}>
+                Medalha conquistada
+              </p>
+              <p className="text-base font-bold text-white truncate">{topMonthlyMedal.display_name}</p>
+              <p className="text-[10px] text-white/40">Toque para ver quem mais está nesta conquista</p>
+            </div>
+          </div>
+        </button>
+      )}
     </>
   );
+
 
   const renderNetwork = () => (
     <>
