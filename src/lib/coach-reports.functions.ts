@@ -175,12 +175,14 @@ async function buildSalesReportForRange(
       student_id: o.student_id,
       student_name: sp?.name || "—",
       student_email: sp?.email || "",
+      student_group: studentGroup.get(o.student_id) || "aluno",
       product_id: its[0]?.product_id || null,
       product_name: label,
       quantity: totalQty,
       amount: Number(o.total_amount) || 0,
       paid_at: o.updated_at,
     });
+
   }
 
   rows.sort((a, b) => b.paid_at.localeCompare(a.paid_at));
