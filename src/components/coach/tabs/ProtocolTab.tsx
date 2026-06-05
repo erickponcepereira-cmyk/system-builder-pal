@@ -705,7 +705,73 @@ export function ProtocolTab() {
                 </div>
               </div>
 
+              {!selected?.external && (
+                <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white/60 flex items-center gap-2">
+                      <Award className="h-3.5 w-3.5 text-primary" /> Treinos habilitados para o aluno
+                    </h3>
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">{enabledPlans.length} {enabledPlans.length === 1 ? "treino" : "treinos"}</span>
+                  </div>
+                  {enabledPlans.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-white/10 py-6 text-center text-xs text-white/40">
+                      Nenhum treino habilitado ainda. Salve o protocolo ou habilite um treino A–E da galeria "Treinos prontos".
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {enabledPlans.map((p) => {
+                        const expanded = expandedPlanIds.has(p.id);
+                        const exs = (p.workout_exercises || []).slice().sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+                        return (
+                          <div key={p.id} className="rounded-xl border border-white/10 bg-white/[0.04]">
+                            <div className="flex items-center gap-2 p-3">
+                              <button
+                                onClick={() => setExpandedPlanIds((s) => { const n = new Set(s); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n; })}
+                                className="rounded p-1 text-white/60 hover:bg-white/10 hover:text-white"
+                                aria-label={expanded ? "Recolher" : "Expandir"}
+                              >
+                                {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </button>
+                              <Dumbbell className="h-4 w-4 text-primary" />
+                              <div className="flex-1 min-w-0">
+                                <p className="truncate text-sm font-semibold text-white">{p.name}</p>
+                                <p className="text-[10px] text-white/50">{exs.length} exercício{exs.length !== 1 ? "s" : ""}{p.notes ? ` · ${p.notes}` : ""}</p>
+                              </div>
+                              <button
+                                onClick={() => removeEnabledPlan(p.id, p.name)}
+                                className="rounded bg-red-500/10 px-2 py-1.5 text-red-400 hover:bg-red-500/20"
+                                title="Excluir treino"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            {expanded && (
+                              <div className="border-t border-white/5 px-3 py-2 space-y-1">
+                                {exs.length === 0 && <p className="py-2 text-center text-[11px] text-white/40">Sem exercícios.</p>}
+                                {exs.map((e: any, i: number) => (
+                                  <div key={e.id || i} className="flex items-start gap-2 rounded bg-black/30 px-2 py-1.5 text-[11px] text-white/85">
+                                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{i + 1}</span>
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-white">{e.exercise_name}</p>
+                                      <p className="text-white/55">
+                                        {e.sets ? `${e.sets} séries` : ""}{e.reps ? ` · ${e.reps} reps` : ""}{e.rest_seconds ? ` · descanso ${e.rest_seconds}${e.rest_seconds_max && e.rest_seconds_max !== e.rest_seconds ? `–${e.rest_seconds_max}` : ""}s` : ""}
+                                      </p>
+                                      {e.notes && <p className="mt-0.5 text-white/45">{e.notes}</p>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-white/60">Exercícios</h3>
                 <div className="space-y-2">
                   {protocol.workout_plan.length === 0 && <p className="rounded-xl border border-dashed border-white/10 py-6 text-center text-xs text-white/40">Nenhum exercício ainda. Importe dos treinos prontos ou adicione da biblioteca abaixo.</p>}
