@@ -47,7 +47,7 @@ function StudentCardPage() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id,name,email,avatar_url,created_at")
+        .select("id,name,email,avatar_url,photo_url,created_at")
         .eq("user_id", userData.user.id)
         .maybeSingle();
       if (!profile) {
