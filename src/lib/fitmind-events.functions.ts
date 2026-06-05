@@ -104,12 +104,36 @@ export const getEventsReport = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Permission: admin OR event creator coach
+    // Permission: admin OR event creator (badge) OR responsible coach of any event
     const { data: isAdminRpc } = await supabase.rpc("is_admin", { _user_id: userId });
     let canView = !!isAdminRpc;
+    let myCoachId: string | null = null;
     if (!canView) {
-      const { data: ok } = await supabase.rpc("can_create_fitmind_events" as never, { _user_id: userId } as never);
-      canView = ok === true;
+      const { data: prof } = await supabase
+        .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+      if (prof) {
+        const { data: coach } = await supabaseAdmin
+          .from("coaches").select("id").eq("profile_id", (prof as { id: string }).id).maybeSingle();
+        if (coach) {
+          myCoachId = (coach as { id: string }).id;
+          const { data: badge } = await supabaseAdmin
+            .from("coach_badges")
+            .select("badge_key")
+            .eq("coach_id", myCoachId)
+            .eq("badge_key", "event_creator" as never)
+            .maybeSingle();
+          if (badge) canView = true;
+          if (!canView) {
+            // Responsible coach of at least one event
+            const { data: anyEv } = await supabaseAdmin
+              .from("fitmind_events")
+              .select("id")
+              .eq("responsible_coach_id", myCoachId)
+              .limit(1);
+            if (anyEv && anyEv.length) canView = true;
+          }
+        }
+      }
     }
     if (!canView) throw new Error("Sem permissão para acessar relatórios.");
 
