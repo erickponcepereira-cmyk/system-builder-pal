@@ -9,8 +9,10 @@ import { listDetailedSales, type DetailedSale } from "@/lib/admin-reports.functi
 
 export const Route = createFileRoute("/admin/reports")({ component: AdminReports });
 
-type AttendanceRow = { student_id: string; log_date: string; attended: boolean | null; students: { profiles: { name: string; email: string } | null } | null };
+type AttendanceRow = { student_id: string; log_date: string; attended: boolean | null; students: { profile_id: string | null; profiles: { name: string; email: string } | null } | null };
 type OrderRow = { id: string; order_number: string; status: string; total_amount: number; created_at: string | null; students: { profiles: { name: string; email: string } | null } | null };
+type GroupKey = "aluno" | "aluno_coach" | "aluno_profissional" | "aluno_parceiro";
+const GROUP_LABELS: Record<GroupKey, string> = { aluno: "Só Aluno", aluno_coach: "Aluno Coach", aluno_profissional: "Aluno Profissional", aluno_parceiro: "Aluno Parceiro" };
 
 function AdminReports() {
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
