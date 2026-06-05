@@ -509,6 +509,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         </div>
       )}
 
+      {viewMode === "calendar" ? (
+        <>
       {/* Grid do calendário */}
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
         {/* Cabeçalho dos dias da semana */}
@@ -628,6 +630,16 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           )}
         </div>
       )}
+        </>
+      ) : (
+        <EventListView
+          events={events}
+          year={year}
+          month={month}
+          loading={loading}
+          onSelect={(ev) => setDetail(ev)}
+        />
+      )}
 
       {/* Modal de detalhes */}
       {detail && <EventDetailModal event={detail} onClose={() => setDetail(null)} />}
@@ -635,7 +647,94 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   );
 }
 
+// ─── Event List View (alternative to calendar grid) ─────────────────────────
+
+function EventListView({
+  events,
+  year,
+  month,
+  loading,
+  onSelect,
+}: {
+  events: FitmindEvent[];
+  year: number;
+  month: number;
+  loading: boolean;
+  onSelect: (ev: FitmindEvent) => void;
+}) {
+  const monthEvents = events
+    .filter((ev) => {
+      const d = new Date(ev.starts_at);
+      return d.getFullYear() === year && d.getMonth() === month;
+    })
+    .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+
+  const grouped = new Map<string, FitmindEvent[]>();
+  for (const ev of monthEvents) {
+    const d = new Date(ev.starts_at);
+    const key = ymdKey(d.getFullYear(), d.getMonth(), d.getDate());
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(ev);
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl py-16 text-center text-sm text-white/40" style={{ backgroundColor: "#1A1A1A" }}>
+        Carregando eventos...
+      </div>
+    );
+  }
+
+  if (monthEvents.length === 0) {
+    return (
+      <div className="rounded-2xl py-16 text-center text-sm text-white/40" style={{ backgroundColor: "#1A1A1A" }}>
+        Nenhum evento neste mês.
+      </div>
+    );
+  }
+
+  const todayKey = ymdKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+  return (
+    <div className="space-y-4">
+      {Array.from(grouped.entries()).map(([dateKey, dayEvents]) => {
+        const d = new Date(`${dateKey}T12:00:00-04:00`);
+        const isToday = dateKey === todayKey;
+        return (
+          <div key={dateKey} className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+              <div className={`flex h-12 w-12 flex-col items-center justify-center rounded-xl flex-none ${isToday ? "bg-primary text-white" : "bg-white/5 text-white/80"}`}>
+                <span className="text-[10px] font-bold uppercase leading-none">{d.toLocaleDateString("pt-BR", { month: "short", timeZone: TZ }).replace(".", "")}</span>
+                <span className="text-lg font-bold leading-none mt-0.5">{d.getDate()}</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white capitalize">
+                  {d.toLocaleDateString("pt-BR", { weekday: "long", timeZone: TZ })}
+                </p>
+                <p className="text-[11px] text-white/40">
+                  {dayEvents.length} {dayEvents.length === 1 ? "evento" : "eventos"}
+                </p>
+              </div>
+              {isToday && (
+                <span className="ml-auto text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-primary/20 text-primary">
+                  Hoje
+                </span>
+              )}
+            </div>
+            <div className="p-3 space-y-2">
+              {dayEvents.map((ev) => (
+                <EventCard key={ev.id} event={ev} onClick={() => onSelect(ev)} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Event Card (used in day panel) ─────────────────────────────────────────
+
 
 function EventCard({ event: ev, onClick }: { event: FitmindEvent; onClick: () => void }) {
   const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
