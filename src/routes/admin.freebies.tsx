@@ -22,6 +22,7 @@ type Freebie = {
   condition_note: string | null;
   is_active: boolean;
   sort_order: number;
+  category: string | null;
 };
 
 type Redemption = {
