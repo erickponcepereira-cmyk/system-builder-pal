@@ -40,9 +40,12 @@ interface FitmindEvent {
   google_calendar_title: string | null;
   google_calendar_description: string | null;
   google_calendar_location: string | null;
+  responsible_coach_name?: string | null;
+  responsible_coach_whatsapp?: string | null;
   appointment_pay_url?: string | null;
   appointment_pending?: boolean;
 }
+
 
 
 interface HighlightedDay {
