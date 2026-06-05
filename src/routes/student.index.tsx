@@ -64,13 +64,19 @@ function StudentHome() {
       if (!profile) return;
       if (profile.name) setStudentName(profile.name.split(" ")[0]);
 
-      const [{ data: quoteData }, { data: notificationData }] = await Promise.all([
-        supabase.rpc("get_or_create_daily_quote" as never),
-        supabase.from("notifications").select("id").eq("profile_id", profile.id).eq("is_read", false),
-      ]);
-      const quote = quoteData as unknown as { quote?: string; author?: string } | null;
-      if (quote?.quote) setDailyQuote({ quote: quote.quote, author: quote.author || "FitMind Club" });
+      const { data: notificationData } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("is_read", false);
       setUnreadNotifications(notificationData?.length || 0);
+
+      // Check if user is also coach/professional/partner (blocked from challenge)
+      const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+        supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("partners").select("id").eq("profile_id", profile.id).maybeSingle(),
+      ]);
+      if (coachRow || partnerRow) setChallengeBlocked(true);
 
       const { data: student } = await supabase
         .from("students")
