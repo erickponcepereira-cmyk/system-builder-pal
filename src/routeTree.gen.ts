@@ -19,6 +19,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as MeusEventosRouteImport } from './routes/meus-eventos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
@@ -148,6 +149,11 @@ const PartnerRoute = PartnerRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeusEventosRoute = MeusEventosRouteImport.update({
+  id: '/meus-eventos',
+  path: '/meus-eventos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -564,6 +570,7 @@ export interface FileRoutesByFullPath {
   '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/meus-eventos': typeof MeusEventosRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -655,6 +662,7 @@ export interface FileRoutesByTo {
   '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/meus-eventos': typeof MeusEventosRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -747,6 +755,7 @@ export interface FileRoutesById {
   '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/meus-eventos': typeof MeusEventosRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -841,6 +850,7 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/coach'
     | '/login'
+    | '/meus-eventos'
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
@@ -932,6 +942,7 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/coach'
     | '/login'
+    | '/meus-eventos'
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
@@ -1023,6 +1034,7 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/coach'
     | '/login'
+    | '/meus-eventos'
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
@@ -1116,6 +1128,7 @@ export interface RootRouteChildren {
   BecomePartnerRoute: typeof BecomePartnerRoute
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
+  MeusEventosRoute: typeof MeusEventosRoute
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
@@ -1212,6 +1225,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meus-eventos': {
+      id: '/meus-eventos'
+      path: '/meus-eventos'
+      fullPath: '/meus-eventos'
+      preLoaderRoute: typeof MeusEventosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1952,6 +1972,7 @@ const rootRouteChildren: RootRouteChildren = {
   BecomePartnerRoute: BecomePartnerRoute,
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
+  MeusEventosRoute: MeusEventosRoute,
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
   PendingApprovalRoute: PendingApprovalRoute,
