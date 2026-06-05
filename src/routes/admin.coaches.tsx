@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard, CalendarPlus } from "lucide-react";
+import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -164,18 +164,8 @@ function AdminCoaches() {
     saveCard(base.toISOString());
   };
 
-  const toggleEventCreator = async (c: CoachRow) => {
-    const next = !c.can_create_fitmind_events;
-    setActing(`creator-${c.id}`);
-    const { error } = await supabase
-      .from("coaches")
-      .update({ can_create_fitmind_events: next } as never)
-      .eq("id", c.id);
-    setActing(null);
-    if (error) { toast.error(error.message || "Erro ao atualizar"); return; }
-    toast.success(next ? "Coach pode criar eventos FitMind" : "Permissão removida");
-    load();
-  };
+
+
 
 
   const transferTargets = useMemo(() => {
@@ -322,19 +312,6 @@ function AdminCoaches() {
                       className="flex items-center gap-1.5 rounded-lg bg-yellow-500/15 px-3 py-2 text-xs font-bold text-yellow-400 hover:bg-yellow-500/25"
                     >
                       <IdCard className="h-3.5 w-3.5" /> Carteirinha
-                    </button>
-                    <button
-                      onClick={() => toggleEventCreator(c)}
-                      disabled={acting === `creator-${c.id}`}
-                      title="Permitir que este coach crie eventos na Agenda FitMind"
-                      className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-50 ${
-                        c.can_create_fitmind_events
-                          ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
-                          : "bg-white/5 text-white/60 hover:bg-white/10"
-                      }`}
-                    >
-                      {acting === `creator-${c.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5" />}
-                      {c.can_create_fitmind_events ? "Criador de eventos" : "Sem criar eventos"}
                     </button>
                     <button
                       onClick={() => openTransfer(c)}

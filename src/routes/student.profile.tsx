@@ -34,7 +34,7 @@ const sections = [
       { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
       { icon: ClipboardList, label: "Meu Protocolo", to: "/student/protocol" },
       { icon: ClipboardList, label: "Preencher anamnese", to: "/student/health" },
-      { icon: Clock, label: "Meus Eventos", to: "/meus-eventos" },
+      
     ],
   },
   {
