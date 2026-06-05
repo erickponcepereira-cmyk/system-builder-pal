@@ -194,85 +194,119 @@ function StudentFreebies() {
 
             {items.length === 0 && partnerFreebies.length === 0 && <p className="text-center text-sm text-white/50 mt-10">Nenhum brinde disponível no momento.</p>}
 
-            {partnerFreebies.length > 0 && (
-              <div className="mb-6">
-                <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Brindes de empresas parceiras</h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {partnerFreebies.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setOpenPartner(p.partner_id)}
-                      className="text-left rounded-2xl overflow-hidden border border-white/5 block"
-                      style={{ backgroundColor: "#1A1A1A" }}
-                    >
-                      {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-white">{p.name}</h3>
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-white/40">{p.partners?.fantasy_name}</p>
-                        {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
-                        {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                        {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                        <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver empresa</div>
+            {partnerFreebies.length > 0 && (() => {
+              const byArea = new Map<string, PartnerFreeProduct[]>();
+              partnerFreebies.forEach((p) => {
+                const area = p.partners?.business_area || "Outras áreas";
+                if (!byArea.has(area)) byArea.set(area, []);
+                byArea.get(area)!.push(p);
+              });
+              const areas = Array.from(byArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+              return (
+                <div className="mb-6 space-y-5">
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Brindes de empresas parceiras</h2>
+                  {areas.map(([area, list]) => (
+                    <div key={area}>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/45">{area}</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {list.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => setOpenPartner(p.partner_id)}
+                            className="text-left rounded-2xl overflow-hidden border border-white/5 block"
+                            style={{ backgroundColor: "#1A1A1A" }}
+                          >
+                            {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                            <div className="p-4">
+                              <div className="flex items-start justify-between gap-2">
+                                <h3 className="font-bold text-white">{p.name}</h3>
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>
+                              </div>
+                              <p className="mt-1 text-[11px] text-white/40">{p.partners?.fantasy_name}</p>
+                              {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                              {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                              {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                              <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver empresa</div>
+                            </div>
+                          </button>
+                        ))}
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {items.map((it) => {
-                const taken = countMine(it.id);
-                const limitReached = taken >= it.per_student_limit;
-                const outOfStock = it.stock !== null && it.stock <= 0;
-                const expired = it.valid_until && new Date(it.valid_until) < new Date();
-                const disabled = limitReached || outOfStock || !!expired || redeeming === it.id;
-                return (
-                  <div
-                    key={it.id}
-                    className="rounded-2xl overflow-hidden border border-white/5 cursor-pointer transition hover:border-primary/40"
-                    style={{ backgroundColor: "#1A1A1A" }}
-                    onClick={() => setSelected({
-                      id: it.id, title: it.name, description: it.description,
-                      image_url: it.image_url, location: it.location, address: it.address,
-                      event_date: it.event_date, event_time: it.event_time,
-                      sponsor_name: it.sponsor_name, sponsor_bio: it.sponsor_bio,
-                      sponsor_avatar: it.sponsor_avatar, sponsor_whatsapp: it.sponsor_whatsapp,
-                      sponsor_instagram: it.sponsor_instagram, sponsor_website: it.sponsor_website,
-                    })}
-                  >
-                    {it.image_url && <img src={it.image_url} alt={it.name} className="h-40 w-full object-cover" />}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-white">{it.name}</h3>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">{it.kind === "digital" ? "Digital" : "Físico"}</span>
+            {items.length > 0 && (() => {
+              const byCat = new Map<string, Freebie[]>();
+              items.forEach((it) => {
+                const cat = it.category || "Geral";
+                if (!byCat.has(cat)) byCat.set(cat, []);
+                byCat.get(cat)!.push(it);
+              });
+              const cats = Array.from(byCat.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+              return (
+                <div className="space-y-5">
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2"><Gift className="h-4 w-4 text-primary" /> Brindes FitMind</h2>
+                  {cats.map(([cat, list]) => (
+                    <div key={cat}>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/45">{cat}</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {list.map((it) => {
+                          const taken = countMine(it.id);
+                          const limitReached = taken >= it.per_student_limit;
+                          const outOfStock = it.stock !== null && it.stock <= 0;
+                          const expired = it.valid_until && new Date(it.valid_until) < new Date();
+                          const disabled = limitReached || outOfStock || !!expired || redeeming === it.id;
+                          return (
+                            <div
+                              key={it.id}
+                              className="rounded-2xl overflow-hidden border border-white/5 cursor-pointer transition hover:border-primary/40"
+                              style={{ backgroundColor: "#1A1A1A" }}
+                              onClick={() => setSelected({
+                                id: it.id, title: it.name, description: it.description,
+                                image_url: it.image_url, location: it.location, address: it.address,
+                                event_date: it.event_date, event_time: it.event_time,
+                                sponsor_name: it.sponsor_name, sponsor_bio: it.sponsor_bio,
+                                sponsor_avatar: it.sponsor_avatar, sponsor_whatsapp: it.sponsor_whatsapp,
+                                sponsor_instagram: it.sponsor_instagram, sponsor_website: it.sponsor_website,
+                              })}
+                            >
+                              {it.image_url && <img src={it.image_url} alt={it.name} className="h-40 w-full object-cover" />}
+                              <div className="p-4">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h3 className="font-bold text-white">{it.name}</h3>
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">{it.kind === "digital" ? "Digital" : "Físico"}</span>
+                                </div>
+                                {it.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{it.description}</p>}
+                                {it.condition_note && <p className="mt-2 text-[11px] text-yellow-400/80">⚠ {it.condition_note}</p>}
+                                <div className="mt-2 flex items-center gap-3 text-[10px] text-white/40">
+                                  {it.stock !== null && <span>Estoque: {it.stock}</span>}
+                                  <span>Limite: {it.per_student_limit}</span>
+                                  {it.valid_until && <span>Até {new Date(it.valid_until).toLocaleDateString("pt-BR")}</span>}
+                                </div>
+                                <button
+                                  disabled={disabled}
+                                  onClick={(e) => { e.stopPropagation(); redeem(it.id); }}
+                                  className="mt-3 w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  {redeeming === it.id ? "Resgatando..." :
+                                   expired ? "Expirado" :
+                                   outOfStock ? "Esgotado" :
+                                   limitReached ? "Já resgatado" :
+                                   "Resgatar grátis"}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      {it.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{it.description}</p>}
-                      {it.condition_note && <p className="mt-2 text-[11px] text-yellow-400/80">⚠ {it.condition_note}</p>}
-                      <div className="mt-2 flex items-center gap-3 text-[10px] text-white/40">
-                        {it.stock !== null && <span>Estoque: {it.stock}</span>}
-                        <span>Limite: {it.per_student_limit}</span>
-                        {it.valid_until && <span>Até {new Date(it.valid_until).toLocaleDateString("pt-BR")}</span>}
-                      </div>
-                      <button
-                        disabled={disabled}
-                        onClick={(e) => { e.stopPropagation(); redeem(it.id); }}
-                        className="mt-3 w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {redeeming === it.id ? "Resgatando..." :
-                         expired ? "Expirado" :
-                         outOfStock ? "Esgotado" :
-                         limitReached ? "Já resgatado" :
-                         "Resgatar grátis"}
-                      </button>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              );
+            })()}
+
 
             {mine.length > 0 && (
               <div className="mt-8">
