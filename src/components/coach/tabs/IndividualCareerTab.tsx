@@ -113,8 +113,10 @@ export function IndividualCareerTab() {
                 current={vpThisMonth}
                 earned={!!e}
                 awardedAt={e?.awarded_at ?? null}
+                onClick={() => setModal({ kind: "medal_monthly", key: r.key, title: r.display_name, subtitle: "Ordem da Excelência (mês atual)", color: TIER_COLOR[r.tier || ""] || "#CD7F32" })}
               />
             );
+
           })}
         </div>
       </div>
