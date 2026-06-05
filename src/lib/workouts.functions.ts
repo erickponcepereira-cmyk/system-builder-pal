@@ -522,3 +522,32 @@ export const getLastExerciseLogs = createServerFn({ method: "POST" })
     });
     return { last };
   });
+
+/**
+ * Coach-facing: list active workout_plans (with exercises) for a given
+ * student record id (students.id). Resolves the student's auth user_id then
+ * fetches plans so the coach UI can show what's been enabled per day.
+ */
+export const listStudentWorkoutPlansByRecord = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ student_record_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: stu, error: stuErr } = await supabase
+      .from("students")
+      .select("profile_id, profiles!students_profile_id_fkey(user_id)")
+      .eq("id", data.student_record_id)
+      .maybeSingle();
+    if (stuErr) throw new Error(stuErr.message);
+    const studentUserId = (stu as any)?.profiles?.user_id as string | null;
+    if (!studentUserId) return { plans: [] };
+    const { data: plans, error } = await supabase
+      .from("workout_plans")
+      .select("id, name, day_of_week, notes, created_at, workout_exercises(id, order_index, exercise_name, sets, reps, rest_seconds, rest_seconds_max, notes)")
+      .eq("student_id", studentUserId)
+      .eq("active", true)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return { plans: plans || [] };
+  });
+
