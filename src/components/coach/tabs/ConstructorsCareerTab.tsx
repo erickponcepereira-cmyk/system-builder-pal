@@ -223,8 +223,8 @@ function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt, onClick }: 
         <div className="relative flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: `${p.badge_color || "#9CA3AF"}25`, border: `1px solid ${p.badge_color || "#9CA3AF"}55` }}>
           {p.image_url ? (
-            <img
-              src={resolveBadgeUrl(p.image_url) || ""}
+            <BadgeImage
+              path={p.image_url}
               alt={p.display_name}
               className={`h-full w-full object-contain p-1 ${achieved ? "" : "grayscale"}`}
             />
