@@ -25,7 +25,7 @@ import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
-import { WorkoutPlansTab } from "@/components/coach/tabs/WorkoutPlansTab";
+
 import { PartnersApprovalTab } from "@/components/coach/tabs/PartnersApprovalTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { ChallengeTab } from "@/components/coach/tabs/ChallengeTab";
