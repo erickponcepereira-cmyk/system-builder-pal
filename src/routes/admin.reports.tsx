@@ -139,14 +139,6 @@ function AdminReports() {
     a.click();
     URL.revokeObjectURL(url);
   };
-    const csv = lines.map((line) => line.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "frequencia-fitmind.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return <>
     <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h1 className="text-2xl font-bold text-white">Relatórios</h1><p className="text-sm text-white/50">Frequência, pedidos e exportação operacional</p></div><Button onClick={exportCsv} className="gap-2"><Download className="h-4 w-4" /> Exportar frequência</Button></div>
