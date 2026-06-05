@@ -3007,6 +3007,64 @@ export type Database = {
           },
         ]
       }
+      event_registrations: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notes: string | null
+          profile_id: string
+          registered_at: string
+          status: Database["public"]["Enums"]["event_registration_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notes?: string | null
+          profile_id: string
+          registered_at?: string
+          status?: Database["public"]["Enums"]["event_registration_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          registered_at?: string
+          status?: Database["public"]["Enums"]["event_registration_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "fitmind_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_registrations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_tickets: {
         Row: {
           amount_paid: number | null
@@ -8504,6 +8562,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      can_manage_event: {
+        Args: { _event_id: string; _user_id: string }
+        Returns: boolean
+      }
       cancel_nutritionist_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
@@ -8900,6 +8962,7 @@ export type Database = {
         | "comemorativo"
         | "networking"
         | "outro"
+      event_registration_status: "registered" | "attended" | "no_show"
       event_visibility:
         | "todos"
         | "coaches"
@@ -9128,6 +9191,7 @@ export const Constants = {
         "networking",
         "outro",
       ],
+      event_registration_status: ["registered", "attended", "no_show"],
       event_visibility: [
         "todos",
         "coaches",
