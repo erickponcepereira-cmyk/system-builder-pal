@@ -62,9 +62,9 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
 
     // Real sales total (paid transactions of own students)
     const { data: studs } = await supabaseAdmin
-      .from("students").select("id,profile_id,coach_id,created_at,is_active")
+      .from("students").select("id,profile_id,coach_id,created_at")
       .eq("coach_id", coachId);
-    const ownStudents = (studs || []) as Array<{ id: string; profile_id: string; coach_id: string; created_at: string; is_active: boolean | null }>;
+    const ownStudents = ((studs || []) as unknown) as Array<{ id: string; profile_id: string; coach_id: string; created_at: string }>;
     const studentIds = ownStudents.map((s) => s.id);
     const studentProfileIds = ownStudents.map((s) => s.profile_id).filter(Boolean) as string[];
 
@@ -77,7 +77,7 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
         .from("store_orders").select("total_amount").in("student_id", studentIds).eq("status", "paid");
       ((orders || []) as Array<{ total_amount: number }>).forEach((o) => { totalSales += Number(o.total_amount) || 0; });
     }
-    const totalActiveStudents = ownStudents.filter((s) => s.is_active !== false).length;
+    const totalActiveStudents = ownStudents.length;
 
     // Resolve names for own students
     const nameByProfile = new Map<string, string>();
