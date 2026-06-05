@@ -392,7 +392,15 @@ function EventsTab() {
                     </span>
                     {ev.is_highlighted && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">⭐ Destaque</span>}
                     {ev.is_important  && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">🚨 Importante</span>}
-                    <span className="text-[10px] text-white/40 flex items-center gap-1"><VisIcon className="h-3 w-3" /> {vis.label}</span>
+                    {roles.map((r) => {
+                      const meta = VISIBILITY_META[r as EventVisibility] || VISIBILITY_META.todos;
+                      const RIcon = meta.icon;
+                      return (
+                        <span key={r} className="text-[10px] text-white/50 flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5">
+                          <RIcon className="h-3 w-3" /> {meta.label}
+                        </span>
+                      );
+                    })}
                   </div>
                   <p className="text-sm font-bold text-white mt-1 truncate">{ev.title}</p>
                   {ev.subtitle && <p className="text-xs text-white/50 truncate">{ev.subtitle}</p>}
@@ -402,7 +410,13 @@ function EventsTab() {
                       {ev.all_day ? "Dia inteiro" : `${dtStart.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} – ${dtEnd.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
                     </span>
                     {ev.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {ev.location}</span>}
+                    {respCoach && (
+                      <span className="flex items-center gap-1 text-primary">
+                        <UserCheck className="h-3 w-3" /> {respCoach.name}
+                      </span>
+                    )}
                   </p>
+
                 </div>
 
                 {/* Ações */}
