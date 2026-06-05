@@ -149,6 +149,23 @@ function PartnerProfilePage() {
           )
         )}
       </div>
+
+      {coupon && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setCoupon(null)}>
+          <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-sm w-full text-center relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setCoupon(null)} className="absolute top-3 right-3 text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
+            <Ticket className="h-8 w-8 text-primary mx-auto" />
+            <h3 className="mt-2 text-lg font-bold text-white">Seu Cupom</h3>
+            <p className="text-sm text-white/70 mt-1">{coupon.productName}</p>
+            <div className="my-4 inline-block bg-white p-3 rounded-xl">
+              <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
+            </div>
+            <p className="text-[10px] text-white/40 break-all font-mono">{coupon.token}</p>
+            <p className="text-[11px] text-white/60 mt-3">Apresente este QR no parceiro para validar seu desconto. O cupom é único e expira após o uso.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
