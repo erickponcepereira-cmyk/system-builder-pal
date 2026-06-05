@@ -155,12 +155,14 @@ async function buildSalesReportForRange(
       student_id: t.student_id,
       student_name: sp?.name || "—",
       student_email: sp?.email || "",
+      student_group: studentGroup.get(t.student_id) || "aluno",
       product_id: t.product_id,
       product_name: t.product_id ? (productMap.get(t.product_id) || "Produto") : "Produto",
       quantity: 1,
       amount: Number(t.gross_amount) || 0,
       paid_at: t.paid_at,
     });
+
   }
   for (const o of orders) {
     const sp = studentMap.get(o.student_id);
