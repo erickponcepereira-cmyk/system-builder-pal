@@ -21,7 +21,7 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
-import type { CoachContext } from "@/routes/coach";
+
 
 export const Route = createFileRoute("/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
