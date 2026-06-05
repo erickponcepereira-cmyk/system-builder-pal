@@ -300,8 +300,13 @@ export const getCoachMinisteredReport = createServerFn({ method: "GET" })
       .from("fitmind_events")
       .select("id,title,starts_at,category")
       .order("starts_at", { ascending: false });
-    if (scope === "created") q = q.eq("created_by", profileId);
-    else q = q.eq("responsible_coach_id", coachId);
+    // event_creator badge holders see ALL events on the "created" tab (they're the platform's event creators).
+    // The "ministered" tab is always scoped to events they're the responsible coach for.
+    if (scope === "created") {
+      // no extra filter — show all events
+    } else {
+      q = q.eq("responsible_coach_id", coachId);
+    }
     if (data.from) q = q.gte("starts_at", data.from);
     if (data.to) q = q.lte("starts_at", data.to);
     const { data: events } = await q;

@@ -798,7 +798,7 @@ function MinisteredEventsDashboard() {
         {data?.can_view_created && (
           <button onClick={() => setScope("created")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${scope === "created" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
-            Criados por mim
+            Todos os eventos
           </button>
         )}
       </div>
@@ -824,7 +824,7 @@ function MinisteredEventsDashboard() {
         <div className="py-16 text-center text-white/50">Carregando…</div>
       ) : !data || data.events.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/50">
-          {scope === "created" ? "Você ainda não criou nenhum evento FitMind no período." : "Você ainda não foi responsável por nenhum evento FitMind no período."}
+          {scope === "created" ? "Nenhum evento FitMind no período." : "Você ainda não foi responsável por nenhum evento FitMind no período."}
         </div>
       ) : (
         <>
