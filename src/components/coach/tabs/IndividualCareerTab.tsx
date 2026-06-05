@@ -263,8 +263,8 @@ function CurrentMedalPanel({
   const nextColor = nextMedal ? (TIER_COLOR[nextMedal.tier || ""] || "#CD7F32") : "#FF4230";
   if (!currentMedal && !nextMedal) return null;
 
-  const color = currentMedal ? (TIER_COLOR[currentMedal.tier || ""] || "#CD7F32") : "#9CA3AF";
-  const nextColor = nextMedal ? (TIER_COLOR[nextMedal.tier || ""] || "#CD7F32") : "#FF4230";
+
+
 
   const prevThreshold = currentMedal ? currentMedal.threshold : 0;
   const nextThreshold = nextMedal ? nextMedal.threshold : prevThreshold;
