@@ -224,10 +224,10 @@ export function WalletTab() {
         <button
           type="button"
           onClick={() => setModal({
-            kind: "medal_monthly",
+            kind: topMonthlyKind,
             key: topMonthlyMedal!.key,
             title: topMonthlyMedal!.display_name,
-            subtitle: "Sua medalha do mês",
+            subtitle: "Última medalha conquistada",
             color: TIER_COLOR_WALLET[topMonthlyMedal!.tier || ""] || "#CD7F32",
           })}
           className="w-full text-left rounded-2xl p-4 mt-3 transition hover:bg-white/[0.02] relative overflow-hidden"
