@@ -335,6 +335,7 @@ function AdminCoaches() {
                     >
                       {acting === `creator-${c.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5" />}
                       {c.can_create_fitmind_events ? "Criador de eventos" : "Sem criar eventos"}
+                    </button>
                     <button
                       onClick={() => openTransfer(c)}
                       disabled={acting === `transfer-${c.id}`}
