@@ -46,7 +46,7 @@ function PartnerProfilePage() {
     (async () => {
       const [p, pr, ps] = await Promise.all([
         supabase.from("partners" as never).select("*").eq("id" as never, partnerId).eq("status" as never, "approved" as never).maybeSingle(),
-        supabase.from("partner_products" as never).select("id,kind,redemption_mode,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).order("kind" as never),
+        supabase.from("partner_products" as never).select("id,kind,redemption_mode,discount_percent,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).order("kind" as never),
         supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, partnerId).order("created_at" as never, { ascending: false }).limit(30),
       ]);
       setPartner((p.data as unknown as Partner) || null);
