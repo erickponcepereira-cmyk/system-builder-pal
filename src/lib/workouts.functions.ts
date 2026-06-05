@@ -364,16 +364,20 @@ export const finishWorkoutSession = createServerFn({ method: "POST" })
       .select("id, target_days, status" as never)
       .eq("student_id" as never, userId as never)
       .eq("status" as never, "active" as never);
-    let personalCompletedThisSession = false;
     for (const c of ((challenges as any[]) || [])) {
       if (streak >= c.target_days) {
         await supabase
           .from("personal_challenges" as never)
           .update({ status: "completed", completed_at: new Date().toISOString() } as never)
           .eq("id" as never, c.id as never);
-        personalCompletedThisSession = true;
       }
     }
+    // Total completed challenges (after potential updates above)
+    const { count: completedChallengesCount } = await supabase
+      .from("personal_challenges" as never)
+      .select("id" as never, { count: "exact", head: true })
+      .eq("student_id" as never, userId as never)
+      .eq("status" as never, "completed" as never);
 
     const { data: catalog } = await supabase
       .from("achievement_catalog" as never)
@@ -385,7 +389,7 @@ export const finishWorkoutSession = createServerFn({ method: "POST" })
       let satisfied = false;
       if (a.condition_type === "workouts_count") satisfied = (totalSessions || 0) >= (a.condition_value || 1);
       else if (a.condition_type === "streak_days") satisfied = streak >= (a.condition_value || 1);
-      else if (a.condition_type === "personal_challenge_completed") satisfied = personalCompletedThisSession;
+      else if (a.condition_type === "personal_challenge_completed") satisfied = (completedChallengesCount || 0) >= (a.condition_value || 1);
       if (!satisfied) continue;
       const { data: existing } = await supabase
         .from("workout_achievements")
@@ -554,20 +558,26 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
     const studentId = data.studentId || userId;
     const { data: sessions } = await supabase
       .from("workout_sessions")
-      .select("id, plan_id, started_at, ended_at, total_seconds, completion_pct, xp_earned, workout_plans!inner(name, student_id)")
+      .select("id, plan_id, started_at, ended_at, total_seconds, completion_pct, xp_earned, workout_plans!inner(name, student_id, letter)")
       .eq("student_id", studentId)
       .order("started_at", { ascending: false })
-      .limit(200);
-    const { data: logs } = await supabase
-      .from("workout_session_logs")
-      .select("exercise_id, load_kg, completed_at, workout_exercises!inner(exercise_name)")
-      .order("completed_at", { ascending: true });
+      .limit(500);
+    const sessionIds = (sessions || []).map((s: any) => s.id);
+    let logs: any[] = [];
+    if (sessionIds.length) {
+      const { data: l } = await supabase
+        .from("workout_session_logs")
+        .select("session_id, exercise_id, load_kg, reps_done, completed_at, workout_exercises!inner(exercise_name)")
+        .in("session_id", sessionIds)
+        .order("completed_at", { ascending: true });
+      logs = l || [];
+    }
     const { data: achievements } = await supabase
       .from("workout_achievements")
       .select("*")
       .eq("student_id", studentId)
       .order("earned_at", { ascending: false });
-    return { sessions: sessions || [], logs: logs || [], achievements: achievements || [] };
+    return { sessions: sessions || [], logs, achievements: achievements || [] };
   });
 
 /**

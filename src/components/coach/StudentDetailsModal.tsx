@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins, ChevronDown, ChevronUp, Eye, EyeOff, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -8,8 +8,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { getStudentAttendanceDetail, type StudentCheckin, type StudentPurchase } from "@/lib/coach-attendance.functions";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
+import StudentWorkoutsPanel from "@/components/coach/StudentWorkoutsPanel";
 
-type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas";
+type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas" | "treinos";
 
 interface Props {
   studentId: string;
@@ -81,6 +82,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [showProNotes, setShowProNotes] = useState<Set<string>>(new Set());
+  const [studentUserId, setStudentUserId] = useState<string | null>(null);
 
 
 
@@ -89,11 +91,12 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       setLoading(true);
       const { data: student } = await supabase
         .from("students")
-        .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state)")
+        .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state,user_id)")
         .eq("id", studentId)
         .maybeSingle();
-      const stu = (student as unknown as { profile_id: string; profiles: Profile }) || null;
+      const stu = (student as unknown as { profile_id: string; profiles: Profile & { user_id: string | null } }) || null;
       setProfile(stu?.profiles || null);
+      setStudentUserId(stu?.profiles?.user_id || null);
 
 
 
@@ -163,6 +166,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
     { id: "avaliacoes", label: "Avaliações", icon: Activity },
     { id: "anamnese", label: "Anamnese", icon: ClipboardList },
     { id: "janelas", label: "Janelas", icon: ClipboardList },
+    { id: "treinos", label: "Treinos & Evolução", icon: Dumbbell },
     { id: "evolucao", label: "Evolução", icon: TrendingUp },
     { id: "compras", label: "Compras", icon: ShoppingBag },
   ];
@@ -476,6 +480,10 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 <WindowMethodHistory studentId={studentId} />
               </div>
             </div>
+          ) : tab === "treinos" ? (
+            studentUserId
+              ? <StudentWorkoutsPanel studentUserId={studentUserId} />
+              : <p className="py-10 text-center text-xs text-white/40">Aluno sem usuário vinculado.</p>
           ) : tab === "evolucao" ? (
             <EvolutionPhotos photos={photos} />
           ) : (
