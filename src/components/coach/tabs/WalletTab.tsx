@@ -119,6 +119,9 @@ export function WalletTab() {
     })();
     fetchCrossSales().then((r) => setCross(r)).catch(() => {});
     fetchSplit().then((r) => setSplit(r)).catch((e) => console.error("getWalletSplit failed:", e));
+    fetchCareer().then(setCareer).catch(() => {});
+    fetchMedals().then(setMedals).catch(() => {});
+
   }, []);
 
 
