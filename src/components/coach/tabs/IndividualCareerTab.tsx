@@ -228,99 +228,87 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
   );
 }
 
-function CurrentPatentPanel({
-  career,
+function CurrentMedalPanel({
+  rules,
+  current,
   onOpen,
 }: {
-  career: CareerProgress;
+  rules: MedalRule[];
+  current: number;
   onOpen: (key: string, title: string, color: string) => void;
 }) {
-  const current = career.patents.find((p) => p.key === career.currentPatentKey) ?? null;
-  const next = career.patents.find((p) => p.key === career.nextPatentKey) ?? null;
-  const nextWindow = next ? career.windows[next.time_window_months] : null;
-  const color = current?.badge_color || "#9CA3AF";
+  const sorted = [...rules].sort((a, b) => a.threshold - b.threshold);
+  const earnedList = sorted.filter((r) => current >= r.threshold);
+  const currentMedal = earnedList[earnedList.length - 1] ?? null;
+  const nextMedal = sorted.find((r) => r.threshold > current) ?? null;
+  const color = currentMedal ? (TIER_COLOR[currentMedal.tier || ""] || "#CD7F32") : "#9CA3AF";
+  const nextColor = nextMedal ? (TIER_COLOR[nextMedal.tier || ""] || "#CD7F32") : "#FF4230";
+
+  const prevThreshold = currentMedal ? currentMedal.threshold : 0;
+  const nextThreshold = nextMedal ? nextMedal.threshold : prevThreshold;
+  const span = Math.max(1, nextThreshold - prevThreshold);
+  const progressInSpan = Math.max(0, Math.min(span, current - prevThreshold));
+  const pct = nextMedal ? (progressInSpan / span) * 100 : 100;
+  const remaining = nextMedal ? Math.max(0, nextMedal.threshold - current) : 0;
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => current && onOpen(current.key, current.display_name, color)}
-        disabled={!current}
-        className="w-full text-left rounded-2xl p-5 mb-4 relative overflow-hidden transition hover:bg-white/[0.02]"
-        style={{ backgroundColor: "#1A1A1A" }}
-      >
-        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full" style={{ backgroundColor: `${color}20` }} />
-        <div className="relative">
-          <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1">Patente atual</p>
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0"
-              style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
-              <Trophy className="h-7 w-7" style={{ color }} />
-            </div>
-            <div className="flex-1">
-              <p className="text-xl font-bold text-white">{current?.display_name || "Sem patente"}</p>
-              <p className="text-xs text-white/50">{current?.description || "Comece movimentando suas primeiras vendas."}</p>
+      {currentMedal && (
+        <button
+          type="button"
+          onClick={() => onOpen(currentMedal.key, currentMedal.display_name, color)}
+          className="w-full text-left rounded-2xl p-5 mb-4 relative overflow-hidden transition hover:bg-white/[0.02]"
+          style={{ backgroundColor: "#1A1A1A" }}
+        >
+          <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full" style={{ backgroundColor: `${color}20` }} />
+          <div className="relative">
+            <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1">Medalha atual</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0"
+                style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
+                <Medal className="h-7 w-7" style={{ color }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xl font-bold text-white">{currentMedal.display_name}</p>
+                <p className="text-xs text-white/50">{fmtBRL(currentMedal.threshold)} acumulado</p>
+              </div>
             </div>
           </div>
-        </div>
-      </button>
+        </button>
+      )}
 
-      {next && nextWindow && (
+      {nextMedal && (
         <div className="rounded-2xl p-5 mb-6" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima patente</p>
-              <p className="text-base font-bold text-white">{next.display_name}</p>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima medalha</p>
+              <p className="text-base font-bold text-white">{nextMedal.display_name}</p>
             </div>
             <span className="rounded-full px-2.5 py-1 text-[10px] font-bold"
-              style={{ backgroundColor: `${next.badge_color || "#FF4230"}20`, color: next.badge_color || "#FF4230" }}>
-              Nível {next.level}
+              style={{ backgroundColor: `${nextColor}20`, color: nextColor }}>
+              {pct.toFixed(0)}%
             </span>
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-white/70">
-                Faturamento total (VP + VE){" "}
-                <span className="text-white/40">
-                  ({next.time_window_months === 1 ? "mês atual" : `últimos ${next.time_window_months} meses`})
-                </span>
-              </span>
+              <span className="text-xs text-white/70">VP acumulado</span>
               <span className="text-xs font-bold text-white">
-                {fmtBRL(nextWindow.totalRevenue)} / {fmtBRL(next.required_revenue)}
+                {fmtBRL(current)} / {fmtBRL(nextMedal.threshold)}
               </span>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#252525" }}>
-              <div
-                className="h-full transition-all"
-                style={{
-                  width: `${next.required_revenue > 0 ? Math.min((nextWindow.totalRevenue / next.required_revenue) * 100, 100) : 0}%`,
-                  backgroundColor: next.badge_color || "#FF4230",
-                }}
-              />
+              <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: nextColor }} />
             </div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg p-2.5" style={{ backgroundColor: "#0F0F0F" }}>
-              <div className="flex items-center gap-1.5 text-white/40 mb-0.5">
-                <Users className="h-3 w-3" />
-                <span className="text-[10px] uppercase tracking-wider">VP (próprio)</span>
-              </div>
-              <p className="text-sm font-bold text-white">{fmtBRL(nextWindow.ownRevenue)}</p>
-              <p className="text-[10px] text-white/40">{nextWindow.ownPct.toFixed(0)}%</p>
-            </div>
-            <div className="rounded-lg p-2.5" style={{ backgroundColor: "#0F0F0F" }}>
-              <div className="flex items-center gap-1.5 text-white/40 mb-0.5">
-                <TrendingUp className="h-3 w-3" />
-                <span className="text-[10px] uppercase tracking-wider">VE (equipe)</span>
-              </div>
-              <p className="text-sm font-bold text-white">{fmtBRL(nextWindow.teamRevenue)}</p>
-              <p className="text-[10px] text-white/40">{(100 - nextWindow.ownPct).toFixed(0)}%</p>
-            </div>
+            <p className="text-[11px] text-white/50 mt-2">
+              Falta <span className="font-bold text-white">{fmtBRL(remaining)}</span> para conquistar.
+            </p>
           </div>
         </div>
       )}
     </>
   );
 }
+
 
 
 export default IndividualCareerTab;
