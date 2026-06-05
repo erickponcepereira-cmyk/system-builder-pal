@@ -38,6 +38,8 @@ interface FitmindEvent {
   color: string | null;
   category: EventCategory;
   visibility: EventVisibility;
+  visibility_roles: EventVisibility[];
+  responsible_coach_id: string | null;
   tags: string[] | null;
   starts_at: string;
   ends_at: string;
@@ -52,6 +54,7 @@ interface FitmindEvent {
   is_active: boolean;
   created_at: string;
 }
+
 
 interface HighlightedDay {
   id: string;
