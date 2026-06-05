@@ -189,6 +189,17 @@ export function ProtocolTab() {
   };
 
   const enableTplFn = useServerFn(enableTemplateForStudent);
+  const listPlansFn = useServerFn(listStudentWorkoutPlansByRecord);
+  const deletePlanFn = useServerFn(deleteWorkoutPlan);
+
+  const reloadEnabledPlans = async (s: Student | null) => {
+    if (!s || s.external) { setEnabledPlans([]); return; }
+    try {
+      const r = (await listPlansFn({ data: { student_record_id: s.id } })) as { plans: any[] };
+      setEnabledPlans(r.plans || []);
+    } catch { setEnabledPlans([]); }
+  };
+
 
   const applyTemplate = (t: WorkoutTemplate, mode: "replace" | "append") => {
     setProtocol((p) => ({
