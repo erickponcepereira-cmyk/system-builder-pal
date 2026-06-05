@@ -301,7 +301,7 @@ function StudentChallengePage() {
           <Lock className="h-12 w-12 text-amber-400 mx-auto" />
           <h1 className="text-xl font-bold text-foreground">Desafio indisponível para {reasonLabel}s</h1>
           <p className="text-sm text-muted-foreground">
-            O Desafio FitMind é exclusivo para alunos. Como você está cadastrado(a) também como <strong>{reasonLabel}</strong>, não pode participar nem ganhar moedas de desafio por compras.
+            O Desafio FitMind é exclusivo para alunos. Como você está cadastrado(a) também como <strong>{reasonLabel}</strong>, não pode participar nem ganhar tickets de desafio por compras.
           </p>
           <p className="text-xs text-muted-foreground">
             Caso entenda que isso é um erro, fale com o administrador.
@@ -310,6 +310,15 @@ function StudentChallengePage() {
       </div>
     );
   }
+
+  // Bioimpedância (pesagem inicial) pendente?
+  const initialDone = !!enrollment && ["weighed_initial", "scheduled_final", "weighed_final"].includes(enrollment.status);
+  const daysUntilInitialDeadline = enrollment?.group?.initial_end_date
+    ? Math.ceil((new Date(enrollment.group.initial_end_date + "T12:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+  const showInitialDeadlineAlert =
+    !!enrollment && !initialDone && daysUntilInitialDeadline !== null && daysUntilInitialDeadline >= 0;
+
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-24 space-y-4">
