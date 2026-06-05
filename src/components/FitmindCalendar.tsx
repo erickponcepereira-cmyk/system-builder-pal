@@ -859,8 +859,8 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
   const gcUrl = buildGoogleCalendarUrl(ev);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md rounded-2xl overflow-hidden" style={{ backgroundColor: "#111" }}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-2 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-md my-auto max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl" style={{ backgroundColor: "#111" }}>
         {/* Banner do evento */}
         <div className="relative p-6 pb-4" style={{ background: `linear-gradient(135deg, ${evColor}30, ${evColor}10)` }}>
           <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg bg-black/30 text-white/60 hover:text-white hover:bg-black/50 transition">
