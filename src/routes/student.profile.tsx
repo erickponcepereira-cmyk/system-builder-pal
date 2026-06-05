@@ -249,10 +249,14 @@ function ProfilePage() {
       {/* Profile card */}
       <div className="rounded-2xl p-5 flex items-center gap-4" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="relative">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/40">
-            <span className="text-xl font-bold text-primary">{profile.name.charAt(0)}</span>
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/40 overflow-hidden">
+            {profile.photo_url ? (
+              <img src={profile.photo_url} alt={profile.name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xl font-bold text-primary">{profile.name.charAt(0)}</span>
+            )}
           </div>
-          <button className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary border-2" style={{ borderColor: "#1A1A1A" }}>
+          <button onClick={() => navigate({ to: "/student/profile/edit" })} className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary border-2" style={{ borderColor: "#1A1A1A" }}>
             <Camera className="h-3 w-3 text-primary-foreground" />
           </button>
         </div>
@@ -260,15 +264,36 @@ function ProfilePage() {
           <p className="text-base font-bold text-white">{profile.name}</p>
           <p className="text-xs text-white/50">{profile.email}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-              🔥 Plano Premium
-            </span>
+            <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">🔥 Plano Premium</span>
+            {isInfluencer && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300"><Sparkles className="h-3 w-3" /> Influencer</span>
+            )}
+            {isSubcoach && !isInfluencer && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300"><Star className="h-3 w-3" /> Subcoach</span>
+            )}
+            {profile.blood_type && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-300">🩸 {profile.blood_type}</span>
+            )}
             {challengeTokens > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-                🎟️ {challengeTokens} ticket{challengeTokens > 1 ? "s" : ""} de desafio
-              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">🎟️ {challengeTokens} ticket{challengeTokens > 1 ? "s" : ""} de desafio</span>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Stats reais */}
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setShowChallengesModal(true)} className="rounded-2xl p-3 text-center transition hover:bg-white/5" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-0.5 flex items-center justify-center gap-1">
+            <Trophy className="h-3 w-3 text-primary" />
+            <p className="text-base font-bold text-white">{challengesCount}</p>
+          </div>
+          <p className="text-[10px] text-white/40">Desafios participados</p>
+          <p className="mt-0.5 text-[9px] text-primary">Ver histórico →</p>
+        </button>
+        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
+          <p className="text-base font-bold text-white">{bioWeightDiff != null ? `${bioWeightDiff > 0 ? "-" : "+"}${Math.abs(bioWeightDiff).toFixed(1)}` : (totalKgLost > 0 ? `-${totalKgLost.toFixed(1)}` : "0")}</p>
+          <p className="text-[10px] text-white/40">kg perdidos {bioWeightDiff != null ? "(bioimpedância)" : "no total"}</p>
         </div>
       </div>
 
