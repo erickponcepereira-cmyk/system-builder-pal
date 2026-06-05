@@ -176,14 +176,16 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
       const ruleByKey = new Map<string, { key: string; display_name: string; threshold: number; image_url: string | null; icon: string | null }>();
       ((rules || []) as unknown as Array<{ key: string; display_name: string; threshold: number; image_url: string | null; icon: string | null }>)
         .forEach((r) => ruleByKey.set(r.key, r));
-      let best: { rule: { key: string; display_name: string; threshold: number; image_url: string | null; icon: string | null }; threshold: number } | null = null;
+      type BestRule = { key: string; display_name: string; threshold: number; image_url: string | null; icon: string | null };
+      let best: { rule: BestRule; threshold: number } | null = null;
       earned.forEach((e) => {
         const r = ruleByKey.get(e.medal_key);
         if (!r) return;
         if (!best || r.threshold > best.threshold) best = { rule: r, threshold: r.threshold };
       });
-      if (best) {
-        currentMedal = { key: best.rule.key, name: best.rule.display_name, image_url: best.rule.image_url, icon: best.rule.icon, color: null };
+      const bestVal = best as { rule: BestRule; threshold: number } | null;
+      if (bestVal) {
+        currentMedal = { key: bestVal.rule.key, name: bestVal.rule.display_name, image_url: bestVal.rule.image_url, icon: bestVal.rule.icon, color: null };
       }
     }
 
