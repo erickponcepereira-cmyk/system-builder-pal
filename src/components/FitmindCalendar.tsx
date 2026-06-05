@@ -286,6 +286,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   });
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<FitmindEvent | null>(null);
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+
 
   const [yearStr, monthStr] = currentYM.split("-");
   const year = Number(yearStr);
