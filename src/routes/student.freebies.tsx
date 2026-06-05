@@ -69,6 +69,18 @@ function StudentFreebies() {
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+
+  const generateCoupon = async (p: PartnerFreeProduct) => {
+    setGenerating(p.id);
+    const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent });
+  };
 
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
