@@ -359,7 +359,7 @@ function StudentHome() {
                   <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
                 </div>
                 <div className="rounded-lg bg-primary/10 px-2.5 py-2">
-                  <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Moedas</p>
+                  <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Tickets</p>
                   <p className="font-bold text-primary">{tokens}</p>
                 </div>
               </div>
@@ -369,10 +369,11 @@ function StudentHome() {
               <p>Você ainda não está inscrito no desafio.</p>
               {tokens > 0 && (
                 <p className="mt-1 text-primary font-semibold flex items-center gap-1">
-                  <Coins className="h-3 w-3" /> {tokens} moeda{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
+                  <Coins className="h-3 w-3" /> {tokens} ticket{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
                 </p>
               )}
             </div>
+
           )}
         </Link>
       )}
