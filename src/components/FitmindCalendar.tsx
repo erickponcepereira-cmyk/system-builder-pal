@@ -396,17 +396,25 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     return { gridDays: [...prefix, ...days], monthLabel: label };
   }, [currentYM, year, month]);
 
+  // ── Apply "Meus eventos" filter (only to FitMind events; keeps personal items) ──
+  const displayEvents = useMemo(() => {
+    if (!onlyMine) return events;
+    return events.filter((ev) =>
+      ev.id.startsWith("appt-") || ev.id.startsWith("challenge-") || myRegisteredIds.has(ev.id),
+    );
+  }, [events, onlyMine, myRegisteredIds]);
+
   // ── Events indexed by date string (Cuiabá date) ──────────────────────────
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, FitmindEvent[]>();
-    for (const ev of events) {
+    for (const ev of displayEvents) {
       const key = tzDateKey(ev.starts_at);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
     }
     return map;
-  }, [events]);
+  }, [displayEvents]);
 
   const highlightByDate = useMemo(() => {
     const map = new Map<string, HighlightedDay>();
