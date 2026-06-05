@@ -332,7 +332,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     Promise.all([
       supabase
         .from("fitmind_events" as never)
-        .select("id,title,subtitle,description,location,image_url,color,category,tags,starts_at,ends_at,all_day,is_highlighted,is_important,highlight_color,highlight_label,google_calendar_title,google_calendar_description,google_calendar_location,responsible_coach:responsible_coach_id(profiles:profile_id(name,whatsapp))" as never)
+        .select("id,title,subtitle,description,location,image_url,color,category,tags,starts_at,ends_at,all_day,is_highlighted,is_important,highlight_color,highlight_label,google_calendar_title,google_calendar_description,google_calendar_location,responsible_coach:responsible_coach_id(profiles:profile_id(name,phone))" as never)
         .eq("is_active" as never, true as never)
         .gte("starts_at" as never, from.toISOString() as never)
         .lt("starts_at" as never, to.toISOString() as never)
@@ -351,7 +351,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       const base = ((evRes.data as any[]) || []).map((r) => ({
         ...r,
         responsible_coach_name: r.responsible_coach?.profiles?.name || null,
-        responsible_coach_whatsapp: r.responsible_coach?.profiles?.whatsapp || null,
+        responsible_coach_whatsapp: r.responsible_coach?.profiles?.phone || null,
       })) as FitmindEvent[];
       setEvents([...base, ...challengeEvents, ...appointmentEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
