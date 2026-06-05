@@ -16,7 +16,7 @@ interface Partner {
   whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
 }
-interface Product { id: string; kind: "free" | "paid"; name: string; description: string | null; image_url: string | null; price: number; }
+interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; name: string; description: string | null; image_url: string | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
 
 function PartnerProfilePage() {
@@ -26,6 +26,8 @@ function PartnerProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"info" | "products" | "timeline">("info");
+  const [productFilter, setProductFilter] = useState<"all" | "free" | "discount" | "paid">("all");
+
   const [coupon, setCoupon] = useState<{ token: string; productName: string } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ function PartnerProfilePage() {
     (async () => {
       const [p, pr, ps] = await Promise.all([
         supabase.from("partners" as never).select("*").eq("id" as never, partnerId).eq("status" as never, "approved" as never).maybeSingle(),
-        supabase.from("partner_products" as never).select("id,kind,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).order("kind" as never),
+        supabase.from("partner_products" as never).select("id,kind,redemption_mode,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).order("kind" as never),
         supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, partnerId).order("created_at" as never, { ascending: false }).limit(30),
       ]);
       setPartner((p.data as unknown as Partner) || null);
