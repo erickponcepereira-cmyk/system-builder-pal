@@ -4900,6 +4900,7 @@ export type Database = {
           coach_commission_percentage: number
           created_at: string
           description: string | null
+          discount_percent: number | null
           id: string
           image_url: string | null
           is_active_by_partner: boolean
@@ -4932,6 +4933,7 @@ export type Database = {
           coach_commission_percentage?: number
           created_at?: string
           description?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
@@ -4964,6 +4966,7 @@ export type Database = {
           coach_commission_percentage?: number
           created_at?: string
           description?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean

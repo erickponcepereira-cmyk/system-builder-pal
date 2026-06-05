@@ -48,6 +48,7 @@ interface Product {
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
   redemption_mode?: "free" | "discount";
+  discount_percent?: number | null;
   price_input_mode?: "charge" | "receive";
   coach_commission_percentage?: number;
   partner_net_amount?: number;
@@ -409,9 +410,14 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-white truncate">{p.name}</p>
                 {p.kind === "free" ? (
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.redemption_mode === "discount" ? "bg-amber-500/15 text-amber-400" : "bg-green-500/15 text-green-400"}`}>
-                    {p.redemption_mode === "discount" ? "Desconto" : "Gratuito"}
-                  </span>
+                  <>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.redemption_mode === "discount" ? "bg-amber-500/15 text-amber-400" : "bg-green-500/15 text-green-400"}`}>
+                      {p.redemption_mode === "discount" ? "Desconto" : "Gratuito"}
+                    </span>
+                    {p.redemption_mode === "discount" && p.discount_percent ? (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-bold">{p.discount_percent}% OFF</span>
+                    ) : null}
+                  </>
                 ) : (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">Pago</span>
                 )}
@@ -472,6 +478,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                       : "O aluno gera um cupom para resgatar o item/serviço gratuitamente."}
                   </p>
                 </div>
+              )}
+              {editing.kind === "free" && editing.redemption_mode === "discount" && (
+                <Field label="Porcentagem do desconto (%)">
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={editing.discount_percent ?? ""}
+                    onChange={e => setEditing({ ...editing, discount_percent: e.target.value === "" ? null : Math.min(100, Math.max(1, Number(e.target.value))) })}
+                    placeholder="Ex.: 20"
+                    className="field-input"
+                  />
+                  <p className="mt-1 text-[10px] text-white/40">Aparece em destaque para o aluno como "X% OFF".</p>
+                </Field>
               )}
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>

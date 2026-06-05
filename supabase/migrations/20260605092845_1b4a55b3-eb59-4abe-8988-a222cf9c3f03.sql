@@ -1,0 +1,1 @@
+ALTER TABLE public.partner_products ADD COLUMN IF NOT EXISTS discount_percent integer CHECK (discount_percent IS NULL OR (discount_percent > 0 AND discount_percent <= 100));

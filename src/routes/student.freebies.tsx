@@ -52,6 +52,8 @@ type PartnerFreeProduct = {
   redemption_instructions: string | null;
   stock: number | null;
   partner_id: string;
+  redemption_mode: "free" | "discount" | null;
+  discount_percent: number | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
 
@@ -66,6 +68,7 @@ function StudentFreebies() {
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [pageMode, setPageMode] = useState<"free" | "discount">("free");
 
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -98,7 +101,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,partners(fantasy_name,photo_url,status,business_area)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,partners(fantasy_name,photo_url,status,business_area)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -148,8 +151,12 @@ function StudentFreebies() {
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-[#0F0F0F] px-4 py-3">
         <Link to="/student/store" className="text-white/60"><ArrowLeft className="h-5 w-5" /></Link>
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-white flex items-center gap-2"><Gift className="h-5 w-5 text-primary" /> Gratuitos</h1>
-          <p className="text-xs text-white/50">Brindes e bônus para você resgatar</p>
+          <h1 className="text-lg font-bold text-white flex items-center gap-2">
+            <Gift className="h-5 w-5 text-primary" /> {pageMode === "discount" ? "Clube de Descontos" : "Gratuitos"}
+          </h1>
+          <p className="text-xs text-white/50">
+            {pageMode === "discount" ? "Cupons de desconto exclusivos de parceiros" : "Brindes e bônus para você resgatar"}
+          </p>
         </div>
         <Link to="/student/partners" className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-3 py-1.5">
           <Building2 className="h-3.5 w-3.5" /> Parceiros
@@ -192,11 +199,49 @@ function StudentFreebies() {
               </button>
             </div>
 
-            {items.length === 0 && partnerFreebies.length === 0 && <p className="text-center text-sm text-white/50 mt-10">Nenhum brinde disponível no momento.</p>}
+            {/* Page mode selector: Gratuitos | Clube de Descontos */}
+            {(() => {
+              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + items.length;
+              const discountCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
+              return (
+                <div className="mb-5 grid grid-cols-2 gap-0 p-1 rounded-2xl bg-white/5 border border-white/10">
+                  <button
+                    onClick={() => setPageMode("free")}
+                    className={`rounded-xl py-2.5 text-xs font-bold transition ${pageMode === "free" ? "bg-primary text-primary-foreground shadow" : "text-white/60 hover:text-white"}`}
+                  >
+                    <Gift className="inline h-3.5 w-3.5 mr-1" /> Gratuitos {freeCount > 0 && <span className="ml-1 opacity-75">({freeCount})</span>}
+                  </button>
+                  <button
+                    onClick={() => setPageMode("discount")}
+                    className={`rounded-xl py-2.5 text-xs font-bold transition ${pageMode === "discount" ? "bg-primary text-primary-foreground shadow" : "text-white/60 hover:text-white"}`}
+                  >
+                    🏷️ Clube de Descontos {discountCount > 0 && <span className="ml-1 opacity-75">({discountCount})</span>}
+                  </button>
+                </div>
+              );
+            })()}
 
-            {partnerFreebies.length > 0 && (() => {
+            {(() => {
+              const filteredPartner = partnerFreebies.filter((p) =>
+                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+              );
+              const showItems = pageMode === "free" && items.length > 0;
+              const isEmpty = filteredPartner.length === 0 && !showItems;
+              if (isEmpty) {
+                return <p className="text-center text-sm text-white/50 mt-10">
+                  {pageMode === "discount" ? "Nenhum cupom de desconto disponível no momento." : "Nenhum brinde disponível no momento."}
+                </p>;
+              }
+              return null;
+            })()}
+
+            {(() => {
+              const filteredPartner = partnerFreebies.filter((p) =>
+                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+              );
+              if (filteredPartner.length === 0) return null;
               const byArea = new Map<string, PartnerFreeProduct[]>();
-              partnerFreebies.forEach((p) => {
+              filteredPartner.forEach((p) => {
                 const area = p.partners?.business_area || "Outras áreas";
                 if (!byArea.has(area)) byArea.set(area, []);
                 byArea.get(area)!.push(p);
@@ -204,32 +249,43 @@ function StudentFreebies() {
               const areas = Array.from(byArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
               return (
                 <div className="mb-6 space-y-5">
-                  <h2 className="text-sm font-bold text-white flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> Brindes de empresas parceiras</h2>
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    {pageMode === "discount" ? "Descontos de empresas parceiras" : "Brindes de empresas parceiras"}
+                  </h2>
                   {areas.map(([area, list]) => (
                     <div key={area}>
                       <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/45">{area}</p>
                       <div className="grid gap-3 sm:grid-cols-2">
-                        {list.map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => setOpenPartner(p.partner_id)}
-                            className="text-left rounded-2xl overflow-hidden border border-white/5 block"
-                            style={{ backgroundColor: "#1A1A1A" }}
-                          >
-                            {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
-                            <div className="p-4">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="font-bold text-white">{p.name}</h3>
-                                <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>
+                        {list.map((p) => {
+                          const isDiscount = p.redemption_mode === "discount";
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => setOpenPartner(p.partner_id)}
+                              className="text-left rounded-2xl overflow-hidden border border-white/5 block relative"
+                              style={{ backgroundColor: "#1A1A1A" }}
+                            >
+                              {isDiscount && p.discount_percent ? (
+                                <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-lg">
+                                  {p.discount_percent}% OFF
+                                </div>
+                              ) : null}
+                              {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                              <div className="p-4">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h3 className="font-bold text-white">{p.name}</h3>
+                                  {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>}
+                                </div>
+                                <p className="mt-1 text-[11px] text-white/40">{p.partners?.fantasy_name}</p>
+                                {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                                {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                                {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                                <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver empresa</div>
                               </div>
-                              <p className="mt-1 text-[11px] text-white/40">{p.partners?.fantasy_name}</p>
-                              {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
-                              {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                              {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                              <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver empresa</div>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -237,7 +293,7 @@ function StudentFreebies() {
               );
             })()}
 
-            {items.length > 0 && (() => {
+            {pageMode === "free" && items.length > 0 && (() => {
               const byCat = new Map<string, Freebie[]>();
               items.forEach((it) => {
                 const cat = it.category || "Geral";
