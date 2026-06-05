@@ -215,7 +215,7 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
               <span className="text-[9px] font-bold rounded-full px-2 py-0.5 bg-white/5 text-white/40">BLOQUEADA</span>
             )}
           </div>
-          <p className="text-[10px] text-white/40">{fmtBRL(rule.threshold)}</p>
+          <p className="text-[10px] text-white/40">{fmtBRL(rule.threshold)} · {pct.toFixed(0)}% concluído</p>
           <div className="h-1.5 rounded-full overflow-hidden mt-1.5" style={{ backgroundColor: "#252525" }}>
             <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
           </div>
