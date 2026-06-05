@@ -292,7 +292,7 @@ function CoachDashboard() {
     { id: "benefits", label: "Gratuitos", icon: Gift },
     { id: "evaluate", label: "Avaliar Aluno", icon: ClipboardList },
     { id: "protocol", label: "Protocolo & Treino", icon: Utensils },
-    { id: "workouts", label: "Treinos & Evolução", icon: Dumbbell },
+    
     { id: "attendance", label: "Frequência", icon: CalendarCheck },
     { id: "reports", label: "Relatórios", icon: BarChart3 },
     { id: "fitmind_calendar", label: "Agenda FitMind", icon: CalendarDays },
