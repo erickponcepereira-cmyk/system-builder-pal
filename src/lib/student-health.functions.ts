@@ -41,14 +41,30 @@ export const getStudentHealthData = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<StudentHealthData> => {
     const { profile, student } = await resolveStudentForUser(context.userId);
 
-    // Try to find latest FitMindShape assessment for this student via email/phone match
-    // within their coach's evaluation clients.
+    // 1) Try latest assessment directly linked to this student (coach panel flow)
     let assessmentBmr: number | null = null;
     let assessmentWeight: number | null = null;
     let lastAssessmentDate: string | null = null;
     let source: StudentHealthData["lastAssessmentSource"] = null;
 
-    if (student.coach_id && (profile.email || profile.phone)) {
+    {
+      const { data: assessment } = await supabaseAdmin
+        .from("coach_body_assessments")
+        .select("basal_metabolism,weight,assessment_date")
+        .eq("student_id", student.id)
+        .order("assessment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (assessment) {
+        assessmentBmr = assessment.basal_metabolism ? Number(assessment.basal_metabolism) : null;
+        assessmentWeight = assessment.weight ? Number(assessment.weight) : null;
+        lastAssessmentDate = assessment.assessment_date || null;
+        source = "fitmindshape";
+      }
+    }
+
+    // 2) Fallback: FitMindShape evaluation clients matched by email/phone
+    if (!assessmentWeight && student.coach_id && (profile.email || profile.phone)) {
       const filters: string[] = [];
       if (profile.email) filters.push(`email.eq.${profile.email}`);
       if (profile.phone) filters.push(`whatsapp.eq.${profile.phone}`);
