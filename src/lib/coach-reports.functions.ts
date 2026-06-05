@@ -224,14 +224,15 @@ async function buildSalesReportForRange(
     }
   });
 
-  const customerAgg = new Map<string, { student_id: string; name: string; email: string; orders: number; revenue: number }>();
+  const customerAgg = new Map<string, { student_id: string; name: string; email: string; group: StudentGroup; orders: number; revenue: number }>();
   rows.forEach((r) => {
     const c = customerAgg.get(r.student_id) || {
-      student_id: r.student_id, name: r.student_name, email: r.student_email, orders: 0, revenue: 0,
+      student_id: r.student_id, name: r.student_name, email: r.student_email, group: r.student_group, orders: 0, revenue: 0,
     };
     c.orders += 1; c.revenue += r.amount;
     customerAgg.set(r.student_id, c);
   });
+
 
   const revenue = rows.reduce((s, r) => s + r.amount, 0);
   const itemsSold = rows.reduce((s, r) => s + r.quantity, 0);
