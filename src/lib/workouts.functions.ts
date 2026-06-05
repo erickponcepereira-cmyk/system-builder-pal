@@ -203,28 +203,32 @@ export const syncProtocolWorkout = createServerFn({ method: "POST" })
 
     const items = data.items.filter((i) => i.name.trim());
     if (items.length > 0 && planId) {
-      const parseInt0 = (s?: string | null) => {
+      const parseIntSafe = (s?: string | null) => {
         if (!s) return null;
-        const n = parseInt(String(s).replace(/[^\d]/g, ""), 10);
-        return Number.isFinite(n) ? n : null;
+        const m = String(s).match(/\d+/);
+        return m ? parseInt(m[0], 10) : null;
       };
-      const rows = items.map((it, i) => ({
-        plan_id: planId!,
-        order_index: i,
-        exercise_name: it.name,
-        sets: parseInt0(it.sets) ?? 3,
-        reps: it.reps ?? null,
-        load_kg: null,
-        rest_seconds: parseInt0(it.rest) ?? 60,
-        equipment_config: null,
-        media_url: null,
-        notes: it.notes ?? null,
-        is_cardio: false,
-        cardio_duration_min: null,
-        cardio_pace: null,
-        cardio_speed: null,
-        cardio_elevation: null,
-      }));
+      const rows = items.map((it, i) => {
+        const rest = parseRestRange(it.rest);
+        return {
+          plan_id: planId!,
+          order_index: i,
+          exercise_name: it.name,
+          sets: parseIntSafe(it.sets) ?? 3,
+          reps: it.reps ?? null,
+          load_kg: null,
+          rest_seconds: rest.min,
+          rest_seconds_max: rest.max,
+          equipment_config: null,
+          media_url: null,
+          notes: it.notes ?? null,
+          is_cardio: false,
+          cardio_duration_min: null,
+          cardio_pace: null,
+          cardio_speed: null,
+          cardio_elevation: null,
+        };
+      });
       const { error } = await supabase.from("workout_exercises").insert(rows);
       if (error) throw new Error(error.message);
     }
