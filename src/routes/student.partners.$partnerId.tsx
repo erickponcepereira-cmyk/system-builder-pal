@@ -132,7 +132,12 @@ function PartnerProfilePage() {
                     const isDiscount = p.kind === "free" && p.redemption_mode === "discount";
                     const isFree = p.kind === "free" && !isDiscount;
                     return (
-                      <div key={p.id} className="rounded-xl overflow-hidden flex flex-col" style={{ backgroundColor: "#1A1A1A" }}>
+                      <div key={p.id} className="rounded-xl overflow-hidden flex flex-col relative" style={{ backgroundColor: "#1A1A1A" }}>
+                        {isDiscount && p.discount_percent ? (
+                          <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground text-[11px] font-extrabold px-2 py-1 rounded-md shadow-lg">
+                            {p.discount_percent}% OFF
+                          </div>
+                        ) : null}
                         {p.image_url ? <img src={p.image_url} className="h-28 w-full object-cover" alt={p.name} /> : <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>}
                         <div className="p-2.5 flex-1 flex flex-col">
                           <div className="flex items-center gap-1 mb-1">
