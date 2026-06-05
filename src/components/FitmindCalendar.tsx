@@ -40,9 +40,12 @@ interface FitmindEvent {
   google_calendar_title: string | null;
   google_calendar_description: string | null;
   google_calendar_location: string | null;
+  responsible_coach_name?: string | null;
+  responsible_coach_whatsapp?: string | null;
   appointment_pay_url?: string | null;
   appointment_pending?: boolean;
 }
+
 
 
 interface HighlightedDay {
@@ -283,6 +286,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   });
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<FitmindEvent | null>(null);
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+
 
   const [yearStr, monthStr] = currentYM.split("-");
   const year = Number(yearStr);
@@ -297,7 +302,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     Promise.all([
       supabase
         .from("fitmind_events" as never)
-        .select("id,title,subtitle,description,location,image_url,color,category,tags,starts_at,ends_at,all_day,is_highlighted,is_important,highlight_color,highlight_label,google_calendar_title,google_calendar_description,google_calendar_location" as never)
+        .select("id,title,subtitle,description,location,image_url,color,category,tags,starts_at,ends_at,all_day,is_highlighted,is_important,highlight_color,highlight_label,google_calendar_title,google_calendar_description,google_calendar_location,responsible_coach:responsible_coach_id(profiles:profile_id(name,whatsapp))" as never)
         .eq("is_active" as never, true as never)
         .gte("starts_at" as never, from.toISOString() as never)
         .lt("starts_at" as never, to.toISOString() as never)
@@ -313,12 +318,17 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     ]).then(([evRes, dayRes, challengeEvents, appointmentEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
-      const base = (evRes.data as unknown as FitmindEvent[]) || [];
+      const base = ((evRes.data as any[]) || []).map((r) => ({
+        ...r,
+        responsible_coach_name: r.responsible_coach?.profiles?.name || null,
+        responsible_coach_whatsapp: r.responsible_coach?.profiles?.whatsapp || null,
+      })) as FitmindEvent[];
       setEvents([...base, ...challengeEvents, ...appointmentEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
   }, [currentYM]);
+
 
   // ── Calendar grid ────────────────────────────────────────────────────────
 
@@ -431,7 +441,17 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           </h2>
           <p className="text-xs text-white/45 mt-0.5">Eventos gratuitos para toda a comunidade</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex rounded-xl bg-white/5 p-0.5">
+            <button onClick={() => setViewMode("calendar")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === "calendar" ? "bg-primary text-white" : "text-white/60"}`}>
+              Calendário
+            </button>
+            <button onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === "list" ? "bg-primary text-white" : "text-white/60"}`}>
+              Lista
+            </button>
+          </div>
           <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, -1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronLeft className="h-4 w-4" />
@@ -443,6 +463,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           </button>
 
         </div>
+
       </div>
 
       {/* Eventos em destaque (banner) */}
@@ -736,10 +757,27 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             </a>
           )}
 
+          {/* Coach responsável + WhatsApp */}
+          {ev.responsible_coach_name && (
+            <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Coach responsável</p>
+              <p className="text-sm font-semibold text-white">{ev.responsible_coach_name}</p>
+              {ev.responsible_coach_whatsapp && (
+                <a
+                  href={`https://wa.me/${ev.responsible_coach_whatsapp.replace(/\D/g, "")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/30 transition">
+                  💬 Falar no WhatsApp
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Presença (somente eventos FitMind) */}
           {!ev.id.startsWith("appt-") && !ev.id.startsWith("challenge-") && (
             <EventAttendanceBlock eventId={ev.id} color={evColor} />
           )}
+
 
           {/* CTA: Adicionar ao Google Agenda */}
           <a

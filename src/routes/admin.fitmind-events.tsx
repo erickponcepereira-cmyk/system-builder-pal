@@ -38,6 +38,8 @@ interface FitmindEvent {
   color: string | null;
   category: EventCategory;
   visibility: EventVisibility;
+  visibility_roles: EventVisibility[];
+  responsible_coach_id: string | null;
   tags: string[] | null;
   starts_at: string;
   ends_at: string;
@@ -52,6 +54,7 @@ interface FitmindEvent {
   is_active: boolean;
   created_at: string;
 }
+
 
 interface HighlightedDay {
   id: string;
@@ -90,6 +93,8 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   color: "#E24B4A",
   category: "aula",
   visibility: "todos",
+  visibility_roles: ["todos"],
+  responsible_coach_id: null,
   tags: [],
   starts_at: tzDateTimeLocal(new Date()),
   ends_at: tzDateTimeLocal(new Date(Date.now() + 3600000)),
@@ -102,6 +107,7 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   google_calendar_description: null,
   google_calendar_location: null,
 };
+
 
 const EMPTY_DAY: Omit<HighlightedDay, "id"> = {
   date: tzToday(),
@@ -169,9 +175,23 @@ function EventsTab() {
   const [editing, setEditing] = useState<Partial<FitmindEvent> | null>(null);
   const [saving, setSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(() => tzToday().slice(0, 7));
+  const [coachOptions, setCoachOptions] = useState<Array<{ id: string; name: string; whatsapp: string | null }>>([]);
 
   const [showInactive, setShowInactive] = useState(false);
   const [tagInput, setTagInput] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("coaches" as never)
+        .select("id, profiles:profile_id(name, whatsapp)" as never);
+      const opts = ((data as any[]) || [])
+        .map((c) => ({ id: c.id, name: c.profiles?.name || "Coach", whatsapp: c.profiles?.whatsapp || null }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setCoachOptions(opts);
+    })();
+  }, []);
+
   const load = async () => {
     setLoading(true);
     const from = tzStartOfMonth(filterMonth).toISOString();
@@ -188,6 +208,7 @@ function EventsTab() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [filterMonth]);
+
 
 
 
@@ -223,6 +244,9 @@ function EventsTab() {
 
     setSaving(true);
     try {
+      const roles = (editing.visibility_roles && editing.visibility_roles.length > 0)
+        ? editing.visibility_roles
+        : ["todos"] as EventVisibility[];
       const payload = {
         title: editing.title.trim(),
         subtitle: editing.subtitle?.trim() || null,
@@ -231,7 +255,9 @@ function EventsTab() {
         image_url: editing.image_url?.trim() || null,
         color: editing.color || "#E24B4A",
         category: editing.category || "aula",
-        visibility: editing.visibility || "todos",
+        visibility: (roles.includes("todos") ? "todos" : roles[0]) as EventVisibility,
+        visibility_roles: roles,
+        responsible_coach_id: editing.responsible_coach_id || null,
         tags: (editing.tags || []).filter(Boolean),
         starts_at: tzLocalToISO(editing.starts_at),
         ends_at: tzLocalToISO(editing.ends_at),
@@ -246,6 +272,7 @@ function EventsTab() {
         google_calendar_location: editing.google_calendar_location?.trim() || null,
         is_active: editing.is_active !== false,
       };
+
 
       if (editing.id) {
         const { error } = await supabase.from("fitmind_events" as never).update(payload as never).eq("id" as never, editing.id as never);
@@ -339,8 +366,9 @@ function EventsTab() {
         <div className="space-y-2">
           {filtered.map((ev) => {
             const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
-            const vis = VISIBILITY_META[ev.visibility] || VISIBILITY_META.todos;
-            const VisIcon = vis.icon;
+            const roles = (ev.visibility_roles && ev.visibility_roles.length > 0) ? ev.visibility_roles : [ev.visibility || "todos"];
+            const respCoach = coachOptions.find((c) => c.id === ev.responsible_coach_id);
+
             const dtStart = new Date(ev.starts_at);
             const dtEnd   = new Date(ev.ends_at);
             return (
@@ -364,7 +392,15 @@ function EventsTab() {
                     </span>
                     {ev.is_highlighted && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">⭐ Destaque</span>}
                     {ev.is_important  && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">🚨 Importante</span>}
-                    <span className="text-[10px] text-white/40 flex items-center gap-1"><VisIcon className="h-3 w-3" /> {vis.label}</span>
+                    {roles.map((r) => {
+                      const meta = VISIBILITY_META[r as EventVisibility] || VISIBILITY_META.todos;
+                      const RIcon = meta.icon;
+                      return (
+                        <span key={r} className="text-[10px] text-white/50 flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5">
+                          <RIcon className="h-3 w-3" /> {meta.label}
+                        </span>
+                      );
+                    })}
                   </div>
                   <p className="text-sm font-bold text-white mt-1 truncate">{ev.title}</p>
                   {ev.subtitle && <p className="text-xs text-white/50 truncate">{ev.subtitle}</p>}
@@ -374,7 +410,13 @@ function EventsTab() {
                       {ev.all_day ? "Dia inteiro" : `${dtStart.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} – ${dtEnd.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
                     </span>
                     {ev.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {ev.location}</span>}
+                    {respCoach && (
+                      <span className="flex items-center gap-1 text-primary">
+                        <UserCheck className="h-3 w-3" /> {respCoach.name}
+                      </span>
+                    )}
                   </p>
+
                 </div>
 
                 {/* Ações */}
@@ -477,33 +519,74 @@ function EventsTab() {
                 <span className="text-sm text-white/70">Evento de dia inteiro</span>
               </label>
 
-              {/* Categoria + Visibilidade */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Categoria</label>
-                  <select
-                    className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
-                    value={editing.category || "aula"}
-                    onChange={(e) => setEditing((ev) => ({ ...ev, category: e.target.value as EventCategory }))}
-                  >
-                    {Object.entries(CATEGORY_META).map(([k, v]) => (
-                      <option key={k} value={k} style={{ backgroundColor: "#1A1A1A" }}>{v.emoji} {v.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Visível para</label>
-                  <select
-                    className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
-                    value={editing.visibility || "todos"}
-                    onChange={(e) => setEditing((ev) => ({ ...ev, visibility: e.target.value as EventVisibility }))}
-                  >
-                    {Object.entries(VISIBILITY_META).map(([k, v]) => (
-                      <option key={k} value={k} style={{ backgroundColor: "#1A1A1A" }}>{v.label}</option>
-                    ))}
-                  </select>
+              {/* Categoria */}
+              <div>
+                <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Categoria</label>
+                <select
+                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
+                  value={editing.category || "aula"}
+                  onChange={(e) => setEditing((ev) => ({ ...ev, category: e.target.value as EventCategory }))}
+                >
+                  {Object.entries(CATEGORY_META).map(([k, v]) => (
+                    <option key={k} value={k} style={{ backgroundColor: "#1A1A1A" }}>{v.emoji} {v.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Visibilidade multi-papel */}
+              <div>
+                <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Visível para</label>
+                <p className="text-[11px] text-white/40 mt-0.5">Selecione um ou mais públicos. "Todos" cobre qualquer usuário.</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(Object.entries(VISIBILITY_META) as Array<[EventVisibility, { label: string; icon: typeof Globe }]>).map(([k, v]) => {
+                    const VIcon = v.icon;
+                    const roles = editing.visibility_roles || [];
+                    const checked = roles.includes(k);
+                    const toggle = () => {
+                      let next: EventVisibility[];
+                      if (k === "todos") {
+                        next = checked ? [] : ["todos"];
+                      } else {
+                        next = checked ? roles.filter((r) => r !== k) : [...roles.filter((r) => r !== "todos"), k];
+                      }
+                      if (next.length === 0) next = ["todos"];
+                      setEditing((ev) => ({ ...ev, visibility_roles: next }));
+                    };
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={toggle}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${
+                          checked
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                        }`}>
+                        <VIcon className="h-3.5 w-3.5" /> {v.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Coach responsável */}
+              <div>
+                <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Coach responsável</label>
+                <p className="text-[11px] text-white/40 mt-0.5">O WhatsApp do perfil deste coach aparecerá para contato.</p>
+                <select
+                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
+                  value={editing.responsible_coach_id || ""}
+                  onChange={(e) => setEditing((ev) => ({ ...ev, responsible_coach_id: e.target.value || null }))}
+                >
+                  <option value="" style={{ backgroundColor: "#1A1A1A" }}>— Nenhum —</option>
+                  {coachOptions.map((c) => (
+                    <option key={c.id} value={c.id} style={{ backgroundColor: "#1A1A1A" }}>
+                      {c.name}{c.whatsapp ? ` · ${c.whatsapp}` : " · (sem WhatsApp)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
 
               {/* Local */}
               <div>

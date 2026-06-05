@@ -3211,12 +3211,14 @@ export type Database = {
           is_highlighted: boolean
           is_important: boolean
           location: string | null
+          responsible_coach_id: string | null
           starts_at: string
           subtitle: string | null
           tags: string[] | null
           title: string
           updated_at: string
           visibility: Database["public"]["Enums"]["event_visibility"]
+          visibility_roles: string[]
         }
         Insert: {
           all_day?: boolean
@@ -3237,12 +3239,14 @@ export type Database = {
           is_highlighted?: boolean
           is_important?: boolean
           location?: string | null
+          responsible_coach_id?: string | null
           starts_at: string
           subtitle?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
           visibility?: Database["public"]["Enums"]["event_visibility"]
+          visibility_roles?: string[]
         }
         Update: {
           all_day?: boolean
@@ -3263,12 +3267,14 @@ export type Database = {
           is_highlighted?: boolean
           is_important?: boolean
           location?: string | null
+          responsible_coach_id?: string | null
           starts_at?: string
           subtitle?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
           visibility?: Database["public"]["Enums"]["event_visibility"]
+          visibility_roles?: string[]
         }
         Relationships: [
           {
@@ -3276,6 +3282,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fitmind_events_responsible_coach_id_fkey"
+            columns: ["responsible_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
         ]
