@@ -98,7 +98,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,partners(fantasy_name,photo_url,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,partners(fantasy_name,photo_url,status,business_area)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
