@@ -213,6 +213,27 @@ function StudentHome() {
       {/* Grupo WhatsApp */}
       <WhatsAppGroupCard />
 
+      {/* Alerta: bioimpedância pendente */}
+      {showInitialDeadlineAlert && (
+        <Link to="/student/challenge" className="flex items-start gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-3">
+          <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-semibold text-amber-300 leading-relaxed">
+            ⚠️ Faltam {daysUntilInitialDeadline} dia{daysUntilInitialDeadline !== 1 ? "s" : ""} para o prazo final da sua avaliação (bioimpedância). Caso não realize no prazo indicado não poderá participar do desafio e seu ticket não será reembolsado!
+          </p>
+        </Link>
+      )}
+
+      {/* Alerta: 3 dias para pesagem final */}
+      {showFinalAlert && (
+        <Link to="/student/challenge" className="flex items-start gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 px-3 py-3">
+          <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-semibold text-red-300 leading-relaxed">
+            ⚠️ Faltam {daysUntilFinalHome} dia{daysUntilFinalHome !== 1 ? "s" : ""} para a sua pesagem final do desafio. Não perca o prazo, caso contrário você não poderá concluir o desafio e seu ticket não será reembolsado!
+          </p>
+        </Link>
+      )}
+
+
       {/* Indique e ganhe */}
       <button
         type="button"
