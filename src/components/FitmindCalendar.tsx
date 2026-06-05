@@ -43,6 +43,7 @@ interface FitmindEvent {
   google_calendar_title: string | null;
   google_calendar_description: string | null;
   google_calendar_location: string | null;
+  responsible_coach_id?: string | null;
   responsible_coach_name?: string | null;
   responsible_coach_whatsapp?: string | null;
   appointment_pay_url?: string | null;
@@ -337,7 +338,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     Promise.all([
       supabase
         .from("fitmind_events" as never)
-        .select("id,title,subtitle,description,location,image_url,color,category,tags,starts_at,ends_at,all_day,is_highlighted,is_important,highlight_color,highlight_label,google_calendar_title,google_calendar_description,google_calendar_location,responsible_coach:responsible_coach_id(profiles:profile_id(name,phone))" as never)
+        .select("id,title,subtitle,description,location,image_url,color,category,tags,starts_at,ends_at,all_day,is_highlighted,is_important,highlight_color,highlight_label,google_calendar_title,google_calendar_description,google_calendar_location,responsible_coach_id,responsible_coach:responsible_coach_id(profiles:profile_id(name,phone))" as never)
         .eq("is_active" as never, true as never)
         .gte("starts_at" as never, from.toISOString() as never)
         .lt("starts_at" as never, to.toISOString() as never)
@@ -922,7 +923,7 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
 
           {/* Presença (somente eventos FitMind) */}
           {!ev.id.startsWith("appt-") && !ev.id.startsWith("challenge-") && (
-            <EventAttendanceBlock eventId={ev.id} color={evColor} />
+            <EventAttendanceBlock eventId={ev.id} color={evColor} responsibleCoachId={ev.responsible_coach_id ?? null} />
           )}
 
 
@@ -947,12 +948,13 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
 
 // ─── Attendance ─────────────────────────────────────────────────────────────
 
-function EventAttendanceBlock({ eventId, color }: { eventId: string; color: string }) {
+function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId: string; color: string; responsibleCoachId: string | null }) {
   const [attendees, setAttendees] = useState<EnrichedAttendee[]>([]);
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [canManage, setCanManage] = useState(false);
   const fetchAttendees = useServerFn(getEventAttendees);
 
   const reload = async () => {
@@ -971,10 +973,27 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
       if (!userData.user) return;
       const { data: profile } = await supabase
         .from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
-      if (profile) setMyProfileId(profile.id);
+      if (!profile) return;
+      setMyProfileId(profile.id);
+
+      // Permission: admin OR event_creator badge OR responsible coach of this event
+      const { data: adminCheck } = await supabase.rpc("is_admin" as never, { _user_id: userData.user.id } as never);
+      if (adminCheck === true) { setCanManage(true); return; }
+      const { data: coach } = await supabase
+        .from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
+      if (!coach) return;
+      const coachId = (coach as { id: string }).id;
+      if (responsibleCoachId && coachId === responsibleCoachId) { setCanManage(true); return; }
+      const { data: badge } = await supabase
+        .from("coach_badges")
+        .select("badge_key")
+        .eq("coach_id", coachId)
+        .eq("badge_key", "event_creator" as never)
+        .maybeSingle();
+      if (badge) setCanManage(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId]);
+  }, [eventId, responsibleCoachId]);
 
   const mine = attendees.find((a) => a.profile_id === myProfileId);
 
