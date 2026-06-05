@@ -11,8 +11,9 @@ import {
 } from "@/lib/google-calendar.functions";
 import {
   getCoachSalesReport, getCoachChallengeRanking,
-  type SalesReport, type ChallengeRankingRow,
+  type SalesReport, type ChallengeRankingRow, type StudentGroup,
 } from "@/lib/coach-reports.functions";
+
 import { getCoachDownlineReport, type DownlineReport } from "@/lib/coach-downline.functions";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
