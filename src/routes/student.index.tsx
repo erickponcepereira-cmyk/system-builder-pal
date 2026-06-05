@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift } from "lucide-react";
+import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift, AlertCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
