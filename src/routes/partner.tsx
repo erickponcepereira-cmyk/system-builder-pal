@@ -47,6 +47,7 @@ interface Product {
   description: string | null; image_url: string | null; price: number; stock: number | null;
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
+  redemption_mode?: "free" | "discount";
   price_input_mode?: "charge" | "receive";
   coach_commission_percentage?: number;
   partner_net_amount?: number;
@@ -57,6 +58,7 @@ interface Product {
   section_id?: string | null;
   category_id?: string | null;
 }
+
 
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
 
@@ -319,6 +321,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const blank = (): Partial<Product> => ({
     partner_id: partner.id,
     kind: hasActiveFree ? "paid" : "free",
+    redemption_mode: "free",
     name: "", description: "", image_url: "", price: 0, stock: null,
     redemption_instructions: "", is_active_by_partner: true,
     price_input_mode: "charge",
@@ -327,6 +330,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     section_id: null,
     category_id: null,
   });
+
 
   const upload = async (file: File) => {
     setUploading(true);
@@ -404,9 +408,16 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-white truncate">{p.name}</p>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.kind === "free" ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>{p.kind === "free" ? "Gratuito" : "Pago"}</span>
+                {p.kind === "free" ? (
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.redemption_mode === "discount" ? "bg-amber-500/15 text-amber-400" : "bg-green-500/15 text-green-400"}`}>
+                    {p.redemption_mode === "discount" ? "Desconto" : "Gratuito"}
+                  </span>
+                ) : (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">Pago</span>
+                )}
                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${statusColor(p.status)}`}>{p.status}</span>
               </div>
+
               {p.kind === "paid" && (
                 <div className="mt-0.5 text-[11px] text-white/60">
                   <span className="text-primary font-semibold">R$ {Number(p.price).toFixed(2)}</span>
@@ -440,10 +451,29 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               <div>
                 <label className="text-xs text-white/60">Tipo</label>
                 <select value={editing.kind} onChange={e => setEditing({ ...editing, kind: e.target.value as "free" | "paid" })} disabled={editing.kind === "paid" && !hasActiveFree && !editing.id} className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-white">
-                  <option value="free">Gratuito (obrigatório ter ao menos 1)</option>
-                  <option value="paid" disabled={!hasActiveFree && !editing.id}>Pago / Patrocinado {!hasActiveFree && !editing.id ? "(crie 1 gratuito antes)" : ""}</option>
+                  <option value="free">Benefício para o aluno (obrigatório ter ao menos 1)</option>
+                  <option value="paid" disabled={!hasActiveFree && !editing.id}>Pago / Patrocinado {!hasActiveFree && !editing.id ? "(crie 1 benefício antes)" : ""}</option>
                 </select>
               </div>
+              {editing.kind === "free" && (
+                <div>
+                  <label className="text-xs text-white/60">Modalidade do benefício</label>
+                  <select
+                    value={editing.redemption_mode || "free"}
+                    onChange={e => setEditing({ ...editing, redemption_mode: e.target.value as "free" | "discount" })}
+                    className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-white"
+                  >
+                    <option value="free">Gratuito — produto/serviço sem custo</option>
+                    <option value="discount">Desconto — cupom de desconto sobre o preço normal</option>
+                  </select>
+                  <p className="mt-1 text-[10px] text-white/40">
+                    {editing.redemption_mode === "discount"
+                      ? "O aluno gera um cupom para apresentar e receber desconto no estabelecimento."
+                      : "O aluno gera um cupom para resgatar o item/serviço gratuitamente."}
+                  </p>
+                </div>
+              )}
+
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
               <Field label="Imagem">
