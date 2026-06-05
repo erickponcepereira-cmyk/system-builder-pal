@@ -441,7 +441,17 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           </h2>
           <p className="text-xs text-white/45 mt-0.5">Eventos gratuitos para toda a comunidade</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex rounded-xl bg-white/5 p-0.5">
+            <button onClick={() => setViewMode("calendar")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === "calendar" ? "bg-primary text-white" : "text-white/60"}`}>
+              Calendário
+            </button>
+            <button onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${viewMode === "list" ? "bg-primary text-white" : "text-white/60"}`}>
+              Lista
+            </button>
+          </div>
           <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, -1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronLeft className="h-4 w-4" />
@@ -453,6 +463,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           </button>
 
         </div>
+
       </div>
 
       {/* Eventos em destaque (banner) */}
