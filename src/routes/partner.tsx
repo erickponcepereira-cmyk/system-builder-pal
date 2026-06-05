@@ -199,6 +199,7 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
   const [showVisits, setShowVisits] = useState(false);
   return (
     <div className="space-y-3">
+      <WhatsAppGroupCard />
       {!hasActiveFree && (
         <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
           <AlertTriangle className="inline h-4 w-4 mr-1" /> Você precisa de pelo menos <b>1 produto gratuito aprovado e ativo</b> para publicar produtos pagos. Os pagos ficam pausados enquanto isso.
