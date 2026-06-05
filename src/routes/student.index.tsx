@@ -158,7 +158,7 @@ function StudentHome() {
     const start = new Date(challenge.initialStart + "T12:00:00").getTime();
     const end = new Date(challenge.finalWeighIn + "T12:00:00").getTime();
     const now = Date.now();
-    const total = Math.max(1, Math.round((end - start) / 86400000));
+    const total = Math.max(1, Math.round((end - start) / 86400000) + 1);
     const elapsed = Math.max(0, Math.min(total, Math.round((now - start) / 86400000)));
     const remaining = Math.max(0, total - elapsed);
     const pct = Math.round((elapsed / total) * 100);
