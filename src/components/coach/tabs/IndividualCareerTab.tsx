@@ -318,11 +318,12 @@ function CurrentMedalPanel({
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-white/70">VP acumulado</span>
+              <span className="text-xs text-white/70">{currentLabel}</span>
               <span className="text-xs font-bold text-white">
                 {fmtBRL(current)} / {fmtBRL(nextMedal.threshold)}
               </span>
             </div>
+
             <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#252525" }}>
               <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: nextColor }} />
             </div>
