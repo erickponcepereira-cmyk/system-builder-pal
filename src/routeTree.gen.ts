@@ -19,6 +19,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as MeusEventosRouteImport } from './routes/meus-eventos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
@@ -75,6 +76,7 @@ import { Route as AdminNetworkUnlockRouteImport } from './routes/admin.network-u
 import { Route as AdminNetworkRankingRouteImport } from './routes/admin.network-ranking'
 import { Route as AdminLibraryRouteImport } from './routes/admin.library'
 import { Route as AdminFreebiesRouteImport } from './routes/admin.freebies'
+import { Route as AdminFitmindEventsReportsRouteImport } from './routes/admin.fitmind-events-reports'
 import { Route as AdminFitmindEventsRouteImport } from './routes/admin.fitmind-events'
 import { Route as AdminFinancialSummaryRouteImport } from './routes/admin.financial-summary'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin.financeiro'
@@ -148,6 +150,11 @@ const PartnerRoute = PartnerRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeusEventosRoute = MeusEventosRouteImport.update({
+  id: '/meus-eventos',
+  path: '/meus-eventos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -433,6 +440,12 @@ const AdminFreebiesRoute = AdminFreebiesRouteImport.update({
   path: '/freebies',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFitmindEventsReportsRoute =
+  AdminFitmindEventsReportsRouteImport.update({
+    id: '/fitmind-events-reports',
+    path: '/fitmind-events-reports',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminFitmindEventsRoute = AdminFitmindEventsRouteImport.update({
   id: '/fitmind-events',
   path: '/fitmind-events',
@@ -564,6 +577,7 @@ export interface FileRoutesByFullPath {
   '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/meus-eventos': typeof MeusEventosRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -588,6 +602,7 @@ export interface FileRoutesByFullPath {
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/financial-summary': typeof AdminFinancialSummaryRoute
   '/admin/fitmind-events': typeof AdminFitmindEventsRoute
+  '/admin/fitmind-events-reports': typeof AdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/network-ranking': typeof AdminNetworkRankingRoute
@@ -655,6 +670,7 @@ export interface FileRoutesByTo {
   '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/meus-eventos': typeof MeusEventosRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -678,6 +694,7 @@ export interface FileRoutesByTo {
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/financial-summary': typeof AdminFinancialSummaryRoute
   '/admin/fitmind-events': typeof AdminFitmindEventsRoute
+  '/admin/fitmind-events-reports': typeof AdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/network-ranking': typeof AdminNetworkRankingRoute
@@ -747,6 +764,7 @@ export interface FileRoutesById {
   '/become-partner': typeof BecomePartnerRoute
   '/coach': typeof CoachRoute
   '/login': typeof LoginRoute
+  '/meus-eventos': typeof MeusEventosRoute
   '/onboarding': typeof OnboardingRoute
   '/partner': typeof PartnerRoute
   '/pending-approval': typeof PendingApprovalRoute
@@ -771,6 +789,7 @@ export interface FileRoutesById {
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/financial-summary': typeof AdminFinancialSummaryRoute
   '/admin/fitmind-events': typeof AdminFitmindEventsRoute
+  '/admin/fitmind-events-reports': typeof AdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AdminFreebiesRoute
   '/admin/library': typeof AdminLibraryRoute
   '/admin/network-ranking': typeof AdminNetworkRankingRoute
@@ -841,6 +860,7 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/coach'
     | '/login'
+    | '/meus-eventos'
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
@@ -865,6 +885,7 @@ export interface FileRouteTypes {
     | '/admin/financeiro'
     | '/admin/financial-summary'
     | '/admin/fitmind-events'
+    | '/admin/fitmind-events-reports'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/network-ranking'
@@ -932,6 +953,7 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/coach'
     | '/login'
+    | '/meus-eventos'
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
@@ -955,6 +977,7 @@ export interface FileRouteTypes {
     | '/admin/financeiro'
     | '/admin/financial-summary'
     | '/admin/fitmind-events'
+    | '/admin/fitmind-events-reports'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/network-ranking'
@@ -1023,6 +1046,7 @@ export interface FileRouteTypes {
     | '/become-partner'
     | '/coach'
     | '/login'
+    | '/meus-eventos'
     | '/onboarding'
     | '/partner'
     | '/pending-approval'
@@ -1047,6 +1071,7 @@ export interface FileRouteTypes {
     | '/admin/financeiro'
     | '/admin/financial-summary'
     | '/admin/fitmind-events'
+    | '/admin/fitmind-events-reports'
     | '/admin/freebies'
     | '/admin/library'
     | '/admin/network-ranking'
@@ -1116,6 +1141,7 @@ export interface RootRouteChildren {
   BecomePartnerRoute: typeof BecomePartnerRoute
   CoachRoute: typeof CoachRoute
   LoginRoute: typeof LoginRoute
+  MeusEventosRoute: typeof MeusEventosRoute
   OnboardingRoute: typeof OnboardingRoute
   PartnerRoute: typeof PartnerRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
@@ -1212,6 +1238,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meus-eventos': {
+      id: '/meus-eventos'
+      path: '/meus-eventos'
+      fullPath: '/meus-eventos'
+      preLoaderRoute: typeof MeusEventosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1606,6 +1639,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFreebiesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/fitmind-events-reports': {
+      id: '/admin/fitmind-events-reports'
+      path: '/fitmind-events-reports'
+      fullPath: '/admin/fitmind-events-reports'
+      preLoaderRoute: typeof AdminFitmindEventsReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/fitmind-events': {
       id: '/admin/fitmind-events'
       path: '/fitmind-events'
@@ -1804,6 +1844,7 @@ interface AdminRouteChildren {
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminFinancialSummaryRoute: typeof AdminFinancialSummaryRoute
   AdminFitmindEventsRoute: typeof AdminFitmindEventsRoute
+  AdminFitmindEventsReportsRoute: typeof AdminFitmindEventsReportsRoute
   AdminFreebiesRoute: typeof AdminFreebiesRoute
   AdminLibraryRoute: typeof AdminLibraryRoute
   AdminNetworkRankingRoute: typeof AdminNetworkRankingRoute
@@ -1844,6 +1885,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminFinancialSummaryRoute: AdminFinancialSummaryRoute,
   AdminFitmindEventsRoute: AdminFitmindEventsRoute,
+  AdminFitmindEventsReportsRoute: AdminFitmindEventsReportsRoute,
   AdminFreebiesRoute: AdminFreebiesRoute,
   AdminLibraryRoute: AdminLibraryRoute,
   AdminNetworkRankingRoute: AdminNetworkRankingRoute,
@@ -1952,6 +1994,7 @@ const rootRouteChildren: RootRouteChildren = {
   BecomePartnerRoute: BecomePartnerRoute,
   CoachRoute: CoachRoute,
   LoginRoute: LoginRoute,
+  MeusEventosRoute: MeusEventosRoute,
   OnboardingRoute: OnboardingRoute,
   PartnerRoute: PartnerRoute,
   PendingApprovalRoute: PendingApprovalRoute,

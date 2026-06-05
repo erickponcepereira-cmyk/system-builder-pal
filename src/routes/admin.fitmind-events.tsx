@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import {
   CalendarDays, Plus, Trash2, Save, X, Star, ChevronLeft, ChevronRight,
   Loader2, Edit2, Eye, EyeOff, MapPin, Clock, Tag, Sparkles, AlertTriangle,
-  CheckCircle2, Flag, Palette, Globe, Users, UserCheck, Building2, Stethoscope,
+  CheckCircle2, Flag, Palette, Globe, Users, UserCheck, Building2, Stethoscope, BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -136,6 +136,12 @@ function AdminFitmindEventsPage() {
             Gerencie eventos, aulas gratuitas e datas especiais visíveis para toda a comunidade.
           </p>
         </div>
+        <a
+          href="/admin/fitmind-events-reports"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          <BarChart3 className="h-4 w-4" /> Relatórios
+        </a>
       </div>
 
       {/* Tabs */}
