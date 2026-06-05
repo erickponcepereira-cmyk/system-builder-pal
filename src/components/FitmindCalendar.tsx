@@ -1233,6 +1233,63 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
       {showList && attendees.length === 0 && (
         <p className="text-xs text-white/40">Nenhuma presença confirmada ainda.</p>
       )}
+
+      {showRoster && canManage && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div className="rounded-lg bg-white/5 p-2">
+              <p className="text-[9px] text-white/40 uppercase">Total</p>
+              <p className="text-sm font-bold text-white">{regCounts.total}</p>
+            </div>
+            <div className="rounded-lg bg-blue-500/10 p-2">
+              <p className="text-[9px] text-blue-300/70 uppercase">Inscritos</p>
+              <p className="text-sm font-bold text-blue-300">{regCounts.registered}</p>
+            </div>
+            <div className="rounded-lg bg-emerald-500/10 p-2">
+              <p className="text-[9px] text-emerald-300/70 uppercase">Vieram</p>
+              <p className="text-sm font-bold text-emerald-300">{regCounts.attended}</p>
+            </div>
+            <div className="rounded-lg bg-red-500/10 p-2">
+              <p className="text-[9px] text-red-300/70 uppercase">Faltaram</p>
+              <p className="text-sm font-bold text-red-300">{regCounts.no_show}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleFinalize}
+            className="w-full rounded-lg py-2 text-xs font-bold text-white bg-red-500/80 hover:bg-red-500 transition">
+            Finalizar evento (marcar não-presentes como Faltou)
+          </button>
+
+          {registrations.length === 0 ? (
+            <p className="text-xs text-white/40 text-center py-2">Nenhuma inscrição ainda.</p>
+          ) : (
+            <ul className="max-h-72 overflow-y-auto divide-y divide-white/5">
+              {registrations.map((r) => (
+                <li key={r.id} className="flex items-center gap-2 py-2 text-xs">
+                  <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/60 overflow-hidden flex-none">
+                    {r.avatar_url
+                      ? <img src={r.avatar_url} alt="" className="h-full w-full object-cover" />
+                      : (r.display_name?.[0] || "?").toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/90 truncate font-medium">{r.display_name}</p>
+                    {r.coach_name && (
+                      <p className="text-[10px] text-white/40 truncate">Coach: {r.coach_name}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => cycleStatus(r)}
+                    title="Clique para alternar status"
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-none ${STATUS_STYLES[r.status].cls}`}>
+                    {STATUS_STYLES[r.status].label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
