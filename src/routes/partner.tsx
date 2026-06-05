@@ -48,6 +48,7 @@ interface Product {
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
   redemption_mode?: "free" | "discount";
+  discount_percent?: number | null;
   price_input_mode?: "charge" | "receive";
   coach_commission_percentage?: number;
   partner_net_amount?: number;
