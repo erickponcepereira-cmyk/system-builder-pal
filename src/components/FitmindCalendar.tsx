@@ -17,6 +17,12 @@ import {
   tzStartOfMonth, shiftYearMonth, yearMonthLabel,
 } from "@/lib/timezone";
 import { getEventAttendees, type EnrichedAttendee } from "@/lib/fitmind-attendance.functions";
+import {
+  toggleMyRegistration, getMyRegistration, getMyRegisteredEventIds,
+  getEventRegistrations, setRegistrationStatus, finalizeEventAttendance,
+  type RegistrationRow,
+} from "@/lib/fitmind-registrations.functions";
+import { Heart, HeartOff, ClipboardCheck } from "lucide-react";
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -294,6 +300,18 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   const [canCreate, setCanCreate] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [myRegisteredIds, setMyRegisteredIds] = useState<Set<string>>(new Set());
+  const fetchMyRegisteredIds = useServerFn(getMyRegisteredEventIds);
+
+  // Load my registered event IDs for the filter
+  useEffect(() => {
+    let mounted = true;
+    fetchMyRegisteredIds().then((res) => {
+      if (mounted) setMyRegisteredIds(new Set(res.eventIds));
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, [fetchMyRegisteredIds, reloadKey]);
 
   // Check if current user can create FitMind events (admin or coach with permission)
   useEffect(() => {
@@ -378,17 +396,25 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     return { gridDays: [...prefix, ...days], monthLabel: label };
   }, [currentYM, year, month]);
 
+  // ── Apply "Meus eventos" filter (only to FitMind events; keeps personal items) ──
+  const displayEvents = useMemo(() => {
+    if (!onlyMine) return events;
+    return events.filter((ev) =>
+      ev.id.startsWith("appt-") || ev.id.startsWith("challenge-") || myRegisteredIds.has(ev.id),
+    );
+  }, [events, onlyMine, myRegisteredIds]);
+
   // ── Events indexed by date string (Cuiabá date) ──────────────────────────
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, FitmindEvent[]>();
-    for (const ev of events) {
+    for (const ev of displayEvents) {
       const key = tzDateKey(ev.starts_at);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(ev);
     }
     return map;
-  }, [events]);
+  }, [displayEvents]);
 
   const highlightByDate = useMemo(() => {
     const map = new Map<string, HighlightedDay>();
@@ -404,10 +430,10 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   // ── Highlighted/upcoming events list (for compact mode) ──────────────────
 
   const upcomingEvents = useMemo(() => {
-    return events
+    return displayEvents
       .filter((ev) => tzDateKey(ev.starts_at) >= todayKey && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
       .slice(0, 5);
-  }, [events, todayKey, onlyHighlighted]);
+  }, [displayEvents, todayKey, onlyHighlighted]);
 
   // ─── Compact widget mode ─────────────────────────────────────────────────
   if (compact) {
@@ -488,6 +514,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
               Lista
             </button>
           </div>
+          <button
+            onClick={() => setOnlyMine((v) => !v)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 ${onlyMine ? "bg-primary text-white" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            title="Mostrar apenas eventos em que você se inscreveu">
+            <Heart className={`h-3.5 w-3.5 ${onlyMine ? "fill-current" : ""}`} /> Meus eventos
+          </button>
           <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, -1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronLeft className="h-4 w-4" />
@@ -510,13 +542,13 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       </div>
 
       {/* Eventos em destaque (banner) */}
-      {events.filter((ev) => ev.is_highlighted).length > 0 && (
+      {displayEvents.filter((ev) => ev.is_highlighted).length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/40 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Destaques do mês
           </p>
           <div className="grid gap-2 grid-cols-1">
-            {events.filter((ev) => ev.is_highlighted).map((ev) => {
+            {displayEvents.filter((ev) => ev.is_highlighted).map((ev) => {
               const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
               const evColor = ev.color || "#E24B4A";
               const dtStart = new Date(ev.starts_at);
@@ -676,7 +708,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         </>
       ) : (
         <EventListView
-          events={events}
+          events={displayEvents}
           year={year}
           month={month}
           loading={loading}
@@ -953,9 +985,17 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showRoster, setShowRoster] = useState(false);
   const [loading, setLoading] = useState(false);
   const [canManage, setCanManage] = useState(false);
+  const [myRegStatus, setMyRegStatus] = useState<"registered" | "attended" | "no_show" | null>(null);
+  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
   const fetchAttendees = useServerFn(getEventAttendees);
+  const callToggleReg = useServerFn(toggleMyRegistration);
+  const callGetMyReg = useServerFn(getMyRegistration);
+  const callGetRegs = useServerFn(getEventRegistrations);
+  const callSetRegStatus = useServerFn(setRegistrationStatus);
+  const callFinalize = useServerFn(finalizeEventAttendance);
 
   const reload = async () => {
     try {
@@ -966,9 +1006,22 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     }
   };
 
+  const reloadRegs = async () => {
+    try {
+      const r = await callGetRegs({ data: { eventId } });
+      setRegistrations(r);
+    } catch {
+      setRegistrations([]);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       await reload();
+      try {
+        const r = await callGetMyReg({ data: { eventId } });
+        setMyRegStatus(r.status);
+      } catch { /* noop */ }
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
       const { data: profile } = await supabase
@@ -976,7 +1029,6 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
       if (!profile) return;
       setMyProfileId(profile.id);
 
-      // Permission: admin OR event_creator badge OR responsible coach of this event
       const { data: adminCheck } = await supabase.rpc("is_admin" as never, { _user_id: userData.user.id } as never);
       if (adminCheck === true) { setCanManage(true); return; }
       const { data: coach } = await supabase
@@ -995,7 +1047,25 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, responsibleCoachId]);
 
+  useEffect(() => {
+    if (showRoster && canManage) reloadRegs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRoster, canManage, eventId]);
+
   const mine = attendees.find((a) => a.profile_id === myProfileId);
+
+  const toggleQueroIr = async () => {
+    setLoading(true);
+    try {
+      const r = await callToggleReg({ data: { eventId } });
+      setMyRegStatus(r.registered ? "registered" : null);
+      toast.success(r.registered ? "Inscrição confirmada — você receberá lembretes!" : "Inscrição cancelada.");
+    } catch (e) {
+      toast.error((e as Error).message || "Não foi possível atualizar inscrição.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const markPresent = async () => {
     if (!myProfileId) { toast.error("Faça login para marcar presença."); return; }
@@ -1038,6 +1108,41 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     "Aluno Profissional": "bg-emerald-500/20 text-emerald-300",
   };
 
+  const STATUS_STYLES: Record<"registered" | "attended" | "no_show", { label: string; cls: string }> = {
+    registered: { label: "Inscrito", cls: "bg-blue-500/20 text-blue-300" },
+    attended:   { label: "Compareceu", cls: "bg-emerald-500/20 text-emerald-300" },
+    no_show:    { label: "Faltou", cls: "bg-red-500/20 text-red-300" },
+  };
+
+  const cycleStatus = async (reg: RegistrationRow) => {
+    const next: "registered" | "attended" | "no_show" = reg.status === "registered" ? "attended"
+      : reg.status === "attended" ? "no_show" : "registered";
+    try {
+      await callSetRegStatus({ data: { registrationId: reg.id, status: next } });
+      setRegistrations((prev) => prev.map((r) => r.id === reg.id ? { ...r, status: next } : r));
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao atualizar status.");
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!confirm("Finalizar evento? Todos os inscritos que não escanearam o QR serão marcados como 'Faltou' (editável depois).")) return;
+    try {
+      const r = await callFinalize({ data: { eventId } });
+      toast.success(`Evento finalizado — ${r.marked} marcado(s) como 'Faltou'.`);
+      reloadRegs();
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao finalizar.");
+    }
+  };
+
+  const regCounts = {
+    total: registrations.length,
+    registered: registrations.filter((r) => r.status === "registered").length,
+    attended: registrations.filter((r) => r.status === "attended").length,
+    no_show: registrations.filter((r) => r.status === "no_show").length,
+  };
+
   return (
     <div className="rounded-xl p-3 space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1054,11 +1159,26 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
               <QrCode className="h-3.5 w-3.5" /> {showQR ? "Ocultar QR" : "QR de presença"}
             </button>
           )}
+          {canManage && (
+            <button
+              onClick={() => setShowRoster((v) => !v)}
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition inline-flex items-center gap-1.5">
+              <ClipboardCheck className="h-3.5 w-3.5" /> {showRoster ? "Ocultar inscrições" : "Inscrições"}
+            </button>
+          )}
           <button
             onClick={() => setShowList((v) => !v)}
             className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition">
             {showList ? "Ocultar lista" : "Ver lista"}
           </button>
+          {myProfileId && myRegStatus !== "attended" && (
+            <button
+              onClick={toggleQueroIr}
+              disabled={loading}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${myRegStatus === "registered" ? "bg-blue-500/20 text-blue-300 hover:bg-blue-500/30" : "bg-white/10 text-white/80 hover:bg-white/20"}`}>
+              {myRegStatus === "registered" ? <><HeartOff className="h-3.5 w-3.5" /> Cancelar inscrição</> : <><Heart className="h-3.5 w-3.5" /> Quero ir</>}
+            </button>
+          )}
           {mine ? (
             <button
               onClick={removePresent}
@@ -1112,6 +1232,63 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
       )}
       {showList && attendees.length === 0 && (
         <p className="text-xs text-white/40">Nenhuma presença confirmada ainda.</p>
+      )}
+
+      {showRoster && canManage && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div className="rounded-lg bg-white/5 p-2">
+              <p className="text-[9px] text-white/40 uppercase">Total</p>
+              <p className="text-sm font-bold text-white">{regCounts.total}</p>
+            </div>
+            <div className="rounded-lg bg-blue-500/10 p-2">
+              <p className="text-[9px] text-blue-300/70 uppercase">Inscritos</p>
+              <p className="text-sm font-bold text-blue-300">{regCounts.registered}</p>
+            </div>
+            <div className="rounded-lg bg-emerald-500/10 p-2">
+              <p className="text-[9px] text-emerald-300/70 uppercase">Vieram</p>
+              <p className="text-sm font-bold text-emerald-300">{regCounts.attended}</p>
+            </div>
+            <div className="rounded-lg bg-red-500/10 p-2">
+              <p className="text-[9px] text-red-300/70 uppercase">Faltaram</p>
+              <p className="text-sm font-bold text-red-300">{regCounts.no_show}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleFinalize}
+            className="w-full rounded-lg py-2 text-xs font-bold text-white bg-red-500/80 hover:bg-red-500 transition">
+            Finalizar evento (marcar não-presentes como Faltou)
+          </button>
+
+          {registrations.length === 0 ? (
+            <p className="text-xs text-white/40 text-center py-2">Nenhuma inscrição ainda.</p>
+          ) : (
+            <ul className="max-h-72 overflow-y-auto divide-y divide-white/5">
+              {registrations.map((r) => (
+                <li key={r.id} className="flex items-center gap-2 py-2 text-xs">
+                  <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/60 overflow-hidden flex-none">
+                    {r.avatar_url
+                      ? <img src={r.avatar_url} alt="" className="h-full w-full object-cover" />
+                      : (r.display_name?.[0] || "?").toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/90 truncate font-medium">{r.display_name}</p>
+                    {r.coach_name && (
+                      <p className="text-[10px] text-white/40 truncate">Coach: {r.coach_name}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => cycleStatus(r)}
+                    title="Clique para alternar status"
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-none ${STATUS_STYLES[r.status].cls}`}>
+                    {STATUS_STYLES[r.status].label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
