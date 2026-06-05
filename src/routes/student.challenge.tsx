@@ -403,7 +403,7 @@ function StudentChallengePage() {
               <p className="font-bold text-foreground">Você tem acesso ao Desafio!</p>
               <p className="text-sm text-muted-foreground">
                 {tokens && tokens.balance > 0
-                  ? "Use uma moeda acima para entrar agora na turma em pesagem inicial."
+                  ? "Use um ticket acima para entrar agora na turma em pesagem inicial."
                   : "Sua inscrição será feita automaticamente na próxima competição ativa, ou peça ao seu coach para te inscrever manualmente."}
               </p>
             </div>
