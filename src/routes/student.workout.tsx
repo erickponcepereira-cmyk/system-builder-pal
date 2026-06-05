@@ -723,6 +723,7 @@ function ExerciseCard({
   onChangeCardio,
   onCompleteSet,
   onCompleteCardio,
+  onCompleteExercise,
 }: {
   ex: Plan["workout_exercises"][number];
   done: number;
@@ -737,6 +738,7 @@ function ExerciseCard({
   onChangeCardio: (p: Partial<{ duration: string; pace: string; speed: string; elevation: string; distance: string }>) => void;
   onCompleteSet: () => void;
   onCompleteCardio: () => void;
+  onCompleteExercise: () => void;
 }) {
   const isComplete = ex.is_cardio ? cardio?.done : done >= ex.sets;
   const restLabel = ex.rest_seconds_max && ex.rest_seconds_max !== ex.rest_seconds
