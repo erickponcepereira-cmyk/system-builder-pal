@@ -649,6 +649,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
           }
           onCompleteSet={() => completeSet(ex)}
           onCompleteCardio={() => completeCardio(ex)}
+          onCompleteExercise={() => completeExercise(ex)}
         />
       ))}
 
