@@ -24,10 +24,11 @@ type PublicProfile = {
   website: string;
   social_links: SocialLink[];
   services: string;
+  specializations: string[];
 };
 
 const EMPTY_PROFILE: PublicProfile = {
-  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "",
+  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [],
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
@@ -49,7 +50,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
       const { data: pubRow } = await supabase
         .from("professional_public_profile" as never)
-        .select("headline,bio_long,instagram,website,social_links,services" as never)
+        .select("headline,bio_long,instagram,website,social_links,services,specializations" as never)
         .eq("profile_id" as never, profileId as never)
         .maybeSingle();
       if (pubRow) {
@@ -61,6 +62,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
           website: r.website || "",
           social_links: Array.isArray(r.social_links) ? r.social_links : [],
           services: r.services || "",
+          specializations: Array.isArray(r.specializations) ? r.specializations : [],
         });
       }
 
@@ -97,6 +99,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
         website: pub.website.slice(0, 300) || null,
         social_links: pub.social_links,
         services: pub.services.slice(0, 2000) || null,
+        specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
       } as never, { onConflict: "profile_id" } as never);
     setSaving(false);
     if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
@@ -190,6 +193,14 @@ export function SettingsTab({ coachId, profileId }: Props) {
             <textarea value={pub.services} onChange={(e) => setPub({ ...pub, services: e.target.value })} rows={3} placeholder="Liste seus serviços, programas, pacotes..." className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
           </Field>
 
+          <Field label="Especializações (tags)" hint="Pressione Enter ou vírgula para adicionar. Aparecem no seu perfil público.">
+            <SpecializationsEditor
+              value={pub.specializations}
+              onChange={(specializations) => setPub({ ...pub, specializations })}
+            />
+          </Field>
+
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Instagram (@usuario)" icon={<Instagram className="h-3 w-3" />}>
               <input value={pub.instagram} onChange={(e) => setPub({ ...pub, instagram: e.target.value })} placeholder="@seu.handle" className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
@@ -276,6 +287,45 @@ function Field({ label, hint, icon, children }: { label: string; hint?: string; 
       {children}
       {hint && <span className="block mt-1 text-[10px] text-white/40">{hint}</span>}
     </label>
+  );
+}
+
+function SpecializationsEditor({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [input, setInput] = useState("");
+  const add = (raw: string) => {
+    const t = raw.trim().slice(0, 60);
+    if (!t) return;
+    if (value.includes(t)) return;
+    if (value.length >= 30) return;
+    onChange([...value, t]);
+    setInput("");
+  };
+  return (
+    <div className="rounded-lg bg-white/5 px-3 py-2">
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {value.map((tag, i) => (
+          <span key={i} className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">
+            {tag}
+            <button type="button" onClick={() => onChange(value.filter((_, j) => j !== i))} className="text-primary/70 hover:text-primary">×</button>
+          </span>
+        ))}
+      </div>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            add(input);
+          } else if (e.key === "Backspace" && !input && value.length) {
+            onChange(value.slice(0, -1));
+          }
+        }}
+        onBlur={() => input && add(input)}
+        placeholder="Ex: Emagrecimento, Hipertrofia, Low Carb..."
+        className="w-full bg-transparent text-sm text-white outline-none"
+      />
+    </div>
   );
 }
 

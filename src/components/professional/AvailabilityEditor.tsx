@@ -13,7 +13,16 @@ type Slot = {
 };
 
 type Block = { id: string; block_date: string; reason: string | null };
-type Appt = { id: string; starts_at: string; ends_at: string; status: string };
+type Appt = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  student_name: string | null;
+  coach_name: string | null;
+  order_status: string | null;
+  has_order: boolean;
+};
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const WEEK_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -50,13 +59,28 @@ export function AvailabilityEditor({ coachId }: Props) {
         .eq("professional_coach_id" as never, coachId as never),
       supabase
         .from("professional_appointments" as never)
-        .select("id,starts_at,ends_at,status")
+        .select("id,starts_at,ends_at,status,order_id,student:students!professional_appointments_student_id_fkey(profile:profiles!students_profile_id_fkey(name),coach:coaches!students_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))),order:partner_product_orders!professional_appointments_order_id_fkey(status)" as never)
         .eq("professional_coach_id" as never, coachId as never)
         .eq("status" as never, "scheduled" as never),
     ]);
     setSlots(((slotData as unknown as Slot[]) || []));
     setBlocks(((blockData as unknown as Block[]) || []));
-    setAppts(((apptData as unknown as Appt[]) || []));
+    type RawAppt = {
+      id: string; starts_at: string; ends_at: string; status: string; order_id: string | null;
+      student: { profile: { name: string | null } | null; coach: { profile: { name: string | null } | null } | null } | null;
+      order: { status: string | null } | null;
+    };
+    const enriched = (((apptData as unknown as RawAppt[]) || [])).map<Appt>((a) => ({
+      id: a.id,
+      starts_at: a.starts_at,
+      ends_at: a.ends_at,
+      status: a.status,
+      student_name: a.student?.profile?.name || null,
+      coach_name: a.student?.coach?.profile?.name || null,
+      order_status: a.order?.status || null,
+      has_order: !!a.order_id,
+    }));
+    setAppts(enriched);
     setLoading(false);
   };
 
@@ -321,18 +345,32 @@ export function AvailabilityEditor({ coachId }: Props) {
             {selectedAppts.length === 0 ? (
               <p className="text-[11px] text-white/50">Nenhum atendimento agendado neste dia.</p>
             ) : (
-              <ul className="space-y-1">
-                {selectedAppts.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5 text-[11px] text-white">
-                    <span className="font-bold text-primary">
-                      {new Date(a.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                    <span className="text-white/50">→</span>
-                    <span className="text-white/80">
-                      {new Date(a.ends_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </li>
-                ))}
+              <ul className="space-y-1.5">
+                {selectedAppts.map((a) => {
+                  const paidSet = new Set(["paid", "approved", "completed"]);
+                  const isPaid = !a.has_order || (a.order_status && paidSet.has(a.order_status));
+                  return (
+                    <li key={a.id} className="rounded-lg bg-white/5 px-2.5 py-2 text-[11px] text-white">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-primary">
+                          {new Date(a.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="text-white/50">→</span>
+                        <span className="text-white/80">
+                          {new Date(a.ends_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="text-white/40">·</span>
+                        <span className="font-bold text-white">{a.student_name || "Cliente"}</span>
+                        <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${isPaid ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`}>
+                          {isPaid ? "Pago" : "Pendente"}
+                        </span>
+                      </div>
+                      {a.coach_name && (
+                        <p className="mt-0.5 text-[10px] text-white/50">Coach: <span className="text-white/80">{a.coach_name}</span></p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
