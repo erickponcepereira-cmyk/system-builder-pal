@@ -488,6 +488,13 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronRight className="h-4 w-4" />
           </button>
+          {canCreate && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="ml-1 flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white hover:opacity-90 transition">
+              <CalendarPlus className="h-4 w-4" /> Criar evento
+            </button>
+          )}
 
         </div>
 
