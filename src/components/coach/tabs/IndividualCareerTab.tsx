@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+import { resolveBadgeUrl } from "@/lib/badge-url";
 
 
 const fmtBRL = (n: number) =>
@@ -213,15 +214,24 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
 
       <div className="flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
+          className="relative flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}
         >
           {rule.image_url ? (
-            <img src={rule.image_url} alt={rule.display_name} className={`h-full w-full object-cover ${earned ? "" : "opacity-50 grayscale"}`} />
+            <img
+              src={resolveBadgeUrl(rule.image_url) || ""}
+              alt={rule.display_name}
+              className={`h-full w-full object-contain p-1 ${earned ? "" : "grayscale"}`}
+            />
           ) : earned ? (
             <Icon className="h-5 w-5" style={{ color }} />
           ) : (
             <Lock className="h-4 w-4 text-white/30" />
+          )}
+          {!earned && rule.image_url && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <Lock className="h-4 w-4 text-white/90" />
+            </div>
           )}
         </div>
 
@@ -296,7 +306,7 @@ function CurrentMedalPanel({
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
                 {currentMedal.image_url ? (
-                  <img src={currentMedal.image_url} alt={currentMedal.display_name} className="h-full w-full object-cover" />
+                  <img src={resolveBadgeUrl(currentMedal.image_url) || ""} alt={currentMedal.display_name} className="h-full w-full object-contain p-1" />
                 ) : (
                   <Medal className="h-7 w-7" style={{ color }} />
                 )}

@@ -3,6 +3,7 @@ import { Loader2, Trophy, Check, Lock, Star, TrendingUp, Users, Clock } from "lu
 import { useServerFn } from "@tanstack/react-start";
 import { getCareerProgress, type PatentRule, type CareerProgress } from "@/lib/coach-career.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+import { resolveBadgeUrl } from "@/lib/badge-url";
 
 
 const fmtBRL = (n: number) =>
@@ -83,7 +84,7 @@ export function ConstructorsCareerTab() {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
               style={{ backgroundColor: `${current?.badge_color || "#9CA3AF"}25`, border: `1px solid ${current?.badge_color || "#9CA3AF"}55` }}>
               {current?.image_url ? (
-                <img src={current.image_url} alt={current.display_name} className="h-full w-full object-cover" />
+                <img src={resolveBadgeUrl(current.image_url) || ""} alt={current.display_name} className="h-full w-full object-contain p-1" />
               ) : (
                 <Trophy className="h-7 w-7" style={{ color: current?.badge_color || "#9CA3AF" }} />
               )}
@@ -219,10 +220,24 @@ function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt, onClick }: 
       style={{ backgroundColor: isCurrent ? "rgba(255,66,48,0.06)" : "#0F0F0F" }}>
 
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+        <div className="relative flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: `${p.badge_color || "#9CA3AF"}25`, border: `1px solid ${p.badge_color || "#9CA3AF"}55` }}>
-          {achieved ? <Check className="h-5 w-5" style={{ color: p.badge_color || "#9CA3AF" }} />
-            : <Lock className="h-4 w-4 text-white/30" />}
+          {p.image_url ? (
+            <img
+              src={resolveBadgeUrl(p.image_url) || ""}
+              alt={p.display_name}
+              className={`h-full w-full object-contain p-1 ${achieved ? "" : "grayscale"}`}
+            />
+          ) : (
+            achieved
+              ? <Check className="h-5 w-5" style={{ color: p.badge_color || "#9CA3AF" }} />
+              : <Lock className="h-4 w-4 text-white/30" />
+          )}
+          {!achieved && p.image_url && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <Lock className="h-4 w-4 text-white/90" />
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
