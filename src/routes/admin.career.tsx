@@ -15,7 +15,6 @@ import {
   BADGE_KEYS,
   type BadgeKey,
 } from "@/lib/coach-badges.functions";
-import { PatentBadge, type PatentLevel, PATENT_LEVELS } from "@/components/coach/PatentBadge";
 import { BadgeImageUploader } from "@/components/admin/BadgeImageUploader";
 
 export const Route = createFileRoute("/admin/career")({
