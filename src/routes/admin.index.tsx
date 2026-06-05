@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Users, UserCheck, DollarSign, TrendingUp, Activity, Clock, Wallet, Trophy, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
