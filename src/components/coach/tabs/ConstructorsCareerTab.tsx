@@ -3,7 +3,7 @@ import { Loader2, Trophy, Check, Lock, Star, TrendingUp, Users, Clock } from "lu
 import { useServerFn } from "@tanstack/react-start";
 import { getCareerProgress, type PatentRule, type CareerProgress } from "@/lib/coach-career.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
-import { resolveBadgeUrl } from "@/lib/badge-url";
+import { BadgeImage } from "@/components/coach/BadgeImage";
 
 
 const fmtBRL = (n: number) =>
@@ -84,7 +84,7 @@ export function ConstructorsCareerTab() {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
               style={{ backgroundColor: `${current?.badge_color || "#9CA3AF"}25`, border: `1px solid ${current?.badge_color || "#9CA3AF"}55` }}>
               {current?.image_url ? (
-                <img src={resolveBadgeUrl(current.image_url) || ""} alt={current.display_name} className="h-full w-full object-contain p-1" />
+                <BadgeImage path={current.image_url} alt={current.display_name} className="h-full w-full object-contain p-1" />
               ) : (
                 <Trophy className="h-7 w-7" style={{ color: current?.badge_color || "#9CA3AF" }} />
               )}
@@ -223,8 +223,8 @@ function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt, onClick }: 
         <div className="relative flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: `${p.badge_color || "#9CA3AF"}25`, border: `1px solid ${p.badge_color || "#9CA3AF"}55` }}>
           {p.image_url ? (
-            <img
-              src={resolveBadgeUrl(p.image_url) || ""}
+            <BadgeImage
+              path={p.image_url}
               alt={p.display_name}
               className={`h-full w-full object-contain p-1 ${achieved ? "" : "grayscale"}`}
             />

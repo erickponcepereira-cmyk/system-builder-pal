@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
-import { resolveBadgeUrl } from "@/lib/badge-url";
+import { BadgeImage } from "@/components/coach/BadgeImage";
 
 
 const fmtBRL = (n: number) =>
@@ -218,8 +218,8 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
           style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}
         >
           {rule.image_url ? (
-            <img
-              src={resolveBadgeUrl(rule.image_url) || ""}
+            <BadgeImage
+              path={rule.image_url}
               alt={rule.display_name}
               className={`h-full w-full object-contain p-1 ${earned ? "" : "grayscale"}`}
             />
@@ -306,7 +306,7 @@ function CurrentMedalPanel({
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
                 {currentMedal.image_url ? (
-                  <img src={resolveBadgeUrl(currentMedal.image_url) || ""} alt={currentMedal.display_name} className="h-full w-full object-contain p-1" />
+                  <BadgeImage path={currentMedal.image_url} alt={currentMedal.display_name} className="h-full w-full object-contain p-1" />
                 ) : (
                   <Medal className="h-7 w-7" style={{ color }} />
                 )}

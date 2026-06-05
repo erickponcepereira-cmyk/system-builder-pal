@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload, X, Loader2, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBadgeUrl } from "@/lib/badge-url";
 import { toast } from "sonner";
 
 interface Props {
@@ -13,13 +14,7 @@ interface Props {
 export function BadgeImageUploader({ value, onChange, folder, label = "Imagem" }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-
-  const displayUrl = (() => {
-    if (!value) return null;
-    if (value.startsWith("http")) return value;
-    const { data } = supabase.storage.from("career-badges").getPublicUrl(value);
-    return data.publicUrl;
-  })();
+  const displayUrl = useBadgeUrl(value);
 
   const handleFile = async (file: File) => {
     setUploading(true);
