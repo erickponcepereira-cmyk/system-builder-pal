@@ -9,6 +9,7 @@ export type PatentRule = {
   description: string | null;
   badge_color: string | null;
   badge_icon: string | null;
+  image_url: string | null;
   required_revenue: number;
   time_window_months: number;
   min_own_sales_pct: number;
@@ -21,6 +22,7 @@ export type PatentRule = {
   benefits: string | null;
   is_active: boolean;
 };
+
 
 export type PatentAchievement = {
   patent_key: string;
@@ -71,7 +73,8 @@ export const getCareerProgress = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<CareerProgress> => {
     const { data: rules } = await supabaseAdmin
       .from("patent_rules")
-      .select("id,key,display_name,description,badge_color,badge_icon,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,vp_max_pct,ve_max_pct,phase,level,sort_order,benefits,is_active")
+      .select("id,key,display_name,description,badge_color,badge_icon,image_url,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,vp_max_pct,ve_max_pct,phase,level,sort_order,benefits,is_active")
+
       .eq("is_active", true)
       .not("key", "is", null)
       .order("level", { ascending: true });

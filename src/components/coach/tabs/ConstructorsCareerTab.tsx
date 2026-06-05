@@ -80,10 +80,15 @@ export function ConstructorsCareerTab() {
         <div className="relative">
           <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1">Patente atual</p>
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0"
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
               style={{ backgroundColor: `${current?.badge_color || "#9CA3AF"}25`, border: `1px solid ${current?.badge_color || "#9CA3AF"}55` }}>
-              <Trophy className="h-7 w-7" style={{ color: current?.badge_color || "#9CA3AF" }} />
+              {current?.image_url ? (
+                <img src={current.image_url} alt={current.display_name} className="h-full w-full object-cover" />
+              ) : (
+                <Trophy className="h-7 w-7" style={{ color: current?.badge_color || "#9CA3AF" }} />
+              )}
             </div>
+
             <div className="flex-1">
               <p className="text-xl font-bold text-white">{current?.display_name || "Sem patente"}</p>
               <p className="text-xs text-white/50">{current?.description || "Comece movimentando suas primeiras vendas."}</p>

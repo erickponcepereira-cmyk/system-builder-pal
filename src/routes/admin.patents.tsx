@@ -15,10 +15,14 @@ interface PatentRule {
   description: string | null;
   badge_color: string | null;
   badge_icon: string | null;
+  image_url: string | null;
   required_revenue: number;
   time_window_months: number;
   min_own_sales_pct: number;
   max_team_sales_pct: number;
+  vp_max_pct: number | null;
+  ve_max_pct: number | null;
+  phase: number | null;
   level: number;
   sort_order: number;
   benefits: string | null;
@@ -32,15 +36,20 @@ const blank = (): PatentRule => ({
   description: "",
   badge_color: "#FF4230",
   badge_icon: "trophy",
+  image_url: null,
   required_revenue: 0,
   time_window_months: 1,
   min_own_sales_pct: 100,
   max_team_sales_pct: 0,
+  vp_max_pct: 100,
+  ve_max_pct: 0,
+  phase: 1,
   level: 99,
   sort_order: 999,
   benefits: "",
   is_active: true,
 });
+
 
 function AdminPatents() {
   const [rules, setRules] = useState<PatentRule[]>([]);
@@ -50,21 +59,25 @@ function AdminPatents() {
     setLoading(true);
     const { data } = await supabase
       .from("patent_rules")
-      .select("id,key,display_name,description,badge_color,badge_icon,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,level,sort_order,benefits,is_active")
+      .select("id,key,display_name,description,badge_color,badge_icon,image_url,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,vp_max_pct,ve_max_pct,phase,level,sort_order,benefits,is_active" as never)
       .not("key", "is", null)
       .eq("is_active", true)
       .order("level");
-    setRules(((data as PatentRule[]) || []).map((r) => ({
+    setRules(((data as unknown as PatentRule[]) || []).map((r) => ({
       ...r,
       required_revenue: Number(r.required_revenue) || 0,
       time_window_months: Number(r.time_window_months) || 1,
       min_own_sales_pct: Number(r.min_own_sales_pct) || 0,
       max_team_sales_pct: Number(r.max_team_sales_pct) || 0,
+      vp_max_pct: r.vp_max_pct == null ? null : Number(r.vp_max_pct),
+      ve_max_pct: r.ve_max_pct == null ? null : Number(r.ve_max_pct),
+      phase: r.phase == null ? null : Number(r.phase),
       level: Number(r.level) || 0,
       sort_order: Number(r.sort_order) || 0,
     })));
     setLoading(false);
   };
+
 
   useEffect(() => { reload(); }, []);
 

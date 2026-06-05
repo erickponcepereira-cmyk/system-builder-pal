@@ -84,14 +84,28 @@ export function IndividualCareerTab() {
         </div>
       </div>
 
-      {/* Medalha atual + próxima (acumulado) */}
+      {/* Medalha atual + próxima (mensal — Ordem da Excelência) */}
       <CurrentMedalPanel
+        title="mensal"
+        currentLabel="VP do mês"
+        rules={data.monthlyRules}
+        current={vpThisMonth}
+        onOpen={(key, title, color) =>
+          setModal({ kind: "medal_monthly", key, title, subtitle: "Ordem da Excelência (mês atual)", color })
+        }
+      />
+
+      {/* Medalha atual + próxima (acumulado — Clube dos Campeões) */}
+      <CurrentMedalPanel
+        title="acumulado"
+        currentLabel="VP acumulado"
         rules={data.cumulativeRules}
         current={vpLifetime}
         onOpen={(key, title, color) =>
-          setModal({ kind: "medal_cumulative", key, title, subtitle: "Medalha atual", color })
+          setModal({ kind: "medal_cumulative", key, title, subtitle: "Clube dos Campeões", color })
         }
       />
+
 
 
 
@@ -199,11 +213,18 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
 
       <div className="flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
+          className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 overflow-hidden"
           style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}
         >
-          {earned ? <Icon className="h-5 w-5" style={{ color }} /> : <Lock className="h-4 w-4 text-white/30" />}
+          {rule.image_url ? (
+            <img src={rule.image_url} alt={rule.display_name} className={`h-full w-full object-cover ${earned ? "" : "opacity-50 grayscale"}`} />
+          ) : earned ? (
+            <Icon className="h-5 w-5" style={{ color }} />
+          ) : (
+            <Lock className="h-4 w-4 text-white/30" />
+          )}
         </div>
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold" style={{ color: earned ? color : "#fff" }}>{rule.display_name}</span>
@@ -232,10 +253,14 @@ function CurrentMedalPanel({
   rules,
   current,
   onOpen,
+  title = "acumulado",
+  currentLabel = "VP acumulado",
 }: {
   rules: MedalRule[];
   current: number;
   onOpen: (key: string, title: string, color: string) => void;
+  title?: string;
+  currentLabel?: string;
 }) {
   const sorted = [...rules].sort((a, b) => a.threshold - b.threshold);
   const earnedList = sorted.filter((r) => current >= r.threshold);
@@ -243,6 +268,10 @@ function CurrentMedalPanel({
   const nextMedal = sorted.find((r) => r.threshold > current) ?? null;
   const color = currentMedal ? (TIER_COLOR[currentMedal.tier || ""] || "#CD7F32") : "#9CA3AF";
   const nextColor = nextMedal ? (TIER_COLOR[nextMedal.tier || ""] || "#CD7F32") : "#FF4230";
+  if (!currentMedal && !nextMedal) return null;
+
+
+
 
   const prevThreshold = currentMedal ? currentMedal.threshold : 0;
   const nextThreshold = nextMedal ? nextMedal.threshold : prevThreshold;
@@ -262,17 +291,22 @@ function CurrentMedalPanel({
         >
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full" style={{ backgroundColor: `${color}20` }} />
           <div className="relative">
-            <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1">Medalha atual</p>
+            <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1">Medalha atual ({title})</p>
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0"
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
-                <Medal className="h-7 w-7" style={{ color }} />
+                {currentMedal.image_url ? (
+                  <img src={currentMedal.image_url} alt={currentMedal.display_name} className="h-full w-full object-cover" />
+                ) : (
+                  <Medal className="h-7 w-7" style={{ color }} />
+                )}
               </div>
               <div className="flex-1">
                 <p className="text-xl font-bold text-white">{currentMedal.display_name}</p>
-                <p className="text-xs text-white/50">{fmtBRL(currentMedal.threshold)} acumulado</p>
+                <p className="text-xs text-white/50">{fmtBRL(currentMedal.threshold)} {title}</p>
               </div>
             </div>
+
           </div>
         </button>
       )}
@@ -291,11 +325,12 @@ function CurrentMedalPanel({
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-white/70">VP acumulado</span>
+              <span className="text-xs text-white/70">{currentLabel}</span>
               <span className="text-xs font-bold text-white">
                 {fmtBRL(current)} / {fmtBRL(nextMedal.threshold)}
               </span>
             </div>
+
             <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#252525" }}>
               <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: nextColor }} />
             </div>
