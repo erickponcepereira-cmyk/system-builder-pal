@@ -885,6 +885,22 @@ export function ProtocolTab() {
                     <button onClick={() => applyTemplate(t, "replace")} className="flex-1 rounded bg-primary px-2 py-1.5 text-xs font-bold text-primary-foreground">Substituir treino</button>
                     <button onClick={() => applyTemplate(t, "append")} className="flex-1 rounded bg-white/10 px-2 py-1.5 text-xs text-white">Adicionar ao atual</button>
                   </div>
+                  {selected && !selected.external && (
+                    <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50">Habilitar como dia do treino</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {["A","B","C","D","E"].map((L) => (
+                          <button
+                            key={L}
+                            onClick={async () => { await enableTemplateAsDay(t, L); setTemplatePickerOpen(false); }}
+                            className="rounded bg-primary/20 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/30"
+                          >
+                            Treino {L}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {templates.length === 0 && <p className="py-6 text-center text-sm text-white/40">Nenhum treino disponível. Crie um em "Treinos prontos".</p>}
