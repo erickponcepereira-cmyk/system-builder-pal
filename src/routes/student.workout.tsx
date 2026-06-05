@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus } from "lucide-react";
-import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory } from "@/lib/workouts.functions";
+import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig } from "@/lib/workouts.functions";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
@@ -24,7 +24,9 @@ type Plan = {
     reps: string | null;
     load_kg: number | null;
     rest_seconds: number;
+    rest_seconds_max: number | null;
     equipment_config: string | null;
+    equipment_config_user: string | null;
     media_url: string | null;
     notes: string | null;
     is_cardio: boolean;
@@ -34,6 +36,8 @@ type Plan = {
     cardio_elevation: number | null;
   }>;
 };
+
+type LastLog = { load_kg: number | null; equipment_config: string | null; completed_at: string };
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -129,20 +133,54 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
   const logSetFn = useServerFn(logSet);
   const logCardioFn = useServerFn(logCardio);
   const finishFn = useServerFn(finishWorkoutSession);
+  const lastLogsFn = useServerFn(getLastExerciseLogs);
+  const saveConfigFn = useServerFn(updateExerciseUserConfig);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [globalSec, setGlobalSec] = useState(0);
   const [running, setRunning] = useState(true);
-  const [completedSets, setCompletedSets] = useState<Record<string, number>>({}); // exerciseId -> sets done
-  const [loads, setLoads] = useState<Record<string, number>>({}); // exerciseId -> current load
+  const [completedSets, setCompletedSets] = useState<Record<string, number>>({});
+  const [loads, setLoads] = useState<Record<string, number>>({});
   const [reps, setReps] = useState<Record<string, number>>({});
-  const [restRemaining, setRestRemaining] = useState<number | null>(null);
-  const [restMax, setRestMax] = useState<number>(60);
-  const [restExceeded, setRestExceeded] = useState(false);
+  const [equipment, setEquipment] = useState<Record<string, string>>({});
+  const [lastLogs, setLastLogs] = useState<Record<string, LastLog>>({});
+
+  // Rest count-UP timer: tracks elapsed since the active exercise's last completed set.
+  const [restElapsed, setRestElapsed] = useState<number | null>(null);
+  const [restRange, setRestRange] = useState<{ min: number; max: number }>({ min: 60, max: 60 });
+  const [restExerciseName, setRestExerciseName] = useState<string>("");
+
   const [summary, setSummary] = useState<{ xp: number; total: number; achievements: string[]; durationSec: number } | null>(null);
 
   // cardio state
   const [cardio, setCardio] = useState<Record<string, { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean }>>({});
+
+  // Initialize state from plan (saved configs + previous logs)
+  useEffect(() => {
+    const initEq: Record<string, string> = {};
+    plan.workout_exercises.forEach((e) => {
+      if (e.equipment_config_user) initEq[e.id] = e.equipment_config_user;
+      else if (e.equipment_config) initEq[e.id] = e.equipment_config;
+    });
+    setEquipment(initEq);
+    (async () => {
+      try {
+        const ids = plan.workout_exercises.map((e) => e.id);
+        const r = (await lastLogsFn({ data: { exercise_ids: ids } })) as { last: Record<string, LastLog> };
+        setLastLogs(r.last || {});
+        // pre-fill load with last used (if not prescribed)
+        setLoads((prev) => {
+          const next = { ...prev };
+          plan.workout_exercises.forEach((e) => {
+            if (next[e.id] == null && e.load_kg == null && r.last?.[e.id]?.load_kg != null) {
+              next[e.id] = Number(r.last[e.id]!.load_kg);
+            }
+          });
+          return next;
+        });
+      } catch { /* non-fatal */ }
+    })();
+  }, [plan.id]);
 
   useEffect(() => {
     (async () => {
@@ -158,18 +196,12 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
     return () => clearInterval(t);
   }, [running]);
 
-  // Rest timer countdown
+  // Rest COUNT-UP timer
   useEffect(() => {
-    if (restRemaining === null) return;
-    const t = setInterval(() => {
-      setRestRemaining((r) => (r === null ? null : r - 1));
-    }, 1000);
+    if (restElapsed === null) return;
+    const t = setInterval(() => setRestElapsed((e) => (e === null ? null : e + 1)), 1000);
     return () => clearInterval(t);
-  }, [restRemaining !== null]);
-
-  useEffect(() => {
-    if (restRemaining !== null && restRemaining < 0 && !restExceeded) setRestExceeded(true);
-  }, [restRemaining, restExceeded]);
+  }, [restElapsed !== null]);
 
   const totalUnits = useMemo(() => plan.workout_exercises.reduce((s, e) => s + (e.is_cardio ? 1 : e.sets), 0), [plan]);
   const doneUnits = useMemo(() => {
@@ -183,20 +215,28 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
   const completionPct = totalUnits ? Math.round((doneUnits / totalUnits) * 100) : 0;
 
   const fmt = (s: number) => {
-    const sign = s < 0 ? "-" : "";
-    const a = Math.abs(s);
+    const a = Math.max(0, s);
     const m = Math.floor(a / 60);
     const ss = a % 60;
-    return `${sign}${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
   };
 
-  const skipRest = () => { setRestRemaining(null); setRestExceeded(false); };
+  // Rest zone derived from min/max range
+  const restZone: "normal" | "target" | "over" = (() => {
+    if (restElapsed === null) return "normal";
+    if (restElapsed < restRange.min) return "normal";
+    if (restElapsed < restRange.max) return "target";
+    return "over";
+  })();
+
+  const skipRest = () => { setRestElapsed(null); };
 
   const completeSet = async (ex: Plan["workout_exercises"][number]) => {
     if (!sessionId) return;
     const setNumber = (completedSets[ex.id] || 0) + 1;
     const load = loads[ex.id] ?? ex.load_kg ?? 0;
     const repsDone = reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0);
+    const eqConfig = equipment[ex.id] || null;
     try {
       await logSetFn({
         data: {
@@ -207,17 +247,25 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
           load_kg: load,
           rest_seconds_actual: null,
           rest_exceeded: false,
+          equipment_config: eqConfig,
         },
       });
       setCompletedSets((c) => ({ ...c, [ex.id]: setNumber }));
       if (setNumber < ex.sets) {
-        setRestMax(ex.rest_seconds);
-        setRestRemaining(ex.rest_seconds);
-        setRestExceeded(false);
+        const max = ex.rest_seconds_max ?? ex.rest_seconds;
+        const min = Math.min(ex.rest_seconds, max);
+        setRestRange({ min, max });
+        setRestExerciseName(ex.exercise_name);
+        setRestElapsed(0);
       }
     } catch (e) {
       toast.error("Erro ao registrar série");
     }
+  };
+
+  const saveEquipment = async (ex: Plan["workout_exercises"][number], value: string) => {
+    setEquipment((m) => ({ ...m, [ex.id]: value }));
+    try { await saveConfigFn({ data: { exercise_id: ex.id, equipment_config_user: value || null } }); } catch { /* ignore */ }
   };
 
   const completeCardio = async (ex: Plan["workout_exercises"][number]) => {
@@ -306,19 +354,25 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
         <div className="h-full bg-gradient-to-r from-primary to-orange-500 transition-all" style={{ width: `${completionPct}%` }} />
       </div>
 
-      {/* Rest timer banner */}
-      {restRemaining !== null && (
+      {/* Rest count-up timer banner — white < min, yellow in target, red over max */}
+      {restElapsed !== null && (
         <div
-          className={`sticky top-0 z-10 flex items-center justify-between rounded-2xl p-3 ${
-            restExceeded ? "animate-pulse bg-red-500/30 border border-red-500" : "bg-primary/15 border border-primary/30"
+          className={`sticky top-0 z-10 flex items-center justify-between rounded-2xl border p-3 ${
+            restZone === "over"
+              ? "animate-pulse border-red-500 bg-red-500/25"
+              : restZone === "target"
+                ? "border-yellow-400/50 bg-yellow-400/15"
+                : "border-white/20 bg-white/10"
           }`}
         >
           <div className="flex items-center gap-2">
-            <Clock className={`h-5 w-5 ${restExceeded ? "text-red-400" : "text-primary"}`} />
+            <Clock className={`h-5 w-5 ${restZone === "over" ? "text-red-400" : restZone === "target" ? "text-yellow-300" : "text-white"}`} />
             <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-white/60">Descanso</p>
-              <p className={`font-mono text-lg font-bold tabular-nums ${restExceeded ? "text-red-300" : "text-white"}`}>
-                {fmt(restRemaining)}
+              <p className="text-[10px] uppercase font-bold tracking-wider text-white/60">
+                Descanso {restExerciseName ? `· ${restExerciseName}` : ""} ({restRange.min === restRange.max ? `${restRange.min}s` : `${restRange.min}–${restRange.max}s`})
+              </p>
+              <p className={`font-mono text-lg font-bold tabular-nums ${restZone === "over" ? "text-red-300" : restZone === "target" ? "text-yellow-200" : "text-white"}`}>
+                {fmt(restElapsed)}
               </p>
             </div>
           </div>
@@ -336,8 +390,11 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
           load={loads[ex.id] ?? ex.load_kg ?? 0}
           reps={reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0)}
           cardio={cardio[ex.id]}
+          equipment={equipment[ex.id] ?? ""}
+          lastLog={lastLogs[ex.id]}
           onChangeLoad={(v) => setLoads((m) => ({ ...m, [ex.id]: v }))}
           onChangeReps={(v) => setReps((m) => ({ ...m, [ex.id]: v }))}
+          onChangeEquipment={(v) => saveEquipment(ex, v)}
           onChangeCardio={(patch) =>
             setCardio((m) => {
               const prev = m[ex.id] ?? { duration: "", pace: "", speed: "", elevation: "", distance: "", done: false };
@@ -375,8 +432,11 @@ function ExerciseCard({
   load,
   reps,
   cardio,
+  equipment,
+  lastLog,
   onChangeLoad,
   onChangeReps,
+  onChangeEquipment,
   onChangeCardio,
   onCompleteSet,
   onCompleteCardio,
@@ -386,13 +446,19 @@ function ExerciseCard({
   load: number;
   reps: number;
   cardio?: { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean };
+  equipment: string;
+  lastLog?: LastLog;
   onChangeLoad: (v: number) => void;
   onChangeReps: (v: number) => void;
+  onChangeEquipment: (v: string) => void;
   onChangeCardio: (p: Partial<{ duration: string; pace: string; speed: string; elevation: string; distance: string }>) => void;
   onCompleteSet: () => void;
   onCompleteCardio: () => void;
 }) {
   const isComplete = ex.is_cardio ? cardio?.done : done >= ex.sets;
+  const restLabel = ex.rest_seconds_max && ex.rest_seconds_max !== ex.rest_seconds
+    ? `${ex.rest_seconds}–${ex.rest_seconds_max}s`
+    : `${ex.rest_seconds}s`;
   return (
     <div className={`rounded-2xl border p-3 ${isComplete ? "border-primary/30 bg-primary/5" : "border-white/10 bg-white/5"}`}>
       <div className="flex items-start gap-3">
@@ -412,14 +478,29 @@ function ExerciseCard({
             </p>
           ) : (
             <p className="text-[11px] text-white/45">
-              {ex.sets} séries · {ex.reps || "—"} reps · {ex.rest_seconds}s descanso
+              {ex.sets} séries · {ex.reps || "—"} reps · {restLabel} descanso
             </p>
           )}
-          {ex.equipment_config && <p className="mt-0.5 text-[10px] text-white/40">⚙ {ex.equipment_config}</p>}
+          {ex.equipment_config && <p className="mt-0.5 text-[10px] text-white/40">⚙ Sugerido: {ex.equipment_config}</p>}
+          {lastLog && (lastLog.load_kg != null || lastLog.equipment_config) && (
+            <p className="mt-0.5 text-[10px] text-primary/80">
+              📌 Última vez: {lastLog.load_kg != null ? `${lastLog.load_kg}kg` : "—"}
+              {lastLog.equipment_config ? ` · ${lastLog.equipment_config}` : ""}
+            </p>
+          )}
           {ex.notes && <p className="mt-0.5 text-[10px] italic text-white/40">{ex.notes}</p>}
         </div>
         {isComplete && <Check className="h-5 w-5 shrink-0 text-primary" />}
       </div>
+
+      {!ex.is_cardio && (
+        <input
+          value={equipment}
+          onChange={(e) => onChangeEquipment(e.target.value)}
+          placeholder="Configuração do aparelho (ex: Pino 4 · Banco 2)"
+          className="mt-2 w-full rounded-lg bg-white/5 px-2 py-1.5 text-xs text-white outline-none placeholder:text-white/30"
+        />
+      )}
 
       {!ex.is_cardio && (
         <>

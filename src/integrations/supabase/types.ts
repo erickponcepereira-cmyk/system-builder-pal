@@ -8057,6 +8057,7 @@ export type Database = {
           cardio_speed: number | null
           created_at: string
           equipment_config: string | null
+          equipment_config_user: string | null
           exercise_name: string
           exercise_ref_id: string | null
           id: string
@@ -8068,6 +8069,7 @@ export type Database = {
           plan_id: string
           reps: string | null
           rest_seconds: number
+          rest_seconds_max: number | null
           sets: number
         }
         Insert: {
@@ -8077,6 +8079,7 @@ export type Database = {
           cardio_speed?: number | null
           created_at?: string
           equipment_config?: string | null
+          equipment_config_user?: string | null
           exercise_name: string
           exercise_ref_id?: string | null
           id?: string
@@ -8088,6 +8091,7 @@ export type Database = {
           plan_id: string
           reps?: string | null
           rest_seconds?: number
+          rest_seconds_max?: number | null
           sets?: number
         }
         Update: {
@@ -8097,6 +8101,7 @@ export type Database = {
           cardio_speed?: number | null
           created_at?: string
           equipment_config?: string | null
+          equipment_config_user?: string | null
           exercise_name?: string
           exercise_ref_id?: string | null
           id?: string
@@ -8108,6 +8113,7 @@ export type Database = {
           plan_id?: string
           reps?: string | null
           rest_seconds?: number
+          rest_seconds_max?: number | null
           sets?: number
         }
         Relationships: [
@@ -8159,6 +8165,7 @@ export type Database = {
       workout_session_logs: {
         Row: {
           completed_at: string
+          equipment_config: string | null
           exercise_id: string
           id: string
           load_kg: number | null
@@ -8170,6 +8177,7 @@ export type Database = {
         }
         Insert: {
           completed_at?: string
+          equipment_config?: string | null
           exercise_id: string
           id?: string
           load_kg?: number | null
@@ -8181,6 +8189,7 @@ export type Database = {
         }
         Update: {
           completed_at?: string
+          equipment_config?: string | null
           exercise_id?: string
           id?: string
           load_kg?: number | null

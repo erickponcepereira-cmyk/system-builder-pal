@@ -7,7 +7,7 @@ import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/comp
 import { WindowMethod } from "@/components/student/WindowMethod";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { calcWaterGoalMl, describeWaterFormula, calcAgeFromBirthdate } from "@/lib/water-goal";
-import { syncProtocolWorkout } from "@/lib/workouts.functions";
+import { syncProtocolWorkout, enableTemplateForStudent } from "@/lib/workouts.functions";
 
 type Student = {
   id: string;
@@ -183,6 +183,8 @@ export function ProtocolTab() {
     setTemplates((tpl as unknown as WorkoutTemplate[]) || []);
   };
 
+  const enableTplFn = useServerFn(enableTemplateForStudent);
+
   const applyTemplate = (t: WorkoutTemplate, mode: "replace" | "append") => {
     setProtocol((p) => ({
       ...p,
@@ -193,6 +195,17 @@ export function ProtocolTab() {
     }));
     setTemplatePickerOpen(false);
     toast.success(`Treino "${t.name}" aplicado.`);
+  };
+
+  const enableTemplateAsDay = async (t: WorkoutTemplate, letter: string): Promise<void> => {
+    if (!selected) { toast.error("Selecione um aluno primeiro."); return; }
+    if (selected.external) { toast.error("Esta ação só funciona para alunos do app (não externos)."); return; }
+    try {
+      const r = (await enableTplFn({ data: { student_record_id: selected.id, template_id: t.id, letter } })) as { plan_name: string };
+      toast.success(`"${r.plan_name}" habilitado para ${selected.name}.`);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao habilitar treino");
+    }
   };
 
   const saveAsTemplate = async () => {
@@ -827,7 +840,12 @@ export function ProtocolTab() {
 
           {!loading && section === "templates" && (
             <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <WorkoutTemplatesPanel mode="coach" coachId={coachId} />
+              <WorkoutTemplatesPanel
+                mode="coach"
+                coachId={coachId}
+                onEnableForStudent={selected && !selected.external ? enableTemplateAsDay : undefined}
+                enableStudentName={selected?.name || null}
+              />
             </div>
           )}
         </>
@@ -867,6 +885,22 @@ export function ProtocolTab() {
                     <button onClick={() => applyTemplate(t, "replace")} className="flex-1 rounded bg-primary px-2 py-1.5 text-xs font-bold text-primary-foreground">Substituir treino</button>
                     <button onClick={() => applyTemplate(t, "append")} className="flex-1 rounded bg-white/10 px-2 py-1.5 text-xs text-white">Adicionar ao atual</button>
                   </div>
+                  {selected && !selected.external && (
+                    <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                      <p className="text-[10px] uppercase tracking-wider text-white/50">Habilitar como dia do treino</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {["A","B","C","D","E"].map((L) => (
+                          <button
+                            key={L}
+                            onClick={async () => { await enableTemplateAsDay(t, L); setTemplatePickerOpen(false); }}
+                            className="rounded bg-primary/20 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/30"
+                          >
+                            Treino {L}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {templates.length === 0 && <p className="py-6 text-center text-sm text-white/40">Nenhum treino disponível. Crie um em "Treinos prontos".</p>}
