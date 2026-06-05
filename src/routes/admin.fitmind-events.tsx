@@ -175,9 +175,23 @@ function EventsTab() {
   const [editing, setEditing] = useState<Partial<FitmindEvent> | null>(null);
   const [saving, setSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(() => tzToday().slice(0, 7));
+  const [coachOptions, setCoachOptions] = useState<Array<{ id: string; name: string; whatsapp: string | null }>>([]);
 
   const [showInactive, setShowInactive] = useState(false);
   const [tagInput, setTagInput] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("coaches" as never)
+        .select("id, profiles:profile_id(name, whatsapp)" as never);
+      const opts = ((data as any[]) || [])
+        .map((c) => ({ id: c.id, name: c.profiles?.name || "Coach", whatsapp: c.profiles?.whatsapp || null }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setCoachOptions(opts);
+    })();
+  }, []);
+
   const load = async () => {
     setLoading(true);
     const from = tzStartOfMonth(filterMonth).toISOString();
@@ -194,6 +208,7 @@ function EventsTab() {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [filterMonth]);
+
 
 
 
