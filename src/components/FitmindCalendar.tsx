@@ -1192,18 +1192,35 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
             <button
               onClick={removePresent}
               disabled={loading}
-              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition">
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition disabled:opacity-50">
               Cancelar presença
             </button>
+          ) : myRegStatus === "registered" ? (
+            <>
+              <button
+                onClick={markPresent}
+                disabled={loading || !myProfileId}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: color }}>
+                <Check className="h-3.5 w-3.5" />
+                Marcar presença
+              </button>
+              <button
+                onClick={toggleQueroIr}
+                disabled={loading}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">
+                <HeartOff className="h-3.5 w-3.5" /> Cancelar inscrição
+              </button>
+            </>
           ) : (
-            <button
-              onClick={markPresent}
-              disabled={loading || !myProfileId}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: color }}>
-              <Check className="h-3.5 w-3.5" />
-              Marcar presença
-            </button>
+            myProfileId && (
+              <button
+                onClick={toggleQueroIr}
+                disabled={loading}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 bg-white/10 text-white/80 hover:bg-white/20">
+                <Heart className="h-3.5 w-3.5" /> Quero ir
+              </button>
+            )
           )}
         </div>
       </div>
