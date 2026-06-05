@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Award, Pencil, X } from "lucide-react";
+import fitmindLogo from "@/assets/fitmind-logo.png";
 
 type Achievement = {
   id: string;
@@ -144,8 +145,8 @@ function AdminAchievementsPage() {
           <div className="space-y-2">
             {list.map((a) => (
               <div key={a.id} className={`flex items-center gap-3 rounded-xl border p-3 ${a.active ? "border-white/10 bg-white/[0.04]" : "border-white/5 bg-white/[0.02] opacity-60"}`}>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xl">
-                  {a.icon || "🏆"}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/20 p-0.5">
+                  <img src={fitmindLogo} alt="" className="h-full w-full rounded-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -183,15 +184,10 @@ function AdminAchievementsPage() {
               <button onClick={() => setModalOpen(false)} className="rounded p-1 text-white/60 hover:bg-white/10"><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-3">
-              <div className="grid grid-cols-[80px_1fr] gap-2">
-                <div>
-                  <label className="mb-1 block text-[10px] uppercase text-white/50">Ícone</label>
-                  <input value={form.icon || ""} onChange={(e) => setForm({ ...form, icon: e.target.value })} placeholder="🏆" className="w-full rounded bg-black/30 px-2 py-1.5 text-center text-xl text-white outline-none" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[10px] uppercase text-white/50">Código (único, sem espaços)</label>
-                  <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\s+/g, "_").toLowerCase() })} placeholder="ex: first_workout" className="w-full rounded bg-black/30 px-2 py-1.5 text-sm text-white outline-none" />
-                </div>
+              <div>
+                <label className="mb-1 block text-[10px] uppercase text-white/50">Código (único, sem espaços)</label>
+                <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\s+/g, "_").toLowerCase() })} placeholder="ex: first_workout" className="w-full rounded bg-black/30 px-2 py-1.5 text-sm text-white outline-none" />
+                <p className="mt-1 text-[10px] text-white/40">Todas as conquistas usam o logo da FitMind como ícone.</p>
               </div>
               <div>
                 <label className="mb-1 block text-[10px] uppercase text-white/50">Título</label>
