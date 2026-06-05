@@ -137,8 +137,10 @@ export function IndividualCareerTab() {
                 current={vpLifetime}
                 earned={!!e}
                 awardedAt={e?.awarded_at ?? null}
+                onClick={() => setModal({ kind: "medal_cumulative", key: r.key, title: r.display_name, subtitle: "Clube dos Campeões", color: TIER_COLOR[r.tier || ""] || "#CD7F32" })}
               />
             );
+
           })}
         </div>
       </div>
