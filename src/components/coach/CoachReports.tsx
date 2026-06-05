@@ -204,19 +204,28 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar produto, cliente ou email..."
             className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/40 border border-white/10 text-xs text-white" />
         </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {GROUP_KEYS.map((k) => (
+            <button key={k} onClick={() => setGroupTab(k)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition ${groupTab === k ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+              {GROUP_LABELS[k]} ({groupCounts[k]})
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && <p className="text-xs text-white/50">Carregando dados...</p>}
 
       {!loading && data && (
         <>
-          {/* KPIs */}
+          {/* KPIs (refletem o filtro de grupo) */}
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <Kpi label="Receita" value={brl(data.totals.revenue)} delta={data.compare ? pct(data.totals.revenue, data.compare.totals.revenue) : null} />
-            <Kpi label="Pedidos" value={String(data.totals.orders)} delta={data.compare ? pct(data.totals.orders, data.compare.totals.orders) : null} />
-            <Kpi label="Itens vendidos" value={String(data.totals.itemsSold)} delta={data.compare ? pct(data.totals.itemsSold, data.compare.totals.itemsSold) : null} />
-            <Kpi label="Clientes únicos" value={String(data.totals.uniqueCustomers)} delta={data.compare ? pct(data.totals.uniqueCustomers, data.compare.totals.uniqueCustomers) : null} />
+            <Kpi label="Receita" value={brl(kpis.revenue)} delta={groupTab === "all" && data.compare ? pct(kpis.revenue, data.compare.totals.revenue) : null} />
+            <Kpi label="Pedidos" value={String(kpis.orders)} delta={groupTab === "all" && data.compare ? pct(kpis.orders, data.compare.totals.orders) : null} />
+            <Kpi label="Itens vendidos" value={String(kpis.itemsSold)} delta={groupTab === "all" && data.compare ? pct(kpis.itemsSold, data.compare.totals.itemsSold) : null} />
+            <Kpi label="Clientes únicos" value={String(kpis.uniqueCustomers)} delta={groupTab === "all" && data.compare ? pct(kpis.uniqueCustomers, data.compare.totals.uniqueCustomers) : null} />
           </div>
+
 
           {/* Monthly comparison chart */}
           <Section title="Receita por mês">
