@@ -41,6 +41,12 @@ export function WalletTab() {
   const [split, setSplit] = useState<WalletSplit | null>(null);
   const [tab, setTab] = useState<"direct" | "network">("direct");
   const [showRules, setShowRules] = useState(false);
+  const [career, setCareer] = useState<CareerProgress | null>(null);
+  const [medals, setMedals] = useState<IndividualCareer | null>(null);
+  const [modal, setModal] = useState<
+    | { kind: "patent" | "medal_monthly" | "medal_cumulative"; key: string; title: string; subtitle?: string; color: string }
+    | null
+  >(null);
 
 
   useEffect(() => {
