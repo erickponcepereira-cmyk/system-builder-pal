@@ -19,6 +19,8 @@ interface PartnerCard {
   business_area: string | null;
   specialty: string | null;
   free_count: number;
+  discount_count: number;
+
 }
 
 function PartnersList() {
@@ -32,15 +34,18 @@ function PartnersList() {
     (async () => {
       const { data } = await supabase
         .from("partners" as never)
-        .select("id,fantasy_name,description,photo_url,city,state,status,business_area,specialty,partner_products(id,kind,status,is_active_by_partner)" as never)
+        .select("id,fantasy_name,description,photo_url,city,state,status,business_area,specialty,partner_products(id,kind,redemption_mode,status,is_active_by_partner)" as never)
         .eq("status" as never, "approved" as never)
         .order("fantasy_name" as never);
-      const rows = ((data as unknown as Array<PartnerCard & { partner_products: Array<{ kind: string; status: string; is_active_by_partner: boolean }> }>) || []).map((p) => ({
-        ...p,
-        free_count: (p.partner_products || []).filter(
-          (x) => x.kind === "free" && x.status === "approved" && x.is_active_by_partner,
-        ).length,
-      }));
+      const rows = ((data as unknown as Array<PartnerCard & { partner_products: Array<{ kind: string; redemption_mode: string | null; status: string; is_active_by_partner: boolean }> }>) || []).map((p) => {
+        const activeFree = (p.partner_products || []).filter((x) => x.kind === "free" && x.status === "approved" && x.is_active_by_partner);
+        return {
+          ...p,
+          free_count: activeFree.filter((x) => (x.redemption_mode ?? "free") === "free").length,
+          discount_count: activeFree.filter((x) => x.redemption_mode === "discount").length,
+        };
+      });
+
       setPartners(rows);
       setLoading(false);
     })();
@@ -114,9 +119,15 @@ function PartnersList() {
                               <p className="text-[10px] text-white/40 flex items-center gap-1"><MapPin className="h-3 w-3" /> {[p.city, p.state].filter(Boolean).join(" / ")}</p>
                             )}
                             {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
-                            {p.free_count > 0 && (
-                              <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary"><Sparkles className="h-3 w-3" /> {p.free_count} benefício{p.free_count > 1 ? "s" : ""} grátis</span>
-                            )}
+                            <div className="mt-1.5 flex gap-1 flex-wrap">
+                              {p.free_count > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-green-500/15 text-green-400"><Sparkles className="h-3 w-3" /> {p.free_count} grátis</span>
+                              )}
+                              {p.discount_count > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-400"><Sparkles className="h-3 w-3" /> {p.discount_count} desconto{p.discount_count > 1 ? "s" : ""}</span>
+                              )}
+                            </div>
+
                           </div>
                         </div>
                       </button>
