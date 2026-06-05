@@ -430,10 +430,10 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   // ── Highlighted/upcoming events list (for compact mode) ──────────────────
 
   const upcomingEvents = useMemo(() => {
-    return events
+    return displayEvents
       .filter((ev) => tzDateKey(ev.starts_at) >= todayKey && (!onlyHighlighted || ev.is_highlighted || ev.is_important))
       .slice(0, 5);
-  }, [events, todayKey, onlyHighlighted]);
+  }, [displayEvents, todayKey, onlyHighlighted]);
 
   // ─── Compact widget mode ─────────────────────────────────────────────────
   if (compact) {
