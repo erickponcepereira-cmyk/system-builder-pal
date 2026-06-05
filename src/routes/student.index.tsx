@@ -283,62 +283,69 @@ function StudentHome() {
         </div>
       )}
 
-      {/* Progresso do desafio real */}
-      <Link to="/student/challenge" className="block rounded-2xl p-4 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold text-white">Desafio FitMind</h2>
-          </div>
-          {challenge && challengeProgress ? (
-            <span className="text-xs font-bold text-primary">Dia {challengeProgress.elapsed}/{challengeProgress.total}</span>
-          ) : (
-            <span className="text-[10px] font-bold uppercase text-white/40">Sem inscrição</span>
-          )}
-        </div>
-
-        {challenge && challengeProgress ? (
-          <>
-            <p className="text-[11px] text-white/50 mb-2">
-              {challenge.competitionLabel} · <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Turma {challenge.groupNumber}</span>
-            </p>
-            <Progress value={challengeProgress.pct} className="h-2 bg-white/5" />
-            <div className="mt-2 flex justify-between text-[11px] text-white/50">
-              <span>{challengeProgress.pct}% concluído</span>
-              <span>{challengeProgress.remaining} dias restantes</span>
+      {/* Progresso do desafio real — escondido para coach/profissional/parceiro */}
+      {!challengeBlocked && (
+        <Link to="/student/challenge" className="block rounded-2xl p-4 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-white">Desafio FitMind</h2>
             </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem inicial</p>
-                <p className="font-bold text-white">{fmtDate(challenge.initialStart)} – {fmtDate(challenge.initialEnd)}</p>
-              </div>
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem final</p>
-                <p className="font-bold text-white">{fmtDate(challenge.finalWeighIn)}</p>
-              </div>
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                <p className="text-white/40 flex items-center gap-1"><Trophy className="h-3 w-3" />Premiação</p>
-                <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
-              </div>
-              <div className="rounded-lg bg-primary/10 px-2.5 py-2">
-                <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Moedas</p>
-                <p className="font-bold text-primary">{tokens}</p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-white/55">
-            <p>Você ainda não está inscrito no desafio.</p>
-            {tokens > 0 && (
-              <p className="mt-1 text-primary font-semibold flex items-center gap-1">
-                <Coins className="h-3 w-3" /> {tokens} moeda{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
-              </p>
+            {challenge && challengeProgress ? (
+              <span className="text-xs font-bold text-primary">Dia {challengeProgress.elapsed}/{challengeProgress.total}</span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase text-white/40">Sem inscrição</span>
             )}
           </div>
-        )}
-      </Link>
 
+          {challenge && challengeProgress ? (
+            <>
+              <p className="text-[11px] text-white/50 mb-2">
+                {challenge.competitionLabel} · <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Turma {challenge.groupNumber}</span>
+              </p>
+              <Progress value={challengeProgress.pct} className="h-2 bg-white/5" />
+              <div className="mt-2 flex justify-between text-[11px] text-white/50">
+                <span>{challengeProgress.pct}% concluído</span>
+                <span>{challengeProgress.remaining} dias restantes</span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                  <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem inicial</p>
+                  <p className="font-bold text-white">{fmtDate(challenge.initialStart)} – {fmtDate(challenge.initialEnd)}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                  <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem final</p>
+                  <p className="font-bold text-white">{fmtDate(challenge.finalWeighIn)}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                  <p className="text-white/40 flex items-center gap-1"><Trophy className="h-3 w-3" />Premiação</p>
+                  <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
+                </div>
+                <div className="rounded-lg bg-primary/10 px-2.5 py-2">
+                  <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Moedas</p>
+                  <p className="font-bold text-primary">{tokens}</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-white/55">
+              <p>Você ainda não está inscrito no desafio.</p>
+              {tokens > 0 && (
+                <p className="mt-1 text-primary font-semibold flex items-center gap-1">
+                  <Coins className="h-3 w-3" /> {tokens} moeda{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
+                </p>
+              )}
+            </div>
+          )}
+        </Link>
+      )}
+
+      <StudentReferralModal
+        open={showReferral}
+        onClose={() => setShowReferral(false)}
+        referralCode={referralCode || "ALUNO"}
+      />
     </div>
   );
 }
