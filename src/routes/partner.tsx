@@ -35,6 +35,7 @@ interface Partner {
   instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   status: string; document: string | null; document_type: string | null;
+  business_area: string | null; specialty: string | null;
   referral_code: string | null; referral_link: string | null;
 }
 
@@ -787,6 +788,10 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
       </Field>
       <Field label="Nome fantasia"><input className="field-input" value={form.fantasy_name} onChange={e => setForm({ ...form, fantasy_name: e.target.value })} /></Field>
       <Field label="Descrição"><textarea className="field-input" rows={3} value={form.description || ""} onChange={e => setForm({ ...form, description: e.target.value })} /></Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Área de atuação"><input className="field-input" placeholder="Ex: Alimentação saudável" value={form.business_area || ""} onChange={e => setForm({ ...form, business_area: e.target.value })} /></Field>
+        <Field label="Especialidade"><input className="field-input" placeholder="Ex: Açaí e smoothies" value={form.specialty || ""} onChange={e => setForm({ ...form, specialty: e.target.value })} /></Field>
+      </div>
       <Field label="WhatsApp"><input className="field-input" value={form.whatsapp || ""} onChange={e => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} /></Field>
       <Field label="Instagram (@usuario ou URL)"><input className="field-input" value={form.instagram || ""} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
       <Field label="Facebook (URL)"><input className="field-input" value={form.facebook || ""} onChange={e => setForm({ ...form, facebook: e.target.value })} /></Field>

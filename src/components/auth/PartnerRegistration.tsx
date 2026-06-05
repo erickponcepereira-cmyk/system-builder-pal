@@ -30,6 +30,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   const [whatsapp, setWhatsapp] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [businessArea, setBusinessArea] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -140,6 +142,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             whatsapp,
             city: city || null,
             state: state || null,
+            business_area: businessArea.trim() || null,
+            specialty: specialty.trim() || null,
             status: "pending",
             upline_coach_id: uplineCoachId,
           } as never);
@@ -176,6 +180,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             whatsapp,
             city: city || null,
             state: state || null,
+            business_area: businessArea.trim() || null,
+            specialty: specialty.trim() || null,
             upline_coach_id: uplineCoachId,
           } as never)
           .eq("profile_id" as never, profile.id);
@@ -282,6 +288,14 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
                 <Label className="text-white/70 text-xs">UF</Label>
                 <Input value={state} onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))} className="bg-white/5 border-white/10 text-white" />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70 text-xs">Área de atuação</Label>
+              <Input value={businessArea} onChange={(e) => setBusinessArea(e.target.value)} placeholder="Ex: Alimentação saudável, Estética, Suplementos..." className="bg-white/5 border-white/10 text-white" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70 text-xs">Especialidade (opcional)</Label>
+              <Input value={specialty} onChange={(e) => setSpecialty(e.target.value)} placeholder="Ex: Açaí e smoothies" className="bg-white/5 border-white/10 text-white" />
             </div>
 
             {/* Coach indicador */}

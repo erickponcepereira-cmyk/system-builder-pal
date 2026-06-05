@@ -22,6 +22,7 @@ type Freebie = {
   condition_note: string | null;
   is_active: boolean;
   sort_order: number;
+  category: string | null;
 };
 
 type Redemption = {
@@ -44,7 +45,7 @@ function FreebiesAdmin() {
   const blank = (): Freebie => ({
     id: "", name: "", description: "", image_url: null, kind: "digital",
     stock: null, per_student_limit: 1, valid_from: null, valid_until: null,
-    condition_note: "", is_active: true, sort_order: 0,
+    condition_note: "", is_active: true, sort_order: 0, category: null,
   });
 
   const load = async () => {
@@ -184,6 +185,7 @@ function FreebiesAdmin() {
             </div>
             <div className="space-y-3 text-sm">
               <Input label="Nome" value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
+              <Input label="Categoria" value={editing.category || ""} onChange={(v) => setEditing({ ...editing, category: v || null })} />
               <div>
                 <label className="text-xs text-white/60">Imagem</label>
                 {editing.image_url ? (
