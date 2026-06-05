@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag } from "lucide-react";
+import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag, Ticket, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/student/partners/$partnerId")({
   head: () => ({ meta: [{ title: "Parceiro — FitMind Club" }] }),
