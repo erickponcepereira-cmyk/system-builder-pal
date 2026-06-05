@@ -306,7 +306,7 @@ function CurrentMedalPanel({
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
                 {currentMedal.image_url ? (
-                  <img src={currentMedal.image_url} alt={currentMedal.display_name} className="h-full w-full object-cover" />
+                  <img src={resolveBadgeUrl(currentMedal.image_url) || ""} alt={currentMedal.display_name} className="h-full w-full object-contain p-1" />
                 ) : (
                   <Medal className="h-7 w-7" style={{ color }} />
                 )}
