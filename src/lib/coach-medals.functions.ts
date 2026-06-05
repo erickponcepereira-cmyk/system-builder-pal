@@ -10,8 +10,10 @@ export type MedalRule = {
   threshold: number;
   tier: string | null;
   icon: string | null;
+  image_url: string | null;
   sort_order: number;
 };
+
 
 export type EarnedMedal = {
   medal_kind: "monthly" | "cumulative";
