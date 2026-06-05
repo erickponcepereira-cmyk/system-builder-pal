@@ -260,6 +260,7 @@ export const logSet = createServerFn({ method: "POST" })
       load_kg: z.number().nullable().optional(),
       rest_seconds_actual: z.number().int().nullable().optional(),
       rest_exceeded: z.boolean(),
+      equipment_config: z.string().max(500).nullable().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -271,7 +272,8 @@ export const logSet = createServerFn({ method: "POST" })
       load_kg: data.load_kg ?? null,
       rest_seconds_actual: data.rest_seconds_actual ?? null,
       rest_exceeded: data.rest_exceeded,
-    });
+      equipment_config: data.equipment_config ?? null,
+    } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
