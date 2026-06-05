@@ -78,6 +78,8 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [anams, setAnams] = useState<AnamRow[]>([]);
   const [weights, setWeights] = useState<WeightRow[]>([]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
+  const [waterHistory, setWaterHistory] = useState<{ date: string; total_ml: number }[]>([]);
+  const [waterGoalMl, setWaterGoalMl] = useState<number>(2500);
   const [sharing, setSharing] = useState(false);
   const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
@@ -118,7 +120,27 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       setWeights(((wRes.data || []) as unknown) as WeightRow[]);
       setPhotos(((pRes.data || []) as unknown) as PhotoRow[]);
 
-      // Saldo de moedas de desafio
+      // Histórico de hidratação (últimos 30 dias)
+      try {
+        const since = new Date(); since.setDate(since.getDate() - 30);
+        const [{ data: studentRow }, { data: waterRows }] = await Promise.all([
+          supabase.from("students").select("water_goal_ml").eq("id", studentId).maybeSingle(),
+          supabase
+            .from("student_water_logs" as never)
+            .select("log_date, amount_ml" as never)
+            .eq("student_id" as never, studentId as never)
+            .gte("log_date" as never, since.toISOString().slice(0, 10) as never),
+        ]);
+        setWaterGoalMl(Number((studentRow as any)?.water_goal_ml) || 2500);
+        const totals: Record<string, number> = {};
+        ((waterRows as any[]) || []).forEach((r) => { totals[r.log_date] = (totals[r.log_date] || 0) + r.amount_ml; });
+        const sorted = Object.entries(totals)
+          .map(([date, total_ml]) => ({ date, total_ml }))
+          .sort((a, b) => (a.date < b.date ? 1 : -1));
+        setWaterHistory(sorted);
+      } catch (e) { console.warn("water history fetch failed", e); }
+
+      // Saldo de tickets de desafio
       try {
         const { data: toks } = await supabase
           .from("student_challenge_tokens")
@@ -485,7 +507,10 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               ? <StudentWorkoutsPanel studentUserId={studentUserId} />
               : <p className="py-10 text-center text-xs text-white/40">Aluno sem usuário vinculado.</p>
           ) : tab === "evolucao" ? (
-            <EvolutionPhotos photos={photos} />
+            <div className="space-y-4">
+              <EvolutionPhotos photos={photos} />
+              <WaterHistoryPanel history={waterHistory} goalMl={waterGoalMl} />
+            </div>
           ) : (
             <PurchasesTab txs={txs} />
           )}
