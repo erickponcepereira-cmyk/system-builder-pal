@@ -20,17 +20,25 @@ const TIER_COLOR: Record<string, string> = {
 
 export function IndividualCareerTab() {
   const fetchData = useServerFn(getIndividualCareer);
+  const fetchCareer = useServerFn(getCareerProgress);
   const [data, setData] = useState<IndividualCareer | null>(null);
+  const [career, setCareer] = useState<CareerProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<
+    | { kind: "patent"; key: string; title: string; subtitle?: string; color: string }
+    | { kind: "medal_monthly" | "medal_cumulative"; key: string; title: string; subtitle?: string; color: string }
+    | null
+  >(null);
 
   useEffect(() => {
     let active = true;
-    fetchData()
-      .then((r) => { if (active) setData(r); })
+    Promise.all([fetchData(), fetchCareer().catch(() => null)])
+      .then(([r, c]) => { if (active) { setData(r); setCareer(c); } })
       .catch(() => { if (active) setData(null); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+
 
   if (loading) {
     return (
