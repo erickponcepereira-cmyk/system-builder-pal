@@ -713,11 +713,14 @@ function QrCodePanel({ partner }: { partner: Partner }) {
 
 interface ScanPreview { student_id: string; student_name: string; student_avatar: string | null; student_email: string | null; student_phone: string | null; student_city: string | null; student_state: string | null; }
 interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
+interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; token: string; }
+
 
 function StudentQrScanner({ partner }: { partner: Partner }) {
   const [scanning, setScanning] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [preview, setPreview] = useState<ScanPreview | null>(null);
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [lastValue, setLastValue] = useState<string>("");
 
@@ -729,12 +732,35 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     return null;
   };
 
+  const extractCouponToken = (raw: string): string | null => {
+    const trimmed = raw.trim().toUpperCase();
+    const m = trimmed.match(/^COUPON:([A-F0-9]{24})$/);
+    return m ? m[1] : null;
+  };
+
   const onDetected = async (value: string) => {
-    if (processing || preview || result || value === lastValue) return;
+    if (processing || preview || couponPreview || result || value === lastValue) return;
     setLastValue(value);
+
+    const couponToken = extractCouponToken(value);
+    if (couponToken) {
+      setProcessing(true);
+      setScanning(false);
+      const { data, error } = await supabase.rpc("partner_preview_coupon" as never, { p_token: couponToken } as never);
+      setProcessing(false);
+      if (error) { setResult({ ok: false, error: error.message }); return; }
+      const rows = data as unknown as Omit<CouponPreview, "token">[];
+      if (!rows || rows.length === 0) {
+        setResult({ ok: false, error: "Cupom não encontrado ou não pertence à sua empresa." });
+        return;
+      }
+      setCouponPreview({ ...rows[0], token: couponToken });
+      return;
+    }
+
     const studentId = extractStudentId(value);
     if (!studentId) {
-      toast.error("QR inválido. Use o QR da carteirinha do aluno.");
+      toast.error("QR inválido. Use o QR da carteirinha do aluno ou de um cupom.");
       setTimeout(() => setLastValue(""), 1500);
       return;
     }
@@ -761,7 +787,20 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     toast.success(`Check-in: ${r.student_name}`);
   };
 
-  const reset = () => { setResult(null); setPreview(null); setLastValue(""); setScanning(true); };
+  const confirmCoupon = async () => {
+    if (!couponPreview) return;
+    setProcessing(true);
+    const { error } = await supabase.rpc("partner_redeem_coupon" as never, { p_token: couponPreview.token } as never);
+    setProcessing(false);
+    const cp = couponPreview;
+    setCouponPreview(null);
+    if (error) { setResult({ ok: false, error: error.message }); return; }
+    setResult({ ok: true, student_name: cp.student_name, student_avatar: cp.student_photo, visited_at: new Date().toISOString() });
+    toast.success(`Cupom validado: ${cp.product_name}`);
+  };
+
+  const reset = () => { setResult(null); setPreview(null); setCouponPreview(null); setLastValue(""); setScanning(true); };
+
 
   if (partner.status !== "approved") {
     return (
@@ -775,8 +814,9 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
   return (
     <div className="space-y-3">
       <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR Code da carteirinha do aluno</p>
-        {scanning && !preview && !result && <QrScannerView onDetected={onDetected} />}
+        <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR da carteirinha do aluno <span className="text-primary">ou de um cupom de desconto</span></p>
+        {scanning && !preview && !couponPreview && !result && <QrScannerView onDetected={onDetected} />}
+
         {processing && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -808,6 +848,37 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
             </div>
           </div>
         )}
+        {couponPreview && !processing && (
+          <div className="text-center py-4">
+            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-bold mb-2">Cupom de desconto</p>
+            {couponPreview.student_photo ? (
+              <img src={couponPreview.student_photo} className="mx-auto h-24 w-24 rounded-full object-cover border-4 border-primary/30" alt={couponPreview.student_name} />
+            ) : (
+              <div className="mx-auto h-24 w-24 rounded-full bg-primary/15 flex items-center justify-center text-3xl font-bold text-primary">
+                {couponPreview.student_name.charAt(0)}
+              </div>
+            )}
+            <p className="mt-3 text-lg font-bold text-white">{couponPreview.student_name}</p>
+            <p className="text-sm text-primary mt-1">{couponPreview.product_name}</p>
+            <p className="text-[10px] text-white/40 mt-1">Gerado em {new Date(couponPreview.created_at).toLocaleString("pt-BR")}</p>
+            {couponPreview.status !== "active" ? (
+              <>
+                <p className="mt-3 text-sm text-red-400 font-bold">Cupom já {couponPreview.status === "used" ? "utilizado" : "cancelado"}</p>
+                {couponPreview.redeemed_at && <p className="text-[10px] text-white/40">em {new Date(couponPreview.redeemed_at).toLocaleString("pt-BR")}</p>}
+                <button onClick={reset} className="mt-4 rounded bg-white/10 px-4 py-2 text-sm text-white">OK</button>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-xs text-white/60">Confirme para aplicar o desconto. O cupom será marcado como usado.</p>
+                <div className="mt-4 flex gap-2 max-w-xs mx-auto">
+                  <button onClick={reset} className="flex-1 rounded bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/20"><X className="inline h-4 w-4 mr-1" /> Cancelar</button>
+                  <button onClick={confirmCoupon} className="flex-1 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"><Check className="inline h-4 w-4 mr-1" /> Validar</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {result?.ok && (
           <div className="text-center py-6">
             {result.student_avatar ? (

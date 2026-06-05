@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag } from "lucide-react";
+import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag, Ticket, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/student/partners/$partnerId")({
   head: () => ({ meta: [{ title: "Parceiro — FitMind Club" }] }),
@@ -23,6 +26,19 @@ function PartnerProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"info" | "products" | "timeline">("info");
+  const [coupon, setCoupon] = useState<{ token: string; productName: string } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+
+  const generateCoupon = async (product: Product) => {
+    setGenerating(product.id);
+    const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: product.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: product.name });
+  };
+
 
   useEffect(() => {
     (async () => {
@@ -87,20 +103,31 @@ function PartnerProfilePage() {
           products.length === 0 ? <p className="text-center text-sm text-white/40 py-8">Sem produtos ativos.</p> : (
             <div className="grid grid-cols-2 gap-3">
               {products.map((p) => (
-                <div key={p.id} className="rounded-xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
+                <div key={p.id} className="rounded-xl overflow-hidden flex flex-col" style={{ backgroundColor: "#1A1A1A" }}>
                   {p.image_url ? <img src={p.image_url} className="h-28 w-full object-cover" alt={p.name} /> : <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>}
-                  <div className="p-2.5">
+                  <div className="p-2.5 flex-1 flex flex-col">
                     <div className="flex items-center gap-1 mb-1">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.kind === "free" ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>
-                        {p.kind === "free" ? <><Sparkles className="inline h-2.5 w-2.5" /> Grátis</> : "Patrocinado"}
+                        {p.kind === "free" ? <><Sparkles className="inline h-2.5 w-2.5" /> Desconto</> : "Patrocinado"}
                       </span>
                     </div>
                     <p className="text-xs font-bold text-white line-clamp-2">{p.name}</p>
                     {p.kind === "paid" && <p className="text-xs text-primary mt-1">R$ {Number(p.price).toFixed(2)}</p>}
                     {p.description && <p className="text-[10px] text-white/50 line-clamp-2 mt-1">{p.description}</p>}
+                    {p.kind === "free" && (
+                      <button
+                        onClick={() => generateCoupon(p)}
+                        disabled={generating === p.id}
+                        className="mt-2 inline-flex items-center justify-center gap-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                      >
+                        {generating === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ticket className="h-3 w-3" />}
+                        Gerar cupom
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
+
             </div>
           )
         )}
@@ -122,6 +149,23 @@ function PartnerProfilePage() {
           )
         )}
       </div>
+
+      {coupon && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setCoupon(null)}>
+          <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-sm w-full text-center relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setCoupon(null)} className="absolute top-3 right-3 text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
+            <Ticket className="h-8 w-8 text-primary mx-auto" />
+            <h3 className="mt-2 text-lg font-bold text-white">Seu Cupom</h3>
+            <p className="text-sm text-white/70 mt-1">{coupon.productName}</p>
+            <div className="my-4 inline-block bg-white p-3 rounded-xl">
+              <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
+            </div>
+            <p className="text-[10px] text-white/40 break-all font-mono">{coupon.token}</p>
+            <p className="text-[11px] text-white/60 mt-3">Apresente este QR no parceiro para validar seu desconto. O cupom é único e expira após o uso.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
