@@ -68,6 +68,7 @@ function StudentFreebies() {
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [pageMode, setPageMode] = useState<"free" | "discount">("free");
 
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
