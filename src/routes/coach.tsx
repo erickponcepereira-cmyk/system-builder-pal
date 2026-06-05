@@ -498,7 +498,7 @@ function CoachDashboard() {
           {activeTab === "benefits" && <CoachBenefitsTab />}
           {activeTab === "evaluate" && <EvaluateTab />}
           {activeTab === "protocol" && <ProtocolTab />}
-          {activeTab === "workouts" && <WorkoutPlansTab />}
+          
           {activeTab === "attendance" && <AttendanceTab />}
           {activeTab === "reports" && <CoachReports />}
          {activeTab === "fitmind_calendar" && <div className="p-4"><FitmindCalendar /></div>}
