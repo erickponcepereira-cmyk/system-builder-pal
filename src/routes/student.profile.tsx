@@ -104,7 +104,7 @@ function ProfilePage() {
         setProfile({ name: pd.name, email: pd.email, photo_url: pd.photo_url || "", blood_type: pd.blood_type || "" });
       }
       if (!profileData?.id) return;
-      const { data: student } = await supabase.from("students").select("id,referral_link,referral_code,is_influencer" as never).eq("profile_id", profileData.id).maybeSingle();
+      const { data: student } = await supabase.from("students").select("id,referral_link,referral_code,is_influencer").eq("profile_id", profileData.id).maybeSingle();
       if (!student?.id) return;
       setStudentId(student.id);
       setIsInfluencer(Boolean((student as any).is_influencer));
