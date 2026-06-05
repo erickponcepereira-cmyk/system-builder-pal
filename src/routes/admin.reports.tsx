@@ -130,7 +130,15 @@ function AdminReports() {
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const exportCsv = () => {
-    const lines = [["Aluno", "Email", "Check-ins 30 dias", "Último check-in"], ...studentSummary.map((row) => [row.name, row.email, String(row.count), row.last])];
+    const lines = [["Aluno", "Email", "Grupo", "Check-ins 30 dias", "Último check-in"], ...studentSummary.map((row) => [row.name, row.email, GROUP_LABELS[row.group], String(row.count), row.last])];
+    const csv = lines.map((line) => line.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "frequencia-fitmind.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
     const csv = lines.map((line) => line.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
