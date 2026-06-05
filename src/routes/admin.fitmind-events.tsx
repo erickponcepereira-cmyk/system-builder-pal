@@ -504,33 +504,74 @@ function EventsTab() {
                 <span className="text-sm text-white/70">Evento de dia inteiro</span>
               </label>
 
-              {/* Categoria + Visibilidade */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Categoria</label>
-                  <select
-                    className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
-                    value={editing.category || "aula"}
-                    onChange={(e) => setEditing((ev) => ({ ...ev, category: e.target.value as EventCategory }))}
-                  >
-                    {Object.entries(CATEGORY_META).map(([k, v]) => (
-                      <option key={k} value={k} style={{ backgroundColor: "#1A1A1A" }}>{v.emoji} {v.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Visível para</label>
-                  <select
-                    className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
-                    value={editing.visibility || "todos"}
-                    onChange={(e) => setEditing((ev) => ({ ...ev, visibility: e.target.value as EventVisibility }))}
-                  >
-                    {Object.entries(VISIBILITY_META).map(([k, v]) => (
-                      <option key={k} value={k} style={{ backgroundColor: "#1A1A1A" }}>{v.label}</option>
-                    ))}
-                  </select>
+              {/* Categoria */}
+              <div>
+                <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Categoria</label>
+                <select
+                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
+                  value={editing.category || "aula"}
+                  onChange={(e) => setEditing((ev) => ({ ...ev, category: e.target.value as EventCategory }))}
+                >
+                  {Object.entries(CATEGORY_META).map(([k, v]) => (
+                    <option key={k} value={k} style={{ backgroundColor: "#1A1A1A" }}>{v.emoji} {v.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Visibilidade multi-papel */}
+              <div>
+                <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Visível para</label>
+                <p className="text-[11px] text-white/40 mt-0.5">Selecione um ou mais públicos. "Todos" cobre qualquer usuário.</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(Object.entries(VISIBILITY_META) as Array<[EventVisibility, { label: string; icon: typeof Globe }]>).map(([k, v]) => {
+                    const VIcon = v.icon;
+                    const roles = editing.visibility_roles || [];
+                    const checked = roles.includes(k);
+                    const toggle = () => {
+                      let next: EventVisibility[];
+                      if (k === "todos") {
+                        next = checked ? [] : ["todos"];
+                      } else {
+                        next = checked ? roles.filter((r) => r !== k) : [...roles.filter((r) => r !== "todos"), k];
+                      }
+                      if (next.length === 0) next = ["todos"];
+                      setEditing((ev) => ({ ...ev, visibility_roles: next }));
+                    };
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={toggle}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${
+                          checked
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                        }`}>
+                        <VIcon className="h-3.5 w-3.5" /> {v.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Coach responsável */}
+              <div>
+                <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">Coach responsável</label>
+                <p className="text-[11px] text-white/40 mt-0.5">O WhatsApp do perfil deste coach aparecerá para contato.</p>
+                <select
+                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-primary"
+                  value={editing.responsible_coach_id || ""}
+                  onChange={(e) => setEditing((ev) => ({ ...ev, responsible_coach_id: e.target.value || null }))}
+                >
+                  <option value="" style={{ backgroundColor: "#1A1A1A" }}>— Nenhum —</option>
+                  {coachOptions.map((c) => (
+                    <option key={c.id} value={c.id} style={{ backgroundColor: "#1A1A1A" }}>
+                      {c.name}{c.whatsapp ? ` · ${c.whatsapp}` : " · (sem WhatsApp)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
 
               {/* Local */}
               <div>
