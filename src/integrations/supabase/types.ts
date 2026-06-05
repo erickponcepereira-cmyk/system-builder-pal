@@ -663,6 +663,7 @@ export type Database = {
           display_name: string
           icon: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           key: string
           kind: string
@@ -675,6 +676,7 @@ export type Database = {
           display_name: string
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           key: string
           kind: string
@@ -687,6 +689,7 @@ export type Database = {
           display_name?: string
           icon?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           key?: string
           kind?: string
@@ -5088,6 +5091,7 @@ export type Database = {
           description: string | null
           display_name: string
           id: string
+          image_url: string | null
           is_active: boolean | null
           key: string | null
           level: number | null
@@ -5115,6 +5119,7 @@ export type Database = {
           description?: string | null
           display_name: string
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           key?: string | null
           level?: number | null
@@ -5142,6 +5147,7 @@ export type Database = {
           description?: string | null
           display_name?: string
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
           key?: string | null
           level?: number | null
