@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CalendarCheck, BarChart3, User as UserIcon, ShoppingBag, Trophy, Users,
-  Download, Search, TrendingUp, TrendingDown, Network, CalendarDays,
+  Download, Search, TrendingUp, TrendingDown, Network, CalendarDays, Share2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -10,8 +10,8 @@ import {
   type AttendanceHistory,
 } from "@/lib/google-calendar.functions";
 import {
-  getCoachSalesReport, getCoachChallengeRanking,
-  type SalesReport, type ChallengeRankingRow, type StudentGroup,
+  getCoachSalesReport, getCoachChallengeRanking, getCoachReferralSales,
+  type SalesReport, type ChallengeRankingRow, type StudentGroup, type ReferralSaleRow,
 } from "@/lib/coach-reports.functions";
 
 import { getCoachDownlineReport, type DownlineReport } from "@/lib/coach-downline.functions";
@@ -27,7 +27,7 @@ function shiftMonths(iso: string, n: number) {
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (a: number, b: number) => (b === 0 ? (a > 0 ? 100 : 0) : ((a - b) / b) * 100);
 
-type ReportTab = "atendimentos" | "vendas" | "clientes" | "desafio" | "rede" | "eventos";
+type ReportTab = "atendimentos" | "vendas" | "indicacoes" | "clientes" | "desafio" | "rede" | "eventos";
 
 export function CoachReports() {
   const [tab, setTab] = useState<ReportTab>("vendas");
@@ -41,6 +41,7 @@ export function CoachReports() {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           <TabBtn active={tab === "vendas"} onClick={() => setTab("vendas")} icon={ShoppingBag} label="Vendas" />
+          <TabBtn active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} icon={Share2} label="Vendas por indicação" />
           <TabBtn active={tab === "clientes"} onClick={() => setTab("clientes")} icon={Users} label="Top Clientes" />
           <TabBtn active={tab === "rede"} onClick={() => setTab("rede")} icon={Network} label="Rede / Downline" />
           <TabBtn active={tab === "desafio"} onClick={() => setTab("desafio")} icon={Trophy} label="Desafio" />
@@ -50,6 +51,7 @@ export function CoachReports() {
       </div>
 
       {tab === "vendas" && <SalesDashboard mode="sales" />}
+      {tab === "indicacoes" && <ReferralSalesDashboard />}
       {tab === "clientes" && <SalesDashboard mode="customers" />}
       {tab === "rede" && <DownlineDashboard />}
       {tab === "desafio" && <ChallengeDashboard />}
@@ -369,7 +371,180 @@ function ChallengeDashboard() {
   );
 }
 
-/* ------------------- Attendance (existing) ------------------- */
+/* ------------------- Referral Sales (aluno-aluno) ------------------- */
+
+const COACH_FORMATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
+
+function ReferralSalesDashboard() {
+  const fetchReferrals = useServerFn(getCoachReferralSales);
+  const [from, setFrom] = useState(shiftMonths(todayISO(), -12));
+  const [to, setTo] = useState(todayISO());
+  const [search, setSearch] = useState("");
+  const [titleFilter, setTitleFilter] = useState<"all" | "subcoach" | "influencer">("all");
+  const [onlyCoachProduct, setOnlyCoachProduct] = useState(true);
+  const [rows, setRows] = useState<ReferralSaleRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchReferrals({ data: { from, to, productId: onlyCoachProduct ? COACH_FORMATION_PRODUCT_ID : null } })
+      .then(setRows).catch(() => setRows([])).finally(() => setLoading(false));
+  }, [fetchReferrals, from, to, onlyCoachProduct]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (titleFilter !== "all" && r.referrer_title !== titleFilter) return false;
+      if (!q) return true;
+      return (
+        r.referrer_name.toLowerCase().includes(q) ||
+        r.referrer_email.toLowerCase().includes(q) ||
+        r.buyer_name.toLowerCase().includes(q) ||
+        r.product_name.toLowerCase().includes(q)
+      );
+    });
+  }, [rows, search, titleFilter]);
+
+  const counts = useMemo(() => {
+    const c = { all: rows.length, subcoach: 0, influencer: 0 };
+    rows.forEach((r) => { if (r.referrer_title === "subcoach") c.subcoach++; else if (r.referrer_title === "influencer") c.influencer++; });
+    return c;
+  }, [rows]);
+
+  const kpis = useMemo(() => {
+    const revenue = filtered.reduce((s, r) => s + r.amount, 0);
+    const indicators = new Set(filtered.map((r) => r.referrer_id));
+    const sub = filtered.filter((r) => r.referrer_title === "subcoach");
+    const inf = filtered.filter((r) => r.referrer_title === "influencer");
+    return {
+      revenue,
+      sales: filtered.length,
+      indicators: indicators.size,
+      subRevenue: sub.reduce((s, r) => s + r.amount, 0),
+      infRevenue: inf.reduce((s, r) => s + r.amount, 0),
+    };
+  }, [filtered]);
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filtered.map((r) => ({
+      Data: r.paid_at ? r.paid_at.slice(0, 10) : "",
+      "Indicador": r.referrer_name,
+      "Email indicador": r.referrer_email,
+      Título: r.referrer_title === "influencer" ? "Influencer" : r.referrer_title === "subcoach" ? "Subcoach" : "—",
+      Comprador: r.buyer_name,
+      "Email comprador": r.buyer_email,
+      Produto: r.product_name,
+      "Comissão": r.amount,
+      Status: r.status,
+    }))), "Indicações");
+    XLSX.writeFile(wb, `vendas-indicacao-${from}-${to}.xlsx`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label>Período:</Label>
+          <DateInput value={from} onChange={setFrom} />
+          <span className="text-white/40 text-xs">até</span>
+          <DateInput value={to} onChange={setTo} />
+          <QuickRange label="30 dias" onClick={() => { setFrom(shiftMonths(todayISO(), -1)); setTo(todayISO()); }} />
+          <QuickRange label="90 dias" onClick={() => { setFrom(shiftMonths(todayISO(), -3)); setTo(todayISO()); }} />
+          <QuickRange label="1 ano" onClick={() => { setFrom(shiftMonths(todayISO(), -12)); setTo(todayISO()); }} />
+          <button onClick={exportExcel} className="ml-auto bg-primary/15 text-primary px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-primary/25 flex items-center gap-1.5">
+            <Download className="h-3.5 w-3.5" /> Excel
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-xs text-white/60 flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={onlyCoachProduct} onChange={(e) => setOnlyCoachProduct(e.target.checked)} />
+            Apenas <span className="text-primary font-semibold">Ativação Coach - Anual</span>
+          </label>
+        </div>
+        <div className="relative">
+          <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar indicador, comprador ou produto..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/40 border border-white/10 text-xs text-white" />
+        </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {(["all", "subcoach", "influencer"] as const).map((k) => (
+            <button key={k} onClick={() => setTitleFilter(k)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition ${titleFilter === k ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+              {k === "all" ? `Todos (${counts.all})` : k === "subcoach" ? `Subcoach (${counts.subcoach})` : `Influencer (${counts.influencer})`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading && <p className="text-xs text-white/50">Carregando indicações...</p>}
+
+      {!loading && (
+        <>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Kpi label="Comissão total" value={brl(kpis.revenue)} delta={null} />
+            <Kpi label="Vendas por indicação" value={String(kpis.sales)} delta={null} />
+            <Kpi label="Indicadores únicos" value={String(kpis.indicators)} delta={null} />
+            <Kpi label="Subcoach × Influencer" value={`${brl(kpis.subRevenue)} / ${brl(kpis.infRevenue)}`} delta={null} />
+          </div>
+
+          <Section title={`Indicações detalhadas (${filtered.length})`}>
+            {filtered.length === 0 ? (
+              <p className="text-sm text-white/50">Nenhuma venda por indicação no período.</p>
+            ) : (
+              <div className="max-h-[28rem] overflow-auto">
+                <table className="w-full text-xs">
+                  <thead className="text-white/50 text-left sticky top-0 bg-[#1A1A1A]">
+                    <tr>
+                      <th className="py-2 pr-3">Data</th>
+                      <th className="pr-3">Indicador</th>
+                      <th className="pr-3">Título</th>
+                      <th className="pr-3">Comprador</th>
+                      <th className="pr-3">Produto</th>
+                      <th className="text-right">Comissão</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => (
+                      <tr key={r.commission_id} className="border-t border-white/5">
+                        <td className="py-2 pr-3 text-white/60">{r.paid_at ? new Date(r.paid_at).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="pr-3">
+                          <p className="text-white">{r.referrer_name}</p>
+                          <p className="text-[10px] text-white/40">{r.referrer_email}</p>
+                        </td>
+                        <td className="pr-3">
+                          <TitleBadge title={r.referrer_title} />
+                        </td>
+                        <td className="pr-3">
+                          <p className="text-white">{r.buyer_name}</p>
+                          <p className="text-[10px] text-white/40">{r.buyer_email}</p>
+                        </td>
+                        <td className="pr-3 text-white/80 truncate max-w-[14rem]">{r.product_name}</td>
+                        <td className="text-right text-primary font-bold">{brl(r.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TitleBadge({ title }: { title: "subcoach" | "influencer" | "none" }) {
+  if (title === "influencer") {
+    return <span className="inline-block px-2 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-300 text-[10px] font-bold uppercase">Influencer</span>;
+  }
+  if (title === "subcoach") {
+    return <span className="inline-block px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold uppercase">Subcoach</span>;
+  }
+  return <span className="text-white/40 text-[10px]">—</span>;
+}
+
+
 
 function AttendanceDashboard() {
   const [view, setView] = useState<"daily" | "monthly">("daily");

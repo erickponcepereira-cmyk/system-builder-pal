@@ -41,6 +41,25 @@ export type ChallengeRankingRow = {
   final_date: string | null;
 };
 
+export type ReferralTitle = "subcoach" | "influencer" | "none";
+
+export type ReferralSaleRow = {
+  commission_id: string;
+  transaction_id: string | null;
+  paid_at: string | null;
+  amount: number;
+  status: string;
+  product_id: string | null;
+  product_name: string;
+  buyer_id: string | null;
+  buyer_name: string;
+  buyer_email: string;
+  referrer_id: string;
+  referrer_name: string;
+  referrer_email: string;
+  referrer_title: ReferralTitle;
+};
+
 async function resolveCoachId(userId: string): Promise<string | null> {
   const { data: profile } = await supabaseAdmin
     .from("profiles").select("id").eq("user_id", userId).maybeSingle();
@@ -320,3 +339,96 @@ export const getCoachChallengeRanking = createServerFn({ method: "POST" })
       }))
       .sort((a, b) => (b.result_pct ?? -999) - (a.result_pct ?? -999));
   });
+
+/* ---------- Referral sales (aluno-aluno) ---------- */
+
+export const getCoachReferralSales = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { from: string; to: string; productId?: string | null }) => data)
+  .handler(async ({ data, context }): Promise<ReferralSaleRow[]> => {
+    const coachId = await resolveCoachId(context.userId);
+    if (!coachId) return [];
+
+    const fromIso = new Date(data.from + "T00:00:00").toISOString();
+    const toIso = new Date(data.to + "T23:59:59").toISOString();
+
+    // All students belonging to this coach (potential referrers)
+    const { data: myStudents } = await supabaseAdmin
+      .from("students")
+      .select("id, is_influencer, profile_id, profiles!students_profile_id_fkey(name,email)")
+      .eq("coach_id", coachId);
+    type MS = { id: string; is_influencer: boolean | null; profile_id: string | null; profiles: { name: string; email: string } | null };
+    const refList = (myStudents as unknown as MS[]) || [];
+    if (refList.length === 0) return [];
+    const refIds = refList.map((r) => r.id);
+    const refMap = new Map(refList.map((r) => [r.id, r]));
+
+    // Referral commissions where referrer is one of my students
+    const { data: comms } = await supabaseAdmin
+      .from("commissions")
+      .select("id, transaction_id, amount, status, created_at, referred_by_student_id")
+      .eq("is_referral", true)
+      .in("referred_by_student_id", refIds)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    type Comm = { id: string; transaction_id: string | null; amount: number; status: string; created_at: string; referred_by_student_id: string };
+    const commissions = (comms as Comm[] | null) || [];
+    if (commissions.length === 0) return [];
+
+    // Load related transactions
+    const txIds = Array.from(new Set(commissions.map((c) => c.transaction_id).filter(Boolean))) as string[];
+    type Tx = { id: string; student_id: string | null; product_id: string | null; paid_at: string | null; status: string };
+    let txs: Tx[] = [];
+    if (txIds.length) {
+      const { data: txd } = await supabaseAdmin
+        .from("transactions")
+        .select("id, student_id, product_id, paid_at, status")
+        .in("id", txIds);
+      txs = (txd as Tx[] | null) || [];
+    }
+    const txMap = new Map(txs.map((t) => [t.id, t]));
+
+    // Buyers + products
+    const buyerIds = Array.from(new Set(txs.map((t) => t.student_id).filter(Boolean))) as string[];
+    const productIds = Array.from(new Set(txs.map((t) => t.product_id).filter(Boolean))) as string[];
+    const [buyersRes, prodsRes] = await Promise.all([
+      buyerIds.length
+        ? supabaseAdmin.from("students").select("id, profiles!students_profile_id_fkey(name,email)").in("id", buyerIds)
+        : Promise.resolve({ data: [] as any[] }),
+      productIds.length
+        ? supabaseAdmin.from("products").select("id,name").in("id", productIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    type BR = { id: string; profiles: { name: string; email: string } | null };
+    const buyerMap = new Map(((buyersRes.data as unknown as BR[]) || []).map((b) => [b.id, b.profiles]));
+    const productMap = new Map(((prodsRes.data as { id: string; name: string }[]) || []).map((p) => [p.id, p.name]));
+
+    return commissions
+      .map<ReferralSaleRow | null>((c) => {
+        const tx = c.transaction_id ? txMap.get(c.transaction_id) : null;
+        if (!tx || tx.status !== "paid" || !tx.paid_at) return null;
+        if (tx.paid_at < fromIso || tx.paid_at > toIso) return null;
+        if (data.productId && tx.product_id !== data.productId) return null;
+        const ref = refMap.get(c.referred_by_student_id)!;
+        const buyer = tx.student_id ? buyerMap.get(tx.student_id) : null;
+        const title: ReferralTitle = ref.is_influencer ? "influencer" : "subcoach";
+        return {
+          commission_id: c.id,
+          transaction_id: c.transaction_id,
+          paid_at: tx.paid_at,
+          amount: Number(c.amount) || 0,
+          status: c.status,
+          product_id: tx.product_id,
+          product_name: tx.product_id ? (productMap.get(tx.product_id) || "Produto") : "Produto",
+          buyer_id: tx.student_id,
+          buyer_name: buyer?.name || "—",
+          buyer_email: buyer?.email || "",
+          referrer_id: ref.id,
+          referrer_name: ref.profiles?.name || "—",
+          referrer_email: ref.profiles?.email || "",
+          referrer_title: title,
+        };
+      })
+      .filter((r): r is ReferralSaleRow => r !== null);
+  });
+
