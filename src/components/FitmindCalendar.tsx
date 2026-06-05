@@ -744,10 +744,27 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
             </a>
           )}
 
+          {/* Coach responsável + WhatsApp */}
+          {ev.responsible_coach_name && (
+            <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Coach responsável</p>
+              <p className="text-sm font-semibold text-white">{ev.responsible_coach_name}</p>
+              {ev.responsible_coach_whatsapp && (
+                <a
+                  href={`https://wa.me/${ev.responsible_coach_whatsapp.replace(/\D/g, "")}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/30 transition">
+                  💬 Falar no WhatsApp
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Presença (somente eventos FitMind) */}
           {!ev.id.startsWith("appt-") && !ev.id.startsWith("challenge-") && (
             <EventAttendanceBlock eventId={ev.id} color={evColor} />
           )}
+
 
           {/* CTA: Adicionar ao Google Agenda */}
           <a
