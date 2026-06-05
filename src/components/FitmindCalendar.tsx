@@ -677,6 +677,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
 
       {/* Modal de detalhes */}
       {detail && <EventDetailModal event={detail} onClose={() => setDetail(null)} />}
+      {showCreate && (
+        <CreateEventModal
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); setReloadKey((k) => k + 1); }}
+        />
+      )}
     </div>
   );
 }
