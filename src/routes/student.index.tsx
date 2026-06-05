@@ -80,10 +80,12 @@ function StudentHome() {
 
       const { data: student } = await supabase
         .from("students")
-        .select("id, card_valid_until, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
+        .select("id, card_valid_until, referral_code, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
         .eq("profile_id", profile.id)
         .maybeSingle();
       if (!student) return;
+      const s = student as unknown as { id: string; card_valid_until?: string | null; referral_code?: string | null };
+      if (s.referral_code) setReferralCode(s.referral_code);
 
       const { data: activeSub } = await supabase
         .from("subscriptions")
