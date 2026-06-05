@@ -17,6 +17,12 @@ import {
   tzStartOfMonth, shiftYearMonth, yearMonthLabel,
 } from "@/lib/timezone";
 import { getEventAttendees, type EnrichedAttendee } from "@/lib/fitmind-attendance.functions";
+import {
+  toggleMyRegistration, getMyRegistration, getMyRegisteredEventIds,
+  getEventRegistrations, setRegistrationStatus, finalizeEventAttendance,
+  type RegistrationRow,
+} from "@/lib/fitmind-registrations.functions";
+import { Heart, HeartOff, ClipboardCheck } from "lucide-react";
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
