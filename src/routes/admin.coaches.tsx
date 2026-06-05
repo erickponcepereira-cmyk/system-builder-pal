@@ -324,6 +324,18 @@ function AdminCoaches() {
                       <IdCard className="h-3.5 w-3.5" /> Carteirinha
                     </button>
                     <button
+                      onClick={() => toggleEventCreator(c)}
+                      disabled={acting === `creator-${c.id}`}
+                      title="Permitir que este coach crie eventos na Agenda FitMind"
+                      className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-50 ${
+                        c.can_create_fitmind_events
+                          ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                          : "bg-white/5 text-white/60 hover:bg-white/10"
+                      }`}
+                    >
+                      {acting === `creator-${c.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CalendarPlus className="h-3.5 w-3.5" />}
+                      {c.can_create_fitmind_events ? "Criador de eventos" : "Sem criar eventos"}
+                    <button
                       onClick={() => openTransfer(c)}
                       disabled={acting === `transfer-${c.id}`}
                       className="flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-2 text-xs font-bold text-primary hover:bg-primary/25 disabled:opacity-50"
