@@ -84,6 +84,17 @@ export function IndividualCareerTab() {
         </div>
       </div>
 
+      {/* Patente atual + próxima — espelhando Ordem dos Construtores */}
+      {career && (
+        <CurrentPatentPanel
+          career={career}
+          onOpen={(key, title, color) =>
+            setModal({ kind: "patent", key, title, subtitle: "Patente atual", color })
+          }
+        />
+      )}
+
+
       {/* Ordem da Excelência — monthly medals */}
       <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="mb-4">
