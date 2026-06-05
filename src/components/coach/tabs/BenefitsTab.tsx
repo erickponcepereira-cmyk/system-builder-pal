@@ -142,61 +142,90 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             </button>
           </div>
 
+          {/* Page mode selector: Gratuitos | Clube de Descontos */}
+          {(() => {
+            const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length;
+            const discCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
+            return (
+              <div className="mb-5 grid grid-cols-2 gap-2 p-1.5 rounded-full bg-[#141414] border border-white/10">
+                <button
+                  onClick={() => setPageMode("free")}
+                  className={`rounded-full py-2.5 text-sm font-bold transition ${pageMode === "free" ? "bg-primary text-primary-foreground shadow-lg" : "text-white/70 hover:text-white"}`}
+                >
+                  Gratuitos{freeCount > 0 ? ` (${freeCount})` : ""}
+                </button>
+                <button
+                  onClick={() => setPageMode("discount")}
+                  className={`rounded-full py-2.5 text-sm font-bold transition ${pageMode === "discount" ? "bg-primary text-primary-foreground shadow-lg" : "text-white/70 hover:text-white"}`}
+                >
+                  Clube de Descontos{discCount > 0 ? ` (${discCount})` : ""}
+                </button>
+              </div>
+            );
+          })()}
+
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
             {(() => {
-              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length;
-              const discCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
-              const list = partnerFreebies.filter((p) => {
-                if (filter === "all") return true;
-                if (filter === "discount") return p.redemption_mode === "discount";
-                return (p.redemption_mode ?? "free") === "free";
-              });
+              const list = partnerFreebies.filter((p) =>
+                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+              );
+              if (list.length === 0) {
+                return <p className="text-sm text-white/50">
+                  {pageMode === "discount" ? "Nenhum cupom de desconto disponível no momento." : "Nenhum benefício gratuito disponível no momento."}
+                </p>;
+              }
               return (
-                <>
-                  <div className="mb-4 flex gap-1.5 flex-wrap">
-                    {([
-                      { k: "all", label: `Todos (${partnerFreebies.length})` },
-                      { k: "free", label: `Gratuitos (${freeCount})` },
-                      { k: "discount", label: `Descontos (${discCount})` },
-                    ] as const).map((f) => (
-                      <button
-                        key={f.k}
-                        onClick={() => setFilter(f.k)}
-                        className={`text-[11px] px-3 py-1 rounded-full border ${filter === f.k ? "bg-primary text-primary-foreground border-primary" : "border-white/10 text-white/60"}`}
-                      >{f.label}</button>
-                    ))}
-                  </div>
-                  {list.length === 0 ? (
-                    <p className="text-sm text-white/50">Nenhum benefício disponível no momento.</p>
-                  ) : (
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {list.map((p) => {
-                        const isDiscount = p.redemption_mode === "discount";
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() => setOpenPartner(p.partner_id)}
-                            className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40"
-                            style={{ backgroundColor: "#0F0F0F" }}
-                          >
-                            {p.image_url && <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />}
-                            <div className="p-4">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-sm font-bold text-white">{p.name}</h3>
-                                <span className={`text-[10px] px-2 py-0.5 rounded uppercase ${isDiscount ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300"}`}>{isDiscount ? "Desconto" : "Grátis"}</span>
-                              </div>
-                              <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
-                              {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
-                              {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                              {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                              <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-xs font-semibold text-primary">Ver empresa</div>
-                            </div>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {list.map((p) => {
+                    const isDiscount = p.redemption_mode === "discount";
+                    return (
+                      <div
+                        key={p.id}
+                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative"
+                        style={{ backgroundColor: "#0F0F0F" }}
+                      >
+                        {isDiscount && p.discount_percent ? (
+                          <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground text-xs font-extrabold px-2.5 py-1 rounded-lg shadow-lg">
+                            {p.discount_percent}% OFF
+                          </div>
+                        ) : null}
+                        {p.image_url && (
+                          <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="block w-full">
+                            <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />
                           </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
+                        )}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-sm font-bold text-white">{p.name}</h3>
+                            {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded uppercase bg-green-500/20 text-green-300">Grátis</span>}
+                          </div>
+                          <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
+                          {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
+                          {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                          {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setOpenPartner(p.partner_id)}
+                              className="rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 text-xs font-semibold text-white/80"
+                            >
+                              Ver empresa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => generateCoupon(p)}
+                              disabled={generating === p.id}
+                              className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                            >
+                              {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                              {isDiscount ? "Gerar cupom" : "Resgatar"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               );
             })()}
           </div>
