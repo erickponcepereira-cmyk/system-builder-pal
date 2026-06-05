@@ -326,7 +326,8 @@ function AdminFinanceiro() {
                       <th className="px-2 py-1 text-left">Data</th>
                       <th className="px-2 py-1 text-left">Cliente</th>
                       <th className="px-2 py-1 text-left">Produto</th>
-                      <th className="px-2 py-1 text-left">Coach beneficiário</th>
+                      <th className="px-2 py-1 text-left">{bucketOpen.kind === "referrals" ? "Indicador" : "Coach beneficiário"}</th>
+                      {bucketOpen.kind === "referrals" && <th className="px-2 py-1 text-left">Título</th>}
                       <th className="px-2 py-1 text-left">Slot</th>
                       <th className="px-2 py-1 text-center">Nível</th>
                       <th className="px-2 py-1 text-right">Valor</th>
@@ -340,6 +341,17 @@ function AdminFinanceiro() {
                         <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
                         <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
                         <td className="px-2 py-1.5 text-white">{r.beneficiaryName}<span className="ml-1 text-white/30">{r.beneficiaryEmail}</span></td>
+                        {bucketOpen.kind === "referrals" && (
+                          <td className="px-2 py-1.5">
+                            {r.referrerTitle === "influencer" ? (
+                              <span className="inline-block rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-fuchsia-300">Influencer</span>
+                            ) : r.referrerTitle === "subcoach" ? (
+                              <span className="inline-block rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">Subcoach</span>
+                            ) : (
+                              <span className="text-white/40 text-[10px]">—</span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-2 py-1.5 text-white/60">{r.slotLabel || "—"}</td>
                         <td className="px-2 py-1.5 text-center text-white/60">{r.level}</td>
                         <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.amount)}</td>
