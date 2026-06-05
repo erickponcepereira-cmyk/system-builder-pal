@@ -222,30 +222,50 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3">
       <div className="flex w-full max-w-3xl flex-col rounded-2xl border border-white/10 max-h-[92vh] overflow-hidden" style={{ backgroundColor: "#141414" }} onClick={(e) => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-3 border-b border-white/5 p-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="truncate text-base font-bold text-white">{profile?.name || "Aluno"}</h2>
-              {studentMeta.is_influencer && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300">✨ Influencer</span>
-              )}
-              {studentMeta.is_subcoach && !studentMeta.is_influencer && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">⭐ Subcoach</span>
-              )}
-            </div>
-            <p className="truncate text-xs text-white/50">{profile?.email || "—"}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/60">
-              {profile?.birthdate && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5">
-                  <Cake className="h-3 w-3" /> {fmtBR(profile.birthdate)} {age != null && `· ${age}a`}
-                </span>
-              )}
-              {profile?.city && <span className="rounded-full bg-white/5 px-2 py-0.5">{profile.city}/{profile.state || ""}</span>}
-              {studentMeta.blood_type && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-300">🩸 {studentMeta.blood_type}</span>}
-              <WhatsAppButton phone={profile?.phone} size="sm" message={`Olá ${profile?.name?.split(" ")[0] || ""}!`} />
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            {(() => {
+              const photo = profile?.photo_url || profile?.avatar_url;
+              return photo ? (
+                <button type="button" onClick={() => setPhotoZoom(true)} className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
+                  <img src={photo} alt={profile?.name || "Aluno"} className="h-14 w-14 rounded-full object-cover border-2 border-white/10 hover:border-primary transition" />
+                </button>
+              ) : (
+                <div className="shrink-0 h-14 w-14 rounded-full bg-primary/15 flex items-center justify-center text-lg font-bold text-primary">
+                  {(profile?.name || "?").charAt(0).toUpperCase()}
+                </div>
+              );
+            })()}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="truncate text-base font-bold text-white">{profile?.name || "Aluno"}</h2>
+                {studentMeta.is_influencer && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300">✨ Influencer</span>
+                )}
+                {studentMeta.is_subcoach && !studentMeta.is_influencer && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">⭐ Subcoach</span>
+                )}
+              </div>
+              <p className="truncate text-xs text-white/50">{profile?.email || "—"}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/60">
+                {profile?.birthdate && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5">
+                    <Cake className="h-3 w-3" /> {fmtBR(profile.birthdate)} {age != null && `· ${age}a`}
+                  </span>
+                )}
+                {profile?.city && <span className="rounded-full bg-white/5 px-2 py-0.5">{profile.city}/{profile.state || ""}</span>}
+                {studentMeta.blood_type && <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-red-300">🩸 {studentMeta.blood_type}</span>}
+                <WhatsAppButton phone={profile?.phone} size="sm" message={`Olá ${profile?.name?.split(" ")[0] || ""}!`} />
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1 text-white/60 hover:bg-white/5"><X className="h-4 w-4" /></button>
         </header>
+        {photoZoom && (profile?.photo_url || profile?.avatar_url) && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={() => setPhotoZoom(false)}>
+            <button className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"><X className="h-5 w-5" /></button>
+            <img src={profile?.photo_url || profile?.avatar_url || ""} alt={profile?.name || "Aluno"} className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain" onClick={(e) => e.stopPropagation()} />
+          </div>
+        )}
 
         <nav className="flex gap-1 overflow-x-auto border-b border-white/5 px-2 py-2">
           {tabs.map((t) => {
