@@ -317,7 +317,7 @@ function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCrea
 }
 
 /* ------------------------- ACTIVE SESSION ------------------------- */
-function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans?: Plan[]; onExit: () => void; onStartNext?: (p: Plan) => void }) {
+function ActiveSession({ plan, plans, onExit, onStartNext, onFinished }: { plan: Plan; plans?: Plan[]; onExit: () => void; onStartNext?: (p: Plan) => void; onFinished?: (p: Plan) => void }) {
   const startFn = useServerFn(startWorkoutSession);
   const logSetFn = useServerFn(logSet);
   const logCardioFn = useServerFn(logCardio);
@@ -518,6 +518,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
       })) as { xp: number; totalSessions: number; streak: number; newAchievements: Array<{ code: string; title: string; icon: string | null }> };
       setSummary({ total: r.totalSessions, achievements: r.newAchievements || [], durationSec: globalSec, streak: r.streak || 0 });
       setRunning(false);
+      onFinished?.(plan);
       if ((r.newAchievements || []).length > 0) {
         setAchievementReveal(r.newAchievements[0]);
       }
@@ -527,7 +528,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
   };
 
   if (summary) {
-    const next = nextLetter(plans || [], plan.letter);
+    const next = nextLetter(plans || [], planLetter(plan));
     const showNext = next && next.id !== plan.id;
     return (
       <div className="relative space-y-5 p-5 text-center">
@@ -563,8 +564,8 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
           <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-4 text-left">
             <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
             <div className="mt-2 flex items-center gap-3">
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(next!.letter)} text-xl font-black text-white`}>
-                {next!.letter || "·"}
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(planLetter(next))} text-xl font-black text-white`}>
+                {planLetter(next) || "·"}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-white">{next!.name}</p>
