@@ -4559,6 +4559,80 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_coupons: {
+        Row: {
+          created_at: string
+          discount_label: string | null
+          id: string
+          notes: string | null
+          partner_id: string
+          partner_product_id: string
+          product_name: string | null
+          redeemed_at: string | null
+          redeemed_by: string | null
+          status: string
+          student_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          discount_label?: string | null
+          id?: string
+          notes?: string | null
+          partner_id: string
+          partner_product_id: string
+          product_name?: string | null
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          status?: string
+          student_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          discount_label?: string | null
+          id?: string
+          notes?: string | null
+          partner_id?: string
+          partner_product_id?: string
+          product_name?: string | null
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          status?: string
+          student_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_coupons_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_coupons_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_coupons_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_coupons_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_posts: {
         Row: {
           caption: string | null
@@ -8795,7 +8869,20 @@ export type Database = {
         Returns: undefined
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
+      partner_preview_coupon: {
+        Args: { p_token: string }
+        Returns: {
+          coupon_id: string
+          created_at: string
+          product_name: string
+          redeemed_at: string
+          status: string
+          student_name: string
+          student_photo: string
+        }[]
+      }
       partner_preview_student: { Args: { _student_id: string }; Returns: Json }
+      partner_redeem_coupon: { Args: { p_token: string }; Returns: string }
       partner_scan_student: { Args: { _student_id: string }; Returns: Json }
       pay_coach_available: {
         Args: { _kind?: string; _notes?: string; _profile_id: string }
@@ -8886,6 +8973,13 @@ export type Database = {
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
         Returns: string
+      }
+      student_generate_partner_coupon: {
+        Args: { p_partner_product_id: string }
+        Returns: {
+          coupon_id: string
+          token: string
+        }[]
       }
       student_has_partner_benefits: {
         Args: { _student_id: string }
