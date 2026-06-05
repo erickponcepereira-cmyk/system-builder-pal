@@ -19,6 +19,7 @@ export type UpcomingEvent = {
   htmlLink?: string;
   publicToken?: string;
   attendeeConfirmed?: boolean;
+  attendeeConfirmedAt?: string | null;
   googleEventId?: string;
   coachId?: string;
   coachName?: string;
@@ -92,7 +93,7 @@ export async function impl_getUpcomingEvents(userId: string): Promise<{ events: 
 
   const { data: rows, error } = await supabaseAdmin
     .from("internal_appointments")
-    .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link,google_event_id,public_token,attendee_confirmed,completed_at")
+    .select("id,summary,start_at,end_at,attendee_name,attendee_email,location,html_link,google_event_id,public_token,attendee_confirmed,attendee_confirmed_at,completed_at")
     .eq("coach_id", coach.id)
     .gte("start_at", new Date(Date.now() - 24 * 3600_000).toISOString())
     .order("start_at", { ascending: true })
@@ -112,6 +113,7 @@ export async function impl_getUpcomingEvents(userId: string): Promise<{ events: 
       googleEventId: r.google_event_id ?? undefined,
       publicToken: r.public_token ?? undefined,
       attendeeConfirmed: !!r.attendee_confirmed,
+      attendeeConfirmedAt: (r as any).attendee_confirmed_at ?? null,
       completedAt: (r as any).completed_at ?? null,
     })),
   };
