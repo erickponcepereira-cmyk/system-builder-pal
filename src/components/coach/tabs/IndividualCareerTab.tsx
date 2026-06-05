@@ -218,8 +218,8 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
           style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}
         >
           {rule.image_url ? (
-            <img
-              src={resolveBadgeUrl(rule.image_url) || ""}
+            <BadgeImage
+              path={rule.image_url}
               alt={rule.display_name}
               className={`h-full w-full object-contain p-1 ${earned ? "" : "grayscale"}`}
             />
