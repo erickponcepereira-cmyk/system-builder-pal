@@ -196,6 +196,10 @@ function ProfessionalPanel() {
           </div>
         )}
 
+        <div className="mb-4"><WhatsAppGroupCard /></div>
+
+
+
         {/* Tabs nav */}
         <div className="mb-6 flex flex-wrap gap-2">
           {tabs.map((t) => {
