@@ -61,17 +61,19 @@ function AdminCareerPage() {
         </button>
       </div>
       <div className="flex flex-wrap gap-1 border-b border-white/10">
-        <TabBtn active={tab === "plans"}      onClick={() => setTab("plans")}      icon={Plane}        label="Planos de Carreira" />
-        <TabBtn active={tab === "patents"}    onClick={() => setTab("patents")}    icon={Award}        label="Patentes" />
-        <TabBtn active={tab === "medals"}     onClick={() => setTab("medals")}     icon={Medal}        label="Categorias" />
-        <TabBtn active={tab === "challenges"} onClick={() => setTab("challenges")} icon={Trophy}       label="Desafios" />
-        <TabBtn active={tab === "deliveries"} onClick={() => setTab("deliveries")} icon={PackageCheck} label="Entregas" />
+        <TabBtn active={tab === "plans"}       onClick={() => setTab("plans")}       icon={Plane}        label="Planos de Carreira" />
+        <TabBtn active={tab === "patents"}     onClick={() => setTab("patents")}     icon={Award}        label="Patentes" />
+        <TabBtn active={tab === "medal_rules"} onClick={() => setTab("medal_rules")} icon={Medal}        label="Medalhas" />
+        <TabBtn active={tab === "medals"}      onClick={() => setTab("medals")}      icon={Star}         label="Categorias" />
+        <TabBtn active={tab === "challenges"}  onClick={() => setTab("challenges")}  icon={Trophy}       label="Desafios" />
+        <TabBtn active={tab === "deliveries"}  onClick={() => setTab("deliveries")}  icon={PackageCheck} label="Entregas" />
       </div>
-      {tab === "plans"      && <PlansTab />}
-      {tab === "patents"    && <PatentsTab />}
-      {tab === "medals"     && <MedalsTab />}
-      {tab === "challenges" && <ChallengesTab />}
-      {tab === "deliveries" && <DeliveriesTab />}
+      {tab === "plans"        && <PlansTab />}
+      {tab === "patents"      && <PatentsTab />}
+      {tab === "medal_rules"  && <MedalRulesTab />}
+      {tab === "medals"       && <MedalsTab />}
+      {tab === "challenges"   && <ChallengesTab />}
+      {tab === "deliveries"   && <DeliveriesTab />}
     </div>
   );
 }
