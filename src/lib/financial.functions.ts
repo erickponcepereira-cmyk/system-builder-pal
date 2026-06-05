@@ -112,6 +112,7 @@ export type ProductFinancial = {
   slots: ValueSlot[];
   referralRule: {
     enabled: boolean;
+    is_referral_product: boolean;
     pre_deduction_fixed: number;
     pre_deduction_label: string;
     student_referral_percentage: number;
@@ -169,6 +170,7 @@ export const getProductFinancial = createServerFn({ method: "GET" })
       referralRule: rule
         ? {
             enabled: !!rule.enabled,
+            is_referral_product: !!(rule as any).is_referral_product,
             pre_deduction_fixed: Number(rule.pre_deduction_fixed || 0),
             pre_deduction_label: rule.pre_deduction_label || "Taxa do Sistema",
             student_referral_percentage: Number(rule.student_referral_percentage || 0),
@@ -176,6 +178,7 @@ export const getProductFinancial = createServerFn({ method: "GET" })
           }
         : {
             enabled: true,
+            is_referral_product: false,
             pre_deduction_fixed: 20,
             pre_deduction_label: "Taxa do Sistema",
             student_referral_percentage: 50,
@@ -193,6 +196,7 @@ export type SaveProductFinancialInput = {
   slots: Array<Omit<ValueSlot, "id"> & { id?: string }>;
   referralRule: {
     enabled: boolean;
+    is_referral_product: boolean;
     pre_deduction_fixed: number;
     pre_deduction_label: string;
     student_referral_percentage: number;
@@ -234,6 +238,7 @@ export const saveProductFinancial = createServerFn({ method: "POST" })
         {
           product_id: data.productId,
           enabled: data.referralRule.enabled,
+          is_referral_product: data.referralRule.is_referral_product,
           pre_deduction_fixed: data.referralRule.pre_deduction_fixed,
           pre_deduction_label: data.referralRule.pre_deduction_label,
           student_referral_percentage: data.referralRule.student_referral_percentage,
