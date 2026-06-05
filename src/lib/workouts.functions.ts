@@ -332,33 +332,219 @@ export const finishWorkoutSession = createServerFn({ method: "POST" })
       .eq("id", data.session_id);
     if (error) throw new Error(error.message);
 
-    // Achievements
+    // Achievements driven by admin-managed catalog
     const { count: totalSessions } = await supabase
       .from("workout_sessions")
       .select("id", { count: "exact", head: true })
       .eq("student_id", userId)
       .not("ended_at", "is", null);
 
-    const milestones: Array<{ count: number; code: string; title: string; icon: string }> = [
-      { count: 1, code: "first_workout", title: "Primeiro Treino", icon: "🎯" },
-      { count: 7, code: "7_workouts", title: "7 Treinos", icon: "🔥" },
-      { count: 30, code: "30_workouts", title: "30 Treinos", icon: "💪" },
-      { count: 100, code: "100_workouts", title: "100 Treinos", icon: "👑" },
-    ];
-    const earned: string[] = [];
-    for (const m of milestones) {
-      if ((totalSessions || 0) >= m.count) {
-        const { error: aErr } = await supabase
-          .from("workout_achievements")
-          .upsert(
-            { student_id: userId, code: m.code, title: m.title, icon: m.icon },
-            { onConflict: "student_id,code", ignoreDuplicates: true },
-          );
-        if (!aErr) earned.push(m.title);
+    // Compute current streak (consecutive days with at least one finished session)
+    const { data: recent } = await supabase
+      .from("workout_sessions")
+      .select("started_at, ended_at")
+      .eq("student_id", userId)
+      .not("ended_at", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(180);
+    const daySet = new Set<string>();
+    (recent || []).forEach((s: any) => daySet.add(new Date(s.started_at).toISOString().slice(0, 10)));
+    let streak = 0;
+    {
+      const d = new Date();
+      for (;;) {
+        const key = d.toISOString().slice(0, 10);
+        if (daySet.has(key)) { streak++; d.setDate(d.getDate() - 1); } else break;
       }
     }
-    return { xp, totalSessions: totalSessions || 0, newAchievements: earned };
+
+    // Personal challenges: mark any active ones as completed if streak reached target
+    const { data: challenges } = await supabase
+      .from("personal_challenges" as never)
+      .select("id, target_days, status" as never)
+      .eq("student_id" as never, userId as never)
+      .eq("status" as never, "active" as never);
+    let personalCompletedThisSession = false;
+    for (const c of ((challenges as any[]) || [])) {
+      if (streak >= c.target_days) {
+        await supabase
+          .from("personal_challenges" as never)
+          .update({ status: "completed", completed_at: new Date().toISOString() } as never)
+          .eq("id" as never, c.id as never);
+        personalCompletedThisSession = true;
+      }
+    }
+
+    const { data: catalog } = await supabase
+      .from("achievement_catalog" as never)
+      .select("code, title, description, icon, condition_type, condition_value" as never)
+      .eq("active" as never, true as never);
+
+    const earned: Array<{ code: string; title: string; icon: string | null }> = [];
+    for (const a of ((catalog as any[]) || [])) {
+      let satisfied = false;
+      if (a.condition_type === "workouts_count") satisfied = (totalSessions || 0) >= (a.condition_value || 1);
+      else if (a.condition_type === "streak_days") satisfied = streak >= (a.condition_value || 1);
+      else if (a.condition_type === "personal_challenge_completed") satisfied = personalCompletedThisSession;
+      if (!satisfied) continue;
+      const { data: existing } = await supabase
+        .from("workout_achievements")
+        .select("id")
+        .eq("student_id", userId)
+        .eq("code", a.code)
+        .maybeSingle();
+      if (existing) continue;
+      const { error: aErr } = await supabase
+        .from("workout_achievements")
+        .insert({ student_id: userId, code: a.code, title: a.title, description: a.description, icon: a.icon } as never);
+      if (!aErr) earned.push({ code: a.code, title: a.title, icon: a.icon });
+    }
+    return { xp, totalSessions: totalSessions || 0, streak, newAchievements: earned };
   });
+
+/* ---------------- Workout exercise inline edits ---------------- */
+
+export const updatePlanExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      exercise_id: z.string().uuid(),
+      exercise_name: z.string().min(1).max(200).optional(),
+      sets: z.number().int().min(1).max(50).optional(),
+      reps: z.string().max(50).nullable().optional(),
+      rest_seconds: z.number().int().min(0).max(3600).optional(),
+      rest_seconds_max: z.number().int().min(0).max(3600).nullable().optional(),
+      notes: z.string().max(1000).nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: any = {};
+    if (data.exercise_name !== undefined) patch.exercise_name = data.exercise_name;
+    if (data.sets !== undefined) patch.sets = data.sets;
+    if (data.reps !== undefined) patch.reps = data.reps;
+    if (data.rest_seconds !== undefined) patch.rest_seconds = data.rest_seconds;
+    if (data.rest_seconds_max !== undefined) patch.rest_seconds_max = data.rest_seconds_max;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    const { error } = await context.supabase.from("workout_exercises").update(patch as never).eq("id", data.exercise_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deletePlanExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ exercise_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("workout_exercises").delete().eq("id", data.exercise_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const replacePlanExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      exercise_id: z.string().uuid(),
+      new_name: z.string().min(1).max(200),
+      sets: z.number().int().min(1).max(50).optional(),
+      reps: z.string().max(50).nullable().optional(),
+      rest_seconds: z.number().int().min(0).max(3600).optional(),
+      rest_seconds_max: z.number().int().min(0).max(3600).nullable().optional(),
+      notes: z.string().max(1000).nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: any = { exercise_name: data.new_name };
+    if (data.sets !== undefined) patch.sets = data.sets;
+    if (data.reps !== undefined) patch.reps = data.reps;
+    if (data.rest_seconds !== undefined) patch.rest_seconds = data.rest_seconds;
+    if (data.rest_seconds_max !== undefined) patch.rest_seconds_max = data.rest_seconds_max;
+    if (data.notes !== undefined) patch.notes = data.notes;
+    // Reset learned data when replacing the exercise
+    patch.load_kg = null;
+    patch.equipment_config_user = null;
+    const { error } = await context.supabase.from("workout_exercises").update(patch as never).eq("id", data.exercise_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const addPlanExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      plan_id: z.string().uuid(),
+      name: z.string().min(1).max(200),
+      sets: z.number().int().min(1).max(50).default(3),
+      reps: z.string().max(50).nullable().optional(),
+      rest_seconds: z.number().int().min(0).max(3600).default(60),
+      rest_seconds_max: z.number().int().min(0).max(3600).nullable().optional(),
+      notes: z.string().max(1000).nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { count } = await context.supabase
+      .from("workout_exercises")
+      .select("id", { count: "exact", head: true })
+      .eq("plan_id", data.plan_id);
+    const { error } = await context.supabase.from("workout_exercises").insert({
+      plan_id: data.plan_id,
+      order_index: count || 0,
+      exercise_name: data.name,
+      sets: data.sets,
+      reps: data.reps ?? null,
+      rest_seconds: data.rest_seconds,
+      rest_seconds_max: data.rest_seconds_max ?? null,
+      notes: data.notes ?? null,
+      is_cardio: false,
+    } as never);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/* ---------------- Personal challenges ---------------- */
+
+export const listPersonalChallenges = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data } = await supabase
+      .from("personal_challenges" as never)
+      .select("*" as never)
+      .eq("student_id" as never, userId as never)
+      .order("created_at" as never, { ascending: false });
+    return { challenges: (data as any[]) || [] };
+  });
+
+export const createPersonalChallenge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      title: z.string().min(1).max(120),
+      target_days: z.number().int().min(1).max(365),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: row, error } = await supabase
+      .from("personal_challenges" as never)
+      .insert({ student_id: userId, title: data.title, target_days: data.target_days } as never)
+      .select("*" as never)
+      .single();
+    if (error) throw new Error(error.message);
+    return { challenge: row };
+  });
+
+export const deletePersonalChallenge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("personal_challenges" as never)
+      .delete()
+      .eq("id" as never, data.id as never);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const getWorkoutHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -421,7 +607,8 @@ export const enableTemplateForStudent = createServerFn({ method: "POST" })
 
     const tplName = (tpl as any).name as string;
     const items = ((tpl as any).items || []) as Array<{ name: string; sets?: string; reps?: string; rest?: string; notes?: string }>;
-    const planName = data.letter ? `Treino ${data.letter} — ${tplName}` : tplName;
+    const planName = tplName;
+    const letter = (data.letter || "").toUpperCase().slice(0, 2) || null;
 
     const { data: created, error } = await supabase
       .from("workout_plans")
@@ -430,8 +617,9 @@ export const enableTemplateForStudent = createServerFn({ method: "POST" })
         coach_id: userId,
         name: planName,
         day_of_week: data.day_of_week ?? null,
+        letter,
         notes: `Importado do template "${tplName}"`,
-      })
+      } as never)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -543,7 +731,7 @@ export const listStudentWorkoutPlansByRecord = createServerFn({ method: "POST" }
     if (!studentUserId) return { plans: [] };
     const { data: plans, error } = await supabase
       .from("workout_plans")
-      .select("id, name, day_of_week, notes, created_at, workout_exercises(id, order_index, exercise_name, sets, reps, rest_seconds, rest_seconds_max, notes)")
+      .select("id, name, day_of_week, notes, letter, created_at, workout_exercises(id, order_index, exercise_name, sets, reps, rest_seconds, rest_seconds_max, notes)")
       .eq("student_id", studentUserId)
       .eq("active", true)
       .order("created_at", { ascending: true });

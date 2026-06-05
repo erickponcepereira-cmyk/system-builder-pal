@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus } from "lucide-react";
-import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig } from "@/lib/workouts.functions";
+import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus, Target, Sparkles } from "lucide-react";
+import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig, listPersonalChallenges, createPersonalChallenge, deletePersonalChallenge } from "@/lib/workouts.functions";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
@@ -14,6 +14,7 @@ export const Route = createFileRoute("/student/workout")({
 type Plan = {
   id: string;
   name: string;
+  letter?: string | null;
   day_of_week: number | null;
   notes: string | null;
   workout_exercises: Array<{
@@ -38,8 +39,28 @@ type Plan = {
 };
 
 type LastLog = { load_kg: number | null; equipment_config: string | null; completed_at: string };
+type PersonalChallenge = { id: string; title: string; target_days: number; started_at: string; completed_at: string | null; status: string };
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const LETTER_COLORS: Record<string, string> = {
+  A: "from-primary to-orange-500",
+  B: "from-blue-500 to-cyan-400",
+  C: "from-emerald-500 to-teal-400",
+  D: "from-purple-500 to-pink-500",
+  E: "from-yellow-500 to-amber-400",
+};
+function letterGradient(letter?: string | null) {
+  return LETTER_COLORS[(letter || "").toUpperCase()] || "from-white/20 to-white/10";
+}
+function nextLetter(plans: Plan[], currentLetter?: string | null): Plan | null {
+  if (plans.length === 0) return null;
+  const lettered = plans.filter((p) => p.letter).sort((a, b) => (a.letter || "").localeCompare(b.letter || ""));
+  if (lettered.length === 0) return plans[0];
+  if (!currentLetter) return lettered[0];
+  const idx = lettered.findIndex((p) => (p.letter || "").toUpperCase() === currentLetter.toUpperCase());
+  if (idx < 0) return lettered[0];
+  return lettered[(idx + 1) % lettered.length];
+}
 
 function WorkoutPage() {
   const navigate = useNavigate();
@@ -47,31 +68,57 @@ function WorkoutPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastCompletedPlan, setLastCompletedPlan] = useState<Plan | null>(null);
+  const [recentSessions, setRecentSessions] = useState<Array<{ started_at: string; completion_pct: number; plan_id: string }>>([]);
+  const [challenges, setChallenges] = useState<PersonalChallenge[]>([]);
+  const [newChallengeOpen, setNewChallengeOpen] = useState(false);
 
   const listFn = useServerFn(listWorkoutPlans);
+  const histFn = useServerFn(getWorkoutHistory);
+  const listChallengesFn = useServerFn(listPersonalChallenges);
 
   const reload = async () => {
     setLoading(true);
     try {
-      const data = (await listFn({ data: {} })) as Plan[];
+      const [data, hist, ch] = await Promise.all([
+        listFn({ data: {} }) as Promise<Plan[]>,
+        histFn({ data: {} }) as Promise<any>,
+        listChallengesFn() as Promise<{ challenges: PersonalChallenge[] }>,
+      ]);
       data.forEach((p) => p.workout_exercises?.sort((a, b) => a.order_index - b.order_index));
       setPlans(data);
+      const completed = (hist.sessions || []).filter((s: any) => s.ended_at);
+      setRecentSessions(completed.map((s: any) => ({ started_at: s.started_at, completion_pct: s.completion_pct, plan_id: s.plan_id })));
+      const last = completed[0];
+      if (last) {
+        const p = data.find((p) => p.id === last.plan_id) || null;
+        setLastCompletedPlan(p);
+      }
+      setChallenges(ch.challenges || []);
     } catch (e) {
       toast.error("Erro ao carregar treinos");
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    reload();
-  }, []);
+  useEffect(() => { reload(); }, []);
 
   if (view === "active" && activePlan) {
-    return <ActiveSession plan={activePlan} onExit={() => { setActivePlan(null); setView("home"); reload(); }} />;
+    return <ActiveSession plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
   }
+
+  const next = nextLetter(plans, lastCompletedPlan?.letter);
+  // Days a workout was completed (for mini-calendar)
+  const completedDays = new Set(recentSessions.map((s) => new Date(s.started_at).toISOString().slice(0, 10)));
+  // Current streak
+  const streak = (() => {
+    let s = 0; const d = new Date();
+    for (;;) { const k = d.toISOString().slice(0, 10); if (completedDays.has(k)) { s++; d.setDate(d.getDate() - 1); } else break; }
+    return s;
+  })();
 
   return (
     <div className="space-y-4 p-4 pb-8">
@@ -88,6 +135,86 @@ function WorkoutPage() {
         </button>
       </header>
 
+      {/* Próximo treino destaque */}
+      {next && (
+        <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4">
+          <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
+          <div className="mt-2 flex items-center gap-3">
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${letterGradient(next.letter)} text-2xl font-black text-white shadow-lg`}>
+              {next.letter || "·"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-bold text-white">{next.name}</p>
+              <p className="text-[11px] text-white/55">{next.workout_exercises.length} exercícios</p>
+            </div>
+            <button
+              onClick={() => { setActivePlan(next); setView("active"); }}
+              className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/30 hover:brightness-110"
+            >
+              <Play className="inline h-4 w-4 -mt-0.5 mr-1" /> Iniciar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2">
+        <Stat icon={<Flame className="h-4 w-4" />} label="Constância" value={`${streak}d`} />
+        <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(recentSessions.length)} />
+        <Stat icon={<Target className="h-4 w-4" />} label="Desafios" value={String(challenges.filter((c) => c.status === "active").length)} />
+      </div>
+
+      {/* Personal challenges card */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            <p className="text-xs font-bold uppercase tracking-wider text-white/70">Meu Desafio Pessoal</p>
+          </div>
+          <button onClick={() => setNewChallengeOpen(true)} className="rounded-full bg-primary/20 px-2.5 py-1 text-[11px] font-bold text-primary">
+            <Plus className="inline h-3 w-3 -mt-0.5" /> Novo
+          </button>
+        </div>
+        {challenges.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-white/10 py-4 text-center text-[11px] text-white/45">
+            Defina quantos dias seguidos você vai treinar — para você mesmo se cobrar.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {challenges.map((c) => {
+              const pct = Math.min(100, Math.round((streak / c.target_days) * 100));
+              const done = c.status === "completed";
+              return (
+                <div key={c.id} className={`rounded-xl border p-3 ${done ? "border-emerald-500/30 bg-emerald-500/5" : "border-white/10 bg-white/[0.04]"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-white">{c.title}</p>
+                      <p className="text-[11px] text-white/55">
+                        {done ? "✅ Concluído!" : `${Math.min(streak, c.target_days)}/${c.target_days} dias seguidos`}
+                      </p>
+                    </div>
+                    <button onClick={async () => { if (confirm(`Excluir desafio "${c.title}"?`)) { await (await import("@/lib/workouts.functions")).deletePersonalChallenge({ data: { id: c.id } } as any); reload(); } }} className="rounded p-1 text-white/40 hover:text-red-400">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className={`h-full transition-all ${done ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-orange-500"}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Mini-calendar */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/60">
+          <CalendarIcon className="h-3.5 w-3.5 text-primary" /> Mês atual
+        </p>
+        <CalendarView sessions={recentSessions} />
+      </div>
+
       {loading ? (
         <p className="py-12 text-center text-sm text-white/50">Carregando...</p>
       ) : plans.length === 0 ? (
@@ -100,35 +227,91 @@ function WorkoutPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {plans.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">{p.name}</p>
-                  <p className="mt-1 text-[11px] text-white/45">
-                    {p.day_of_week !== null ? `Dia: ${DAYS[p.day_of_week]} · ` : ""}
-                    {p.workout_exercises.length} exercícios
-                  </p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/50">Todos os treinos da semana</p>
+          {plans.map((p) => {
+            const isNext = next && p.id === next.id;
+            return (
+              <div key={p.id} className={`rounded-2xl border p-4 ${isNext ? "border-primary/40 bg-primary/[0.06]" : "border-white/10 bg-white/5"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(p.letter)} text-xl font-black text-white shadow-md`}>
+                    {p.letter || "·"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-white">{p.name}</p>
+                    <p className="mt-0.5 text-[11px] text-white/45">
+                      {p.day_of_week !== null ? `${DAYS[p.day_of_week]} · ` : ""}
+                      {p.workout_exercises.length} exercícios
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setActivePlan(p); setView("active"); }}
+                    className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
+                  >
+                    <Play className="h-3.5 w-3.5" /> Iniciar
+                  </button>
                 </div>
-                <button
-                  onClick={() => { setActivePlan(p); setView("active"); }}
-                  className="flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
-                >
-                  <Play className="h-3.5 w-3.5" /> Iniciar
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       <Link to="/student" className="block text-center text-[11px] text-white/40 underline">Voltar para início</Link>
+
+      {newChallengeOpen && (
+        <NewChallengeModal
+          onClose={() => setNewChallengeOpen(false)}
+          onCreated={() => { setNewChallengeOpen(false); reload(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const createFn = useServerFn(createPersonalChallenge);
+  const [title, setTitle] = useState("");
+  const [days, setDays] = useState(30);
+  const [saving, setSaving] = useState(false);
+  const submit = async () => {
+    if (!title.trim()) return toast.error("Dê um nome para seu desafio");
+    if (days < 1 || days > 365) return toast.error("Entre 1 e 365 dias");
+    setSaving(true);
+    try {
+      await createFn({ data: { title: title.trim(), target_days: days } });
+      toast.success("Desafio criado! Bora?");
+      onCreated();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao criar desafio");
+    }
+    setSaving(false);
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          <h2 className="text-base font-bold text-white">Novo desafio pessoal</h2>
+        </div>
+        <p className="mb-3 text-[11px] text-white/55">Defina seu compromisso de constância e siga em frente. A cada treino concluído você avança.</p>
+        <label className="text-[11px] text-white/60">Nome do desafio</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: 30 dias sem falta" className="mt-1 mb-3 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
+        <label className="text-[11px] text-white/60">Meta de dias seguidos: <span className="font-bold text-primary">{days}</span></label>
+        <input type="range" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="mt-1 w-full accent-primary" />
+        <div className="mt-2 flex justify-between text-[10px] text-white/40">
+          <span>1d</span><span>30d</span><span>90d</span><span>180d</span><span>365d</span>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white">Cancelar</button>
+          <button onClick={submit} disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Criando..." : "Criar desafio"}</button>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ------------------------- ACTIVE SESSION ------------------------- */
-function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
+function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans?: Plan[]; onExit: () => void; onStartNext?: (p: Plan) => void }) {
   const startFn = useServerFn(startWorkoutSession);
   const logSetFn = useServerFn(logSet);
   const logCardioFn = useServerFn(logCardio);
@@ -150,7 +333,8 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
   const [restRange, setRestRange] = useState<{ min: number; max: number }>({ min: 60, max: 60 });
   const [restExerciseName, setRestExerciseName] = useState<string>("");
 
-  const [summary, setSummary] = useState<{ xp: number; total: number; achievements: string[]; durationSec: number } | null>(null);
+  const [summary, setSummary] = useState<{ total: number; achievements: Array<{ code: string; title: string; icon: string | null }>; durationSec: number; streak: number } | null>(null);
+  const [achievementReveal, setAchievementReveal] = useState<{ code: string; title: string; icon: string | null } | null>(null);
 
   // cardio state
   const [cardio, setCardio] = useState<Record<string, { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean }>>({});
@@ -295,38 +479,70 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
     try {
       const r = (await finishFn({
         data: { session_id: sessionId, total_seconds: globalSec, completion_pct: completionPct, notes: null },
-      })) as { xp: number; totalSessions: number; newAchievements: string[] };
-      setSummary({ xp: r.xp, total: r.totalSessions, achievements: r.newAchievements, durationSec: globalSec });
+      })) as { xp: number; totalSessions: number; streak: number; newAchievements: Array<{ code: string; title: string; icon: string | null }> };
+      setSummary({ total: r.totalSessions, achievements: r.newAchievements || [], durationSec: globalSec, streak: r.streak || 0 });
       setRunning(false);
+      if ((r.newAchievements || []).length > 0) {
+        setAchievementReveal(r.newAchievements[0]);
+      }
     } catch {
       toast.error("Erro ao finalizar");
     }
   };
 
   if (summary) {
+    const next = nextLetter(plans || [], plan.letter);
+    const showNext = next && next.id !== plan.id;
     return (
-      <div className="space-y-5 p-5 text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-4xl shadow-xl shadow-primary/40">
+      <div className="relative space-y-5 p-5 text-center">
+        {achievementReveal && (
+          <AchievementReveal achievement={achievementReveal} onClose={() => setAchievementReveal(null)} />
+        )}
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-4xl shadow-xl shadow-primary/40 animate-scale-in">
           🏆
         </div>
         <h2 className="text-2xl font-extrabold text-white">Treino concluído!</h2>
         <p className="text-sm text-white/60">Você completou {completionPct}% do treino</p>
 
         <div className="grid grid-cols-3 gap-3">
-          <Stat icon={<Flame className="h-4 w-4" />} label="XP" value={`+${summary.xp}`} />
+          <Stat icon={<Flame className="h-4 w-4" />} label="Constância" value={`${summary.streak}d`} />
           <Stat icon={<Clock className="h-4 w-4" />} label="Tempo" value={fmt(summary.durationSec)} />
           <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(summary.total)} />
         </div>
 
         {summary.achievements.length > 0 && (
-          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">Nova Conquista!</p>
-            <p className="mt-1 text-sm text-white">{summary.achievements.join(" · ")}</p>
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 animate-fade-in">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Novas Conquistas!</p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {summary.achievements.map((a) => (
+                <button key={a.code} onClick={() => setAchievementReveal(a)} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15">
+                  <span>{a.icon || "🏆"}</span> {a.title}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        <button onClick={onExit} className="w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground">
-          Voltar
+        {showNext && onStartNext && (
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-4 text-left">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(next!.letter)} text-xl font-black text-white`}>
+                {next!.letter || "·"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">{next!.name}</p>
+                <p className="text-[11px] text-white/55">{next!.workout_exercises.length} exercícios</p>
+              </div>
+              <button onClick={() => onStartNext(next!)} className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
+                <Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" /> Iniciar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button onClick={onExit} className="w-full rounded-full bg-white/10 py-3 text-sm font-bold text-white">
+          Voltar para meus treinos
         </button>
       </div>
     );
@@ -412,6 +628,42 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
       >
         Finalizar Treino
       </button>
+    </div>
+  );
+}
+
+function AchievementReveal({ achievement, onClose }: { achievement: { code: string; title: string; icon: string | null }; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-6 animate-fade-in" onClick={onClose}>
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        {/* burst rays */}
+        <div className="absolute inset-0 -m-20 animate-pulse opacity-60" aria-hidden>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/40 via-orange-500/30 to-yellow-400/20 blur-3xl" />
+        </div>
+        {/* sparkles */}
+        {Array.from({ length: 12 }).map((_, i) => (
+          <Sparkles
+            key={i}
+            className="absolute h-5 w-5 text-yellow-300 animate-ping"
+            style={{
+              top: `${50 + 45 * Math.sin((i / 12) * Math.PI * 2)}%`,
+              left: `${50 + 45 * Math.cos((i / 12) * Math.PI * 2)}%`,
+              animationDelay: `${i * 90}ms`,
+              animationDuration: "1.6s",
+            }}
+          />
+        ))}
+        <div className="relative flex flex-col items-center gap-4 rounded-3xl border border-primary/40 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] p-8 text-center shadow-[0_0_60px_rgba(255,120,40,0.35)] animate-scale-in">
+          <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/80">Conquista desbloqueada</p>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-5xl shadow-lg shadow-primary/40">
+            {achievement.icon || "🏆"}
+          </div>
+          <h3 className="text-2xl font-extrabold text-white">{achievement.title}</h3>
+          <button onClick={onClose} className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground">
+            Incrível!
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -700,7 +952,7 @@ function HistoryView({ onBack }: { onBack: () => void }) {
               </div>
               <div className="text-right">
                 <p className="font-bold text-primary">{s.completion_pct}%</p>
-                <p className="text-white/40">+{s.xp_earned} XP</p>
+                <p className="text-white/40">{s.total_seconds ? `${Math.floor((s.total_seconds||0)/60)}min` : ""}</p>
               </div>
             </div>
           );

@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievement_catalog: {
+        Row: {
+          active: boolean
+          code: string
+          condition_type: string
+          condition_value: number | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          condition_type: string
+          condition_value?: number | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          condition_type?: string
+          condition_value?: number | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_audit_log: {
         Row: {
           action: string
@@ -5102,6 +5144,42 @@ export type Database = {
           },
         ]
       }
+      personal_challenges: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          started_at: string
+          status: string
+          student_id: string
+          target_days: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          started_at?: string
+          status?: string
+          student_id: string
+          target_days: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          started_at?: string
+          status?: string
+          student_id?: string
+          target_days?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       points_redeem_orders: {
         Row: {
           admin_notes: string | null
@@ -8133,6 +8211,7 @@ export type Database = {
           created_at: string
           day_of_week: number | null
           id: string
+          letter: string | null
           name: string
           notes: string | null
           student_id: string
@@ -8144,6 +8223,7 @@ export type Database = {
           created_at?: string
           day_of_week?: number | null
           id?: string
+          letter?: string | null
           name: string
           notes?: string | null
           student_id: string
@@ -8155,6 +8235,7 @@ export type Database = {
           created_at?: string
           day_of_week?: number | null
           id?: string
+          letter?: string | null
           name?: string
           notes?: string | null
           student_id?: string
