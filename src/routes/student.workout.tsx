@@ -5,6 +5,7 @@ import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar
 import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig, listPersonalChallenges, createPersonalChallenge, deletePersonalChallenge } from "@/lib/workouts.functions";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import fitmindLogo from "@/assets/fitmind-logo.png";
 
 export const Route = createFileRoute("/student/workout")({
   head: () => ({ meta: [{ title: "Meu Treino — FitMind Club" }] }),
@@ -553,7 +554,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext, onFinished }: { plan:
             <div className="mt-2 flex flex-wrap justify-center gap-2">
               {summary.achievements.map((a) => (
                 <button key={a.code} onClick={() => setAchievementReveal(a)} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15">
-                  <span>{a.icon || "🏆"}</span> {a.title}
+                  <img src={fitmindLogo} alt="" className="h-4 w-4 rounded-full object-cover" /> {a.title}
                 </button>
               ))}
             </div>
@@ -693,8 +694,8 @@ function AchievementReveal({ achievement, onClose }: { achievement: { code: stri
         ))}
         <div className="relative flex flex-col items-center gap-4 rounded-3xl border border-primary/40 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] p-8 text-center shadow-[0_0_60px_rgba(255,120,40,0.35)] animate-scale-in">
           <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-primary/80">Conquista desbloqueada</p>
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-5xl shadow-lg shadow-primary/40">
-            {achievement.icon || "🏆"}
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-orange-500 p-1 shadow-lg shadow-primary/40">
+            <img src={fitmindLogo} alt="FitMind" className="h-full w-full rounded-full object-cover" />
           </div>
           <h3 className="text-2xl font-extrabold text-white">{achievement.title}</h3>
           <button onClick={onClose} className="rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-primary-foreground">
@@ -981,7 +982,7 @@ function HistoryView({ onBack }: { onBack: () => void }) {
           {data?.achievements.length === 0 && <p className="col-span-2 py-8 text-center text-xs text-white/40">Sem conquistas ainda.</p>}
           {data?.achievements.map((a) => (
             <div key={a.id} className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 to-transparent p-3 text-center">
-              <p className="text-2xl">{a.icon || "🏆"}</p>
+              <img src={fitmindLogo} alt="" className="mx-auto h-10 w-10 rounded-full object-cover ring-2 ring-primary/40" />
               <p className="mt-1 text-xs font-bold text-white">{a.title}</p>
               <p className="text-[9px] text-white/40">{new Date(a.earned_at).toLocaleDateString("pt-BR")}</p>
             </div>
