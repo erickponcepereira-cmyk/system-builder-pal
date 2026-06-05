@@ -187,17 +187,15 @@ export function WalletTab() {
 
   const currentPatent = career?.patents.find((p) => p.key === career.currentPatentKey) ?? null;
 
-  // Top monthly medal currently earned this month
+  // Last conquered medal (any kind), used in Vendas Diretas
   let topMonthlyMedal: MedalRule | null = null;
-  if (medals) {
-    const earnedKeys = new Set(
-      medals.earned
-        .filter((e) => e.medal_kind === "monthly" && e.period_year === medals.currentMonth.year && e.period_month === medals.currentMonth.month)
-        .map((e) => e.medal_key),
-    );
-    const eligible = medals.monthlyRules.filter((r) => earnedKeys.has(r.key));
-    eligible.sort((a, b) => b.threshold - a.threshold);
-    topMonthlyMedal = eligible[0] ?? null;
+  let topMonthlyKind: "medal_monthly" | "medal_cumulative" = "medal_monthly";
+  if (medals && medals.earned.length) {
+    const sorted = [...medals.earned].sort((a, b) => b.awarded_at.localeCompare(a.awarded_at));
+    const last = sorted[0];
+    const rules = last.medal_kind === "monthly" ? medals.monthlyRules : medals.cumulativeRules;
+    topMonthlyMedal = rules.find((r) => r.key === last.medal_key) ?? null;
+    topMonthlyKind = last.medal_kind === "monthly" ? "medal_monthly" : "medal_cumulative";
   }
 
   const renderDirect = () => (
