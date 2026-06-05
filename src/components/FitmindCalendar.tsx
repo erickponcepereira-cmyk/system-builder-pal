@@ -542,13 +542,13 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       </div>
 
       {/* Eventos em destaque (banner) */}
-      {events.filter((ev) => ev.is_highlighted).length > 0 && (
+      {displayEvents.filter((ev) => ev.is_highlighted).length > 0 && (
         <div className="space-y-2">
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/40 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Destaques do mês
           </p>
           <div className="grid gap-2 grid-cols-1">
-            {events.filter((ev) => ev.is_highlighted).map((ev) => {
+            {displayEvents.filter((ev) => ev.is_highlighted).map((ev) => {
               const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
               const evColor = ev.color || "#E24B4A";
               const dtStart = new Date(ev.starts_at);
@@ -708,7 +708,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         </>
       ) : (
         <EventListView
-          events={events}
+          events={displayEvents}
           year={year}
           month={month}
           loading={loading}
