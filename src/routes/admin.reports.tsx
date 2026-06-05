@@ -100,15 +100,30 @@ function AdminReports() {
 
 
   const studentSummary = useMemo(() => {
-    const map = new Map<string, { name: string; email: string; count: number; last: string }>();
+    const map = new Map<string, { name: string; email: string; count: number; last: string; group: GroupKey }>();
     attendance.filter((row) => row.attended).forEach((row) => {
-      const current = map.get(row.student_id) || { name: row.students?.profiles?.name || "Aluno", email: row.students?.profiles?.email || "", count: 0, last: row.log_date };
+      const profileId = row.students?.profile_id || null;
+      let group: GroupKey = "aluno";
+      if (profileId) {
+        if (proProfileSet.has(profileId)) group = "aluno_profissional";
+        else if (coachProfileSet.has(profileId)) group = "aluno_coach";
+        else if (partnerProfileSet.has(profileId)) group = "aluno_parceiro";
+      }
+      const current = map.get(row.student_id) || { name: row.students?.profiles?.name || "Aluno", email: row.students?.profiles?.email || "", count: 0, last: row.log_date, group };
       current.count += 1;
       if (row.log_date > current.last) current.last = row.log_date;
       map.set(row.student_id, current);
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [attendance]);
+  }, [attendance, coachProfileSet, proProfileSet, partnerProfileSet]);
+
+  const groupedSummary = useMemo(() => {
+    const groups: Record<GroupKey, typeof studentSummary> = { aluno: [], aluno_coach: [], aluno_profissional: [], aluno_parceiro: [] };
+    studentSummary.forEach((s) => groups[s.group].push(s));
+    return groups;
+  }, [studentSummary]);
+
+  const visibleSummary = groupedSummary[groupTab];
 
   const revenue = orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
   const paidOrders = orders.filter((order) => ["paid", "preparing", "shipped", "delivered"].includes(order.status)).length;
