@@ -186,6 +186,8 @@ function PartnerPanel() {
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
         {tab === "wallet" && <WalletTab />}
+        {tab === "reports" && <PartnerReports />}
+
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
