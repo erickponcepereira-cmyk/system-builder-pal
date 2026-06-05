@@ -681,7 +681,7 @@ function StudentChallengePage() {
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Ao confirmar, 1 moeda de desafio será consumida do seu saldo.
+              Ao confirmar, 1 ticket de desafio será consumido do seu saldo.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmTurma(null)} disabled={joining}
