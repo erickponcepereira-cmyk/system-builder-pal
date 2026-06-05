@@ -8981,8 +8981,9 @@ export type Database = {
         Returns: string
       }
       student_generate_partner_coupon: {
-        Args: { p_product_id: string }
+        Args: { p_partner_product_id: string }
         Returns: {
+          coupon_id: string
           token: string
         }[]
       }
