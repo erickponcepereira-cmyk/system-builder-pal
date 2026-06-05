@@ -790,6 +790,19 @@ function MinisteredEventsDashboard() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => setScope("ministered")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${scope === "ministered" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
+          Ministrados por mim
+        </button>
+        {data?.can_view_created && (
+          <button onClick={() => setScope("created")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${scope === "created" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
+            Criados por mim
+          </button>
+        )}
+      </div>
+
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-[10px] uppercase text-white/40">De</label>
@@ -799,12 +812,13 @@ function MinisteredEventsDashboard() {
           <label className="block text-[10px] uppercase text-white/40">Até</label>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
         </div>
-        <button onClick={load} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Aplicar</button>
+        <button onClick={() => load(scope)} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Aplicar</button>
         <button onClick={exportCsv} disabled={!data || data.events.length === 0}
           className="ml-auto inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
           <Download className="h-4 w-4" /> CSV
         </button>
       </div>
+
 
       {loading ? (
         <div className="py-16 text-center text-white/50">Carregando…</div>
