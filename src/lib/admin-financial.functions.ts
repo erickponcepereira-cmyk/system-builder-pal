@@ -355,14 +355,25 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     if (data.bucket === "referrals") {
       const { data: rows, error } = await supabaseAdmin
         .from("commissions")
-        .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
+        .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, referred_by_student_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
         .eq("is_referral", true)
         .in("status", statuses as any)
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
       const txIds = Array.from(new Set((rows || []).map((c: any) => c.transaction_id).filter(Boolean)));
+      const referrerIds = Array.from(new Set((rows || []).map((c: any) => c.referred_by_student_id).filter(Boolean)));
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
+      const referrerTitleMap = new Map<string, "subcoach" | "influencer">();
+      if (referrerIds.length) {
+        const { data: refs } = await supabaseAdmin
+          .from("students")
+          .select("id, is_influencer")
+          .in("id", referrerIds);
+        (refs || []).forEach((r: any) => {
+          referrerTitleMap.set(r.id, r.is_influencer ? "influencer" : "subcoach");
+        });
+      }
       if (txIds.length) {
         const { data: txs } = await supabaseAdmin
           .from("transactions")
@@ -397,6 +408,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
           amount: Number(c.amount || 0),
           status: c.status,
           createdAt: c.created_at,
+          referrerTitle: c.referred_by_student_id ? (referrerTitleMap.get(c.referred_by_student_id) || "subcoach") : null,
         };
       });
     }
