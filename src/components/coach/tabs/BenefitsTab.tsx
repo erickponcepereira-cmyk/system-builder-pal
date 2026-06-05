@@ -15,6 +15,7 @@ type PartnerFreeProduct = {
   redemption_instructions: string | null;
   stock: number | null;
   redemption_mode: "free" | "discount" | null;
+  discount_percent: number | null;
   partner_id: string;
   partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
 };
