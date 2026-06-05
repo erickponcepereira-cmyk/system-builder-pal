@@ -3,7 +3,7 @@ import { Loader2, Trophy, Check, Lock, Star, TrendingUp, Users, Clock } from "lu
 import { useServerFn } from "@tanstack/react-start";
 import { getCareerProgress, type PatentRule, type CareerProgress } from "@/lib/coach-career.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
-import { resolveBadgeUrl } from "@/lib/badge-url";
+import { BadgeImage } from "@/components/coach/BadgeImage";
 
 
 const fmtBRL = (n: number) =>
