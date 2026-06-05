@@ -3489,6 +3489,7 @@ export type Database = {
       freebies: {
         Row: {
           address: string | null
+          category: string | null
           condition_note: string | null
           created_at: string
           description: string | null
@@ -3515,6 +3516,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          category?: string | null
           condition_note?: string | null
           created_at?: string
           description?: string | null
@@ -3541,6 +3543,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          category?: string | null
           condition_note?: string | null
           created_at?: string
           description?: string | null
@@ -4982,6 +4985,7 @@ export type Database = {
           approved_at: string | null
           blocked_at: string | null
           blocked_reason: string | null
+          business_area: string | null
           city: string | null
           cover_url: string | null
           created_at: string
@@ -4998,6 +5002,7 @@ export type Database = {
           profile_id: string
           referral_code: string | null
           referral_link: string | null
+          specialty: string | null
           state: string | null
           status: string
           updated_at: string
@@ -5011,6 +5016,7 @@ export type Database = {
           approved_at?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          business_area?: string | null
           city?: string | null
           cover_url?: string | null
           created_at?: string
@@ -5027,6 +5033,7 @@ export type Database = {
           profile_id: string
           referral_code?: string | null
           referral_link?: string | null
+          specialty?: string | null
           state?: string | null
           status?: string
           updated_at?: string
@@ -5040,6 +5047,7 @@ export type Database = {
           approved_at?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          business_area?: string | null
           city?: string | null
           cover_url?: string | null
           created_at?: string
@@ -5056,6 +5064,7 @@ export type Database = {
           profile_id?: string
           referral_code?: string | null
           referral_link?: string | null
+          specialty?: string | null
           state?: string | null
           status?: string
           updated_at?: string
