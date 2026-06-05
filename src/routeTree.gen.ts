@@ -87,6 +87,7 @@ import { Route as AdminCareerRouteImport } from './routes/admin.career'
 import { Route as AdminCalendarsRouteImport } from './routes/admin.calendars'
 import { Route as AdminAssessmentDeletionsRouteImport } from './routes/admin.assessment-deletions'
 import { Route as AdminAdminWalletRouteImport } from './routes/admin.admin-wallet'
+import { Route as AdminAchievementsRouteImport } from './routes/admin.achievements'
 import { Route as StudentProfileEditRouteImport } from './routes/student.profile.edit'
 import { Route as StudentPartnersPartnerIdRouteImport } from './routes/student.partners.$partnerId'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
@@ -492,6 +493,11 @@ const AdminAdminWalletRoute = AdminAdminWalletRouteImport.update({
   path: '/admin-wallet',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAchievementsRoute = AdminAchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
+  getParentRoute: () => AdminRoute,
+} as any)
 const StudentProfileEditRoute = StudentProfileEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -562,6 +568,7 @@ export interface FileRoutesByFullPath {
   '/student': typeof StudentRouteWithChildren
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/admin/achievements': typeof AdminAchievementsRoute
   '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -650,6 +657,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/admin/achievements': typeof AdminAchievementsRoute
   '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -741,6 +749,7 @@ export interface FileRoutesById {
   '/student': typeof StudentRouteWithChildren
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/admin/achievements': typeof AdminAchievementsRoute
   '/admin/admin-wallet': typeof AdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AdminAssessmentDeletionsRoute
   '/admin/calendars': typeof AdminCalendarsRoute
@@ -833,6 +842,7 @@ export interface FileRouteTypes {
     | '/student'
     | '/termos'
     | '/termos-compra'
+    | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
@@ -921,6 +931,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/termos'
     | '/termos-compra'
+    | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
@@ -1011,6 +1022,7 @@ export interface FileRouteTypes {
     | '/student'
     | '/termos'
     | '/termos-compra'
+    | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
     | '/admin/calendars'
@@ -1665,6 +1677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminWalletRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/achievements': {
+      id: '/admin/achievements'
+      path: '/achievements'
+      fullPath: '/admin/achievements'
+      preLoaderRoute: typeof AdminAchievementsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/student/profile/edit': {
       id: '/student/profile/edit'
       path: '/edit'
@@ -1751,6 +1770,7 @@ const AdminCoachesRouteWithChildren = AdminCoachesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAchievementsRoute: typeof AdminAchievementsRoute
   AdminAdminWalletRoute: typeof AdminAdminWalletRoute
   AdminAssessmentDeletionsRoute: typeof AdminAssessmentDeletionsRoute
   AdminCalendarsRoute: typeof AdminCalendarsRoute
@@ -1790,6 +1810,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAchievementsRoute: AdminAchievementsRoute,
   AdminAdminWalletRoute: AdminAdminWalletRoute,
   AdminAssessmentDeletionsRoute: AdminAssessmentDeletionsRoute,
   AdminCalendarsRoute: AdminCalendarsRoute,
