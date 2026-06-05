@@ -58,7 +58,7 @@ function StudentHome() {
       if (!userData.user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id,name,email,avatar_url")
+        .select("id,name,email,avatar_url,photo_url")
         .eq("user_id", userData.user.id)
         .maybeSingle();
       if (!profile) return;
