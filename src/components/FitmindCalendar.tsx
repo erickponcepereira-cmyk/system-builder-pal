@@ -351,7 +351,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       const base = ((evRes.data as any[]) || []).map((r) => ({
         ...r,
         responsible_coach_name: r.responsible_coach?.profiles?.name || null,
-        responsible_coach_whatsapp: r.responsible_coach?.profiles?.whatsapp || null,
+        responsible_coach_whatsapp: r.responsible_coach?.profiles?.phone || null,
       })) as FitmindEvent[];
       setEvents([...base, ...challengeEvents, ...appointmentEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
