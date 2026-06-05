@@ -165,10 +165,11 @@ function WorkoutPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <Stat icon={<Flame className="h-4 w-4" />} label="Constância" value={`${streak}d`} />
         <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(recentSessions.length)} />
-        <Stat icon={<Target className="h-4 w-4" />} label="Desafios" value={String(challenges.filter((c) => c.status === "active").length)} />
+        <Stat icon={<Target className="h-4 w-4" />} label="Ativos" value={String(challenges.filter((c) => c.status === "active").length)} />
+        <Stat icon={<Trophy className="h-4 w-4" />} label="Concluídos" value={String(challenges.filter((c) => c.status === "completed").length)} />
       </div>
 
       {/* Personal challenges card */}
