@@ -209,7 +209,7 @@ function StudentHome() {
         </div>
         <div className="flex-1">
           <p className="text-sm font-bold text-white">Indique e ganhe comissão</p>
-          <p className="text-[11px] text-white/55">Escolha um produto, gere o link e envie pro seu amigo 🎁</p>
+          <p className="text-[11px] text-white/55">Escolha um produto, gere o link e envie para um(a) amigo(a) 🎁</p>
         </div>
         <ChevronRight className="h-5 w-5 text-white/40" />
       </button>
