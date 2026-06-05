@@ -82,6 +82,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
   const [tokenStats, setTokenStats] = useState<{ balance: number; earned: number; consumed: number }>({ balance: 0, earned: 0, consumed: 0 });
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [showProNotes, setShowProNotes] = useState<Set<string>>(new Set());
+  const [studentUserId, setStudentUserId] = useState<string | null>(null);
 
 
 
@@ -90,11 +91,12 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       setLoading(true);
       const { data: student } = await supabase
         .from("students")
-        .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state)")
+        .select("profile_id, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state,user_id)")
         .eq("id", studentId)
         .maybeSingle();
-      const stu = (student as unknown as { profile_id: string; profiles: Profile }) || null;
+      const stu = (student as unknown as { profile_id: string; profiles: Profile & { user_id: string | null } }) || null;
       setProfile(stu?.profiles || null);
+      setStudentUserId(stu?.profiles?.user_id || null);
 
 
 
