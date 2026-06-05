@@ -295,6 +295,42 @@ export function WalletTab() {
         )}
       </div>
 
+      {currentPatent && (
+        <button
+          type="button"
+          onClick={() => setModal({
+            kind: "patent",
+            key: currentPatent.key,
+            title: currentPatent.display_name,
+            subtitle: "Patente atual",
+            color: currentPatent.badge_color || "#FF4230",
+          })}
+          className="w-full text-left rounded-2xl p-4 mb-4 transition hover:bg-white/[0.02] relative overflow-hidden"
+          style={{ backgroundColor: "#1A1A1A", border: `1px solid ${(currentPatent.badge_color || "#FF4230")}55` }}
+        >
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ backgroundColor: `${currentPatent.badge_color || "#FF4230"}1A` }} />
+          <div className="relative flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0"
+              style={{
+                backgroundColor: `${currentPatent.badge_color || "#FF4230"}25`,
+                border: `1px solid ${currentPatent.badge_color || "#FF4230"}66`,
+              }}
+            >
+              <Trophy className="h-6 w-6" style={{ color: currentPatent.badge_color || "#FF4230" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: currentPatent.badge_color || "#FF4230" }}>
+                Patente atual
+              </p>
+              <p className="text-base font-bold text-white truncate">{currentPatent.display_name}</p>
+              <p className="text-[10px] text-white/40">Toque para ver quem mais está nesta patente</p>
+            </div>
+          </div>
+        </button>
+      )}
+
+
       {/* Gamification */}
       {split && (
         <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: "#1A1A1A" }}>
