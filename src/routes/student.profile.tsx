@@ -297,21 +297,6 @@ function ProfilePage() {
         </div>
       </div>
 
-      {/* Stats reais */}
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={() => setShowChallengesModal(true)} className="rounded-2xl p-3 text-center transition hover:bg-white/5" style={{ backgroundColor: "#1A1A1A" }}>
-          <div className="mb-0.5 flex items-center justify-center gap-1">
-            <Trophy className="h-3 w-3 text-primary" />
-            <p className="text-base font-bold text-white">{challengesCount}</p>
-          </div>
-          <p className="text-[10px] text-white/40">Desafios participados</p>
-          <p className="mt-0.5 text-[9px] text-primary">Ver histórico →</p>
-        </button>
-        <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: "#1A1A1A" }}>
-          <p className="text-base font-bold text-white">{totalKgLost > 0 ? `-${totalKgLost.toFixed(1)}` : "0"}</p>
-          <p className="text-[10px] text-white/40">kg perdidos no total</p>
-        </div>
-      </div>
 
       {/* Histórico de moedas de desafio */}
       {tokenHistory.length > 0 && (
