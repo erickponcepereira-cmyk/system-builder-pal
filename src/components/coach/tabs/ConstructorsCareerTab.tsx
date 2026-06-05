@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Loader2, Trophy, Check, Lock, Star, TrendingUp, Users, Clock } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getCareerProgress, type PatentRule, type CareerProgress } from "@/lib/coach-career.functions";
+import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -17,6 +19,8 @@ export function ConstructorsCareerTab() {
   const fetchProgress = useServerFn(getCareerProgress);
   const [data, setData] = useState<CareerProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modalPatent, setModalPatent] = useState<PatentRule | null>(null);
+
 
   useEffect(() => {
     let active = true;
@@ -144,16 +148,29 @@ export function ConstructorsCareerTab() {
                   const qualifying = w ? cappedOwn + w.teamRevenue : 0;
                   const achievedAt = achievedAtByKey.get(p.key) ?? null;
                   const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue;
-                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} />;
+                  return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} onClick={() => setModalPatent(p)} />;
                 })}
               </div>
             </div>
           );
         })}
       </div>
+
+      {modalPatent && (
+        <AchievementMembersModal
+          open={!!modalPatent}
+          onClose={() => setModalPatent(null)}
+          kind="patent"
+          achievementKey={modalPatent.key}
+          title={modalPatent.display_name}
+          subtitle={`Patente · Nível ${modalPatent.level}`}
+          accentColor={modalPatent.badge_color || "#FF4230"}
+        />
+      )}
     </>
   );
 }
+
 
 function RevenueRow({ label, current, target, windowMonths, color }: {
   label: string; current: number; target: number; windowMonths: number; color: string;
@@ -185,13 +202,17 @@ function Stat({ icon: Icon, label, value, hint }: { icon: typeof Users; label: s
   );
 }
 
-function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt }: {
-  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number; achievedAt: string | null;
+function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt, onClick }: {
+  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number; achievedAt: string | null; onClick?: () => void;
 }) {
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
   return (
-    <div className={`rounded-xl p-3 ${isCurrent ? "ring-1 ring-primary/40" : ""}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left rounded-xl p-3 transition hover:bg-white/[0.03] ${isCurrent ? "ring-1 ring-primary/40" : ""}`}
       style={{ backgroundColor: isCurrent ? "rgba(255,66,48,0.06)" : "#0F0F0F" }}>
+
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
           style={{ backgroundColor: `${p.badge_color || "#9CA3AF"}25`, border: `1px solid ${p.badge_color || "#9CA3AF"}55` }}>
@@ -234,7 +255,8 @@ function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt }: {
           </div>
         )}
       </div>
-    </div>
+    </button>
+
   );
 }
 

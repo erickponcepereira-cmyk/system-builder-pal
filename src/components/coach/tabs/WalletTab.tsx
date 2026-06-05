@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Wallet, X, Crown, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info } from "lucide-react";
+import { Wallet, X, Crown, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info, Trophy, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions";
+import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
+import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
+import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+
 
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const TIER_COLOR_WALLET: Record<string, string> = {
+  bronze: "#CD7F32", silver: "#C0C0C0", gold: "#FFD700", platinum: "#E5E4E2", crown: "#FFB300", club: "#FF6B35",
+};
+
 type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean };
+
 
 export function WalletTab() {
   const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
   const fetchSplit = useServerFn(getWalletSplit);
+  const fetchCareer = useServerFn(getCareerProgress);
+  const fetchMedals = useServerFn(getIndividualCareer);
+
   const [bank, setBank] = useState<{
     coachId: string | null;
     pix_key: string;
@@ -34,6 +46,12 @@ export function WalletTab() {
   const [split, setSplit] = useState<WalletSplit | null>(null);
   const [tab, setTab] = useState<"direct" | "network">("direct");
   const [showRules, setShowRules] = useState(false);
+  const [career, setCareer] = useState<CareerProgress | null>(null);
+  const [medals, setMedals] = useState<IndividualCareer | null>(null);
+  const [modal, setModal] = useState<
+    | { kind: "patent" | "medal_monthly" | "medal_cumulative"; key: string; title: string; subtitle?: string; color: string }
+    | null
+  >(null);
 
 
   useEffect(() => {
@@ -106,6 +124,9 @@ export function WalletTab() {
     })();
     fetchCrossSales().then((r) => setCross(r)).catch(() => {});
     fetchSplit().then((r) => setSplit(r)).catch((e) => console.error("getWalletSplit failed:", e));
+    fetchCareer().then(setCareer).catch(() => {});
+    fetchMedals().then(setMedals).catch(() => {});
+
   }, []);
 
 
@@ -164,7 +185,23 @@ export function WalletTab() {
 
   const mask = (v: number) => walletVisible ? brl(v) : "R$ ••••";
 
+  const currentPatent = career?.patents.find((p) => p.key === career.currentPatentKey) ?? null;
+
+  // Top monthly medal currently earned this month
+  let topMonthlyMedal: MedalRule | null = null;
+  if (medals) {
+    const earnedKeys = new Set(
+      medals.earned
+        .filter((e) => e.medal_kind === "monthly" && e.period_year === medals.currentMonth.year && e.period_month === medals.currentMonth.month)
+        .map((e) => e.medal_key),
+    );
+    const eligible = medals.monthlyRules.filter((r) => earnedKeys.has(r.key));
+    eligible.sort((a, b) => b.threshold - a.threshold);
+    topMonthlyMedal = eligible[0] ?? null;
+  }
+
   const renderDirect = () => (
+
     <>
       <div className="rounded-2xl p-6 mb-4" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.6))" }}>
         <div className="flex items-center justify-between">
@@ -184,8 +221,50 @@ export function WalletTab() {
           <p className="text-xl font-bold text-white mt-1 font-mono">{mask(split?.direct.pending ?? 0)}</p>
         </div>
       </div>
+
+      {topMonthlyMedal && (
+        <button
+          type="button"
+          onClick={() => setModal({
+            kind: "medal_monthly",
+            key: topMonthlyMedal!.key,
+            title: topMonthlyMedal!.display_name,
+            subtitle: "Sua medalha do mês",
+            color: TIER_COLOR_WALLET[topMonthlyMedal!.tier || ""] || "#CD7F32",
+          })}
+          className="w-full text-left rounded-2xl p-4 mt-3 transition hover:bg-white/[0.02] relative overflow-hidden"
+          style={{
+            backgroundColor: "#1A1A1A",
+            border: `1px solid ${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}55`,
+          }}
+        >
+          <div
+            className="absolute -right-8 -top-8 h-32 w-32 rounded-full"
+            style={{ backgroundColor: `${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}1A` }}
+          />
+          <div className="relative flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0"
+              style={{
+                backgroundColor: `${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}25`,
+                border: `1px solid ${TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32"}66`,
+              }}
+            >
+              <Medal className="h-6 w-6" style={{ color: TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: TIER_COLOR_WALLET[topMonthlyMedal.tier || ""] || "#CD7F32" }}>
+                Medalha conquistada
+              </p>
+              <p className="text-base font-bold text-white truncate">{topMonthlyMedal.display_name}</p>
+              <p className="text-[10px] text-white/40">Toque para ver quem mais está nesta conquista</p>
+            </div>
+          </div>
+        </button>
+      )}
     </>
   );
+
 
   const renderNetwork = () => (
     <>
@@ -215,6 +294,42 @@ export function WalletTab() {
           </p>
         )}
       </div>
+
+      {currentPatent && (
+        <button
+          type="button"
+          onClick={() => setModal({
+            kind: "patent",
+            key: currentPatent.key,
+            title: currentPatent.display_name,
+            subtitle: "Patente atual",
+            color: currentPatent.badge_color || "#FF4230",
+          })}
+          className="w-full text-left rounded-2xl p-4 mb-4 transition hover:bg-white/[0.02] relative overflow-hidden"
+          style={{ backgroundColor: "#1A1A1A", border: `1px solid ${(currentPatent.badge_color || "#FF4230")}55` }}
+        >
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full" style={{ backgroundColor: `${currentPatent.badge_color || "#FF4230"}1A` }} />
+          <div className="relative flex items-center gap-3">
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0"
+              style={{
+                backgroundColor: `${currentPatent.badge_color || "#FF4230"}25`,
+                border: `1px solid ${currentPatent.badge_color || "#FF4230"}66`,
+              }}
+            >
+              <Trophy className="h-6 w-6" style={{ color: currentPatent.badge_color || "#FF4230" }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: currentPatent.badge_color || "#FF4230" }}>
+                Patente atual
+              </p>
+              <p className="text-base font-bold text-white truncate">{currentPatent.display_name}</p>
+              <p className="text-[10px] text-white/40">Toque para ver quem mais está nesta patente</p>
+            </div>
+          </div>
+        </button>
+      )}
+
 
       {/* Gamification */}
       {split && (
@@ -438,8 +553,21 @@ export function WalletTab() {
           </div>
         </div>
       )}
+
+      {modal && (
+        <AchievementMembersModal
+          open={!!modal}
+          onClose={() => setModal(null)}
+          kind={modal.kind}
+          achievementKey={modal.key}
+          title={modal.title}
+          subtitle={modal.subtitle}
+          accentColor={modal.color}
+        />
+      )}
     </>
   );
 }
+
 
 export default WalletTab;
