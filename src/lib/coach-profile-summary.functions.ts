@@ -97,15 +97,15 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
     if (studentIds.length) {
       const { data: wins } = await supabaseAdmin
         .from("challenge_winners")
-        .select("id,student_id,placement,created_at,edition_id,challenge_editions(name)")
+        .select("id,student_id,placement,created_at,edition_id,challenge_editions(edition_name,edition_number)")
         .in("student_id", studentIds);
       const studentNameById = new Map<string, string>();
       ownStudents.forEach((s) => studentNameById.set(s.id, nameByProfile.get(s.profile_id) || "Aluno"));
-      studentsWinners = ((wins || []) as Array<{ id: string; student_id: string; placement: number; created_at: string; challenge_editions: { name: string } | null }>)
+      studentsWinners = (((wins || []) as unknown) as Array<{ id: string; student_id: string; placement: number; created_at: string; challenge_editions: { edition_name: string | null; edition_number: number | null } | null }>)
         .map((w) => ({
           id: w.id,
           title: studentNameById.get(w.student_id) || "Aluno",
-          subtitle: `${w.placement || 0}º · ${w.challenge_editions?.name || "Desafio"}`,
+          subtitle: `${w.placement || 0}º · ${w.challenge_editions?.edition_name || `Edição ${w.challenge_editions?.edition_number ?? ""}`}`.trim(),
           date: w.created_at,
         }))
         .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
