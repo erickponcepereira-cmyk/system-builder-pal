@@ -20,6 +20,7 @@ interface CoachRow {
   total_sales: number | null;
   created_at: string | null;
   card_valid_until: string | null;
+  can_create_fitmind_events: boolean | null;
   profiles: {
     id: string;
     name: string;
