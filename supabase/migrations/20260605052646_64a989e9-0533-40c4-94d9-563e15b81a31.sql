@@ -1,0 +1,4 @@
+CREATE POLICY "career_badges_read_authenticated" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'career-badges');
+CREATE POLICY "career_badges_admin_insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'career-badges' AND public.is_admin(auth.uid()));
+CREATE POLICY "career_badges_admin_update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'career-badges' AND public.is_admin(auth.uid()));
+CREATE POLICY "career_badges_admin_delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'career-badges' AND public.is_admin(auth.uid()));
