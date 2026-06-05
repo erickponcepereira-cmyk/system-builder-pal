@@ -106,7 +106,14 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     { icon: Trophy, label: "Desafios participados", value: 4, detail: "Verão Shape, Setembro Fit, Inverno Pro, Reset 30D" },
     { icon: Award, label: "Alunos vencedores de desafio", value: 12, detail: "Levou 12 alunos até a vitória em desafios oficiais" },
     { icon: UserRound, label: "Alunos trazidos", value: coach?.totalActiveStudents || 24, detail: "Alunos diretos cadastrados na sua rede" },
-    { icon: Activity, label: "Aulões ministrados", value: 7, detail: "Última edição: Aulão FitMind Outubro" },
+    {
+      icon: Activity,
+      label: "Eventos ministrados",
+      value: ministered.count,
+      detail: ministered.lastTitle
+        ? `Última edição: ${ministered.lastTitle}${ministered.lastDate ? " • " + new Date(ministered.lastDate).toLocaleDateString("pt-BR") : ""} · ${ministered.attendeesTotal} presenças totais`
+        : "Você ainda não foi responsável por nenhum evento FitMind.",
+    },
     { icon: BookOpen, label: "Cursos criados", value: 2, detail: "Treino Funcional Iniciante, Mentoria Coach 360" },
     { icon: GraduationCap, label: "Coaches treinados", value: 5, detail: "Diretos da sua rede que evoluíram para coach" },
   ];
