@@ -713,6 +713,8 @@ function QrCodePanel({ partner }: { partner: Partner }) {
 
 interface ScanPreview { student_id: string; student_name: string; student_avatar: string | null; student_email: string | null; student_phone: string | null; student_city: string | null; student_state: string | null; }
 interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
+interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; token: string; }
+
 
 function StudentQrScanner({ partner }: { partner: Partner }) {
   const [scanning, setScanning] = useState(true);
