@@ -124,11 +124,11 @@ export const getAchievementMembers = createServerFn({ method: "POST" })
       ]),
     );
     const { data: profiles } = allProfileIds.length
-      ? await supabaseAdmin.from("profiles").select("id,full_name").in("id", allProfileIds)
-      : { data: [] as { id: string; full_name: string | null }[] };
+      ? await supabaseAdmin.from("profiles").select("id,name").in("id", allProfileIds)
+      : { data: [] as { id: string; name: string | null }[] };
     const nameByProfile = new Map<string, string>();
-    ((profiles as { id: string; full_name: string | null }[] | null) || []).forEach((p) => {
-      nameByProfile.set(p.id, p.full_name || "Sem nome");
+    ((profiles as { id: string; name: string | null }[] | null) || []).forEach((p) => {
+      nameByProfile.set(p.id, p.name || "Sem nome");
     });
 
     const members: AchievementMember[] = coachRows.map((c) => {

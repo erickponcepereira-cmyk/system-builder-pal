@@ -87,8 +87,8 @@ export function AchievementMembersModal({
           )}
           {!loading && members && members.length > 0 && (
             <>
-              <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 px-1">
-                {members.length} {members.length === 1 ? "coach" : "coaches"}
+              <p className="text-[10px] uppercase tracking-wider font-bold mb-2 px-1" style={{ color: accentColor }}>
+                {members.length} {members.length === 1 ? "pessoa neste nível" : "pessoas neste nível"}
               </p>
               <ul className="space-y-1.5">
                 {members.map((m) => (
