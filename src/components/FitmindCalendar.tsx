@@ -287,6 +287,32 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [detail, setDetail] = useState<FitmindEvent | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [canCreate, setCanCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Check if current user can create FitMind events (admin or coach with permission)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data: prof } = await supabase
+        .from("profiles").select("id, is_admin").eq("user_id", auth.user.id).maybeSingle();
+      if (!mounted || !prof) return;
+      if ((prof as { is_admin?: boolean | null }).is_admin) { setCanCreate(true); return; }
+      const { data: coach } = await supabase
+        .from("coaches")
+        .select("can_create_fitmind_events")
+        .eq("profile_id", (prof as { id: string }).id)
+        .maybeSingle();
+      if (mounted && coach && (coach as { can_create_fitmind_events?: boolean | null }).can_create_fitmind_events) {
+        setCanCreate(true);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
 
 
   const [yearStr, monthStr] = currentYM.split("-");
