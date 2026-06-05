@@ -170,6 +170,9 @@ function AdminDashboard() {
         <p className="text-sm text-white/50">Visão geral da plataforma FitMind Club</p>
       </div>
 
+      <div className="mb-6"><WhatsAppGroupCard /></div>
+
+
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         {cards.map((c) => (
