@@ -24,10 +24,11 @@ type PublicProfile = {
   website: string;
   social_links: SocialLink[];
   services: string;
+  specializations: string[];
 };
 
 const EMPTY_PROFILE: PublicProfile = {
-  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "",
+  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [],
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
@@ -49,7 +50,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
       const { data: pubRow } = await supabase
         .from("professional_public_profile" as never)
-        .select("headline,bio_long,instagram,website,social_links,services" as never)
+        .select("headline,bio_long,instagram,website,social_links,services,specializations" as never)
         .eq("profile_id" as never, profileId as never)
         .maybeSingle();
       if (pubRow) {
@@ -61,6 +62,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
           website: r.website || "",
           social_links: Array.isArray(r.social_links) ? r.social_links : [],
           services: r.services || "",
+          specializations: Array.isArray(r.specializations) ? r.specializations : [],
         });
       }
 
@@ -97,6 +99,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
         website: pub.website.slice(0, 300) || null,
         social_links: pub.social_links,
         services: pub.services.slice(0, 2000) || null,
+        specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
       } as never, { onConflict: "profile_id" } as never);
     setSaving(false);
     if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
