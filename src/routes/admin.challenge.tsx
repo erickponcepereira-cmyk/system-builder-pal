@@ -578,7 +578,7 @@ function AdminChallengePage() {
         <button onClick={() => setShowAttempts((v) => !v)} className="flex w-full items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-bold text-foreground">Tentativas de entrada por moeda</h2>
+            <h2 className="text-sm font-bold text-foreground">Tentativas de entrada por ticket</h2>
             <span className="text-xs text-muted-foreground">{showAttempts ? "(clique para ocultar)" : "(clique para abrir)"}</span>
           </div>
           {showAttempts ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
