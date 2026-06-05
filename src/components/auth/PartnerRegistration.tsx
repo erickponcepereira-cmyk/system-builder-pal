@@ -180,6 +180,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             whatsapp,
             city: city || null,
             state: state || null,
+            business_area: businessArea.trim() || null,
+            specialty: specialty.trim() || null,
             upline_coach_id: uplineCoachId,
           } as never)
           .eq("profile_id" as never, profile.id);
