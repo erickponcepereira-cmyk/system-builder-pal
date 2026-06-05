@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +9,8 @@ import {
 } from "lucide-react";
 import { money, type CoachContext } from "@/routes/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
+import { getCoachMinisteredReport } from "@/lib/fitmind-events.functions";
+
 
 
 export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContext | null; onSaved: () => void; onLocalChange: (value: CoachContext | null) => void }) {
