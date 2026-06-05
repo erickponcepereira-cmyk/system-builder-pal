@@ -74,7 +74,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   products: { label: "Produtos", icon: Package },
   store: { label: "Loja", icon: ShoppingBag },
   wallet: { label: "Carteira", icon: Wallet },
-  network: { label: "Rede", icon: Network },
+  overview: { label: "Visão Geral", icon: LayoutDashboard },
   settings: { label: "Configurações", icon: Settings },
   fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
   appointments: { label: "Atendimentos", icon: Calendar },
