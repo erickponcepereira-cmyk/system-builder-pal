@@ -840,7 +840,12 @@ export function ProtocolTab() {
 
           {!loading && section === "templates" && (
             <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-              <WorkoutTemplatesPanel mode="coach" coachId={coachId} />
+              <WorkoutTemplatesPanel
+                mode="coach"
+                coachId={coachId}
+                onEnableForStudent={selected && !selected.external ? enableTemplateAsDay : undefined}
+                enableStudentName={selected?.name || null}
+              />
             </div>
           )}
         </>
