@@ -2,6 +2,36 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/**
+ * Parse a freeform rest string ("60s", "1min", "35 a 45 segundos", "35-45", "1:30")
+ * into { min, max } seconds. Falls back to 60s when unparseable.
+ *
+ * IMPORTANT: previously we did `parseInt(s.replace(/[^\d]/g, ""))` which turned
+ * "35 a 45 segundos" into 3545 → ~59min countdown. This new parser keeps the
+ * tokens separated and infers the time unit.
+ */
+export function parseRestRange(input?: string | null): { min: number; max: number } {
+  if (input == null) return { min: 60, max: 60 };
+  const raw = String(input).trim().toLowerCase();
+  if (!raw) return { min: 60, max: 60 };
+  const mmss = raw.match(/^(\d+)\s*:\s*(\d+)$/);
+  if (mmss) {
+    const v = parseInt(mmss[1], 10) * 60 + parseInt(mmss[2], 10);
+    return { min: v, max: v };
+  }
+  const isMinutes = /\bmin|\bm\b|minuto/.test(raw);
+  const factor = isMinutes && !/seg|\bs\b/.test(raw) ? 60 : 1;
+  const nums = raw.match(/\d+/g)?.map((n) => parseInt(n, 10)).filter((n) => Number.isFinite(n)) || [];
+  if (nums.length === 0) return { min: 60, max: 60 };
+  if (nums.length === 1) {
+    const v = nums[0] * factor;
+    return { min: v, max: v };
+  }
+  const a = nums[0] * factor;
+  const b = nums[1] * factor;
+  return { min: Math.min(a, b), max: Math.max(a, b) };
+}
+
 const exerciseSchema = z.object({
   id: z.string().uuid().optional(),
   order_index: z.number().int().nonnegative(),
@@ -11,6 +41,7 @@ const exerciseSchema = z.object({
   reps: z.string().max(50).nullable().optional(),
   load_kg: z.number().nullable().optional(),
   rest_seconds: z.number().int().min(0).max(3600),
+  rest_seconds_max: z.number().int().min(0).max(3600).nullable().optional(),
   equipment_config: z.string().max(500).nullable().optional(),
   media_url: z.string().max(1000).nullable().optional(),
   notes: z.string().max(1000).nullable().optional(),
