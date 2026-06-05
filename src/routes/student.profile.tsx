@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift } from "lucide-react";
+import { Settings, Users, HelpCircle, LogOut, ChevronRight, Camera, GraduationCap, ClipboardList, Wallet, Clock, CheckCircle2, XCircle, QrCode, Building2, Activity, Coins, Trophy, Briefcase, X, Gift, Heart, Star, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -33,7 +33,9 @@ const sections = [
       { icon: Settings, label: "Editar perfil", to: "/student/profile/edit" },
       { icon: Activity, label: "Minhas avaliações", to: "/student/assessments" },
       { icon: ClipboardList, label: "Meu Protocolo", to: "/student/protocol" },
+      { icon: Heart, label: "Ficha médica", to: "/student/medical-record" },
       { icon: ClipboardList, label: "Preencher anamnese", to: "/student/health" },
+      
       
     ],
   },
@@ -56,7 +58,10 @@ const sections = [
 function ProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [profile, setProfile] = useState({ name: "Aluno FitMind Club", email: "aluno@email.com" });
+  const [profile, setProfile] = useState({ name: "Aluno FitMind Club", email: "aluno@email.com", photo_url: "" as string, blood_type: "" as string });
+  const [isInfluencer, setIsInfluencer] = useState(false);
+  const [isSubcoach, setIsSubcoach] = useState(false);
+  const [bioWeightDiff, setBioWeightDiff] = useState<number | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
@@ -93,14 +98,18 @@ function ProfilePage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      const { data: profileData } = await supabase.from("profiles").select("id,name,email").eq("user_id", userData.user.id).maybeSingle();
-      if (profileData) setProfile({ name: profileData.name, email: profileData.email });
+      const { data: profileData } = await supabase.from("profiles").select("id,name,email,photo_url,blood_type").eq("user_id", userData.user.id).maybeSingle();
+      if (profileData) {
+        const pd = profileData as any;
+        setProfile({ name: pd.name, email: pd.email, photo_url: pd.photo_url || "", blood_type: pd.blood_type || "" });
+      }
       if (!profileData?.id) return;
-      const { data: student } = await supabase.from("students").select("id,referral_link,referral_code").eq("profile_id", profileData.id).maybeSingle();
+      const { data: student } = await supabase.from("students").select("id,referral_link,referral_code,is_influencer" as never).eq("profile_id", profileData.id).maybeSingle();
       if (!student?.id) return;
       setStudentId(student.id);
-      setReferralLink(student.referral_link || `/r/${student.referral_code || "ALUNO2026"}`);
-      setReferralCode(student.referral_code || "ALUNO2026");
+      setIsInfluencer(Boolean((student as any).is_influencer));
+      setReferralLink((student as any).referral_link || `/r/${(student as any).referral_code || "ALUNO2026"}`);
+      setReferralCode((student as any).referral_code || "ALUNO2026");
       const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned").eq("student_id", student.id).maybeSingle();
       setWallet({
         available_balance: Number(walletData?.available_balance || 0),
@@ -162,6 +171,33 @@ function ProfilePage() {
         }));
         setReferralCommissions(mapped);
       } catch (e) { console.warn("referral commissions fetch failed", e); }
+
+      // Tornar subcoach quando há ao menos 1 comissão paga/disponível
+      try {
+        const { count } = await supabase
+          .from("commissions")
+          .select("id", { count: "exact", head: true })
+          .eq("is_referral", true as never)
+          .eq("referred_by_student_id", student.id as never)
+          .in("status", ["paid", "available"] as never);
+        setIsSubcoach((count || 0) > 0);
+      } catch (e) { console.warn("subcoach check failed", e); }
+
+      // Diferença de peso (primeira vs última bioimpedância)
+      try {
+        const { data: assess } = await supabase
+          .from("coach_body_assessments")
+          .select("weight,assessment_date")
+          .eq("student_id", student.id)
+          .not("weight", "is", null)
+          .order("assessment_date", { ascending: true });
+        const list = (assess as { weight: number | null; assessment_date: string }[] | null) || [];
+        if (list.length >= 2) {
+          const first = Number(list[0].weight);
+          const last = Number(list[list.length - 1].weight);
+          if (Number.isFinite(first) && Number.isFinite(last)) setBioWeightDiff(first - last);
+        }
+      } catch (e) { console.warn("bio diff failed", e); }
     })();
   }, []);
 
