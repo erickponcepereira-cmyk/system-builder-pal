@@ -45,7 +45,7 @@ function FreebiesAdmin() {
   const blank = (): Freebie => ({
     id: "", name: "", description: "", image_url: null, kind: "digital",
     stock: null, per_student_limit: 1, valid_from: null, valid_until: null,
-    condition_note: "", is_active: true, sort_order: 0,
+    condition_note: "", is_active: true, sort_order: 0, category: null,
   });
 
   const load = async () => {
