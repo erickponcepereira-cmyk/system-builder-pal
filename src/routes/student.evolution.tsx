@@ -119,10 +119,6 @@ function StudentEvolution() {
 
       {student && <WaterTrackerCard studentId={student.id} />}
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{photos.length}</p><p className="text-[10px] text-muted-foreground">fotos ({MAX_PHOTOS} máx)</p></div>
-        <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{student?.goal_weight ? `${student.goal_weight}kg` : "—"}</p><p className="text-[10px] text-muted-foreground">meta peso</p></div>
-      </div>
 
       <section className="rounded-2xl bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
@@ -340,15 +336,18 @@ function HealthGoalsCard() {
 }
 
 type WaterLog = { id: string; amount_ml: number; created_at: string };
+type WaterDayTotal = { date: string; total_ml: number };
 
 function WaterTrackerCard({ studentId }: { studentId: string }) {
   const [goalMl, setGoalMl] = useState<number>(2500);
   const [logs, setLogs] = useState<WaterLog[]>([]);
+  const [history, setHistory] = useState<WaterDayTotal[]>([]);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState("250");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const totalToday = useMemo(() => logs.reduce((s, l) => s + l.amount_ml, 0), [logs]);
@@ -385,6 +384,10 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
       else if (i > 0) break;
     }
     setStreak(s);
+    const sortedHist: WaterDayTotal[] = Object.entries(totals)
+      .map(([date, total_ml]) => ({ date, total_ml }))
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+    setHistory(sortedHist);
     setLoading(false);
   };
 
@@ -414,10 +417,11 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
   return (
     <section className="rounded-2xl bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <button onClick={() => setHistoryOpen(true)} className="flex items-center gap-2 text-left hover:opacity-80" title="Ver histórico">
           <Droplet className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">Hidratação do dia</h2>
-        </div>
+          <span className="text-[10px] text-primary/70 underline">histórico</span>
+        </button>
         <div className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5">
           <Trophy className="h-3 w-3 text-primary" />
           <span className="text-[10px] font-bold text-primary">{streak} dia{streak === 1 ? "" : "s"} seguidos</span>
@@ -472,6 +476,38 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
                 <X className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100" />
               </button>
             ))}
+          </div>
+        </div>
+      )}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4" onClick={() => setHistoryOpen(false)}>
+          <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-card sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <header className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">Histórico de hidratação</h3>
+                <p className="text-[11px] text-white/50">Últimos 30 dias · meta {(goalMl / 1000).toFixed(1)} L/dia</p>
+              </div>
+              <button onClick={() => setHistoryOpen(false)} className="rounded-full bg-white/10 p-2 text-white/70"><X className="h-4 w-4" /></button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-3">
+              {history.length === 0 ? (
+                <p className="py-6 text-center text-xs text-white/40">Nenhum registro nos últimos 30 dias.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {history.map((d) => {
+                    const reached = d.total_ml >= goalMl;
+                    return (
+                      <li key={d.date} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs">
+                        <span className="text-white/80">{new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}</span>
+                        <span className={`font-bold ${reached ? "text-success" : "text-white/70"}`}>
+                          {(d.total_ml / 1000).toFixed(2)} L {reached ? "✓" : ""}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       )}
