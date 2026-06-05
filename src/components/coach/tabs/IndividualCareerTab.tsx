@@ -84,15 +84,15 @@ export function IndividualCareerTab() {
         </div>
       </div>
 
-      {/* Patente atual + próxima — espelhando Ordem dos Construtores */}
-      {career && (
-        <CurrentPatentPanel
-          career={career}
-          onOpen={(key, title, color) =>
-            setModal({ kind: "patent", key, title, subtitle: "Patente atual", color })
-          }
-        />
-      )}
+      {/* Medalha atual + próxima (acumulado) */}
+      <CurrentMedalPanel
+        rules={data.cumulativeRules}
+        current={vpLifetime}
+        onOpen={(key, title, color) =>
+          setModal({ kind: "medal_cumulative", key, title, subtitle: "Medalha atual", color })
+        }
+      />
+
 
 
       {/* Ordem da Excelência — monthly medals */}
