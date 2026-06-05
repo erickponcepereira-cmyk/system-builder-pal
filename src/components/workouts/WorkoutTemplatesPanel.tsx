@@ -36,7 +36,7 @@ interface Props {
 
 const EMPTY_ITEM = (): WorkoutTemplateItem => ({ name: "", sets: "", reps: "", rest: "", notes: "" });
 
-export function WorkoutTemplatesPanel({ mode, coachId }: Props) {
+export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enableStudentName }: Props) {
   const [list, setList] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
