@@ -195,16 +195,24 @@ function StudentHome() {
         </Link>
       </header>
 
-      {/* Citação do dia */}
-      <div className="rounded-2xl border-l-4 border-primary p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="flex gap-3">
-          <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <div>
-            <p className="text-sm leading-relaxed text-white/80">"{dailyQuote.quote}"</p>
-            <p className="mt-1 text-[11px] text-white/40">— {dailyQuote.author}</p>
-          </div>
+      {/* Grupo WhatsApp */}
+      <WhatsAppGroupCard />
+
+      {/* Indique e ganhe */}
+      <button
+        type="button"
+        onClick={() => setShowReferral(true)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 text-left transition-transform hover:scale-[1.01]"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20">
+          <Gift className="h-6 w-6 text-primary" />
         </div>
-      </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-white">Indique e ganhe comissão</p>
+          <p className="text-[11px] text-white/55">Escolha um produto, gere o link e envie pro seu amigo 🎁</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-white/40" />
+      </button>
 
       {/* Meu Treino */}
       <Link to="/student/workout" className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 transition-transform hover:scale-[1.01]">
