@@ -8795,6 +8795,7 @@ export type Database = {
         Returns: undefined
       }
       partner_checkin: { Args: { _partner_id: string }; Returns: Json }
+      partner_preview_student: { Args: { _student_id: string }; Returns: Json }
       partner_scan_student: { Args: { _student_id: string }; Returns: Json }
       pay_coach_available: {
         Args: { _kind?: string; _notes?: string; _profile_id: string }
