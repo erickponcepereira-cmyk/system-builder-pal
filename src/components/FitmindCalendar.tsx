@@ -6,14 +6,17 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Clock, ExternalLink,
-  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check,
+  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check, QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   TZ, tzDateKey, tzToday, tzCurrentYearMonth, ymdKey,
   tzStartOfMonth, shiftYearMonth, yearMonthLabel,
 } from "@/lib/timezone";
+import { getEventAttendees, type EnrichedAttendee } from "@/lib/fitmind-attendance.functions";
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
