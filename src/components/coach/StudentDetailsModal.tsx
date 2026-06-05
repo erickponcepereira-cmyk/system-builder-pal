@@ -95,7 +95,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
       setLoading(true);
       const { data: student } = await supabase
         .from("students")
-        .select("profile_id, is_influencer, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state,user_id,blood_type)" as never)
+        .select("profile_id, is_influencer, profiles!students_profile_id_fkey(name,email,phone,birthdate,city,state,user_id,blood_type,photo_url,avatar_url)" as never)
         .eq("id", studentId)
         .maybeSingle();
       const stu = (student as unknown as { profile_id: string; is_influencer?: boolean; profiles: Profile & { user_id: string | null; blood_type: string | null } }) || null;
