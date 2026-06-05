@@ -246,15 +246,23 @@ function CurrentMedalPanel({
   rules,
   current,
   onOpen,
+  title = "acumulado",
+  currentLabel = "VP acumulado",
 }: {
   rules: MedalRule[];
   current: number;
   onOpen: (key: string, title: string, color: string) => void;
+  title?: string;
+  currentLabel?: string;
 }) {
   const sorted = [...rules].sort((a, b) => a.threshold - b.threshold);
   const earnedList = sorted.filter((r) => current >= r.threshold);
   const currentMedal = earnedList[earnedList.length - 1] ?? null;
   const nextMedal = sorted.find((r) => r.threshold > current) ?? null;
+  const color = currentMedal ? (TIER_COLOR[currentMedal.tier || ""] || "#CD7F32") : "#9CA3AF";
+  const nextColor = nextMedal ? (TIER_COLOR[nextMedal.tier || ""] || "#CD7F32") : "#FF4230";
+  if (!currentMedal && !nextMedal) return null;
+
   const color = currentMedal ? (TIER_COLOR[currentMedal.tier || ""] || "#CD7F32") : "#9CA3AF";
   const nextColor = nextMedal ? (TIER_COLOR[nextMedal.tier || ""] || "#CD7F32") : "#FF4230";
 
