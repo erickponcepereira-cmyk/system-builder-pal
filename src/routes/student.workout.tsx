@@ -68,31 +68,57 @@ function WorkoutPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastCompletedPlan, setLastCompletedPlan] = useState<Plan | null>(null);
+  const [recentSessions, setRecentSessions] = useState<Array<{ started_at: string; completion_pct: number; plan_id: string }>>([]);
+  const [challenges, setChallenges] = useState<PersonalChallenge[]>([]);
+  const [newChallengeOpen, setNewChallengeOpen] = useState(false);
 
   const listFn = useServerFn(listWorkoutPlans);
+  const histFn = useServerFn(getWorkoutHistory);
+  const listChallengesFn = useServerFn(listPersonalChallenges);
 
   const reload = async () => {
     setLoading(true);
     try {
-      const data = (await listFn({ data: {} })) as Plan[];
+      const [data, hist, ch] = await Promise.all([
+        listFn({ data: {} }) as Promise<Plan[]>,
+        histFn({ data: {} }) as Promise<any>,
+        listChallengesFn() as Promise<{ challenges: PersonalChallenge[] }>,
+      ]);
       data.forEach((p) => p.workout_exercises?.sort((a, b) => a.order_index - b.order_index));
       setPlans(data);
+      const completed = (hist.sessions || []).filter((s: any) => s.ended_at);
+      setRecentSessions(completed.map((s: any) => ({ started_at: s.started_at, completion_pct: s.completion_pct, plan_id: s.plan_id })));
+      const last = completed[0];
+      if (last) {
+        const p = data.find((p) => p.id === last.plan_id) || null;
+        setLastCompletedPlan(p);
+      }
+      setChallenges(ch.challenges || []);
     } catch (e) {
       toast.error("Erro ao carregar treinos");
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    reload();
-  }, []);
+  useEffect(() => { reload(); }, []);
 
   if (view === "active" && activePlan) {
-    return <ActiveSession plan={activePlan} onExit={() => { setActivePlan(null); setView("home"); reload(); }} />;
+    return <ActiveSession plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
   }
+
+  const next = nextLetter(plans, lastCompletedPlan?.letter);
+  // Days a workout was completed (for mini-calendar)
+  const completedDays = new Set(recentSessions.map((s) => new Date(s.started_at).toISOString().slice(0, 10)));
+  // Current streak
+  const streak = (() => {
+    let s = 0; const d = new Date();
+    for (;;) { const k = d.toISOString().slice(0, 10); if (completedDays.has(k)) { s++; d.setDate(d.getDate() - 1); } else break; }
+    return s;
+  })();
 
   return (
     <div className="space-y-4 p-4 pb-8">
@@ -109,6 +135,86 @@ function WorkoutPage() {
         </button>
       </header>
 
+      {/* Próximo treino destaque */}
+      {next && (
+        <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4">
+          <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
+          <div className="mt-2 flex items-center gap-3">
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${letterGradient(next.letter)} text-2xl font-black text-white shadow-lg`}>
+              {next.letter || "·"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-bold text-white">{next.name}</p>
+              <p className="text-[11px] text-white/55">{next.workout_exercises.length} exercícios</p>
+            </div>
+            <button
+              onClick={() => { setActivePlan(next); setView("active"); }}
+              className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-md shadow-primary/30 hover:brightness-110"
+            >
+              <Play className="inline h-4 w-4 -mt-0.5 mr-1" /> Iniciar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2">
+        <Stat icon={<Flame className="h-4 w-4" />} label="Constância" value={`${streak}d`} />
+        <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(recentSessions.length)} />
+        <Stat icon={<Target className="h-4 w-4" />} label="Desafios" value={String(challenges.filter((c) => c.status === "active").length)} />
+      </div>
+
+      {/* Personal challenges card */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            <p className="text-xs font-bold uppercase tracking-wider text-white/70">Meu Desafio Pessoal</p>
+          </div>
+          <button onClick={() => setNewChallengeOpen(true)} className="rounded-full bg-primary/20 px-2.5 py-1 text-[11px] font-bold text-primary">
+            <Plus className="inline h-3 w-3 -mt-0.5" /> Novo
+          </button>
+        </div>
+        {challenges.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-white/10 py-4 text-center text-[11px] text-white/45">
+            Defina quantos dias seguidos você vai treinar — para você mesmo se cobrar.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {challenges.map((c) => {
+              const pct = Math.min(100, Math.round((streak / c.target_days) * 100));
+              const done = c.status === "completed";
+              return (
+                <div key={c.id} className={`rounded-xl border p-3 ${done ? "border-emerald-500/30 bg-emerald-500/5" : "border-white/10 bg-white/[0.04]"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-white">{c.title}</p>
+                      <p className="text-[11px] text-white/55">
+                        {done ? "✅ Concluído!" : `${Math.min(streak, c.target_days)}/${c.target_days} dias seguidos`}
+                      </p>
+                    </div>
+                    <button onClick={async () => { if (confirm(`Excluir desafio "${c.title}"?`)) { await (await import("@/lib/workouts.functions")).deletePersonalChallenge({ data: { id: c.id } } as any); reload(); } }} className="rounded p-1 text-white/40 hover:text-red-400">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className={`h-full transition-all ${done ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-orange-500"}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Mini-calendar */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/60">
+          <CalendarIcon className="h-3.5 w-3.5 text-primary" /> Mês atual
+        </p>
+        <CalendarView sessions={recentSessions} />
+      </div>
+
       {loading ? (
         <p className="py-12 text-center text-sm text-white/50">Carregando...</p>
       ) : plans.length === 0 ? (
@@ -121,29 +227,85 @@ function WorkoutPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {plans.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">{p.name}</p>
-                  <p className="mt-1 text-[11px] text-white/45">
-                    {p.day_of_week !== null ? `Dia: ${DAYS[p.day_of_week]} · ` : ""}
-                    {p.workout_exercises.length} exercícios
-                  </p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/50">Todos os treinos da semana</p>
+          {plans.map((p) => {
+            const isNext = next && p.id === next.id;
+            return (
+              <div key={p.id} className={`rounded-2xl border p-4 ${isNext ? "border-primary/40 bg-primary/[0.06]" : "border-white/10 bg-white/5"}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(p.letter)} text-xl font-black text-white shadow-md`}>
+                    {p.letter || "·"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-white">{p.name}</p>
+                    <p className="mt-0.5 text-[11px] text-white/45">
+                      {p.day_of_week !== null ? `${DAYS[p.day_of_week]} · ` : ""}
+                      {p.workout_exercises.length} exercícios
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setActivePlan(p); setView("active"); }}
+                    className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/15"
+                  >
+                    <Play className="h-3.5 w-3.5" /> Iniciar
+                  </button>
                 </div>
-                <button
-                  onClick={() => { setActivePlan(p); setView("active"); }}
-                  className="flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
-                >
-                  <Play className="h-3.5 w-3.5" /> Iniciar
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       <Link to="/student" className="block text-center text-[11px] text-white/40 underline">Voltar para início</Link>
+
+      {newChallengeOpen && (
+        <NewChallengeModal
+          onClose={() => setNewChallengeOpen(false)}
+          onCreated={() => { setNewChallengeOpen(false); reload(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const createFn = useServerFn(createPersonalChallenge);
+  const [title, setTitle] = useState("");
+  const [days, setDays] = useState(30);
+  const [saving, setSaving] = useState(false);
+  const submit = async () => {
+    if (!title.trim()) return toast.error("Dê um nome para seu desafio");
+    if (days < 1 || days > 365) return toast.error("Entre 1 e 365 dias");
+    setSaving(true);
+    try {
+      await createFn({ data: { title: title.trim(), target_days: days } });
+      toast.success("Desafio criado! Bora?");
+      onCreated();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao criar desafio");
+    }
+    setSaving(false);
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          <h2 className="text-base font-bold text-white">Novo desafio pessoal</h2>
+        </div>
+        <p className="mb-3 text-[11px] text-white/55">Defina seu compromisso de constância e siga em frente. A cada treino concluído você avança.</p>
+        <label className="text-[11px] text-white/60">Nome do desafio</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: 30 dias sem falta" className="mt-1 mb-3 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
+        <label className="text-[11px] text-white/60">Meta de dias seguidos: <span className="font-bold text-primary">{days}</span></label>
+        <input type="range" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="mt-1 w-full accent-primary" />
+        <div className="mt-2 flex justify-between text-[10px] text-white/40">
+          <span>1d</span><span>30d</span><span>90d</span><span>180d</span><span>365d</span>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white">Cancelar</button>
+          <button onClick={submit} disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Criando..." : "Criar desafio"}</button>
+        </div>
+      </div>
     </div>
   );
 }
