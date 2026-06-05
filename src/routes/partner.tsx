@@ -814,8 +814,9 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
   return (
     <div className="space-y-3">
       <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR Code da carteirinha do aluno</p>
-        {scanning && !preview && !result && <QrScannerView onDetected={onDetected} />}
+        <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR da carteirinha do aluno <span className="text-primary">ou de um cupom de desconto</span></p>
+        {scanning && !preview && !couponPreview && !result && <QrScannerView onDetected={onDetected} />}
+
         {processing && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
