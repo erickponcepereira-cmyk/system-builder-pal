@@ -720,6 +720,7 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
   const [scanning, setScanning] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [preview, setPreview] = useState<ScanPreview | null>(null);
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [lastValue, setLastValue] = useState<string>("");
 
@@ -731,12 +732,35 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     return null;
   };
 
+  const extractCouponToken = (raw: string): string | null => {
+    const trimmed = raw.trim().toUpperCase();
+    const m = trimmed.match(/^COUPON:([A-F0-9]{24})$/);
+    return m ? m[1] : null;
+  };
+
   const onDetected = async (value: string) => {
-    if (processing || preview || result || value === lastValue) return;
+    if (processing || preview || couponPreview || result || value === lastValue) return;
     setLastValue(value);
+
+    const couponToken = extractCouponToken(value);
+    if (couponToken) {
+      setProcessing(true);
+      setScanning(false);
+      const { data, error } = await supabase.rpc("partner_preview_coupon" as never, { p_token: couponToken } as never);
+      setProcessing(false);
+      if (error) { setResult({ ok: false, error: error.message }); return; }
+      const rows = data as unknown as Omit<CouponPreview, "token">[];
+      if (!rows || rows.length === 0) {
+        setResult({ ok: false, error: "Cupom não encontrado ou não pertence à sua empresa." });
+        return;
+      }
+      setCouponPreview({ ...rows[0], token: couponToken });
+      return;
+    }
+
     const studentId = extractStudentId(value);
     if (!studentId) {
-      toast.error("QR inválido. Use o QR da carteirinha do aluno.");
+      toast.error("QR inválido. Use o QR da carteirinha do aluno ou de um cupom.");
       setTimeout(() => setLastValue(""), 1500);
       return;
     }
@@ -763,7 +787,20 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     toast.success(`Check-in: ${r.student_name}`);
   };
 
-  const reset = () => { setResult(null); setPreview(null); setLastValue(""); setScanning(true); };
+  const confirmCoupon = async () => {
+    if (!couponPreview) return;
+    setProcessing(true);
+    const { error } = await supabase.rpc("partner_redeem_coupon" as never, { p_token: couponPreview.token } as never);
+    setProcessing(false);
+    const cp = couponPreview;
+    setCouponPreview(null);
+    if (error) { setResult({ ok: false, error: error.message }); return; }
+    setResult({ ok: true, student_name: cp.student_name, student_avatar: cp.student_photo, visited_at: new Date().toISOString() });
+    toast.success(`Cupom validado: ${cp.product_name}`);
+  };
+
+  const reset = () => { setResult(null); setPreview(null); setCouponPreview(null); setLastValue(""); setScanning(true); };
+
 
   if (partner.status !== "approved") {
     return (
