@@ -63,7 +63,7 @@ function AdminPatents() {
       .not("key", "is", null)
       .eq("is_active", true)
       .order("level");
-    setRules(((data as PatentRule[]) || []).map((r) => ({
+    setRules(((data as unknown as PatentRule[]) || []).map((r) => ({
       ...r,
       required_revenue: Number(r.required_revenue) || 0,
       time_window_months: Number(r.time_window_months) || 1,
