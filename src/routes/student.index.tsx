@@ -40,8 +40,10 @@ function StudentHome() {
   const [card, setCard] = useState<CardData | null>(null);
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
   const [tokens, setTokens] = useState(0);
-  const [dailyQuote, setDailyQuote] = useState({ quote: "Seu único competidor é a versão de ontem de você mesmo.", author: "FitMind Club" });
+  const [challengeBlocked, setChallengeBlocked] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [showReferral, setShowReferral] = useState(false);
 
   const greeting = (() => {
     const h = new Date().getHours();
