@@ -50,7 +50,7 @@ function getRange(period: PeriodKey, customFrom: string, customTo: string): { fr
 export function TopSellingProducts({ coachProfileId }: { coachProfileId: string | null }) {
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Map<string, SaleRow>>(new Map());
-  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; category_id: string | null }>>([]);
+  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; category_id: string | null; section_id: string | null }>>([]);
   const [allCategories, setAllCategories] = useState<Array<{ id: string; name: string; section_id: string | null }>>([]);
   const [allSections, setAllSections] = useState<Array<{ id: string; name: string }>>([]);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -67,7 +67,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       const [secsRes, catsRes, prodsRes] = await Promise.all([
         supabase.from("store_sections").select("id,name").order("name"),
         supabase.from("store_categories").select("id,name,section_id").order("name"),
-        supabase.from("products").select("id,name,category_id"),
+        supabase.from("products").select("id,name,category_id,section_id"),
       ]);
       setAllSections((secsRes.data as any[]) || []);
       setAllCategories((catsRes.data as any[]) || []);
@@ -123,47 +123,56 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     const secMap = new Map<string, SectionNode>(
       allSections.map((s) => [s.id, { id: s.id, name: s.name, qty: 0, revenue: 0, rank: 0, categories: [] }])
     );
-    // ensure a virtual "Sem seção" bucket if needed
     const ensureSec = (id: string | null, name: string) => {
       const key = id || "__none__";
       if (!secMap.has(key)) secMap.set(key, { id: key, name, qty: 0, revenue: 0, rank: 0, categories: [] });
       return secMap.get(key)!;
     };
 
-    const catNodes = new Map<string, CategoryNode>();
-    // initialize all categories (even without sales)
+    // Helper to fetch-or-create a category node inside a section bucket
+    const catNodesBySec = new Map<string, Map<string, CategoryNode>>();
+    const ensureCatInSec = (sec: SectionNode, catId: string, catName: string): CategoryNode => {
+      let bucket = catNodesBySec.get(sec.id);
+      if (!bucket) { bucket = new Map(); catNodesBySec.set(sec.id, bucket); }
+      let node = bucket.get(catId);
+      if (!node) {
+        node = { id: catId, name: catName, qty: 0, revenue: 0, rank: 0, products: [] };
+        bucket.set(catId, node);
+        sec.categories.push(node);
+      }
+      return node;
+    };
+
+    // Initialize known categories under their parent sections (empty buckets)
     allCategories.forEach((c) => {
-      catNodes.set(c.id, { id: c.id, name: c.name, qty: 0, revenue: 0, rank: 0, products: [] });
+      const sec = ensureSec(c.section_id, "Sem seção");
+      ensureCatInSec(sec, c.id, c.name);
     });
 
-    // initialize all products under their category
+    // Place each product under its proper section + category (or "Geral" subcategory)
     allProducts.forEach((p) => {
       const sale = sales.get(p.id);
       const node: ProductNode = {
         id: p.id, name: p.name, qty: sale?.qty || 0, revenue: sale?.revenue || 0, rank: 0,
       };
-      const catId = p.category_id;
-      if (catId && catNodes.has(catId)) {
-        catNodes.get(catId)!.products.push(node);
-      } else {
-        // product without category -> bucket
-        const orphanCat = catNodes.get("__none_cat__") || { id: "__none_cat__", name: "Sem subcategoria", qty: 0, revenue: 0, rank: 0, products: [] };
-        orphanCat.products.push(node);
-        catNodes.set("__none_cat__", orphanCat);
-      }
-    });
-
-    // attach categories to sections + sum
-    catNodes.forEach((cat) => {
-      cat.qty = cat.products.reduce((s, p) => s + p.qty, 0);
-      cat.revenue = cat.products.reduce((s, p) => s + p.revenue, 0);
-      const meta = catMap.get(cat.id);
-      const sec = ensureSec(meta?.section_id || null, "Sem seção");
-      sec.categories.push(cat);
+      // Resolve section: prefer product.section_id; fallback to its category's section
+      const catMeta = p.category_id ? catMap.get(p.category_id) : undefined;
+      const sectionId = p.section_id || catMeta?.section_id || null;
+      const sec = ensureSec(sectionId, "Sem seção");
+      // Resolve category: use product.category_id if present, otherwise a "Geral" pseudo-category per section
+      const catId = p.category_id || `__general_${sec.id}`;
+      const catName = catMeta?.name || "Geral";
+      const cat = ensureCatInSec(sec, catId, catName);
+      cat.products.push(node);
     });
 
     const arr = Array.from(secMap.values()).filter((s) => s.categories.length > 0);
     arr.forEach((s) => {
+      s.categories = s.categories.filter((c) => c.products.length > 0);
+      s.categories.forEach((c) => {
+        c.qty = c.products.reduce((sum, p) => sum + p.qty, 0);
+        c.revenue = c.products.reduce((sum, p) => sum + p.revenue, 0);
+      });
       s.qty = s.categories.reduce((acc, c) => acc + c.qty, 0);
       s.revenue = s.categories.reduce((acc, c) => acc + c.revenue, 0);
       s.categories.sort((a, b) => b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name));
@@ -174,7 +183,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       });
     });
     arr.sort((a, b) => b.qty - a.qty || b.revenue - a.revenue || a.name.localeCompare(b.name));
-    return arr.map((s, i) => ({ ...s, rank: i + 1 }));
+    return arr.filter((s) => s.categories.length > 0).map((s, i) => ({ ...s, rank: i + 1 }));
   }, [sales, allProducts, allCategories, allSections, limitMode]);
 
   const totalQty = useMemo(() => tree.reduce((s, n) => s + n.qty, 0), [tree]);
