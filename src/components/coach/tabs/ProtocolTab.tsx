@@ -112,6 +112,9 @@ export function ProtocolTab() {
   const [newExternalOpen, setNewExternalOpen] = useState(false);
   const [newExternal, setNewExternal] = useState({ name: "", email: "", whatsapp: "" });
   const [creatingExternal, setCreatingExternal] = useState(false);
+  const [enabledPlans, setEnabledPlans] = useState<any[]>([]);
+  const [expandedPlanIds, setExpandedPlanIds] = useState<Set<string>>(new Set());
+
 
   const [isNutritionist, setIsNutritionist] = useState(false);
 
