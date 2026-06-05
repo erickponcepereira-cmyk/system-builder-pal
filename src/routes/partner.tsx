@@ -474,6 +474,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   </p>
                 </div>
               )}
+              {editing.kind === "free" && editing.redemption_mode === "discount" && (
+                <Field label="Porcentagem do desconto (%)">
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={editing.discount_percent ?? ""}
+                    onChange={e => setEditing({ ...editing, discount_percent: e.target.value === "" ? null : Math.min(100, Math.max(1, Number(e.target.value))) })}
+                    placeholder="Ex.: 20"
+                    className="field-input"
+                  />
+                  <p className="mt-1 text-[10px] text-white/40">Aparece em destaque para o aluno como "X% OFF".</p>
+                </Field>
+              )}
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
