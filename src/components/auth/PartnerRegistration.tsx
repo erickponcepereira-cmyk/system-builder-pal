@@ -30,6 +30,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   const [whatsapp, setWhatsapp] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [businessArea, setBusinessArea] = useState("");
+  const [specialty, setSpecialty] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
