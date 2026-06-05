@@ -380,6 +380,9 @@ export const getCoachMinisteredReport = createServerFn({ method: "GET" })
       events: rows,
       top_participants: topParticipants,
       top_referring_coaches: topReferringCoaches,
+      can_view_created: canViewCreated,
+      scope,
     };
+
   });
 
