@@ -364,16 +364,20 @@ export const finishWorkoutSession = createServerFn({ method: "POST" })
       .select("id, target_days, status" as never)
       .eq("student_id" as never, userId as never)
       .eq("status" as never, "active" as never);
-    let personalCompletedThisSession = false;
     for (const c of ((challenges as any[]) || [])) {
       if (streak >= c.target_days) {
         await supabase
           .from("personal_challenges" as never)
           .update({ status: "completed", completed_at: new Date().toISOString() } as never)
           .eq("id" as never, c.id as never);
-        personalCompletedThisSession = true;
       }
     }
+    // Total completed challenges (after potential updates above)
+    const { count: completedChallengesCount } = await supabase
+      .from("personal_challenges" as never)
+      .select("id" as never, { count: "exact", head: true })
+      .eq("student_id" as never, userId as never)
+      .eq("status" as never, "completed" as never);
 
     const { data: catalog } = await supabase
       .from("achievement_catalog" as never)
@@ -385,7 +389,7 @@ export const finishWorkoutSession = createServerFn({ method: "POST" })
       let satisfied = false;
       if (a.condition_type === "workouts_count") satisfied = (totalSessions || 0) >= (a.condition_value || 1);
       else if (a.condition_type === "streak_days") satisfied = streak >= (a.condition_value || 1);
-      else if (a.condition_type === "personal_challenge_completed") satisfied = personalCompletedThisSession;
+      else if (a.condition_type === "personal_challenge_completed") satisfied = (completedChallengesCount || 0) >= (a.condition_value || 1);
       if (!satisfied) continue;
       const { data: existing } = await supabase
         .from("workout_achievements")
