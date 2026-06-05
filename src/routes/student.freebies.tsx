@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2, QrCode, ScanLine, ShieldAlert } from "lucide-react";
+import { Gift, Loader2, ArrowLeft, CheckCircle2, Clock, Building2, QrCode, ScanLine, ShieldAlert, Ticket, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -69,6 +69,18 @@ function StudentFreebies() {
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+
+  const generateCoupon = async (p: PartnerFreeProduct) => {
+    setGenerating(p.id);
+    const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent });
+  };
 
   // Carteirinha gate
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -260,9 +272,8 @@ function StudentFreebies() {
                         {list.map((p) => {
                           const isDiscount = p.redemption_mode === "discount";
                           return (
-                            <button
+                            <div
                               key={p.id}
-                              onClick={() => setOpenPartner(p.partner_id)}
                               className="text-left rounded-2xl overflow-hidden border border-white/5 block relative"
                               style={{ backgroundColor: "#1A1A1A" }}
                             >
@@ -271,19 +282,42 @@ function StudentFreebies() {
                                   {p.discount_percent}% OFF
                                 </div>
                               ) : null}
-                              {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                              {p.image_url && (
+                                <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="block w-full">
+                                  <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />
+                                </button>
+                              )}
                               <div className="p-4">
                                 <div className="flex items-start justify-between gap-2">
                                   <h3 className="font-bold text-white">{p.name}</h3>
                                   {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>}
                                 </div>
-                                <p className="mt-1 text-[11px] text-white/40">{p.partners?.fantasy_name}</p>
+                                <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="mt-1 text-[11px] text-white/40 hover:text-white/70 block">
+                                  {p.partners?.fantasy_name}
+                                </button>
                                 {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
                                 {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                                 {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                                <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-sm font-semibold text-primary">Ver empresa</div>
+                                <div className="mt-3 grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenPartner(p.partner_id)}
+                                    className="rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 text-xs font-semibold text-white/80"
+                                  >
+                                    Ver empresa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => generateCoupon(p)}
+                                    disabled={generating === p.id}
+                                    className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                                  >
+                                    {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                                    {isDiscount ? "Gerar cupom" : "Resgatar"}
+                                  </button>
+                                </div>
                               </div>
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -425,6 +459,25 @@ function StudentFreebies() {
           onScan={handleScan}
           title="Ler QR do parceiro"
         />
+      )}
+
+      {coupon && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4" onClick={() => setCoupon(null)}>
+          <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-sm w-full text-center relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setCoupon(null)} className="absolute top-3 right-3 text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
+            <Ticket className="h-8 w-8 text-primary mx-auto" />
+            <h3 className="mt-2 text-lg font-bold text-white">Seu Cupom</h3>
+            <p className="text-sm text-white/70 mt-1">{coupon.productName}</p>
+            {coupon.discountPercent ? (
+              <p className="mt-1 inline-block bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1 rounded">{coupon.discountPercent}% OFF</p>
+            ) : null}
+            <div className="my-4 inline-block bg-white p-3 rounded-xl">
+              <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
+            </div>
+            <p className="text-[10px] text-white/40 break-all font-mono">{coupon.token}</p>
+            <p className="text-[11px] text-white/60 mt-3">Apresente este QR no parceiro para validar. O cupom é único e expira após o uso.</p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, QrCode, ScanLine, ShieldAlert } from "lucide-react";
+import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
@@ -15,6 +15,7 @@ type PartnerFreeProduct = {
   redemption_instructions: string | null;
   stock: number | null;
   redemption_mode: "free" | "discount" | null;
+  discount_percent: number | null;
   partner_id: string;
   partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
 };
@@ -27,7 +28,9 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [filter, setFilter] = useState<"all" | "free" | "discount">("all");
+  const [pageMode, setPageMode] = useState<"free" | "discount">("free");
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
@@ -57,7 +60,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -67,6 +70,16 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
       setLoading(false);
     })();
   }, []);
+
+  const generateCoupon = async (p: PartnerFreeProduct) => {
+    setGenerating(p.id);
+    const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent });
+  };
 
   const handleScan = (decoded: string) => {
     setShowScanner(false);
@@ -129,61 +142,90 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             </button>
           </div>
 
+          {/* Page mode selector: Gratuitos | Clube de Descontos */}
+          {(() => {
+            const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length;
+            const discCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
+            return (
+              <div className="mb-5 grid grid-cols-2 gap-2 p-1.5 rounded-full bg-[#141414] border border-white/10">
+                <button
+                  onClick={() => setPageMode("free")}
+                  className={`rounded-full py-2.5 text-sm font-bold transition ${pageMode === "free" ? "bg-primary text-primary-foreground shadow-lg" : "text-white/70 hover:text-white"}`}
+                >
+                  Gratuitos{freeCount > 0 ? ` (${freeCount})` : ""}
+                </button>
+                <button
+                  onClick={() => setPageMode("discount")}
+                  className={`rounded-full py-2.5 text-sm font-bold transition ${pageMode === "discount" ? "bg-primary text-primary-foreground shadow-lg" : "text-white/70 hover:text-white"}`}
+                >
+                  Clube de Descontos{discCount > 0 ? ` (${discCount})` : ""}
+                </button>
+              </div>
+            );
+          })()}
+
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
             {(() => {
-              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length;
-              const discCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
-              const list = partnerFreebies.filter((p) => {
-                if (filter === "all") return true;
-                if (filter === "discount") return p.redemption_mode === "discount";
-                return (p.redemption_mode ?? "free") === "free";
-              });
+              const list = partnerFreebies.filter((p) =>
+                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+              );
+              if (list.length === 0) {
+                return <p className="text-sm text-white/50">
+                  {pageMode === "discount" ? "Nenhum cupom de desconto disponível no momento." : "Nenhum benefício gratuito disponível no momento."}
+                </p>;
+              }
               return (
-                <>
-                  <div className="mb-4 flex gap-1.5 flex-wrap">
-                    {([
-                      { k: "all", label: `Todos (${partnerFreebies.length})` },
-                      { k: "free", label: `Gratuitos (${freeCount})` },
-                      { k: "discount", label: `Descontos (${discCount})` },
-                    ] as const).map((f) => (
-                      <button
-                        key={f.k}
-                        onClick={() => setFilter(f.k)}
-                        className={`text-[11px] px-3 py-1 rounded-full border ${filter === f.k ? "bg-primary text-primary-foreground border-primary" : "border-white/10 text-white/60"}`}
-                      >{f.label}</button>
-                    ))}
-                  </div>
-                  {list.length === 0 ? (
-                    <p className="text-sm text-white/50">Nenhum benefício disponível no momento.</p>
-                  ) : (
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {list.map((p) => {
-                        const isDiscount = p.redemption_mode === "discount";
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() => setOpenPartner(p.partner_id)}
-                            className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40"
-                            style={{ backgroundColor: "#0F0F0F" }}
-                          >
-                            {p.image_url && <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />}
-                            <div className="p-4">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-sm font-bold text-white">{p.name}</h3>
-                                <span className={`text-[10px] px-2 py-0.5 rounded uppercase ${isDiscount ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300"}`}>{isDiscount ? "Desconto" : "Grátis"}</span>
-                              </div>
-                              <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
-                              {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
-                              {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                              {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                              <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-xs font-semibold text-primary">Ver empresa</div>
-                            </div>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {list.map((p) => {
+                    const isDiscount = p.redemption_mode === "discount";
+                    return (
+                      <div
+                        key={p.id}
+                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative"
+                        style={{ backgroundColor: "#0F0F0F" }}
+                      >
+                        {isDiscount && p.discount_percent ? (
+                          <div className="absolute top-2 right-2 z-10 bg-primary text-primary-foreground text-xs font-extrabold px-2.5 py-1 rounded-lg shadow-lg">
+                            {p.discount_percent}% OFF
+                          </div>
+                        ) : null}
+                        {p.image_url && (
+                          <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="block w-full">
+                            <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />
                           </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
+                        )}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-sm font-bold text-white">{p.name}</h3>
+                            {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded uppercase bg-green-500/20 text-green-300">Grátis</span>}
+                          </div>
+                          <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
+                          {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
+                          {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                          {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setOpenPartner(p.partner_id)}
+                              className="rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 text-xs font-semibold text-white/80"
+                            >
+                              Ver empresa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => generateCoupon(p)}
+                              disabled={generating === p.id}
+                              className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                            >
+                              {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                              {isDiscount ? "Gerar cupom" : "Resgatar"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               );
             })()}
           </div>
@@ -222,6 +264,25 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
           onScan={handleScan}
           title="Ler QR do parceiro"
         />
+      )}
+
+      {coupon && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4" onClick={() => setCoupon(null)}>
+          <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-sm w-full text-center relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setCoupon(null)} className="absolute top-3 right-3 text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
+            <Ticket className="h-8 w-8 text-primary mx-auto" />
+            <h3 className="mt-2 text-lg font-bold text-white">Seu Cupom</h3>
+            <p className="text-sm text-white/70 mt-1">{coupon.productName}</p>
+            {coupon.discountPercent ? (
+              <p className="mt-1 inline-block bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1 rounded">{coupon.discountPercent}% OFF</p>
+            ) : null}
+            <div className="my-4 inline-block bg-white p-3 rounded-xl">
+              <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
+            </div>
+            <p className="text-[10px] text-white/40 break-all font-mono">{coupon.token}</p>
+            <p className="text-[11px] text-white/60 mt-3">Apresente este QR no parceiro para validar. O cupom é único e expira após o uso.</p>
+          </div>
+        </div>
       )}
     </>
   );
