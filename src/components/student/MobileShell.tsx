@@ -13,7 +13,7 @@ const navItems = [
   { to: "/student", label: "Home", icon: Home },
   { to: "/student/challenge", label: "Desafio", icon: Trophy },
   { to: "/student/calendar", label: "Agenda", icon: CalendarDays },
-  { to: "/student/evolution", label: "Evolução", icon: Camera },
+  { to: "/student/evolution", label: "Evolução", icon: TrendingUp },
   { to: "/student/store", label: "Loja", icon: ShoppingBag },
   { to: "/student/freebies", label: "Grátis", icon: Gift },
   { to: "/student/profile", label: "Perfil", icon: User },
