@@ -354,19 +354,25 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
         <div className="h-full bg-gradient-to-r from-primary to-orange-500 transition-all" style={{ width: `${completionPct}%` }} />
       </div>
 
-      {/* Rest timer banner */}
-      {restRemaining !== null && (
+      {/* Rest count-up timer banner — white < min, yellow in target, red over max */}
+      {restElapsed !== null && (
         <div
-          className={`sticky top-0 z-10 flex items-center justify-between rounded-2xl p-3 ${
-            restExceeded ? "animate-pulse bg-red-500/30 border border-red-500" : "bg-primary/15 border border-primary/30"
+          className={`sticky top-0 z-10 flex items-center justify-between rounded-2xl border p-3 ${
+            restZone === "over"
+              ? "animate-pulse border-red-500 bg-red-500/25"
+              : restZone === "target"
+                ? "border-yellow-400/50 bg-yellow-400/15"
+                : "border-white/20 bg-white/10"
           }`}
         >
           <div className="flex items-center gap-2">
-            <Clock className={`h-5 w-5 ${restExceeded ? "text-red-400" : "text-primary"}`} />
+            <Clock className={`h-5 w-5 ${restZone === "over" ? "text-red-400" : restZone === "target" ? "text-yellow-300" : "text-white"}`} />
             <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-white/60">Descanso</p>
-              <p className={`font-mono text-lg font-bold tabular-nums ${restExceeded ? "text-red-300" : "text-white"}`}>
-                {fmt(restRemaining)}
+              <p className="text-[10px] uppercase font-bold tracking-wider text-white/60">
+                Descanso {restExerciseName ? `· ${restExerciseName}` : ""} ({restRange.min === restRange.max ? `${restRange.min}s` : `${restRange.min}–${restRange.max}s`})
+              </p>
+              <p className={`font-mono text-lg font-bold tabular-nums ${restZone === "over" ? "text-red-300" : restZone === "target" ? "text-yellow-200" : "text-white"}`}>
+                {fmt(restElapsed)}
               </p>
             </div>
           </div>
@@ -384,8 +390,11 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
           load={loads[ex.id] ?? ex.load_kg ?? 0}
           reps={reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0)}
           cardio={cardio[ex.id]}
+          equipment={equipment[ex.id] ?? ""}
+          lastLog={lastLogs[ex.id]}
           onChangeLoad={(v) => setLoads((m) => ({ ...m, [ex.id]: v }))}
           onChangeReps={(v) => setReps((m) => ({ ...m, [ex.id]: v }))}
+          onChangeEquipment={(v) => saveEquipment(ex, v)}
           onChangeCardio={(patch) =>
             setCardio((m) => {
               const prev = m[ex.id] ?? { duration: "", pace: "", speed: "", elevation: "", distance: "", done: false };
