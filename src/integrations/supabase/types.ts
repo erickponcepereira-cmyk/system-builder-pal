@@ -2109,6 +2109,7 @@ export type Database = {
           bank_name: string | null
           blocked_at: string | null
           blocked_reason: string | null
+          can_create_fitmind_events: boolean
           card_valid_until: string | null
           career_goal_progress: Json | null
           coach_course_notes: string | null
@@ -2164,6 +2165,7 @@ export type Database = {
           bank_name?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          can_create_fitmind_events?: boolean
           card_valid_until?: string | null
           career_goal_progress?: Json | null
           coach_course_notes?: string | null
@@ -2219,6 +2221,7 @@ export type Database = {
           bank_name?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          can_create_fitmind_events?: boolean
           card_valid_until?: string | null
           career_goal_progress?: Json | null
           coach_course_notes?: string | null
@@ -8496,6 +8499,10 @@ export type Database = {
       block_inactive_coach: {
         Args: { _coach_id: string; _reason?: string }
         Returns: undefined
+      }
+      can_create_fitmind_events: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       cancel_nutritionist_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
