@@ -49,7 +49,7 @@ export const getEventAttendees = createServerFn({ method: "GET" })
       supabaseAdmin.from("coaches").select("profile_id,is_professional").in("profile_id", profileIds),
       supabaseAdmin
         .from("students")
-        .select("profile_id,coaches:coach_id(profiles:profile_id(name))")
+        .select("profile_id,coaches:coach_id(profiles!coaches_profile_id_fkey(name))")
         .in("profile_id", profileIds),
       supabaseAdmin.from("partners").select("profile_id").in("profile_id", profileIds).then(
         (r) => r,
