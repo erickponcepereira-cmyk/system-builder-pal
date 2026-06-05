@@ -211,6 +211,9 @@ export function StudentReferralModal({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white">{selected.title}</p>
                   <p className="text-[11px] text-white/40">{money(selected.price)}</p>
+                  <p className="mt-1 text-[11px] font-bold text-primary">
+                    Você ganha {money(selected.commission)} por venda
+                  </p>
                 </div>
               </div>
             </div>
