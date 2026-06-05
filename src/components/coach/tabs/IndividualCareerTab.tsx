@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
-import { resolveBadgeUrl } from "@/lib/badge-url";
+import { BadgeImage } from "@/components/coach/BadgeImage";
 
 
 const fmtBRL = (n: number) =>
