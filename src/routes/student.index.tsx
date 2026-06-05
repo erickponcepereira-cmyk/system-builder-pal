@@ -58,7 +58,7 @@ function StudentHome() {
       if (!userData.user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id,name,email,avatar_url")
+        .select("id,name,email,avatar_url,photo_url")
         .eq("user_id", userData.user.id)
         .maybeSingle();
       if (!profile) return;
@@ -104,7 +104,7 @@ function StudentHome() {
         email: profile.email,
         plan: (activeSub as unknown as { products?: { name?: string } })?.products?.name ?? "FitMind Club",
         coachName,
-        avatarUrl: profile.avatar_url,
+        avatarUrl: (profile as unknown as { photo_url?: string | null }).photo_url || profile.avatar_url,
         validUntil: (student as unknown as { card_valid_until?: string | null })?.card_valid_until ?? null,
       });
 
