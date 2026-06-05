@@ -1075,3 +1075,230 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
     </div>
   );
 }
+
+// ─── Create Event Modal (admin + coach creator) ─────────────────────────────
+
+type RoleKey = "coaches" | "alunos" | "parceiros" | "profissionais" | "todos";
+
+function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [category, setCategory] = useState<EventCategory>("aula");
+  const [color, setColor] = useState("#E24B4A");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("19:00");
+  const [endTime, setEndTime] = useState("20:00");
+  const [allDay, setAllDay] = useState(false);
+  const [isHighlighted, setIsHighlighted] = useState(false);
+  const [isImportant, setIsImportant] = useState(false);
+  const [roles, setRoles] = useState<RoleKey[]>(["todos"]);
+  const [responsibleCoachId, setResponsibleCoachId] = useState<string>("");
+  const [coaches, setCoaches] = useState<{ id: string; name: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("coaches")
+      .select("id, profiles!coaches_profile_id_fkey(name)")
+      .not("approved_at", "is", null)
+      .is("blocked_at", null)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const list = ((data as unknown as Array<{ id: string; profiles: { name: string } | null }>) || [])
+          .map((c) => ({ id: c.id, name: c.profiles?.name || "Coach" }));
+        setCoaches(list);
+      });
+  }, []);
+
+  const toggleRole = (r: RoleKey) => {
+    setRoles((prev) => {
+      if (r === "todos") return prev.includes("todos") ? [] : ["todos"];
+      const without = prev.filter((x) => x !== "todos" && x !== r);
+      return prev.includes(r) ? without : [...without, r];
+    });
+  };
+
+  const handleSave = async () => {
+    if (!title.trim()) { toast.error("Informe um título"); return; }
+    if (!date) { toast.error("Informe a data"); return; }
+    if (roles.length === 0) { toast.error("Selecione ao menos uma visibilidade"); return; }
+
+    const startsAt = allDay
+      ? new Date(`${date}T00:00:00-04:00`).toISOString()
+      : new Date(`${date}T${startTime}:00-04:00`).toISOString();
+    const endsAt = allDay
+      ? new Date(`${date}T23:59:00-04:00`).toISOString()
+      : new Date(`${date}T${endTime}:00-04:00`).toISOString();
+
+    setSaving(true);
+    const { data: auth } = await supabase.auth.getUser();
+    const { data: prof } = await supabase
+      .from("profiles").select("id").eq("user_id", auth.user!.id).maybeSingle();
+
+    const { error } = await supabase.from("fitmind_events" as never).insert({
+      title: title.trim(),
+      subtitle: subtitle.trim() || null,
+      description: description.trim() || null,
+      location: location.trim() || null,
+      category,
+      color,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      all_day: allDay,
+      is_highlighted: isHighlighted,
+      is_important: isImportant,
+      visibility_roles: roles,
+      responsible_coach_id: responsibleCoachId || null,
+      created_by: (prof as { id: string } | null)?.id || null,
+      is_active: true,
+    } as never);
+    setSaving(false);
+    if (error) { toast.error(error.message || "Erro ao criar evento"); return; }
+    toast.success("Evento criado!");
+    onCreated();
+  };
+
+  const ROLE_OPTIONS: { key: RoleKey; label: string }[] = [
+    { key: "todos", label: "Todos" },
+    { key: "coaches", label: "Coaches" },
+    { key: "alunos", label: "Alunos" },
+    { key: "parceiros", label: "Parceiros" },
+    { key: "profissionais", label: "Profissionais" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
+      <div className="w-full max-w-lg rounded-2xl my-8" style={{ backgroundColor: "#111" }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <CalendarPlus className="h-4 w-4 text-primary" /> Criar evento FitMind
+          </h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/60">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Título *</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Subtítulo</label>
+            <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)}
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Descrição</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Local</label>
+            <input value={location} onChange={(e) => setLocation(e.target.value)}
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Categoria</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value as EventCategory)}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary">
+                {Object.entries(CATEGORY_META).map(([k, v]) => (
+                  <option key={k} value={k}>{v.emoji} {v.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Cor</label>
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)}
+                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 cursor-pointer" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Data *</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Início</label>
+              <input type="time" value={startTime} disabled={allDay} onChange={(e) => setStartTime(e.target.value)}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary disabled:opacity-40" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Fim</label>
+              <input type="time" value={endTime} disabled={allDay} onChange={(e) => setEndTime(e.target.value)}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary disabled:opacity-40" />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            Dia inteiro
+          </label>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 mb-2 uppercase">Quem pode ver</label>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_OPTIONS.map((r) => {
+                const active = roles.includes(r.key);
+                return (
+                  <button
+                    key={r.key}
+                    type="button"
+                    onClick={() => toggleRole(r.key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition border ${
+                      active
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
+                    }`}>
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 mb-1 uppercase">Coach responsável</label>
+            <select value={responsibleCoachId} onChange={(e) => setResponsibleCoachId(e.target.value)}
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary">
+              <option value="">Nenhum</option>
+              {coaches.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+              <input type="checkbox" checked={isHighlighted} onChange={(e) => setIsHighlighted(e.target.checked)} />
+              <Star className="h-3.5 w-3.5 text-yellow-400" /> Destaque
+            </label>
+            <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+              <input type="checkbox" checked={isImportant} onChange={(e) => setIsImportant(e.target.checked)} />
+              <Zap className="h-3.5 w-3.5 text-red-400" /> Importante
+            </label>
+          </div>
+        </div>
+
+        <div className="flex gap-2 px-5 py-4 border-t border-white/5">
+          <button onClick={onClose} disabled={saving}
+            className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/5 disabled:opacity-50">
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50">
+            {saving ? "Criando..." : "Criar evento"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
