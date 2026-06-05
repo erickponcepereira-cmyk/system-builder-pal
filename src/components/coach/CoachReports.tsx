@@ -798,7 +798,7 @@ function MinisteredEventsDashboard() {
         {data?.can_view_created && (
           <button onClick={() => setScope("created")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${scope === "created" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
-            Criados por mim
+            Todos os eventos
           </button>
         )}
       </div>
