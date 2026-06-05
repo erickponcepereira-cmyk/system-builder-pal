@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import { X, Cake, ExternalLink, Loader2, ShoppingBag, Activity, ClipboardList, TrendingUp, Crown, CalendarCheck, Coins, ChevronDown, ChevronUp, Eye, EyeOff, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -8,8 +8,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { getStudentAttendanceDetail, type StudentCheckin, type StudentPurchase } from "@/lib/coach-attendance.functions";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
+import StudentWorkoutsPanel from "@/components/coach/StudentWorkoutsPanel";
 
-type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas";
+type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas" | "treinos";
 
 interface Props {
   studentId: string;
