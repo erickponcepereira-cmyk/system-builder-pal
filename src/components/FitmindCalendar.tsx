@@ -300,6 +300,18 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
   const [canCreate, setCanCreate] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [myRegisteredIds, setMyRegisteredIds] = useState<Set<string>>(new Set());
+  const fetchMyRegisteredIds = useServerFn(getMyRegisteredEventIds);
+
+  // Load my registered event IDs for the filter
+  useEffect(() => {
+    let mounted = true;
+    fetchMyRegisteredIds().then((res) => {
+      if (mounted) setMyRegisteredIds(new Set(res.eventIds));
+    }).catch(() => {});
+    return () => { mounted = false; };
+  }, [fetchMyRegisteredIds, reloadKey]);
 
   // Check if current user can create FitMind events (admin or coach with permission)
   useEffect(() => {
