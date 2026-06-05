@@ -84,14 +84,28 @@ export function IndividualCareerTab() {
         </div>
       </div>
 
-      {/* Medalha atual + próxima (acumulado) */}
+      {/* Medalha atual + próxima (mensal — Ordem da Excelência) */}
       <CurrentMedalPanel
+        title="mensal"
+        currentLabel="VP do mês"
+        rules={data.monthlyRules}
+        current={vpThisMonth}
+        onOpen={(key, title, color) =>
+          setModal({ kind: "medal_monthly", key, title, subtitle: "Ordem da Excelência (mês atual)", color })
+        }
+      />
+
+      {/* Medalha atual + próxima (acumulado — Clube dos Campeões) */}
+      <CurrentMedalPanel
+        title="acumulado"
+        currentLabel="VP acumulado"
         rules={data.cumulativeRules}
         current={vpLifetime}
         onOpen={(key, title, color) =>
-          setModal({ kind: "medal_cumulative", key, title, subtitle: "Medalha atual", color })
+          setModal({ kind: "medal_cumulative", key, title, subtitle: "Clube dos Campeões", color })
         }
       />
+
 
 
 
