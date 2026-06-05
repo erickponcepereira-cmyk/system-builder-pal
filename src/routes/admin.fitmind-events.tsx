@@ -244,6 +244,9 @@ function EventsTab() {
 
     setSaving(true);
     try {
+      const roles = (editing.visibility_roles && editing.visibility_roles.length > 0)
+        ? editing.visibility_roles
+        : ["todos"] as EventVisibility[];
       const payload = {
         title: editing.title.trim(),
         subtitle: editing.subtitle?.trim() || null,
@@ -252,7 +255,9 @@ function EventsTab() {
         image_url: editing.image_url?.trim() || null,
         color: editing.color || "#E24B4A",
         category: editing.category || "aula",
-        visibility: editing.visibility || "todos",
+        visibility: (roles.includes("todos") ? "todos" : roles[0]) as EventVisibility,
+        visibility_roles: roles,
+        responsible_coach_id: editing.responsible_coach_id || null,
         tags: (editing.tags || []).filter(Boolean),
         starts_at: tzLocalToISO(editing.starts_at),
         ends_at: tzLocalToISO(editing.ends_at),
@@ -267,6 +272,7 @@ function EventsTab() {
         google_calendar_location: editing.google_calendar_location?.trim() || null,
         is_active: editing.is_active !== false,
       };
+
 
       if (editing.id) {
         const { error } = await supabase.from("fitmind_events" as never).update(payload as never).eq("id" as never, editing.id as never);
