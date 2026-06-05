@@ -383,3 +383,142 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
       .order("earned_at", { ascending: false });
     return { sessions: sessions || [], logs: logs || [], achievements: achievements || [] };
   });
+
+/**
+ * Activate a workout_template directly for a given student, creating a
+ * gamified workout_plan + workout_exercises so the coach can enable multiple
+ * days (A, B, C, D, E) side by side without overwriting the protocol.
+ */
+export const enableTemplateForStudent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      student_record_id: z.string().uuid(),
+      template_id: z.string().uuid(),
+      letter: z.string().max(2).nullable().optional(),
+      day_of_week: z.number().int().min(0).max(6).nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: stu, error: stuErr } = await supabase
+      .from("students")
+      .select("profile_id, profiles!students_profile_id_fkey(user_id)")
+      .eq("id", data.student_record_id)
+      .maybeSingle();
+    if (stuErr) throw new Error(stuErr.message);
+    const studentUserId = (stu as any)?.profiles?.user_id as string | null;
+    if (!studentUserId) throw new Error("Aluno sem usuário vinculado");
+
+    const { data: tpl, error: tplErr } = await supabase
+      .from("workout_templates" as never)
+      .select("name, items" as never)
+      .eq("id" as never, data.template_id as never)
+      .maybeSingle();
+    if (tplErr) throw new Error(tplErr.message);
+    if (!tpl) throw new Error("Template não encontrado");
+
+    const tplName = (tpl as any).name as string;
+    const items = ((tpl as any).items || []) as Array<{ name: string; sets?: string; reps?: string; rest?: string; notes?: string }>;
+    const planName = data.letter ? `Treino ${data.letter} — ${tplName}` : tplName;
+
+    const { data: created, error } = await supabase
+      .from("workout_plans")
+      .insert({
+        student_id: studentUserId,
+        coach_id: userId,
+        name: planName,
+        day_of_week: data.day_of_week ?? null,
+        notes: `Importado do template "${tplName}"`,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    const planId = created.id;
+
+    const parseIntSafe = (s?: string | null) => {
+      if (!s) return null;
+      const m = String(s).match(/\d+/);
+      return m ? parseInt(m[0], 10) : null;
+    };
+    const rows = items.filter((it) => it.name?.trim()).map((it, i) => {
+      const rest = parseRestRange(it.rest);
+      return {
+        plan_id: planId,
+        order_index: i,
+        exercise_name: it.name,
+        sets: parseIntSafe(it.sets) ?? 3,
+        reps: it.reps ?? null,
+        load_kg: null,
+        rest_seconds: rest.min,
+        rest_seconds_max: rest.max,
+        equipment_config: null,
+        media_url: null,
+        notes: it.notes ?? null,
+        is_cardio: false,
+        cardio_duration_min: null,
+        cardio_pace: null,
+        cardio_speed: null,
+        cardio_elevation: null,
+      };
+    });
+    if (rows.length > 0) {
+      const { error: exErr } = await supabase.from("workout_exercises").insert(rows as never);
+      if (exErr) throw new Error(exErr.message);
+    }
+    return { ok: true, plan_id: planId, plan_name: planName };
+  });
+
+/**
+ * Persist the student's equipment configuration (e.g. "Pino 4, banco 2")
+ * on a specific exercise of their plan, so it pre-fills on next sessions.
+ */
+export const updateExerciseUserConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      exercise_id: z.string().uuid(),
+      equipment_config_user: z.string().max(500).nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("workout_exercises")
+      .update({ equipment_config_user: data.equipment_config_user } as never)
+      .eq("id", data.exercise_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Returns the most recent log per exercise for the current user, so the UI
+ * can hint "última vez: 20kg · pino 4" before they start a new set.
+ */
+export const getLastExerciseLogs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ exercise_ids: z.array(z.string().uuid()).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.exercise_ids.length === 0) return { last: {} as Record<string, { load_kg: number | null; equipment_config: string | null; completed_at: string }> };
+    const { data: logs } = await supabase
+      .from("workout_session_logs")
+      .select("exercise_id, load_kg, equipment_config, completed_at, workout_sessions!inner(student_id)" as never)
+      .in("exercise_id", data.exercise_ids)
+      .eq("workout_sessions.student_id" as never, userId as never)
+      .order("completed_at", { ascending: false })
+      .limit(500);
+    const last: Record<string, { load_kg: number | null; equipment_config: string | null; completed_at: string }> = {};
+    ((logs as any[]) || []).forEach((l) => {
+      if (!last[l.exercise_id]) {
+        last[l.exercise_id] = {
+          load_kg: l.load_kg,
+          equipment_config: l.equipment_config,
+          completed_at: l.completed_at,
+        };
+      }
+    });
+    return { last };
+  });
