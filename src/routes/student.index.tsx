@@ -165,9 +165,24 @@ function StudentHome() {
     return { total, elapsed, remaining, pct };
   })();
 
+  // Alertas: bioimpedância pendente + 3 dias antes da pesagem final
+  const initialDone = !!challenge && ["weighed_initial", "scheduled_final", "weighed_final"].includes(challenge.status);
+  const daysUntilInitialDeadline = challenge
+    ? Math.ceil((new Date(challenge.initialEnd + "T12:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+  const showInitialDeadlineAlert =
+    !challengeBlocked && !!challenge && !initialDone && daysUntilInitialDeadline !== null && daysUntilInitialDeadline >= 0;
+  const daysUntilFinalHome = challenge?.finalWeighIn
+    ? Math.ceil((new Date(challenge.finalWeighIn + "T12:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+  const showFinalAlert =
+    !challengeBlocked && !!challenge && challenge.status !== "weighed_final" &&
+    daysUntilFinalHome !== null && daysUntilFinalHome <= 3 && daysUntilFinalHome >= 0;
+
   const validUntilDate = card?.validUntil ? new Date(card.validUntil) : null;
   const cardActive = !!(validUntilDate && validUntilDate.getTime() > Date.now());
   const checkinUrl = card ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}` : "";
+
 
   return (
     <div className="flex flex-col gap-5 p-4 pb-6">
