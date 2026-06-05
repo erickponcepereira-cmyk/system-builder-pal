@@ -366,8 +366,9 @@ function EventsTab() {
         <div className="space-y-2">
           {filtered.map((ev) => {
             const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
-            const vis = VISIBILITY_META[ev.visibility] || VISIBILITY_META.todos;
-            const VisIcon = vis.icon;
+            const roles = (ev.visibility_roles && ev.visibility_roles.length > 0) ? ev.visibility_roles : [ev.visibility || "todos"];
+            const respCoach = coachOptions.find((c) => c.id === ev.responsible_coach_id);
+
             const dtStart = new Date(ev.starts_at);
             const dtEnd   = new Date(ev.ends_at);
             return (
