@@ -255,7 +255,8 @@ function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt, onClick }: 
           </div>
         )}
       </div>
-    </div>
+    </button>
+
   );
 }
 
