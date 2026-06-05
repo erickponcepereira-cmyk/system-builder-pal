@@ -447,6 +447,36 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
     }
   };
 
+  const completeExercise = async (ex: Plan["workout_exercises"][number]) => {
+    if (!sessionId) return;
+    const already = completedSets[ex.id] || 0;
+    if (already >= ex.sets) return;
+    const load = loads[ex.id] ?? ex.load_kg ?? 0;
+    const repsDone = reps[ex.id] ?? (parseInt(ex.reps || "0", 10) || 0);
+    const eqConfig = equipment[ex.id] || null;
+    try {
+      for (let n = already + 1; n <= ex.sets; n++) {
+        await logSetFn({
+          data: {
+            session_id: sessionId,
+            exercise_id: ex.id,
+            set_number: n,
+            reps_done: repsDone,
+            load_kg: load,
+            rest_seconds_actual: null,
+            rest_exceeded: false,
+            equipment_config: eqConfig,
+          },
+        });
+      }
+      setCompletedSets((c) => ({ ...c, [ex.id]: ex.sets }));
+      setRestElapsed(null);
+      toast.success(`${ex.exercise_name} concluído!`);
+    } catch {
+      toast.error("Erro ao concluir exercício");
+    }
+  };
+
   const saveEquipment = async (ex: Plan["workout_exercises"][number], value: string) => {
     setEquipment((m) => ({ ...m, [ex.id]: value }));
     try { await saveConfigFn({ data: { exercise_id: ex.id, equipment_config_user: value || null } }); } catch { /* ignore */ }
