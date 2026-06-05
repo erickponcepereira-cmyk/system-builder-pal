@@ -7395,6 +7395,9 @@ export type Database = {
           health_goals_updated_at: string | null
           height: number | null
           id: string
+          influencer_promoted_at: string | null
+          influencer_promoted_by: string | null
+          is_influencer: boolean
           metabolic_age: number | null
           muscle_mass: number | null
           notes: string | null
@@ -7430,6 +7433,9 @@ export type Database = {
           health_goals_updated_at?: string | null
           height?: number | null
           id?: string
+          influencer_promoted_at?: string | null
+          influencer_promoted_by?: string | null
+          is_influencer?: boolean
           metabolic_age?: number | null
           muscle_mass?: number | null
           notes?: string | null
@@ -7465,6 +7471,9 @@ export type Database = {
           health_goals_updated_at?: string | null
           height?: number | null
           id?: string
+          influencer_promoted_at?: string | null
+          influencer_promoted_by?: string | null
+          is_influencer?: boolean
           metabolic_age?: number | null
           muscle_mass?: number | null
           notes?: string | null
