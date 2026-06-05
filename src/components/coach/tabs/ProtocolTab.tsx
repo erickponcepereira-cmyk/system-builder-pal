@@ -426,7 +426,9 @@ export function ProtocolTab() {
           console.warn("sync workout failed", e?.message);
         }
       }
+      reloadEnabledPlans(selected);
     }
+
 
     setSaving(false);
     if (error) { console.error(error); toast.error("Erro ao salvar protocolo"); return; }
