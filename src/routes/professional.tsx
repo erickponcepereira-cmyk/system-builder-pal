@@ -15,7 +15,7 @@ import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
-import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
+
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
@@ -129,7 +129,7 @@ function ProfessionalPanel() {
       };
 
       setInfo(proInfo);
-      if (spec?.default_tabs?.length) setTab(spec.default_tabs[0]);
+      setTab("overview");
       setLoading(false);
 
       // Load assignments
@@ -164,9 +164,9 @@ function ProfessionalPanel() {
     );
   }
 
-  const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate", "network"];
-  const ensureTabs = ["students", "diet", "anamnese", "evaluate", "network", "products", "store", "appointments", "settings", "fitmind_calendar"];
-  const tabs = Array.from(new Set([...baseTabs, ...ensureTabs])).filter((t) => t !== "collaborators");
+  const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
+  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "settings", "fitmind_calendar"];
+  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs])).filter((t) => t !== "collaborators" && t !== "network" && t !== "overview")];
 
 
   return (
@@ -223,38 +223,19 @@ function ProfessionalPanel() {
 }
 
 function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; assignments: AssignmentRow[] }) {
+  if (tab === "overview") return <OverviewTab coachId={info.coachId} profileId={info.profileId} coachName={info.name} />;
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
   if (tab === "wallet") return <WalletTab />;
   if (tab === "store") return <StorePage coachMode />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
-  
+
   if (tab === "appointments") return <AppointmentsTab coachId={info.coachId} />;
 
   if (["students", "clients"].includes(tab)) return <ProfessionalStudentsTab coachId={info.coachId} />;
   if (tab === "diet") return <ProtocolTab />;
   if (tab === "anamnese") return <AnamneseTab coachId={info.coachId} />;
   if (tab === "evaluate") return <EvaluateTab />;
-  if (tab === "network") {
-    const coachCtx: CoachContext = {
-      profileId: info.profileId,
-      coachId: info.coachId,
-      name: info.name,
-      email: "",
-      phone: "",
-      city: "",
-      state: "",
-      bio: "",
-      avatarUrl: info.avatarUrl,
-      patent: null,
-      referralCode: "",
-      referralLink: "",
-      uplineCoachId: null,
-      totalActiveStudents: 0,
-      totalSales: 0,
-    };
-    return <NetworkTreeTab coach={coachCtx} />;
-  }
 
   // Fallback: also show assignments for any other specialty tab
   return <AssignmentsList info={info} assignments={assignments} />;
