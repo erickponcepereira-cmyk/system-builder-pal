@@ -2,12 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+export type StudentGroup = "aluno" | "aluno_coach" | "aluno_profissional" | "aluno_parceiro";
+
 export type SaleRow = {
   id: string;
   source: "transaction" | "store";
   student_id: string;
   student_name: string;
   student_email: string;
+  student_group: StudentGroup;
   product_id: string | null;
   product_name: string;
   quantity: number;
@@ -20,10 +23,11 @@ export type SalesReport = {
   totals: { revenue: number; orders: number; itemsSold: number; uniqueCustomers: number };
   byMonth: { month: string; revenue: number; orders: number }[];
   byProduct: { product_id: string | null; name: string; quantity: number; revenue: number }[];
-  byCustomer: { student_id: string; name: string; email: string; orders: number; revenue: number }[];
+  byCustomer: { student_id: string; name: string; email: string; group: StudentGroup; orders: number; revenue: number }[];
   rows: SaleRow[];
   compare?: SalesReport;
 };
+
 
 export type ChallengeRankingRow = {
   student_id: string;
