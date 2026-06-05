@@ -432,8 +432,11 @@ function ExerciseCard({
   load,
   reps,
   cardio,
+  equipment,
+  lastLog,
   onChangeLoad,
   onChangeReps,
+  onChangeEquipment,
   onChangeCardio,
   onCompleteSet,
   onCompleteCardio,
@@ -443,13 +446,19 @@ function ExerciseCard({
   load: number;
   reps: number;
   cardio?: { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean };
+  equipment: string;
+  lastLog?: LastLog;
   onChangeLoad: (v: number) => void;
   onChangeReps: (v: number) => void;
+  onChangeEquipment: (v: string) => void;
   onChangeCardio: (p: Partial<{ duration: string; pace: string; speed: string; elevation: string; distance: string }>) => void;
   onCompleteSet: () => void;
   onCompleteCardio: () => void;
 }) {
   const isComplete = ex.is_cardio ? cardio?.done : done >= ex.sets;
+  const restLabel = ex.rest_seconds_max && ex.rest_seconds_max !== ex.rest_seconds
+    ? `${ex.rest_seconds}–${ex.rest_seconds_max}s`
+    : `${ex.rest_seconds}s`;
   return (
     <div className={`rounded-2xl border p-3 ${isComplete ? "border-primary/30 bg-primary/5" : "border-white/10 bg-white/5"}`}>
       <div className="flex items-start gap-3">
@@ -469,14 +478,29 @@ function ExerciseCard({
             </p>
           ) : (
             <p className="text-[11px] text-white/45">
-              {ex.sets} séries · {ex.reps || "—"} reps · {ex.rest_seconds}s descanso
+              {ex.sets} séries · {ex.reps || "—"} reps · {restLabel} descanso
             </p>
           )}
-          {ex.equipment_config && <p className="mt-0.5 text-[10px] text-white/40">⚙ {ex.equipment_config}</p>}
+          {ex.equipment_config && <p className="mt-0.5 text-[10px] text-white/40">⚙ Sugerido: {ex.equipment_config}</p>}
+          {lastLog && (lastLog.load_kg != null || lastLog.equipment_config) && (
+            <p className="mt-0.5 text-[10px] text-primary/80">
+              📌 Última vez: {lastLog.load_kg != null ? `${lastLog.load_kg}kg` : "—"}
+              {lastLog.equipment_config ? ` · ${lastLog.equipment_config}` : ""}
+            </p>
+          )}
           {ex.notes && <p className="mt-0.5 text-[10px] italic text-white/40">{ex.notes}</p>}
         </div>
         {isComplete && <Check className="h-5 w-5 shrink-0 text-primary" />}
       </div>
+
+      {!ex.is_cardio && (
+        <input
+          value={equipment}
+          onChange={(e) => onChangeEquipment(e.target.value)}
+          placeholder="Configuração do aparelho (ex: Pino 4 · Banco 2)"
+          className="mt-2 w-full rounded-lg bg-white/5 px-2 py-1.5 text-xs text-white outline-none placeholder:text-white/30"
+        />
+      )}
 
       {!ex.is_cardio && (
         <>
