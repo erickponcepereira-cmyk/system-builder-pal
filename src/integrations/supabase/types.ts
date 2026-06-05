@@ -6337,6 +6337,7 @@ export type Database = {
           profile_id: string
           services: string | null
           social_links: Json
+          specializations: string[]
           updated_at: string
           website: string | null
         }
@@ -6348,6 +6349,7 @@ export type Database = {
           profile_id: string
           services?: string | null
           social_links?: Json
+          specializations?: string[]
           updated_at?: string
           website?: string | null
         }
@@ -6359,6 +6361,7 @@ export type Database = {
           profile_id?: string
           services?: string | null
           social_links?: Json
+          specializations?: string[]
           updated_at?: string
           website?: string | null
         }
