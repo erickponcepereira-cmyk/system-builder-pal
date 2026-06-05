@@ -164,6 +164,20 @@ function AdminCoaches() {
     saveCard(base.toISOString());
   };
 
+  const toggleEventCreator = async (c: CoachRow) => {
+    const next = !c.can_create_fitmind_events;
+    setActing(`creator-${c.id}`);
+    const { error } = await supabase
+      .from("coaches")
+      .update({ can_create_fitmind_events: next } as never)
+      .eq("id", c.id);
+    setActing(null);
+    if (error) { toast.error(error.message || "Erro ao atualizar"); return; }
+    toast.success(next ? "Coach pode criar eventos FitMind" : "Permissão removida");
+    load();
+  };
+
+
   const transferTargets = useMemo(() => {
     if (!transferring) return [];
     const q = transferSearch.trim().toLowerCase();
