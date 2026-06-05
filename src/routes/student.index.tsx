@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift } from "lucide-react";
+import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift, AlertCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -165,9 +165,24 @@ function StudentHome() {
     return { total, elapsed, remaining, pct };
   })();
 
+  // Alertas: bioimpedância pendente + 3 dias antes da pesagem final
+  const initialDone = !!challenge && ["weighed_initial", "scheduled_final", "weighed_final"].includes(challenge.status);
+  const daysUntilInitialDeadline = challenge
+    ? Math.ceil((new Date(challenge.initialEnd + "T12:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+  const showInitialDeadlineAlert =
+    !challengeBlocked && !!challenge && !initialDone && daysUntilInitialDeadline !== null && daysUntilInitialDeadline >= 0;
+  const daysUntilFinalHome = challenge?.finalWeighIn
+    ? Math.ceil((new Date(challenge.finalWeighIn + "T12:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+  const showFinalAlert =
+    !challengeBlocked && !!challenge && challenge.status !== "weighed_final" &&
+    daysUntilFinalHome !== null && daysUntilFinalHome <= 3 && daysUntilFinalHome >= 0;
+
   const validUntilDate = card?.validUntil ? new Date(card.validUntil) : null;
   const cardActive = !!(validUntilDate && validUntilDate.getTime() > Date.now());
   const checkinUrl = card ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${card.studentId}` : "";
+
 
   return (
     <div className="flex flex-col gap-5 p-4 pb-6">
@@ -197,6 +212,27 @@ function StudentHome() {
 
       {/* Grupo WhatsApp */}
       <WhatsAppGroupCard />
+
+      {/* Alerta: bioimpedância pendente */}
+      {showInitialDeadlineAlert && (
+        <Link to="/student/challenge" className="flex items-start gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-3">
+          <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-semibold text-amber-300 leading-relaxed">
+            ⚠️ Faltam {daysUntilInitialDeadline} dia{daysUntilInitialDeadline !== 1 ? "s" : ""} para o prazo final da sua avaliação (bioimpedância). Caso não realize no prazo indicado não poderá participar do desafio e seu ticket não será reembolsado!
+          </p>
+        </Link>
+      )}
+
+      {/* Alerta: 3 dias para pesagem final */}
+      {showFinalAlert && (
+        <Link to="/student/challenge" className="flex items-start gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 px-3 py-3">
+          <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs font-semibold text-red-300 leading-relaxed">
+            ⚠️ Faltam {daysUntilFinalHome} dia{daysUntilFinalHome !== 1 ? "s" : ""} para a sua pesagem final do desafio. Não perca o prazo, caso contrário você não poderá concluir o desafio e seu ticket não será reembolsado!
+          </p>
+        </Link>
+      )}
+
 
       {/* Indique e ganhe */}
       <button
@@ -323,7 +359,7 @@ function StudentHome() {
                   <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
                 </div>
                 <div className="rounded-lg bg-primary/10 px-2.5 py-2">
-                  <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Moedas</p>
+                  <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Tickets</p>
                   <p className="font-bold text-primary">{tokens}</p>
                 </div>
               </div>
@@ -333,10 +369,11 @@ function StudentHome() {
               <p>Você ainda não está inscrito no desafio.</p>
               {tokens > 0 && (
                 <p className="mt-1 text-primary font-semibold flex items-center gap-1">
-                  <Coins className="h-3 w-3" /> {tokens} moeda{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
+                  <Coins className="h-3 w-3" /> {tokens} ticket{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
                 </p>
               )}
             </div>
+
           )}
         </Link>
       )}

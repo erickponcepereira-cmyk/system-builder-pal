@@ -229,7 +229,7 @@ function ProfilePage() {
             </span>
             {challengeTokens > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-                🪙 {challengeTokens} moeda{challengeTokens > 1 ? "s" : ""} de desafio
+                🎟️ {challengeTokens} ticket{challengeTokens > 1 ? "s" : ""} de desafio
               </span>
             )}
           </div>
@@ -258,7 +258,7 @@ function ProfilePage() {
           <button onClick={() => setShowTokenHistory((v) => !v)} className="flex w-full items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-primary" />
-              <p className="text-sm font-bold text-white">Moedas de desafio</p>
+              <p className="text-sm font-bold text-white">Tickets de desafio</p>
               <span className="text-[10px] text-white/40">({tokenHistory.length} total · {tokenHistory.filter((t) => !t.consumedAt).length} disponíveis)</span>
             </div>
             <ChevronRight className={`h-4 w-4 text-white/40 transition ${showTokenHistory ? "rotate-90" : ""}`} />

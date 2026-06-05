@@ -301,7 +301,7 @@ function StudentChallengePage() {
           <Lock className="h-12 w-12 text-amber-400 mx-auto" />
           <h1 className="text-xl font-bold text-foreground">Desafio indisponível para {reasonLabel}s</h1>
           <p className="text-sm text-muted-foreground">
-            O Desafio FitMind é exclusivo para alunos. Como você está cadastrado(a) também como <strong>{reasonLabel}</strong>, não pode participar nem ganhar moedas de desafio por compras.
+            O Desafio FitMind é exclusivo para alunos. Como você está cadastrado(a) também como <strong>{reasonLabel}</strong>, não pode participar nem ganhar tickets de desafio por compras.
           </p>
           <p className="text-xs text-muted-foreground">
             Caso entenda que isso é um erro, fale com o administrador.
@@ -310,6 +310,15 @@ function StudentChallengePage() {
       </div>
     );
   }
+
+  // Bioimpedância (pesagem inicial) pendente?
+  const initialDone = !!enrollment && ["weighed_initial", "scheduled_final", "weighed_final"].includes(enrollment.status);
+  const daysUntilInitialDeadline = enrollment?.group?.initial_end_date
+    ? Math.ceil((new Date(enrollment.group.initial_end_date + "T12:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+  const showInitialDeadlineAlert =
+    !!enrollment && !initialDone && daysUntilInitialDeadline !== null && daysUntilInitialDeadline >= 0;
+
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-24 space-y-4">
@@ -327,15 +336,15 @@ function StudentChallengePage() {
       {/* ── TAB: Meu Desafio ── */}
       {activeTab === "challenge" && (
         <>
-          {/* Painel de moedas de desafio */}
+          {/* Painel de tickets de desafio */}
           {tokens && (tokens.balance > 0 || tokens.totalEarned > 0) && (
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Coins className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm font-bold text-foreground">Moedas de Desafio</p>
-                    <p className="text-[11px] text-muted-foreground">Cada moeda dá direito a 1 entrada em 1 desafio.</p>
+                    <p className="text-sm font-bold text-foreground">Tickets de Desafio</p>
+                    <p className="text-[11px] text-muted-foreground">Cada ticket dá direito a 1 entrada em 1 desafio.</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -359,11 +368,22 @@ function StudentChallengePage() {
               )}
               {tokens.balance > 0 && tokens.joinableTurmas.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Nenhuma turma com janela de pesagem inicial aberta no momento, ou você já está inscrito nas turmas vigentes. Sua moeda fica reservada para a próxima.
+                  Nenhuma turma com janela de pesagem inicial aberta no momento, ou você já está inscrito nas turmas vigentes. Seu ticket fica reservado para a próxima.
                 </p>
               )}
             </div>
           )}
+
+          {/* Alerta: bioimpedância pendente */}
+          {showInitialDeadlineAlert && (
+            <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 border border-amber-500/40 px-3 py-3">
+              <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs font-semibold text-amber-300 leading-relaxed">
+                ⚠️ Faltam {daysUntilInitialDeadline} dia{daysUntilInitialDeadline !== 1 ? "s" : ""} para o prazo final da sua avaliação (bioimpedância). Caso não realize no prazo indicado não poderá participar do desafio e seu ticket não será reembolsado!
+              </p>
+            </div>
+          )}
+
 
           {!hasAccess && !(tokens && tokens.balance > 0) ? (
             /* Sem acesso */
@@ -383,7 +403,7 @@ function StudentChallengePage() {
               <p className="font-bold text-foreground">Você tem acesso ao Desafio!</p>
               <p className="text-sm text-muted-foreground">
                 {tokens && tokens.balance > 0
-                  ? "Use uma moeda acima para entrar agora na turma em pesagem inicial."
+                  ? "Use um ticket acima para entrar agora na turma em pesagem inicial."
                   : "Sua inscrição será feita automaticamente na próxima competição ativa, ou peça ao seu coach para te inscrever manualmente."}
               </p>
             </div>
@@ -661,7 +681,7 @@ function StudentChallengePage() {
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Ao confirmar, 1 moeda de desafio será consumida do seu saldo.
+              Ao confirmar, 1 ticket de desafio será consumido do seu saldo.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmTurma(null)} disabled={joining}
