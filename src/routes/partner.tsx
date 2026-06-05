@@ -16,6 +16,7 @@ import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
@@ -198,6 +199,44 @@ function PartnerPanel() {
 function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number }) {
   const approved = products.filter(p => p.status === "approved" && p.is_active_by_partner).length;
   const [showVisits, setShowVisits] = useState(false);
+  const [uplineCoach, setUplineCoach] = useState<{ name: string; phone: string | null } | null>(null);
+  const referralLink = partner.referral_code ? `${window.location.origin}/r/${partner.referral_code}` : "";
+
+  useEffect(() => {
+    (async () => {
+      // Procura o coach que indicou esta empresa (via upline_coach_id em partners)
+      const { data: pr } = await supabase
+        .from("partners" as never)
+        .select("upline_coach_id" as never)
+        .eq("id" as never, partner.id as never)
+        .maybeSingle();
+      const uplineId = (pr as unknown as { upline_coach_id: string | null } | null)?.upline_coach_id;
+      if (!uplineId) return;
+      const { data: c } = await supabase
+        .from("coaches")
+        .select("profiles!coaches_profile_id_fkey(name, phone)")
+        .eq("id", uplineId)
+        .maybeSingle();
+      const prof = (c as unknown as { profiles: { name: string; phone: string | null } | null } | null)?.profiles;
+      if (prof) setUplineCoach({ name: prof.name, phone: prof.phone });
+    })();
+  }, [partner.id]);
+
+  const copyReferral = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink);
+    toast.success("Link copiado!");
+  };
+  const shareReferral = async () => {
+    if (!referralLink) return;
+    const text = `Conheça o FitMind Club — cadastre-se pelo meu link:`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "FitMind Club", text, url: referralLink }); } catch { /* ignore */ }
+    } else { copyReferral(); }
+  };
+
+  const coachWhatsMsg = uplineCoach ? `Oi ${uplineCoach.name.split(" ")[0]}, eu quero além de parceiro ser coach FitMind e vender mais!` : "";
+
   return (
     <div className="space-y-3">
       <WhatsAppGroupCard />
@@ -213,6 +252,39 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         <Stat label="Produtos ativos" value={approved} />
         <Stat label="Pendentes" value={pendingCount} />
       </div>
+
+      {referralLink && (
+        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Share2 className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold text-white">Seu link de indicação</h3>
+          </div>
+          <p className="text-[11px] text-white/50 mb-2">Compartilhe este link para indicar novos usuários ao FitMind Club. Ele leva para a página de cadastro, onde a pessoa escolhe o tipo de conta (aluno, coach, parceiro).</p>
+          <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{referralLink}</div>
+          <div className="mt-2 flex gap-2">
+            <button onClick={copyReferral} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20"><Copy className="h-3.5 w-3.5" /> Copiar</button>
+            <button onClick={shareReferral} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90"><Share2 className="h-3.5 w-3.5" /> Compartilhar</button>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl p-4 border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-bold text-white">Venha fazer parte da nossa equipe de coachs!</h3>
+        </div>
+        <p className="text-xs text-white/70 leading-relaxed">
+          Você já tem acesso <b>gratuito</b> ao curso de coach. Converse com seu coach e venha fazer parte da nossa equipe — aumente seus resultados vendendo também planos e produtos FitMind!
+        </p>
+        {uplineCoach?.phone ? (
+          <div className="mt-3">
+            <WhatsAppButton phone={uplineCoach.phone} message={coachWhatsMsg} label={`Falar com ${uplineCoach.name.split(" ")[0]}`} size="md" />
+          </div>
+        ) : (
+          <p className="mt-2 text-[10px] text-white/40">Seu coach indicador ainda não tem WhatsApp cadastrado.</p>
+        )}
+      </div>
+
       <div className="rounded-xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
         <p className="text-xs text-white/40 mb-2">Bem-vindo(a), {partner.fantasy_name}</p>
         <p className="text-sm text-white/70">Use as abas para gerenciar produtos, timeline, QR code de presença e seu perfil público.</p>
@@ -398,7 +470,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
               />
 
-              <Field label="Instruções de resgate"><textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Apresente o QR Code da carteirinha na loja" /></Field>
+              
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
@@ -639,17 +711,18 @@ function QrCodePanel({ partner }: { partner: Partner }) {
   );
 }
 
+interface ScanPreview { student_id: string; student_name: string; student_avatar: string | null; student_email: string | null; student_phone: string | null; student_city: string | null; student_state: string | null; }
 interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
 
 function StudentQrScanner({ partner }: { partner: Partner }) {
   const [scanning, setScanning] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [preview, setPreview] = useState<ScanPreview | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [lastValue, setLastValue] = useState<string>("");
 
   const extractStudentId = (raw: string): string | null => {
     const trimmed = raw.trim();
-    // Accept full URL like .../checkin/<uuid> or bare UUID
     const m = trimmed.match(/checkin\/([0-9a-f-]{36})/i);
     if (m) return m[1];
     if (/^[0-9a-f-]{36}$/i.test(trimmed)) return trimmed;
@@ -657,7 +730,7 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
   };
 
   const onDetected = async (value: string) => {
-    if (processing || value === lastValue) return;
+    if (processing || preview || result || value === lastValue) return;
     setLastValue(value);
     const studentId = extractStudentId(value);
     if (!studentId) {
@@ -667,18 +740,28 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     }
     setProcessing(true);
     setScanning(false);
-    const { data, error } = await supabase.rpc("partner_scan_student" as never, { _student_id: studentId } as never);
+    const { data, error } = await supabase.rpc("partner_preview_student" as never, { _student_id: studentId } as never);
+    setProcessing(false);
     if (error) {
       setResult({ ok: false, error: error.message });
-    } else {
-      const r = data as unknown as ScanResult;
-      setResult({ ...r, ok: true });
-      toast.success(`Check-in: ${r.student_name}`);
+      return;
     }
-    setProcessing(false);
+    setPreview(data as unknown as ScanPreview);
   };
 
-  const reset = () => { setResult(null); setLastValue(""); setScanning(true); };
+  const confirmVisit = async () => {
+    if (!preview) return;
+    setProcessing(true);
+    const { data, error } = await supabase.rpc("partner_scan_student" as never, { _student_id: preview.student_id } as never);
+    setProcessing(false);
+    setPreview(null);
+    if (error) { setResult({ ok: false, error: error.message }); return; }
+    const r = data as unknown as ScanResult;
+    setResult({ ...r, ok: true });
+    toast.success(`Check-in: ${r.student_name}`);
+  };
+
+  const reset = () => { setResult(null); setPreview(null); setLastValue(""); setScanning(true); };
 
   if (partner.status !== "approved") {
     return (
@@ -693,10 +776,36 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     <div className="space-y-3">
       <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
         <p className="text-xs text-white/60 text-center mb-2">Aponte a câmera para o QR Code da carteirinha do aluno</p>
-        {scanning && !result && <QrScannerView onDetected={onDetected} />}
+        {scanning && !preview && !result && <QrScannerView onDetected={onDetected} />}
         {processing && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+        {preview && !processing && (
+          <div className="text-center py-4">
+            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-bold mb-2">Confirme o aluno</p>
+            {preview.student_avatar ? (
+              <img src={preview.student_avatar} className="mx-auto h-28 w-28 rounded-full object-cover border-4 border-primary/30" alt={preview.student_name} />
+            ) : (
+              <div className="mx-auto h-28 w-28 rounded-full bg-primary/15 flex items-center justify-center text-3xl font-bold text-primary">
+                {preview.student_name.charAt(0)}
+              </div>
+            )}
+            <p className="mt-3 text-xl font-bold text-white">{preview.student_name}</p>
+            {preview.student_email && <p className="text-xs text-white/50">{preview.student_email}</p>}
+            {(preview.student_city || preview.student_state) && (
+              <p className="text-[11px] text-white/40">{[preview.student_city, preview.student_state].filter(Boolean).join(" / ")}</p>
+            )}
+            <p className="mt-3 text-xs text-white/60">É esta pessoa? Confirme para registrar a visita.</p>
+            <div className="mt-4 flex gap-2 max-w-xs mx-auto">
+              <button onClick={reset} className="flex-1 rounded bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/20">
+                <X className="inline h-4 w-4 mr-1" /> Cancelar
+              </button>
+              <button onClick={confirmVisit} className="flex-1 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90">
+                <Check className="inline h-4 w-4 mr-1" /> Confirmar
+              </button>
+            </div>
           </div>
         )}
         {result?.ok && (
@@ -725,6 +834,7 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
     </div>
   );
 }
+
 
 function QrScannerView({ onDetected }: { onDetected: (v: string) => void }) {
   // Lazy import to avoid SSR issues
