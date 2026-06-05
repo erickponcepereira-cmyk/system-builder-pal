@@ -19,6 +19,9 @@ type HistoryItem = { id: string; who: string; type: string; value: number; creat
 export function WalletTab() {
   const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
   const fetchSplit = useServerFn(getWalletSplit);
+  const fetchCareer = useServerFn(getCareerProgress);
+  const fetchMedals = useServerFn(getIndividualCareer);
+
   const [bank, setBank] = useState<{
     coachId: string | null;
     pix_key: string;
