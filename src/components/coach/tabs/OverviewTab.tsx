@@ -103,6 +103,9 @@ export function OverviewTab({
       </div>
       {coachId && <CoachAlertsCard coachId={coachId} />}
 
+      <div className="mb-4"><WhatsAppGroupCard /></div>
+
+
       {/* Stats */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mb-6">
         {stats.map((s) => {
