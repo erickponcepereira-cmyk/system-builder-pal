@@ -479,6 +479,38 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
           </div>
         </div>
       )}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 sm:items-center sm:p-4" onClick={() => setHistoryOpen(false)}>
+          <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-card sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <header className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">Histórico de hidratação</h3>
+                <p className="text-[11px] text-white/50">Últimos 30 dias · meta {(goalMl / 1000).toFixed(1)} L/dia</p>
+              </div>
+              <button onClick={() => setHistoryOpen(false)} className="rounded-full bg-white/10 p-2 text-white/70"><X className="h-4 w-4" /></button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-3">
+              {history.length === 0 ? (
+                <p className="py-6 text-center text-xs text-white/40">Nenhum registro nos últimos 30 dias.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {history.map((d) => {
+                    const reached = d.total_ml >= goalMl;
+                    return (
+                      <li key={d.date} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs">
+                        <span className="text-white/80">{new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}</span>
+                        <span className={`font-bold ${reached ? "text-success" : "text-white/70"}`}>
+                          {(d.total_ml / 1000).toFixed(2)} L {reached ? "✓" : ""}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
