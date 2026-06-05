@@ -336,15 +336,18 @@ function HealthGoalsCard() {
 }
 
 type WaterLog = { id: string; amount_ml: number; created_at: string };
+type WaterDayTotal = { date: string; total_ml: number };
 
 function WaterTrackerCard({ studentId }: { studentId: string }) {
   const [goalMl, setGoalMl] = useState<number>(2500);
   const [logs, setLogs] = useState<WaterLog[]>([]);
+  const [history, setHistory] = useState<WaterDayTotal[]>([]);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState("250");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const totalToday = useMemo(() => logs.reduce((s, l) => s + l.amount_ml, 0), [logs]);
@@ -381,6 +384,10 @@ function WaterTrackerCard({ studentId }: { studentId: string }) {
       else if (i > 0) break;
     }
     setStreak(s);
+    const sortedHist: WaterDayTotal[] = Object.entries(totals)
+      .map(([date, total_ml]) => ({ date, total_ml }))
+      .sort((a, b) => (a.date < b.date ? 1 : -1));
+    setHistory(sortedHist);
     setLoading(false);
   };
 
