@@ -354,7 +354,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
-  }, [currentYM]);
+  }, [currentYM, reloadKey]);
 
 
   // ── Calendar grid ────────────────────────────────────────────────────────
