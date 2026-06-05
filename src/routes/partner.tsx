@@ -470,7 +470,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
               />
 
-              <Field label="Instruções de resgate"><textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Apresente o QR Code da carteirinha na loja" /></Field>
+              
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
