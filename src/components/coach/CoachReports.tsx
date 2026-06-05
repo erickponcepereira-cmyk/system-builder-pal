@@ -736,3 +736,163 @@ function RankList({ items }: { items: { key: string; label: string; meta: string
     </div>
   );
 }
+
+/* ------------------- Ministered Events Dashboard ------------------- */
+
+function MinisteredEventsDashboard() {
+  const fetchMinistered = useServerFn(getCoachMinisteredReport);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<MinisteredReport | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await fetchMinistered({ data: { from: from || undefined, to: to || undefined } });
+      setData(r);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  const exportCsv = () => {
+    if (!data) return;
+    const lines: string[] = [];
+    lines.push("=== Eventos ministrados ===");
+    lines.push("Evento,Data,Categoria,Presenças");
+    for (const e of data.events) {
+      lines.push([
+        `"${e.title.replace(/"/g, '""')}"`,
+        new Date(e.starts_at).toLocaleString("pt-BR"),
+        e.category, e.total_attendees,
+      ].join(","));
+    }
+    lines.push("");
+    lines.push("=== Top participantes ===");
+    lines.push("Nome,Presenças");
+    for (const p of data.top_participants) lines.push(`"${p.name.replace(/"/g, '""')}",${p.attendances}`);
+    lines.push("");
+    lines.push("=== Coaches que mais trouxeram pessoas ===");
+    lines.push("Coach,Presenças trazidas");
+    for (const c of data.top_referring_coaches) lines.push(`"${c.name.replace(/"/g, '""')}",${c.brought_attendees}`);
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `eventos-ministrados-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-[10px] uppercase text-white/40">De</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase text-white/40">Até</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="mt-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+        </div>
+        <button onClick={load} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">Aplicar</button>
+        <button onClick={exportCsv} disabled={!data || data.events.length === 0}
+          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
+          <Download className="h-4 w-4" /> CSV
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-16 text-center text-white/50">Carregando…</div>
+      ) : !data || data.events.length === 0 ? (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/50">
+          Você ainda não foi responsável por nenhum evento FitMind no período.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <StatBox label="Eventos ministrados" value={data.summary.events_count} />
+            <StatBox label="Presenças totais" value={data.summary.attendees_total} />
+            <StatBox label="Média / evento" value={data.summary.events_count ? (data.summary.attendees_total / data.summary.events_count).toFixed(1) : "0"} />
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/5">
+            <div className="border-b border-white/10 px-4 py-3 text-sm font-bold text-white">Eventos</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-white/5 text-[10px] uppercase text-white/50">
+                  <tr><th className="px-3 py-2 text-left">Evento</th><th className="px-3 py-2 text-left">Data</th><th className="px-3 py-2 text-left">Categoria</th><th className="px-3 py-2 text-right">Presenças</th></tr>
+                </thead>
+                <tbody>
+                  {data.events.map((e) => (
+                    <tr key={e.id} className="border-t border-white/5">
+                      <td className="px-3 py-2 text-white">{e.title}</td>
+                      <td className="px-3 py-2 text-xs text-white/50">{new Date(e.starts_at).toLocaleString("pt-BR")}</td>
+                      <td className="px-3 py-2 text-xs text-white/60">{e.category}</td>
+                      <td className="px-3 py-2 text-right font-bold text-white">{e.total_attendees}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-white/5">
+              <div className="border-b border-white/10 px-4 py-3 text-sm font-bold text-white flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-primary" /> Top participantes
+              </div>
+              {data.top_participants.length === 0 ? (
+                <p className="p-4 text-xs text-white/50">Nenhuma presença registrada.</p>
+              ) : (
+                <ul className="divide-y divide-white/5">
+                  {data.top_participants.map((p, i) => (
+                    <li key={p.profile_id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span className="flex items-center gap-2 text-white">
+                        <span className="w-5 text-center text-[11px] font-bold text-primary">{i + 1}</span>
+                        {p.name}
+                      </span>
+                      <span className="text-xs font-bold text-white/70">{p.attendances} presença{p.attendances > 1 ? "s" : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/5">
+              <div className="border-b border-white/10 px-4 py-3 text-sm font-bold text-white flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Coaches que mais trouxeram pessoas
+              </div>
+              {data.top_referring_coaches.length === 0 ? (
+                <p className="p-4 text-xs text-white/50">Sem dados de coach de origem dos participantes.</p>
+              ) : (
+                <ul className="divide-y divide-white/5">
+                  {data.top_referring_coaches.map((c, i) => (
+                    <li key={c.coach_id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                      <span className="flex items-center gap-2 text-white">
+                        <span className="w-5 text-center text-[11px] font-bold text-primary">{i + 1}</span>
+                        {c.name}
+                      </span>
+                      <span className="text-xs font-bold text-white/70">{c.brought_attendees} presença{c.brought_attendees > 1 ? "s" : ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StatBox({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <p className="text-[10px] uppercase text-white/40">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-white">{value}</p>
+    </div>
+  );
+}
