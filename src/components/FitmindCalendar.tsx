@@ -1091,6 +1091,15 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
     if (!mine) return;
     setLoading(true);
     const { error } = await supabase.from("event_attendances").delete().eq("id", mine.id);
+    if (!error && myProfileId) {
+      // also clear the linked registration so it doesn't stay as "attended"
+      await supabase
+        .from("event_registrations")
+        .delete()
+        .eq("event_id", eventId)
+        .eq("profile_id", myProfileId);
+      setMyRegStatus(null);
+    }
     setLoading(false);
     if (error) { toast.error("Não foi possível remover presença."); return; }
     toast.success("Presença removida.");
