@@ -191,6 +191,76 @@ export function ProtocolTab() {
   const enableTplFn = useServerFn(enableTemplateForStudent);
   const listPlansFn = useServerFn(listStudentWorkoutPlansByRecord);
   const deletePlanFn = useServerFn(deleteWorkoutPlan);
+  const updateExFn = useServerFn(updatePlanExercise);
+  const deleteExFn = useServerFn(deletePlanExercise);
+  const replaceExFn = useServerFn(replacePlanExercise);
+  const addExFn = useServerFn(addPlanExercise);
+  const [editingExId, setEditingExId] = useState<string | null>(null);
+  const [exDraft, setExDraft] = useState<any>({});
+  const [replacingExId, setReplacingExId] = useState<string | null>(null);
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [addingToPlanId, setAddingToPlanId] = useState<string | null>(null);
+  const [newExDraft, setNewExDraft] = useState<{ name: string; sets: number; reps: string; rest_seconds: number; rest_seconds_max: number | null; notes: string }>({ name: "", sets: 3, reps: "10-12", rest_seconds: 60, rest_seconds_max: null, notes: "" });
+
+  const startEditEx = (e: any) => {
+    setEditingExId(e.id);
+    setExDraft({
+      exercise_name: e.exercise_name,
+      sets: e.sets ?? 3,
+      reps: e.reps ?? "",
+      rest_seconds: e.rest_seconds ?? 60,
+      rest_seconds_max: e.rest_seconds_max ?? null,
+      notes: e.notes ?? "",
+    });
+  };
+
+  const saveEditEx = async () => {
+    if (!editingExId) return;
+    try {
+      await updateExFn({ data: { exercise_id: editingExId, ...exDraft, reps: exDraft.reps || null, notes: exDraft.notes || null } });
+      toast.success("Exercício atualizado");
+      setEditingExId(null);
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao salvar"); }
+  };
+
+  const deleteEx = async (id: string, name: string) => {
+    if (!confirm(`Excluir exercício "${name}"?`)) return;
+    try {
+      await deleteExFn({ data: { exercise_id: id } });
+      toast.success("Exercício removido");
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao excluir"); }
+  };
+
+  const doReplaceEx = async (id: string, newName: string) => {
+    try {
+      await replaceExFn({ data: { exercise_id: id, new_name: newName } });
+      toast.success("Exercício substituído");
+      setReplacingExId(null);
+      setReplaceQuery("");
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao substituir"); }
+  };
+
+  const submitAddEx = async (planId: string) => {
+    if (!newExDraft.name.trim()) { toast.error("Informe o nome"); return; }
+    try {
+      await addExFn({ data: {
+        plan_id: planId,
+        name: newExDraft.name.trim(),
+        sets: newExDraft.sets,
+        reps: newExDraft.reps || null,
+        rest_seconds: newExDraft.rest_seconds,
+        rest_seconds_max: newExDraft.rest_seconds_max,
+        notes: newExDraft.notes || null,
+      } });
+      toast.success("Exercício adicionado");
+      setAddingToPlanId(null);
+      setNewExDraft({ name: "", sets: 3, reps: "10-12", rest_seconds: 60, rest_seconds_max: null, notes: "" });
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao adicionar"); }
+  };
 
   const reloadEnabledPlans = async (s: Student | null) => {
     if (!s || s.external) { setEnabledPlans([]); return; }
