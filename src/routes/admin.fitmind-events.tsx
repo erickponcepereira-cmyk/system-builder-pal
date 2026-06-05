@@ -93,6 +93,8 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   color: "#E24B4A",
   category: "aula",
   visibility: "todos",
+  visibility_roles: ["todos"],
+  responsible_coach_id: null,
   tags: [],
   starts_at: tzDateTimeLocal(new Date()),
   ends_at: tzDateTimeLocal(new Date(Date.now() + 3600000)),
@@ -105,6 +107,7 @@ const EMPTY_EVENT: Omit<FitmindEvent, "id" | "created_at" | "is_active"> = {
   google_calendar_description: null,
   google_calendar_location: null,
 };
+
 
 const EMPTY_DAY: Omit<HighlightedDay, "id"> = {
   date: tzToday(),
