@@ -15,10 +15,14 @@ interface PatentRule {
   description: string | null;
   badge_color: string | null;
   badge_icon: string | null;
+  image_url: string | null;
   required_revenue: number;
   time_window_months: number;
   min_own_sales_pct: number;
   max_team_sales_pct: number;
+  vp_max_pct: number | null;
+  ve_max_pct: number | null;
+  phase: number | null;
   level: number;
   sort_order: number;
   benefits: string | null;
@@ -32,15 +36,20 @@ const blank = (): PatentRule => ({
   description: "",
   badge_color: "#FF4230",
   badge_icon: "trophy",
+  image_url: null,
   required_revenue: 0,
   time_window_months: 1,
   min_own_sales_pct: 100,
   max_team_sales_pct: 0,
+  vp_max_pct: 100,
+  ve_max_pct: 0,
+  phase: 1,
   level: 99,
   sort_order: 999,
   benefits: "",
   is_active: true,
 });
+
 
 function AdminPatents() {
   const [rules, setRules] = useState<PatentRule[]>([]);
