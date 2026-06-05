@@ -229,7 +229,7 @@ function ProfilePage() {
             </span>
             {challengeTokens > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
-                🪙 {challengeTokens} moeda{challengeTokens > 1 ? "s" : ""} de desafio
+                🎟️ {challengeTokens} ticket{challengeTokens > 1 ? "s" : ""} de desafio
               </span>
             )}
           </div>
