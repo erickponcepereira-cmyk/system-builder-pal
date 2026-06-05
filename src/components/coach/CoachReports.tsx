@@ -11,8 +11,9 @@ import {
 } from "@/lib/google-calendar.functions";
 import {
   getCoachSalesReport, getCoachChallengeRanking,
-  type SalesReport, type ChallengeRankingRow,
+  type SalesReport, type ChallengeRankingRow, type StudentGroup,
 } from "@/lib/coach-reports.functions";
+
 import { getCoachDownlineReport, type DownlineReport } from "@/lib/coach-downline.functions";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -65,6 +66,15 @@ function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onCli
 
 /* ------------------- Sales / Customers Dashboard ------------------- */
 
+const GROUP_LABELS: Record<StudentGroup | "all", string> = {
+  all: "Todos",
+  aluno: "Só Aluno",
+  aluno_coach: "Aluno Coach",
+  aluno_parceiro: "Aluno Parceiro",
+  aluno_profissional: "Aluno Profissional",
+};
+const GROUP_KEYS: Array<StudentGroup | "all"> = ["all", "aluno", "aluno_coach", "aluno_parceiro", "aluno_profissional"];
+
 function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
   const fetchSales = useServerFn(getCoachSalesReport);
   const [from, setFrom] = useState(firstOfMonth());
@@ -73,6 +83,7 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
   const [compareFrom, setCompareFrom] = useState(shiftMonths(firstOfMonth(), -1));
   const [compareTo, setCompareTo] = useState(shiftMonths(todayISO(), -1));
   const [search, setSearch] = useState("");
+  const [groupTab, setGroupTab] = useState<StudentGroup | "all">("all");
   const [data, setData] = useState<SalesReport | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -82,28 +93,59 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
       .then(setData).catch(() => setData(null)).finally(() => setLoading(false));
   }, [fetchSales, from, to, compare, compareFrom, compareTo]);
 
-  const filteredRows = useMemo(() => {
+  // Filter the whole report by group (rows -> rebuild products/customers counts)
+  const groupRows = useMemo(() => {
     if (!data) return [];
+    return groupTab === "all" ? data.rows : data.rows.filter((r) => r.student_group === groupTab);
+  }, [data, groupTab]);
+
+  const groupCounts = useMemo(() => {
+    const counts: Record<StudentGroup | "all", number> = { all: 0, aluno: 0, aluno_coach: 0, aluno_parceiro: 0, aluno_profissional: 0 };
+    if (!data) return counts;
+    counts.all = data.rows.length;
+    data.rows.forEach((r) => { counts[r.student_group] = (counts[r.student_group] || 0) + 1; });
+    return counts;
+  }, [data]);
+
+  const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return data.rows;
-    return data.rows.filter((r) =>
+    if (!q) return groupRows;
+    return groupRows.filter((r) =>
       r.student_name.toLowerCase().includes(q) ||
       r.student_email.toLowerCase().includes(q) ||
       r.product_name.toLowerCase().includes(q),
     );
-  }, [data, search]);
+  }, [groupRows, search]);
 
   const filteredProducts = useMemo(() => {
-    if (!data) return [];
-    const q = search.trim().toLowerCase();
-    return q ? data.byProduct.filter((p) => p.name.toLowerCase().includes(q)) : data.byProduct;
-  }, [data, search]);
+    const map = new Map<string, { product_id: string | null; name: string; quantity: number; revenue: number }>();
+    filteredRows.forEach((r) => {
+      const key = r.product_id || r.product_name;
+      const c = map.get(key) || { product_id: r.product_id, name: r.product_name, quantity: 0, revenue: 0 };
+      c.quantity += r.quantity; c.revenue += r.amount;
+      map.set(key, c);
+    });
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [filteredRows]);
 
   const filteredCustomers = useMemo(() => {
-    if (!data) return [];
-    const q = search.trim().toLowerCase();
-    return q ? data.byCustomer.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)) : data.byCustomer;
-  }, [data, search]);
+    const map = new Map<string, { student_id: string; name: string; email: string; orders: number; revenue: number }>();
+    filteredRows.forEach((r) => {
+      const c = map.get(r.student_id) || { student_id: r.student_id, name: r.student_name, email: r.student_email, orders: 0, revenue: 0 };
+      c.orders += 1; c.revenue += r.amount;
+      map.set(r.student_id, c);
+    });
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [filteredRows]);
+
+  // KPIs derived from filtered rows so group filter affects them
+  const kpis = useMemo(() => {
+    const revenue = filteredRows.reduce((s, r) => s + r.amount, 0);
+    const itemsSold = filteredRows.reduce((s, r) => s + r.quantity, 0);
+    const customers = new Set(filteredRows.map((r) => r.student_id));
+    return { revenue, orders: filteredRows.length, itemsSold, uniqueCustomers: customers.size };
+  }, [filteredRows]);
+
 
   const exportExcel = () => {
     if (!data) return;
@@ -162,19 +204,28 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar produto, cliente ou email..."
             className="w-full pl-9 pr-3 py-2 rounded-lg bg-black/40 border border-white/10 text-xs text-white" />
         </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {GROUP_KEYS.map((k) => (
+            <button key={k} onClick={() => setGroupTab(k)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition ${groupTab === k ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+              {GROUP_LABELS[k]} ({groupCounts[k]})
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading && <p className="text-xs text-white/50">Carregando dados...</p>}
 
       {!loading && data && (
         <>
-          {/* KPIs */}
+          {/* KPIs (refletem o filtro de grupo) */}
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            <Kpi label="Receita" value={brl(data.totals.revenue)} delta={data.compare ? pct(data.totals.revenue, data.compare.totals.revenue) : null} />
-            <Kpi label="Pedidos" value={String(data.totals.orders)} delta={data.compare ? pct(data.totals.orders, data.compare.totals.orders) : null} />
-            <Kpi label="Itens vendidos" value={String(data.totals.itemsSold)} delta={data.compare ? pct(data.totals.itemsSold, data.compare.totals.itemsSold) : null} />
-            <Kpi label="Clientes únicos" value={String(data.totals.uniqueCustomers)} delta={data.compare ? pct(data.totals.uniqueCustomers, data.compare.totals.uniqueCustomers) : null} />
+            <Kpi label="Receita" value={brl(kpis.revenue)} delta={groupTab === "all" && data.compare ? pct(kpis.revenue, data.compare.totals.revenue) : null} />
+            <Kpi label="Pedidos" value={String(kpis.orders)} delta={groupTab === "all" && data.compare ? pct(kpis.orders, data.compare.totals.orders) : null} />
+            <Kpi label="Itens vendidos" value={String(kpis.itemsSold)} delta={groupTab === "all" && data.compare ? pct(kpis.itemsSold, data.compare.totals.itemsSold) : null} />
+            <Kpi label="Clientes únicos" value={String(kpis.uniqueCustomers)} delta={groupTab === "all" && data.compare ? pct(kpis.uniqueCustomers, data.compare.totals.uniqueCustomers) : null} />
           </div>
+
 
           {/* Monthly comparison chart */}
           <Section title="Receita por mês">

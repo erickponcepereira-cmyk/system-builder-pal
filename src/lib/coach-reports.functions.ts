@@ -2,12 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+export type StudentGroup = "aluno" | "aluno_coach" | "aluno_profissional" | "aluno_parceiro";
+
 export type SaleRow = {
   id: string;
   source: "transaction" | "store";
   student_id: string;
   student_name: string;
   student_email: string;
+  student_group: StudentGroup;
   product_id: string | null;
   product_name: string;
   quantity: number;
@@ -20,10 +23,11 @@ export type SalesReport = {
   totals: { revenue: number; orders: number; itemsSold: number; uniqueCustomers: number };
   byMonth: { month: string; revenue: number; orders: number }[];
   byProduct: { product_id: string | null; name: string; quantity: number; revenue: number }[];
-  byCustomer: { student_id: string; name: string; email: string; orders: number; revenue: number }[];
+  byCustomer: { student_id: string; name: string; email: string; group: StudentGroup; orders: number; revenue: number }[];
   rows: SaleRow[];
   compare?: SalesReport;
 };
+
 
 export type ChallengeRankingRow = {
   student_id: string;
@@ -57,15 +61,43 @@ async function buildSalesReportForRange(
   // Students of this coach
   const { data: studentRows } = await supabaseAdmin
     .from("students")
-    .select("id, profiles!students_profile_id_fkey(name,email)")
+    .select("id, profile_id, profiles!students_profile_id_fkey(name,email)")
     .eq("coach_id", coachId);
-  type SR = { id: string; profiles: { name: string; email: string } | null };
+  type SR = { id: string; profile_id: string | null; profiles: { name: string; email: string } | null };
   const students = (studentRows as unknown as SR[]) || [];
   const studentIds = students.map((s) => s.id);
   const studentMap = new Map(students.map((s) => [s.id, s.profiles]));
   if (studentIds.length === 0) {
     return emptyReport(from, to);
   }
+
+  // Classify each student by profile (coach / professional / partner / pure aluno)
+  const profileIds = students.map((s) => s.profile_id).filter(Boolean) as string[];
+  const coachProfiles = new Set<string>();
+  const proProfiles = new Set<string>();
+  const partnerProfiles = new Set<string>();
+  if (profileIds.length) {
+    const [coachesRes, partnersRes] = await Promise.all([
+      supabaseAdmin.from("coaches").select("profile_id,is_professional").in("profile_id", profileIds),
+      supabaseAdmin.from("partners").select("profile_id").in("profile_id", profileIds),
+    ]);
+    ((coachesRes.data as Array<{ profile_id: string; is_professional: boolean | null }> | null) || []).forEach((c) => {
+      if (c.is_professional) proProfiles.add(c.profile_id); else coachProfiles.add(c.profile_id);
+    });
+    ((partnersRes.data as Array<{ profile_id: string }> | null) || []).forEach((p) => partnerProfiles.add(p.profile_id));
+  }
+  const studentGroup = new Map<string, StudentGroup>();
+  for (const s of students) {
+    const pid = s.profile_id;
+    let g: StudentGroup = "aluno";
+    if (pid) {
+      if (proProfiles.has(pid)) g = "aluno_profissional";
+      else if (coachProfiles.has(pid)) g = "aluno_coach";
+      else if (partnerProfiles.has(pid)) g = "aluno_parceiro";
+    }
+    studentGroup.set(s.id, g);
+  }
+
 
   // Transactions (paid)
   const { data: txData } = await supabaseAdmin
@@ -123,12 +155,14 @@ async function buildSalesReportForRange(
       student_id: t.student_id,
       student_name: sp?.name || "—",
       student_email: sp?.email || "",
+      student_group: studentGroup.get(t.student_id) || "aluno",
       product_id: t.product_id,
       product_name: t.product_id ? (productMap.get(t.product_id) || "Produto") : "Produto",
       quantity: 1,
       amount: Number(t.gross_amount) || 0,
       paid_at: t.paid_at,
     });
+
   }
   for (const o of orders) {
     const sp = studentMap.get(o.student_id);
@@ -141,12 +175,14 @@ async function buildSalesReportForRange(
       student_id: o.student_id,
       student_name: sp?.name || "—",
       student_email: sp?.email || "",
+      student_group: studentGroup.get(o.student_id) || "aluno",
       product_id: its[0]?.product_id || null,
       product_name: label,
       quantity: totalQty,
       amount: Number(o.total_amount) || 0,
       paid_at: o.updated_at,
     });
+
   }
 
   rows.sort((a, b) => b.paid_at.localeCompare(a.paid_at));
@@ -188,14 +224,15 @@ async function buildSalesReportForRange(
     }
   });
 
-  const customerAgg = new Map<string, { student_id: string; name: string; email: string; orders: number; revenue: number }>();
+  const customerAgg = new Map<string, { student_id: string; name: string; email: string; group: StudentGroup; orders: number; revenue: number }>();
   rows.forEach((r) => {
     const c = customerAgg.get(r.student_id) || {
-      student_id: r.student_id, name: r.student_name, email: r.student_email, orders: 0, revenue: 0,
+      student_id: r.student_id, name: r.student_name, email: r.student_email, group: r.student_group, orders: 0, revenue: 0,
     };
     c.orders += 1; c.revenue += r.amount;
     customerAgg.set(r.student_id, c);
   });
+
 
   const revenue = rows.reduce((s, r) => s + r.amount, 0);
   const itemsSold = rows.reduce((s, r) => s + r.quantity, 0);
