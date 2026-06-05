@@ -311,7 +311,7 @@ function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCrea
 }
 
 /* ------------------------- ACTIVE SESSION ------------------------- */
-function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
+function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans?: Plan[]; onExit: () => void; onStartNext?: (p: Plan) => void }) {
   const startFn = useServerFn(startWorkoutSession);
   const logSetFn = useServerFn(logSet);
   const logCardioFn = useServerFn(logCardio);
@@ -333,7 +333,8 @@ function ActiveSession({ plan, onExit }: { plan: Plan; onExit: () => void }) {
   const [restRange, setRestRange] = useState<{ min: number; max: number }>({ min: 60, max: 60 });
   const [restExerciseName, setRestExerciseName] = useState<string>("");
 
-  const [summary, setSummary] = useState<{ xp: number; total: number; achievements: string[]; durationSec: number } | null>(null);
+  const [summary, setSummary] = useState<{ total: number; achievements: Array<{ code: string; title: string; icon: string | null }>; durationSec: number; streak: number } | null>(null);
+  const [achievementReveal, setAchievementReveal] = useState<{ code: string; title: string; icon: string | null } | null>(null);
 
   // cardio state
   const [cardio, setCardio] = useState<Record<string, { duration: string; pace: string; speed: string; elevation: string; distance: string; done: boolean }>>({});
