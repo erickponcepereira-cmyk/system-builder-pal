@@ -372,7 +372,9 @@ export function ProtocolTab() {
     }
 
     setLoading(false);
+    reloadEnabledPlans(s);
   };
+
 
   const syncWorkoutFn = useServerFn(syncProtocolWorkout);
 
