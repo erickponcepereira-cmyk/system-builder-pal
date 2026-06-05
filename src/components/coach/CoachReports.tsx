@@ -824,7 +824,7 @@ function MinisteredEventsDashboard() {
         <div className="py-16 text-center text-white/50">Carregando…</div>
       ) : !data || data.events.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/50">
-          Você ainda não foi responsável por nenhum evento FitMind no período.
+          {scope === "created" ? "Você ainda não criou nenhum evento FitMind no período." : "Você ainda não foi responsável por nenhum evento FitMind no período."}
         </div>
       ) : (
         <>
