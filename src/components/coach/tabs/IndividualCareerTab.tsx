@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { Loader2, Medal, Trophy, Lock, Crown } from "lucide-react";
+import { Loader2, Medal, Trophy, Lock, Crown, Users, TrendingUp } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
+import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
+import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
