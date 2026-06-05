@@ -190,22 +190,11 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
       }
     }
 
-    // Enabled categories — coach_badges + flags
+    // Enabled categories — strictly from coach_badges (admin/career categorias)
     const { data: badges } = await supabaseAdmin
       .from("coach_badges").select("badge_key").eq("coach_id", coachId);
     const enabledCategories: EnabledCategory[] = ((badges || []) as Array<{ badge_key: string }>)
       .map((b) => ({ key: b.badge_key, label: BADGE_LABELS[b.badge_key] || b.badge_key }));
-    const { data: flags } = await supabaseAdmin
-      .from("coaches")
-      .select("can_create_fitmind_events,is_professional")
-      .eq("id", coachId).maybeSingle();
-    const f = (flags as { can_create_fitmind_events: boolean; is_professional: boolean } | null);
-    if (f?.can_create_fitmind_events && !enabledCategories.some((c) => c.key === "event_creator")) {
-      enabledCategories.push({ key: "event_creator", label: "Criador de eventos" });
-    }
-    if (f?.is_professional && !enabledCategories.some((c) => c.key === "professional")) {
-      enabledCategories.push({ key: "professional", label: "Profissional" });
-    }
 
     return {
       coachId,
