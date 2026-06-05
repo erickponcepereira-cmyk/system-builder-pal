@@ -204,6 +204,26 @@ export function ProductFinancialEditor({ productId, onSaved, compact }: { produc
 
       <BadgeFlagsSection productId={productId} />
 
+      <div className="mb-6 rounded-lg border border-[#E24B4A]/30 bg-[#E24B4A]/5 p-3">
+        <label className="flex cursor-pointer items-start gap-2 text-sm font-bold text-white">
+          <input
+            type="checkbox"
+            checked={!!data.referralRule.is_referral_product}
+            onChange={(e) => setData({
+              ...data,
+              referralRule: { ...data.referralRule, enabled: e.target.checked, is_referral_product: e.target.checked },
+            })}
+            className="mt-1"
+          />
+          <span>
+            Produto de indicação
+            <span className="mt-1 block text-[11px] font-normal text-white/50">
+              Quando ativo, aparece para o aluno indicar e usa os slots marcados como Indicação / Aluno indicador.
+            </span>
+          </span>
+        </label>
+      </div>
+
 
 
       <SectionLabel>Simulação · forma de pagamento</SectionLabel>

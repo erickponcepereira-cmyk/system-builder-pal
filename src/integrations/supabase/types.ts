@@ -5476,6 +5476,7 @@ export type Database = {
           created_at: string
           enabled: boolean
           id: string
+          is_referral_product: boolean
           pre_deduction_fixed: number
           pre_deduction_label: string
           product_id: string
@@ -5487,6 +5488,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           id?: string
+          is_referral_product?: boolean
           pre_deduction_fixed?: number
           pre_deduction_label?: string
           product_id: string
@@ -5498,6 +5500,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           id?: string
+          is_referral_product?: boolean
           pre_deduction_fixed?: number
           pre_deduction_label?: string
           product_id?: string

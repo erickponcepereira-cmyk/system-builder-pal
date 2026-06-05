@@ -34,34 +34,22 @@ export function StudentReferralModal({
     setSelected(null);
     setSearch("");
     (async () => {
-      const [{ data: challenges }, { data: digitals }, { data: slots }] = await Promise.all([
-        supabase
+      const { data: rules } = await supabase
+        .from("product_referral_rules")
+        .select("product_id")
+        .eq("enabled", true)
+        .eq("is_referral_product" as any, true);
+      const enabled = new Set(((rules as any[]) || []).map((r) => r.product_id));
+      const { data: challenges } = enabled.size
+        ? await supabase
           .from("products")
           .select("id,name,price,image_url")
           .eq("status", "active")
-          .is("kind", null),
-        supabase
-          .from("digital_products")
-          .select("id,title,price,cover_url")
-          .eq("status", "active"),
-        supabase
-          .from("product_value_slots")
-          .select("product_id,applies_to_student_referral,is_active")
-          .eq("applies_to_student_referral", true)
-          .eq("is_active", true),
-      ]);
-      // Produtos com pelo menos um slot de indicação aluno→aluno ativo
-      const enabled = new Set(
-        ((slots as any[]) || []).map((r) => r.product_id),
-      );
+          .in("id", Array.from(enabled))
+        : { data: [] as any[] };
       const out: RefProduct[] = [];
       (challenges || []).forEach((p: any) => {
-        if (!enabled.has(p.id)) return;
         out.push({ id: p.id, kind: "challenge", title: p.name, price: Number(p.price || 0), imageUrl: p.image_url });
-      });
-      (digitals || []).forEach((p: any) => {
-        if (!enabled.has(p.id)) return;
-        out.push({ id: p.id, kind: "digital", title: p.title, price: Number(p.price || 0), imageUrl: p.cover_url });
       });
       setProducts(out);
       setLoading(false);
