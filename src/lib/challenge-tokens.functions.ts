@@ -199,8 +199,8 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
       .limit(1);
     const token = ((freeTokens as { id: string }[] | null) || [])[0];
     if (!token) {
-      await logAttempt({ studentId: student.id, success: false, errorCode: "no_tokens", errorMessage: "Sem moedas disponíveis." });
-      return { ok: false, error: "Você não possui moedas de desafio disponíveis." };
+      await logAttempt({ studentId: student.id, success: false, errorCode: "no_tokens", errorMessage: "Sem tickets disponíveis." });
+      return { ok: false, error: "Você não possui tickets de desafio disponíveis." };
     }
 
     const { joinable } = await loadJoinableTurmas(student.id);
@@ -266,10 +266,10 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
       await logAttempt({
         studentId: student.id, success: false,
         errorCode: "token_consume_failed",
-        errorMessage: tokErr.message || "Falha ao consumir a moeda.",
+        errorMessage: tokErr.message || "Falha ao consumir o ticket.",
         competitionId: target.competitionId, groupId: target.groupId, tokenId: token.id,
       });
-      return { ok: false, error: "Falha ao consumir a moeda. Tente novamente." };
+      return { ok: false, error: "Falha ao consumir o ticket. Tente novamente." };
     }
 
     await logAttempt({
@@ -291,7 +291,7 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
           profile_id: coachProfileId,
           type: "challenge_enrollment",
           title: "🏋️ Novo aluno no desafio",
-          message: `${studentName} entrou em ${target.competitionLabel} — Turma ${target.groupNumber} usando moeda de desafio.`,
+          message: `${studentName} entrou em ${target.competitionLabel} — Turma ${target.groupNumber} usando ticket de desafio.`,
           action_url: "/coach",
         } as never);
       }

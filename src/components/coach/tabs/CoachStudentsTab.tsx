@@ -214,7 +214,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
           {([
             { k: "recent" as SortKey, label: "Últimos cadastrados" },
             { k: "no_bioimpedance" as SortKey, label: "Sem bioimpedância" },
-            { k: "tokens_no_challenge" as SortKey, label: "Com moedas e sem desafio" },
+            { k: "tokens_no_challenge" as SortKey, label: "Com tickets e sem desafio" },
           ]).map(({ k, label }) => {
             const active = sort === k;
             return (
@@ -266,7 +266,7 @@ export function CoachStudentsTab({ coachId }: { coachId: string }) {
                     <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                       {student.completed_coach_course && <span className="rounded-full bg-success/20 px-2 py-1 text-[10px] font-bold text-success">Curso coach</span>}
                       {(ex?.tokenBalance ?? 0) > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary" title="Moedas de desafio disponíveis">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2 py-1 text-[10px] font-bold text-primary" title="Tickets de desafio disponíveis">
                           <Coins className="h-3 w-3" /> {ex!.tokenBalance} desafio{ex!.tokenBalance > 1 ? "s" : ""}
                         </span>
                       )}
