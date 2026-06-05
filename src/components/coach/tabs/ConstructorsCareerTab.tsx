@@ -19,6 +19,8 @@ export function ConstructorsCareerTab() {
   const fetchProgress = useServerFn(getCareerProgress);
   const [data, setData] = useState<CareerProgress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modalPatent, setModalPatent] = useState<PatentRule | null>(null);
+
 
   useEffect(() => {
     let active = true;
