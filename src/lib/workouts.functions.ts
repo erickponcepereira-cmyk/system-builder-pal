@@ -558,20 +558,26 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
     const studentId = data.studentId || userId;
     const { data: sessions } = await supabase
       .from("workout_sessions")
-      .select("id, plan_id, started_at, ended_at, total_seconds, completion_pct, xp_earned, workout_plans!inner(name, student_id)")
+      .select("id, plan_id, started_at, ended_at, total_seconds, completion_pct, xp_earned, workout_plans!inner(name, student_id, letter)")
       .eq("student_id", studentId)
       .order("started_at", { ascending: false })
-      .limit(200);
-    const { data: logs } = await supabase
-      .from("workout_session_logs")
-      .select("exercise_id, load_kg, completed_at, workout_exercises!inner(exercise_name)")
-      .order("completed_at", { ascending: true });
+      .limit(500);
+    const sessionIds = (sessions || []).map((s: any) => s.id);
+    let logs: any[] = [];
+    if (sessionIds.length) {
+      const { data: l } = await supabase
+        .from("workout_session_logs")
+        .select("session_id, exercise_id, load_kg, reps_done, completed_at, workout_exercises!inner(exercise_name)")
+        .in("session_id", sessionIds)
+        .order("completed_at", { ascending: true });
+      logs = l || [];
+    }
     const { data: achievements } = await supabase
       .from("workout_achievements")
       .select("*")
       .eq("student_id", studentId)
       .order("earned_at", { ascending: false });
-    return { sessions: sessions || [], logs: logs || [], achievements: achievements || [] };
+    return { sessions: sessions || [], logs, achievements: achievements || [] };
   });
 
 /**
