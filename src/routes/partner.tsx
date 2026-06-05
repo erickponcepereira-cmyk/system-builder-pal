@@ -410,9 +410,14 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-white truncate">{p.name}</p>
                 {p.kind === "free" ? (
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.redemption_mode === "discount" ? "bg-amber-500/15 text-amber-400" : "bg-green-500/15 text-green-400"}`}>
-                    {p.redemption_mode === "discount" ? "Desconto" : "Gratuito"}
-                  </span>
+                  <>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.redemption_mode === "discount" ? "bg-amber-500/15 text-amber-400" : "bg-green-500/15 text-green-400"}`}>
+                      {p.redemption_mode === "discount" ? "Desconto" : "Gratuito"}
+                    </span>
+                    {p.redemption_mode === "discount" && p.discount_percent ? (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-bold">{p.discount_percent}% OFF</span>
+                    ) : null}
+                  </>
                 ) : (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400">Pago</span>
                 )}
