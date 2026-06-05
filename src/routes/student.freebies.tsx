@@ -204,18 +204,18 @@ function StudentFreebies() {
               const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + items.length;
               const discountCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
               return (
-                <div className="mb-5 grid grid-cols-2 gap-0 p-1 rounded-2xl bg-white/5 border border-white/10">
+                <div className="mb-5 grid grid-cols-2 gap-2 p-1.5 rounded-full bg-[#141414] border border-white/10">
                   <button
                     onClick={() => setPageMode("free")}
-                    className={`rounded-xl py-2.5 text-xs font-bold transition ${pageMode === "free" ? "bg-primary text-primary-foreground shadow" : "text-white/60 hover:text-white"}`}
+                    className={`rounded-full py-2.5 text-sm font-bold transition ${pageMode === "free" ? "bg-primary text-primary-foreground shadow-lg" : "text-white/70 hover:text-white"}`}
                   >
-                    <Gift className="inline h-3.5 w-3.5 mr-1" /> Gratuitos {freeCount > 0 && <span className="ml-1 opacity-75">({freeCount})</span>}
+                    Gratuitos{freeCount > 0 ? ` (${freeCount})` : ""}
                   </button>
                   <button
                     onClick={() => setPageMode("discount")}
-                    className={`rounded-xl py-2.5 text-xs font-bold transition ${pageMode === "discount" ? "bg-primary text-primary-foreground shadow" : "text-white/60 hover:text-white"}`}
+                    className={`rounded-full py-2.5 text-sm font-bold transition ${pageMode === "discount" ? "bg-primary text-primary-foreground shadow-lg" : "text-white/70 hover:text-white"}`}
                   >
-                    🏷️ Clube de Descontos {discountCount > 0 && <span className="ml-1 opacity-75">({discountCount})</span>}
+                    Clube de Descontos{discountCount > 0 ? ` (${discountCount})` : ""}
                   </button>
                 </div>
               );
