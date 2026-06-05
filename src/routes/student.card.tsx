@@ -47,7 +47,7 @@ function StudentCardPage() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id,name,email,avatar_url,created_at")
+        .select("id,name,email,avatar_url,photo_url,created_at")
         .eq("user_id", userData.user.id)
         .maybeSingle();
       if (!profile) {
@@ -99,7 +99,7 @@ function StudentCardPage() {
         plan: (activeSub as unknown as { products?: { name?: string } })?.products?.name ?? (partnerBenefit ? `Colaborador · ${partnerBenefit.partnerName}` : "FitMind Club"),
         coachName,
         since: profile.created_at,
-        avatarUrl: profile.avatar_url,
+        avatarUrl: (profile as unknown as { photo_url?: string | null }).photo_url || profile.avatar_url,
         validUntil: (student as unknown as { card_valid_until?: string | null })?.card_valid_until ?? null,
         partnerBenefit,
       });
