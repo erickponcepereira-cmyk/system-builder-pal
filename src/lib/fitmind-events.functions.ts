@@ -224,3 +224,146 @@ export const getEventsReport = createServerFn({ method: "GET" })
 
     return { rows, totals: { events: evList.length, attendees: totalAttendees, byClass: totalsByClass } };
   });
+
+/* ===== Coach ministered events: profile + report ===== */
+
+export interface MinisteredEventRow {
+  id: string;
+  title: string;
+  starts_at: string;
+  category: string;
+  total_attendees: number;
+}
+
+export interface MinisteredTopParticipant {
+  profile_id: string;
+  name: string;
+  attendances: number;
+}
+
+export interface MinisteredTopReferringCoach {
+  coach_id: string;
+  name: string;
+  brought_attendees: number;
+}
+
+export interface MinisteredReport {
+  summary: {
+    events_count: number;
+    attendees_total: number;
+    last_event: { id: string; title: string; starts_at: string } | null;
+  };
+  events: MinisteredEventRow[];
+  top_participants: MinisteredTopParticipant[];
+  top_referring_coaches: MinisteredTopReferringCoach[];
+}
+
+export const getCoachMinisteredReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ from: z.string().optional(), to: z.string().optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ data, context }): Promise<MinisteredReport> => {
+    const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const empty: MinisteredReport = {
+      summary: { events_count: 0, attendees_total: 0, last_event: null },
+      events: [],
+      top_participants: [],
+      top_referring_coaches: [],
+    };
+
+    const { data: prof } = await supabase
+      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+    if (!prof) return empty;
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id").eq("profile_id", (prof as { id: string }).id).maybeSingle();
+    if (!coach) return empty;
+    const coachId = (coach as { id: string }).id;
+
+    let q = supabaseAdmin
+      .from("fitmind_events")
+      .select("id,title,starts_at,category")
+      .eq("responsible_coach_id", coachId)
+      .order("starts_at", { ascending: false });
+    if (data.from) q = q.gte("starts_at", data.from);
+    if (data.to) q = q.lte("starts_at", data.to);
+    const { data: events } = await q;
+    const evList = (events || []) as Array<{ id: string; title: string; starts_at: string; category: string }>;
+    if (!evList.length) return empty;
+
+    const evIds = evList.map((e) => e.id);
+    const { data: attRaw } = await supabaseAdmin
+      .from("event_attendances")
+      .select("event_id,profile_id")
+      .in("event_id", evIds);
+    const attendances = (attRaw || []) as Array<{ event_id: string; profile_id: string }>;
+
+    // Per-event totals
+    const perEvent = new Map<string, number>();
+    for (const a of attendances) perEvent.set(a.event_id, (perEvent.get(a.event_id) || 0) + 1);
+
+    // Top participants
+    const perProfile = new Map<string, number>();
+    for (const a of attendances) perProfile.set(a.profile_id, (perProfile.get(a.profile_id) || 0) + 1);
+    const profileIds = Array.from(perProfile.keys());
+    const profMap = new Map<string, string>();
+    if (profileIds.length) {
+      const { data: profs } = await supabaseAdmin
+        .from("profiles").select("id,name").in("id", profileIds);
+      ((profs || []) as Array<{ id: string; name: string }>).forEach((p) => profMap.set(p.id, p.name));
+    }
+    const topParticipants: MinisteredTopParticipant[] = profileIds
+      .map((pid) => ({ profile_id: pid, name: profMap.get(pid) || "Participante", attendances: perProfile.get(pid) || 0 }))
+      .sort((a, b) => b.attendances - a.attendances)
+      .slice(0, 20);
+
+    // Top referring coaches: join attendees → students.coach_id (excluding self-ministered coach)
+    const perCoach = new Map<string, number>();
+    if (profileIds.length) {
+      const { data: studs } = await supabaseAdmin
+        .from("students").select("profile_id,coach_id").in("profile_id", profileIds);
+      const profileToCoach = new Map<string, string>();
+      ((studs || []) as Array<{ profile_id: string; coach_id: string }>).forEach((s) => {
+        profileToCoach.set(s.profile_id, s.coach_id);
+      });
+      for (const a of attendances) {
+        const cId = profileToCoach.get(a.profile_id);
+        if (cId) perCoach.set(cId, (perCoach.get(cId) || 0) + 1);
+      }
+    }
+    const coachIds = Array.from(perCoach.keys());
+    const coachNameMap = new Map<string, string>();
+    if (coachIds.length) {
+      const { data: cs } = await supabaseAdmin
+        .from("coaches")
+        .select("id,profiles!coaches_profile_id_fkey(name)")
+        .in("id", coachIds);
+      ((cs || []) as Array<{ id: string; profiles: { name: string } | null }>).forEach((c) => {
+        coachNameMap.set(c.id, c.profiles?.name || "Coach");
+      });
+    }
+    const topReferringCoaches: MinisteredTopReferringCoach[] = coachIds
+      .map((cid) => ({ coach_id: cid, name: coachNameMap.get(cid) || "Coach", brought_attendees: perCoach.get(cid) || 0 }))
+      .sort((a, b) => b.brought_attendees - a.brought_attendees)
+      .slice(0, 20);
+
+    const rows: MinisteredEventRow[] = evList.map((e) => ({
+      id: e.id, title: e.title, starts_at: e.starts_at, category: e.category,
+      total_attendees: perEvent.get(e.id) || 0,
+    }));
+
+    const last = evList[0];
+    return {
+      summary: {
+        events_count: evList.length,
+        attendees_total: attendances.length,
+        last_event: last ? { id: last.id, title: last.title, starts_at: last.starts_at } : null,
+      },
+      events: rows,
+      top_participants: topParticipants,
+      top_referring_coaches: topReferringCoaches,
+    };
+  });
+

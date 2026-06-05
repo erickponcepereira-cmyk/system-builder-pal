@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +9,8 @@ import {
 } from "lucide-react";
 import { money, type CoachContext } from "@/routes/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
+import { getCoachMinisteredReport } from "@/lib/fitmind-events.functions";
+
 
 
 export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: CoachContext | null; onSaved: () => void; onLocalChange: (value: CoachContext | null) => void }) {
@@ -19,6 +22,24 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
   const [uploading, setUploading] = useState(false);
   const [activeView, setActiveView] = useState<"profile" | "top">("profile");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fetchMinistered = useServerFn(getCoachMinisteredReport);
+  const [ministered, setMinistered] = useState<{ count: number; lastTitle: string | null; lastDate: string | null; attendeesTotal: number }>({ count: 0, lastTitle: null, lastDate: null, attendeesTotal: 0 });
+
+  useEffect(() => {
+    if (!coach) return;
+    (async () => {
+      try {
+        const r = await fetchMinistered({ data: {} });
+        setMinistered({
+          count: r.summary.events_count,
+          lastTitle: r.summary.last_event?.title || null,
+          lastDate: r.summary.last_event?.starts_at || null,
+          attendeesTotal: r.summary.attendees_total,
+        });
+      } catch { /* silent */ }
+    })();
+  }, [coach, fetchMinistered]);
+
 
   
 
@@ -85,7 +106,14 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     { icon: Trophy, label: "Desafios participados", value: 4, detail: "Verão Shape, Setembro Fit, Inverno Pro, Reset 30D" },
     { icon: Award, label: "Alunos vencedores de desafio", value: 12, detail: "Levou 12 alunos até a vitória em desafios oficiais" },
     { icon: UserRound, label: "Alunos trazidos", value: coach?.totalActiveStudents || 24, detail: "Alunos diretos cadastrados na sua rede" },
-    { icon: Activity, label: "Aulões ministrados", value: 7, detail: "Última edição: Aulão FitMind Outubro" },
+    {
+      icon: Activity,
+      label: "Eventos ministrados",
+      value: ministered.count,
+      detail: ministered.lastTitle
+        ? `Última edição: ${ministered.lastTitle}${ministered.lastDate ? " • " + new Date(ministered.lastDate).toLocaleDateString("pt-BR") : ""} · ${ministered.attendeesTotal} presenças totais`
+        : "Você ainda não foi responsável por nenhum evento FitMind.",
+    },
     { icon: BookOpen, label: "Cursos criados", value: 2, detail: "Treino Funcional Iniciante, Mentoria Coach 360" },
     { icon: GraduationCap, label: "Coaches treinados", value: 5, detail: "Diretos da sua rede que evoluíram para coach" },
   ];
