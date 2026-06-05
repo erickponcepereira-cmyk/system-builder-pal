@@ -91,6 +91,7 @@ import { Route as AdminAchievementsRouteImport } from './routes/admin.achievemen
 import { Route as StudentProfileEditRouteImport } from './routes/student.profile.edit'
 import { Route as StudentPartnersPartnerIdRouteImport } from './routes/student.partners.$partnerId'
 import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coaches.inactivity'
+import { Route as AuthenticatedFitmindCheckinEventIdRouteImport } from './routes/_authenticated.fitmind-checkin.$eventId'
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
@@ -514,6 +515,12 @@ const AdminCoachesInactivityRoute = AdminCoachesInactivityRouteImport.update({
   path: '/inactivity',
   getParentRoute: () => AdminCoachesRoute,
 } as any)
+const AuthenticatedFitmindCheckinEventIdRoute =
+  AuthenticatedFitmindCheckinEventIdRouteImport.update({
+    id: '/_authenticated/fitmind-checkin/$eventId',
+    path: '/fitmind-checkin/$eventId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPayOrderNumberRoute = ApiPublicPayOrderNumberRouteImport.update({
   id: '/api/public/pay/$orderNumber',
   path: '/api/public/pay/$orderNumber',
@@ -632,6 +639,7 @@ export interface FileRoutesByFullPath {
   '/student/workout': typeof StudentWorkoutRoute
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
+  '/fitmind-checkin/$eventId': typeof AuthenticatedFitmindCheckinEventIdRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
   '/student/partners/$partnerId': typeof StudentPartnersPartnerIdRoute
   '/student/profile/edit': typeof StudentProfileEditRoute
@@ -721,6 +729,7 @@ export interface FileRoutesByTo {
   '/student/workout': typeof StudentWorkoutRoute
   '/admin': typeof AdminIndexRoute
   '/student': typeof StudentIndexRoute
+  '/fitmind-checkin/$eventId': typeof AuthenticatedFitmindCheckinEventIdRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
   '/student/partners/$partnerId': typeof StudentPartnersPartnerIdRoute
   '/student/profile/edit': typeof StudentProfileEditRoute
@@ -813,6 +822,7 @@ export interface FileRoutesById {
   '/student/workout': typeof StudentWorkoutRoute
   '/admin/': typeof AdminIndexRoute
   '/student/': typeof StudentIndexRoute
+  '/_authenticated/fitmind-checkin/$eventId': typeof AuthenticatedFitmindCheckinEventIdRoute
   '/admin/coaches/inactivity': typeof AdminCoachesInactivityRoute
   '/student/partners/$partnerId': typeof StudentPartnersPartnerIdRoute
   '/student/profile/edit': typeof StudentProfileEditRoute
@@ -906,6 +916,7 @@ export interface FileRouteTypes {
     | '/student/workout'
     | '/admin/'
     | '/student/'
+    | '/fitmind-checkin/$eventId'
     | '/admin/coaches/inactivity'
     | '/student/partners/$partnerId'
     | '/student/profile/edit'
@@ -995,6 +1006,7 @@ export interface FileRouteTypes {
     | '/student/workout'
     | '/admin'
     | '/student'
+    | '/fitmind-checkin/$eventId'
     | '/admin/coaches/inactivity'
     | '/student/partners/$partnerId'
     | '/student/profile/edit'
@@ -1086,6 +1098,7 @@ export interface FileRouteTypes {
     | '/student/workout'
     | '/admin/'
     | '/student/'
+    | '/_authenticated/fitmind-checkin/$eventId'
     | '/admin/coaches/inactivity'
     | '/student/partners/$partnerId'
     | '/student/profile/edit'
@@ -1120,6 +1133,7 @@ export interface RootRouteChildren {
   PayOrderNumberRoute: typeof PayOrderNumberRoute
   RCodeRoute: typeof RCodeRoute
   ResultadoTokenRoute: typeof ResultadoTokenRoute
+  AuthenticatedFitmindCheckinEventIdRoute: typeof AuthenticatedFitmindCheckinEventIdRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
@@ -1705,6 +1719,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoachesInactivityRouteImport
       parentRoute: typeof AdminCoachesRoute
     }
+    '/_authenticated/fitmind-checkin/$eventId': {
+      id: '/_authenticated/fitmind-checkin/$eventId'
+      path: '/fitmind-checkin/$eventId'
+      fullPath: '/fitmind-checkin/$eventId'
+      preLoaderRoute: typeof AuthenticatedFitmindCheckinEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pay/$orderNumber': {
       id: '/api/public/pay/$orderNumber'
       path: '/api/public/pay/$orderNumber'
@@ -1948,6 +1969,8 @@ const rootRouteChildren: RootRouteChildren = {
   PayOrderNumberRoute: PayOrderNumberRoute,
   RCodeRoute: RCodeRoute,
   ResultadoTokenRoute: ResultadoTokenRoute,
+  AuthenticatedFitmindCheckinEventIdRoute:
+    AuthenticatedFitmindCheckinEventIdRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
