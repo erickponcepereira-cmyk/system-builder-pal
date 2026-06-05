@@ -408,111 +408,339 @@ function PlanForm({ value, products, onChange, onSave, onCancel, saving }: {
 // ═══════════════════════════════════════════════════════════
 interface PatentRule {
   id: string;
-  patent: PatentLevel;
+  key: string;
   display_name: string;
-  min_direct_students: number | null;
-  min_network_students: number | null;
-  min_monthly_revenue: number | null;
-  min_consecutive_months: number | null;
+  description: string | null;
+  badge_color: string | null;
+  badge_icon: string | null;
+  image_url: string | null;
+  required_revenue: number;
+  time_window_months: number;
+  min_own_sales_pct: number;
+  max_team_sales_pct: number;
+  vp_max_pct: number | null;
+  ve_max_pct: number | null;
+  phase: number | null;
+  level: number;
+  sort_order: number;
   benefits: string | null;
+  is_active: boolean;
 }
 
-function PatentsTab() {
-  const [rules, setRules]   = useState<PatentRule[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+const blankPatent = (): PatentRule => ({
+  id: "",
+  key: `coach_custom_${Date.now()}`,
+  display_name: "Nova patente",
+  description: "",
+  badge_color: "#FF4230",
+  badge_icon: "trophy",
+  image_url: null,
+  required_revenue: 0,
+  time_window_months: 1,
+  min_own_sales_pct: 100,
+  max_team_sales_pct: 0,
+  vp_max_pct: 100,
+  ve_max_pct: 0,
+  phase: 1,
+  level: 99,
+  sort_order: 999,
+  benefits: "",
+  is_active: true,
+});
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("patent_rules").select("*").order("sort_order");
-      const existing = (data as PatentRule[]) || [];
-      const filled: PatentRule[] = PATENT_LEVELS.map((p) => {
-        const found = existing.find((r) => r.patent === p);
-        return found || {
-          id: "",
-          patent: p,
-          display_name: p,
-          min_direct_students: null,
-          min_network_students: null,
-          min_monthly_revenue: null,
-          min_consecutive_months: null,
-          benefits: "",
-        };
-      });
-      setRules(filled);
-      setLoading(false);
-    })();
-  }, []);
+function PatentsTab() {
+  const [rules, setRules] = useState<PatentRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const reload = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("patent_rules")
+      .select("id,key,display_name,description,badge_color,badge_icon,image_url,required_revenue,time_window_months,min_own_sales_pct,max_team_sales_pct,vp_max_pct,ve_max_pct,phase,level,sort_order,benefits,is_active" as never)
+      .not("key", "is", null)
+      .eq("is_active", true)
+      .order("level");
+    setRules(((data as unknown as PatentRule[]) || []).map((r) => ({
+      ...r,
+      required_revenue: Number(r.required_revenue) || 0,
+      time_window_months: Number(r.time_window_months) || 1,
+      min_own_sales_pct: Number(r.min_own_sales_pct) || 0,
+      max_team_sales_pct: Number(r.max_team_sales_pct) || 0,
+      vp_max_pct: r.vp_max_pct == null ? null : Number(r.vp_max_pct),
+      ve_max_pct: r.ve_max_pct == null ? null : Number(r.ve_max_pct),
+      phase: r.phase == null ? null : Number(r.phase),
+      level: Number(r.level) || 0,
+      sort_order: Number(r.sort_order) || 0,
+    })));
+    setLoading(false);
+  };
+
+  useEffect(() => { reload(); }, []);
 
   const update = (i: number, patch: Partial<PatentRule>) => {
     setRules((prev) => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
   };
-
-  const save = async () => {
-    setSaving(true);
-    for (let i = 0; i < rules.length; i++) {
-      const r = rules[i];
-      const payload = {
-        patent: r.patent,
-        display_name: r.display_name || r.patent,
-        badge_color: "#E24B4A",
-        badge_icon: "award",
-        min_direct_students: r.min_direct_students || null,
-        min_network_students: r.min_network_students || null,
-        min_monthly_revenue: r.min_monthly_revenue || null,
-        min_consecutive_months: r.min_consecutive_months || null,
-        benefits: r.benefits || null,
-        sort_order: i,
-      };
-      if (r.id) {
-        await supabase.from("patent_rules").update(payload as any).eq("id", r.id);
-      } else {
-        const { data } = await supabase.from("patent_rules").insert(payload as any).select().single();
-        if (data) rules[i].id = (data as any).id;
-      }
+  const add = () => setRules([...rules, blankPatent()]);
+  const removeRow = async (r: PatentRule, i: number) => {
+    if (!confirm(`Remover patente "${r.display_name}"?`)) return;
+    if (r.id) {
+      const { error } = await supabase.from("patent_rules").update({ is_active: false } as any).eq("id", r.id);
+      if (error) { toast.error(error.message); return; }
     }
-    setSaving(false);
-    toast.success("Patentes salvas com sucesso!");
+    setRules(rules.filter((_, idx) => idx !== i));
+    toast.success("Patente removida");
+  };
+
+  const saveAll = async () => {
+    setSaving(true);
+    try {
+      for (const r of rules) {
+        const payload: any = {
+          key: r.key,
+          display_name: r.display_name,
+          description: r.description ?? "",
+          badge_color: r.badge_color ?? "#FF4230",
+          badge_icon: r.badge_icon ?? "trophy",
+          image_url: r.image_url,
+          required_revenue: r.required_revenue,
+          time_window_months: r.time_window_months,
+          min_own_sales_pct: r.min_own_sales_pct,
+          max_team_sales_pct: r.max_team_sales_pct,
+          vp_max_pct: r.vp_max_pct,
+          ve_max_pct: r.ve_max_pct,
+          phase: r.phase,
+          level: r.level,
+          sort_order: r.sort_order,
+          benefits: r.benefits ?? "",
+          is_active: r.is_active,
+        };
+        if (r.id) await supabase.from("patent_rules").update(payload).eq("id", r.id);
+        else await supabase.from("patent_rules").insert(payload);
+      }
+      toast.success("Patentes salvas!");
+      reload();
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) return <Loader2 className="h-5 w-5 animate-spin text-white/50" />;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-white/50">Configure as metas de cada patente. Os benefícios poderão ser adicionados futuramente.</p>
-        <button onClick={save} disabled={saving}
-          className="flex items-center gap-1.5 rounded-md bg-[#E24B4A] px-4 py-2 text-sm font-bold text-white disabled:opacity-60">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          Salvar patentes
-        </button>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs text-white/50">Edite níveis, requisitos, porcentagens e imagens dos escudos.</p>
+        <div className="flex gap-2">
+          <button onClick={add} className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15">
+            <Plus className="h-4 w-4" /> Nova
+          </button>
+          <button onClick={reload} className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/15">
+            <RefreshCw className="h-4 w-4" /> Recarregar
+          </button>
+          <button onClick={saveAll} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-[#E24B4A] px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar todas
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
-        {rules.map((rule, i) => (
-          <div key={rule.patent} className="rounded-xl border border-white/10 p-4 space-y-3" style={{ backgroundColor: "#161616" }}>
-            <div className="flex items-center gap-3">
-              <PatentBadge patent={rule.patent} size="md" showName />
+        {rules.map((r, i) => (
+          <div key={r.id || i} className="rounded-2xl border border-white/5 p-4" style={{ backgroundColor: "#161616" }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
+                style={{ backgroundColor: `${r.badge_color || "#FF4230"}25`, border: `1px solid ${r.badge_color || "#FF4230"}55` }}>
+                <span className="text-xs font-bold" style={{ color: r.badge_color || "#FF4230" }}>N{r.level}</span>
+              </div>
+              <input type="text" value={r.display_name}
+                onChange={(e) => update(i, { display_name: e.target.value })}
+                className="text-base font-bold text-white bg-transparent outline-none border-b border-white/10 focus:border-[#E24B4A] flex-1" />
+              <button onClick={() => removeRow(r, i)} className="text-white/40 hover:text-red-400">
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <FInput label="Alunos diretos (mín.)" type="number" value={rule.min_direct_students ?? ""}
-                onChange={(v) => update(i, { min_direct_students: v === "" ? null : Number(v) })} />
-              <FInput label="Alunos na rede (mín.)" type="number" value={rule.min_network_students ?? ""}
-                onChange={(v) => update(i, { min_network_students: v === "" ? null : Number(v) })} />
-              <FInput label="Receita mensal mín. (R$)" type="number" value={rule.min_monthly_revenue ?? ""}
-                onChange={(v) => update(i, { min_monthly_revenue: v === "" ? null : Number(v) })} />
-              <FInput label="Meses consecutivos (mín.)" type="number" value={rule.min_consecutive_months ?? ""}
-                onChange={(v) => update(i, { min_consecutive_months: v === "" ? null : Number(v) })} />
+
+            <div className="grid gap-3 lg:grid-cols-3 mb-3">
+              <FInput label="Chave (única)" value={r.key} onChange={(v) => update(i, { key: v })} />
+              <FInput label="Cor (#hex)" value={r.badge_color || ""} onChange={(v) => update(i, { badge_color: v })} />
+              <BadgeImageUploader value={r.image_url} onChange={(url) => update(i, { image_url: url })} folder="patents" label="Escudo (imagem)" />
             </div>
-            <label className="block">
-              <span className="block text-xs text-white/60 mb-1">Benefícios (futuramente)</span>
-              <textarea rows={2} value={rule.benefits || ""} onChange={(e) => update(i, { benefits: e.target.value })}
-                placeholder="Descreva os benefícios desta patente..."
-                className="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-white resize-none" />
+
+            <label className="block mb-3">
+              <span className="block text-[11px] text-white/60 mb-1.5">Descrição / requisito</span>
+              <textarea value={r.description || ""} onChange={(e) => update(i, { description: e.target.value })}
+                rows={2} className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white" />
+            </label>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <FInput label="Nível" type="number" value={r.level} onChange={(v) => update(i, { level: Number(v), sort_order: 100 + Number(v) })} />
+              <FInput label="Fase" type="number" value={r.phase ?? ""} onChange={(v) => update(i, { phase: v === "" ? null : Number(v) })} />
+              <FInput label="Faturamento alvo (R$)" type="number" value={r.required_revenue} onChange={(v) => update(i, { required_revenue: Number(v) })} />
+              <FInput label="Prazo (meses)" type="number" value={r.time_window_months} onChange={(v) => update(i, { time_window_months: Number(v) })} />
+              <FInput label="% mín. próprias (VP)" type="number" value={r.min_own_sales_pct} onChange={(v) => update(i, { min_own_sales_pct: Number(v), max_team_sales_pct: 100 - Number(v) })} />
+              <FInput label="% máx. equipe (VE)" type="number" value={r.max_team_sales_pct} onChange={(v) => update(i, { max_team_sales_pct: Number(v) })} />
+              <FInput label="% máx. VP (teto)" type="number" value={r.vp_max_pct ?? ""} onChange={(v) => update(i, { vp_max_pct: v === "" ? null : Number(v) })} />
+              <FInput label="% máx. VE (teto)" type="number" value={r.ve_max_pct ?? ""} onChange={(v) => update(i, { ve_max_pct: v === "" ? null : Number(v) })} />
+            </div>
+
+            <label className="block mt-3">
+              <span className="block text-[11px] text-white/60 mb-1.5">Benefícios / liberações</span>
+              <textarea value={r.benefits || ""} onChange={(e) => update(i, { benefits: e.target.value })}
+                rows={2} className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white" />
             </label>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// MEDAL RULES TAB — career_medal_rules (monthly + cumulative)
+// ═══════════════════════════════════════════════════════════
+interface MedalRule {
+  id: string;
+  kind: "monthly" | "cumulative";
+  key: string;
+  display_name: string;
+  threshold: number;
+  tier: string | null;
+  icon: string | null;
+  image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+const blankMedal = (kind: "monthly" | "cumulative"): MedalRule => ({
+  id: "",
+  kind,
+  key: `${kind}_custom_${Date.now()}`,
+  display_name: "Nova medalha",
+  threshold: 0,
+  tier: "bronze",
+  icon: "medal",
+  image_url: null,
+  sort_order: 999,
+  is_active: true,
+});
+
+function MedalRulesTab() {
+  const [rows, setRows] = useState<MedalRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const reload = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("career_medal_rules")
+      .select("*")
+      .order("kind").order("sort_order").order("threshold");
+    setRows(((data as any[]) || []).map((r) => ({
+      ...r,
+      threshold: Number(r.threshold) || 0,
+      sort_order: Number(r.sort_order) || 0,
+    })));
+    setLoading(false);
+  };
+  useEffect(() => { reload(); }, []);
+
+  const update = (i: number, patch: Partial<MedalRule>) => {
+    setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  };
+  const add = (kind: "monthly" | "cumulative") => setRows([...rows, blankMedal(kind)]);
+  const removeRow = async (r: MedalRule, i: number) => {
+    if (!confirm(`Remover medalha "${r.display_name}"?`)) return;
+    if (r.id) {
+      const { error } = await supabase.from("career_medal_rules").delete().eq("id", r.id);
+      if (error) { toast.error(error.message); return; }
+    }
+    setRows(rows.filter((_, idx) => idx !== i));
+    toast.success("Medalha removida");
+  };
+  const saveAll = async () => {
+    setSaving(true);
+    try {
+      for (const r of rows) {
+        const payload: any = {
+          kind: r.kind,
+          key: r.key,
+          display_name: r.display_name,
+          threshold: r.threshold,
+          tier: r.tier,
+          icon: r.icon,
+          image_url: r.image_url,
+          sort_order: r.sort_order,
+          is_active: r.is_active,
+        };
+        if (r.id) await supabase.from("career_medal_rules").update(payload).eq("id", r.id);
+        else await supabase.from("career_medal_rules").insert(payload);
+      }
+      toast.success("Medalhas salvas!");
+      reload();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <Loader2 className="h-5 w-5 animate-spin text-white/50" />;
+
+  const monthly = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.kind === "monthly");
+  const cumulative = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.kind === "cumulative");
+
+  const renderGroup = (
+    title: string,
+    subtitle: string,
+    list: { r: MedalRule; i: number }[],
+    kind: "monthly" | "cumulative",
+  ) => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-white">{title}</h3>
+          <p className="text-[11px] text-white/50">{subtitle}</p>
+        </div>
+        <button onClick={() => add(kind)} className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/15">
+          <Plus className="h-3 w-3" /> Nova
+        </button>
+      </div>
+      <div className="space-y-2">
+        {list.map(({ r, i }) => (
+          <div key={r.id || `new-${i}`} className="rounded-xl border border-white/10 p-3" style={{ backgroundColor: "#161616" }}>
+            <div className="flex items-center gap-3 mb-3">
+              <input type="text" value={r.display_name}
+                onChange={(e) => update(i, { display_name: e.target.value })}
+                className="text-sm font-bold text-white bg-transparent outline-none border-b border-white/10 focus:border-[#E24B4A] flex-1" />
+              <button onClick={() => removeRow(r, i)} className="text-white/40 hover:text-red-400">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-4">
+              <FInput label="Chave" value={r.key} onChange={(v) => update(i, { key: v })} />
+              <FInput label="VP necessário" type="number" value={r.threshold} onChange={(v) => update(i, { threshold: Number(v) })} />
+              <FInput label="Tier (bronze/prata/ouro...)" value={r.tier || ""} onChange={(v) => update(i, { tier: v })} />
+              <FInput label="Ordem" type="number" value={r.sort_order} onChange={(v) => update(i, { sort_order: Number(v) })} />
+              <BadgeImageUploader value={r.image_url} onChange={(url) => update(i, { image_url: url })} folder="medals" label="Medalha (imagem)" />
+            </div>
+          </div>
+        ))}
+        {list.length === 0 && <p className="text-xs text-white/40">Nenhuma medalha cadastrada.</p>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-white/50">Edite metas, tiers e imagens das medalhas mensais (Ordem da Excelência) e acumuladas (Clube dos Campeões).</p>
+        <button onClick={saveAll} disabled={saving}
+          className="flex items-center gap-1.5 rounded-lg bg-[#E24B4A] px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar todas
+        </button>
+      </div>
+      {renderGroup("Ordem da Excelência FitMind", "Medalhas mensais (resetam todo mês)", monthly, "monthly")}
+      {renderGroup("Clube dos Campeões", "Medalhas acumuladas (carreira)", cumulative, "cumulative")}
     </div>
   );
 }
