@@ -183,6 +183,8 @@ export function ProtocolTab() {
     setTemplates((tpl as unknown as WorkoutTemplate[]) || []);
   };
 
+  const enableTplFn = useServerFn(enableTemplateForStudent);
+
   const applyTemplate = (t: WorkoutTemplate, mode: "replace" | "append") => {
     setProtocol((p) => ({
       ...p,
@@ -193,6 +195,17 @@ export function ProtocolTab() {
     }));
     setTemplatePickerOpen(false);
     toast.success(`Treino "${t.name}" aplicado.`);
+  };
+
+  const enableTemplateAsDay = async (t: WorkoutTemplate, letter: string) => {
+    if (!selected) return toast.error("Selecione um aluno primeiro.");
+    if (selected.external) return toast.error("Esta ação só funciona para alunos do app (não externos).");
+    try {
+      const r = (await enableTplFn({ data: { student_record_id: selected.id, template_id: t.id, letter } })) as { plan_name: string };
+      toast.success(`"${r.plan_name}" habilitado para ${selected.name}.`);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao habilitar treino");
+    }
   };
 
   const saveAsTemplate = async () => {
