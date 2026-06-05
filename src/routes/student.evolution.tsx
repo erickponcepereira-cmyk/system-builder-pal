@@ -119,10 +119,6 @@ function StudentEvolution() {
 
       {student && <WaterTrackerCard studentId={student.id} />}
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{photos.length}</p><p className="text-[10px] text-muted-foreground">fotos ({MAX_PHOTOS} máx)</p></div>
-        <div className="rounded-2xl bg-card p-3 text-center"><p className="text-lg font-bold text-foreground">{student?.goal_weight ? `${student.goal_weight}kg` : "—"}</p><p className="text-[10px] text-muted-foreground">meta peso</p></div>
-      </div>
 
       <section className="rounded-2xl bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
