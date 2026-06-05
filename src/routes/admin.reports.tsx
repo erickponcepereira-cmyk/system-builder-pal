@@ -22,30 +22,21 @@ function AdminReports() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "refunded">("all");
   const [salesOpen, setSalesOpen] = useState(false);
-  const [groupTab, setGroupTab] = useState<GroupKey>("aluno");
-  const [coachProfileSet, setCoachProfileSet] = useState<Set<string>>(new Set());
-  const [proProfileSet, setProProfileSet] = useState<Set<string>>(new Set());
-  const [partnerProfileSet, setPartnerProfileSet] = useState<Set<string>>(new Set());
   const fetchSales = useServerFn(listDetailedSales);
 
   const load = async () => {
     setLoading(true);
     const since = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
-    const [attendanceRes, ordersRes, coachesRes, partnersRes] = await Promise.all([
-      supabase.from("attendance_logs").select("student_id,log_date,attended,students!attendance_logs_student_id_fkey(profile_id,profiles!students_profile_id_fkey(name,email))").gte("log_date", since).order("log_date", { ascending: false }),
+    const [attendanceRes, ordersRes] = await Promise.all([
+      supabase.from("attendance_logs").select("student_id,log_date,attended,students!attendance_logs_student_id_fkey(profiles!students_profile_id_fkey(name,email))").gte("log_date", since).order("log_date", { ascending: false }),
       supabase.from("store_orders" as never).select("id,order_number,status,total_amount,created_at,students!store_orders_student_id_fkey(profiles!students_profile_id_fkey(name,email))" as never).order("created_at" as never, { ascending: false }).limit(100),
-      supabase.from("coaches").select("profile_id,is_professional"),
-      supabase.from("partners").select("profile_id"),
     ]);
     if (attendanceRes.error || ordersRes.error) toast.error(attendanceRes.error?.message || ordersRes.error?.message || "Erro ao carregar relatórios");
     setAttendance((attendanceRes.data as unknown as AttendanceRow[]) || []);
     setOrders((ordersRes.data as unknown as OrderRow[]) || []);
-    const coachRows = (coachesRes.data as Array<{ profile_id: string; is_professional: boolean | null }> | null) || [];
-    setCoachProfileSet(new Set(coachRows.filter((c) => !c.is_professional).map((c) => c.profile_id)));
-    setProProfileSet(new Set(coachRows.filter((c) => !!c.is_professional).map((c) => c.profile_id)));
-    setPartnerProfileSet(new Set(((partnersRes.data as Array<{ profile_id: string }> | null) || []).map((p) => p.profile_id)));
     setLoading(false);
   };
+
 
   useEffect(() => { load(); }, []);
 
