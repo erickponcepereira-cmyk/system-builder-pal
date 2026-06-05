@@ -28,7 +28,9 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [filter, setFilter] = useState<"all" | "free" | "discount">("all");
+  const [pageMode, setPageMode] = useState<"free" | "discount">("free");
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
