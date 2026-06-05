@@ -6,14 +6,17 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Clock, ExternalLink,
-  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check,
+  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check, QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   TZ, tzDateKey, tzToday, tzCurrentYearMonth, ymdKey,
   tzStartOfMonth, shiftYearMonth, yearMonthLabel,
 } from "@/lib/timezone";
+import { getEventAttendees, type EnrichedAttendee } from "@/lib/fitmind-attendance.functions";
 
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -939,24 +942,21 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
 
 // ─── Attendance ─────────────────────────────────────────────────────────────
 
-type Attendee = { id: string; display_name: string; profile_id: string; avatar_url: string | null };
-
 function EventAttendanceBlock({ eventId, color }: { eventId: string; color: string }) {
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [attendees, setAttendees] = useState<EnrichedAttendee[]>([]);
   const [myProfileId, setMyProfileId] = useState<string | null>(null);
-  const [myName, setMyName] = useState<string>("");
-  const [myAvatar, setMyAvatar] = useState<string | null>(null);
-  const [myStudentId, setMyStudentId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [loading, setLoading] = useState(false);
+  const fetchAttendees = useServerFn(getEventAttendees);
 
   const reload = async () => {
-    const { data } = await supabase
-      .from("event_attendances")
-      .select("id,display_name,profile_id,avatar_url")
-      .eq("event_id", eventId)
-      .order("created_at", { ascending: true });
-    setAttendees((data as Attendee[]) || []);
+    try {
+      const data = await fetchAttendees({ data: { eventId } });
+      setAttendees(data);
+    } catch {
+      setAttendees([]);
+    }
   };
 
   useEffect(() => {
@@ -965,21 +965,8 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("id,name,avatar_url")
-        .eq("user_id", userData.user.id)
-        .maybeSingle();
-      if (profile) {
-        setMyProfileId(profile.id);
-        setMyName(profile.name || "Aluno FitMind");
-        setMyAvatar(profile.avatar_url || null);
-        const { data: student } = await supabase
-          .from("students")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .maybeSingle();
-        setMyStudentId(student?.id || null);
-      }
+        .from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
+      if (profile) setMyProfileId(profile.id);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
@@ -987,23 +974,21 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
   const mine = attendees.find((a) => a.profile_id === myProfileId);
 
   const markPresent = async () => {
-    if (!myProfileId) {
-      toast.error("Faça login para marcar presença.");
-      return;
-    }
+    if (!myProfileId) { toast.error("Faça login para marcar presença."); return; }
     setLoading(true);
+    const { data: prof } = await supabase
+      .from("profiles").select("name,avatar_url").eq("id", myProfileId).maybeSingle();
+    const { data: student } = await supabase
+      .from("students").select("id").eq("profile_id", myProfileId).maybeSingle();
     const { error } = await supabase.from("event_attendances").insert({
       event_id: eventId,
       profile_id: myProfileId,
-      display_name: myName,
-      avatar_url: myAvatar,
-      student_id: myStudentId,
+      display_name: prof?.name || "Participante",
+      avatar_url: prof?.avatar_url || null,
+      student_id: student?.id || null,
     });
     setLoading(false);
-    if (error) {
-      toast.error("Não foi possível marcar presença.");
-      return;
-    }
+    if (error) { toast.error("Não foi possível marcar presença."); return; }
     toast.success("Presença confirmada!");
     reload();
   };
@@ -1013,35 +998,46 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
     setLoading(true);
     const { error } = await supabase.from("event_attendances").delete().eq("id", mine.id);
     setLoading(false);
-    if (error) {
-      toast.error("Não foi possível remover presença.");
-      return;
-    }
+    if (error) { toast.error("Não foi possível remover presença."); return; }
     toast.success("Presença removida.");
     reload();
   };
 
+  const checkinUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/fitmind-checkin/${eventId}`
+    : `/fitmind-checkin/${eventId}`;
+
+  const CLASS_STYLES: Record<EnrichedAttendee["classification"], string> = {
+    "Aluno":              "bg-white/10 text-white/70",
+    "Aluno Coach":        "bg-primary/20 text-primary",
+    "Aluno Parceiro":     "bg-blue-500/20 text-blue-300",
+    "Aluno Profissional": "bg-emerald-500/20 text-emerald-300",
+  };
+
   return (
-    <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+    <div className="rounded-xl p-3 space-y-3" style={{ backgroundColor: "#1A1A1A" }}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-sm text-white/80">
           <Users className="h-4 w-4 text-white/50" />
           <span className="font-semibold">{attendees.length}</span>
           <span className="text-white/50">{attendees.length === 1 ? "presente" : "presentes"}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowQR((v) => !v)}
+            className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition inline-flex items-center gap-1.5">
+            <QrCode className="h-3.5 w-3.5" /> {showQR ? "Ocultar QR" : "QR de presença"}
+          </button>
           <button
             onClick={() => setShowList((v) => !v)}
-            className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition"
-          >
+            className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition">
             {showList ? "Ocultar lista" : "Ver lista"}
           </button>
           {mine ? (
             <button
               onClick={removePresent}
               disabled={loading}
-              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition"
-            >
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition">
               Cancelar presença
             </button>
           ) : (
@@ -1049,28 +1045,47 @@ function EventAttendanceBlock({ eventId, color }: { eventId: string; color: stri
               onClick={markPresent}
               disabled={loading || !myProfileId}
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: color }}
-            >
+              style={{ backgroundColor: color }}>
               <Check className="h-3.5 w-3.5" />
               Marcar presença
             </button>
           )}
         </div>
       </div>
+
+      {showQR && (
+        <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4">
+          <QRCodeSVG value={checkinUrl} size={180} />
+          <p className="text-[11px] text-black/60 text-center max-w-[200px]">
+            Aponte a câmera para o QR. O participante precisa estar logado para confirmar presença.
+          </p>
+        </div>
+      )}
+
       {showList && attendees.length > 0 && (
-        <ul className="mt-3 max-h-48 overflow-y-auto divide-y divide-white/5">
+        <ul className="max-h-64 overflow-y-auto divide-y divide-white/5">
           {attendees.map((a) => (
-            <li key={a.id} className="flex items-center gap-2 py-1.5 text-xs text-white/70">
-              <div className="h-6 w-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/60 overflow-hidden">
-                {a.avatar_url ? <img src={a.avatar_url} alt="" className="h-full w-full object-cover" /> : (a.display_name?.[0] || "?").toUpperCase()}
+            <li key={a.id} className="flex items-center gap-2 py-2 text-xs">
+              <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/60 overflow-hidden flex-none">
+                {a.avatar_url
+                  ? <img src={a.avatar_url} alt="" className="h-full w-full object-cover" />
+                  : (a.display_name?.[0] || "?").toUpperCase()}
               </div>
-              <span className="truncate">{a.display_name}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white/90 truncate font-medium">{a.display_name}</p>
+                {a.coach_name && (
+                  <p className="text-[10px] text-white/40 truncate">Coach: {a.coach_name}</p>
+                )}
+              </div>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full flex-none ${CLASS_STYLES[a.classification]}`}>
+                {a.classification}
+              </span>
             </li>
           ))}
         </ul>
       )}
       {showList && attendees.length === 0 && (
-        <p className="mt-3 text-xs text-white/40">Nenhuma presença confirmada ainda.</p>
+        <p className="text-xs text-white/40">Nenhuma presença confirmada ainda.</p>
       )}
     </div>
   );

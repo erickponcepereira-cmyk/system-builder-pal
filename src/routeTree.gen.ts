@@ -51,6 +51,7 @@ import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PayOrderNumberRouteImport } from './routes/pay.$orderNumber'
 import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-checkin.$partnerId'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-checkin.$eventId'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTestSalesRouteImport } from './routes/admin.test-sales'
@@ -308,6 +309,11 @@ const PartnerCheckinPartnerIdRoute = PartnerCheckinPartnerIdRouteImport.update({
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FitmindCheckinEventIdRoute = FitmindCheckinEventIdRouteImport.update({
+  id: '/fitmind-checkin/$eventId',
+  path: '/fitmind-checkin/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
@@ -605,6 +611,7 @@ export interface FileRoutesByFullPath {
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
+  '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -694,6 +701,7 @@ export interface FileRoutesByTo {
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
+  '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -786,6 +794,7 @@ export interface FileRoutesById {
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
+  '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/partner-checkin/$partnerId': typeof PartnerCheckinPartnerIdRoute
   '/pay/$orderNumber': typeof PayOrderNumberRoute
@@ -879,6 +888,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
+    | '/fitmind-checkin/$eventId'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -968,6 +978,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
+    | '/fitmind-checkin/$eventId'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -1059,6 +1070,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
+    | '/fitmind-checkin/$eventId'
     | '/invite/$token'
     | '/partner-checkin/$partnerId'
     | '/pay/$orderNumber'
@@ -1115,6 +1127,7 @@ export interface RootRouteChildren {
   TermosRoute: typeof TermosRoute
   TermosCompraRoute: typeof TermosCompraRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
+  FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PartnerCheckinPartnerIdRoute: typeof PartnerCheckinPartnerIdRoute
   PayOrderNumberRoute: typeof PayOrderNumberRoute
@@ -1423,6 +1436,13 @@ declare module '@tanstack/react-router' {
       path: '/invite/$token'
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fitmind-checkin/$eventId': {
+      id: '/fitmind-checkin/$eventId'
+      path: '/fitmind-checkin/$eventId'
+      fullPath: '/fitmind-checkin/$eventId'
+      preLoaderRoute: typeof FitmindCheckinEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkin/$studentId': {
@@ -1943,6 +1963,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermosRoute: TermosRoute,
   TermosCompraRoute: TermosCompraRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
+  FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,
   PartnerCheckinPartnerIdRoute: PartnerCheckinPartnerIdRoute,
   PayOrderNumberRoute: PayOrderNumberRoute,
