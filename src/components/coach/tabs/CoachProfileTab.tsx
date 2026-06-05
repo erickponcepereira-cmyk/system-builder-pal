@@ -22,6 +22,24 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
   const [uploading, setUploading] = useState(false);
   const [activeView, setActiveView] = useState<"profile" | "top">("profile");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fetchMinistered = useServerFn(getCoachMinisteredReport);
+  const [ministered, setMinistered] = useState<{ count: number; lastTitle: string | null; lastDate: string | null; attendeesTotal: number }>({ count: 0, lastTitle: null, lastDate: null, attendeesTotal: 0 });
+
+  useEffect(() => {
+    if (!coach) return;
+    (async () => {
+      try {
+        const r = await fetchMinistered({ data: {} });
+        setMinistered({
+          count: r.summary.events_count,
+          lastTitle: r.summary.last_event?.title || null,
+          lastDate: r.summary.last_event?.starts_at || null,
+          attendeesTotal: r.summary.attendees_total,
+        });
+      } catch { /* silent */ }
+    })();
+  }, [coach, fetchMinistered]);
+
 
   
 
