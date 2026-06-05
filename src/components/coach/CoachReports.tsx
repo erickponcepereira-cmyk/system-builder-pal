@@ -27,7 +27,7 @@ function shiftMonths(iso: string, n: number) {
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (a: number, b: number) => (b === 0 ? (a > 0 ? 100 : 0) : ((a - b) / b) * 100);
 
-type ReportTab = "atendimentos" | "vendas" | "clientes" | "desafio" | "rede";
+type ReportTab = "atendimentos" | "vendas" | "clientes" | "desafio" | "rede" | "eventos";
 
 export function CoachReports() {
   const [tab, setTab] = useState<ReportTab>("vendas");
@@ -44,6 +44,7 @@ export function CoachReports() {
           <TabBtn active={tab === "clientes"} onClick={() => setTab("clientes")} icon={Users} label="Top Clientes" />
           <TabBtn active={tab === "rede"} onClick={() => setTab("rede")} icon={Network} label="Rede / Downline" />
           <TabBtn active={tab === "desafio"} onClick={() => setTab("desafio")} icon={Trophy} label="Desafio" />
+          <TabBtn active={tab === "eventos"} onClick={() => setTab("eventos")} icon={CalendarDays} label="Eventos ministrados" />
           <TabBtn active={tab === "atendimentos"} onClick={() => setTab("atendimentos")} icon={CalendarCheck} label="Atendimentos" />
         </div>
       </div>
@@ -52,10 +53,12 @@ export function CoachReports() {
       {tab === "clientes" && <SalesDashboard mode="customers" />}
       {tab === "rede" && <DownlineDashboard />}
       {tab === "desafio" && <ChallengeDashboard />}
+      {tab === "eventos" && <MinisteredEventsDashboard />}
       {tab === "atendimentos" && <AttendanceDashboard />}
     </>
   );
 }
+
 
 function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof BarChart3; label: string }) {
   return (
