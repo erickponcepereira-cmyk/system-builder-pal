@@ -108,15 +108,8 @@ export const getEventsReport = createServerFn({ method: "GET" })
     const { data: isAdminRpc } = await supabase.rpc("is_admin", { _user_id: userId });
     let canView = !!isAdminRpc;
     if (!canView) {
-      const { data: prof } = await supabase.from("profiles").select("id").eq("user_id", userId).maybeSingle();
-      if (prof) {
-        const { data: coach } = await supabaseAdmin
-          .from("coaches")
-          .select("can_create_fitmind_events")
-          .eq("profile_id", prof.id)
-          .maybeSingle();
-        canView = !!(coach as { can_create_fitmind_events?: boolean } | null)?.can_create_fitmind_events;
-      }
+      const { data: ok } = await supabase.rpc("can_create_fitmind_events" as never, { _user_id: userId } as never);
+      canView = ok === true;
     }
     if (!canView) throw new Error("Sem permissão para acessar relatórios.");
 
