@@ -16,6 +16,7 @@ import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
