@@ -743,20 +743,22 @@ function MinisteredEventsDashboard() {
   const fetchMinistered = useServerFn(getCoachMinisteredReport);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [scope, setScope] = useState<"ministered" | "created">("ministered");
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<MinisteredReport | null>(null);
+  const [data, setData] = useState<(MinisteredReport & { can_view_created?: boolean; scope?: "ministered" | "created" }) | null>(null);
 
-  const load = async () => {
+  const load = async (s: "ministered" | "created" = scope) => {
     setLoading(true);
     try {
-      const r = await fetchMinistered({ data: { from: from || undefined, to: to || undefined } });
+      const r = await fetchMinistered({ data: { from: from || undefined, to: to || undefined, scope: s } });
       setData(r);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { load(scope); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [scope]);
+
 
   const exportCsv = () => {
     if (!data) return;
