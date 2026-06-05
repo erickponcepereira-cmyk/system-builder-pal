@@ -33,6 +33,7 @@ type Freebie = {
   sponsor_whatsapp: string | null;
   sponsor_instagram: string | null;
   sponsor_website: string | null;
+  category: string | null;
 };
 
 type Redemption = {
@@ -51,7 +52,7 @@ type PartnerFreeProduct = {
   redemption_instructions: string | null;
   stock: number | null;
   partner_id: string;
-  partners: { fantasy_name: string; photo_url: string | null; status: string } | null;
+  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
 
 function StudentFreebies() {
