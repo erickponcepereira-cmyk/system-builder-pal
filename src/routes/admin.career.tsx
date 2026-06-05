@@ -22,7 +22,7 @@ export const Route = createFileRoute("/admin/career")({
   component: AdminCareerPage,
 });
 
-type Tab = "plans" | "patents" | "medals" | "challenges" | "deliveries";
+type Tab = "plans" | "patents" | "medal_rules" | "medals" | "challenges" | "deliveries";
 
 function AdminCareerPage() {
   const [tab, setTab] = useState<Tab>("plans");
