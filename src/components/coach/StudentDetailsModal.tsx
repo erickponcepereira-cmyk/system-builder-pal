@@ -480,6 +480,10 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 <WindowMethodHistory studentId={studentId} />
               </div>
             </div>
+          ) : tab === "treinos" ? (
+            studentUserId
+              ? <StudentWorkoutsPanel studentUserId={studentUserId} />
+              : <p className="py-10 text-center text-xs text-white/40">Aluno sem usuário vinculado.</p>
           ) : tab === "evolucao" ? (
             <EvolutionPhotos photos={photos} />
           ) : (
