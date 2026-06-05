@@ -848,6 +848,37 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
             </div>
           </div>
         )}
+        {couponPreview && !processing && (
+          <div className="text-center py-4">
+            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-bold mb-2">Cupom de desconto</p>
+            {couponPreview.student_photo ? (
+              <img src={couponPreview.student_photo} className="mx-auto h-24 w-24 rounded-full object-cover border-4 border-primary/30" alt={couponPreview.student_name} />
+            ) : (
+              <div className="mx-auto h-24 w-24 rounded-full bg-primary/15 flex items-center justify-center text-3xl font-bold text-primary">
+                {couponPreview.student_name.charAt(0)}
+              </div>
+            )}
+            <p className="mt-3 text-lg font-bold text-white">{couponPreview.student_name}</p>
+            <p className="text-sm text-primary mt-1">{couponPreview.product_name}</p>
+            <p className="text-[10px] text-white/40 mt-1">Gerado em {new Date(couponPreview.created_at).toLocaleString("pt-BR")}</p>
+            {couponPreview.status !== "active" ? (
+              <>
+                <p className="mt-3 text-sm text-red-400 font-bold">Cupom já {couponPreview.status === "used" ? "utilizado" : "cancelado"}</p>
+                {couponPreview.redeemed_at && <p className="text-[10px] text-white/40">em {new Date(couponPreview.redeemed_at).toLocaleString("pt-BR")}</p>}
+                <button onClick={reset} className="mt-4 rounded bg-white/10 px-4 py-2 text-sm text-white">OK</button>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-xs text-white/60">Confirme para aplicar o desconto. O cupom será marcado como usado.</p>
+                <div className="mt-4 flex gap-2 max-w-xs mx-auto">
+                  <button onClick={reset} className="flex-1 rounded bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/20"><X className="inline h-4 w-4 mr-1" /> Cancelar</button>
+                  <button onClick={confirmCoupon} className="flex-1 rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"><Check className="inline h-4 w-4 mr-1" /> Validar</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {result?.ok && (
           <div className="text-center py-6">
             {result.student_avatar ? (
