@@ -421,7 +421,8 @@ export const enableTemplateForStudent = createServerFn({ method: "POST" })
 
     const tplName = (tpl as any).name as string;
     const items = ((tpl as any).items || []) as Array<{ name: string; sets?: string; reps?: string; rest?: string; notes?: string }>;
-    const planName = data.letter ? `Treino ${data.letter} — ${tplName}` : tplName;
+    const planName = tplName;
+    const letter = (data.letter || "").toUpperCase().slice(0, 2) || null;
 
     const { data: created, error } = await supabase
       .from("workout_plans")
@@ -430,8 +431,9 @@ export const enableTemplateForStudent = createServerFn({ method: "POST" })
         coach_id: userId,
         name: planName,
         day_of_week: data.day_of_week ?? null,
+        letter,
         notes: `Importado do template "${tplName}"`,
-      })
+      } as never)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
