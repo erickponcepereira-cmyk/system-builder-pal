@@ -50,7 +50,7 @@ function getRange(period: PeriodKey, customFrom: string, customTo: string): { fr
 export function TopSellingProducts({ coachProfileId }: { coachProfileId: string | null }) {
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Map<string, SaleRow>>(new Map());
-  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; category_id: string | null }>>([]);
+  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; category_id: string | null; section_id: string | null }>>([]);
   const [allCategories, setAllCategories] = useState<Array<{ id: string; name: string; section_id: string | null }>>([]);
   const [allSections, setAllSections] = useState<Array<{ id: string; name: string }>>([]);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -67,7 +67,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       const [secsRes, catsRes, prodsRes] = await Promise.all([
         supabase.from("store_sections").select("id,name").order("name"),
         supabase.from("store_categories").select("id,name,section_id").order("name"),
-        supabase.from("products").select("id,name,category_id"),
+        supabase.from("products").select("id,name,category_id,section_id"),
       ]);
       setAllSections((secsRes.data as any[]) || []);
       setAllCategories((catsRes.data as any[]) || []);
