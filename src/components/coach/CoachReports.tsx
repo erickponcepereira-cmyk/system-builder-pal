@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CalendarCheck, BarChart3, User as UserIcon, ShoppingBag, Trophy, Users,
-  Download, Search, TrendingUp, TrendingDown, Network,
+  Download, Search, TrendingUp, TrendingDown, Network, CalendarDays,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -15,6 +15,8 @@ import {
 } from "@/lib/coach-reports.functions";
 
 import { getCoachDownlineReport, type DownlineReport } from "@/lib/coach-downline.functions";
+import { getCoachMinisteredReport, type MinisteredReport } from "@/lib/fitmind-events.functions";
+
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function thisMonthISO() { return new Date().toISOString().slice(0, 7); }
