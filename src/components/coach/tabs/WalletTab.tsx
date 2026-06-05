@@ -180,7 +180,23 @@ export function WalletTab() {
 
   const mask = (v: number) => walletVisible ? brl(v) : "R$ ••••";
 
+  const currentPatent = career?.patents.find((p) => p.key === career.currentPatentKey) ?? null;
+
+  // Top monthly medal currently earned this month
+  let topMonthlyMedal: MedalRule | null = null;
+  if (medals) {
+    const earnedKeys = new Set(
+      medals.earned
+        .filter((e) => e.medal_kind === "monthly" && e.period_year === medals.currentMonth.year && e.period_month === medals.currentMonth.month)
+        .map((e) => e.medal_key),
+    );
+    const eligible = medals.monthlyRules.filter((r) => earnedKeys.has(r.key));
+    eligible.sort((a, b) => b.threshold - a.threshold);
+    topMonthlyMedal = eligible[0] ?? null;
+  }
+
   const renderDirect = () => (
+
     <>
       <div className="rounded-2xl p-6 mb-4" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.6))" }}>
         <div className="flex items-center justify-between">
