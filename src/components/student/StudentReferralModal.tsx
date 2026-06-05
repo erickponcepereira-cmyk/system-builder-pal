@@ -34,7 +34,7 @@ export function StudentReferralModal({
     setSelected(null);
     setSearch("");
     (async () => {
-      const [{ data: challenges }, { data: digitals }, { data: nRules }] = await Promise.all([
+      const [{ data: challenges }, { data: digitals }, { data: slots }] = await Promise.all([
         supabase
           .from("products")
           .select("id,name,price,image_url")
@@ -45,12 +45,14 @@ export function StudentReferralModal({
           .select("id,title,price,cover_url")
           .eq("status", "active"),
         supabase
-          .from("product_n_rules" as never)
-          .select("product_id,enabled"),
+          .from("product_value_slots")
+          .select("product_id,applies_to_student_referral,is_active")
+          .eq("applies_to_student_referral", true)
+          .eq("is_active", true),
       ]);
-      // Apenas produtos com regra de indicação habilitada
+      // Produtos com pelo menos um slot de indicação aluno→aluno ativo
       const enabled = new Set(
-        ((nRules as any[]) || []).filter((r) => r.enabled).map((r) => r.product_id),
+        ((slots as any[]) || []).map((r) => r.product_id),
       );
       const out: RefProduct[] = [];
       (challenges || []).forEach((p: any) => {
