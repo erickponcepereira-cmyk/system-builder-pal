@@ -14,6 +14,7 @@ export const Route = createFileRoute("/student/workout")({
 type Plan = {
   id: string;
   name: string;
+  letter?: string | null;
   day_of_week: number | null;
   notes: string | null;
   workout_exercises: Array<{
@@ -38,8 +39,28 @@ type Plan = {
 };
 
 type LastLog = { load_kg: number | null; equipment_config: string | null; completed_at: string };
+type PersonalChallenge = { id: string; title: string; target_days: number; started_at: string; completed_at: string | null; status: string };
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const LETTER_COLORS: Record<string, string> = {
+  A: "from-primary to-orange-500",
+  B: "from-blue-500 to-cyan-400",
+  C: "from-emerald-500 to-teal-400",
+  D: "from-purple-500 to-pink-500",
+  E: "from-yellow-500 to-amber-400",
+};
+function letterGradient(letter?: string | null) {
+  return LETTER_COLORS[(letter || "").toUpperCase()] || "from-white/20 to-white/10";
+}
+function nextLetter(plans: Plan[], currentLetter?: string | null): Plan | null {
+  if (plans.length === 0) return null;
+  const lettered = plans.filter((p) => p.letter).sort((a, b) => (a.letter || "").localeCompare(b.letter || ""));
+  if (lettered.length === 0) return plans[0];
+  if (!currentLetter) return lettered[0];
+  const idx = lettered.findIndex((p) => (p.letter || "").toUpperCase() === currentLetter.toUpperCase());
+  if (idx < 0) return lettered[0];
+  return lettered[(idx + 1) % lettered.length];
+}
 
 function WorkoutPage() {
   const navigate = useNavigate();
