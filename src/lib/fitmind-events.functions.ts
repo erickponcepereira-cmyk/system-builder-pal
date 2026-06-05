@@ -279,12 +279,19 @@ export const getCoachMinisteredReport = createServerFn({ method: "GET" })
       : { data: null as { id: string } | null };
     const coachId = (coachRes.data as { id: string } | null)?.id || null;
 
-    let canViewCreated = false;
-    if (coachId) {
+    const { data: isAdminRpc } = await supabase.rpc("is_admin", { _user_id: userId });
+    const { data: canCreateRpc } = await supabase.rpc("can_create_fitmind_events" as never, { _user_id: userId } as never);
+    let canViewCreated = isAdminRpc === true || canCreateRpc === true;
+    if (!canViewCreated && coachId) {
+      const { data: coachPermission } = await supabaseAdmin
+        .from("coaches")
+        .select("can_create_fitmind_events")
+        .eq("id", coachId)
+        .maybeSingle();
       const { data: badge } = await supabaseAdmin
         .from("coach_badges").select("badge_key")
         .eq("coach_id", coachId).eq("badge_key", "event_creator" as never).maybeSingle();
-      canViewCreated = !!badge;
+      canViewCreated = !!badge || (coachPermission as { can_create_fitmind_events?: boolean } | null)?.can_create_fitmind_events === true;
     }
     const scope: "ministered" | "created" =
       data.scope === "created" && canViewCreated ? "created" : "ministered";
