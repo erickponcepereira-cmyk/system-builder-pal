@@ -202,13 +202,17 @@ function Stat({ icon: Icon, label, value, hint }: { icon: typeof Users; label: s
   );
 }
 
-function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt }: {
-  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number; achievedAt: string | null;
+function PatentRow({ p, achieved, isCurrent, qualifying, achievedAt, onClick }: {
+  p: PatentRule; achieved: boolean; isCurrent: boolean; qualifying: number; achievedAt: string | null; onClick?: () => void;
 }) {
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
   return (
-    <div className={`rounded-xl p-3 ${isCurrent ? "ring-1 ring-primary/40" : ""}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left rounded-xl p-3 transition hover:bg-white/[0.03] ${isCurrent ? "ring-1 ring-primary/40" : ""}`}
       style={{ backgroundColor: isCurrent ? "rgba(255,66,48,0.06)" : "#0F0F0F" }}>
+
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
           style={{ backgroundColor: `${p.badge_color || "#9CA3AF"}25`, border: `1px solid ${p.badge_color || "#9CA3AF"}55` }}>
