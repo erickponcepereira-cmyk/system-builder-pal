@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ShieldCheck, Trophy, Quote, Coins, Calendar, Users, Dumbbell, ChevronRight } from "lucide-react";
+import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 
 export const Route = createFileRoute("/student/")({
   component: StudentHome,
