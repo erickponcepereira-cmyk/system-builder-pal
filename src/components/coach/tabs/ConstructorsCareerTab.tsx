@@ -84,7 +84,7 @@ export function ConstructorsCareerTab() {
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0 overflow-hidden"
               style={{ backgroundColor: `${current?.badge_color || "#9CA3AF"}25`, border: `1px solid ${current?.badge_color || "#9CA3AF"}55` }}>
               {current?.image_url ? (
-                <img src={current.image_url} alt={current.display_name} className="h-full w-full object-cover" />
+                <img src={resolveBadgeUrl(current.image_url) || ""} alt={current.display_name} className="h-full w-full object-contain p-1" />
               ) : (
                 <Trophy className="h-7 w-7" style={{ color: current?.badge_color || "#9CA3AF" }} />
               )}
