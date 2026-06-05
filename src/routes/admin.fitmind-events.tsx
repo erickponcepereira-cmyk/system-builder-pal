@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import {
   CalendarDays, Plus, Trash2, Save, X, Star, ChevronLeft, ChevronRight,
   Loader2, Edit2, Eye, EyeOff, MapPin, Clock, Tag, Sparkles, AlertTriangle,
-  CheckCircle2, Flag, Palette, Globe, Users, UserCheck, Building2, Stethoscope,
+  CheckCircle2, Flag, Palette, Globe, Users, UserCheck, Building2, Stethoscope, BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
