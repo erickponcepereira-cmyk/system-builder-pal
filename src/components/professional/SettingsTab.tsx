@@ -193,6 +193,14 @@ export function SettingsTab({ coachId, profileId }: Props) {
             <textarea value={pub.services} onChange={(e) => setPub({ ...pub, services: e.target.value })} rows={3} placeholder="Liste seus serviços, programas, pacotes..." className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
           </Field>
 
+          <Field label="Especializações (tags)" hint="Pressione Enter ou vírgula para adicionar. Aparecem no seu perfil público.">
+            <SpecializationsEditor
+              value={pub.specializations}
+              onChange={(specializations) => setPub({ ...pub, specializations })}
+            />
+          </Field>
+
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Instagram (@usuario)" icon={<Instagram className="h-3 w-3" />}>
               <input value={pub.instagram} onChange={(e) => setPub({ ...pub, instagram: e.target.value })} placeholder="@seu.handle" className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
