@@ -307,12 +307,17 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       if (!mounted || !prof) return;
       const { data: coach } = await supabase
         .from("coaches")
-        .select("can_create_fitmind_events")
+        .select("id")
         .eq("profile_id", (prof as { id: string }).id)
         .maybeSingle();
-      if (mounted && coach && (coach as { can_create_fitmind_events?: boolean | null }).can_create_fitmind_events) {
-        setCanCreate(true);
-      }
+      if (!mounted || !coach) return;
+      const { data: badge } = await supabase
+        .from("coach_badges")
+        .select("badge_key")
+        .eq("coach_id", (coach as { id: string }).id)
+        .eq("badge_key", "event_creator" as never)
+        .maybeSingle();
+      if (mounted && badge) setCanCreate(true);
     })();
     return () => { mounted = false; };
   }, []);
