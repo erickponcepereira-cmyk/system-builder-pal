@@ -41,11 +41,12 @@ async function resolveCoachId(userId: string): Promise<{ profileId: string | nul
 
 const BADGE_LABELS: Record<string, string> = {
   master_coach: "Master Coach",
+  coach_hbl_42: "Coach HBL 42%",
+  coach_hbl_50: "Coach HBL 50%",
+  nutritionist_partner: "Nutricionista Parceiro",
   council: "Conselho",
-  coach_hbl_42: "Coach HBL 42",
-  nutritionist_partner: "Nutricionista parceiro",
-  partnership_master: "Parcerias Master",
-  event_creator: "Criador de eventos",
+  partnership_master: "Mestre de Parcerias",
+  event_creator: "Criador de Eventos",
 };
 
 export const getCoachProfileSummary = createServerFn({ method: "GET" })
