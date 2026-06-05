@@ -805,6 +805,7 @@ const BADGE_LABEL: Record<BadgeKey, string> = {
   nutritionist_partner: "Nutricionista Parceiro",
   council: "Conselho",
   partnership_master: "Mestre de Parcerias",
+  event_creator: "Criador de Eventos",
 };
 
 function BadgeFlagsSection({ productId }: { productId: string }) {
