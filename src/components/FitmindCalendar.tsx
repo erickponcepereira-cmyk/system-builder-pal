@@ -1115,7 +1115,7 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
   };
 
   const cycleStatus = async (reg: RegistrationRow) => {
-    const next: RegistrationStatusLite = reg.status === "registered" ? "attended"
+    const next: "registered" | "attended" | "no_show" = reg.status === "registered" ? "attended"
       : reg.status === "attended" ? "no_show" : "registered";
     try {
       await callSetRegStatus({ data: { registrationId: reg.id, status: next } });
