@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2, AlertCircle, CalendarDays } from "lucide-react";
 import { checkInToEvent } from "@/lib/fitmind-attendance.functions";
 
-export const Route = createFileRoute("/_authenticated/fitmind-checkin/$eventId")({
+export const Route = createFileRoute("/fitmind-checkin/$eventId")({
   component: FitmindCheckinPage,
 });
 
