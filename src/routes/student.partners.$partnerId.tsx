@@ -16,7 +16,7 @@ interface Partner {
   whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
 }
-interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; name: string; description: string | null; image_url: string | null; price: number; }
+interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; name: string; description: string | null; image_url: string | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
 
 function PartnerProfilePage() {
