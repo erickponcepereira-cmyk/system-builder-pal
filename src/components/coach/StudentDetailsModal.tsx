@@ -18,7 +18,7 @@ interface Props {
   initialTab?: Tab;
 }
 
-type Profile = { name: string; email: string; phone: string | null; birthdate: string | null; city: string | null; state: string | null };
+type Profile = { name: string; email: string; phone: string | null; birthdate: string | null; city: string | null; state: string | null; photo_url?: string | null; avatar_url?: string | null };
 type SubRow = { id: string; status: string; start_date: string; end_date: string; products: { id: string; name: string; price: number | null } | null };
 type TxRow = { id: string; gross_amount: number; status: string; paid_at: string | null; created_at: string; products: { name: string } | null };
 type BodyAssess = { id: string; assessment_date: string; weight: number | null; body_fat: number | null; muscle_mass: number | null; skeletal_muscle: number | null; basal_metabolism: number | null; bmi: number | null; client_notes: string | null; professional_notes: string | null };
