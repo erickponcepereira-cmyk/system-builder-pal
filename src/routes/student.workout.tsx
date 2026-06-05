@@ -52,12 +52,18 @@ const LETTER_COLORS: Record<string, string> = {
 function letterGradient(letter?: string | null) {
   return LETTER_COLORS[(letter || "").toUpperCase()] || "from-white/20 to-white/10";
 }
+function planLetter(plan?: Pick<Plan, "letter" | "name"> | null) {
+  const saved = (plan?.letter || "").trim().toUpperCase();
+  if (saved) return saved;
+  const inferred = (plan?.name || "").match(/(?:^|\b)treino\s*([A-E])\b/i)?.[1];
+  return inferred ? inferred.toUpperCase() : null;
+}
 function nextLetter(plans: Plan[], currentLetter?: string | null): Plan | null {
   if (plans.length === 0) return null;
-  const lettered = plans.filter((p) => p.letter).sort((a, b) => (a.letter || "").localeCompare(b.letter || ""));
+  const lettered = plans.filter((p) => planLetter(p)).sort((a, b) => (planLetter(a) || "").localeCompare(planLetter(b) || ""));
   if (lettered.length === 0) return plans[0];
   if (!currentLetter) return lettered[0];
-  const idx = lettered.findIndex((p) => (p.letter || "").toUpperCase() === currentLetter.toUpperCase());
+  const idx = lettered.findIndex((p) => planLetter(p) === currentLetter.toUpperCase());
   if (idx < 0) return lettered[0];
   return lettered[(idx + 1) % lettered.length];
 }
@@ -104,13 +110,13 @@ function WorkoutPage() {
   useEffect(() => { reload(); }, []);
 
   if (view === "active" && activePlan) {
-    return <ActiveSession key={activePlan.id} plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
+    return <ActiveSession key={activePlan.id} plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} onFinished={(p) => setLastCompletedPlan(p)} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
   }
 
-  const next = nextLetter(plans, lastCompletedPlan?.letter);
+  const next = nextLetter(plans, planLetter(lastCompletedPlan));
   // Days a workout was completed (for mini-calendar)
   const completedDays = new Set(recentSessions.map((s) => new Date(s.started_at).toISOString().slice(0, 10)));
   // Current streak
@@ -140,8 +146,8 @@ function WorkoutPage() {
         <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4">
           <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
           <div className="mt-2 flex items-center gap-3">
-            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${letterGradient(next.letter)} text-2xl font-black text-white shadow-lg`}>
-              {next.letter || "·"}
+            <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${letterGradient(planLetter(next))} text-2xl font-black text-white shadow-lg`}>
+              {planLetter(next) || "·"}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-bold text-white">{next.name}</p>
@@ -233,8 +239,8 @@ function WorkoutPage() {
             return (
               <div key={p.id} className={`rounded-2xl border p-4 ${isNext ? "border-primary/40 bg-primary/[0.06]" : "border-white/10 bg-white/5"}`}>
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(p.letter)} text-xl font-black text-white shadow-md`}>
-                    {p.letter || "·"}
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(planLetter(p))} text-xl font-black text-white shadow-md`}>
+                    {planLetter(p) || "·"}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-white">{p.name}</p>
@@ -311,7 +317,7 @@ function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCrea
 }
 
 /* ------------------------- ACTIVE SESSION ------------------------- */
-function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans?: Plan[]; onExit: () => void; onStartNext?: (p: Plan) => void }) {
+function ActiveSession({ plan, plans, onExit, onStartNext, onFinished }: { plan: Plan; plans?: Plan[]; onExit: () => void; onStartNext?: (p: Plan) => void; onFinished?: (p: Plan) => void }) {
   const startFn = useServerFn(startWorkoutSession);
   const logSetFn = useServerFn(logSet);
   const logCardioFn = useServerFn(logCardio);
@@ -512,6 +518,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
       })) as { xp: number; totalSessions: number; streak: number; newAchievements: Array<{ code: string; title: string; icon: string | null }> };
       setSummary({ total: r.totalSessions, achievements: r.newAchievements || [], durationSec: globalSec, streak: r.streak || 0 });
       setRunning(false);
+      onFinished?.(plan);
       if ((r.newAchievements || []).length > 0) {
         setAchievementReveal(r.newAchievements[0]);
       }
@@ -521,7 +528,7 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
   };
 
   if (summary) {
-    const next = nextLetter(plans || [], plan.letter);
+    const next = nextLetter(plans || [], planLetter(plan));
     const showNext = next && next.id !== plan.id;
     return (
       <div className="relative space-y-5 p-5 text-center">
@@ -557,8 +564,8 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
           <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-4 text-left">
             <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
             <div className="mt-2 flex items-center gap-3">
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(next!.letter)} text-xl font-black text-white`}>
-                {next!.letter || "·"}
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(planLetter(next))} text-xl font-black text-white`}>
+                {planLetter(next) || "·"}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-white">{next!.name}</p>
