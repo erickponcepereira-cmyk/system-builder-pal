@@ -24,7 +24,9 @@ type Plan = {
     reps: string | null;
     load_kg: number | null;
     rest_seconds: number;
+    rest_seconds_max: number | null;
     equipment_config: string | null;
+    equipment_config_user: string | null;
     media_url: string | null;
     notes: string | null;
     is_cardio: boolean;
@@ -34,6 +36,8 @@ type Plan = {
     cardio_elevation: number | null;
   }>;
 };
+
+type LastLog = { load_kg: number | null; equipment_config: string | null; completed_at: string };
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
