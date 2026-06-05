@@ -185,6 +185,7 @@ function FreebiesAdmin() {
             </div>
             <div className="space-y-3 text-sm">
               <Input label="Nome" value={editing.name} onChange={(v) => setEditing({ ...editing, name: v })} />
+              <Input label="Categoria" value={editing.category || ""} onChange={(v) => setEditing({ ...editing, category: v || null })} />
               <div>
                 <label className="text-xs text-white/60">Imagem</label>
                 {editing.image_url ? (
