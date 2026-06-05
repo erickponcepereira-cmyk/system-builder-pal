@@ -13,7 +13,16 @@ type Slot = {
 };
 
 type Block = { id: string; block_date: string; reason: string | null };
-type Appt = { id: string; starts_at: string; ends_at: string; status: string };
+type Appt = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  student_name: string | null;
+  coach_name: string | null;
+  order_status: string | null;
+  has_order: boolean;
+};
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const WEEK_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -50,13 +59,28 @@ export function AvailabilityEditor({ coachId }: Props) {
         .eq("professional_coach_id" as never, coachId as never),
       supabase
         .from("professional_appointments" as never)
-        .select("id,starts_at,ends_at,status")
+        .select("id,starts_at,ends_at,status,order_id,student:students!professional_appointments_student_id_fkey(profile:profiles!students_profile_id_fkey(name),coach:coaches!students_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))),order:partner_product_orders!professional_appointments_order_id_fkey(status)" as never)
         .eq("professional_coach_id" as never, coachId as never)
         .eq("status" as never, "scheduled" as never),
     ]);
     setSlots(((slotData as unknown as Slot[]) || []));
     setBlocks(((blockData as unknown as Block[]) || []));
-    setAppts(((apptData as unknown as Appt[]) || []));
+    type RawAppt = {
+      id: string; starts_at: string; ends_at: string; status: string; order_id: string | null;
+      student: { profile: { name: string | null } | null; coach: { profile: { name: string | null } | null } | null } | null;
+      order: { status: string | null } | null;
+    };
+    const enriched = (((apptData as unknown as RawAppt[]) || [])).map<Appt>((a) => ({
+      id: a.id,
+      starts_at: a.starts_at,
+      ends_at: a.ends_at,
+      status: a.status,
+      student_name: a.student?.profile?.name || null,
+      coach_name: a.student?.coach?.profile?.name || null,
+      order_status: a.order?.status || null,
+      has_order: !!a.order_id,
+    }));
+    setAppts(enriched);
     setLoading(false);
   };
 
