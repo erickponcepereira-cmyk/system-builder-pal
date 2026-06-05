@@ -20,6 +20,8 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
+import { PartnerReports } from "@/components/partner/PartnerReports";
+
 
 
 export const Route = createFileRoute("/partner")({
