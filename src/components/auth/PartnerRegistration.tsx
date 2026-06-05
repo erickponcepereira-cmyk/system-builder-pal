@@ -289,6 +289,14 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
                 <Input value={state} onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))} className="bg-white/5 border-white/10 text-white" />
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70 text-xs">Área de atuação</Label>
+              <Input value={businessArea} onChange={(e) => setBusinessArea(e.target.value)} placeholder="Ex: Alimentação saudável, Estética, Suplementos..." className="bg-white/5 border-white/10 text-white" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/70 text-xs">Especialidade (opcional)</Label>
+              <Input value={specialty} onChange={(e) => setSpecialty(e.target.value)} placeholder="Ex: Açaí e smoothies" className="bg-white/5 border-white/10 text-white" />
+            </div>
 
             {/* Coach indicador */}
             {referral ? (
