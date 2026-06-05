@@ -4914,6 +4914,7 @@ export type Database = {
           price: number | null
           price_input_mode: string
           redemption_instructions: string | null
+          redemption_mode: string
           section_id: string | null
           status: string
           stock: number | null
@@ -4945,6 +4946,7 @@ export type Database = {
           price?: number | null
           price_input_mode?: string
           redemption_instructions?: string | null
+          redemption_mode?: string
           section_id?: string | null
           status?: string
           stock?: number | null
@@ -4976,6 +4978,7 @@ export type Database = {
           price?: number | null
           price_input_mode?: string
           redemption_instructions?: string | null
+          redemption_mode?: string
           section_id?: string | null
           status?: string
           stock?: number | null
