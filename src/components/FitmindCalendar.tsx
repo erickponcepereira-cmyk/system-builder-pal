@@ -514,6 +514,12 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
               Lista
             </button>
           </div>
+          <button
+            onClick={() => setOnlyMine((v) => !v)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 ${onlyMine ? "bg-primary text-white" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            title="Mostrar apenas eventos em que você se inscreveu">
+            <Heart className={`h-3.5 w-3.5 ${onlyMine ? "fill-current" : ""}`} /> Meus eventos
+          </button>
           <button onClick={() => setCurrentYM(shiftYearMonth(currentYM, -1))}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition text-white">
             <ChevronLeft className="h-4 w-4" />
