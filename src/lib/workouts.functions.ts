@@ -116,6 +116,7 @@ export const saveWorkoutPlan = createServerFn({ method: "POST" })
         reps: e.reps ?? null,
         load_kg: e.load_kg ?? null,
         rest_seconds: e.rest_seconds,
+        rest_seconds_max: e.rest_seconds_max ?? null,
         equipment_config: e.equipment_config ?? null,
         media_url: e.media_url ?? null,
         notes: e.notes ?? null,
