@@ -14,7 +14,12 @@ import { AchievementMembersModal } from "@/components/coach/AchievementMembersMo
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const TIER_COLOR_WALLET: Record<string, string> = {
+  bronze: "#CD7F32", silver: "#C0C0C0", gold: "#FFD700", platinum: "#E5E4E2", crown: "#FFB300", club: "#FF6B35",
+};
+
 type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean };
+
 
 export function WalletTab() {
   const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
