@@ -151,29 +151,42 @@ export function StudentReferralModal({
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {filtered.map((p) => (
-                    <button
+                  {filtered.map((p) => {
+                    const isRevealed = revealed.has(p.id);
+                    return (
+                    <div
                       key={`${p.kind}-${p.id}`}
-                      onClick={() => setSelected(p)}
                       className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition hover:bg-white/5"
                       style={{ backgroundColor: "#1A1A1A" }}
                     >
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.title} className="h-12 w-12 rounded-lg object-cover" />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                          <Gift className="h-5 w-5" />
+                      <button onClick={() => setSelected(p)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.title} className="h-12 w-12 rounded-lg object-cover" />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                            <Gift className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-white">{p.title}</p>
+                          <p className="text-[11px] text-white/40">
+                            {p.kind === "challenge" ? "Desafio/Plano" : "Digital"} · {money(p.price)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] font-bold text-primary">
+                            Sua comissão: {isRevealed ? money(p.commission) : "••••••"}
+                          </p>
                         </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-white">{p.title}</p>
-                        <p className="text-[11px] text-white/40">
-                          {p.kind === "challenge" ? "Desafio/Plano" : "Digital"} · {money(p.price)}
-                        </p>
-                      </div>
-                      <Share2 className="h-4 w-4 text-white/40" />
-                    </button>
-                  ))}
+                      </button>
+                      <button
+                        onClick={(e) => toggleReveal(p.id, e)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                        title={isRevealed ? "Ocultar comissão" : "Mostrar comissão"}
+                      >
+                        {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
