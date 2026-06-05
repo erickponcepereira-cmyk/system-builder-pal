@@ -479,38 +479,70 @@ function ActiveSession({ plan, plans, onExit, onStartNext }: { plan: Plan; plans
     try {
       const r = (await finishFn({
         data: { session_id: sessionId, total_seconds: globalSec, completion_pct: completionPct, notes: null },
-      })) as { xp: number; totalSessions: number; newAchievements: string[] };
-      setSummary({ xp: r.xp, total: r.totalSessions, achievements: r.newAchievements, durationSec: globalSec });
+      })) as { xp: number; totalSessions: number; streak: number; newAchievements: Array<{ code: string; title: string; icon: string | null }> };
+      setSummary({ total: r.totalSessions, achievements: r.newAchievements || [], durationSec: globalSec, streak: r.streak || 0 });
       setRunning(false);
+      if ((r.newAchievements || []).length > 0) {
+        setAchievementReveal(r.newAchievements[0]);
+      }
     } catch {
       toast.error("Erro ao finalizar");
     }
   };
 
   if (summary) {
+    const next = nextLetter(plans || [], plan.letter);
+    const showNext = next && next.id !== plan.id;
     return (
-      <div className="space-y-5 p-5 text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-4xl shadow-xl shadow-primary/40">
+      <div className="relative space-y-5 p-5 text-center">
+        {achievementReveal && (
+          <AchievementReveal achievement={achievementReveal} onClose={() => setAchievementReveal(null)} />
+        )}
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-500 text-4xl shadow-xl shadow-primary/40 animate-scale-in">
           🏆
         </div>
         <h2 className="text-2xl font-extrabold text-white">Treino concluído!</h2>
         <p className="text-sm text-white/60">Você completou {completionPct}% do treino</p>
 
         <div className="grid grid-cols-3 gap-3">
-          <Stat icon={<Flame className="h-4 w-4" />} label="XP" value={`+${summary.xp}`} />
+          <Stat icon={<Flame className="h-4 w-4" />} label="Constância" value={`${summary.streak}d`} />
           <Stat icon={<Clock className="h-4 w-4" />} label="Tempo" value={fmt(summary.durationSec)} />
           <Stat icon={<Trophy className="h-4 w-4" />} label="Treinos" value={String(summary.total)} />
         </div>
 
         {summary.achievements.length > 0 && (
-          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">Nova Conquista!</p>
-            <p className="mt-1 text-sm text-white">{summary.achievements.join(" · ")}</p>
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 animate-fade-in">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Novas Conquistas!</p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {summary.achievements.map((a) => (
+                <button key={a.code} onClick={() => setAchievementReveal(a)} className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15">
+                  <span>{a.icon || "🏆"}</span> {a.title}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        <button onClick={onExit} className="w-full rounded-full bg-primary py-3 text-sm font-bold text-primary-foreground">
-          Voltar
+        {showNext && onStartNext && (
+          <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-transparent p-4 text-left">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80">Próximo treino</p>
+            <div className="mt-2 flex items-center gap-3">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${letterGradient(next!.letter)} text-xl font-black text-white`}>
+                {next!.letter || "·"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">{next!.name}</p>
+                <p className="text-[11px] text-white/55">{next!.workout_exercises.length} exercícios</p>
+              </div>
+              <button onClick={() => onStartNext(next!)} className="rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
+                <Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" /> Iniciar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button onClick={onExit} className="w-full rounded-full bg-white/10 py-3 text-sm font-bold text-white">
+          Voltar para meus treinos
         </button>
       </div>
     );
