@@ -297,10 +297,11 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     (async () => {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
+      const { data: adminCheck } = await supabase.rpc("is_admin" as never, { _user_id: auth.user.id } as never);
+      if (mounted && adminCheck === true) { setCanCreate(true); return; }
       const { data: prof } = await supabase
-        .from("profiles").select("id, is_admin").eq("user_id", auth.user.id).maybeSingle();
+        .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
       if (!mounted || !prof) return;
-      if ((prof as { is_admin?: boolean | null }).is_admin) { setCanCreate(true); return; }
       const { data: coach } = await supabase
         .from("coaches")
         .select("can_create_fitmind_events")
