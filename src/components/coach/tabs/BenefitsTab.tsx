@@ -14,9 +14,11 @@ type PartnerFreeProduct = {
   image_url: string | null;
   redemption_instructions: string | null;
   stock: number | null;
+  redemption_mode: "free" | "discount" | null;
   partner_id: string;
   partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
 };
+
 
 export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolean } = {}) {
   const navigate = useNavigate();
@@ -25,6 +27,8 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [filter, setFilter] = useState<"all" | "free" | "discount">("all");
+
 
   const [coachId, setCoachId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -53,7 +57,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -84,9 +88,10 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Gratuitos</h1>
-        <p className="text-sm text-white/50">Brindes de empresas parceiras aprovados pelo admin</p>
+        <h1 className="text-2xl font-bold text-white">Benefícios de Parceiros</h1>
+        <p className="text-sm text-white/50">Brindes e descontos de empresas parceiras aprovados pelo admin</p>
       </div>
+
 
       {loading ? (
         <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
@@ -125,34 +130,64 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
           </div>
 
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
-            {partnerFreebies.length === 0 ? (
-              <p className="text-sm text-white/50">Nenhum brinde de empresa parceira disponível no momento.</p>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {partnerFreebies.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setOpenPartner(p.partner_id)}
-                    className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40"
-                    style={{ backgroundColor: "#0F0F0F" }}
-                  >
-                    {p.image_url && <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-bold text-white">{p.name}</h3>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
-                      {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
-                      {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                      {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                      <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-xs font-semibold text-primary">Ver empresa</div>
+            {(() => {
+              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length;
+              const discCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
+              const list = partnerFreebies.filter((p) => {
+                if (filter === "all") return true;
+                if (filter === "discount") return p.redemption_mode === "discount";
+                return (p.redemption_mode ?? "free") === "free";
+              });
+              return (
+                <>
+                  <div className="mb-4 flex gap-1.5 flex-wrap">
+                    {([
+                      { k: "all", label: `Todos (${partnerFreebies.length})` },
+                      { k: "free", label: `Gratuitos (${freeCount})` },
+                      { k: "discount", label: `Descontos (${discCount})` },
+                    ] as const).map((f) => (
+                      <button
+                        key={f.k}
+                        onClick={() => setFilter(f.k)}
+                        className={`text-[11px] px-3 py-1 rounded-full border ${filter === f.k ? "bg-primary text-primary-foreground border-primary" : "border-white/10 text-white/60"}`}
+                      >{f.label}</button>
+                    ))}
+                  </div>
+                  {list.length === 0 ? (
+                    <p className="text-sm text-white/50">Nenhum benefício disponível no momento.</p>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {list.map((p) => {
+                        const isDiscount = p.redemption_mode === "discount";
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => setOpenPartner(p.partner_id)}
+                            className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40"
+                            style={{ backgroundColor: "#0F0F0F" }}
+                          >
+                            {p.image_url && <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />}
+                            <div className="p-4">
+                              <div className="flex items-start justify-between gap-2">
+                                <h3 className="text-sm font-bold text-white">{p.name}</h3>
+                                <span className={`text-[10px] px-2 py-0.5 rounded uppercase ${isDiscount ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300"}`}>{isDiscount ? "Desconto" : "Grátis"}</span>
+                              </div>
+                              <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
+                              {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
+                              {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                              {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                              <div className="mt-3 w-full rounded-lg bg-primary/15 py-2 text-center text-xs font-semibold text-primary">Ver empresa</div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                  )}
+                </>
+              );
+            })()}
           </div>
+
         </>
       )}
 

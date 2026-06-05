@@ -12,7 +12,7 @@ export const Route = createFileRoute("/admin/partners")({
 });
 
 interface PartnerRow { id: string; fantasy_name: string; document: string | null; whatsapp: string | null; city: string | null; state: string | null; status: string; photo_url: string | null; description: string | null; }
-interface ProductRow { id: string; partner_id: string; name: string; kind: string; status: string; price: number; image_url: string | null; admin_notes: string | null; partners?: { fantasy_name: string } | null; }
+interface ProductRow { id: string; partner_id: string; name: string; kind: string; redemption_mode: string | null; status: string; price: number; image_url: string | null; admin_notes: string | null; partners?: { fantasy_name: string } | null; }
 
 function AdminPartners() {
   const [tab, setTab] = useState<"empresas" | "produtos">("empresas");
@@ -89,7 +89,7 @@ function AdminPartners() {
               {p.image_url ? <img src={p.image_url} className="h-20 w-20 rounded object-cover" /> : <div className="h-20 w-20 rounded bg-white/5" />}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">{p.name}</p>
-                <p className="text-[11px] text-white/50">{p.partners?.fantasy_name} · {p.kind === "free" ? "Gratuito" : `R$ ${Number(p.price).toFixed(2)}`}</p>
+                <p className="text-[11px] text-white/50">{p.partners?.fantasy_name} · {p.kind === "free" ? (p.redemption_mode === "discount" ? "Desconto" : "Gratuito") : `R$ ${Number(p.price).toFixed(2)}`}</p>
                 <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-primary"><Eye className="h-3.5 w-3.5" /> Abrir para revisar</span>
               </div>
             </button>
