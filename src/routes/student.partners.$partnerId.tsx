@@ -103,36 +103,65 @@ function PartnerProfilePage() {
 
         {tab === "products" && (
           products.length === 0 ? <p className="text-center text-sm text-white/40 py-8">Sem produtos ativos.</p> : (
-            <div className="grid grid-cols-2 gap-3">
-              {products.map((p) => (
-                <div key={p.id} className="rounded-xl overflow-hidden flex flex-col" style={{ backgroundColor: "#1A1A1A" }}>
-                  {p.image_url ? <img src={p.image_url} className="h-28 w-full object-cover" alt={p.name} /> : <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>}
-                  <div className="p-2.5 flex-1 flex flex-col">
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.kind === "free" ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>
-                        {p.kind === "free" ? <><Sparkles className="inline h-2.5 w-2.5" /> Desconto</> : "Patrocinado"}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-white line-clamp-2">{p.name}</p>
-                    {p.kind === "paid" && <p className="text-xs text-primary mt-1">R$ {Number(p.price).toFixed(2)}</p>}
-                    {p.description && <p className="text-[10px] text-white/50 line-clamp-2 mt-1">{p.description}</p>}
-                    {p.kind === "free" && (
-                      <button
-                        onClick={() => generateCoupon(p)}
-                        disabled={generating === p.id}
-                        className="mt-2 inline-flex items-center justify-center gap-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-                      >
-                        {generating === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ticket className="h-3 w-3" />}
-                        Gerar cupom
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-            </div>
+            <>
+              <div className="flex gap-1.5 mb-3 flex-wrap">
+                {([
+                  { k: "all", label: `Todos (${products.length})` },
+                  { k: "free", label: `Gratuitos (${products.filter(p => p.kind === "free" && (p.redemption_mode ?? "free") === "free").length})` },
+                  { k: "discount", label: `Descontos (${products.filter(p => p.kind === "free" && p.redemption_mode === "discount").length})` },
+                  { k: "paid", label: `Pagos (${products.filter(p => p.kind === "paid").length})` },
+                ] as const).map((f) => (
+                  <button
+                    key={f.k}
+                    onClick={() => setProductFilter(f.k)}
+                    className={`text-[11px] px-2.5 py-1 rounded-full border ${productFilter === f.k ? "bg-primary text-primary-foreground border-primary" : "border-white/10 text-white/60"}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {products
+                  .filter((p) => {
+                    if (productFilter === "all") return true;
+                    if (productFilter === "paid") return p.kind === "paid";
+                    if (productFilter === "discount") return p.kind === "free" && p.redemption_mode === "discount";
+                    return p.kind === "free" && (p.redemption_mode ?? "free") === "free";
+                  })
+                  .map((p) => {
+                    const isDiscount = p.kind === "free" && p.redemption_mode === "discount";
+                    const isFree = p.kind === "free" && !isDiscount;
+                    return (
+                      <div key={p.id} className="rounded-xl overflow-hidden flex flex-col" style={{ backgroundColor: "#1A1A1A" }}>
+                        {p.image_url ? <img src={p.image_url} className="h-28 w-full object-cover" alt={p.name} /> : <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>}
+                        <div className="p-2.5 flex-1 flex flex-col">
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded ${isDiscount ? "bg-amber-500/15 text-amber-400" : isFree ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>
+                              {isDiscount ? <><Sparkles className="inline h-2.5 w-2.5" /> Desconto</> : isFree ? <><Sparkles className="inline h-2.5 w-2.5" /> Gratuito</> : "Patrocinado"}
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-white line-clamp-2">{p.name}</p>
+                          {p.kind === "paid" && <p className="text-xs text-primary mt-1">R$ {Number(p.price).toFixed(2)}</p>}
+                          {p.description && <p className="text-[10px] text-white/50 line-clamp-2 mt-1">{p.description}</p>}
+                          {p.kind === "free" && (
+                            <button
+                              onClick={() => generateCoupon(p)}
+                              disabled={generating === p.id}
+                              className="mt-2 inline-flex items-center justify-center gap-1 rounded bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                            >
+                              {generating === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Ticket className="h-3 w-3" />}
+                              {isDiscount ? "Gerar cupom de desconto" : "Gerar cupom de resgate"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </>
           )
         )}
+
 
         {tab === "timeline" && (
           posts.length === 0 ? <p className="text-center text-sm text-white/40 py-8">Sem publicações.</p> : (
