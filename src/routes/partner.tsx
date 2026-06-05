@@ -145,10 +145,12 @@ function PartnerPanel() {
     ...benefitTabs,
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
     { key: "wallet" as Tab, label: "Carteira", icon: Wallet },
+    { key: "reports" as Tab, label: "Relatórios", icon: BarChart3 },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
+
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
