@@ -46,7 +46,7 @@ function FitmindCheckinPage() {
             {message && <p className="mt-1 text-sm text-white/60">{message}</p>}
             <div className="mt-6 flex gap-2 justify-center">
               <Link
-                to="/calendar"
+                to="/student/calendar"
                 className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:opacity-90 inline-flex items-center gap-1.5">
                 <CalendarDays className="h-4 w-4" /> Ver agenda
               </Link>
