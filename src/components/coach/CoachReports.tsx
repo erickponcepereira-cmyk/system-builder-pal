@@ -27,7 +27,7 @@ function shiftMonths(iso: string, n: number) {
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (a: number, b: number) => (b === 0 ? (a > 0 ? 100 : 0) : ((a - b) / b) * 100);
 
-type ReportTab = "atendimentos" | "vendas" | "clientes" | "desafio" | "rede" | "eventos";
+type ReportTab = "atendimentos" | "vendas" | "indicacoes" | "clientes" | "desafio" | "rede" | "eventos";
 
 export function CoachReports() {
   const [tab, setTab] = useState<ReportTab>("vendas");
@@ -41,6 +41,7 @@ export function CoachReports() {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           <TabBtn active={tab === "vendas"} onClick={() => setTab("vendas")} icon={ShoppingBag} label="Vendas" />
+          <TabBtn active={tab === "indicacoes"} onClick={() => setTab("indicacoes")} icon={Share2} label="Vendas por indicação" />
           <TabBtn active={tab === "clientes"} onClick={() => setTab("clientes")} icon={Users} label="Top Clientes" />
           <TabBtn active={tab === "rede"} onClick={() => setTab("rede")} icon={Network} label="Rede / Downline" />
           <TabBtn active={tab === "desafio"} onClick={() => setTab("desafio")} icon={Trophy} label="Desafio" />
@@ -50,6 +51,7 @@ export function CoachReports() {
       </div>
 
       {tab === "vendas" && <SalesDashboard mode="sales" />}
+      {tab === "indicacoes" && <ReferralSalesDashboard />}
       {tab === "clientes" && <SalesDashboard mode="customers" />}
       {tab === "rede" && <DownlineDashboard />}
       {tab === "desafio" && <ChallengeDashboard />}
