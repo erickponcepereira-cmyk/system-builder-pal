@@ -224,8 +224,103 @@ function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalR
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
+
+function CurrentPatentPanel({
+  career,
+  onOpen,
+}: {
+  career: CareerProgress;
+  onOpen: (key: string, title: string, color: string) => void;
+}) {
+  const current = career.patents.find((p) => p.key === career.currentPatentKey) ?? null;
+  const next = career.patents.find((p) => p.key === career.nextPatentKey) ?? null;
+  const nextWindow = next ? career.windows[next.time_window_months] : null;
+  const color = current?.badge_color || "#9CA3AF";
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => current && onOpen(current.key, current.display_name, color)}
+        disabled={!current}
+        className="w-full text-left rounded-2xl p-5 mb-4 relative overflow-hidden transition hover:bg-white/[0.02]"
+        style={{ backgroundColor: "#1A1A1A" }}
+      >
+        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full" style={{ backgroundColor: `${color}20` }} />
+        <div className="relative">
+          <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold mb-1">Patente atual</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl flex-shrink-0"
+              style={{ backgroundColor: `${color}25`, border: `1px solid ${color}55` }}>
+              <Trophy className="h-7 w-7" style={{ color }} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xl font-bold text-white">{current?.display_name || "Sem patente"}</p>
+              <p className="text-xs text-white/50">{current?.description || "Comece movimentando suas primeiras vendas."}</p>
+            </div>
+          </div>
+        </div>
+      </button>
+
+      {next && nextWindow && (
+        <div className="rounded-2xl p-5 mb-6" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Próxima patente</p>
+              <p className="text-base font-bold text-white">{next.display_name}</p>
+            </div>
+            <span className="rounded-full px-2.5 py-1 text-[10px] font-bold"
+              style={{ backgroundColor: `${next.badge_color || "#FF4230"}20`, color: next.badge_color || "#FF4230" }}>
+              Nível {next.level}
+            </span>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-white/70">
+                Faturamento total (VP + VE){" "}
+                <span className="text-white/40">
+                  ({next.time_window_months === 1 ? "mês atual" : `últimos ${next.time_window_months} meses`})
+                </span>
+              </span>
+              <span className="text-xs font-bold text-white">
+                {fmtBRL(nextWindow.totalRevenue)} / {fmtBRL(next.required_revenue)}
+              </span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#252525" }}>
+              <div
+                className="h-full transition-all"
+                style={{
+                  width: `${next.required_revenue > 0 ? Math.min((nextWindow.totalRevenue / next.required_revenue) * 100, 100) : 0}%`,
+                  backgroundColor: next.badge_color || "#FF4230",
+                }}
+              />
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg p-2.5" style={{ backgroundColor: "#0F0F0F" }}>
+              <div className="flex items-center gap-1.5 text-white/40 mb-0.5">
+                <Users className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">VP (próprio)</span>
+              </div>
+              <p className="text-sm font-bold text-white">{fmtBRL(nextWindow.ownRevenue)}</p>
+              <p className="text-[10px] text-white/40">{nextWindow.ownPct.toFixed(0)}%</p>
+            </div>
+            <div className="rounded-lg p-2.5" style={{ backgroundColor: "#0F0F0F" }}>
+              <div className="flex items-center gap-1.5 text-white/40 mb-0.5">
+                <TrendingUp className="h-3 w-3" />
+                <span className="text-[10px] uppercase tracking-wider">VE (equipe)</span>
+              </div>
+              <p className="text-sm font-bold text-white">{fmtBRL(nextWindow.teamRevenue)}</p>
+              <p className="text-[10px] text-white/40">{(100 - nextWindow.ownPct).toFixed(0)}%</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 
 export default IndividualCareerTab;
