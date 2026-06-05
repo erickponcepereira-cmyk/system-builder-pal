@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen, Pencil, X, Sparkles, Zap, Award } from "lucide-react";
+import { Search, Plus, Trash2, Save, Utensils, Dumbbell, ClipboardList, Heart, Target, Droplet, Flame, ExternalLink, FileText, Activity, Library, BookOpen, Pencil, X, Sparkles, Zap, Award, Repeat } from "lucide-react";
 import { WorkoutTemplatesPanel, GOAL_LABELS, type WorkoutTemplate } from "@/components/workouts/WorkoutTemplatesPanel";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import StudentDetailsModal from "@/components/coach/StudentDetailsModal";
 import { calcWaterGoalMl, describeWaterFormula, calcAgeFromBirthdate } from "@/lib/water-goal";
-import { syncProtocolWorkout, enableTemplateForStudent, listStudentWorkoutPlansByRecord, deleteWorkoutPlan } from "@/lib/workouts.functions";
+import { syncProtocolWorkout, enableTemplateForStudent, listStudentWorkoutPlansByRecord, deleteWorkoutPlan, updatePlanExercise, deletePlanExercise, replacePlanExercise, addPlanExercise } from "@/lib/workouts.functions";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 
@@ -191,6 +191,76 @@ export function ProtocolTab() {
   const enableTplFn = useServerFn(enableTemplateForStudent);
   const listPlansFn = useServerFn(listStudentWorkoutPlansByRecord);
   const deletePlanFn = useServerFn(deleteWorkoutPlan);
+  const updateExFn = useServerFn(updatePlanExercise);
+  const deleteExFn = useServerFn(deletePlanExercise);
+  const replaceExFn = useServerFn(replacePlanExercise);
+  const addExFn = useServerFn(addPlanExercise);
+  const [editingExId, setEditingExId] = useState<string | null>(null);
+  const [exDraft, setExDraft] = useState<any>({});
+  const [replacingExId, setReplacingExId] = useState<string | null>(null);
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [addingToPlanId, setAddingToPlanId] = useState<string | null>(null);
+  const [newExDraft, setNewExDraft] = useState<{ name: string; sets: number; reps: string; rest_seconds: number; rest_seconds_max: number | null; notes: string }>({ name: "", sets: 3, reps: "10-12", rest_seconds: 60, rest_seconds_max: null, notes: "" });
+
+  const startEditEx = (e: any) => {
+    setEditingExId(e.id);
+    setExDraft({
+      exercise_name: e.exercise_name,
+      sets: e.sets ?? 3,
+      reps: e.reps ?? "",
+      rest_seconds: e.rest_seconds ?? 60,
+      rest_seconds_max: e.rest_seconds_max ?? null,
+      notes: e.notes ?? "",
+    });
+  };
+
+  const saveEditEx = async () => {
+    if (!editingExId) return;
+    try {
+      await updateExFn({ data: { exercise_id: editingExId, ...exDraft, reps: exDraft.reps || null, notes: exDraft.notes || null } });
+      toast.success("Exercício atualizado");
+      setEditingExId(null);
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao salvar"); }
+  };
+
+  const deleteEx = async (id: string, name: string) => {
+    if (!confirm(`Excluir exercício "${name}"?`)) return;
+    try {
+      await deleteExFn({ data: { exercise_id: id } });
+      toast.success("Exercício removido");
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao excluir"); }
+  };
+
+  const doReplaceEx = async (id: string, newName: string) => {
+    try {
+      await replaceExFn({ data: { exercise_id: id, new_name: newName } });
+      toast.success("Exercício substituído");
+      setReplacingExId(null);
+      setReplaceQuery("");
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao substituir"); }
+  };
+
+  const submitAddEx = async (planId: string) => {
+    if (!newExDraft.name.trim()) { toast.error("Informe o nome"); return; }
+    try {
+      await addExFn({ data: {
+        plan_id: planId,
+        name: newExDraft.name.trim(),
+        sets: newExDraft.sets,
+        reps: newExDraft.reps || null,
+        rest_seconds: newExDraft.rest_seconds,
+        rest_seconds_max: newExDraft.rest_seconds_max,
+        notes: newExDraft.notes || null,
+      } });
+      toast.success("Exercício adicionado");
+      setAddingToPlanId(null);
+      setNewExDraft({ name: "", sets: 3, reps: "10-12", rest_seconds: 60, rest_seconds_max: null, notes: "" });
+      await reloadEnabledPlans(selected);
+    } catch (e: any) { toast.error(e.message || "Erro ao adicionar"); }
+  };
 
   const reloadEnabledPlans = async (s: Student | null) => {
     if (!s || s.external) { setEnabledPlans([]); return; }
@@ -746,20 +816,95 @@ export function ProtocolTab() {
                               </button>
                             </div>
                             {expanded && (
-                              <div className="border-t border-white/5 px-3 py-2 space-y-1">
+                              <div className="border-t border-white/5 px-3 py-2 space-y-1.5">
                                 {exs.length === 0 && <p className="py-2 text-center text-[11px] text-white/40">Sem exercícios.</p>}
-                                {exs.map((e: any, i: number) => (
-                                  <div key={e.id || i} className="flex items-start gap-2 rounded bg-black/30 px-2 py-1.5 text-[11px] text-white/85">
-                                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{i + 1}</span>
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-white">{e.exercise_name}</p>
-                                      <p className="text-white/55">
-                                        {e.sets ? `${e.sets} séries` : ""}{e.reps ? ` · ${e.reps} reps` : ""}{e.rest_seconds ? ` · descanso ${e.rest_seconds}${e.rest_seconds_max && e.rest_seconds_max !== e.rest_seconds ? `–${e.rest_seconds_max}` : ""}s` : ""}
-                                      </p>
-                                      {e.notes && <p className="mt-0.5 text-white/45">{e.notes}</p>}
+                                {exs.map((e: any, i: number) => {
+                                  const isEditing = editingExId === e.id;
+                                  const isReplacing = replacingExId === e.id;
+                                  return (
+                                    <div key={e.id || i} className="rounded bg-black/30 px-2 py-2 text-[11px] text-white/85">
+                                      <div className="flex items-start gap-2">
+                                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">{i + 1}</span>
+                                        <div className="flex-1 min-w-0">
+                                          {!isEditing ? (
+                                            <>
+                                              <p className="font-semibold text-white">{e.exercise_name}</p>
+                                              <p className="text-white/55">
+                                                {e.sets ? `${e.sets} séries` : ""}{e.reps ? ` · ${e.reps} reps` : ""}{e.rest_seconds ? ` · descanso ${e.rest_seconds}${e.rest_seconds_max && e.rest_seconds_max !== e.rest_seconds ? `–${e.rest_seconds_max}` : ""}s` : ""}
+                                              </p>
+                                              {e.notes && <p className="mt-0.5 text-white/45">{e.notes}</p>}
+                                            </>
+                                          ) : (
+                                            <div className="space-y-1.5">
+                                              <input value={exDraft.exercise_name} onChange={(ev) => setExDraft({ ...exDraft, exercise_name: ev.target.value })} placeholder="Nome" className="w-full rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white outline-none" />
+                                              <div className="grid grid-cols-4 gap-1">
+                                                <input type="number" value={exDraft.sets} onChange={(ev) => setExDraft({ ...exDraft, sets: Number(ev.target.value) })} placeholder="Séries" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                                <input value={exDraft.reps} onChange={(ev) => setExDraft({ ...exDraft, reps: ev.target.value })} placeholder="Reps" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                                <input type="number" value={exDraft.rest_seconds} onChange={(ev) => setExDraft({ ...exDraft, rest_seconds: Number(ev.target.value) })} placeholder="Desc min" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                                <input type="number" value={exDraft.rest_seconds_max ?? ""} onChange={(ev) => setExDraft({ ...exDraft, rest_seconds_max: ev.target.value === "" ? null : Number(ev.target.value) })} placeholder="Desc max" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                              </div>
+                                              <input value={exDraft.notes} onChange={(ev) => setExDraft({ ...exDraft, notes: ev.target.value })} placeholder="Observações" className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white outline-none" />
+                                            </div>
+                                          )}
+                                          {isReplacing && (
+                                            <div className="mt-1.5 rounded border border-white/10 bg-white/5 p-1.5">
+                                              <div className="mb-1 flex items-center gap-1">
+                                                <Search className="h-3 w-3 text-white/40" />
+                                                <input autoFocus value={replaceQuery} onChange={(ev) => setReplaceQuery(ev.target.value)} placeholder="Buscar substituto na biblioteca..." className="w-full bg-transparent text-xs text-white outline-none" />
+                                              </div>
+                                              <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                                                {library.filter((lib) => !replaceQuery || `${lib.name} ${lib.muscle_group || ""}`.toLowerCase().includes(replaceQuery.toLowerCase())).slice(0, 30).map((lib) => (
+                                                  <button key={lib.id} onClick={() => doReplaceEx(e.id, lib.name)} className="flex w-full items-center justify-between rounded bg-white/5 px-2 py-1 text-left text-[11px] hover:bg-white/10">
+                                                    <span className="text-white">{lib.name}</span>
+                                                    <span className="text-white/40">{lib.muscle_group}</span>
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="flex shrink-0 gap-1">
+                                          {!isEditing && !isReplacing && (
+                                            <>
+                                              <button onClick={() => startEditEx(e)} title="Editar" className="rounded bg-white/5 p-1 text-white/70 hover:bg-white/10"><Pencil className="h-3 w-3" /></button>
+                                              <button onClick={() => { setReplacingExId(e.id); setReplaceQuery(""); }} title="Substituir" className="rounded bg-white/5 p-1 text-white/70 hover:bg-white/10"><Repeat className="h-3 w-3" /></button>
+                                              <button onClick={() => deleteEx(e.id, e.exercise_name)} title="Excluir" className="rounded bg-red-500/10 p-1 text-red-400 hover:bg-red-500/20"><Trash2 className="h-3 w-3" /></button>
+                                            </>
+                                          )}
+                                          {isEditing && (
+                                            <>
+                                              <button onClick={saveEditEx} title="Salvar" className="rounded bg-primary/20 p-1 text-primary hover:bg-primary/30"><Save className="h-3 w-3" /></button>
+                                              <button onClick={() => setEditingExId(null)} title="Cancelar" className="rounded bg-white/5 p-1 text-white/70 hover:bg-white/10"><X className="h-3 w-3" /></button>
+                                            </>
+                                          )}
+                                          {isReplacing && (
+                                            <button onClick={() => { setReplacingExId(null); setReplaceQuery(""); }} title="Cancelar" className="rounded bg-white/5 p-1 text-white/70 hover:bg-white/10"><X className="h-3 w-3" /></button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {addingToPlanId === p.id ? (
+                                  <div className="rounded border border-primary/30 bg-primary/5 p-2 space-y-1.5">
+                                    <input value={newExDraft.name} onChange={(ev) => setNewExDraft({ ...newExDraft, name: ev.target.value })} placeholder="Nome do exercício" className="w-full rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white outline-none" />
+                                    <div className="grid grid-cols-4 gap-1">
+                                      <input type="number" value={newExDraft.sets} onChange={(ev) => setNewExDraft({ ...newExDraft, sets: Number(ev.target.value) })} placeholder="Séries" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                      <input value={newExDraft.reps} onChange={(ev) => setNewExDraft({ ...newExDraft, reps: ev.target.value })} placeholder="Reps" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                      <input type="number" value={newExDraft.rest_seconds} onChange={(ev) => setNewExDraft({ ...newExDraft, rest_seconds: Number(ev.target.value) })} placeholder="Desc min" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                      <input type="number" value={newExDraft.rest_seconds_max ?? ""} onChange={(ev) => setNewExDraft({ ...newExDraft, rest_seconds_max: ev.target.value === "" ? null : Number(ev.target.value) })} placeholder="Desc max" className="rounded bg-white/10 px-1.5 py-1 text-xs text-white outline-none" />
+                                    </div>
+                                    <input value={newExDraft.notes} onChange={(ev) => setNewExDraft({ ...newExDraft, notes: ev.target.value })} placeholder="Observações" className="w-full rounded bg-white/10 px-2 py-1 text-xs text-white outline-none" />
+                                    <div className="flex gap-1">
+                                      <button onClick={() => submitAddEx(p.id)} className="flex flex-1 items-center justify-center gap-1 rounded bg-primary px-2 py-1 text-xs font-bold text-black hover:bg-primary/90"><Save className="h-3 w-3" /> Adicionar</button>
+                                      <button onClick={() => setAddingToPlanId(null)} className="rounded bg-white/5 px-2 py-1 text-xs text-white hover:bg-white/10">Cancelar</button>
                                     </div>
                                   </div>
-                                ))}
+                                ) : (
+                                  <button onClick={() => setAddingToPlanId(p.id)} className="flex w-full items-center justify-center gap-1 rounded border border-dashed border-white/15 py-1.5 text-[11px] text-white/60 hover:bg-white/5">
+                                    <Plus className="h-3 w-3" /> Adicionar exercício
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
