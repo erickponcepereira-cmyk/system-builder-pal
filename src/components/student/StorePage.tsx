@@ -160,13 +160,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         setOrders((orderData as unknown as OrderRow[]) || []);
       }
 
-      // Produtos com slot de indicação aluno→aluno
-      const { data: refSlots } = await supabase
-        .from("product_value_slots" as never)
+      // Produtos marcados no financeiro como Produto de indicação
+      const { data: refRules } = await supabase
+        .from("product_referral_rules" as never)
         .select("product_id" as never)
-        .eq("applies_to_student_referral" as never, true as never)
-        .eq("is_active" as never, true as never);
-      const ids = new Set<string>(((refSlots as any[]) || []).map((s) => s.product_id));
+        .eq("enabled" as never, true as never)
+        .eq("is_referral_product" as never, true as never);
+      const ids = new Set<string>(((refRules as any[]) || []).map((r) => r.product_id));
       setIndicableProductIds(ids);
 
       // Indicação ativa em sessão (vinda de /r/{code}?p=…)
