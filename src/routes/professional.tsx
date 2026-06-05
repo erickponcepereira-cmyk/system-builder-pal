@@ -18,6 +18,7 @@ import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 import type { CoachContext } from "@/routes/coach";
 
