@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, ShieldCheck, Trophy, Quote, Coins, Calendar, Users, Dumbbell, ChevronRight } from "lucide-react";
+import { Bell, ShieldCheck, Trophy, Coins, Calendar, Users, Dumbbell, ChevronRight, Gift } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 
 export const Route = createFileRoute("/student/")({
   component: StudentHome,
@@ -38,8 +40,10 @@ function StudentHome() {
   const [card, setCard] = useState<CardData | null>(null);
   const [challenge, setChallenge] = useState<ChallengeData | null>(null);
   const [tokens, setTokens] = useState(0);
-  const [dailyQuote, setDailyQuote] = useState({ quote: "Seu único competidor é a versão de ontem de você mesmo.", author: "FitMind Club" });
+  const [challengeBlocked, setChallengeBlocked] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [showReferral, setShowReferral] = useState(false);
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -60,20 +64,28 @@ function StudentHome() {
       if (!profile) return;
       if (profile.name) setStudentName(profile.name.split(" ")[0]);
 
-      const [{ data: quoteData }, { data: notificationData }] = await Promise.all([
-        supabase.rpc("get_or_create_daily_quote" as never),
-        supabase.from("notifications").select("id").eq("profile_id", profile.id).eq("is_read", false),
-      ]);
-      const quote = quoteData as unknown as { quote?: string; author?: string } | null;
-      if (quote?.quote) setDailyQuote({ quote: quote.quote, author: quote.author || "FitMind Club" });
+      const { data: notificationData } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("is_read", false);
       setUnreadNotifications(notificationData?.length || 0);
+
+      // Check if user is also coach/professional/partner (blocked from challenge)
+      const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
+        supabase.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("partners").select("id").eq("profile_id", profile.id).maybeSingle(),
+      ]);
+      if (coachRow || partnerRow) setChallengeBlocked(true);
 
       const { data: student } = await supabase
         .from("students")
-        .select("id, card_valid_until, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
+        .select("id, card_valid_until, referral_code, coach:coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
         .eq("profile_id", profile.id)
         .maybeSingle();
       if (!student) return;
+      const s = student as unknown as { id: string; card_valid_until?: string | null; referral_code?: string | null };
+      if (s.referral_code) setReferralCode(s.referral_code);
 
       const { data: activeSub } = await supabase
         .from("subscriptions")
@@ -146,7 +158,7 @@ function StudentHome() {
     const start = new Date(challenge.initialStart + "T12:00:00").getTime();
     const end = new Date(challenge.finalWeighIn + "T12:00:00").getTime();
     const now = Date.now();
-    const total = Math.max(1, Math.round((end - start) / 86400000));
+    const total = Math.max(1, Math.round((end - start) / 86400000) + 1);
     const elapsed = Math.max(0, Math.min(total, Math.round((now - start) / 86400000)));
     const remaining = Math.max(0, total - elapsed);
     const pct = Math.round((elapsed / total) * 100);
@@ -183,16 +195,24 @@ function StudentHome() {
         </Link>
       </header>
 
-      {/* Citação do dia */}
-      <div className="rounded-2xl border-l-4 border-primary p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="flex gap-3">
-          <Quote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <div>
-            <p className="text-sm leading-relaxed text-white/80">"{dailyQuote.quote}"</p>
-            <p className="mt-1 text-[11px] text-white/40">— {dailyQuote.author}</p>
-          </div>
+      {/* Grupo WhatsApp */}
+      <WhatsAppGroupCard />
+
+      {/* Indique e ganhe */}
+      <button
+        type="button"
+        onClick={() => setShowReferral(true)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 text-left transition-transform hover:scale-[1.01]"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20">
+          <Gift className="h-6 w-6 text-primary" />
         </div>
-      </div>
+        <div className="flex-1">
+          <p className="text-sm font-bold text-white">Indique e ganhe comissão</p>
+          <p className="text-[11px] text-white/55">Escolha um produto, gere o link e envie pro seu amigo 🎁</p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-white/40" />
+      </button>
 
       {/* Meu Treino */}
       <Link to="/student/workout" className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-orange-500/10 to-transparent p-4 transition-transform hover:scale-[1.01]">
@@ -263,62 +283,69 @@ function StudentHome() {
         </div>
       )}
 
-      {/* Progresso do desafio real */}
-      <Link to="/student/challenge" className="block rounded-2xl p-4 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold text-white">Desafio FitMind</h2>
-          </div>
-          {challenge && challengeProgress ? (
-            <span className="text-xs font-bold text-primary">Dia {challengeProgress.elapsed}/{challengeProgress.total}</span>
-          ) : (
-            <span className="text-[10px] font-bold uppercase text-white/40">Sem inscrição</span>
-          )}
-        </div>
-
-        {challenge && challengeProgress ? (
-          <>
-            <p className="text-[11px] text-white/50 mb-2">
-              {challenge.competitionLabel} · <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Turma {challenge.groupNumber}</span>
-            </p>
-            <Progress value={challengeProgress.pct} className="h-2 bg-white/5" />
-            <div className="mt-2 flex justify-between text-[11px] text-white/50">
-              <span>{challengeProgress.pct}% concluído</span>
-              <span>{challengeProgress.remaining} dias restantes</span>
+      {/* Progresso do desafio real — escondido para coach/profissional/parceiro */}
+      {!challengeBlocked && (
+        <Link to="/student/challenge" className="block rounded-2xl p-4 transition-colors hover:bg-white/[0.07]" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-white">Desafio FitMind</h2>
             </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem inicial</p>
-                <p className="font-bold text-white">{fmtDate(challenge.initialStart)} – {fmtDate(challenge.initialEnd)}</p>
-              </div>
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem final</p>
-                <p className="font-bold text-white">{fmtDate(challenge.finalWeighIn)}</p>
-              </div>
-              <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                <p className="text-white/40 flex items-center gap-1"><Trophy className="h-3 w-3" />Premiação</p>
-                <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
-              </div>
-              <div className="rounded-lg bg-primary/10 px-2.5 py-2">
-                <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Moedas</p>
-                <p className="font-bold text-primary">{tokens}</p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-white/55">
-            <p>Você ainda não está inscrito no desafio.</p>
-            {tokens > 0 && (
-              <p className="mt-1 text-primary font-semibold flex items-center gap-1">
-                <Coins className="h-3 w-3" /> {tokens} moeda{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
-              </p>
+            {challenge && challengeProgress ? (
+              <span className="text-xs font-bold text-primary">Dia {challengeProgress.elapsed}/{challengeProgress.total}</span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase text-white/40">Sem inscrição</span>
             )}
           </div>
-        )}
-      </Link>
 
+          {challenge && challengeProgress ? (
+            <>
+              <p className="text-[11px] text-white/50 mb-2">
+                {challenge.competitionLabel} · <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Turma {challenge.groupNumber}</span>
+              </p>
+              <Progress value={challengeProgress.pct} className="h-2 bg-white/5" />
+              <div className="mt-2 flex justify-between text-[11px] text-white/50">
+                <span>{challengeProgress.pct}% concluído</span>
+                <span>{challengeProgress.remaining} dias restantes</span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                  <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem inicial</p>
+                  <p className="font-bold text-white">{fmtDate(challenge.initialStart)} – {fmtDate(challenge.initialEnd)}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                  <p className="text-white/40 flex items-center gap-1"><Calendar className="h-3 w-3" />Pesagem final</p>
+                  <p className="font-bold text-white">{fmtDate(challenge.finalWeighIn)}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 px-2.5 py-2">
+                  <p className="text-white/40 flex items-center gap-1"><Trophy className="h-3 w-3" />Premiação</p>
+                  <p className="font-bold text-white">{fmtDate(challenge.awardDate)}</p>
+                </div>
+                <div className="rounded-lg bg-primary/10 px-2.5 py-2">
+                  <p className="text-primary/70 flex items-center gap-1"><Coins className="h-3 w-3" />Moedas</p>
+                  <p className="font-bold text-primary">{tokens}</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-white/55">
+              <p>Você ainda não está inscrito no desafio.</p>
+              {tokens > 0 && (
+                <p className="mt-1 text-primary font-semibold flex items-center gap-1">
+                  <Coins className="h-3 w-3" /> {tokens} moeda{tokens > 1 ? "s" : ""} disponível{tokens > 1 ? "is" : ""} — toque para entrar.
+                </p>
+              )}
+            </div>
+          )}
+        </Link>
+      )}
+
+      <StudentReferralModal
+        open={showReferral}
+        onClose={() => setShowReferral(false)}
+        referralCode={referralCode || "ALUNO"}
+      />
     </div>
   );
 }

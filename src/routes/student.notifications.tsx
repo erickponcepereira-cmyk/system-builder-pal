@@ -30,7 +30,10 @@ function NotificationsPage() {
       .order("created_at", { ascending: false })
       .limit(80);
     if (error) toast.error(error.message);
-    setItems((data as NotificationRow[]) || []);
+    // Filtra notificações que não fazem sentido para o aluno (frase do dia, alertas de coach/admin)
+    const HIDDEN = /^(daily_quote|quote|coach_|admin_|commission|partner_)/i;
+    const rows = ((data as NotificationRow[]) || []).filter((n) => !HIDDEN.test(n.type || ""));
+    setItems(rows);
     setLoading(false);
   };
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Users, UserCheck, DollarSign, TrendingUp, Activity, Clock, Wallet, Trophy, ArrowUpRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -168,6 +169,9 @@ function AdminDashboard() {
         <h1 className="text-2xl font-bold text-white">Dashboard Admin</h1>
         <p className="text-sm text-white/50">Visão geral da plataforma FitMind Club</p>
       </div>
+
+      <div className="mb-6"><WhatsAppGroupCard /></div>
+
 
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
