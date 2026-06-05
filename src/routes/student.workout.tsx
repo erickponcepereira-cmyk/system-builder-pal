@@ -104,7 +104,7 @@ function WorkoutPage() {
   useEffect(() => { reload(); }, []);
 
   if (view === "active" && activePlan) {
-    return <ActiveSession plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
+    return <ActiveSession key={activePlan.id} plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
