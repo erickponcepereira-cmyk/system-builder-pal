@@ -345,18 +345,32 @@ export function AvailabilityEditor({ coachId }: Props) {
             {selectedAppts.length === 0 ? (
               <p className="text-[11px] text-white/50">Nenhum atendimento agendado neste dia.</p>
             ) : (
-              <ul className="space-y-1">
-                {selectedAppts.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5 text-[11px] text-white">
-                    <span className="font-bold text-primary">
-                      {new Date(a.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                    <span className="text-white/50">→</span>
-                    <span className="text-white/80">
-                      {new Date(a.ends_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </li>
-                ))}
+              <ul className="space-y-1.5">
+                {selectedAppts.map((a) => {
+                  const paidSet = new Set(["paid", "approved", "completed"]);
+                  const isPaid = !a.has_order || (a.order_status && paidSet.has(a.order_status));
+                  return (
+                    <li key={a.id} className="rounded-lg bg-white/5 px-2.5 py-2 text-[11px] text-white">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-primary">
+                          {new Date(a.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="text-white/50">→</span>
+                        <span className="text-white/80">
+                          {new Date(a.ends_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span className="text-white/40">·</span>
+                        <span className="font-bold text-white">{a.student_name || "Cliente"}</span>
+                        <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium ${isPaid ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`}>
+                          {isPaid ? "Pago" : "Pendente"}
+                        </span>
+                      </div>
+                      {a.coach_name && (
+                        <p className="mt-0.5 text-[10px] text-white/50">Coach: <span className="text-white/80">{a.coach_name}</span></p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
