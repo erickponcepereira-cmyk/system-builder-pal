@@ -61,15 +61,43 @@ async function buildSalesReportForRange(
   // Students of this coach
   const { data: studentRows } = await supabaseAdmin
     .from("students")
-    .select("id, profiles!students_profile_id_fkey(name,email)")
+    .select("id, profile_id, profiles!students_profile_id_fkey(name,email)")
     .eq("coach_id", coachId);
-  type SR = { id: string; profiles: { name: string; email: string } | null };
+  type SR = { id: string; profile_id: string | null; profiles: { name: string; email: string } | null };
   const students = (studentRows as unknown as SR[]) || [];
   const studentIds = students.map((s) => s.id);
   const studentMap = new Map(students.map((s) => [s.id, s.profiles]));
   if (studentIds.length === 0) {
     return emptyReport(from, to);
   }
+
+  // Classify each student by profile (coach / professional / partner / pure aluno)
+  const profileIds = students.map((s) => s.profile_id).filter(Boolean) as string[];
+  const coachProfiles = new Set<string>();
+  const proProfiles = new Set<string>();
+  const partnerProfiles = new Set<string>();
+  if (profileIds.length) {
+    const [coachesRes, partnersRes] = await Promise.all([
+      supabaseAdmin.from("coaches").select("profile_id,is_professional").in("profile_id", profileIds),
+      supabaseAdmin.from("partners").select("profile_id").in("profile_id", profileIds),
+    ]);
+    ((coachesRes.data as Array<{ profile_id: string; is_professional: boolean | null }> | null) || []).forEach((c) => {
+      if (c.is_professional) proProfiles.add(c.profile_id); else coachProfiles.add(c.profile_id);
+    });
+    ((partnersRes.data as Array<{ profile_id: string }> | null) || []).forEach((p) => partnerProfiles.add(p.profile_id));
+  }
+  const studentGroup = new Map<string, StudentGroup>();
+  for (const s of students) {
+    const pid = s.profile_id;
+    let g: StudentGroup = "aluno";
+    if (pid) {
+      if (proProfiles.has(pid)) g = "aluno_profissional";
+      else if (coachProfiles.has(pid)) g = "aluno_coach";
+      else if (partnerProfiles.has(pid)) g = "aluno_parceiro";
+    }
+    studentGroup.set(s.id, g);
+  }
+
 
   // Transactions (paid)
   const { data: txData } = await supabaseAdmin
