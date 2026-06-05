@@ -1047,11 +1047,13 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
           <span className="text-white/50">{attendees.length === 1 ? "presente" : "presentes"}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setShowQR((v) => !v)}
-            className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition inline-flex items-center gap-1.5">
-            <QrCode className="h-3.5 w-3.5" /> {showQR ? "Ocultar QR" : "QR de presença"}
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setShowQR((v) => !v)}
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition inline-flex items-center gap-1.5">
+              <QrCode className="h-3.5 w-3.5" /> {showQR ? "Ocultar QR" : "QR de presença"}
+            </button>
+          )}
           <button
             onClick={() => setShowList((v) => !v)}
             className="rounded-lg px-3 py-1.5 text-xs font-bold text-white/80 bg-white/5 hover:bg-white/10 transition">
@@ -1077,7 +1079,7 @@ function EventAttendanceBlock({ eventId, color, responsibleCoachId }: { eventId:
         </div>
       </div>
 
-      {showQR && (
+      {showQR && canManage && (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4">
           <QRCodeSVG value={checkinUrl} size={180} />
           <p className="text-[11px] text-black/60 text-center max-w-[200px]">
