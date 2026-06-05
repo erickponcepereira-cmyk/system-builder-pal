@@ -167,9 +167,22 @@ export function IndividualCareerTab() {
           </div>
         </div>
       )}
+
+      {modal && (
+        <AchievementMembersModal
+          open={!!modal}
+          onClose={() => setModal(null)}
+          kind={modal.kind}
+          achievementKey={modal.key}
+          title={modal.title}
+          subtitle={modal.subtitle}
+          accentColor={modal.color}
+        />
+      )}
     </>
   );
 }
+
 
 function MedalCard({ rule, current, earned, awardedAt }: { rule: MedalRule; current: number; earned: boolean; awardedAt: string | null }) {
   const color = TIER_COLOR[rule.tier || ""] || "#CD7F32";
