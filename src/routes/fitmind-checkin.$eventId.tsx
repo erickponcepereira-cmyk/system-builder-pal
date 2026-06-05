@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, AlertCircle, CalendarDays } from "lucide-react";
 import { checkInToEvent } from "@/lib/fitmind-attendance.functions";
 
 export const Route = createFileRoute("/fitmind-checkin/$eventId")({
+  ssr: false,
   component: FitmindCheckinPage,
 });
 
