@@ -509,6 +509,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         </div>
       )}
 
+      {viewMode === "calendar" ? (
+        <>
       {/* Grid do calendário */}
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
         {/* Cabeçalho dos dias da semana */}
@@ -627,6 +629,16 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
             </div>
           )}
         </div>
+      )}
+        </>
+      ) : (
+        <EventListView
+          events={events}
+          year={year}
+          month={month}
+          loading={loading}
+          onSelect={(ev) => setDetail(ev)}
+        />
       )}
 
       {/* Modal de detalhes */}
