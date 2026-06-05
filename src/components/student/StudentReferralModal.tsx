@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, Search, Copy, Share2, Gift, Loader2 } from "lucide-react";
+import { X, Search, Copy, Share2, Gift, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,6 +9,7 @@ type RefProduct = {
   title: string;
   price: number;
   imageUrl: string | null;
+  commission: number;
 };
 
 const money = (v: number) =>
@@ -27,34 +28,55 @@ export function StudentReferralModal({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<RefProduct | null>(null);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setSelected(null);
     setSearch("");
+    setRevealed(new Set());
     (async () => {
       const { data: rules } = await supabase
         .from("product_referral_rules")
-        .select("product_id")
+        .select("product_id,pre_deduction_fixed,student_referral_percentage,enabled,is_referral_product" as any)
         .eq("enabled", true)
         .eq("is_referral_product" as any, true);
-      const enabled = new Set(((rules as any[]) || []).map((r) => r.product_id));
-      const { data: challenges } = enabled.size
+      const ruleMap = new Map<string, { pre: number; pct: number }>();
+      ((rules as any[]) || []).forEach((r) => {
+        ruleMap.set(r.product_id, {
+          pre: Number(r.pre_deduction_fixed || 0),
+          pct: Number(r.student_referral_percentage || 0),
+        });
+      });
+      const ids = Array.from(ruleMap.keys());
+      const { data: challenges } = ids.length
         ? await supabase
           .from("products")
           .select("id,name,price,image_url")
           .eq("status", "active")
-          .in("id", Array.from(enabled))
+          .in("id", ids)
         : { data: [] as any[] };
       const out: RefProduct[] = [];
       (challenges || []).forEach((p: any) => {
-        out.push({ id: p.id, kind: "challenge", title: p.name, price: Number(p.price || 0), imageUrl: p.image_url });
+        const r = ruleMap.get(p.id);
+        const price = Number(p.price || 0);
+        const commission = r ? Math.max(0, (price - r.pre) * (r.pct / 100)) : 0;
+        out.push({ id: p.id, kind: "challenge", title: p.name, price, imageUrl: p.image_url, commission });
       });
       setProducts(out);
       setLoading(false);
     })();
   }, [open]);
+
+  const toggleReveal = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRevealed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
