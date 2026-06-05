@@ -34,7 +34,7 @@ export function StudentReferralModal({
     setSelected(null);
     setSearch("");
     (async () => {
-      const [{ data: challenges }, { data: digitals }] = await Promise.all([
+      const [{ data: challenges }, { data: digitals }, { data: nRules }] = await Promise.all([
         supabase
           .from("products")
           .select("id,name,price,image_url")
@@ -44,14 +44,23 @@ export function StudentReferralModal({
           .from("digital_products")
           .select("id,title,price,cover_url")
           .eq("status", "active"),
+        supabase
+          .from("product_n_rules" as never)
+          .select("product_id,enabled"),
       ]);
+      // Apenas produtos com regra de indicação habilitada
+      const enabled = new Set(
+        ((nRules as any[]) || []).filter((r) => r.enabled).map((r) => r.product_id),
+      );
       const out: RefProduct[] = [];
-      (challenges || []).forEach((p: any) =>
-        out.push({ id: p.id, kind: "challenge", title: p.name, price: Number(p.price || 0), imageUrl: p.image_url })
-      );
-      (digitals || []).forEach((p: any) =>
-        out.push({ id: p.id, kind: "digital", title: p.title, price: Number(p.price || 0), imageUrl: p.cover_url })
-      );
+      (challenges || []).forEach((p: any) => {
+        if (!enabled.has(p.id)) return;
+        out.push({ id: p.id, kind: "challenge", title: p.name, price: Number(p.price || 0), imageUrl: p.image_url });
+      });
+      (digitals || []).forEach((p: any) => {
+        if (!enabled.has(p.id)) return;
+        out.push({ id: p.id, kind: "digital", title: p.title, price: Number(p.price || 0), imageUrl: p.cover_url });
+      });
       setProducts(out);
       setLoading(false);
     })();
