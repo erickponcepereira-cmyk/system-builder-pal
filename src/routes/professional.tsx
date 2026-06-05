@@ -18,6 +18,7 @@ import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 
 import { AppointmentsTab } from "@/components/professional/AppointmentsTab";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 import type { CoachContext } from "@/routes/coach";
 
@@ -194,6 +195,10 @@ function ProfessionalPanel() {
             <p>O admin foi notificado para configurar abas personalizadas para sua área. Enquanto isso você tem acesso às abas básicas.</p>
           </div>
         )}
+
+        <div className="mb-4"><WhatsAppGroupCard /></div>
+
+
 
         {/* Tabs nav */}
         <div className="mb-6 flex flex-wrap gap-2">

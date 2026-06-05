@@ -15,6 +15,7 @@ import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
+import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
@@ -198,6 +199,7 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
   const [showVisits, setShowVisits] = useState(false);
   return (
     <div className="space-y-3">
+      <WhatsAppGroupCard />
       {!hasActiveFree && (
         <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
           <AlertTriangle className="inline h-4 w-4 mr-1" /> Você precisa de pelo menos <b>1 produto gratuito aprovado e ativo</b> para publicar produtos pagos. Os pagos ficam pausados enquanto isso.
