@@ -198,6 +198,44 @@ function PartnerPanel() {
 function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number }) {
   const approved = products.filter(p => p.status === "approved" && p.is_active_by_partner).length;
   const [showVisits, setShowVisits] = useState(false);
+  const [uplineCoach, setUplineCoach] = useState<{ name: string; phone: string | null } | null>(null);
+  const referralLink = partner.referral_code ? `${window.location.origin}/r/${partner.referral_code}` : "";
+
+  useEffect(() => {
+    (async () => {
+      // Procura o coach que indicou esta empresa (via upline_coach_id em partners)
+      const { data: pr } = await supabase
+        .from("partners" as never)
+        .select("upline_coach_id" as never)
+        .eq("id" as never, partner.id as never)
+        .maybeSingle();
+      const uplineId = (pr as unknown as { upline_coach_id: string | null } | null)?.upline_coach_id;
+      if (!uplineId) return;
+      const { data: c } = await supabase
+        .from("coaches")
+        .select("profiles!coaches_profile_id_fkey(name, phone)")
+        .eq("id", uplineId)
+        .maybeSingle();
+      const prof = (c as unknown as { profiles: { name: string; phone: string | null } | null } | null)?.profiles;
+      if (prof) setUplineCoach({ name: prof.name, phone: prof.phone });
+    })();
+  }, [partner.id]);
+
+  const copyReferral = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink);
+    toast.success("Link copiado!");
+  };
+  const shareReferral = async () => {
+    if (!referralLink) return;
+    const text = `Conheça o FitMind Club — cadastre-se pelo meu link:`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "FitMind Club", text, url: referralLink }); } catch { /* ignore */ }
+    } else { copyReferral(); }
+  };
+
+  const coachWhatsMsg = uplineCoach ? `Oi ${uplineCoach.name.split(" ")[0]}, eu quero além de parceiro ser coach FitMind e vender mais!` : "";
+
   return (
     <div className="space-y-3">
       <WhatsAppGroupCard />
@@ -213,6 +251,39 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         <Stat label="Produtos ativos" value={approved} />
         <Stat label="Pendentes" value={pendingCount} />
       </div>
+
+      {referralLink && (
+        <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Share2 className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold text-white">Seu link de indicação</h3>
+          </div>
+          <p className="text-[11px] text-white/50 mb-2">Compartilhe este link para indicar novos usuários ao FitMind Club. Ele leva para a página de cadastro, onde a pessoa escolhe o tipo de conta (aluno, coach, parceiro).</p>
+          <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{referralLink}</div>
+          <div className="mt-2 flex gap-2">
+            <button onClick={copyReferral} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20"><Copy className="h-3.5 w-3.5" /> Copiar</button>
+            <button onClick={shareReferral} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90"><Share2 className="h-3.5 w-3.5" /> Compartilhar</button>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl p-4 border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5">
+        <div className="flex items-center gap-2 mb-1">
+          <TrendingUp className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-bold text-white">Venha fazer parte da nossa equipe de coachs!</h3>
+        </div>
+        <p className="text-xs text-white/70 leading-relaxed">
+          Você já tem acesso <b>gratuito</b> ao curso de coach. Converse com seu coach e venha fazer parte da nossa equipe — aumente seus resultados vendendo também planos e produtos FitMind!
+        </p>
+        {uplineCoach?.phone ? (
+          <div className="mt-3">
+            <WhatsAppButton phone={uplineCoach.phone} message={coachWhatsMsg} label={`Falar com ${uplineCoach.name.split(" ")[0]}`} size="md" />
+          </div>
+        ) : (
+          <p className="mt-2 text-[10px] text-white/40">Seu coach indicador ainda não tem WhatsApp cadastrado.</p>
+        )}
+      </div>
+
       <div className="rounded-xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
         <p className="text-xs text-white/40 mb-2">Bem-vindo(a), {partner.fantasy_name}</p>
         <p className="text-sm text-white/70">Use as abas para gerenciar produtos, timeline, QR code de presença e seu perfil público.</p>
