@@ -184,16 +184,19 @@ export function IndividualCareerTab() {
 }
 
 
-function MedalCard({ rule, current, earned, awardedAt }: { rule: MedalRule; current: number; earned: boolean; awardedAt: string | null }) {
+function MedalCard({ rule, current, earned, awardedAt, onClick }: { rule: MedalRule; current: number; earned: boolean; awardedAt: string | null; onClick?: () => void }) {
   const color = TIER_COLOR[rule.tier || ""] || "#CD7F32";
   const pct = rule.threshold > 0 ? Math.min((current / rule.threshold) * 100, 100) : 0;
   const Icon = rule.icon === "crown" ? Crown : rule.icon === "trophy" ? Trophy : Medal;
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
   return (
-    <div
-      className={`rounded-xl p-3 ${earned ? "ring-1" : ""}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left rounded-xl p-3 transition hover:bg-white/[0.03] ${earned ? "ring-1" : ""}`}
       style={{ backgroundColor: "#0F0F0F", borderColor: color, boxShadow: earned ? `0 0 0 1px ${color}55` : undefined }}
     >
+
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
