@@ -75,7 +75,8 @@ export const getIndividualCareer = createServerFn({ method: "GET" })
 
     const { data: rulesRaw } = await supabaseAdmin
       .from("career_medal_rules" as never)
-      .select("id,kind,key,display_name,threshold,tier,icon,sort_order")
+      .select("id,kind,key,display_name,threshold,tier,icon,image_url,sort_order")
+
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
     const allRules = ((rulesRaw as unknown as MedalRule[] | null) || []).map((r) => ({
