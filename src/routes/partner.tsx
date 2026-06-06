@@ -337,6 +337,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     redemption_mode: "free",
     name: "", description: "", image_url: "", price: 0, stock: null,
     redemption_instructions: "", is_active_by_partner: true,
+    benefit_start_time: null,
+    benefit_end_time: null,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
@@ -379,7 +381,15 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       };
     }
 
-    const payload = { ...editing, ...extra, partner_id: partner.id, status: "pending" as const, admin_notes: null };
+    const payload = {
+      ...editing,
+      ...extra,
+      partner_id: partner.id,
+      status: "pending" as const,
+      admin_notes: null,
+      benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
+      benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
+    };
     if (editing.id) {
       const { id, ...up } = payload;
       const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
@@ -448,6 +458,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </div>
               )}
               {p.status === "rejected" && p.admin_notes && <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>}
+              {p.kind === "free" && formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
+                  <Clock className="h-3 w-3" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                </p>
+              )}
               <div className="mt-1.5 flex gap-2">
                 <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
