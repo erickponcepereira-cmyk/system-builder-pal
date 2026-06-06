@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 export const Route = createFileRoute("/student/")({
   component: StudentHome,
