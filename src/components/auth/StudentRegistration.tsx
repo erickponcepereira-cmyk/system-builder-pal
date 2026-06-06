@@ -78,7 +78,16 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido. Use o formato nome@dominio.com.");
     if (phone.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto. Inclua DDD + número.");
     if (!gender) return setErr("Selecione seu gênero para continuar.");
-    if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    const pwdChecks = {
+      length: password.length >= 8,
+      upper: /[A-Z]/.test(password),
+      lower: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[^A-Za-z0-9]/.test(password),
+    };
+    if (!Object.values(pwdChecks).every(Boolean)) {
+      return setErr("A senha deve conter no mínimo 8 caracteres, 1 letra maiúscula, 1 minúscula, 1 número e 1 caractere especial.");
+    }
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
     if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
