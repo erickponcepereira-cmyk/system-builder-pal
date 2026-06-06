@@ -29,6 +29,28 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       | "awaiting_upline_release"
       | "released";
 
+    // Bypass: se o usuário já foi aprovado como parceiro, libera o painel de coach automaticamente.
+    if (stage !== "released") {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: approvedPartner } = await supabaseAdmin
+        .from("partners")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("status", "approved")
+        .maybeSingle();
+      if (approvedPartner) {
+        await supabaseAdmin
+          .from("coaches")
+          .update({
+            onboarding_stage: "released",
+            approved_at: coach.approved_at || new Date().toISOString(),
+          })
+          .eq("id", coach.id);
+        stage = "released";
+      }
+    }
+
+
     // Auto-advance: se a pessoa já comprou a Ativação Coach antes de virar coach,
     // pula a etapa de pagamento e vai direto para o quiz de perfil comportamental.
     if (stage === "awaiting_payment") {
