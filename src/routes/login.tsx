@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, User } from "lucide-react";
+import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, Stethoscope, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { useState } from "react";
