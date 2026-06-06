@@ -1,0 +1,3 @@
+CREATE POLICY "store-images authenticated insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'store-images');
+CREATE POLICY "store-images authenticated update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'store-images' AND owner = auth.uid()) WITH CHECK (bucket_id = 'store-images' AND owner = auth.uid());
+CREATE POLICY "store-images authenticated delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'store-images' AND owner = auth.uid());
