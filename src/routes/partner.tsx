@@ -828,7 +828,7 @@ function QrCodePanel({ partner }: { partner: Partner }) {
 
 interface ScanPreview { student_id: string; student_name: string; student_avatar: string | null; student_email: string | null; student_phone: string | null; student_city: string | null; student_state: string | null; }
 interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
-interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; token: string; }
+interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; benefit_start_time: string | null; benefit_end_time: string | null; token: string; }
 
 
 function StudentQrScanner({ partner }: { partner: Partner }) {
@@ -975,6 +975,11 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
             )}
             <p className="mt-3 text-lg font-bold text-white">{couponPreview.student_name}</p>
             <p className="text-sm text-primary mt-1">{couponPreview.product_name}</p>
+            {formatBenefitWindow(couponPreview.benefit_start_time, couponPreview.benefit_end_time) && (
+              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(couponPreview.benefit_start_time, couponPreview.benefit_end_time)}
+              </p>
+            )}
             <p className="text-[10px] text-white/40 mt-1">Gerado em {new Date(couponPreview.created_at).toLocaleString("pt-BR")}</p>
             {couponPreview.status !== "active" ? (
               <>
