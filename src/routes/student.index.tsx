@@ -379,6 +379,8 @@ function StudentHome() {
         </Link>
       )}
 
+      <InstallAppButton />
+
       <StudentReferralModal
         open={showReferral}
         onClose={() => setShowReferral(false)}
