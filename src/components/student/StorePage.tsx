@@ -442,20 +442,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const checkoutAsStudent = async () => {
     if (cart.length === 0) return;
     const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
-    if (partnerItems.length > 0 && cart.length > 1) {
-      toast.error("Produtos de parceiros devem ser comprados separadamente.");
-      return;
-    }
-    if (requiresShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
-      toast.error("Preencha os dados de entrega.");
-      return;
-    }
+    const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
+    const needsShipping = fitmindItems.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
     setCheckingOut(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
 
-      // Caminho exclusivo: produto de parceiro/profissional (1 item por pedido)
-      if (partnerItems.length === 1) {
+      // Pague um produto de parceiro/profissional por vez (RPC do backend cria 1 pedido)
+      if (partnerItems.length > 0) {
         const pp = partnerItems[0];
         let ppId: string | null = null;
         if (pp.kind === "partner_company") {
@@ -492,7 +486,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           .eq("id" as never, ppId as never)
           .maybeSingle();
         const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        setCart([]); setCartOpen(false);
+        setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
@@ -500,12 +494,18 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           email: userData.user?.email || "",
           name: userData.user?.user_metadata?.name || "",
           sourceKind: "partner_product_order",
+          paidItemIds: [pp.id],
         });
         await load();
         return;
       }
 
-      const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
+      if (needsShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
+        toast.error("Preencha os dados de entrega.");
+        return;
+      }
+
+      const payload = fitmindItems.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
       const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null, _referrer_student_id: pendingReferrerStudentId } as never);
       if (error) throw new Error(error.message);
       if (!orderId) throw new Error("Pedido não retornado");
@@ -515,12 +515,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         .eq("id" as never, orderId as never)
         .maybeSingle();
       const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
-      setCart([]); setCartOpen(false); setShipping(initialShipping);
+      setCartOpen(false);
       setPayOrder({
         id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
         sourceKind: "store_order",
+        paidItemIds: fitmindItems.map((i) => i.id),
       });
       await load();
     } catch (e: any) {
