@@ -213,6 +213,11 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           </div>
                           <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
                           {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
+                          {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                            <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                              <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                            </p>
+                          )}
                           {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                           {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
                           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -288,6 +293,11 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             {coupon.discountPercent ? (
               <p className="mt-1 inline-block bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1 rounded">{coupon.discountPercent}% OFF</p>
             ) : null}
+            {coupon.benefitWindow && (
+              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <Clock className="h-3.5 w-3.5" /> {coupon.benefitWindow}
+              </p>
+            )}
             <div className="my-4 inline-block bg-white p-3 rounded-xl">
               <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
             </div>
