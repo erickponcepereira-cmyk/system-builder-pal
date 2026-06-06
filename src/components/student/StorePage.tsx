@@ -87,7 +87,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
 
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
@@ -413,9 +413,18 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       toast.error("Escolha um horário antes de adicionar.");
       return;
     }
+    // Para agendáveis: se já existe com outro horário, confirmar sobrescrita
+    if (item.isSchedulable) {
+      const existing = cart.find((c) => c.id === item.id);
+      if (existing && existing.scheduledSlot && existing.scheduledSlot !== item.scheduledSlot) {
+        const ok = window.confirm(
+          "Você já reservou um horário para este atendimento. Ao confirmar, o horário anterior será cancelado e o novo será adicionado. Deseja continuar?",
+        );
+        if (!ok) return;
+      }
+    }
     setCart((current) => {
       const found = current.find((cartItem) => cartItem.id === item.id);
-      // Itens agendáveis: cada compra é única (1 horário por item), não somar quantidade
       if (found && !item.isSchedulable) return current.map((cartItem) => cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
       if (found && item.isSchedulable) {
         return current.map((cartItem) => cartItem.id === item.id ? { ...item, quantity: 1 } : cartItem);
@@ -657,8 +666,22 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         defaultDurationMinutes: item.durationMinutes ?? 30,
         scheduledSlot: item.scheduledSlot ?? null,
       };
-      // Apenas 1 produto de parceiro/profissional por pedido — substitui o atual
-      setCart([{ ...cartItem, quantity: 1 }]);
+      // Agendáveis: se já existe com outro horário, confirmar sobrescrita
+      if (cartItem.isSchedulable) {
+        const existing = cart.find((c) => c.id === cartItem.id);
+        if (existing && existing.scheduledSlot && existing.scheduledSlot !== cartItem.scheduledSlot) {
+          const ok = window.confirm(
+            "Você já reservou um horário para este atendimento. Ao confirmar, o horário anterior será cancelado e o novo será adicionado. Deseja continuar?",
+          );
+          if (!ok) return;
+        }
+      }
+      setCart((current) => {
+        const found = current.find((c) => c.id === cartItem.id);
+        if (found) return current.map((c) => c.id === cartItem.id ? { ...cartItem, quantity: 1 } : c);
+        return [...current, { ...cartItem, quantity: 1 }];
+      });
+      toast.success("Adicionado ao carrinho.");
       setCartOpen(true);
     };
 
