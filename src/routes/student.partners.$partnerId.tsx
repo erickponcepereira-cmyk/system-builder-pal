@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag, Ticket, X } from "lucide-react";
+import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebook, Globe, Sparkles, Image as ImageIcon, Tag, Ticket, X, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,8 +16,18 @@ interface Partner {
   whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
 }
-interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; name: string; description: string | null; image_url: string | null; price: number; }
+interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
+
+function formatBenefitWindow(start?: string | null, end?: string | null) {
+  const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
+  const s = fmt(start);
+  const e = fmt(end);
+  if (s && e) return `Disponível das ${s} às ${e}`;
+  if (s) return `Disponível a partir das ${s}`;
+  if (e) return `Disponível até ${e}`;
+  return null;
+}
 
 function PartnerProfilePage() {
   const { partnerId } = Route.useParams();
@@ -28,7 +38,7 @@ function PartnerProfilePage() {
   const [tab, setTab] = useState<"info" | "products" | "timeline">("info");
   const [productFilter, setProductFilter] = useState<"all" | "free" | "discount" | "paid">("all");
 
-  const [coupon, setCoupon] = useState<{ token: string; productName: string } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
   const generateCoupon = async (product: Product) => {
@@ -38,7 +48,7 @@ function PartnerProfilePage() {
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: product.name });
+    setCoupon({ token: rows[0].token, productName: product.name, benefitWindow: formatBenefitWindow(product.benefit_start_time, product.benefit_end_time) });
   };
 
 
@@ -46,7 +56,7 @@ function PartnerProfilePage() {
     (async () => {
       const [p, pr, ps] = await Promise.all([
         supabase.from("partners" as never).select("*").eq("id" as never, partnerId).eq("status" as never, "approved" as never).maybeSingle(),
-        supabase.from("partner_products" as never).select("id,kind,redemption_mode,discount_percent,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).order("kind" as never),
+        supabase.from("partner_products" as never).select("id,kind,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).order("kind" as never),
         supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, partnerId).order("created_at" as never, { ascending: false }).limit(30),
       ]);
       setPartner((p.data as unknown as Partner) || null);
