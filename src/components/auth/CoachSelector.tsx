@@ -29,11 +29,11 @@ const MASTER_COACH: CoachOption = {
   state: "BR",
 };
 
-export function CoachSelector({ value, onChange, label = "Coach indicador *" }: CoachSelectorProps) {
+export function CoachSelector({ value, onChange, label = "Coach indicador *", locked = false }: CoachSelectorProps) {
   const [query, setQuery] = useState("");
   const [coaches, setCoaches] = useState<CoachOption[]>([MASTER_COACH]);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(!locked);
 
   const normalizedQuery = useMemo(() => query.trim(), [query]);
 
@@ -41,6 +41,7 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *" }: 
   useEffect(() => {
     if (value) setExpanded(false);
   }, [value]);
+
 
   useEffect(() => {
     if (!expanded) return;
