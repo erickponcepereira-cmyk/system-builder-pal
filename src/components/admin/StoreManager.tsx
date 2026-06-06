@@ -13,6 +13,7 @@ interface Section {
   card_width: number | null;
   card_height: number | null;
   pending?: boolean | null;
+  target_audience?: string | null;
 }
 interface Category {
   id: string;
