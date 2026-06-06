@@ -17,7 +17,9 @@ interface CoachSelectorProps {
   value: CoachOption | null;
   onChange: (coach: CoachOption | null) => void;
   label?: string;
+  locked?: boolean;
 }
+
 
 const MASTER_COACH: CoachOption = {
   id: "75e5ab7a-2088-43fe-9510-a025ada25a30",
