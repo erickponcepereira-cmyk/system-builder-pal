@@ -87,7 +87,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order" } | null>(null);
+  const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
 
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
@@ -413,9 +413,18 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       toast.error("Escolha um horário antes de adicionar.");
       return;
     }
+    // Para agendáveis: se já existe com outro horário, confirmar sobrescrita
+    if (item.isSchedulable) {
+      const existing = cart.find((c) => c.id === item.id);
+      if (existing && existing.scheduledSlot && existing.scheduledSlot !== item.scheduledSlot) {
+        const ok = window.confirm(
+          "Você já reservou um horário para este atendimento. Ao confirmar, o horário anterior será cancelado e o novo será adicionado. Deseja continuar?",
+        );
+        if (!ok) return;
+      }
+    }
     setCart((current) => {
       const found = current.find((cartItem) => cartItem.id === item.id);
-      // Itens agendáveis: cada compra é única (1 horário por item), não somar quantidade
       if (found && !item.isSchedulable) return current.map((cartItem) => cartItem.id === item.id ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem);
       if (found && item.isSchedulable) {
         return current.map((cartItem) => cartItem.id === item.id ? { ...item, quantity: 1 } : cartItem);
@@ -433,20 +442,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const checkoutAsStudent = async () => {
     if (cart.length === 0) return;
     const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
-    if (partnerItems.length > 0 && cart.length > 1) {
-      toast.error("Produtos de parceiros devem ser comprados separadamente.");
-      return;
-    }
-    if (requiresShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
-      toast.error("Preencha os dados de entrega.");
-      return;
-    }
+    const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
+    const needsShipping = fitmindItems.some((item) => item.kind === "store" || (item.kind === "item" && item.stock !== null && item.stock !== undefined));
     setCheckingOut(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
 
-      // Caminho exclusivo: produto de parceiro/profissional (1 item por pedido)
-      if (partnerItems.length === 1) {
+      // Pague um produto de parceiro/profissional por vez (RPC do backend cria 1 pedido)
+      if (partnerItems.length > 0) {
         const pp = partnerItems[0];
         let ppId: string | null = null;
         if (pp.kind === "partner_company") {
@@ -483,7 +486,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           .eq("id" as never, ppId as never)
           .maybeSingle();
         const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        setCart([]); setCartOpen(false);
+        setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
@@ -491,12 +494,18 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           email: userData.user?.email || "",
           name: userData.user?.user_metadata?.name || "",
           sourceKind: "partner_product_order",
+          paidItemIds: [pp.id],
         });
         await load();
         return;
       }
 
-      const payload = cart.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
+      if (needsShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
+        toast.error("Preencha os dados de entrega.");
+        return;
+      }
+
+      const payload = fitmindItems.map((item) => ({ kind: item.kind, sourceId: item.sourceId, quantity: item.quantity }));
       const { data: orderId, error } = await supabase.rpc("create_store_order" as never, { _items: payload, _payment_method: paymentMethod, _shipping: shipping, _notes: null, _referrer_student_id: pendingReferrerStudentId } as never);
       if (error) throw new Error(error.message);
       if (!orderId) throw new Error("Pedido não retornado");
@@ -506,12 +515,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         .eq("id" as never, orderId as never)
         .maybeSingle();
       const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
-      setCart([]); setCartOpen(false); setShipping(initialShipping);
+      setCartOpen(false);
       setPayOrder({
         id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
         email: userData.user?.email || "",
         name: userData.user?.user_metadata?.name || "",
         sourceKind: "store_order",
+        paidItemIds: fitmindItems.map((i) => i.id),
       });
       await load();
     } catch (e: any) {
@@ -526,14 +536,11 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     if (!selectedClient) { setCartOpen(false); setClientPickerOpen(true); return; }
     if (cart.length === 0) return;
     const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
-    if (partnerItems.length > 0 && cart.length > 1) {
-      toast.error("Produtos de parceiros/profissionais devem ser vendidos separadamente.");
-      return;
-    }
+    const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
     setCheckingOut(true);
     try {
-      // Caminho exclusivo: parceiro/profissional revendido para aluno
-      if (partnerItems.length === 1) {
+      // Pague um produto de parceiro/profissional por vez
+      if (partnerItems.length > 0) {
         const pp = partnerItems[0];
         let ppId: string | null = null;
         if (pp.kind === "partner_company") {
@@ -571,7 +578,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           .eq("id" as never, ppId as never)
           .maybeSingle();
         const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        setCart([]); setCartOpen(false);
+        setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
@@ -579,13 +586,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           email: selectedClient.email || "",
           name: selectedClient.name,
           sourceKind: "partner_product_order",
+          paidItemIds: [pp.id],
         });
         toast.success("Venda criada. Finalize o pagamento.");
         loadCoachData();
         return;
       }
 
-      const items = cart.map((c) => ({
+      const items = fitmindItems.map((c) => ({
         productId: c.sourceId,
         kind: c.kind,
         title: c.title,
@@ -604,11 +612,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       const orderId = row?.order_id || row?.orderId;
       const orderNumber = row?.order_number || row?.orderNumber || "pedido";
       if (!orderId) throw new Error("Pedido não retornado pelo servidor");
-      setCart([]); setCartOpen(false);
+      setCartOpen(false);
       setPayOrder({
         id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
         email: selectedClient.email || "", name: selectedClient.name,
         sourceKind: "store_order",
+        paidItemIds: fitmindItems.map((i) => i.id),
       });
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
@@ -657,8 +666,22 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         defaultDurationMinutes: item.durationMinutes ?? 30,
         scheduledSlot: item.scheduledSlot ?? null,
       };
-      // Apenas 1 produto de parceiro/profissional por pedido — substitui o atual
-      setCart([{ ...cartItem, quantity: 1 }]);
+      // Agendáveis: se já existe com outro horário, confirmar sobrescrita
+      if (cartItem.isSchedulable) {
+        const existing = cart.find((c) => c.id === cartItem.id);
+        if (existing && existing.scheduledSlot && existing.scheduledSlot !== cartItem.scheduledSlot) {
+          const ok = window.confirm(
+            "Você já reservou um horário para este atendimento. Ao confirmar, o horário anterior será cancelado e o novo será adicionado. Deseja continuar?",
+          );
+          if (!ok) return;
+        }
+      }
+      setCart((current) => {
+        const found = current.find((c) => c.id === cartItem.id);
+        if (found) return current.map((c) => c.id === cartItem.id ? { ...cartItem, quantity: 1 } : c);
+        return [...current, { ...cartItem, quantity: 1 }];
+      });
+      toast.success("Adicionado ao carrinho.");
       setCartOpen(true);
     };
 
@@ -792,7 +815,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
                 description={`Pedido ${payOrder.number}`}
                 defaultPayer={{ email: payOrder.email, name: payOrder.name }}
                 initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-                onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); }}
+                onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
               />
               {coachMode && (() => {
                 const payLink = `${window.location.origin}/pay/${payOrder.number}`;
@@ -1168,7 +1191,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               description={`Pedido ${payOrder.number}`}
               defaultPayer={{ email: payOrder.email, name: payOrder.name }}
               initialMethod={paymentMethod === "pix" ? "pix" : "card"}
-              onApproved={() => { toast.success("Pagamento aprovado!"); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+              onApproved={() => { toast.success("Pagamento aprovado!"); const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
             />
             {coachMode && (() => {
               const payLink = `${window.location.origin}/pay/${payOrder.number}`;

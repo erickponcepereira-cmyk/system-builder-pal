@@ -485,7 +485,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
           </div>
         )}
 
-        {detail && <EventDetailModal event={detail} onClose={() => setDetail(null)} />}
+        {detail && <EventDetailModal event={detail} onClose={() => setDetail(null)} onChanged={() => { setDetail(null); setReloadKey((k) => k + 1); }} />}
       </div>
     );
   }
@@ -717,7 +717,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       )}
 
       {/* Modal de detalhes */}
-      {detail && <EventDetailModal event={detail} onClose={() => setDetail(null)} />}
+      {detail && <EventDetailModal event={detail} onClose={() => setDetail(null)} onChanged={() => { setDetail(null); setReloadKey((k) => k + 1); }} />}
       {showCreate && (
         <CreateEventModal
           onClose={() => setShowCreate(false)}
@@ -851,7 +851,7 @@ function EventCard({ event: ev, onClick }: { event: FitmindEvent; onClick: () =>
 
 // ─── Event Detail Modal ──────────────────────────────────────────────────────
 
-function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose: () => void }) {
+function EventDetailModal({ event: ev, onClose, onChanged }: { event: FitmindEvent; onClose: () => void; onChanged?: () => void }) {
   const cat = CATEGORY_META[ev.category] || CATEGORY_META.outro;
   const evColor = ev.color || "#E24B4A";
   const dtStart = new Date(ev.starts_at);
@@ -935,6 +935,25 @@ function EventDetailModal({ event: ev, onClose }: { event: FitmindEvent; onClose
               Pagar agora e confirmar reserva
               <ExternalLink className="h-3.5 w-3.5 opacity-70" />
             </a>
+          )}
+
+          {/* CTA: Cancelar agendamento (pendente ou confirmado) */}
+          {ev.id.startsWith("appt-") && (
+            <button
+              onClick={async () => {
+                if (!window.confirm("Cancelar este agendamento? Esta ação não pode ser desfeita.")) return;
+                const apptId = ev.id.slice("appt-".length);
+                const { error } = await supabase
+                  .from("professional_appointments" as never)
+                  .update({ status: "cancelled" } as never)
+                  .eq("id" as never, apptId as never);
+                if (error) { toast.error(error.message); return; }
+                toast.success("Agendamento cancelado");
+                onChanged?.();
+              }}
+              className="flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold text-red-300 bg-red-500/15 hover:bg-red-500/25 transition">
+              <X className="h-4 w-4" /> Cancelar agendamento
+            </button>
           )}
 
           {/* Coach responsável + WhatsApp */}
