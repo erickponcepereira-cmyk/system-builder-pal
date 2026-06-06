@@ -77,7 +77,9 @@ export function SettingsTab({ coachId, profileId }: Props) {
   }, [coachId, profileId]);
 
   const uploadAvatar = async (file: File) => {
-    const path = `${profileId}/${Date.now()}-${file.name}`;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
+    const path = `${user.id}/${Date.now()}-${file.name}`;
     const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (upErr) return toast.error(upErr.message);
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
