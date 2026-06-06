@@ -78,7 +78,16 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido. Use o formato nome@dominio.com.");
     if (phone.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto. Inclua DDD + número.");
     if (!gender) return setErr("Selecione seu gênero para continuar.");
-    if (password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    const pwdChecks = {
+      length: password.length >= 8,
+      upper: /[A-Z]/.test(password),
+      lower: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[^A-Za-z0-9]/.test(password),
+    };
+    if (!Object.values(pwdChecks).every(Boolean)) {
+      return setErr("A senha deve conter no mínimo 8 caracteres, 1 letra maiúscula, 1 minúscula, 1 número e 1 caractere especial.");
+    }
     const coachIdToUse = referral?.coachId || selectedCoach?.id;
     if (!coachIdToUse) return setErr("Selecione seu coach para continuar.");
     if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
@@ -218,7 +227,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Crie uma senha forte"
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
                   required
                 />
@@ -226,6 +235,20 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <ul className="mt-2 space-y-1 text-[11px]">
+                {([
+                  ["Mínimo 8 caracteres", password.length >= 8],
+                  ["1 letra maiúscula (A-Z)", /[A-Z]/.test(password)],
+                  ["1 letra minúscula (a-z)", /[a-z]/.test(password)],
+                  ["1 número (0-9)", /[0-9]/.test(password)],
+                  ["1 caractere especial (!@#$...)", /[^A-Za-z0-9]/.test(password)],
+                ] as const).map(([label, ok]) => (
+                  <li key={label} className={`flex items-center gap-1.5 ${ok ? "text-emerald-400" : "text-white/40"}`}>
+                    <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ok ? "currentColor" : "rgba(255,255,255,0.3)" }} />
+                    {label}
+                  </li>
+                ))}
+              </ul>
             </div>
             <label className="flex items-start gap-2 cursor-pointer pt-1">
               <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />

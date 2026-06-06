@@ -304,11 +304,23 @@ function NewChallengeModal({ onClose, onCreated }: { onClose: () => void; onCrea
         <p className="mb-3 text-[11px] text-white/55">Defina seu compromisso de constância e siga em frente. A cada treino concluído você avança.</p>
         <label className="text-[11px] text-white/60">Nome do desafio</label>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: 30 dias sem falta" className="mt-1 mb-3 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
-        <label className="text-[11px] text-white/60">Meta de dias seguidos: <span className="font-bold text-primary">{days}</span></label>
-        <input type="range" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="mt-1 w-full accent-primary" />
-        <div className="mt-2 flex justify-between text-[10px] text-white/40">
-          <span>1d</span><span>30d</span><span>90d</span><span>180d</span><span>365d</span>
-        </div>
+        <label className="text-[11px] text-white/60">Meta de dias seguidos</label>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={365}
+          value={days}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "") return setDays(0 as unknown as number);
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n)) setDays(Math.max(1, Math.min(365, n)));
+          }}
+          placeholder="Ex: 30"
+          className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none"
+        />
+        <p className="mt-1 text-[10px] text-white/40">Entre 1 e 365 dias.</p>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white">Cancelar</button>
           <button onClick={submit} disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Criando..." : "Criar desafio"}</button>
