@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Mail, UserCog, X, Loader2 } from "lucide-react";
+import { Search, Mail, UserCog, X, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { adminDeleteUser } from "@/lib/admin-users.functions";
 
 
 export const Route = createFileRoute("/admin/students")({
@@ -16,7 +18,7 @@ interface StudentRow {
   goal_weight: number | null;
   created_at: string | null;
   is_influencer: boolean | null;
-  profiles: { name: string; email: string; phone: string | null; city: string | null } | null;
+  profiles: { user_id: string; name: string; email: string; phone: string | null; city: string | null } | null;
   coaches: { id: string; profiles: { name: string } | null } | null;
 }
 
@@ -35,6 +37,25 @@ function AdminStudents() {
   const [newCoachId, setNewCoachId] = useState("");
   const [coachSearch, setCoachSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const deleteUserFn = useServerFn(adminDeleteUser);
+
+  const handleDelete = async (row: StudentRow) => {
+    const userId = row.profiles?.user_id;
+    const label = row.profiles?.name || row.profiles?.email || "este aluno";
+    if (!userId) { toast.error("Usuário não encontrado"); return; }
+    if (!window.confirm(`Excluir definitivamente ${label}? Esta ação não pode ser desfeita.`)) return;
+    setDeletingId(row.id);
+    try {
+      await deleteUserFn({ data: { userId } });
+      toast.success("Cadastro excluído");
+      setRows((cur) => cur.filter((x) => x.id !== row.id));
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao excluir");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -43,7 +64,7 @@ function AdminStudents() {
         .from("students")
         .select(`
           id, coach_id, current_weight, goal_weight, created_at, is_influencer,
-          profiles!students_profile_id_fkey(name, email, phone, city),
+          profiles!students_profile_id_fkey(user_id, name, email, phone, city),
           coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
         `)
         .order("created_at", { ascending: false })
@@ -197,6 +218,15 @@ function AdminStudents() {
                           className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
                         >
                           <UserCog className="h-3.5 w-3.5" /> Trocar coach
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r)}
+                          disabled={deletingId === r.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-destructive/15 px-3 py-1.5 text-[11px] font-bold text-destructive hover:bg-destructive/25 disabled:opacity-50"
+                          title="Excluir cadastro"
+                        >
+                          {deletingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          Excluir
                         </button>
                       </div>
                     </td>
