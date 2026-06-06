@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3 } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -58,10 +58,22 @@ interface Product {
   network_l3_amount?: number;
   section_id?: string | null;
   category_id?: string | null;
+  benefit_start_time?: string | null;
+  benefit_end_time?: string | null;
 }
 
 
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
+
+function formatBenefitWindow(start?: string | null, end?: string | null) {
+  const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
+  const s = fmt(start);
+  const e = fmt(end);
+  if (s && e) return `Disponível das ${s} às ${e}`;
+  if (s) return `Disponível a partir das ${s}`;
+  if (e) return `Disponível até ${e}`;
+  return null;
+}
 
 function PartnerPanel() {
   const navigate = useNavigate();
@@ -325,6 +337,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     redemption_mode: "free",
     name: "", description: "", image_url: "", price: 0, stock: null,
     redemption_instructions: "", is_active_by_partner: true,
+    benefit_start_time: null,
+    benefit_end_time: null,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
@@ -367,7 +381,15 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       };
     }
 
-    const payload = { ...editing, ...extra, partner_id: partner.id, status: "pending" as const, admin_notes: null };
+    const payload = {
+      ...editing,
+      ...extra,
+      partner_id: partner.id,
+      status: "pending" as const,
+      admin_notes: null,
+      benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
+      benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
+    };
     if (editing.id) {
       const { id, ...up } = payload;
       const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
@@ -436,6 +458,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </div>
               )}
               {p.status === "rejected" && p.admin_notes && <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>}
+              {p.kind === "free" && formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
+                  <Clock className="h-3 w-3" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                </p>
+              )}
               <div className="mt-1.5 flex gap-2">
                 <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
@@ -492,6 +519,38 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   />
                   <p className="mt-1 text-[10px] text-white/40">Aparece em destaque para o aluno como "X% OFF".</p>
                 </Field>
+              )}
+
+              {editing.kind === "free" && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary">
+                    <Clock className="h-3.5 w-3.5" /> Horário permitido de uso
+                  </div>
+                  <p className="mt-1 text-[10px] text-white/45">Opcional. Deixe em branco para permitir resgate em qualquer horário.</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Field label="Início">
+                      <input
+                        type="time"
+                        value={editing.benefit_start_time?.slice(0, 5) || ""}
+                        onChange={e => setEditing({ ...editing, benefit_start_time: e.target.value || null })}
+                        className="field-input"
+                      />
+                    </Field>
+                    <Field label="Fim">
+                      <input
+                        type="time"
+                        value={editing.benefit_end_time?.slice(0, 5) || ""}
+                        onChange={e => setEditing({ ...editing, benefit_end_time: e.target.value || null })}
+                        className="field-input"
+                      />
+                    </Field>
+                  </div>
+                  {formatBenefitWindow(editing.benefit_start_time, editing.benefit_end_time) && (
+                    <p className="mt-2 rounded-lg bg-black/30 px-3 py-2 text-[11px] font-bold text-primary">
+                      {formatBenefitWindow(editing.benefit_start_time, editing.benefit_end_time)}
+                    </p>
+                  )}
+                </div>
               )}
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
@@ -769,7 +828,7 @@ function QrCodePanel({ partner }: { partner: Partner }) {
 
 interface ScanPreview { student_id: string; student_name: string; student_avatar: string | null; student_email: string | null; student_phone: string | null; student_city: string | null; student_state: string | null; }
 interface ScanResult { ok: boolean; student_name?: string; student_avatar?: string | null; partner_name?: string; visited_at?: string; error?: string; }
-interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; token: string; }
+interface CouponPreview { coupon_id: string; status: string; student_name: string; student_photo: string | null; product_name: string; created_at: string; redeemed_at: string | null; benefit_start_time: string | null; benefit_end_time: string | null; token: string; }
 
 
 function StudentQrScanner({ partner }: { partner: Partner }) {
@@ -916,6 +975,11 @@ function StudentQrScanner({ partner }: { partner: Partner }) {
             )}
             <p className="mt-3 text-lg font-bold text-white">{couponPreview.student_name}</p>
             <p className="text-sm text-primary mt-1">{couponPreview.product_name}</p>
+            {formatBenefitWindow(couponPreview.benefit_start_time, couponPreview.benefit_end_time) && (
+              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(couponPreview.benefit_start_time, couponPreview.benefit_end_time)}
+              </p>
+            )}
             <p className="text-[10px] text-white/40 mt-1">Gerado em {new Date(couponPreview.created_at).toLocaleString("pt-BR")}</p>
             {couponPreview.status !== "active" ? (
               <>

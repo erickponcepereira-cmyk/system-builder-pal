@@ -54,8 +54,20 @@ type PartnerFreeProduct = {
   partner_id: string;
   redemption_mode: "free" | "discount" | null;
   discount_percent: number | null;
+  benefit_start_time: string | null;
+  benefit_end_time: string | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
+
+function formatBenefitWindow(start?: string | null, end?: string | null) {
+  const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
+  const s = fmt(start);
+  const e = fmt(end);
+  if (s && e) return `Disponível das ${s} às ${e}`;
+  if (s) return `Disponível a partir das ${s}`;
+  if (e) return `Disponível até ${e}`;
+  return null;
+}
 
 function StudentFreebies() {
   const navigate = useNavigate();
@@ -69,7 +81,7 @@ function StudentFreebies() {
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
-  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
   const generateCoupon = async (p: PartnerFreeProduct) => {
@@ -79,7 +91,7 @@ function StudentFreebies() {
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
   };
 
   // Carteirinha gate
@@ -113,7 +125,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,partners(fantasy_name,photo_url,status,business_area)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,partners(fantasy_name,photo_url,status,business_area)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -296,6 +308,11 @@ function StudentFreebies() {
                                   {p.partners?.fantasy_name}
                                 </button>
                                 {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                                {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                                  <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                                    <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                                  </p>
+                                )}
                                 {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                                 {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
                                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -471,6 +488,11 @@ function StudentFreebies() {
             {coupon.discountPercent ? (
               <p className="mt-1 inline-block bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1 rounded">{coupon.discountPercent}% OFF</p>
             ) : null}
+            {coupon.benefitWindow && (
+              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <Clock className="h-3.5 w-3.5" /> {coupon.benefitWindow}
+              </p>
+            )}
             <div className="my-4 inline-block bg-white p-3 rounded-xl">
               <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
             </div>

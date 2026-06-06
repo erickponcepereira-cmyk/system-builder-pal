@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X } from "lucide-react";
+import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
@@ -16,9 +16,21 @@ type PartnerFreeProduct = {
   stock: number | null;
   redemption_mode: "free" | "discount" | null;
   discount_percent: number | null;
+  benefit_start_time: string | null;
+  benefit_end_time: string | null;
   partner_id: string;
   partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
 };
+
+function formatBenefitWindow(start?: string | null, end?: string | null) {
+  const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
+  const s = fmt(start);
+  const e = fmt(end);
+  if (s && e) return `Disponível das ${s} às ${e}`;
+  if (s) return `Disponível a partir das ${s}`;
+  if (e) return `Disponível até ${e}`;
+  return null;
+}
 
 
 export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolean } = {}) {
@@ -29,7 +41,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
-  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
 
@@ -60,7 +72,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -78,7 +90,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
   };
 
   const handleScan = (decoded: string) => {
@@ -201,6 +213,11 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           </div>
                           <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
                           {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
+                          {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                            <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                              <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                            </p>
+                          )}
                           {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                           {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
                           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -276,6 +293,11 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             {coupon.discountPercent ? (
               <p className="mt-1 inline-block bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1 rounded">{coupon.discountPercent}% OFF</p>
             ) : null}
+            {coupon.benefitWindow && (
+              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
+                <Clock className="h-3.5 w-3.5" /> {coupon.benefitWindow}
+              </p>
+            )}
             <div className="my-4 inline-block bg-white p-3 rounded-xl">
               <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
             </div>
