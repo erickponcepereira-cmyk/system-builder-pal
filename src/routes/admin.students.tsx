@@ -45,7 +45,7 @@ function AdminStudents() {
         .from("students")
         .select(`
           id, coach_id, current_weight, goal_weight, created_at, is_influencer,
-          profiles!students_profile_id_fkey(name, email, phone, city),
+          profiles!students_profile_id_fkey(user_id, name, email, phone, city),
           coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
         `)
         .order("created_at", { ascending: false })
