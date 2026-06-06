@@ -82,6 +82,22 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
     throw new Error("Este usuário não pode ser alterado pelo cadastro público.");
   }
 
+  // Detecta CPF já em uso por outro usuário (evita erro genérico de unique constraint)
+  const cpfDigits = digits(input.cpf);
+  if (cpfDigits) {
+    const { data: cpfClash } = await supabaseAdmin
+      .from("profiles")
+      .select("id, user_id, email")
+      .eq("cpf", cpfDigits)
+      .neq("user_id", userId)
+      .maybeSingle();
+    if (cpfClash) {
+      throw new Error(
+        `Já existe uma conta cadastrada com este CPF (${cpfClash.email || "e-mail não informado"}). Faça login com essa conta e use a opção de vincular como Profissional/Parceiro por lá.`
+      );
+    }
+  }
+
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .upsert(
@@ -91,7 +107,7 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
         email,
         role: input.role,
         phone: digits(input.phone),
-        cpf: digits(input.cpf),
+        cpf: cpfDigits,
         birthdate: clean(input.birthdate),
         bio: clean(input.bio),
         gender: clean((input as { gender?: string | null }).gender) || null,
@@ -110,8 +126,12 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
     .single();
 
   if (profileError || !profile) {
+    if (profileError?.code === "23505" && profileError.message?.includes("cpf")) {
+      throw new Error("Já existe uma conta cadastrada com este CPF. Faça login com essa conta para se vincular como Profissional.");
+    }
     throw new Error(profileError?.message || "Não foi possível salvar o perfil.");
   }
+
 
   if (input.role === "coach") {
     if (!input.coach?.uplineCoachId) {
