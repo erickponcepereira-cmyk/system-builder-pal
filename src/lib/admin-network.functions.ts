@@ -53,8 +53,9 @@ export const blockCoachAdmin = createServerFn({ method: "POST" })
     if (!coach) throw new Error("Coach não encontrado");
     const { error } = await supabaseAdmin.from("coaches").update({ inactive_since: new Date().toISOString().slice(0, 10), blocked_at: new Date().toISOString(), blocked_reason: reason }).eq("id", data.coachId);
     if (error) throw new Error(error.message);
-    await supabaseAdmin.from("profiles").update({ status: "blocked" }).eq("id", coach.profile_id);
-    await notifyProfile(coach.profile_id, "coach_blocked", "Conta de coach bloqueada", reason, "/coach");
+    // NÃO bloqueamos o profile global — bloqueio é escopado ao painel de coach.
+    // Outros papéis (aluno, parceiro, profissional) continuam funcionando.
+    await notifyProfile(coach.profile_id, "coach_blocked", "Painel de coach bloqueado", reason, "/coach");
     return { ok: true };
   });
 
@@ -69,8 +70,9 @@ export const unblockCoachAdmin = createServerFn({ method: "POST" })
     if (!coach) throw new Error("Coach não encontrado");
     const { error } = await supabaseAdmin.from("coaches").update({ blocked_at: null, blocked_reason: null, inactive_since: null, inactivity_grace_until: null, last_activity_at: new Date().toISOString() }).eq("id", data.coachId);
     if (error) throw new Error(error.message);
-    await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", coach.profile_id);
-    await notifyProfile(coach.profile_id, "coach_unblocked", "Conta reativada", "Sua conta de coach foi reativada pelo administrador.", "/coach");
+    // Reativa o profile somente se ele estiver explicitamente "blocked" (legado)
+    await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", coach.profile_id).eq("status", "blocked");
+    await notifyProfile(coach.profile_id, "coach_unblocked", "Painel de coach reativado", "Seu painel de coach foi reativado pelo administrador.", "/coach");
     return { ok: true };
   });
 
