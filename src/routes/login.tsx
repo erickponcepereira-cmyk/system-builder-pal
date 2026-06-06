@@ -103,6 +103,8 @@ function LoginPage() {
     // Coach é considerado bloqueado se tiver blocked_at OU se o profile estiver explicitamente "blocked" (legado).
     const coachBlocked = !!(coach && (coach as { blocked_at?: string | null }).blocked_at) || profile.status === "blocked";
     const canCoach = canAdmin || (!!coach && !coachBlocked);
+    const isProfessional = !!(coach && (coach as { is_professional?: boolean }).is_professional);
+    const canProfessional = canAdmin || (isProfessional && !coachBlocked);
     const canStudent = role === "student" || !!student;
     const canPartner = role === "partner" || !!partner;
 
