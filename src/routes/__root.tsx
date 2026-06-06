@@ -35,6 +35,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "google", content: "notranslate" },
         { name: "theme-color", content: "#0b0707" },
         { name: "mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -59,7 +60,7 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" data-theme="dark">
+    <html lang="pt-BR" className="dark" data-theme="dark">
       <head>
         <HeadContent />
         <link rel="manifest" href="/manifest.webmanifest" />
