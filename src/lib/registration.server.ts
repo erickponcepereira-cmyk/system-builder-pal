@@ -175,16 +175,25 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
     throw new Error("Selecione um coach para concluir o cadastro de aluno.");
   }
 
-  const { error: studentError } = await supabaseAdmin.from("students").upsert(
-    {
-      profile_id: profile.id,
-      coach_id: input.student.coachId,
-      referred_by_student_id: input.student.referredByStudentId || null,
-      referral_code: clean(input.student.referralCode),
-      partner_id: input.student.partnerId || null,
-    },
-    { onConflict: "profile_id" }
-  );
+  // Gera código de indicação único para o próprio aluno (não confundir com o código do padrinho usado no convite)
+  let studentReferralCode = makeReferralCode();
+  let studentError: { code?: string; message: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { error } = await supabaseAdmin.from("students").upsert(
+      {
+        profile_id: profile.id,
+        coach_id: input.student.coachId,
+        referred_by_student_id: input.student.referredByStudentId || null,
+        referral_code: studentReferralCode,
+        partner_id: input.student.partnerId || null,
+      },
+      { onConflict: "profile_id" }
+    );
+    if (!error) { studentError = null; break; }
+    studentError = error;
+    if (error.code !== "23505") break;
+    studentReferralCode = makeReferralCode();
+  }
 
   if (studentError) throw new Error(studentError.message);
 
