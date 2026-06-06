@@ -172,20 +172,17 @@ export const reviewPartnerStatus = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
 
-    // Se aprovou parceiro, libera também o painel de coach (caso o usuário seja coach).
+    // Se aprovou parceiro, considera a ativação do coach já paga (caso ele também seja coach),
+    // mas NÃO libera o painel — ele continua precisando enviar o quiz e digitar o ID.
     if (data.status === "approved" && partnerRow?.profile_id) {
       await supabaseAdmin
         .from("coaches")
         .update({
-          onboarding_stage: "released",
-          approved_at: new Date().toISOString(),
+          onboarding_stage: "awaiting_quiz_result",
+          activation_paid_at: new Date().toISOString(),
         })
         .eq("profile_id", partnerRow.profile_id)
-        .neq("onboarding_stage", "released");
-      await supabaseAdmin
-        .from("profiles")
-        .update({ status: "active" })
-        .eq("id", partnerRow.profile_id);
+        .eq("onboarding_stage", "awaiting_payment");
     }
     return { ok: true };
   });
