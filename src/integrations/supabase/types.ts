@@ -4894,6 +4894,8 @@ export type Database = {
           admin_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          benefit_end_time: string | null
+          benefit_start_time: string | null
           card_fee_percentage: number
           category_id: string | null
           coach_commission_amount: number | null
@@ -4927,6 +4929,8 @@ export type Database = {
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          benefit_end_time?: string | null
+          benefit_start_time?: string | null
           card_fee_percentage?: number
           category_id?: string | null
           coach_commission_amount?: number | null
@@ -4960,6 +4964,8 @@ export type Database = {
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          benefit_end_time?: string | null
+          benefit_start_time?: string | null
           card_fee_percentage?: number
           category_id?: string | null
           coach_commission_amount?: number | null
@@ -8881,6 +8887,8 @@ export type Database = {
       partner_preview_coupon: {
         Args: { p_token: string }
         Returns: {
+          benefit_end_time: string
+          benefit_start_time: string
           coupon_id: string
           created_at: string
           product_name: string
