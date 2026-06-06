@@ -709,7 +709,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           />
         )}
         {cartOpen && (
-          <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div className="fixed inset-0 z-50 flex items-end bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:items-center sm:justify-center sm:pb-4">
             <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
@@ -1061,7 +1061,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       )}
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+        <div className="fixed inset-0 z-50 flex items-end bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:items-center sm:justify-center sm:pb-4">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
