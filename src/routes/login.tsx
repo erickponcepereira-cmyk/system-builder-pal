@@ -329,6 +329,16 @@ function LoginPage() {
                     <span className="font-semibold">Painel de Coach</span>
                   </button>
                 )}
+                {accessOptions.professional && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("professional")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-left text-white transition-colors hover:bg-cyan-400/20"
+                  >
+                    <Stethoscope className="h-5 w-5 text-cyan-400" />
+                    <span className="font-semibold">Painel de Profissional</span>
+                  </button>
+                )}
                 {accessOptions.student && (
                   <button
                     type="button"
