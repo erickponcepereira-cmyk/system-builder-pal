@@ -68,7 +68,21 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
   const [query, setQuery] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const cartStorageKey = coachMode ? "fitmind_cart_coach" : "fitmind_cart_student";
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(coachMode ? "fitmind_cart_coach" : "fitmind_cart_student");
+      return raw ? (JSON.parse(raw) as CartItem[]) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (cart.length) window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
+      else window.localStorage.removeItem(cartStorageKey);
+    } catch { /* ignore */ }
+  }, [cart, cartStorageKey]);
   const [cartOpen, setCartOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
@@ -695,7 +709,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           />
         )}
         {cartOpen && (
-          <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <div className="fixed inset-0 z-50 flex items-end bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:items-center sm:justify-center sm:pb-4">
             <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
@@ -1047,7 +1061,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       )}
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-background/80 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+        <div className="fixed inset-0 z-50 flex items-end bg-background/80 px-4 pt-4 pb-24 backdrop-blur-sm sm:items-center sm:justify-center sm:pb-4">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15"><Sparkles className="h-5 w-5 text-primary" /></div>
