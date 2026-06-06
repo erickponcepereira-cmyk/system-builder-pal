@@ -129,7 +129,7 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
 
   if (profileError || !profile) {
     if (profileError?.code === "23505" && profileError.message?.includes("cpf")) {
-      throw new Error("Já existe uma conta cadastrada com este CPF. Faça login com essa conta para se vincular como Profissional.");
+      throw new Error("Já existe uma conta cadastrada com este CPF.");
     }
     throw new Error(profileError?.message || "Não foi possível salvar o perfil.");
   }
