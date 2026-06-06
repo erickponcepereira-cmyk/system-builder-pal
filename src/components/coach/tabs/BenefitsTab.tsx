@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
+import { CouponModal } from "@/components/student/CouponModal";
 
 type PartnerFreeProduct = {
   id: string;
