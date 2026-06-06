@@ -99,17 +99,27 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *", lo
             <UserCheck className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold text-white">{value.name}</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
-          >
-            <Pencil className="h-3 w-3" /> Alterar
-          </button>
+          {locked ? (
+            <span className="text-[11px] font-semibold text-primary/70">Vinculado</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20"
+            >
+              <Pencil className="h-3 w-3" /> Alterar
+            </button>
+          )}
         </div>
+        {locked && (
+          <p className="text-[11px] text-white/40">
+            Coach indicador vinculado pela sua conta/indicação. Não pode ser alterado.
+          </p>
+        )}
       </div>
     );
   }
+
 
   return (
     <div className="space-y-2">
