@@ -200,6 +200,16 @@ export function StoreManager() {
             <input className="input-dark md:col-span-2" placeholder="Nome da seção" value={newSection.name || ""} onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} />
             <input className="input-dark" placeholder="slug (auto)" value={newSection.slug || ""} onChange={(e) => setNewSection({ ...newSection, slug: e.target.value })} />
             <input className="input-dark" placeholder="ícone (lucide name)" value={newSection.icon || ""} onChange={(e) => setNewSection({ ...newSection, icon: e.target.value })} />
+            <select
+              className="input-dark md:col-span-2"
+              value={newSection.target_audience || ""}
+              onChange={(e) => setNewSection({ ...newSection, target_audience: e.target.value || null })}
+            >
+              <option value="">Aba de destino — Todas</option>
+              <option value="partner">Parceiros</option>
+              <option value="professional">Profissionais</option>
+              <option value="fitmind">Fitmind</option>
+            </select>
             <input className="input-dark md:col-span-2" placeholder="URL da imagem (opcional)" value={newSection.image_url || ""} onChange={(e) => setNewSection({ ...newSection, image_url: e.target.value })} />
             <input type="number" className="input-dark" placeholder="largura px (ex: 160)" value={newSection.card_width ?? ""} onChange={(e) => setNewSection({ ...newSection, card_width: e.target.value ? Number(e.target.value) : null })} />
             <input type="number" className="input-dark" placeholder="altura px (ex: 160)" value={newSection.card_height ?? ""} onChange={(e) => setNewSection({ ...newSection, card_height: e.target.value ? Number(e.target.value) : null })} />
