@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, User } from "lucide-react";
+import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, Stethoscope, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { useState } from "react";
@@ -27,16 +27,17 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; student: boolean; partner: boolean } | null>(null);
+  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; professional: boolean; student: boolean; partner: boolean } | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  const enterArea = (area: "coach" | "student" | "admin" | "partner") => {
-    if (area !== "admin" && area !== "partner") sessionStorage.setItem("fitmind_selected_area", area);
+  const enterArea = (area: "coach" | "student" | "admin" | "partner" | "professional") => {
+    if (area !== "admin" && area !== "partner" && area !== "professional") sessionStorage.setItem("fitmind_selected_area", area);
+    else sessionStorage.removeItem("fitmind_selected_area");
     const redirect = new URLSearchParams(window.location.search).get("redirect") || "";
     const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "";
-    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : "/student";
+    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : area === "professional" ? "/professional" : "/student";
     const target = safeRedirect.startsWith(areaRoot) ? safeRedirect : areaRoot;
     window.location.assign(target);
   };
@@ -85,7 +86,7 @@ function LoginPage() {
       { data: student, error: studentError },
       { data: partner, error: partnerError },
     ] = await Promise.all([
-      supabase.from("coaches").select("id, approved_at, blocked_at").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, approved_at, blocked_at, is_professional").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
     ]);
@@ -102,6 +103,8 @@ function LoginPage() {
     // Coach é considerado bloqueado se tiver blocked_at OU se o profile estiver explicitamente "blocked" (legado).
     const coachBlocked = !!(coach && (coach as { blocked_at?: string | null }).blocked_at) || profile.status === "blocked";
     const canCoach = canAdmin || (!!coach && !coachBlocked);
+    const isProfessional = !!(coach && (coach as { is_professional?: boolean }).is_professional);
+    const canProfessional = canAdmin || (isProfessional && !coachBlocked);
     const canStudent = role === "student" || !!student;
     const canPartner = role === "partner" || !!partner;
 
@@ -127,8 +130,8 @@ function LoginPage() {
       setFormError(m); toast.error(m); return;
     }
 
-    const available = { admin: canAdmin, coach: canCoach, student: canStudent, partner: canPartner };
-    const count = Number(canAdmin) + Number(canCoach) + Number(canStudent) + Number(canPartner);
+    const available = { admin: canAdmin, coach: canCoach, professional: canProfessional, student: canStudent, partner: canPartner };
+    const count = Number(canAdmin) + Number(canCoach) + Number(canProfessional) + Number(canStudent) + Number(canPartner);
 
     if (count === 0) {
       setLoading(false);
@@ -148,6 +151,7 @@ function LoginPage() {
 
     if (canAdmin) enterArea("admin");
     else if (canCoach) enterArea("coach");
+    else if (canProfessional) enterArea("professional");
     else if (canStudent) enterArea("student");
     else enterArea("partner");
   };
@@ -323,6 +327,16 @@ function LoginPage() {
                   >
                     <Dumbbell className="h-5 w-5 text-primary" />
                     <span className="font-semibold">Painel de Coach</span>
+                  </button>
+                )}
+                {accessOptions.professional && (
+                  <button
+                    type="button"
+                    onClick={() => enterArea("professional")}
+                    className="flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-left text-white transition-colors hover:bg-cyan-400/20"
+                  >
+                    <Stethoscope className="h-5 w-5 text-cyan-400" />
+                    <span className="font-semibold">Painel de Profissional</span>
                   </button>
                 )}
                 {accessOptions.student && (
