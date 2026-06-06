@@ -579,7 +579,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               )}
 
               <CategoryPicker
-                ownerOnly
+                targetAudience="partner"
                 sectionId={editing.section_id}
                 categoryId={editing.category_id}
                 onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
