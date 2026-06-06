@@ -8661,6 +8661,7 @@ export type Database = {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
       }
+      admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
       admin_set_coach_card_validity: {
         Args: { _coach_id: string; _valid_until: string }
         Returns: undefined
