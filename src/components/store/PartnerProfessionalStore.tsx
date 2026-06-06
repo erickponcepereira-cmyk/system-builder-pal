@@ -330,7 +330,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   onChange={setSlot}
                 />
               )}
-              <CommissionBreakdown price={selected.price} pct={selected.coachCommissionPct} />
+              {mode === "reseller" && (
+                <CommissionBreakdown price={selected.price} pct={selected.coachCommissionPct} />
+              )}
               {mode === "reseller" && (
                 <div className="space-y-1 rounded-xl border border-primary/30 bg-primary/5 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
