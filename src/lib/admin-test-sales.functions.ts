@@ -322,17 +322,20 @@ async function createPartnerSimulation(input: SimulateInput) {
   const { l1, l2, l3 } = await getCoachUplines(sellingCoachId);
   const gross = product.price;
   const paymentMethod = input.paymentMethod === "credit_card" || input.paymentMethod === "debit_card" ? "card" : "pix";
-  const feePct = paymentMethod === "pix" ? 0.99 : 4.98;
-  const paymentFee = Math.round((gross * feePct / 100) * 100) / 100;
-  const tax = Math.round((gross * 0.06) * 100) / 100;
-  const systemFee = 20;
-  const coachPct = moneyNumber(product.coach_commission_percentage || 10);
-  const coachCommission = moneyNumber(product.coach_commission_amount) || Math.round((gross * coachPct / 100) * 100) / 100;
-  const networkL1 = moneyNumber(product.network_l1_amount) || Math.round((gross * 0.03) * 100) / 100;
-  const networkL2 = moneyNumber(product.network_l2_amount) || Math.round((gross * 0.02) * 100) / 100;
-  const networkL3 = moneyNumber(product.network_l3_amount) || Math.round((gross * 0.01) * 100) / 100;
-  const coachNet = Math.max(0, Math.round((coachCommission - networkL1 - networkL2 - networkL3) * 100) / 100);
-  const ownerNet = moneyNumber(product.partner_net_amount || product.professional_net_amount) || Math.max(0, Math.round((gross - paymentFee - tax - systemFee - coachCommission) * 100) / 100);
+  // Motor oficial: partnerFinance.ts (cascata, rede % da comissão do coach)
+  const rawPct = Number(product.coach_commission_percentage || 10);
+  const validPcts: number[] = [10, 20, 30, 40, 50];
+  const coachPct = (validPcts.includes(rawPct) ? rawPct : 10) as CoachCommissionPct;
+  const bd = computeFromCharge(gross, coachPct, paymentMethod);
+  const paymentFee = bd.paymentFee;
+  const tax = bd.tax;
+  const systemFee = bd.systemFee;
+  const coachCommission = bd.coachCommission;
+  const networkL1 = bd.networkL1;
+  const networkL2 = bd.networkL2;
+  const networkL3 = bd.networkL3;
+  const coachNet = bd.coachNet;
+  const ownerNet = bd.partnerNet;
 
   const { data: order, error } = await supabaseAdmin
     .from("partner_product_orders" as never)
