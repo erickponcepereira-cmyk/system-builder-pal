@@ -18,7 +18,7 @@ interface StudentRow {
   goal_weight: number | null;
   created_at: string | null;
   is_influencer: boolean | null;
-  profiles: { name: string; email: string; phone: string | null; city: string | null } | null;
+  profiles: { user_id: string; name: string; email: string; phone: string | null; city: string | null } | null;
   coaches: { id: string; profiles: { name: string } | null } | null;
 }
 
