@@ -68,7 +68,21 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
   const [query, setQuery] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const cartStorageKey = coachMode ? "fitmind_cart_coach" : "fitmind_cart_student";
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(coachMode ? "fitmind_cart_coach" : "fitmind_cart_student");
+      return raw ? (JSON.parse(raw) as CartItem[]) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (cart.length) window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
+      else window.localStorage.removeItem(cartStorageKey);
+    } catch { /* ignore */ }
+  }, [cart, cartStorageKey]);
   const [cartOpen, setCartOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
