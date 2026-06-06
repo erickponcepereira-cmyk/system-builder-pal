@@ -11,7 +11,7 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
-import { maskCPF, maskPhone, maskCEP, generateReferralCode } from "@/lib/masks";
+import { maskCPF, maskPhone, maskCEP, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
@@ -120,8 +120,8 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
       return fail("Este e-mail já está cadastrado. Use outro ou faça login.");
     if (emailStatus === "checking")
       return fail("Aguarde a verificação do e-mail.");
-    if (cpf.replace(/\D/g, "").length !== 11)
-      return fail("CPF incompleto. Digite os 11 dígitos.");
+    if (cpf.replace(/\D/g, "").length !== 11 || !isValidCPF(cpf))
+      return fail("CPF inválido. Verifique os dados informados.");
     if (phone.replace(/\D/g, "").length < 10)
       return fail("WhatsApp incompleto. Inclua DDD + número.");
     if (password.length < 8)
