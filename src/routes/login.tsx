@@ -27,16 +27,17 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; student: boolean; partner: boolean } | null>(null);
+  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; professional: boolean; student: boolean; partner: boolean } | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  const enterArea = (area: "coach" | "student" | "admin" | "partner") => {
-    if (area !== "admin" && area !== "partner") sessionStorage.setItem("fitmind_selected_area", area);
+  const enterArea = (area: "coach" | "student" | "admin" | "partner" | "professional") => {
+    if (area !== "admin" && area !== "partner" && area !== "professional") sessionStorage.setItem("fitmind_selected_area", area);
+    else sessionStorage.removeItem("fitmind_selected_area");
     const redirect = new URLSearchParams(window.location.search).get("redirect") || "";
     const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "";
-    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : "/student";
+    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : area === "professional" ? "/professional" : "/student";
     const target = safeRedirect.startsWith(areaRoot) ? safeRedirect : areaRoot;
     window.location.assign(target);
   };
