@@ -264,7 +264,7 @@ function ProfilePage() {
           <p className="text-base font-bold text-white">{profile.name}</p>
           <p className="text-xs text-white/50">{profile.email}</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">🔥 Plano Premium</span>
+            
             {isInfluencer && (
               <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300"><Sparkles className="h-3 w-3" /> Influencer</span>
             )}
