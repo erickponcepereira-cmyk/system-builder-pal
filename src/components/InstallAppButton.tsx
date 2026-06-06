@@ -27,8 +27,10 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
   const [installed, setInstalled] = useState(false);
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [platform, setPlatform] = useState<"ios" | "android" | "desktop">("desktop");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setPlatform(detectPlatform());
     setInstalled(isStandalone());
 
@@ -49,7 +51,9 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
     };
   }, []);
 
+  if (!mounted) return <div className="h-[46px] w-full" aria-hidden />;
   if (installed) return null;
+
 
   const handleClick = async () => {
     if (deferred) {
