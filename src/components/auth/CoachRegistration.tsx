@@ -120,8 +120,8 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
       return fail("Este e-mail já está cadastrado. Use outro ou faça login.");
     if (emailStatus === "checking")
       return fail("Aguarde a verificação do e-mail.");
-    if (cpf.replace(/\D/g, "").length !== 11)
-      return fail("CPF incompleto. Digite os 11 dígitos.");
+    if (cpf.replace(/\D/g, "").length !== 11 || !isValidCPF(cpf))
+      return fail("CPF inválido. Verifique os dados informados.");
     if (phone.replace(/\D/g, "").length < 10)
       return fail("WhatsApp incompleto. Inclua DDD + número.");
     if (password.length < 8)
