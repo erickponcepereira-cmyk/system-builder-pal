@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   X, Loader2, CheckCircle2, XCircle, Ban, Instagram, Facebook, Globe,
   MessageCircle, MapPin, Eye, Users as UsersIcon, Package, ImageIcon, Camera,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -14,6 +15,16 @@ import {
 
 type Tab = "overview" | "products" | "timeline" | "collaborators";
 const allTabs: Tab[] = ["overview", "products", "timeline", "collaborators"];
+
+function formatBenefitWindow(start?: string | null, end?: string | null) {
+  const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
+  const s = fmt(start);
+  const e = fmt(end);
+  if (s && e) return `Disponível das ${s} às ${e}`;
+  if (s) return `Disponível a partir das ${s}`;
+  if (e) return `Disponível até ${e}`;
+  return null;
+}
 
 
 export function PartnerDetailsModal({
@@ -279,6 +290,11 @@ export function PartnerDetailsModal({
                           {p.kind === "free" ? "Brinde" : `R$ ${Number(p.price || 0).toFixed(2)}`}
                         </p>
                         {p.description && <p className="text-[11px] text-white/50 mt-1 line-clamp-2">{p.description}</p>}
+                        {p.kind === "free" && formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                          <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
+                            <Clock className="h-3 w-3" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                          </p>
+                        )}
                         {!readOnly && p.admin_notes && p.status === "rejected" && (
                           <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>
                         )}
