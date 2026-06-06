@@ -28,7 +28,7 @@ export type SimulatedSaleRow = {
   buyerName: string | null;
   productName: string | null;
   payUrl: string;
-  flow: Array<{ label: string; amount: number; status?: string | null; recipient?: string | null }>;
+  flow: Array<{ label: string; amount: number; status?: string | null; recipient?: string | null; kind?: "money" | "benefit"; info?: string | null }>;
 };
 
 const TEST_META = { test_simulation: true, source: "admin_test_sale" } as const;
