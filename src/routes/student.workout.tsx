@@ -1056,21 +1056,29 @@ function CalendarView({ sessions }: { sessions: Array<{ started_at: string; comp
       <div className="mt-1 grid grid-cols-7 gap-1">
         {cells.map((d, i) => {
           const pct = d ? byDay[d] : undefined;
+          const today = now.getDate();
+          const isPast = d !== null && d < today;
+          const isToday = d === today;
+          const done = pct !== undefined;
+          let cls = "";
+          if (!d) cls = "";
+          else if (done && pct >= 100) cls = "bg-emerald-600 text-white";
+          else if (done) cls = "bg-emerald-600/50 text-white";
+          else if (isPast) cls = "bg-red-600/80 text-white";
+          else if (isToday) cls = "bg-white/10 text-white ring-1 ring-primary/60";
+          else cls = "bg-white/5 text-white/50";
           return (
-            <div
-              key={i}
-              className={`aspect-square rounded-lg text-[10px] font-bold flex items-center justify-center ${
-                pct !== undefined
-                  ? pct >= 100 ? "bg-primary text-primary-foreground" : "bg-primary/40 text-white"
-                  : d ? "bg-white/5 text-white/50" : ""
-              }`}
-            >
+            <div key={i} className={`aspect-square rounded-lg text-[10px] font-bold flex items-center justify-center ${cls}`}>
               {d || ""}
             </div>
           );
         })}
       </div>
-      <p className="mt-2 text-center text-[9px] text-white/40">Verde escuro = treino 100% concluído</p>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[9px] text-white/50">
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded bg-emerald-600" /> Treino feito</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded bg-red-600/80" /> Sem treino</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded bg-white/10 ring-1 ring-primary/60" /> Hoje</span>
+      </div>
     </div>
   );
 }
