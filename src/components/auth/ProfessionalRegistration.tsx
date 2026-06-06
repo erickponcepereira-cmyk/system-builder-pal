@@ -12,7 +12,7 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
-import { maskCPF, maskPhone, generateReferralCode } from "@/lib/masks";
+import { maskCPF, maskPhone, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
@@ -138,7 +138,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
         return fail("Preencha todos os campos obrigatórios.");
       if (emailStatus === "checking") return fail("Aguarde a verificação do e-mail.");
-      if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF incompleto.");
+      if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF inválido. Verifique os dados informados.");
+      if (!isValidCPF(cpf)) return fail("CPF inválido. Verifique os dados informados.");
       if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
         return fail("Senha: 8+ chars, 1 maiúscula e 1 número.");
       if (password !== confirmPassword) return fail("As senhas não coincidem.");
