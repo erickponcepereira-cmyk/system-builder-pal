@@ -67,13 +67,8 @@ function LoginPage() {
       return;
     }
 
-    if (profile.status === "blocked") {
-      setLoading(false);
-      const message = "Login indisponível: conta bloqueada.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
+    // Status "blocked" no profile não bloqueia mais o login global —
+    // bloqueio agora é escopado por papel (ex.: coaches.blocked_at bloqueia só o painel de coach).
 
     // Reativa automaticamente se estava inativo por falta de atividade
     if (profile.status === "inactive") {
@@ -90,7 +85,7 @@ function LoginPage() {
       { data: student, error: studentError },
       { data: partner, error: partnerError },
     ] = await Promise.all([
-      supabase.from("coaches").select("id, approved_at").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, approved_at, blocked_at").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
     ]);
@@ -104,7 +99,9 @@ function LoginPage() {
     }
 
     const canAdmin = role === "admin" || role === "manager" || role === "director";
-    const canCoach = canAdmin || !!coach;
+    // Coach é considerado bloqueado se tiver blocked_at OU se o profile estiver explicitamente "blocked" (legado).
+    const coachBlocked = !!(coach && (coach as { blocked_at?: string | null }).blocked_at) || profile.status === "blocked";
+    const canCoach = canAdmin || (!!coach && !coachBlocked);
     const canStudent = role === "student" || !!student;
     const canPartner = role === "partner" || !!partner;
 
