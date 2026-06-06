@@ -284,29 +284,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         />
       )}
 
-      {coupon && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4" onClick={() => setCoupon(null)}>
-          <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-sm w-full text-center relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setCoupon(null)} className="absolute top-3 right-3 text-white/60 hover:text-white"><X className="h-5 w-5" /></button>
-            <Ticket className="h-8 w-8 text-primary mx-auto" />
-            <h3 className="mt-2 text-lg font-bold text-white">Seu Cupom</h3>
-            <p className="text-sm text-white/70 mt-1">{coupon.productName}</p>
-            {coupon.discountPercent ? (
-              <p className="mt-1 inline-block bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1 rounded">{coupon.discountPercent}% OFF</p>
-            ) : null}
-            {coupon.benefitWindow && (
-              <p className="mx-auto mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">
-                <Clock className="h-3.5 w-3.5" /> {coupon.benefitWindow}
-              </p>
-            )}
-            <div className="my-4 inline-block bg-white p-3 rounded-xl">
-              <QRCodeSVG value={`COUPON:${coupon.token}`} size={200} />
-            </div>
-            <p className="text-[10px] text-white/40 break-all font-mono">{coupon.token}</p>
-            <p className="text-[11px] text-white/60 mt-3">Apresente este QR no parceiro para validar. O cupom é único e expira após o uso.</p>
-          </div>
-        </div>
-      )}
+      {coupon && <CouponModal coupon={coupon} onClose={() => setCoupon(null)} />}
     </>
   );
 }
