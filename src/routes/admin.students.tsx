@@ -37,6 +37,25 @@ function AdminStudents() {
   const [newCoachId, setNewCoachId] = useState("");
   const [coachSearch, setCoachSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const deleteUserFn = useServerFn(adminDeleteUser);
+
+  const handleDelete = async (row: StudentRow) => {
+    const userId = row.profiles?.user_id;
+    const label = row.profiles?.name || row.profiles?.email || "este aluno";
+    if (!userId) { toast.error("Usuário não encontrado"); return; }
+    if (!window.confirm(`Excluir definitivamente ${label}? Esta ação não pode ser desfeita.`)) return;
+    setDeletingId(row.id);
+    try {
+      await deleteUserFn({ data: { userId } });
+      toast.success("Cadastro excluído");
+      setRows((cur) => cur.filter((x) => x.id !== row.id));
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao excluir");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
