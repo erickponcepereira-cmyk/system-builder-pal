@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
-import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
+import { maskCNPJ, maskCPF, maskPhone, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
@@ -106,6 +106,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     if (!fantasyName.trim()) return setErr("Informe o nome fantasia da empresa.");
     if (!responsibleName.trim()) return setErr("Informe o nome do responsável.");
     if (doc.replace(/\D/g, "").length < (docType === "cnpj" ? 14 : 11)) return setErr(`${docType.toUpperCase()} incompleto.`);
+    if (docType === "cpf" && !isValidCPF(doc)) return setErr("CPF inválido. Verifique os dados informados.");
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido.");
     if (whatsapp.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto.");
     if (!isExisting && password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
