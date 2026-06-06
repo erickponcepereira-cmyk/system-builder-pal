@@ -7017,6 +7017,7 @@ export type Database = {
           pending: boolean
           slug: string
           sort_order: number
+          target_audience: string | null
           updated_at: string
         }
         Insert: {
@@ -7032,6 +7033,7 @@ export type Database = {
           pending?: boolean
           slug: string
           sort_order?: number
+          target_audience?: string | null
           updated_at?: string
         }
         Update: {
@@ -7047,6 +7049,7 @@ export type Database = {
           pending?: boolean
           slug?: string
           sort_order?: number
+          target_audience?: string | null
           updated_at?: string
         }
         Relationships: []
