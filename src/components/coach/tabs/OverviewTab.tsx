@@ -164,6 +164,10 @@ export function OverviewTab({
         <BirthdaysCard scope="week" title="Aniversariantes da semana" />
         {coachId && <BirthdaysCard scope="coach-month" coachId={coachId} title="Aniversariantes do mês (meus alunos)" />}
       </div>
+
+      <div className="mt-6">
+        <InstallAppButton />
+      </div>
     </>
   );
 }
