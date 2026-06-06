@@ -219,6 +219,15 @@ function AdminStudents() {
                         >
                           <UserCog className="h-3.5 w-3.5" /> Trocar coach
                         </button>
+                        <button
+                          onClick={() => handleDelete(r)}
+                          disabled={deletingId === r.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-destructive/15 px-3 py-1.5 text-[11px] font-bold text-destructive hover:bg-destructive/25 disabled:opacity-50"
+                          title="Excluir cadastro"
+                        >
+                          {deletingId === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          Excluir
+                        </button>
                       </div>
                     </td>
                   </tr>
