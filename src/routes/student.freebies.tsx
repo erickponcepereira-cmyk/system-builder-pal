@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { FreebieDetailModal, type FreebieDetail } from "@/components/student/FreebieDetailModal";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
+import { CouponModal } from "@/components/student/CouponModal";
 
 export const Route = createFileRoute("/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
