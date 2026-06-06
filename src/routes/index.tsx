@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -128,6 +129,7 @@ function Index() {
           >
             Criar conta
           </Link>
+          <InstallAppButton />
         </div>
       </section>
 

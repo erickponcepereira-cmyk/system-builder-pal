@@ -6,6 +6,7 @@ import { CoachRegistration } from "@/components/auth/CoachRegistration";
 import { StudentRegistration } from "@/components/auth/StudentRegistration";
 import { PartnerRegistration } from "@/components/auth/PartnerRegistration";
 import { ProfessionalRegistration } from "@/components/auth/ProfessionalRegistration";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 type SearchParams = { role?: string };
 
@@ -117,6 +118,9 @@ function RegisterPage() {
           </button>
         </div>
 
+        <div className="mt-6">
+          <InstallAppButton />
+        </div>
 
         <div className="mt-6 text-center text-sm text-white/40">
           Já tem conta?{" "}
