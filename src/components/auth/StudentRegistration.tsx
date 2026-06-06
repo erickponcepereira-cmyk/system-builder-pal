@@ -227,12 +227,6 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Crie uma senha forte"
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
                   required
