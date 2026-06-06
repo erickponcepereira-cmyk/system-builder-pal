@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isValidCPF } from "@/lib/masks";
 
 export type FinalizeRegistrationInput = {
   userId: string;
@@ -85,6 +86,9 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
   // Detecta CPF já em uso por outro usuário (evita erro genérico de unique constraint)
   const cpfDigits = digits(input.cpf);
   if (cpfDigits) {
+    if (!isValidCPF(cpfDigits)) {
+      throw new Error("CPF inválido. Verifique os dados informados.");
+    }
     const { data: cpfClash } = await supabaseAdmin
       .from("profiles")
       .select("id, user_id, email")
@@ -92,9 +96,7 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
       .neq("user_id", userId)
       .maybeSingle();
     if (cpfClash) {
-      throw new Error(
-        `Já existe uma conta cadastrada com este CPF (${cpfClash.email || "e-mail não informado"}). Faça login com essa conta e use a opção de vincular como Profissional/Parceiro por lá.`
-      );
+      throw new Error("Já existe uma conta cadastrada com este CPF.");
     }
   }
 
