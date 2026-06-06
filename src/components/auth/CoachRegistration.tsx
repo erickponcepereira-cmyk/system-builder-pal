@@ -11,7 +11,7 @@ import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
-import { maskCPF, maskPhone, maskCEP, generateReferralCode } from "@/lib/masks";
+import { maskCPF, maskPhone, maskCEP, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
