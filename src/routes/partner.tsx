@@ -521,6 +521,38 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </Field>
               )}
 
+              {editing.kind === "free" && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary">
+                    <Clock className="h-3.5 w-3.5" /> Horário permitido de uso
+                  </div>
+                  <p className="mt-1 text-[10px] text-white/45">Opcional. Deixe em branco para permitir resgate em qualquer horário.</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Field label="Início">
+                      <input
+                        type="time"
+                        value={editing.benefit_start_time?.slice(0, 5) || ""}
+                        onChange={e => setEditing({ ...editing, benefit_start_time: e.target.value || null })}
+                        className="field-input"
+                      />
+                    </Field>
+                    <Field label="Fim">
+                      <input
+                        type="time"
+                        value={editing.benefit_end_time?.slice(0, 5) || ""}
+                        onChange={e => setEditing({ ...editing, benefit_end_time: e.target.value || null })}
+                        className="field-input"
+                      />
+                    </Field>
+                  </div>
+                  {formatBenefitWindow(editing.benefit_start_time, editing.benefit_end_time) && (
+                    <p className="mt-2 rounded-lg bg-black/30 px-3 py-2 text-[11px] font-bold text-primary">
+                      {formatBenefitWindow(editing.benefit_start_time, editing.benefit_end_time)}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
               <Field label="Imagem">
