@@ -100,7 +100,7 @@ export const getPartnerPublicProfile = createServerFn({ method: "POST" })
       supabaseAdmin.from("partners").select("*").eq("id", data.partnerId).maybeSingle(),
       supabaseAdmin
         .from("partner_products")
-        .select("id, kind, name, description, image_url, price, status, is_active_by_partner, redemption_instructions, admin_notes, created_at")
+        .select("id, kind, name, description, image_url, price, status, is_active_by_partner, redemption_instructions, admin_notes, benefit_start_time, benefit_end_time, created_at")
         .eq("partner_id", data.partnerId)
         .eq("status", "approved")
         .eq("is_active_by_partner", true)
