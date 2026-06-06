@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RewardsPanel } from "@/components/coach/RewardsPanel";
 import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -162,6 +163,10 @@ export function OverviewTab({
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <BirthdaysCard scope="week" title="Aniversariantes da semana" />
         {coachId && <BirthdaysCard scope="coach-month" coachId={coachId} title="Aniversariantes do mês (meus alunos)" />}
+      </div>
+
+      <div className="mt-6">
+        <InstallAppButton />
       </div>
     </>
   );

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Package, Link as LinkIcon, Copy, MessageCircle, UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 interface Props {
   coachId: string;
@@ -177,6 +178,8 @@ export function OverviewTab({ coachId, coachName }: Props) {
           <p className="text-xs text-white/40">Contato do seu coach ainda não cadastrado.</p>
         )}
       </div>
+
+      <InstallAppButton />
     </div>
   );
 }
