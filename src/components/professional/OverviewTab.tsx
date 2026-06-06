@@ -178,6 +178,8 @@ export function OverviewTab({ coachId, coachName }: Props) {
           <p className="text-xs text-white/40">Contato do seu coach ainda não cadastrado.</p>
         )}
       </div>
+
+      <InstallAppButton />
     </div>
   );
 }
