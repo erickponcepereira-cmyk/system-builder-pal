@@ -86,7 +86,7 @@ function LoginPage() {
       { data: student, error: studentError },
       { data: partner, error: partnerError },
     ] = await Promise.all([
-      supabase.from("coaches").select("id, approved_at, blocked_at").eq("profile_id", profile.id).maybeSingle(),
+      supabase.from("coaches").select("id, approved_at, blocked_at, is_professional").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
       supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
     ]);
