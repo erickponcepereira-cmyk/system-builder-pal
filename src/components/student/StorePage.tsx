@@ -536,14 +536,11 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     if (!selectedClient) { setCartOpen(false); setClientPickerOpen(true); return; }
     if (cart.length === 0) return;
     const partnerItems = cart.filter((c) => c.kind === "partner" || c.kind === "partner_company");
-    if (partnerItems.length > 0 && cart.length > 1) {
-      toast.error("Produtos de parceiros/profissionais devem ser vendidos separadamente.");
-      return;
-    }
+    const fitmindItems = cart.filter((c) => c.kind !== "partner" && c.kind !== "partner_company");
     setCheckingOut(true);
     try {
-      // Caminho exclusivo: parceiro/profissional revendido para aluno
-      if (partnerItems.length === 1) {
+      // Pague um produto de parceiro/profissional por vez
+      if (partnerItems.length > 0) {
         const pp = partnerItems[0];
         let ppId: string | null = null;
         if (pp.kind === "partner_company") {
@@ -581,7 +578,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           .eq("id" as never, ppId as never)
           .maybeSingle();
         const od = orderData as unknown as { id: string; order_number: string; gross_amount: number } | null;
-        setCart([]); setCartOpen(false);
+        setCartOpen(false);
         setPayOrder({
           id: od?.id || String(ppId),
           total: Number(od?.gross_amount || pp.price),
@@ -589,13 +586,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           email: selectedClient.email || "",
           name: selectedClient.name,
           sourceKind: "partner_product_order",
+          paidItemIds: [pp.id],
         });
         toast.success("Venda criada. Finalize o pagamento.");
         loadCoachData();
         return;
       }
 
-      const items = cart.map((c) => ({
+      const items = fitmindItems.map((c) => ({
         productId: c.sourceId,
         kind: c.kind,
         title: c.title,
@@ -614,11 +612,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       const orderId = row?.order_id || row?.orderId;
       const orderNumber = row?.order_number || row?.orderNumber || "pedido";
       if (!orderId) throw new Error("Pedido não retornado pelo servidor");
-      setCart([]); setCartOpen(false);
+      setCartOpen(false);
       setPayOrder({
         id: orderId, total: Number(row?.total ?? row?.total_amount ?? total), number: orderNumber,
         email: selectedClient.email || "", name: selectedClient.name,
         sourceKind: "store_order",
+        paidItemIds: fitmindItems.map((i) => i.id),
       });
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
