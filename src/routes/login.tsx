@@ -130,8 +130,8 @@ function LoginPage() {
       setFormError(m); toast.error(m); return;
     }
 
-    const available = { admin: canAdmin, coach: canCoach, student: canStudent, partner: canPartner };
-    const count = Number(canAdmin) + Number(canCoach) + Number(canStudent) + Number(canPartner);
+    const available = { admin: canAdmin, coach: canCoach, professional: canProfessional, student: canStudent, partner: canPartner };
+    const count = Number(canAdmin) + Number(canCoach) + Number(canProfessional) + Number(canStudent) + Number(canPartner);
 
     if (count === 0) {
       setLoading(false);
@@ -151,6 +151,7 @@ function LoginPage() {
 
     if (canAdmin) enterArea("admin");
     else if (canCoach) enterArea("coach");
+    else if (canProfessional) enterArea("professional");
     else if (canStudent) enterArea("student");
     else enterArea("partner");
   };
