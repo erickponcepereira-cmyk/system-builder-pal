@@ -54,8 +54,20 @@ type PartnerFreeProduct = {
   partner_id: string;
   redemption_mode: "free" | "discount" | null;
   discount_percent: number | null;
+  benefit_start_time: string | null;
+  benefit_end_time: string | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
+
+function formatBenefitWindow(start?: string | null, end?: string | null) {
+  const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
+  const s = fmt(start);
+  const e = fmt(end);
+  if (s && e) return `Disponível das ${s} às ${e}`;
+  if (s) return `Disponível a partir das ${s}`;
+  if (e) return `Disponível até ${e}`;
+  return null;
+}
 
 function StudentFreebies() {
   const navigate = useNavigate();
@@ -69,7 +81,7 @@ function StudentFreebies() {
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
-  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
 
   const generateCoupon = async (p: PartnerFreeProduct) => {
@@ -79,7 +91,7 @@ function StudentFreebies() {
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
   };
 
   // Carteirinha gate
@@ -113,7 +125,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,partners(fantasy_name,photo_url,status,business_area)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,partners(fantasy_name,photo_url,status,business_area)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
