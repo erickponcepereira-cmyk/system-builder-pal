@@ -242,6 +242,10 @@ export function PartnerDetailsModal({
 
               {tab === "overview" && (
                 <div className="mt-4 space-y-4">
+                  <Block title="Área de atuação">
+                    <KV k="Categoria" v={data.partner.business_area || "—"} />
+                    <KV k="Especialidade" v={data.partner.specialty || "—"} />
+                  </Block>
                   {data.partner.description && (
                     <Block title="Biografia">
                       <p className="text-xs text-white/70 whitespace-pre-wrap">{data.partner.description}</p>
