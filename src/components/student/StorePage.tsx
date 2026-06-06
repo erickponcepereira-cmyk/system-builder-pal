@@ -648,10 +648,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   );
 
   if (storeTab !== "fitmind") {
-    const addPartnerProductToCart = (item: { id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; seller: string; kind: "partner" | "professional"; isSchedulable?: boolean; professionalCoachId?: string | null; durationMinutes?: number; scheduledSlot?: string | null }) => {
+    const addPartnerProductToCart = async (item: { id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; seller: string; kind: "partner" | "professional"; isSchedulable?: boolean; professionalCoachId?: string | null; durationMinutes?: number; scheduledSlot?: string | null }) => {
       const cartKind: ProductKind = item.kind === "partner" ? "partner_company" : "partner";
-      const cartItem: StoreProduct = {
-        id: `${cartKind}-${item.id}`,
+      const baseCartId = `${cartKind}-${item.id}`;
+      const cartId = item.isSchedulable && item.scheduledSlot ? `${baseCartId}-${item.scheduledSlot}` : baseCartId;
+      const cartItem: StoreProduct & { quantity?: number } = {
+        id: cartId,
         sourceId: item.id,
         title: item.name,
         description: item.description,
@@ -666,24 +668,51 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         defaultDurationMinutes: item.durationMinutes ?? 30,
         scheduledSlot: item.scheduledSlot ?? null,
       };
-      // Agendáveis: se já existe com outro horário, confirmar sobrescrita
-      if (cartItem.isSchedulable) {
-        const existing = cart.find((c) => c.id === cartItem.id);
-        if (existing && existing.scheduledSlot && existing.scheduledSlot !== cartItem.scheduledSlot) {
-          const ok = window.confirm(
-            "Você já reservou um horário para este atendimento. Ao confirmar, o horário anterior será cancelado e o novo será adicionado. Deseja continuar?",
-          );
-          if (!ok) return;
+
+      // Agendáveis: detectar agendamentos pendentes anteriores e perguntar/cancelar.
+      const removedCartIds = new Set<string>();
+      if (cartItem.isSchedulable && item.scheduledSlot && ownStudentId) {
+        try {
+          const { data: appts } = await supabase
+            .from("professional_appointments" as never)
+            .select("id, starts_at, order_id, partner_product_orders!inner(status)" as never)
+            .eq("student_id" as never, ownStudentId as never)
+            .eq("product_id" as never, item.id as never)
+            .eq("status" as never, "scheduled" as never);
+          const list = (appts || []) as unknown as Array<{ id: string; starts_at: string; order_id: string | null; partner_product_orders: { status: string } | null }>;
+          const pending = list.filter((a) => (a.partner_product_orders?.status || "") === "pending");
+          const newDay = new Date(item.scheduledSlot).toDateString();
+          for (const ap of pending) {
+            const sameDay = new Date(ap.starts_at).toDateString() === newDay;
+            let shouldCancel = sameDay;
+            if (!sameDay) {
+              shouldCancel = window.confirm(
+                `Você já tem um agendamento em ${new Date(ap.starts_at).toLocaleString("pt-BR")} para este atendimento.\n\nOK = REMARCAR (cancela o agendamento anterior)\nCancelar = MANTER AMBOS os dias`,
+              );
+            }
+            if (shouldCancel) {
+              await supabase.from("professional_appointments" as never).update({ status: "cancelled", cancelled_at: new Date().toISOString() } as never).eq("id" as never, ap.id as never);
+              if (ap.order_id) {
+                await supabase.from("partner_product_orders" as never).update({ status: "cancelled" } as never).eq("id" as never, ap.order_id as never);
+              }
+              removedCartIds.add(`${baseCartId}-${ap.starts_at}`);
+            }
+          }
+        } catch (err) {
+          console.error("[schedulable] preflight error", err);
         }
       }
+
       setCart((current) => {
-        const found = current.find((c) => c.id === cartItem.id);
-        if (found) return current.map((c) => c.id === cartItem.id ? { ...cartItem, quantity: 1 } : c);
-        return [...current, { ...cartItem, quantity: 1 }];
+        const filtered = current.filter((c) => !removedCartIds.has(c.id));
+        const found = filtered.find((c) => c.id === cartItem.id);
+        if (found) return filtered.map((c) => c.id === cartItem.id ? { ...(cartItem as StoreProduct), quantity: 1 } : c);
+        return [...filtered, { ...(cartItem as StoreProduct), quantity: 1 }];
       });
       toast.success("Adicionado ao carrinho.");
       setCartOpen(true);
     };
+
 
     return (
       <div className="flex flex-col gap-4 p-4 pb-6">
