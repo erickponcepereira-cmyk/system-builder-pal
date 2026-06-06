@@ -77,15 +77,11 @@ export const getAchievementMembers = createServerFn({ method: "POST" })
       if (!target) return [];
       const thresholdByKey = new Map(rules.map((r) => [r.key, Number(r.threshold) || 0]));
 
-      let q = supabaseAdmin
+      // Show all-time holders of this medal tier (their current top), not just current month
+      const q = supabaseAdmin
         .from("coach_medals_individual" as never)
         .select("coach_id,medal_key,period_year,period_month")
         .eq("medal_kind", kindCol);
-
-      if (data.kind === "medal_monthly") {
-        const now = new Date();
-        q = q.eq("period_year", now.getUTCFullYear()).eq("period_month", now.getUTCMonth() + 1);
-      }
       const { data: earned } = await q;
       const topByCoach = new Map<string, { key: string; threshold: number }>();
       ((earned as { coach_id: string; medal_key: string }[] | null) || []).forEach((e) => {
