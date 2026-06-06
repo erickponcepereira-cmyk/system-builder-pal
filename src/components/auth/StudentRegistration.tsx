@@ -229,12 +229,32 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Mínimo 8 caracteres"
                   className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Crie uma senha forte"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
                   required
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <ul className="mt-2 space-y-1 text-[11px]">
+                {([
+                  ["Mínimo 8 caracteres", password.length >= 8],
+                  ["1 letra maiúscula (A-Z)", /[A-Z]/.test(password)],
+                  ["1 letra minúscula (a-z)", /[a-z]/.test(password)],
+                  ["1 número (0-9)", /[0-9]/.test(password)],
+                  ["1 caractere especial (!@#$...)", /[^A-Za-z0-9]/.test(password)],
+                ] as const).map(([label, ok]) => (
+                  <li key={label} className={`flex items-center gap-1.5 ${ok ? "text-emerald-400" : "text-white/40"}`}>
+                    <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ok ? "currentColor" : "rgba(255,255,255,0.3)" }} />
+                    {label}
+                  </li>
+                ))}
+              </ul>
             </div>
             <label className="flex items-start gap-2 cursor-pointer pt-1">
               <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
