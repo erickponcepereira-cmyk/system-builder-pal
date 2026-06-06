@@ -92,7 +92,7 @@ export function IndividualCareerTab() {
         rules={data.monthlyRules}
         current={vpThisMonth}
         onOpen={(key, title, color) =>
-          setModal({ kind: "medal_monthly", key, title, subtitle: "Ordem da Excelência (mês atual)", color })
+          setModal({ kind: "medal_monthly", key, title, subtitle: "Ordem da Excelência", color })
         }
       />
 
@@ -128,7 +128,7 @@ export function IndividualCareerTab() {
                 current={vpThisMonth}
                 earned={!!e}
                 awardedAt={e?.awarded_at ?? null}
-                onClick={() => setModal({ kind: "medal_monthly", key: r.key, title: r.display_name, subtitle: "Ordem da Excelência (mês atual)", color: TIER_COLOR[r.tier || ""] || "#CD7F32" })}
+                onClick={() => setModal({ kind: "medal_monthly", key: r.key, title: r.display_name, subtitle: "Ordem da Excelência", color: TIER_COLOR[r.tier || ""] || "#CD7F32" })}
               />
             );
 
