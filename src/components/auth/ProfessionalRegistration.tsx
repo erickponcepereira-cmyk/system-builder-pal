@@ -43,6 +43,62 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
+  const [coachLocked, setCoachLocked] = useState(false);
+
+  // Captura referral da sessão (link /r/:code) — trava o coach indicador
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("fitmind_referral");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { coachId?: string; sponsorName?: string };
+      if (!parsed?.coachId) return;
+      (async () => {
+        const { data } = await supabase
+          .from("coaches")
+          .select("id, profile_id, profiles!coaches_profile_id_fkey(name)")
+          .eq("id", parsed.coachId!)
+          .maybeSingle();
+        const row = data as unknown as { id: string; profile_id: string; profiles?: { name?: string | null } | null } | null;
+        if (row) {
+          setSelectedCoach({ id: row.id, profileId: row.profile_id, name: row.profiles?.name || parsed.sponsorName || "Coach" });
+          setCoachLocked(true);
+        }
+      })();
+    } catch { /* ignore */ }
+  }, []);
+
+  // Se o e-mail já tem conta com coach vinculado (como aluno/coach), trava também
+  useEffect(() => {
+    if (!existingMode || !email) return;
+    (async () => {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
+      if (!prof?.id) return;
+      const [{ data: studentRow }, { data: coachRow }] = await Promise.all([
+        supabase
+          .from("students")
+          .select("coaches!students_coach_id_fkey(id, profile_id, profiles!coaches_profile_id_fkey(name))")
+          .eq("profile_id", prof.id)
+          .maybeSingle(),
+        supabase
+          .from("coaches")
+          .select("upline_coach_id, upline:coaches!coaches_upline_coach_id_fkey(id, profile_id, profiles!coaches_profile_id_fkey(name))")
+          .eq("profile_id", prof.id)
+          .maybeSingle(),
+      ]);
+      const fromCoach = (coachRow as unknown as { upline?: { id: string; profile_id: string; profiles?: { name?: string | null } | null } | null } | null)?.upline;
+      const fromStudent = (studentRow as unknown as { coaches?: { id: string; profile_id: string; profiles?: { name?: string | null } | null } | null } | null)?.coaches;
+      const linked = fromCoach || fromStudent;
+      if (linked) {
+        setSelectedCoach({ id: linked.id, profileId: linked.profile_id, name: linked.profiles?.name || "Coach" });
+        setCoachLocked(true);
+      }
+    })();
+  }, [existingMode, email]);
+
 
   useEffect(() => {
     (async () => {
@@ -329,7 +385,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
           {step === 2 && (
             <div className="space-y-4">
-              {existingMode ? (
+              {coachLocked ? (
+                <CoachSelector value={selectedCoach} onChange={setSelectedCoach} locked />
+              ) : existingMode ? (
                 <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
                   <p className="text-xs text-white/80">
                     Identificamos seu cadastro. Vamos manter o <strong>coach indicador atual</strong> da sua conta.
@@ -342,6 +400,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               ) : (
                 <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
               )}
+
 
               <label className="flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
