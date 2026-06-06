@@ -1,0 +1,16 @@
+{
+  "name": "FitMind Club",
+  "short_name": "FitMind",
+  "description": "Conectando corpo e mente para sua melhor versão",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0b0707",
+  "icons": [
+    { "src": "/fitmind-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/fitmind-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/fitmind-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
