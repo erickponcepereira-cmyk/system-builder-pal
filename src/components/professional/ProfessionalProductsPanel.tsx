@@ -237,7 +237,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               </Field>
 
               <CategoryPicker
-                ownerOnly
+                targetAudience="professional"
                 sectionId={editing.section_id}
                 categoryId={editing.category_id}
                 onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
