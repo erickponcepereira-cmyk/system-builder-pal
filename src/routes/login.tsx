@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { InstallAppButton } from "@/components/InstallAppButton";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -448,6 +449,11 @@ function LoginPage() {
               </Link>
             </div>}
           </div>
+
+          <div className="mt-6">
+            <InstallAppButton />
+          </div>
+
 
           <p className="mt-8 text-center text-[10px] text-white/15">
             v1.0.0 — Para suporte: suporte@fitmindclub.com
