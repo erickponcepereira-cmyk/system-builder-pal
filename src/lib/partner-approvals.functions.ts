@@ -35,7 +35,7 @@ export const listPartnersForApproval = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("partners")
       .select(
-        "id, fantasy_name, document, whatsapp, city, state, status, photo_url, cover_url, description, instagram, facebook, website, created_at, approved_at",
+        "id, fantasy_name, document, whatsapp, city, state, status, photo_url, cover_url, description, instagram, facebook, website, business_area, specialty, created_at, approved_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
