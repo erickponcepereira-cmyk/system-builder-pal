@@ -354,6 +354,25 @@ async function createStoreSimulation(input: SimulateInput) {
 
   const { applyApproval } = await import("@/lib/mercadopago-impl.server");
   await applyApproval("store_order", (order as any).id);
+
+  // Salvaguarda: garante que a transação criada por essa simulação fique paga
+  // e que o engine de distribuição rode, mesmo se o filtro de metadata acima falhar.
+  const txId = (tx as any).id as string;
+  const { data: txCheck } = await supabaseAdmin
+    .from("transactions").select("status").eq("id", txId).maybeSingle();
+  if ((txCheck as any)?.status !== "paid") {
+    await supabaseAdmin
+      .from("transactions")
+      .update({ status: "paid", paid_at: new Date().toISOString() } as never)
+      .eq("id", txId);
+  }
+  // Garante distribuição (idempotente — o RPC apaga e recria as comissões da tx)
+  try {
+    await supabaseAdmin.rpc("process_paid_transaction" as never, { _transaction_id: txId } as never);
+  } catch (e) {
+    console.error("[createStoreSimulation] process_paid_transaction failed:", e);
+  }
+
   return { sourceKind: "store_order", sourceId: (order as any).id, orderNumber: (order as any).order_number };
 }
 
