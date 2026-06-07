@@ -8892,6 +8892,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_store_order_paid_and_process: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       notify_admin_pending_specialty: {
         Args: { _coach_id: string }
         Returns: undefined
