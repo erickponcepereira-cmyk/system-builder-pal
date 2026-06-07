@@ -119,15 +119,25 @@ export function ConstructorsCareerTab() {
             windowMonths={next.time_window_months}
             color={next.badge_color || "#FF4230"}
           />
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <Stat icon={Users} label="VP (próprio)" value={fmtBRL(nextWindow.ownRevenue)} hint={`${nextWindow.ownPct.toFixed(0)}%`} />
-            <Stat icon={TrendingUp} label="VE (equipe)" value={fmtBRL(nextWindow.teamRevenue)} hint={`${(100 - nextWindow.ownPct).toFixed(0)}%`} />
-          </div>
-          {next.vp_max_pct != null && (
-            <div className="mt-3 rounded-lg px-2.5 py-2 text-[11px] bg-white/5 text-white/60">
-              Distribuição alvo: até {next.vp_max_pct}% em VP · pelo menos {(100 - (next.vp_max_pct || 0)).toFixed(1)}% em VE
-            </div>
-          )}
+          {(() => {
+            const vpPct = next.vp_max_pct != null ? next.vp_max_pct : (next.min_own_sales_pct || 100);
+            const vePct = next.ve_max_pct != null ? next.ve_max_pct : Math.max(0, 100 - vpPct);
+            const vpReq = (next.required_revenue * vpPct) / 100;
+            const veReq = (next.required_revenue * vePct) / 100;
+            const vpOk = nextWindow.ownRevenue >= vpReq - 0.001;
+            const veOk = veReq === 0 || nextWindow.teamRevenue >= veReq - 0.001;
+            return (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <Stat icon={Users} label={`VP (mín. ${fmtBRL(vpReq)})`} value={fmtBRL(nextWindow.ownRevenue)} hint={vpOk ? "✓ atingido" : `faltam ${fmtBRL(Math.max(0, vpReq - nextWindow.ownRevenue))}`} />
+                  <Stat icon={TrendingUp} label={`VE (mín. ${fmtBRL(veReq)})`} value={fmtBRL(nextWindow.teamRevenue)} hint={veOk ? "✓ atingido" : `faltam ${fmtBRL(Math.max(0, veReq - nextWindow.teamRevenue))}`} />
+                </div>
+                <div className="mt-3 rounded-lg px-2.5 py-2 text-[11px] bg-white/5 text-white/60">
+                  Regra: é obrigatório bater <strong>ambos</strong> os mínimos — {vpPct}% em VP ({fmtBRL(vpReq)}) <strong>E</strong> {vePct}% em VE ({fmtBRL(veReq)}).
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
