@@ -21,6 +21,7 @@ interface Item {
   is_featured: boolean;
   is_active: boolean;
   has_challenge_access?: boolean;
+  challenge_tokens_amount?: number;
   sort_order: number;
 }
 
