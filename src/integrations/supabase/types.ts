@@ -7483,6 +7483,7 @@ export type Database = {
           body_water_percentage: number | null
           bone_mass: number | null
           card_valid_until: string | null
+          challenge_override_allowed: boolean
           coach_account_created_at: string | null
           coach_course_completed_at: string | null
           coach_id: string
@@ -7521,6 +7522,7 @@ export type Database = {
           body_water_percentage?: number | null
           bone_mass?: number | null
           card_valid_until?: string | null
+          challenge_override_allowed?: boolean
           coach_account_created_at?: string | null
           coach_course_completed_at?: string | null
           coach_id: string
@@ -7559,6 +7561,7 @@ export type Database = {
           body_water_percentage?: number | null
           bone_mass?: number | null
           card_valid_until?: string | null
+          challenge_override_allowed?: boolean
           coach_account_created_at?: string | null
           coach_course_completed_at?: string | null
           coach_id?: string
