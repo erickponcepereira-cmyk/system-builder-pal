@@ -137,7 +137,7 @@ function AdminTestSalesPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={reload} className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/5"><RefreshCcw className="h-4 w-4" /> Atualizar</button>
-          <button onClick={resetAll} disabled={busy || sales.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"><Trash2 className="h-4 w-4" /> Zerar testes</button>
+          <button onClick={resetAll} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-50"><Trash2 className="h-4 w-4" /> Zerar testes</button>
         </div>
       </header>
 
