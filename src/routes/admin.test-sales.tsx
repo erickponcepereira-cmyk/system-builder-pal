@@ -206,7 +206,15 @@ function SaleCard({ row, onDelete, busy }: { row: SaleRow; onDelete: () => void;
       </div>
       <div className="mt-4 grid gap-2 border-t border-white/5 pt-3 md:grid-cols-2 xl:grid-cols-3">
         {row.flow.length === 0 ? <p className="text-xs text-white/40">Sem lançamentos de comissão encontrados.</p> : row.flow.map((item, index) => (
-          <div key={`${row.id}-${index}`} className="rounded-lg bg-white/5 p-3 text-xs"><p className="text-white/50">{item.label}{item.recipient ? ` · ${item.recipient}` : ""}</p><p className="mt-1 font-mono text-base font-bold text-white">{money(item.amount)}</p><p className="text-white/35">{item.status || "—"}</p></div>
+          <div key={`${row.id}-${index}`} className={`rounded-lg p-3 text-xs ${item.kind === "benefit" ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-white/5"}`}>
+            <p className={item.kind === "benefit" ? "text-emerald-300" : "text-white/50"}>{item.label}{item.recipient ? ` · ${item.recipient}` : ""}</p>
+            {item.kind === "benefit" ? (
+              <p className="mt-1 text-sm font-semibold text-emerald-100">{item.info || "Liberado"}</p>
+            ) : (
+              <p className="mt-1 font-mono text-base font-bold text-white">{money(item.amount)}</p>
+            )}
+            <p className="text-white/35">{item.status || "—"}</p>
+          </div>
         ))}
       </div>
     </article>
