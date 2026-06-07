@@ -4,6 +4,8 @@ export type SnapshotGoal = {
   id: string;
   label: string;
   product_type: string | null;
+  product_ids: string[];
+  patent_levels: number[];
   required_base: number;
   required_scaled: number;
   current: number;
