@@ -384,11 +384,16 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
         classifications: classificationsForCoach(c, partnerProfileIds, studentProfileIds),
       };
     };
-    const toNode = (c: CoachRow, level: number): CoachTreeNode => ({
-      ...enrich(c),
-      level,
-      children: (byUpline.get(c.id) || []).map((child) => toNode(child, level + 1)),
-    });
+    const seenTree = new Set<string>([coachId]);
+    const toNode = (c: CoachRow, level: number): CoachTreeNode => {
+      seenTree.add(c.id);
+      const children = (byUpline.get(c.id) || []).filter((child) => !seenTree.has(child.id));
+      return {
+        ...enrich(c),
+        level,
+        children: children.map((child) => toNode(child, level + 1)),
+      };
+    };
 
     const totalDirect = emptyBreakdown();
     addBreakdown(totalDirect, breakdown(coachId));
