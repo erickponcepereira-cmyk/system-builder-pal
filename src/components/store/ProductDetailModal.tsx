@@ -39,6 +39,8 @@ export interface ProductDetail {
   pointsPerSale?: number | null;
   // Indica se a compra/venda libera acesso ao Desafio
   hasChallenge?: boolean | null;
+  // Quantos tickets do desafio o comprador recebe por esta compra
+  challengeTokens?: number | null;
   // Dias de validade da carteirinha de benefícios concedidos pela compra
   cardDays?: number | null;
   // Agendamento (produtos de profissionais agendáveis)
