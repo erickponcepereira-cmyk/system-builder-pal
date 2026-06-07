@@ -85,8 +85,15 @@ function coachEmail(c: CoachRow) {
 async function resolveProfileAndCoach(supabaseAdmin: any, userId: string) {
   const { data: profile } = await supabaseAdmin.from("profiles").select("id, role").eq("user_id", userId).maybeSingle();
   if (!profile?.id) return { profileId: null, coachId: null, role: null };
-  const { data: coach } = await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
-  return { profileId: profile.id as string, coachId: (coach?.id as string | undefined) ?? null, role: profile.role as string | null };
+  // Defensive: allow duplicate coach rows (legacy data) without throwing
+  const { data: coaches } = await supabaseAdmin
+    .from("coaches")
+    .select("id, created_at")
+    .eq("profile_id", profile.id)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const coachId = Array.isArray(coaches) && coaches.length > 0 ? coaches[0].id : null;
+  return { profileId: profile.id as string, coachId: (coachId as string | null), role: profile.role as string | null };
 }
 
 function buildByUpline(coaches: CoachRow[]) {
@@ -216,9 +223,12 @@ function todayDate(): string { return new Date().toISOString().slice(0, 10); }
 
 function descendantsOf(coachId: string, byUpline: Map<string, CoachRow[]>): string[] {
   const out: string[] = [];
+  const seen = new Set<string>([coachId]);
   const q = (byUpline.get(coachId) || []).map((c) => c.id);
   while (q.length) {
     const id = q.shift()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
     out.push(id);
     (byUpline.get(id) || []).forEach((c) => q.push(c.id));
   }
@@ -374,11 +384,16 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
         classifications: classificationsForCoach(c, partnerProfileIds, studentProfileIds),
       };
     };
-    const toNode = (c: CoachRow, level: number): CoachTreeNode => ({
-      ...enrich(c),
-      level,
-      children: (byUpline.get(c.id) || []).map((child) => toNode(child, level + 1)),
-    });
+    const seenTree = new Set<string>([coachId]);
+    const toNode = (c: CoachRow, level: number): CoachTreeNode => {
+      seenTree.add(c.id);
+      const children = (byUpline.get(c.id) || []).filter((child) => !seenTree.has(child.id));
+      return {
+        ...enrich(c),
+        level,
+        children: children.map((child) => toNode(child, level + 1)),
+      };
+    };
 
     const totalDirect = emptyBreakdown();
     addBreakdown(totalDirect, breakdown(coachId));

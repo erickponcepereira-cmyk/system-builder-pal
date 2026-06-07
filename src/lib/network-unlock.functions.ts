@@ -55,17 +55,22 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     // Best-effort — never fail the wallet because of this.
     try { await upsertMonthlySnapshot(snap); } catch (e) { console.error("live snapshot upsert failed", e); }
 
-    // Commissions split
+    // Commissions split. Treat a commission as "available" once its
+    // available_at has elapsed, even if status still says pending — there is
+    // no cron job promoting pending → available yet.
     const { data: comms } = await supabaseAdmin
-      .from("commissions").select("amount, level, status")
+      .from("commissions").select("amount, level, status, available_at")
       .eq("beneficiary_profile_id", profile.id);
     const direct = { available: 0, pending: 0, total: 0 };
     const network = { available: 0, pending: 0, total: 0, locked: !snap.anyCompleted };
-    ((comms as Array<{ amount: number; level: number; status: string }> | null) || []).forEach((c) => {
+    const nowMs = Date.now();
+    ((comms as Array<{ amount: number; level: number; status: string; available_at: string | null }> | null) || []).forEach((c) => {
       const amt = Number(c.amount) || 0;
       const bucket = c.level === 0 ? direct : network;
       bucket.total += amt;
-      if (c.status === "available" || c.status === "paid") bucket.available += amt;
+      const released = c.status === "available" || c.status === "paid"
+        || (c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
+      if (released) bucket.available += amt;
       else bucket.pending += amt;
     });
     const withdrawable = direct.available + (snap.anyCompleted ? network.available : 0);
