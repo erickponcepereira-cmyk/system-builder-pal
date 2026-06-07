@@ -761,6 +761,12 @@ export const resetAdminTestSales = createServerFn({ method: "POST" })
         .delete()
         .in("source_transaction_id" as never, orphanIds as never);
 
+      // Pontuação de desafio/career gerada pela tx
+      await supabaseAdmin
+        .from("coach_points_log")
+        .delete()
+        .in("transaction_id", orphanIds);
+
       await supabaseAdmin.from("transactions").delete().in("id", orphanIds);
       orphanCleaned = orphanIds.length;
     }
