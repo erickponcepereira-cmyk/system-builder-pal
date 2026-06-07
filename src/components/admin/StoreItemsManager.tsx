@@ -360,8 +360,22 @@ export function StoreItemsManager() {
                 <input type="checkbox" checked={editing.is_active ?? true} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} /> Ativo
               </label>
               <label className="flex items-center gap-2 text-sm text-white/80">
-                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked })} /> Dá acesso ao Desafio
+                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked, challenge_tokens_amount: e.target.checked ? (editing.challenge_tokens_amount ?? 1) : 0 })} /> Dá acesso ao Desafio
               </label>
+              {editing.has_challenge_access && (
+                <div className="md:col-span-2 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <label className="text-xs text-white/80 whitespace-nowrap">Tickets do desafio por compra</label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="input-dark w-24"
+                    value={editing.challenge_tokens_amount ?? 1}
+                    onChange={(e) => setEditing({ ...editing, challenge_tokens_amount: Math.max(1, Number(e.target.value) || 1) })}
+                  />
+                  <span className="text-[11px] text-white/50">Quantos tickets o aluno recebe ao comprar este produto.</span>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
