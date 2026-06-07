@@ -148,14 +148,18 @@ export function ConstructorsCareerTab() {
                 {list.map((p) => {
                   const w = windows[p.time_window_months];
                   const isCurrent = p.key === currentPatentKey;
-                  const vpMax = p.vp_max_pct != null ? p.vp_max_pct : p.min_own_sales_pct;
-                  const cap = (p.required_revenue * (vpMax || 100)) / 100;
-                  const cappedOwn = w ? Math.min(w.ownRevenue, cap) : 0;
-                  const qualifying = w ? cappedOwn + w.teamRevenue : 0;
+                  const vpMax = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
+                  const veMax = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpMax);
+                  const vpCap = (p.required_revenue * vpMax) / 100;
+                  const veCap = (p.required_revenue * veMax) / 100;
+                  const cappedOwn = w ? Math.min(w.ownRevenue, vpCap) : 0;
+                  const cappedTeam = w ? Math.min(w.teamRevenue, veCap) : 0;
+                  const qualifying = cappedOwn + cappedTeam;
                   const achievedAt = achievedAtByKey.get(p.key) ?? null;
-                  const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue;
+                  const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue - 0.001;
                   return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} onClick={() => setModalPatent(p)} />;
                 })}
+
               </div>
             </div>
           );

@@ -126,27 +126,42 @@ export const getCareerProgress = createServerFn({ method: "GET" })
       windows[months] = { ownRevenue: own, teamRevenue: team, totalRevenue: total, ownPct };
     }
 
-    // Determine current patent (highest level whose rules are met) + track achievements
+    // Determine highest patent met (cap BOTH VP and VE by their allowed %).
+    // Once a higher patent is reached, all lower ones are auto-conquered.
     let currentPatentKey: string | null = null;
+    let currentLevel = 0;
     const achievedNow: Array<{ key: string; level: number; qualifying: number }> = [];
+
     for (const p of patents) {
       const w = windows[p.time_window_months];
       if (!w) continue;
       if (p.required_revenue === 0) {
-        currentPatentKey = p.key;
+        if (p.level > currentLevel) { currentPatentKey = p.key; currentLevel = p.level; }
         achievedNow.push({ key: p.key, level: p.level, qualifying: 0 });
         continue;
       }
-      const vpMax = p.vp_max_pct != null ? p.vp_max_pct : p.min_own_sales_pct;
-      const cap = (p.required_revenue * (vpMax || 100)) / 100;
-      const cappedOwn = Math.min(w.ownRevenue, cap);
-      const qualifying = cappedOwn + w.teamRevenue;
-      if (qualifying >= p.required_revenue) {
-        currentPatentKey = p.key;
+      const vpMax = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
+      const veMax = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpMax);
+      const vpCap = (p.required_revenue * vpMax) / 100;
+      const veCap = (p.required_revenue * veMax) / 100;
+      const cappedOwn = Math.min(w.ownRevenue, vpCap);
+      const cappedTeam = Math.min(w.teamRevenue, veCap);
+      const qualifying = cappedOwn + cappedTeam;
+      if (qualifying >= p.required_revenue - 0.001) {
+        if (p.level > currentLevel) { currentPatentKey = p.key; currentLevel = p.level; }
         achievedNow.push({ key: p.key, level: p.level, qualifying });
-      } else break;
+      }
     }
-    const currentLevel = patents.find((p) => p.key === currentPatentKey)?.level ?? 0;
+
+    // Auto-conquer all lower-level patents (history) when a higher one is reached.
+    if (currentLevel > 0) {
+      for (const p of patents) {
+        if (p.level <= currentLevel && !achievedNow.some((a) => a.key === p.key)) {
+          achievedNow.push({ key: p.key, level: p.level, qualifying: p.required_revenue });
+        }
+      }
+    }
+
     const nextPatentKey = patents.find((p) => p.level > currentLevel)?.key ?? null;
 
     // Persist first-time achievements (idempotent via unique index)
@@ -161,6 +176,7 @@ export const getCareerProgress = createServerFn({ method: "GET" })
         } as never)
         .then(() => undefined, () => undefined);
     }
+
 
     const { data: achRaw } = await supabaseAdmin
       .from("coach_patent_achievements" as never)
