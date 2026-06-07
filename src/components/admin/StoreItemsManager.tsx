@@ -21,6 +21,7 @@ interface Item {
   is_featured: boolean;
   is_active: boolean;
   has_challenge_access?: boolean;
+  challenge_tokens_amount?: number;
   sort_order: number;
 }
 
@@ -52,7 +53,7 @@ export function StoreItemsManager() {
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,sort_order")
+        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
@@ -109,6 +110,7 @@ export function StoreItemsManager() {
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
         has_challenge_access: !!editing.has_challenge_access,
+        challenge_tokens_amount: editing.has_challenge_access ? Math.max(0, Number(editing.challenge_tokens_amount ?? 1)) : 0,
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
       };
@@ -358,8 +360,22 @@ export function StoreItemsManager() {
                 <input type="checkbox" checked={editing.is_active ?? true} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} /> Ativo
               </label>
               <label className="flex items-center gap-2 text-sm text-white/80">
-                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked })} /> Dá acesso ao Desafio
+                <input type="checkbox" checked={!!editing.has_challenge_access} onChange={(e) => setEditing({ ...editing, has_challenge_access: e.target.checked, challenge_tokens_amount: e.target.checked ? (editing.challenge_tokens_amount ?? 1) : 0 })} /> Dá acesso ao Desafio
               </label>
+              {editing.has_challenge_access && (
+                <div className="md:col-span-2 flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <label className="text-xs text-white/80 whitespace-nowrap">Tickets do desafio por compra</label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    className="input-dark w-24"
+                    value={editing.challenge_tokens_amount ?? 1}
+                    onChange={(e) => setEditing({ ...editing, challenge_tokens_amount: Math.max(1, Number(e.target.value) || 1) })}
+                  />
+                  <span className="text-[11px] text-white/50">Quantos tickets o aluno recebe ao comprar este produto.</span>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">

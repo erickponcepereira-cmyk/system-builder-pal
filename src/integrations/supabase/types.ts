@@ -5722,6 +5722,7 @@ export type Database = {
           card_access_days: number | null
           card_fee_percentage: number | null
           category_id: string | null
+          challenge_tokens_amount: number
           commission_coach: number | null
           commission_level1: number | null
           commission_level2: number | null
@@ -5805,6 +5806,7 @@ export type Database = {
           card_access_days?: number | null
           card_fee_percentage?: number | null
           category_id?: string | null
+          challenge_tokens_amount?: number
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null
@@ -5888,6 +5890,7 @@ export type Database = {
           card_access_days?: number | null
           card_fee_percentage?: number | null
           category_id?: string | null
+          challenge_tokens_amount?: number
           commission_coach?: number | null
           commission_level1?: number | null
           commission_level2?: number | null

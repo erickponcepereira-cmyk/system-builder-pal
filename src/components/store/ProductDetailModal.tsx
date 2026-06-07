@@ -39,6 +39,8 @@ export interface ProductDetail {
   pointsPerSale?: number | null;
   // Indica se a compra/venda libera acesso ao Desafio
   hasChallenge?: boolean | null;
+  // Quantos tickets do desafio o comprador recebe por esta compra
+  challengeTokens?: number | null;
   // Dias de validade da carteirinha de benefícios concedidos pela compra
   cardDays?: number | null;
   // Agendamento (produtos de profissionais agendáveis)
@@ -193,17 +195,19 @@ export function ProductDetailModal({
             <p className="text-xs text-muted-foreground">Estoque disponível: {product.stock}</p>
           )}
 
-          {product.hasChallenge && (
+          {product.hasChallenge && (product.challengeTokens ?? 1) > 0 && (
             <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-base">🔥</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-base">🎟️</span>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">Desafio liberado</p>
-                  <p className="text-xs text-foreground">Acesso ao Desafio incluso na compra</p>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80">Tickets do desafio</p>
+                  <p className="text-xs text-foreground">
+                    Você recebe {product.challengeTokens ?? 1} ticket{(product.challengeTokens ?? 1) > 1 ? "s" : ""} para entrar no desafio
+                  </p>
                 </div>
               </div>
               <span className="rounded-full bg-primary/20 px-3 py-1 text-sm font-bold text-primary">
-                Acesso a 1 desafio
+                {product.challengeTokens ?? 1}× ticket{(product.challengeTokens ?? 1) > 1 ? "s" : ""}
               </span>
             </div>
           )}
