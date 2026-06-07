@@ -68,9 +68,12 @@ export async function computePatentLevelForCoach(coachId: string): Promise<numbe
     byUpline.set(k, arr);
   });
   const downline: string[] = [];
+  const seen = new Set<string>([coachId]);
   const queue = [...(byUpline.get(coachId) || [])];
   while (queue.length) {
     const cur = queue.shift()!;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
     downline.push(cur);
     (byUpline.get(cur) || []).forEach((c) => queue.push(c));
   }
