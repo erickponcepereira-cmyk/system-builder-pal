@@ -206,11 +206,63 @@ async function deleteSimulation(data: DeleteInput) {
     return { ok: true };
   }
 
-  const { data: order } = await supabaseAdmin.from("store_orders").select("metadata").eq("id", data.id).maybeSingle();
+  const { data: order } = await supabaseAdmin.from("store_orders").select("metadata,student_id").eq("id", data.id).maybeSingle();
   if (!(order as any)?.metadata?.test_simulation) throw new Error("Este pedido não é uma simulação");
-  const { data: txs } = await supabaseAdmin.from("transactions").select("id").filter("metadata->>store_order_id", "eq", data.id);
-  const txIds = ((txs as any[]) || []).map((t) => t.id);
+  const { data: txs } = await supabaseAdmin
+    .from("transactions")
+    .select("id,product_id,student_id")
+    .filter("metadata->>store_order_id", "eq", data.id);
+  const txList = ((txs as any[]) || []);
+  const txIds = txList.map((t) => t.id);
+
+  // Reverte créditos do admin_system_wallet desta tx
   if (txIds.length) {
+    const { data: sysEntries } = await supabaseAdmin
+      .from("admin_system_wallet_entries")
+      .select("amount")
+      .in("transaction_id", txIds);
+    const sysTotal = ((sysEntries as any[]) || []).reduce((s, e) => s + moneyNumber(e.amount), 0);
+    if (sysTotal > 0) await subtractAdminWallet(sysTotal);
+    await supabaseAdmin.from("admin_system_wallet_entries").delete().in("transaction_id", txIds);
+
+    // Reverte comissões (carteiras) antes de apagar
+    const { data: comms } = await supabaseAdmin
+      .from("commissions")
+      .select("beneficiary_profile_id,amount,status")
+      .in("transaction_id", txIds);
+    for (const c of ((comms as any[]) || [])) {
+      if (c.status === "paid" || c.status === "available" || c.status === "pending") {
+        await subtractWallet(c.beneficiary_profile_id, moneyNumber(c.amount));
+      }
+    }
+
+    // Reverte tickets de desafio gerados
+    await supabaseAdmin.from("student_challenge_tokens" as never).delete().in("source_transaction_id" as never, txIds as never);
+
+    // Reverte extensão da carteirinha (subtrai os dias do produto)
+    const productIds = Array.from(new Set(txList.map((t) => t.product_id).filter(Boolean)));
+    if (productIds.length) {
+      const { data: prods } = await supabaseAdmin
+        .from("products")
+        .select("id,card_access_days")
+        .in("id", productIds);
+      const studentIds = Array.from(new Set(txList.map((t) => t.student_id).filter(Boolean)));
+      for (const sid of studentIds) {
+        const days = ((prods as any[]) || []).reduce((s, p) => {
+          const used = txList.some((t) => t.student_id === sid && t.product_id === p.id);
+          return s + (used ? Number(p.card_access_days || 0) : 0);
+        }, 0);
+        if (days > 0) {
+          const { data: stu } = await supabaseAdmin.from("students").select("card_valid_until").eq("id", sid).maybeSingle();
+          const cur = (stu as any)?.card_valid_until ? new Date((stu as any).card_valid_until) : null;
+          if (cur) {
+            const next = new Date(cur.getTime() - days * 86400000);
+            await supabaseAdmin.from("students").update({ card_valid_until: next.toISOString() } as never).eq("id", sid);
+          }
+        }
+      }
+    }
+
     await supabaseAdmin.from("commissions").delete().in("transaction_id", txIds);
     await supabaseAdmin.from("transactions").delete().in("id", txIds);
   }
