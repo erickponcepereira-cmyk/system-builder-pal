@@ -56,15 +56,25 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
   const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
   if (ids.length === 0) return 0;
   let total = 0;
+  // Transactions são a fonte canônica (incluem store_orders via metadata.store_order_id)
   const { data: txs } = await supabaseAdmin
-    .from("transactions").select("gross_amount")
+    .from("transactions").select("gross_amount, metadata")
     .in("student_id", ids).eq("status", "paid")
     .not("paid_at", "is", null).gte("paid_at", sinceIso);
-  ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
+  const linkedOrderIds = new Set<string>();
+  ((txs as { gross_amount: number; metadata: any }[] | null) || []).forEach((t) => {
+    total += Number(t.gross_amount) || 0;
+    const linked = t?.metadata?.store_order_id;
+    if (linked) linkedOrderIds.add(String(linked));
+  });
+  // Store orders sem transaction espelho (compras puras de loja)
   const { data: orders } = await supabaseAdmin
-    .from("store_orders").select("total_amount")
+    .from("store_orders").select("id,total_amount")
     .in("student_id", ids).eq("status", "paid").gte("updated_at", sinceIso);
-  ((orders as { total_amount: number }[] | null) || []).forEach((o) => { total += Number(o.total_amount) || 0; });
+  ((orders as { id: string; total_amount: number }[] | null) || []).forEach((o) => {
+    if (linkedOrderIds.has(o.id)) return;
+    total += Number(o.total_amount) || 0;
+  });
   return total;
 }
 
