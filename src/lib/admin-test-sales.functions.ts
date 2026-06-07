@@ -239,6 +239,9 @@ async function deleteSimulation(data: DeleteInput) {
     // Reverte tickets de desafio gerados
     await supabaseAdmin.from("student_challenge_tokens" as never).delete().in("source_transaction_id" as never, txIds as never);
 
+    // Reverte pontuação do desafio/career (coach_points_log) gerada por essa tx
+    await supabaseAdmin.from("coach_points_log").delete().in("transaction_id", txIds);
+
     // Reverte extensão da carteirinha (subtrai os dias do produto)
     const productIds = Array.from(new Set(txList.map((t) => t.product_id).filter(Boolean)));
     if (productIds.length) {
@@ -757,6 +760,12 @@ export const resetAdminTestSales = createServerFn({ method: "POST" })
         .from("student_challenge_tokens" as never)
         .delete()
         .in("source_transaction_id" as never, orphanIds as never);
+
+      // Pontuação de desafio/career gerada pela tx
+      await supabaseAdmin
+        .from("coach_points_log")
+        .delete()
+        .in("transaction_id", orphanIds);
 
       await supabaseAdmin.from("transactions").delete().in("id", orphanIds);
       orphanCleaned = orphanIds.length;
