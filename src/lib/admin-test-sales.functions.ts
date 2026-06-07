@@ -771,5 +771,10 @@ export const resetAdminTestSales = createServerFn({ method: "POST" })
       orphanCleaned = orphanIds.length;
     }
 
+    // Limpa conquistas de patente (carreira) — serão recriadas com base no
+    // estado real assim que cada coach abrir a aba de carreira novamente.
+    await supabaseAdmin.from("coach_patent_achievements" as never).delete().not("id" as never, "is" as never, null as never);
+
     return { deleted: rows.length + orphanCleaned };
   });
+
