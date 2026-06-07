@@ -486,6 +486,22 @@ async function listFlowForOrder(sourceKind: string, sourceId: string) {
     }),
   );
 
+  // Créditos no Sistema (taxa do sistema, custo de produto, nutricionista, etc.)
+  const { data: sysEntries } = await supabaseAdmin
+    .from("admin_system_wallet_entries")
+    .select("amount,slot_label,created_at")
+    .in("transaction_id", txIds);
+  ((sysEntries as any[]) || []).forEach((s) =>
+    items.push({
+      label: s.slot_label || "Sistema",
+      amount: moneyNumber(s.amount),
+      status: "creditado",
+      recipient: "Sistema (admin)",
+      kind: "money",
+    }),
+  );
+
+
   const studentId = txList[0]?.student_id || null;
   const productId = txList[0]?.product_id || null;
   if (studentId) {
