@@ -150,15 +150,16 @@ export const getCareerProgress = createServerFn({ method: "GET" })
         achievedNow.push({ key: p.key, level: p.level, qualifying: 0 });
         continue;
       }
-      const vpMax = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
-      const veMax = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpMax);
-      const vpCap = (p.required_revenue * vpMax) / 100;
-      const veCap = (p.required_revenue * veMax) / 100;
-      const cappedOwn = Math.min(w.ownRevenue, vpCap);
-      const cappedTeam = Math.min(w.teamRevenue, veCap);
-      const qualifying = cappedOwn + cappedTeam;
-      if (qualifying >= p.required_revenue - 0.001) {
+      const vpPct = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
+      const vePct = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpPct);
+      const vpRequired = (p.required_revenue * vpPct) / 100;
+      const veRequired = (p.required_revenue * vePct) / 100;
+      // REGRA: precisa atingir AMBOS — mínimo de VP E mínimo de VE
+      const meetsVP = w.ownRevenue >= vpRequired - 0.001;
+      const meetsVE = veRequired === 0 || w.teamRevenue >= veRequired - 0.001;
+      if (meetsVP && meetsVE) {
         if (p.level > currentLevel) { currentPatentKey = p.key; currentLevel = p.level; }
+        const qualifying = Math.min(w.ownRevenue, vpRequired) + Math.min(w.teamRevenue, veRequired);
         achievedNow.push({ key: p.key, level: p.level, qualifying });
       }
     }
