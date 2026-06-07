@@ -235,6 +235,16 @@ async function createStoreSimulation(input: SimulateInput) {
     source: "admin_test_sale",
   });
 
+  // Aplica as mesmas taxas usadas no card do coach (DEFAULT_PARTNER_FEES)
+  // para que base_distributable do RPC bata com o cálculo exibido na esteira.
+  const { DEFAULT_PARTNER_FEES } = await import("@/lib/partnerFinance");
+  const isPix = (input.paymentMethod || "pix") === "pix";
+  const feePct = isPix ? DEFAULT_PARTNER_FEES.pixFeePct : DEFAULT_PARTNER_FEES.cardFeePct;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const paymentFee = round2(product.price * (feePct / 100));
+  const taxAmount = round2((product.price - paymentFee) * (DEFAULT_PARTNER_FEES.taxPct / 100));
+  const netAmount = round2(product.price - paymentFee - taxAmount);
+
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("store_orders")
     .insert({
@@ -242,8 +252,8 @@ async function createStoreSimulation(input: SimulateInput) {
       status: "pending",
       payment_method: input.paymentMethod || "pix",
       subtotal: product.price,
-      payment_fee: 0,
-      tax_amount: 0,
+      payment_fee: paymentFee,
+      tax_amount: taxAmount,
       total_amount: product.price,
       notes: "Venda simulada pelo admin, sem checkout.",
       metadata,
@@ -276,9 +286,9 @@ async function createStoreSimulation(input: SimulateInput) {
       product_id: fallbackProductId,
       digital_product_id: product.digitalProductId,
       gross_amount: product.price,
-      payment_fee: 0,
-      tax_amount: 0,
-      net_amount: product.price,
+      payment_fee: paymentFee,
+      tax_amount: taxAmount,
+      net_amount: netAmount,
       payment_method: input.paymentMethod || "pix",
       installments: 1,
       status: "pending",
