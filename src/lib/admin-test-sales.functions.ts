@@ -387,12 +387,12 @@ async function listFlowForOrder(sourceKind: string, sourceId: string) {
       .maybeSingle();
     const o = (order as any) || {};
     const moneyRows: FlowItem[] = [
-      { label: "Sistema", amount: moneyNumber(o.system_fee), status: o.status, kind: "money" },
-      { label: "Coach vendedor", amount: moneyNumber(o.coach_net_amount), status: o.status, kind: "money" },
-      { label: "Rede nível 1", amount: moneyNumber(o.network_l1_amount), status: o.status, kind: "money" },
-      { label: "Rede nível 2", amount: moneyNumber(o.network_l2_amount), status: o.status, kind: "money" },
-      { label: "Rede nível 3", amount: moneyNumber(o.network_l3_amount), status: o.status, kind: "money" },
-      { label: "Profissional/parceiro", amount: moneyNumber(o.partner_net_amount), status: o.status, kind: "money" },
+      { label: "Sistema", amount: moneyNumber(o.system_fee), status: o.status, kind: "money" as const },
+      { label: "Coach vendedor", amount: moneyNumber(o.coach_net_amount), status: o.status, kind: "money" as const },
+      { label: "Rede nível 1", amount: moneyNumber(o.network_l1_amount), status: o.status, kind: "money" as const },
+      { label: "Rede nível 2", amount: moneyNumber(o.network_l2_amount), status: o.status, kind: "money" as const },
+      { label: "Rede nível 3", amount: moneyNumber(o.network_l3_amount), status: o.status, kind: "money" as const },
+      { label: "Profissional/parceiro", amount: moneyNumber(o.partner_net_amount), status: o.status, kind: "money" as const },
     ].filter((item) => item.amount > 0);
     items.push(...moneyRows);
     // Benefits do parceiro (carteirinha estendida)
