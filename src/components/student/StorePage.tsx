@@ -259,6 +259,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         creatorCoachId: it.creator_coach_id ?? null,
         pointsPerSale: it.points_per_sale ?? 0,
         hasChallenge: !!it.has_challenge_access,
+        challengeTokens: Number(it.challenge_tokens_amount ?? 1),
         cardDays: Number(it.card_access_days || 0),
       }))),
       ...(((partnerRows as any[]) || []).map((pp: any) => {
