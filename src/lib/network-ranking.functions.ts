@@ -223,9 +223,12 @@ function todayDate(): string { return new Date().toISOString().slice(0, 10); }
 
 function descendantsOf(coachId: string, byUpline: Map<string, CoachRow[]>): string[] {
   const out: string[] = [];
+  const seen = new Set<string>([coachId]);
   const q = (byUpline.get(coachId) || []).map((c) => c.id);
   while (q.length) {
     const id = q.shift()!;
+    if (seen.has(id)) continue;
+    seen.add(id);
     out.push(id);
     (byUpline.get(id) || []).forEach((c) => q.push(c.id));
   }
