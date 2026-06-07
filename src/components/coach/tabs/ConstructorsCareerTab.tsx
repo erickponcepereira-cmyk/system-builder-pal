@@ -158,15 +158,15 @@ export function ConstructorsCareerTab() {
                 {list.map((p) => {
                   const w = windows[p.time_window_months];
                   const isCurrent = p.key === currentPatentKey;
-                  const vpMax = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
-                  const veMax = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpMax);
-                  const vpCap = (p.required_revenue * vpMax) / 100;
-                  const veCap = (p.required_revenue * veMax) / 100;
-                  const cappedOwn = w ? Math.min(w.ownRevenue, vpCap) : 0;
-                  const cappedTeam = w ? Math.min(w.teamRevenue, veCap) : 0;
-                  const qualifying = cappedOwn + cappedTeam;
+                  const vpPct = p.vp_max_pct != null ? p.vp_max_pct : (p.min_own_sales_pct || 100);
+                  const vePct = p.ve_max_pct != null ? p.ve_max_pct : Math.max(0, 100 - vpPct);
+                  const vpReq = (p.required_revenue * vpPct) / 100;
+                  const veReq = (p.required_revenue * vePct) / 100;
+                  const meetsVP = w ? w.ownRevenue >= vpReq - 0.001 : false;
+                  const meetsVE = w ? (veReq === 0 || w.teamRevenue >= veReq - 0.001) : false;
+                  const qualifying = w ? Math.min(w.ownRevenue, vpReq) + Math.min(w.teamRevenue, veReq) : 0;
                   const achievedAt = achievedAtByKey.get(p.key) ?? null;
-                  const achieved = !!achievedAt || p.required_revenue === 0 || qualifying >= p.required_revenue - 0.001;
+                  const achieved = !!achievedAt || p.required_revenue === 0 || (meetsVP && meetsVE);
                   return <PatentRow key={p.id} p={p} achieved={achieved} isCurrent={isCurrent} qualifying={qualifying} achievedAt={achievedAt} onClick={() => setModalPatent(p)} />;
                 })}
 
