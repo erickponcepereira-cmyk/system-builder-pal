@@ -719,5 +719,48 @@ export const resetAdminTestSales = createServerFn({ method: "POST" })
     for (const row of rows) {
       await deleteSimulation(row);
     }
-    return { deleted: rows.length };
+
+    // Limpa transações simuladas órfãs (sem store_order vinculado) e seus efeitos colaterais
+    const { data: orphanTxs } = await supabaseAdmin
+      .from("transactions")
+      .select("id,student_id,product_id,metadata")
+      .filter("metadata->>simulated", "eq", "true");
+    const orphanList = ((orphanTxs as any[]) || []).filter(
+      (t) => !t?.metadata?.store_order_id
+    );
+    const orphanIds = orphanList.map((t) => t.id);
+    let orphanCleaned = 0;
+    if (orphanIds.length > 0) {
+      // Reverte créditos do admin_system_wallet desta tx
+      const { data: sysEntries } = await supabaseAdmin
+        .from("admin_system_wallet_entries")
+        .select("amount")
+        .in("transaction_id", orphanIds);
+      const sysTotal = ((sysEntries as any[]) || []).reduce(
+        (s, e) => s + moneyNumber(e.amount),
+        0
+      );
+      if (sysTotal > 0) await subtractAdminWallet(sysTotal);
+      await supabaseAdmin
+        .from("admin_system_wallet_entries")
+        .delete()
+        .in("transaction_id", orphanIds);
+
+      // Comissões: deixar o trigger commissions_sync_wallet recalcular as carteiras
+      await supabaseAdmin
+        .from("commissions")
+        .delete()
+        .in("transaction_id", orphanIds);
+
+      // Tokens de desafio gerados pela tx
+      await supabaseAdmin
+        .from("student_challenge_tokens" as never)
+        .delete()
+        .in("source_transaction_id" as never, orphanIds as never);
+
+      await supabaseAdmin.from("transactions").delete().in("id", orphanIds);
+      orphanCleaned = orphanIds.length;
+    }
+
+    return { deleted: rows.length + orphanCleaned };
   });
