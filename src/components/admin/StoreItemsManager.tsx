@@ -110,6 +110,7 @@ export function StoreItemsManager() {
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
         has_challenge_access: !!editing.has_challenge_access,
+        challenge_tokens_amount: editing.has_challenge_access ? Math.max(0, Number(editing.challenge_tokens_amount ?? 1)) : 0,
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
       };
