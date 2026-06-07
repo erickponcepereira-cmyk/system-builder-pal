@@ -220,6 +220,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         creatorCoachId: p.creator_coach_id ?? null,
         pointsPerSale: p.points_per_sale ?? 0,
         hasChallenge: (p.has_challenge_access ?? true) ? true : false,
+        challengeTokens: Number(p.challenge_tokens_amount ?? 1),
         cardDays: Number(p.card_access_days || 0),
       });})),
       ...((digital.data || []).map((p: any) => ({
