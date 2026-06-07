@@ -11,9 +11,9 @@ async function resolveStudentByUser(userId: string) {
   if (!profile) return null;
   const p = profile as unknown as { id: string; gender: string | null };
   const { data: student } = await supabaseAdmin
-    .from("students").select("id, coach_id, profile_id").eq("profile_id", p.id).maybeSingle();
+    .from("students").select("id, coach_id, profile_id, challenge_override_allowed" as never).eq("profile_id", p.id).maybeSingle();
   if (!student) return null;
-  const s = student as unknown as { id: string; coach_id: string | null; profile_id: string };
+  const s = student as unknown as { id: string; coach_id: string | null; profile_id: string; challenge_override_allowed: boolean | null };
 
   let gender: "M" | "F" | "O" | null = null;
   const raw = (p.gender || "").toUpperCase();
@@ -35,17 +35,22 @@ async function resolveStudentByUser(userId: string) {
         : null;
   }
 
-  // Verifica se o aluno também é coach/profissional/parceiro (não pode participar do desafio)
+  const override = !!s.challenge_override_allowed;
+
+  // Verifica se o aluno também é coach/profissional/parceiro (não pode participar do desafio,
+  // exceto quando challenge_override_allowed = true — uso administrativo para demos).
   const [{ data: coachRow }, { data: partnerRow }] = await Promise.all([
     supabaseAdmin.from("coaches").select("id, is_professional").eq("profile_id", p.id).maybeSingle(),
     supabaseAdmin.from("partners").select("id").eq("profile_id", p.id).maybeSingle(),
   ]);
   const cr = coachRow as unknown as { id: string; is_professional: boolean | null } | null;
-  const roleFlags: StudentRoleFlags = {
-    isCoach: !!cr && !cr.is_professional,
-    isProfessional: !!cr && !!cr.is_professional,
-    isPartner: !!partnerRow,
-  };
+  const roleFlags: StudentRoleFlags = override
+    ? { isCoach: false, isProfessional: false, isPartner: false }
+    : {
+      isCoach: !!cr && !cr.is_professional,
+      isProfessional: !!cr && !!cr.is_professional,
+      isPartner: !!partnerRow,
+    };
 
   return { id: s.id, coach_id: s.coach_id, profile_id: s.profile_id, gender, roleFlags };
 }
