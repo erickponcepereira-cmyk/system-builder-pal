@@ -85,8 +85,15 @@ function coachEmail(c: CoachRow) {
 async function resolveProfileAndCoach(supabaseAdmin: any, userId: string) {
   const { data: profile } = await supabaseAdmin.from("profiles").select("id, role").eq("user_id", userId).maybeSingle();
   if (!profile?.id) return { profileId: null, coachId: null, role: null };
-  const { data: coach } = await supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
-  return { profileId: profile.id as string, coachId: (coach?.id as string | undefined) ?? null, role: profile.role as string | null };
+  // Defensive: allow duplicate coach rows (legacy data) without throwing
+  const { data: coaches } = await supabaseAdmin
+    .from("coaches")
+    .select("id, created_at")
+    .eq("profile_id", profile.id)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const coachId = Array.isArray(coaches) && coaches.length > 0 ? coaches[0].id : null;
+  return { profileId: profile.id as string, coachId: (coachId as string | null), role: profile.role as string | null };
 }
 
 function buildByUpline(coaches: CoachRow[]) {
