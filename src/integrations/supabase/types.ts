@@ -4339,6 +4339,8 @@ export type Database = {
           id: string
           is_active: boolean
           label: string
+          patent_levels: number[]
+          product_ids: string[]
           product_type: Database["public"]["Enums"]["product_type"] | null
           required_sales: number
           sort_order: number
@@ -4350,6 +4352,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           label: string
+          patent_levels?: number[]
+          product_ids?: string[]
           product_type?: Database["public"]["Enums"]["product_type"] | null
           required_sales?: number
           sort_order?: number
@@ -4361,6 +4365,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           label?: string
+          patent_levels?: number[]
+          product_ids?: string[]
           product_type?: Database["public"]["Enums"]["product_type"] | null
           required_sales?: number
           sort_order?: number

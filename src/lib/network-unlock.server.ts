@@ -4,6 +4,8 @@ export type SnapshotGoal = {
   id: string;
   label: string;
   product_type: string | null;
+  product_ids: string[];
+  patent_levels: number[];
   required_base: number;
   required_scaled: number;
   current: number;
@@ -136,6 +138,7 @@ export async function computeMonthlySnapshot(profileId: string, year: number, mo
   const { mult, tier } = multiplierForLevel(patentLevel);
 
   const salesByType = new Map<string, number>();
+  const salesByProduct = new Map<string, number>();
   let totalSales = 0;
   if (coachId) {
     const { data: studs } = await supabaseAdmin
@@ -159,6 +162,7 @@ export async function computeMonthlySnapshot(profileId: string, year: number, mo
       txRows.forEach((t) => {
         const tp = typeByProduct.get(t.product_id);
         if (tp) salesByType.set(tp, (salesByType.get(tp) || 0) + 1);
+        if (t.product_id) salesByProduct.set(t.product_id, (salesByProduct.get(t.product_id) || 0) + 1);
         totalSales += 1;
       });
     }
@@ -166,17 +170,31 @@ export async function computeMonthlySnapshot(profileId: string, year: number, mo
 
   const { data: rules } = await supabaseAdmin
     .from("network_unlock_rules")
-    .select("id,label,product_type,required_sales,sort_order")
+    .select("id,label,product_type,required_sales,sort_order,product_ids,patent_levels")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
-  const goals: SnapshotGoal[] = ((rules as Array<{ id: string; label: string; product_type: string | null; required_sales: number; sort_order: number }> | null) || []).map((r) => {
+  type RuleRow = { id: string; label: string; product_type: string | null; required_sales: number; sort_order: number; product_ids: string[] | null; patent_levels: number[] | null };
+  const allRules = (rules as RuleRow[] | null) || [];
+  const applicableRules = allRules.filter((r) => {
+    const lvls = r.patent_levels || [];
+    return lvls.length === 0 || lvls.includes(patentLevel);
+  });
+  const goals: SnapshotGoal[] = applicableRules.map((r) => {
     const required_scaled = Number(r.required_sales) * mult;
-    const current = r.product_type === null ? totalSales : (salesByType.get(r.product_type) || 0);
+    const pids = r.product_ids || [];
+    let current: number;
+    if (pids.length > 0) {
+      current = pids.reduce((acc, id) => acc + (salesByProduct.get(id) || 0), 0);
+    } else {
+      current = r.product_type === null ? totalSales : (salesByType.get(r.product_type) || 0);
+    }
     const completed = current >= required_scaled;
     return {
       id: r.id,
       label: r.label,
       product_type: r.product_type,
+      product_ids: pids,
+      patent_levels: r.patent_levels || [],
       required_base: Number(r.required_sales),
       required_scaled,
       current,
