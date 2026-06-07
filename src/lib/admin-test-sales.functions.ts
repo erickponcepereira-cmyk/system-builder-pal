@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 
 async function getSupabaseAdmin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -28,7 +29,7 @@ export type SimulatedSaleRow = {
   buyerName: string | null;
   productName: string | null;
   payUrl: string;
-  flow: Array<{ label: string; amount: number; status?: string | null; recipient?: string | null }>;
+  flow: Array<{ label: string; amount: number; status?: string | null; recipient?: string | null; kind?: "money" | "benefit"; info?: string | null }>;
 };
 
 const TEST_META = { test_simulation: true, source: "admin_test_sale" } as const;
@@ -321,17 +322,20 @@ async function createPartnerSimulation(input: SimulateInput) {
   const { l1, l2, l3 } = await getCoachUplines(sellingCoachId);
   const gross = product.price;
   const paymentMethod = input.paymentMethod === "credit_card" || input.paymentMethod === "debit_card" ? "card" : "pix";
-  const feePct = paymentMethod === "pix" ? 0.99 : 4.98;
-  const paymentFee = Math.round((gross * feePct / 100) * 100) / 100;
-  const tax = Math.round((gross * 0.06) * 100) / 100;
-  const systemFee = 20;
-  const coachPct = moneyNumber(product.coach_commission_percentage || 10);
-  const coachCommission = moneyNumber(product.coach_commission_amount) || Math.round((gross * coachPct / 100) * 100) / 100;
-  const networkL1 = moneyNumber(product.network_l1_amount) || Math.round((gross * 0.03) * 100) / 100;
-  const networkL2 = moneyNumber(product.network_l2_amount) || Math.round((gross * 0.02) * 100) / 100;
-  const networkL3 = moneyNumber(product.network_l3_amount) || Math.round((gross * 0.01) * 100) / 100;
-  const coachNet = Math.max(0, Math.round((coachCommission - networkL1 - networkL2 - networkL3) * 100) / 100);
-  const ownerNet = moneyNumber(product.partner_net_amount || product.professional_net_amount) || Math.max(0, Math.round((gross - paymentFee - tax - systemFee - coachCommission) * 100) / 100);
+  // Motor oficial: partnerFinance.ts (cascata, rede % da comissão do coach)
+  const rawPct = Number(product.coach_commission_percentage || 10);
+  const validPcts: number[] = [10, 20, 30, 40, 50];
+  const coachPct = (validPcts.includes(rawPct) ? rawPct : 10) as CoachCommissionPct;
+  const bd = computeFromCharge(gross, coachPct, paymentMethod);
+  const paymentFee = bd.paymentFee;
+  const tax = bd.tax;
+  const systemFee = bd.systemFee;
+  const coachCommission = bd.coachCommission;
+  const networkL1 = bd.networkL1;
+  const networkL2 = bd.networkL2;
+  const networkL3 = bd.networkL3;
+  const coachNet = bd.coachNet;
+  const ownerNet = bd.partnerNet;
 
   const { data: order, error } = await supabaseAdmin
     .from("partner_product_orders" as never)
@@ -372,40 +376,124 @@ async function createPartnerSimulation(input: SimulateInput) {
 
 async function listFlowForOrder(sourceKind: string, sourceId: string) {
   const supabaseAdmin = await getSupabaseAdmin();
+  type FlowItem = { label: string; amount: number; status?: string | null; recipient?: string | null; kind?: "money" | "benefit"; info?: string | null };
+  const items: FlowItem[] = [];
+
   if (sourceKind === "partner_product_order") {
     const { data: order } = await supabaseAdmin
       .from("partner_product_orders" as never)
-      .select("system_fee,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,status" as never)
+      .select("system_fee,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,status,student_id,partner_product_id,professional_product_id" as never)
       .eq("id" as never, sourceId as never)
       .maybeSingle();
     const o = (order as any) || {};
-    return [
-      { label: "Sistema", amount: moneyNumber(o.system_fee), status: o.status },
-      { label: "Coach vendedor", amount: moneyNumber(o.coach_net_amount), status: o.status },
-      { label: "Rede nível 1", amount: moneyNumber(o.network_l1_amount), status: o.status },
-      { label: "Rede nível 2", amount: moneyNumber(o.network_l2_amount), status: o.status },
-      { label: "Rede nível 3", amount: moneyNumber(o.network_l3_amount), status: o.status },
-      { label: "Profissional/parceiro", amount: moneyNumber(o.partner_net_amount), status: o.status },
+    const moneyRows: FlowItem[] = [
+      { label: "Sistema", amount: moneyNumber(o.system_fee), status: o.status, kind: "money" as const },
+      { label: "Coach vendedor", amount: moneyNumber(o.coach_net_amount), status: o.status, kind: "money" as const },
+      { label: "Rede nível 1", amount: moneyNumber(o.network_l1_amount), status: o.status, kind: "money" as const },
+      { label: "Rede nível 2", amount: moneyNumber(o.network_l2_amount), status: o.status, kind: "money" as const },
+      { label: "Rede nível 3", amount: moneyNumber(o.network_l3_amount), status: o.status, kind: "money" as const },
+      { label: "Profissional/parceiro", amount: moneyNumber(o.partner_net_amount), status: o.status, kind: "money" as const },
     ].filter((item) => item.amount > 0);
+    items.push(...moneyRows);
+    // Benefits do parceiro (carteirinha estendida)
+    if (o.student_id) {
+      const benefits = await collectBenefits(o.student_id, null, null);
+      items.push(...benefits);
+    }
+    return items;
   }
 
   const { data: txs } = await supabaseAdmin
     .from("transactions")
-    .select("id")
+    .select("id,student_id,product_id")
     .filter("metadata->>store_order_id", "eq", sourceId);
-  const txIds = ((txs as any[]) || []).map((tx) => tx.id);
-  if (!txIds.length) return [];
+  const txList = (txs as any[]) || [];
+  const txIds = txList.map((tx) => tx.id);
+  if (!txIds.length) return items;
   const { data: comms } = await supabaseAdmin
     .from("commissions")
     .select("amount,status,slot_label,level,profiles:beneficiary_profile_id(name,email)")
     .in("transaction_id", txIds);
-  return ((comms as any[]) || []).map((c) => ({
-    label: c.slot_label || (c.level > 0 ? `Rede nível ${c.level}` : "Comissão"),
-    amount: moneyNumber(c.amount),
-    status: c.status,
-    recipient: c.profiles?.name || c.profiles?.email || null,
-  }));
+  ((comms as any[]) || []).forEach((c) =>
+    items.push({
+      label: c.slot_label || (c.level > 0 ? `Rede nível ${c.level}` : "Comissão"),
+      amount: moneyNumber(c.amount),
+      status: c.status,
+      recipient: c.profiles?.name || c.profiles?.email || null,
+      kind: "money",
+    }),
+  );
+
+  const studentId = txList[0]?.student_id || null;
+  const productId = txList[0]?.product_id || null;
+  if (studentId) {
+    const benefits = await collectBenefits(studentId, productId, txIds);
+    items.push(...benefits);
+  }
+  return items;
 }
+
+async function collectBenefits(studentId: string, productId: string | null, txIds: string[] | null) {
+  const supabaseAdmin = await getSupabaseAdmin();
+  const out: Array<{ label: string; amount: number; status?: string | null; recipient?: string | null; kind?: "money" | "benefit"; info?: string | null }> = [];
+
+  // Card extension
+  if (productId) {
+    const { data: prod } = await supabaseAdmin
+      .from("products")
+      .select("card_access_days,has_challenge_access,name")
+      .eq("id", productId)
+      .maybeSingle();
+    const days = Number((prod as any)?.card_access_days || 0);
+    if (days > 0) {
+      const { data: stu } = await supabaseAdmin.from("students").select("card_valid_until").eq("id", studentId).maybeSingle();
+      const until = (stu as any)?.card_valid_until || null;
+      out.push({
+        label: "Carteirinha estendida",
+        amount: 0,
+        status: "ativo",
+        kind: "benefit",
+        info: `+${days} dias${until ? ` · até ${new Date(until).toLocaleDateString("pt-BR")}` : ""} · libera Gratuitos`,
+      });
+    }
+  }
+
+  // Challenge tokens granted
+  if (txIds && txIds.length) {
+    const { data: tokens } = await supabaseAdmin
+      .from("student_challenge_tokens" as never)
+      .select("id,status,created_at" as never)
+      .in("source_transaction_id" as never, txIds as never);
+    const list = (tokens as any[]) || [];
+    if (list.length > 0) {
+      out.push({
+        label: "Ticket do desafio",
+        amount: 0,
+        status: list[0]?.status || "ativo",
+        kind: "benefit",
+        info: `${list.length} ticket(s) gerado(s)`,
+      });
+    } else if (productId) {
+      const { data: prod } = await supabaseAdmin
+        .from("products")
+        .select("has_challenge_access")
+        .eq("id", productId)
+        .maybeSingle();
+      if ((prod as any)?.has_challenge_access) {
+        out.push({
+          label: "Ticket do desafio",
+          amount: 0,
+          status: "não gerado",
+          kind: "benefit",
+          info: "Comprador é coach/parceiro · ticket não emitido por regra",
+        });
+      }
+    }
+  }
+
+  return out;
+}
+
 
 export const getAdminTestSalesData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
