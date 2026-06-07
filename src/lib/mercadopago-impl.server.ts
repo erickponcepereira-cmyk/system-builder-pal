@@ -87,7 +87,7 @@ export async function applyApproval(kind: SourceKind, id: string) {
     const { data: pendingTxs } = await supabaseAdmin
       .from("transactions")
       .select("id, status")
-      .contains("metadata", { store_order_id: id } as never);
+      .filter("metadata->>store_order_id", "eq", id);
     const txIds = ((pendingTxs as any[]) || [])
       .filter((t) => t.status !== "paid")
       .map((t) => t.id);
