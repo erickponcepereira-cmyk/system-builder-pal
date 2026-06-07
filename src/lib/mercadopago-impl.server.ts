@@ -79,32 +79,8 @@ export async function attachPaymentToSource(
 
 export async function applyApproval(kind: SourceKind, id: string) {
   if (kind === "store_order") {
-    await supabaseAdmin.from("store_orders").update({ status: "paid" }).eq("id", id);
-    // Marca como paga TODA transação vinculada ao store_order, independente do purchase_type
-    // (digital/challenge/store_order). A trigger on_transaction_paid dispara
-    // process_paid_transaction e distribui comissões, ativa desafio e libera painéis.
-    const nowIso = new Date().toISOString();
-    const { data: pendingTxs } = await supabaseAdmin
-      .from("transactions")
-      .select("id, status")
-      .filter("metadata->>store_order_id", "eq", id);
-    const txIds = ((pendingTxs as any[]) || [])
-      .filter((t) => t.status !== "paid")
-      .map((t) => t.id);
-    if (txIds.length) {
-      await supabaseAdmin
-        .from("transactions")
-        .update({ status: "paid", paid_at: nowIso })
-        .in("id", txIds);
-      // Salvaguarda: chama o engine explicitamente caso a trigger não tenha rodado
-      for (const txId of txIds) {
-        try {
-          await supabaseAdmin.rpc("process_paid_transaction" as never, { _transaction_id: txId } as never);
-        } catch (e) {
-          console.error("[applyApproval] process_paid_transaction fallback failed:", e);
-        }
-      }
-    }
+    const { error } = await supabaseAdmin.rpc("mark_store_order_paid_and_process" as never, { _order_id: id } as never);
+    if (error) throw new Error(error.message);
     try {
       const { handlePaidStoreOrderForActivation } = await import("./coach-onboarding.server");
       await handlePaidStoreOrderForActivation(id);
