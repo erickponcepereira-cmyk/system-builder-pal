@@ -231,7 +231,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       .select("available_balance,pending_balance,total_earned,total_withdrawn")
       .eq("profile_id", data.profileId)
       .maybeSingle();
-    const { data: nw } = data.group === "professional"
+    const { data: nw } = (data.group === "professional" || data.group === "coach")
       ? await supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle()
       : { data: null };
 
