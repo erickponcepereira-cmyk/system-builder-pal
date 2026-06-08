@@ -112,12 +112,12 @@ export function ConstructorsCareerTab() {
             </span>
           </div>
 
-          <RevenueRow
+          <SplitRevenueRow
             label="Faturamento total (VP + VE)"
-            current={nextWindow.totalRevenue}
+            ownRevenue={nextWindow.ownRevenue}
+            teamRevenue={nextWindow.teamRevenue}
             target={next.required_revenue}
             windowMonths={next.time_window_months}
-            color={next.badge_color || "#FF4230"}
           />
           {(() => {
             const vpPct = next.vp_max_pct != null ? next.vp_max_pct : (next.min_own_sales_pct || 100);
