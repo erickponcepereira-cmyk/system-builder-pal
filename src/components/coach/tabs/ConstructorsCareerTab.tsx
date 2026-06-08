@@ -112,12 +112,12 @@ export function ConstructorsCareerTab() {
             </span>
           </div>
 
-          <RevenueRow
+          <SplitRevenueRow
             label="Faturamento total (VP + VE)"
-            current={nextWindow.totalRevenue}
+            ownRevenue={nextWindow.ownRevenue}
+            teamRevenue={nextWindow.teamRevenue}
             target={next.required_revenue}
             windowMonths={next.time_window_months}
-            color={next.badge_color || "#FF4230"}
           />
           {(() => {
             const vpPct = next.vp_max_pct != null ? next.vp_max_pct : (next.min_own_sales_pct || 100);
@@ -192,22 +192,39 @@ export function ConstructorsCareerTab() {
 }
 
 
-function RevenueRow({ label, current, target, windowMonths, color }: {
-  label: string; current: number; target: number; windowMonths: number; color: string;
+function SplitRevenueRow({ label, ownRevenue, teamRevenue, target, windowMonths }: {
+  label: string; ownRevenue: number; teamRevenue: number; target: number; windowMonths: number;
 }) {
-  const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const VP_COLOR = "#3B82F6"; // azul = venda direta (pessoal)
+  const VE_COLOR = "#10B981"; // verde = venda da rede (equipe)
+  const total = ownRevenue + teamRevenue;
+  const ownPct = target > 0 ? Math.min((ownRevenue / target) * 100, 100) : 0;
+  const teamPct = target > 0 ? Math.min((teamRevenue / target) * 100, 100 - ownPct) : 0;
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-white/70">{label} <span className="text-white/40">({windowMonths === 1 ? "mês atual" : `últimos ${windowMonths} meses`})</span></span>
-        <span className="text-xs font-bold text-white">{fmtBRL(current)} / {fmtBRL(target)}</span>
+        <span className="text-xs text-white/70">
+          {label}{" "}
+          <span className="text-white/40">({windowMonths === 1 ? "mês atual" : `últimos ${windowMonths} meses`})</span>
+        </span>
+        <span className="text-xs font-bold text-white">{fmtBRL(total)} / {fmtBRL(target)}</span>
       </div>
-      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "#252525" }}>
-        <div className="h-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+      <div className="h-3 rounded-full overflow-hidden flex" style={{ backgroundColor: "#252525" }}>
+        <div className="h-full transition-all" style={{ width: `${ownPct}%`, backgroundColor: VP_COLOR }} />
+        <div className="h-full transition-all" style={{ width: `${teamPct}%`, backgroundColor: VE_COLOR }} />
+      </div>
+      <div className="mt-1.5 flex items-center gap-3 text-[10px] text-white/60">
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: VP_COLOR }} /> Venda direta (VP) {fmtBRL(ownRevenue)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: VE_COLOR }} /> Venda da rede (VE) {fmtBRL(teamRevenue)}
+        </span>
       </div>
     </div>
   );
 }
+
 
 function Stat({ icon: Icon, label, value, hint }: { icon: typeof Users; label: string; value: string; hint?: string }) {
   return (

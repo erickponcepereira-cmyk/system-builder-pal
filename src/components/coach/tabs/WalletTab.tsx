@@ -375,12 +375,12 @@ export function WalletTab() {
                       {done ? "✓ Concluído" : `${g.current}/${g.required_scaled}`}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${done ? 100 : pct}%`,
-                        background: done ? "hsl(var(--success))" : "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary)/0.6))",
+                        width: `${done ? 100 : Math.max(pct, g.current > 0 ? 4 : 0)}%`,
+                        background: done ? "var(--success)" : "var(--primary)",
                       }}
                     />
                   </div>
