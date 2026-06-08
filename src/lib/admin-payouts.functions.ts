@@ -117,7 +117,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     return {
       groups: {
-        coach: { label: "Coaches", ...sumGroup(coachProfileIds) },
+        coach: { label: "Coaches", ...sumGroup(coachProfileIds, nutriByProfile) },
         partner: { label: "Parceiros", ...sumGroup(partnerProfileIds) },
         professional: { label: "Profissionais", ...sumGroup(professionalProfileIds, nutriByProfile) },
       },
