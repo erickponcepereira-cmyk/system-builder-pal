@@ -144,21 +144,31 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
   .inputValidator((data: { group: PayoutGroup; search?: string }) => data)
   .handler(async ({ context, data }): Promise<PayoutPersonRow[]> => {
     await assertAdmin(context.userId);
+    // Dedupe priority: coach > professional > partner.
+    const [coachesRaw, profsRaw, partnersRaw] = await Promise.all([
+      fetchCoachProfileIds({ onlyProfessionals: false }),
+      fetchCoachProfileIds({ onlyProfessionals: true }),
+      fetchPartnerProfileIds(),
+    ]);
+    const coachSet = new Set(coachesRaw.map((c) => c.profile_id));
+    const professionalIds = profsRaw.map((c) => c.profile_id).filter((id) => !coachSet.has(id));
+    const professionalSet = new Set(professionalIds);
+    const partnerIds = partnersRaw.map((p) => p.profile_id).filter((id) => !coachSet.has(id) && !professionalSet.has(id));
+
     let profileIds: string[] = [];
-    if (data.group === "coach") {
-      profileIds = (await fetchCoachProfileIds({ onlyProfessionals: false })).map((r) => r.profile_id);
-    } else if (data.group === "professional") {
-      profileIds = (await fetchCoachProfileIds({ onlyProfessionals: true })).map((r) => r.profile_id);
-    } else {
-      profileIds = (await fetchPartnerProfileIds()).map((r) => r.profile_id);
-    }
+    if (data.group === "coach") profileIds = Array.from(coachSet);
+    else if (data.group === "professional") profileIds = professionalIds;
+    else profileIds = partnerIds;
     if (profileIds.length === 0) return [];
+
+    // Coaches consolidados: também pegamos nutritionist_wallets caso o coach seja profissional também.
+    const loadNutri = data.group === "coach" || data.group === "professional";
 
     const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
       supabaseAdmin.from("wallets").select("profile_id,available_balance,pending_balance,total_earned,total_withdrawn").in("profile_id", profileIds),
       supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]),
-      data.group === "professional"
+      loadNutri
         ? supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,blocked_balance,total_earned,total_withdrawn" as never).in("profile_id" as never, profileIds as never)
         : Promise.resolve({ data: [] as unknown }),
     ]);
