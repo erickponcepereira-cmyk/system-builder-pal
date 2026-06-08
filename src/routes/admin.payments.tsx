@@ -568,15 +568,15 @@ function LegacyMp() {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   const approved = items.filter((p) => p.status === "approved");
   const totalApproved = approved.reduce((s, p) => s + Number(p.amount || 0), 0);
-  const pending = items.filter((p) => p.status === "pending").length;
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl bg-card p-4"><p className="text-xs text-white/50">Total arrecadado</p><p className="mt-1 text-2xl font-bold text-primary">{fmt(totalApproved)}</p></div>
         <div className="rounded-2xl bg-card p-4"><p className="text-xs text-white/50">Aprovadas</p><p className="mt-1 text-2xl font-bold text-white">{approved.length}</p></div>
-        <div className="rounded-2xl bg-card p-4"><p className="text-xs text-white/50">Pendentes</p><p className="mt-1 text-2xl font-bold text-white">{pending}</p></div>
       </div>
-      {items.map((p) => (
+      {approved.length === 0 ? (
+        <div className="rounded-2xl bg-card p-12 text-center"><DollarSign className="h-10 w-10 text-white/20 mx-auto mb-3" /><p className="text-white/50">Nenhum pagamento aprovado.</p></div>
+      ) : approved.map((p) => (
         <div key={p.id} className="rounded-2xl border border-white/5 bg-card p-4">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="flex-1">
