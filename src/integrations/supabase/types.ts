@@ -8960,6 +8960,7 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      recalc_nutritionist_wallets: { Args: never; Returns: undefined }
       recalc_product_points: {
         Args: { _product_id: string }
         Returns: undefined
