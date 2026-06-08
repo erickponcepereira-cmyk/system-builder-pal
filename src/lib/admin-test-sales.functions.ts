@@ -266,8 +266,15 @@ async function deleteSimulation(data: DeleteInput) {
       }
     }
 
+    // Reverte bloqueios da nutricionista e pedidos físicos do pool ligados a essas TXs
+    await supabaseAdmin.from("nutritionist_blocked_entries" as never).delete().in("transaction_id" as never, txIds as never);
+    await supabaseAdmin.from("product_order_pool_entries" as never).delete().in("transaction_id" as never, txIds as never);
+
     await supabaseAdmin.from("commissions").delete().in("transaction_id", txIds);
     await supabaseAdmin.from("transactions").delete().in("id", txIds);
+
+    // Recalcula carteiras da nutricionista (não há trigger de recálculo no delete)
+    await supabaseAdmin.rpc("recalc_nutritionist_wallets" as never).then(() => {}, () => {});
   }
   await supabaseAdmin.from("store_order_items").delete().eq("order_id", data.id);
   await supabaseAdmin.from("store_orders").delete().eq("id", data.id);
