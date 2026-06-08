@@ -156,8 +156,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         : Promise.resolve({ data: [] as unknown }),
     ]);
 
-    const wMap = new Map(((wallets as Array<{ profile_id: string } & Record<string, number>>) || []).map((w) => [w.profile_id, w]));
-    const nMap = new Map(((nutriW as unknown as Array<{ profile_id: string } & Record<string, number>>) || []).map((w) => [w.profile_id, w]));
+    const wMap = new Map(((wallets as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
+    const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
