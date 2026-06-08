@@ -774,9 +774,16 @@ export const resetAdminTestSales = createServerFn({ method: "POST" })
         .delete()
         .in("transaction_id", orphanIds);
 
+      // Bloqueios nutri + pedidos físicos do pool
+      await supabaseAdmin.from("nutritionist_blocked_entries" as never).delete().in("transaction_id" as never, orphanIds as never);
+      await supabaseAdmin.from("product_order_pool_entries" as never).delete().in("transaction_id" as never, orphanIds as never);
+
       await supabaseAdmin.from("transactions").delete().in("id", orphanIds);
       orphanCleaned = orphanIds.length;
     }
+
+    // Recalcula carteiras nutri (no caso de bloqueios apagados sem trigger)
+    await supabaseAdmin.rpc("recalc_nutritionist_wallets" as never).then(() => {}, () => {});
 
     // Limpa conquistas de patente (carreira) — serão recriadas com base no
     // estado real assim que cada coach abrir a aba de carreira novamente.
