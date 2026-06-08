@@ -336,7 +336,7 @@ export function WalletTab() {
             <div>
               <h3 className="text-sm font-bold text-white">Missão do mês</h3>
               <p className="text-[11px] text-white/50">
-                {new Date(split.unlock.monthStart).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })} · {split.unlock.multiplierTier}
+                {new Date(split.unlock.monthStart).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" })} · {split.unlock.multiplierTier}
               </p>
             </div>
             <button onClick={() => setShowRules((s) => !s)} className="text-[11px] text-white/60 hover:text-white flex items-center gap-1">
