@@ -60,9 +60,14 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       fetchCoachProfileIds({ onlyProfessionals: true }),
       fetchPartnerProfileIds(),
     ]);
-    const coachProfileIds = coachesRaw.map((c) => c.profile_id);
-    const professionalProfileIds = profsRaw.map((c) => c.profile_id);
-    const partnerProfileIds = partners.map((p) => p.profile_id);
+    // Dedupe by priority: coach > professional > partner.
+    // If a profile is both a coach (non-pro) and professional, it goes under coach (and we
+    // also merge its nutritionist_wallet into the coach totals).
+    const coachSet = new Set(coachesRaw.map((c) => c.profile_id));
+    const professionalProfileIds = profsRaw.map((c) => c.profile_id).filter((id) => !coachSet.has(id));
+    const professionalSet = new Set(professionalProfileIds);
+    const partnerProfileIds = partners.map((p) => p.profile_id).filter((id) => !coachSet.has(id) && !professionalSet.has(id));
+    const coachProfileIds = Array.from(coachSet);
 
     const allProfileIds = Array.from(new Set([...coachProfileIds, ...professionalProfileIds, ...partnerProfileIds]));
 
@@ -73,11 +78,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const wallets = ((walletsRaw as Array<{ profile_id: string; available_balance: number; pending_balance: number }>) || []);
     const walletByProfile = new Map(wallets.map((w) => [w.profile_id, w]));
 
-    // Nutricionistas (profissionais) usam nutritionist_wallets também
+    // Nutricionistas — também usados para coaches que são profissionais (consolidação).
+    const nutriQueryIds = Array.from(new Set([...coachProfileIds, ...professionalProfileIds]));
     const { data: nutriWalletsRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never)
       .select("profile_id,available_balance,blocked_balance" as never)
-      .in("profile_id" as never, (professionalProfileIds.length ? professionalProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+      .in("profile_id" as never, (nutriQueryIds.length ? nutriQueryIds : ["00000000-0000-0000-0000-000000000000"]) as never);
     const nutriByProfile = new Map(
       ((nutriWalletsRaw as unknown as Array<{ profile_id: string; available_balance: number; blocked_balance: number }>) || [])
         .map((w) => [w.profile_id, w])
@@ -88,6 +94,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       .select("profile_id,amount,status")
       .in("status", ["requested", "approved", "processing"]);
     const pendingReqs = ((pendingReqRaw as Array<{ profile_id: string; amount: number; status: string }>) || []);
+
 
     const sumGroup = (ids: string[], extraWalletMap?: Map<string, { available_balance: number; blocked_balance: number }>) => {
       const idSet = new Set(ids);
