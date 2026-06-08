@@ -60,9 +60,14 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       fetchCoachProfileIds({ onlyProfessionals: true }),
       fetchPartnerProfileIds(),
     ]);
-    const coachProfileIds = coachesRaw.map((c) => c.profile_id);
-    const professionalProfileIds = profsRaw.map((c) => c.profile_id);
-    const partnerProfileIds = partners.map((p) => p.profile_id);
+    // Dedupe by priority: coach > professional > partner.
+    // If a profile is both a coach (non-pro) and professional, it goes under coach (and we
+    // also merge its nutritionist_wallet into the coach totals).
+    const coachSet = new Set(coachesRaw.map((c) => c.profile_id));
+    const professionalProfileIds = profsRaw.map((c) => c.profile_id).filter((id) => !coachSet.has(id));
+    const professionalSet = new Set(professionalProfileIds);
+    const partnerProfileIds = partners.map((p) => p.profile_id).filter((id) => !coachSet.has(id) && !professionalSet.has(id));
+    const coachProfileIds = Array.from(coachSet);
 
     const allProfileIds = Array.from(new Set([...coachProfileIds, ...professionalProfileIds, ...partnerProfileIds]));
 
@@ -73,11 +78,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const wallets = ((walletsRaw as Array<{ profile_id: string; available_balance: number; pending_balance: number }>) || []);
     const walletByProfile = new Map(wallets.map((w) => [w.profile_id, w]));
 
-    // Nutricionistas (profissionais) usam nutritionist_wallets também
+    // Nutricionistas — também usados para coaches que são profissionais (consolidação).
+    const nutriQueryIds = Array.from(new Set([...coachProfileIds, ...professionalProfileIds]));
     const { data: nutriWalletsRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never)
       .select("profile_id,available_balance,blocked_balance" as never)
-      .in("profile_id" as never, (professionalProfileIds.length ? professionalProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+      .in("profile_id" as never, (nutriQueryIds.length ? nutriQueryIds : ["00000000-0000-0000-0000-000000000000"]) as never);
     const nutriByProfile = new Map(
       ((nutriWalletsRaw as unknown as Array<{ profile_id: string; available_balance: number; blocked_balance: number }>) || [])
         .map((w) => [w.profile_id, w])
@@ -88,6 +94,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       .select("profile_id,amount,status")
       .in("status", ["requested", "approved", "processing"]);
     const pendingReqs = ((pendingReqRaw as Array<{ profile_id: string; amount: number; status: string }>) || []);
+
 
     const sumGroup = (ids: string[], extraWalletMap?: Map<string, { available_balance: number; blocked_balance: number }>) => {
       const idSet = new Set(ids);
@@ -110,7 +117,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     return {
       groups: {
-        coach: { label: "Coaches", ...sumGroup(coachProfileIds) },
+        coach: { label: "Coaches", ...sumGroup(coachProfileIds, nutriByProfile) },
         partner: { label: "Parceiros", ...sumGroup(partnerProfileIds) },
         professional: { label: "Profissionais", ...sumGroup(professionalProfileIds, nutriByProfile) },
       },
@@ -137,21 +144,31 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
   .inputValidator((data: { group: PayoutGroup; search?: string }) => data)
   .handler(async ({ context, data }): Promise<PayoutPersonRow[]> => {
     await assertAdmin(context.userId);
+    // Dedupe priority: coach > professional > partner.
+    const [coachesRaw, profsRaw, partnersRaw] = await Promise.all([
+      fetchCoachProfileIds({ onlyProfessionals: false }),
+      fetchCoachProfileIds({ onlyProfessionals: true }),
+      fetchPartnerProfileIds(),
+    ]);
+    const coachSet = new Set(coachesRaw.map((c) => c.profile_id));
+    const professionalIds = profsRaw.map((c) => c.profile_id).filter((id) => !coachSet.has(id));
+    const professionalSet = new Set(professionalIds);
+    const partnerIds = partnersRaw.map((p) => p.profile_id).filter((id) => !coachSet.has(id) && !professionalSet.has(id));
+
     let profileIds: string[] = [];
-    if (data.group === "coach") {
-      profileIds = (await fetchCoachProfileIds({ onlyProfessionals: false })).map((r) => r.profile_id);
-    } else if (data.group === "professional") {
-      profileIds = (await fetchCoachProfileIds({ onlyProfessionals: true })).map((r) => r.profile_id);
-    } else {
-      profileIds = (await fetchPartnerProfileIds()).map((r) => r.profile_id);
-    }
+    if (data.group === "coach") profileIds = Array.from(coachSet);
+    else if (data.group === "professional") profileIds = professionalIds;
+    else profileIds = partnerIds;
     if (profileIds.length === 0) return [];
+
+    // Coaches consolidados: também pegamos nutritionist_wallets caso o coach seja profissional também.
+    const loadNutri = data.group === "coach" || data.group === "professional";
 
     const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
       supabaseAdmin.from("wallets").select("profile_id,available_balance,pending_balance,total_earned,total_withdrawn").in("profile_id", profileIds),
       supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]),
-      data.group === "professional"
+      loadNutri
         ? supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,blocked_balance,total_earned,total_withdrawn" as never).in("profile_id" as never, profileIds as never)
         : Promise.resolve({ data: [] as unknown }),
     ]);
@@ -214,7 +231,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       .select("available_balance,pending_balance,total_earned,total_withdrawn")
       .eq("profile_id", data.profileId)
       .maybeSingle();
-    const { data: nw } = data.group === "professional"
+    const { data: nw } = (data.group === "professional" || data.group === "coach")
       ? await supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle()
       : { data: null };
 
