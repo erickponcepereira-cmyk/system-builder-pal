@@ -519,14 +519,15 @@ function LegacyOrders() {
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  const approvedOnly = transactions.filter((t) => t.status === "paid");
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
         <button onClick={releaseCommissions} className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"><RefreshCw className="h-4 w-4" />Liberar comissões vencidas</button>
       </div>
-      {transactions.length === 0 ? (
-        <div className="rounded-2xl bg-card p-12 text-center"><DollarSign className="h-10 w-10 text-white/20 mx-auto mb-3" /><p className="text-white/50">Nenhum pedido.</p></div>
-      ) : transactions.map((t) => (
+      {approvedOnly.length === 0 ? (
+        <div className="rounded-2xl bg-card p-12 text-center"><DollarSign className="h-10 w-10 text-white/20 mx-auto mb-3" /><p className="text-white/50">Nenhum pedido aprovado.</p></div>
+      ) : approvedOnly.map((t) => (
         <div key={t.id} className="rounded-2xl border border-white/5 bg-card p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
             <div className="flex-1">
