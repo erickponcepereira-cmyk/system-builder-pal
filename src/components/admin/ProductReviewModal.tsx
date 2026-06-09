@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { DEFAULT_PARTNER_FEES } from "@/lib/partnerFinance";
+import { computeFromCharge, DEFAULT_PARTNER_FEES } from "@/lib/partnerFinance";
 import { toast } from "sonner";
 
 type Kind = "partner_products" | "professional_products";
@@ -111,11 +111,10 @@ export function ProductReviewModal({ table, productId, onClose, onChanged }: Pro
   const cardFeePct = product.card_fee_percentage != null ? Number(product.card_fee_percentage) : DEFAULT_PARTNER_FEES.cardFeePct;
   const pixFeePct = product.pix_fee_percentage != null ? Number(product.pix_fee_percentage) : DEFAULT_PARTNER_FEES.pixFeePct;
   const taxPct = product.tax_percentage != null ? Number(product.tax_percentage) : DEFAULT_PARTNER_FEES.taxPct;
-  const sysFee = product.system_fee_fixed != null ? Number(product.system_fee_fixed) : DEFAULT_PARTNER_FEES.systemFeeFixed;
-  const cardFees = (price * (cardFeePct + taxPct)) / 100 + sysFee;
-  const pixFees = (price * (pixFeePct + taxPct)) / 100 + sysFee;
-  const baseCard = Math.max(0, price - cardFees);
-  const basePix = Math.max(0, price - pixFees);
+  const sysFeePct = DEFAULT_PARTNER_FEES.systemFeePct;
+  const coachPct = Number(product.coach_commission_percentage || 0) as 10 | 20 | 30 | 40 | 50;
+  const cardBreakdown = computeFromCharge(price, coachPct, "card", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
+  const pixBreakdown = computeFromCharge(price, coachPct, "pix", { systemFeePct: sysFeePct, taxPct, cardFeePct, pixFeePct });
   const coachAmt = Number(product.coach_commission_amount || 0);
   const l1 = Number(product.network_l1_amount || 0);
   const l2 = Number(product.network_l2_amount || 0);
@@ -179,9 +178,9 @@ export function ProductReviewModal({ table, productId, onClose, onChanged }: Pro
               <Row label="Taxa cartão" value={`${cardFeePct}%`} />
               <Row label="Taxa PIX" value={`${pixFeePct}%`} />
               <Row label="Imposto" value={`${taxPct}%`} />
-              <Row label="Taxa sistema" value={money(sysFee)} />
-              <Row label="Líquido (Cartão)" value={money(baseCard)} />
-              <Row label="Líquido (PIX)" value={money(basePix)} />
+              <Row label="Taxa sistema" value={`${sysFeePct}%`} />
+              <Row label="Líquido (Cartão)" value={money(cardBreakdown.partnerNet)} />
+              <Row label="Líquido (PIX)" value={money(pixBreakdown.partnerNet)} />
             </div>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
               {[
