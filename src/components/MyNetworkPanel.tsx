@@ -181,17 +181,19 @@ export function MyNetworkPanel() {
   );
 }
 
-function Stat({ icon, label, value, hint, accent }: { icon: React.ReactNode; label: string; value: string; hint?: string; accent?: boolean }) {
+function Stat({ icon, label, value, hint, accent, pendingHelp }: { icon: React.ReactNode; label: string; value: string; hint?: string; accent?: boolean; pendingHelp?: boolean }) {
   return (
     <div className="rounded-2xl p-4 w-full" style={{ backgroundColor: "#1A1A1A" }}>
       <div className="flex items-center gap-1.5 text-[11px] text-white/50 mb-1">
         {icon} {label}
+        {pendingHelp && <PendingInfo days={3} />}
       </div>
       <p className={`text-xl font-bold ${accent ? "text-primary" : "text-white"}`}>{value}</p>
       {hint && <p className="text-[10px] text-white/40 mt-0.5">{hint}</p>}
     </div>
   );
 }
+
 
 function WithdrawModal({ profileId, available, onClose }: { profileId: string; available: number; onClose: () => void }) {
   const [amount, setAmount] = useState("");
