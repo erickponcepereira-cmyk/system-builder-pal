@@ -39,29 +39,45 @@ export function StudentReferralModal({
     (async () => {
       const { data: rules } = await supabase
         .from("product_referral_rules")
-        .select("product_id,pre_deduction_fixed,student_referral_percentage,enabled,is_referral_product" as any)
+        .select("product_id,enabled,is_referral_product" as any)
         .eq("enabled", true)
         .eq("is_referral_product" as any, true);
-      const ruleMap = new Map<string, { pre: number; pct: number }>();
-      ((rules as any[]) || []).forEach((r) => {
-        ruleMap.set(r.product_id, {
-          pre: Number(r.pre_deduction_fixed || 0),
-          pct: Number(r.student_referral_percentage || 0),
-        });
-      });
-      const ids = Array.from(ruleMap.keys());
-      const { data: challenges } = ids.length
-        ? await supabase
+      const enabledIds = new Set<string>(((rules as any[]) || []).map((r) => r.product_id));
+      const ids = Array.from(enabledIds);
+      if (ids.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+      const [{ data: challenges }, { data: slots }] = await Promise.all([
+        supabase
           .from("products")
           .select("id,name,price,image_url")
           .eq("status", "active")
-          .in("id", ids)
-        : { data: [] as any[] };
+          .in("id", ids),
+        supabase
+          .from("product_value_slots")
+          .select("product_id,value_type,value_amount,destination,applies_to_student_referral,is_active" as any)
+          .in("product_id", ids)
+          .eq("destination" as any, "referral_student"),
+      ]);
+      const slotByProduct = new Map<string, { type: string; amount: number }>();
+      ((slots as any[]) || []).forEach((s) => {
+        if (s.is_active === false) return;
+        if (s.applies_to_student_referral === false) return;
+        slotByProduct.set(s.product_id, {
+          type: String(s.value_type),
+          amount: Number(s.value_amount || 0),
+        });
+      });
       const out: RefProduct[] = [];
       (challenges || []).forEach((p: any) => {
-        const r = ruleMap.get(p.id);
+        const slot = slotByProduct.get(p.id);
         const price = Number(p.price || 0);
-        const commission = r ? Math.max(0, (price - r.pre) * (r.pct / 100)) : 0;
+        let commission = 0;
+        if (slot) {
+          commission = slot.type === "fixed" ? slot.amount : Math.max(0, price * (slot.amount / 100));
+        }
         out.push({ id: p.id, kind: "challenge", title: p.name, price, imageUrl: p.image_url, commission });
       });
       setProducts(out);
