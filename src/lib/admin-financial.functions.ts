@@ -360,6 +360,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         .from("commissions")
         .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, referred_by_student_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
         .eq("is_referral", true)
+        .ilike("slot_label", "aluno indicador%")
         .in("status", statuses as any)
         .order("created_at", { ascending: false })
         .limit(500);
