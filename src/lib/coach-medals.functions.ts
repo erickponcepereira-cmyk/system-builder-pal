@@ -49,6 +49,8 @@ async function sumOwnVp(coachId: string, sinceIso: string | null): Promise<numbe
   const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
   if (ids.length === 0) return 0;
   let total = 0;
+  // VP = soma única dos pagamentos. Cada store_order paga gera uma transação,
+  // então somar ambos duplicaria o VP. Usamos apenas transactions (fonte canônica).
   let txq = supabaseAdmin
     .from("transactions").select("gross_amount")
     .in("student_id", ids).eq("status", "paid")
@@ -56,14 +58,9 @@ async function sumOwnVp(coachId: string, sinceIso: string | null): Promise<numbe
   if (sinceIso) txq = txq.gte("paid_at", sinceIso);
   const { data: txs } = await txq;
   ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
-  let oq = supabaseAdmin
-    .from("store_orders").select("total_amount")
-    .in("student_id", ids).eq("status", "paid");
-  if (sinceIso) oq = oq.gte("updated_at", sinceIso);
-  const { data: orders } = await oq;
-  ((orders as { total_amount: number }[] | null) || []).forEach((o) => { total += Number(o.total_amount) || 0; });
   return total;
 }
+
 
 export const getIndividualCareer = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
