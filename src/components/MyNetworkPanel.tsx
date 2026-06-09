@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Users, TrendingUp, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { PendingInfo } from "@/components/PendingInfo";
+
+const MIN_WITHDRAWAL = 100;
 
 type Stats = {
   available: number;
