@@ -938,6 +938,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               <UserRound className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione seu aluno"}</p>
+                {selectedClient?.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {selectedClient.coachName}</p>}
                 {selectedClient?.email && <p className="text-[11px] text-muted-foreground">{selectedClient.email}</p>}
                 {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {selectedClient.cpf}</p>}
               </div>
