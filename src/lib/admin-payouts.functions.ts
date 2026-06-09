@@ -13,29 +13,85 @@ async function assertAdmin(userId: string) {
   if (!data || data.role !== "admin") throw new Error("Acesso negado");
 }
 
-export type PayoutGroup = "coach" | "partner" | "professional";
+// Dois grupos: "seller" (coach + parceiro + profissional) e "student_referrer" (aluno indicador).
+// Se um aluno indicador também é coach/parceiro/profissional, ele entra em "seller".
+export type PayoutGroup = "seller" | "student_referrer";
+export type SellerRole = "all" | "coach" | "partner" | "professional";
 
 const n = (v: unknown) => Number(v || 0);
 
 // ============= Helpers =============
 
-async function fetchCoachProfileIds(opts: { onlyProfessionals?: boolean } = {}) {
-  const { data } = await supabaseAdmin
-    .from("coaches")
-    .select("id,profile_id,is_professional")
-    .not("profile_id", "is", null);
-  const rows = (data || []) as Array<{ id: string; profile_id: string; is_professional: boolean | null }>;
-  return opts.onlyProfessionals
-    ? rows.filter((r) => r.is_professional === true)
-    : rows.filter((r) => r.is_professional !== true);
+interface ClassifiedProfiles {
+  coachProfileIds: string[];
+  partnerProfileIds: string[];
+  professionalProfileIds: string[]; // exclui quem já é coach
+  sellerProfileIds: string[]; // união dedup priority: coach > partner > professional
+  sellerRoleByProfile: Map<string, "coach" | "partner" | "professional">;
+  studentByProfile: Map<string, string>; // profile_id -> student_id (quando existe)
 }
 
-async function fetchPartnerProfileIds() {
+async function classifyProfiles(): Promise<ClassifiedProfiles> {
+  const [coachesRaw, partnersRaw, studentsRaw] = await Promise.all([
+    supabaseAdmin.from("coaches").select("id,profile_id,is_professional").not("profile_id", "is", null),
+    supabaseAdmin.from("partners" as never).select("profile_id" as never).not("profile_id" as never, "is" as never, null as never),
+    supabaseAdmin.from("students").select("id,profile_id").not("profile_id", "is", null),
+  ]);
+  const coaches = ((coachesRaw.data as Array<{ profile_id: string; is_professional: boolean | null }>) || []);
+  const partners = ((partnersRaw.data as unknown as Array<{ profile_id: string }>) || []);
+  const students = ((studentsRaw.data as Array<{ id: string; profile_id: string }>) || []);
+
+  const coachSet = new Set<string>();
+  const proSet = new Set<string>();
+  for (const c of coaches) {
+    if (c.is_professional) proSet.add(c.profile_id); else coachSet.add(c.profile_id);
+  }
+  // se for coach e profissional, vira coach
+  for (const id of coachSet) proSet.delete(id);
+
+  const partnerSet = new Set<string>();
+  for (const p of partners) {
+    if (!coachSet.has(p.profile_id) && !proSet.has(p.profile_id)) partnerSet.add(p.profile_id);
+  }
+
+  const studentByProfile = new Map<string, string>();
+  for (const s of students) studentByProfile.set(s.profile_id, s.id);
+
+  const sellerRoleByProfile = new Map<string, "coach" | "partner" | "professional">();
+  for (const id of coachSet) sellerRoleByProfile.set(id, "coach");
+  for (const id of partnerSet) sellerRoleByProfile.set(id, "partner");
+  for (const id of proSet) sellerRoleByProfile.set(id, "professional");
+
+  const sellerProfileIds = [...coachSet, ...partnerSet, ...proSet];
+
+  return {
+    coachProfileIds: [...coachSet],
+    partnerProfileIds: [...partnerSet],
+    professionalProfileIds: [...proSet],
+    sellerProfileIds,
+    sellerRoleByProfile,
+    studentByProfile,
+  };
+}
+
+// Retorna totais de comissões agregados por beneficiary_profile_id.
+interface CommissionAgg { earned: number; blocked: number; available: number; paid: number; }
+async function aggregateCommissionsBy(profileIds: string[]): Promise<Map<string, CommissionAgg>> {
+  const map = new Map<string, CommissionAgg>();
+  if (!profileIds.length) return map;
   const { data } = await supabaseAdmin
-    .from("partners" as never)
-    .select("id,profile_id" as never)
-    .not("profile_id" as never, "is" as never, null as never);
-  return ((data as unknown as Array<{ id: string; profile_id: string }>) || []);
+    .from("commissions")
+    .select("beneficiary_profile_id,amount,status")
+    .in("beneficiary_profile_id", profileIds);
+  for (const r of ((data as Array<{ beneficiary_profile_id: string; amount: number; status: string }>) || [])) {
+    const cur = map.get(r.beneficiary_profile_id) || { earned: 0, blocked: 0, available: 0, paid: 0 };
+    cur.earned += n(r.amount);
+    if (r.status === "pending") cur.blocked += n(r.amount);
+    else if (r.status === "available") cur.available += n(r.amount);
+    else if (r.status === "paid") cur.paid += n(r.amount);
+    map.set(r.beneficiary_profile_id, cur);
+  }
+  return map;
 }
 
 // ============= Dashboard =============
@@ -45,6 +101,7 @@ export interface PayoutsDashboard {
     label: string;
     availableTotal: number;
     blockedTotal: number;
+    earnedTotal: number;
     pendingRequestsCount: number;
     pendingRequestsTotal: number;
     peopleCount: number;
@@ -55,71 +112,106 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<PayoutsDashboard> => {
     await assertAdmin(context.userId);
-    const [coachesRaw, profsRaw, partners] = await Promise.all([
-      fetchCoachProfileIds({ onlyProfessionals: false }),
-      fetchCoachProfileIds({ onlyProfessionals: true }),
-      fetchPartnerProfileIds(),
-    ]);
-    // Dedupe by priority: coach > professional > partner.
-    // If a profile is both a coach (non-pro) and professional, it goes under coach (and we
-    // also merge its nutritionist_wallet into the coach totals).
-    const coachSet = new Set(coachesRaw.map((c) => c.profile_id));
-    const professionalProfileIds = profsRaw.map((c) => c.profile_id).filter((id) => !coachSet.has(id));
-    const professionalSet = new Set(professionalProfileIds);
-    const partnerProfileIds = partners.map((p) => p.profile_id).filter((id) => !coachSet.has(id) && !professionalSet.has(id));
-    const coachProfileIds = Array.from(coachSet);
+    const cls = await classifyProfiles();
 
-    const allProfileIds = Array.from(new Set([...coachProfileIds, ...professionalProfileIds, ...partnerProfileIds]));
-
-    const { data: walletsRaw } = await supabaseAdmin
-      .from("wallets")
-      .select("profile_id,available_balance,pending_balance")
-      .in("profile_id", allProfileIds.length ? allProfileIds : ["00000000-0000-0000-0000-000000000000"]);
-    const wallets = ((walletsRaw as Array<{ profile_id: string; available_balance: number; pending_balance: number }>) || []);
-    const walletByProfile = new Map(wallets.map((w) => [w.profile_id, w]));
-
-    // Nutricionistas — também usados para coaches que são profissionais (consolidação).
-    const nutriQueryIds = Array.from(new Set([...coachProfileIds, ...professionalProfileIds]));
-    const { data: nutriWalletsRaw } = await supabaseAdmin
-      .from("nutritionist_wallets" as never)
-      .select("profile_id,available_balance,blocked_balance" as never)
-      .in("profile_id" as never, (nutriQueryIds.length ? nutriQueryIds : ["00000000-0000-0000-0000-000000000000"]) as never);
-    const nutriByProfile = new Map(
-      ((nutriWalletsRaw as unknown as Array<{ profile_id: string; available_balance: number; blocked_balance: number }>) || [])
-        .map((w) => [w.profile_id, w])
+    // student_referrer: alunos que receberam comissão de indicação e NÃO estão em seller
+    const sellerSet = new Set(cls.sellerProfileIds);
+    const { data: refRecvRaw } = await supabaseAdmin
+      .from("commissions")
+      .select("beneficiary_profile_id")
+      .eq("is_referral", true);
+    const studentReferrerIds = Array.from(
+      new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
+        .map((r) => r.beneficiary_profile_id)
+        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id)))
     );
 
-    const { data: pendingReqRaw } = await supabaseAdmin
+    // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
+    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds);
+    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds);
+
+    // Solicitações pendentes (saques) — sellers usam withdrawal_requests; alunos usam student_withdrawal_requests
+    const { data: wReqs } = await supabaseAdmin
       .from("withdrawal_requests")
       .select("profile_id,amount,status")
       .in("status", ["requested", "approved", "processing"]);
-    const pendingReqs = ((pendingReqRaw as Array<{ profile_id: string; amount: number; status: string }>) || []);
+    const { data: swReqs } = await supabaseAdmin
+      .from("student_withdrawal_requests" as never)
+      .select("student_id,amount,status" as never)
+      .in("status" as never, ["requested", "approved", "processing"] as never);
 
+    const wReqsArr = ((wReqs as Array<{ profile_id: string; amount: number }>) || []);
+    const swReqsArr = ((swReqs as unknown as Array<{ student_id: string; amount: number }>) || []);
+    const studentToProfile = new Map<string, string>();
+    for (const [pid, sid] of cls.studentByProfile.entries()) studentToProfile.set(sid, pid);
 
-    const sumGroup = (ids: string[], extraWalletMap?: Map<string, { available_balance: number; blocked_balance: number }>) => {
-      const idSet = new Set(ids);
-      let available = 0, blocked = 0;
-      for (const id of ids) {
-        const w = walletByProfile.get(id);
-        if (w) { available += n(w.available_balance); blocked += n(w.pending_balance); }
-        const ex = extraWalletMap?.get(id);
-        if (ex) { available += n(ex.available_balance); blocked += n(ex.blocked_balance); }
-      }
-      const reqs = pendingReqs.filter((r) => idSet.has(r.profile_id));
-      return {
-        availableTotal: available,
-        blockedTotal: blocked,
-        pendingRequestsCount: reqs.length,
-        pendingRequestsTotal: reqs.reduce((s, r) => s + n(r.amount), 0),
-        peopleCount: ids.length,
-      };
+    const sumReq = (ids: Set<string>) => {
+      const sellerReqs = wReqsArr.filter((r) => ids.has(r.profile_id));
+      const studReqs = swReqsArr.filter((r) => ids.has(studentToProfile.get(r.student_id) || ""));
+      const all = [...sellerReqs.map((r) => n(r.amount)), ...studReqs.map((r) => n(r.amount))];
+      return { count: all.length, total: all.reduce((s, x) => s + x, 0) };
     };
+
+    // Sellers: wallets + nutritionist_wallets + student_wallets (caso seja também aluno indicador)
+    const { data: walletsRaw } = await supabaseAdmin
+      .from("wallets").select("profile_id,available_balance")
+      .in("profile_id", cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]);
+    const walletByProfile = new Map(((walletsRaw as Array<{ profile_id: string; available_balance: number }>) || []).map((w) => [w.profile_id, w]));
+    const { data: nutriRaw } = await supabaseAdmin
+      .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
+      .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+    const nutriByProfile = new Map(((nutriRaw as unknown as Array<{ profile_id: string; available_balance: number }>) || []).map((w) => [w.profile_id, w]));
+
+    // student_wallets para sellers que também são alunos + student_referrer
+    const allStudentIds = Array.from(new Set([
+      ...cls.sellerProfileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[],
+      ...studentReferrerIds.map((p) => cls.studentByProfile.get(p)!).filter(Boolean),
+    ]));
+    const { data: stuWalletsRaw } = await supabaseAdmin
+      .from("student_wallets").select("student_id,available_balance")
+      .in("student_id", allStudentIds.length ? allStudentIds : ["00000000-0000-0000-0000-000000000000"]);
+    const stuWalletByStudent = new Map(((stuWalletsRaw as Array<{ student_id: string; available_balance: number }>) || []).map((w) => [w.student_id, w]));
+
+    let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
+    for (const pid of cls.sellerProfileIds) {
+      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+      const sid = cls.studentByProfile.get(pid);
+      if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
+      const agg = sellerAgg.get(pid);
+      if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+    }
+
+    let studRefAvail = 0, studRefBlocked = 0, studRefEarned = 0;
+    for (const pid of studentReferrerIds) {
+      const sid = cls.studentByProfile.get(pid)!;
+      studRefAvail += n(stuWalletByStudent.get(sid)?.available_balance);
+      const agg = studentRefAgg.get(pid);
+      if (agg) { studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+    }
+
+    const sellerReqInfo = sumReq(new Set(cls.sellerProfileIds));
+    const studRefReqInfo = sumReq(new Set(studentReferrerIds));
 
     return {
       groups: {
-        coach: { label: "Coaches", ...sumGroup(coachProfileIds, nutriByProfile) },
-        partner: { label: "Parceiros", ...sumGroup(partnerProfileIds) },
-        professional: { label: "Profissionais", ...sumGroup(professionalProfileIds, nutriByProfile) },
+        seller: {
+          label: "Coach / Parceiro / Profissional",
+          availableTotal: sellerAvail,
+          blockedTotal: sellerBlocked,
+          earnedTotal: sellerEarned,
+          pendingRequestsCount: sellerReqInfo.count,
+          pendingRequestsTotal: sellerReqInfo.total,
+          peopleCount: cls.sellerProfileIds.length,
+        },
+        student_referrer: {
+          label: "Aluno Indicador",
+          availableTotal: studRefAvail,
+          blockedTotal: studRefBlocked,
+          earnedTotal: studRefEarned,
+          pendingRequestsCount: studRefReqInfo.count,
+          pendingRequestsTotal: studRefReqInfo.total,
+          peopleCount: studentReferrerIds.length,
+        },
       },
     };
   });
@@ -137,64 +229,100 @@ export interface PayoutPersonRow {
   pendingRequestId: string | null;
   pendingRequestAmount: number;
   pendingRequestStatus: string | null;
+  role: "coach" | "partner" | "professional" | "student_referrer";
 }
 
 export const listPayoutPeople = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((data: { group: PayoutGroup; search?: string }) => data)
+  .inputValidator((data: { group: PayoutGroup; search?: string; roleFilter?: SellerRole }) => data)
   .handler(async ({ context, data }): Promise<PayoutPersonRow[]> => {
     await assertAdmin(context.userId);
-    // Dedupe priority: coach > professional > partner.
-    const [coachesRaw, profsRaw, partnersRaw] = await Promise.all([
-      fetchCoachProfileIds({ onlyProfessionals: false }),
-      fetchCoachProfileIds({ onlyProfessionals: true }),
-      fetchPartnerProfileIds(),
-    ]);
-    const coachSet = new Set(coachesRaw.map((c) => c.profile_id));
-    const professionalIds = profsRaw.map((c) => c.profile_id).filter((id) => !coachSet.has(id));
-    const professionalSet = new Set(professionalIds);
-    const partnerIds = partnersRaw.map((p) => p.profile_id).filter((id) => !coachSet.has(id) && !professionalSet.has(id));
+    const cls = await classifyProfiles();
 
     let profileIds: string[] = [];
-    if (data.group === "coach") profileIds = Array.from(coachSet);
-    else if (data.group === "professional") profileIds = professionalIds;
-    else profileIds = partnerIds;
+    let roleOf: (pid: string) => PayoutPersonRow["role"];
+
+    if (data.group === "seller") {
+      const f = data.roleFilter || "all";
+      if (f === "coach") profileIds = cls.coachProfileIds;
+      else if (f === "partner") profileIds = cls.partnerProfileIds;
+      else if (f === "professional") profileIds = cls.professionalProfileIds;
+      else profileIds = cls.sellerProfileIds;
+      roleOf = (pid) => cls.sellerRoleByProfile.get(pid) || "coach";
+    } else {
+      const sellerSet = new Set(cls.sellerProfileIds);
+      const { data: refRecvRaw } = await supabaseAdmin
+        .from("commissions").select("beneficiary_profile_id").eq("is_referral", true);
+      profileIds = Array.from(new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
+        .map((r) => r.beneficiary_profile_id)
+        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id))));
+      roleOf = () => "student_referrer";
+    }
+
     if (profileIds.length === 0) return [];
 
-    // Coaches consolidados: também pegamos nutritionist_wallets caso o coach seja profissional também.
-    const loadNutri = data.group === "coach" || data.group === "professional";
-
-    const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }] = await Promise.all([
+    const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }, { data: stuW }, { data: stuReqs }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
-      supabaseAdmin.from("wallets").select("profile_id,available_balance,pending_balance,total_earned,total_withdrawn").in("profile_id", profileIds),
+      supabaseAdmin.from("wallets").select("profile_id,available_balance,total_withdrawn").in("profile_id", profileIds),
       supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]),
-      loadNutri
-        ? supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,blocked_balance,total_earned,total_withdrawn" as never).in("profile_id" as never, profileIds as never)
-        : Promise.resolve({ data: [] as unknown }),
+      supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,total_withdrawn" as never).in("profile_id" as never, profileIds as never),
+      (async () => {
+        const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
+        if (!sids.length) return { data: [] as unknown };
+        return supabaseAdmin.from("student_wallets").select("student_id,available_balance,total_withdrawn").in("student_id", sids);
+      })(),
+      (async () => {
+        const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
+        if (!sids.length) return { data: [] as unknown };
+        return supabaseAdmin.from("student_withdrawal_requests" as never).select("id,student_id,amount,status,requested_at" as never).in("student_id" as never, sids as never).in("status" as never, ["requested", "approved", "processing"] as never);
+      })(),
     ]);
 
-    const wMap = new Map(((wallets as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
+    const commAgg = await aggregateCommissionsBy(profileIds);
+
+    const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
+    const swMap = new Map(((stuW as unknown as Array<{ student_id: string; available_balance: number; total_withdrawn: number }>) || []).map((w) => [w.student_id, w]));
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
+    }
+    const stuReqsByStudent = new Map<string, { id: string; amount: number; status: string }>();
+    for (const r of ((stuReqs as unknown as Array<{ id: string; student_id: string; amount: number; status: string }>) || [])) {
+      if (!stuReqsByStudent.has(r.student_id)) stuReqsByStudent.set(r.student_id, { id: r.id, amount: n(r.amount), status: r.status });
     }
 
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const w = wMap.get(p.id);
       const nw = nMap.get(p.id);
-      const r = reqMap.get(p.id);
+      const sid = cls.studentByProfile.get(p.id);
+      const sw = sid ? swMap.get(sid) : undefined;
+      const role = roleOf(p.id);
+      // saque: para aluno indicador puro usamos student_withdrawal_requests; sellers normalmente o withdrawal_requests
+      let r = reqMap.get(p.id);
+      if (!r && role === "student_referrer" && sid) {
+        const sr = stuReqsByStudent.get(sid);
+        if (sr) r = sr;
+      }
+      const agg = commAgg.get(p.id);
+      const available = role === "student_referrer"
+        ? n(sw?.available_balance)
+        : n(w?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
+      const totalWithdrawn = role === "student_referrer"
+        ? n(sw?.total_withdrawn)
+        : n(w?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
       return {
         profileId: p.id,
         name: p.name || "—",
         email: p.email,
-        available: n(w?.available_balance) + n(nw?.available_balance),
-        blocked: n(w?.pending_balance) + n(nw?.blocked_balance),
-        totalEarned: n(w?.total_earned) + n(nw?.total_earned),
-        totalWithdrawn: n(w?.total_withdrawn) + n(nw?.total_withdrawn),
+        available,
+        blocked: agg?.blocked || 0,
+        totalEarned: agg?.earned || 0,
+        totalWithdrawn,
         pendingRequestId: r?.id || null,
         pendingRequestAmount: r?.amount || 0,
         pendingRequestStatus: r?.status || null,
+        role,
       };
     });
 
@@ -209,7 +337,7 @@ export interface PayoutDetails {
   profile: { id: string; name: string; email: string | null };
   wallet: { available: number; blocked: number; totalEarned: number; totalWithdrawn: number };
   sales: Array<{ id: string; date: string | null; amount: number; status: string | null; product: string | null; student: string | null }>;
-  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null }>;
+  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; isReferral: boolean }>;
   withdrawals: Array<{ id: string; amount: number; status: string | null; requested_at: string | null; paid_at: string | null; notes: string | null; pix_key: string | null }>;
   totals: { salesCount: number; salesAmount: number; commissionsAvailable: number; commissionsPending: number; commissionsPaid: number };
 }
@@ -220,33 +348,23 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<PayoutDetails> => {
     await assertAdmin(context.userId);
     const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("id,name,email")
-      .eq("id", data.profileId)
-      .maybeSingle();
+      .from("profiles").select("id,name,email").eq("id", data.profileId).maybeSingle();
     if (!profile) throw new Error("Perfil não encontrado");
 
-    const { data: w } = await supabaseAdmin
-      .from("wallets")
-      .select("available_balance,pending_balance,total_earned,total_withdrawn")
-      .eq("profile_id", data.profileId)
-      .maybeSingle();
-    const { data: nw } = (data.group === "professional" || data.group === "coach")
-      ? await supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle()
-      : { data: null };
+    const cls = await classifyProfiles();
+    const sid = cls.studentByProfile.get(data.profileId);
 
-    // Vendas (transações onde a pessoa é vendedora)
-    // - Coach/Profissional: via students.coach_id quando coach_id casa com o coach desse profile
-    // - Partner: via partner_product_orders.partner_id
+    const [{ data: w }, { data: nw }, { data: sw }] = await Promise.all([
+      supabaseAdmin.from("wallets").select("available_balance,total_withdrawn").eq("profile_id", data.profileId).maybeSingle(),
+      supabaseAdmin.from("nutritionist_wallets" as never).select("available_balance,total_withdrawn" as never).eq("profile_id" as never, data.profileId as never).maybeSingle(),
+      sid ? supabaseAdmin.from("student_wallets").select("available_balance,total_withdrawn").eq("student_id", sid).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+
+    // Vendas (transações da pessoa enquanto vendedor coach)
     let sales: PayoutDetails["sales"] = [];
-
     const { data: coachRow } = await supabaseAdmin
-      .from("coaches")
-      .select("id")
-      .eq("profile_id", data.profileId)
-      .maybeSingle();
+      .from("coaches").select("id").eq("profile_id", data.profileId).maybeSingle();
     const coachId = (coachRow as { id?: string } | null)?.id;
-
     if (coachId) {
       const { data: stuRows } = await supabaseAdmin.from("students").select("id,profiles!students_profile_id_fkey(name)").eq("coach_id", coachId);
       const studentIds = ((stuRows as Array<{ id: string; profiles?: { name: string } | null }>) || []).map((s) => s.id);
@@ -262,50 +380,68 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         if (data.toDate) q = q.lte("created_at", data.toDate);
         const { data: txs } = await q;
         sales = ((txs as Array<{ id: string; gross_amount: number; status: string; created_at: string | null; paid_at: string | null; student_id: string; products?: { name: string } | null }>) || []).map((t) => ({
-          id: t.id,
-          date: t.paid_at || t.created_at,
-          amount: n(t.gross_amount),
-          status: t.status,
-          product: t.products?.name || null,
-          student: studentNameById.get(t.student_id) || null,
+          id: t.id, date: t.paid_at || t.created_at, amount: n(t.gross_amount), status: t.status,
+          product: t.products?.name || null, student: studentNameById.get(t.student_id) || null,
         }));
       }
     }
 
-    // Comissões
+    // Comissões — sempre filtradas por beneficiary = essa pessoa
     let qc = supabaseAdmin
       .from("commissions")
-      .select("id,amount,status,level,created_at,transaction_id")
+      .select("id,amount,status,level,created_at,transaction_id,is_referral")
       .eq("beneficiary_profile_id", data.profileId)
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.fromDate) qc = qc.gte("created_at", data.fromDate);
     if (data.toDate) qc = qc.lte("created_at", data.toDate);
     const { data: commsRaw } = await qc;
-    const commissions = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null }>) || []).map((c) => ({
-      id: c.id, date: c.created_at, amount: n(c.amount), status: c.status, level: c.level, transactionId: c.transaction_id,
+    const commissions = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null }>) || []).map((c) => ({
+      id: c.id, date: c.created_at, amount: n(c.amount), status: c.status, level: c.level, transactionId: c.transaction_id, isReferral: !!c.is_referral,
     }));
 
-    // Histórico de saques
+    // Saques: combina os dois canais
     const { data: wdRaw } = await supabaseAdmin
       .from("withdrawal_requests")
       .select("id,amount,status,requested_at,paid_at,notes,pix_key")
       .eq("profile_id", data.profileId)
       .order("requested_at", { ascending: false });
-    const withdrawals = ((wdRaw as Array<PayoutDetails["withdrawals"][number]>) || []);
+    const sellerWithdrawals = ((wdRaw as Array<PayoutDetails["withdrawals"][number]>) || []);
+    let studentWithdrawals: PayoutDetails["withdrawals"] = [];
+    if (sid) {
+      const { data: swdRaw } = await supabaseAdmin
+        .from("student_withdrawal_requests" as never)
+        .select("id,amount,status,requested_at,paid_at,notes,pix_key" as never)
+        .eq("student_id" as never, sid as never)
+        .order("requested_at" as never, { ascending: false });
+      studentWithdrawals = ((swdRaw as unknown as Array<PayoutDetails["withdrawals"][number]>) || []);
+    }
+    const withdrawals = [...sellerWithdrawals, ...studentWithdrawals].sort((a, b) =>
+      (b.requested_at || "").localeCompare(a.requested_at || "")
+    );
 
     const commissionsAvailable = commissions.filter((c) => c.status === "available").reduce((s, c) => s + c.amount, 0);
     const commissionsPending = commissions.filter((c) => c.status === "pending").reduce((s, c) => s + c.amount, 0);
     const commissionsPaid = commissions.filter((c) => c.status === "paid").reduce((s, c) => s + c.amount, 0);
 
+    // Derivar total_earned/blocked das comissões reais (fonte da verdade)
+    const totalEarned = commissions.reduce((s, c) => s + c.amount, 0);
+    const blocked = commissionsPending;
+
+    const available = data.group === "student_referrer"
+      ? n((sw as Record<string, number> | null)?.available_balance)
+      : n((w as Record<string, number> | null)?.available_balance)
+        + n((nw as Record<string, number> | null)?.available_balance)
+        + n((sw as Record<string, number> | null)?.available_balance);
+    const totalWithdrawn = data.group === "student_referrer"
+      ? n((sw as Record<string, number> | null)?.total_withdrawn)
+      : n((w as Record<string, number> | null)?.total_withdrawn)
+        + n((nw as Record<string, number> | null)?.total_withdrawn)
+        + n((sw as Record<string, number> | null)?.total_withdrawn);
+
     return {
       profile: profile as { id: string; name: string; email: string | null },
-      wallet: {
-        available: n((w as Record<string, number> | null)?.available_balance) + n((nw as Record<string, number> | null)?.available_balance),
-        blocked: n((w as Record<string, number> | null)?.pending_balance) + n((nw as Record<string, number> | null)?.blocked_balance),
-        totalEarned: n((w as Record<string, number> | null)?.total_earned) + n((nw as Record<string, number> | null)?.total_earned),
-        totalWithdrawn: n((w as Record<string, number> | null)?.total_withdrawn) + n((nw as Record<string, number> | null)?.total_withdrawn),
-      },
+      wallet: { available, blocked, totalEarned, totalWithdrawn },
       sales,
       commissions,
       withdrawals,
@@ -330,6 +466,7 @@ export interface PendingWithdrawalRow {
   pix_key_type: string | null;
   requested_at: string | null;
   group: PayoutGroup | null;
+  sellerRole: "coach" | "partner" | "professional" | null;
 }
 
 export const listPendingWithdrawals = createServerFn({ method: "POST" })
@@ -342,26 +479,19 @@ export const listPendingWithdrawals = createServerFn({ method: "POST" })
       .in("status", ["requested", "approved", "processing"])
       .order("requested_at", { ascending: false });
 
-    const profileIds = Array.from(new Set(((rows as Array<{ profile_id: string }>) || []).map((r) => r.profile_id)));
-    const [coachesPro, partners] = await Promise.all([
-      fetchCoachProfileIds({ onlyProfessionals: true }),
-      fetchPartnerProfileIds(),
-    ]);
-    const professionalSet = new Set(coachesPro.map((c) => c.profile_id));
-    const partnerSet = new Set(partners.map((p) => p.profile_id));
+    const cls = await classifyProfiles();
 
-    return ((rows as Array<{ id: string; profile_id: string; amount: number; status: string | null; pix_key: string | null; pix_key_type: string | null; requested_at: string | null; profiles: { name: string; email: string | null } | null }>) || []).map((r) => ({
-      id: r.id,
-      profileId: r.profile_id,
-      name: r.profiles?.name || "—",
-      email: r.profiles?.email || null,
-      amount: n(r.amount),
-      status: r.status,
-      pix_key: r.pix_key,
-      pix_key_type: r.pix_key_type,
-      requested_at: r.requested_at,
-      group: professionalSet.has(r.profile_id) ? "professional" : partnerSet.has(r.profile_id) ? "partner" : profileIds.includes(r.profile_id) ? "coach" : null,
-    }));
+    return ((rows as Array<{ id: string; profile_id: string; amount: number; status: string | null; pix_key: string | null; pix_key_type: string | null; requested_at: string | null; profiles: { name: string; email: string | null } | null }>) || []).map((r) => {
+      const sellerRole = cls.sellerRoleByProfile.get(r.profile_id) || null;
+      return {
+        id: r.id, profileId: r.profile_id,
+        name: r.profiles?.name || "—", email: r.profiles?.email || null,
+        amount: n(r.amount), status: r.status,
+        pix_key: r.pix_key, pix_key_type: r.pix_key_type, requested_at: r.requested_at,
+        group: sellerRole ? "seller" : "student_referrer",
+        sellerRole,
+      };
+    });
   });
 
 // ============= Baixar saque manualmente =============
@@ -381,7 +511,6 @@ export const registerManualPayout = createServerFn({ method: "POST" })
     const available = n((w as { available_balance?: number } | null)?.available_balance);
     if (available < data.amount) throw new Error(`Saldo disponível insuficiente (R$ ${available.toFixed(2)})`);
 
-    // Cria solicitação já aprovada e marca como paga via RPC (debita a carteira automaticamente)
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("withdrawal_requests")
       .insert({
