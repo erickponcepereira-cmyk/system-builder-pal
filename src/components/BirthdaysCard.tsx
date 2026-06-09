@@ -8,6 +8,7 @@ type Person = {
   birthdate: string | null;
   avatar_url?: string | null;
   role?: string | null;
+  coachName?: string | null;
 };
 
 type Scope = "coach-month" | "week" | "admin-global";
