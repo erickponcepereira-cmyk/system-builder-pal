@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2 } from "lucide-react";
+import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2, Salad } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,7 @@ import {
   type PayoutDetails,
   type PendingWithdrawalRow,
 } from "@/lib/admin-payouts.functions";
+import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 
 export const Route = createFileRoute("/admin/payments")({
   component: AdminPayments,
@@ -43,7 +44,7 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "seller" | "student_referrer" | "orders" | "mp";
+  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sellerRole, setSellerRole] = useState<SellerRole>("all");
 
@@ -51,7 +52,7 @@ function AdminPayments() {
     <>
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-white">Pagamentos</h1>
-        <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais e alunos indicadores.</p>
+        <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais, nutricionistas e alunos indicadores.</p>
       </div>
 
       <div className="mb-4 flex gap-1 rounded-xl bg-card p-1 overflow-x-auto">
@@ -59,6 +60,7 @@ function AdminPayments() {
           { k: "dashboard", l: "Dashboard" },
           { k: "seller", l: "Coach / Parceiro / Profissional" },
           { k: "student_referrer", l: "Aluno Indicador" },
+          { k: "nutritionist", l: "Nutricionistas" },
           { k: "orders", l: "Pedidos" },
           { k: "mp", l: "Mercado Pago" },
         ].map((t) => (
@@ -81,6 +83,7 @@ function AdminPayments() {
       {activeTab === "student_referrer" && (
         <GroupPanel key="stu" group="student_referrer" />
       )}
+      {activeTab === "nutritionist" && <NutritionistPanel />}
       {activeTab === "orders" && <LegacyOrders />}
       {activeTab === "mp" && <LegacyMp />}
     </>
@@ -619,6 +622,96 @@ function LegacyMp() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============= Nutricionistas =============
+
+function NutritionistPanel() {
+  const fetchWallets = useServerFn(listNutritionistWallets);
+  const [rows, setRows] = useState<NutritionistWalletRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try { setRows(await fetchWallets()); }
+    catch (e: any) { toast.error(e?.message || "Erro ao carregar carteiras"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => r.name.toLowerCase().includes(q) || (r.email || "").toLowerCase().includes(q));
+  }, [rows, search]);
+
+  const totals = useMemo(() => rows.reduce((acc, r) => {
+    acc.available += r.available_balance;
+    acc.blocked += r.blocked_balance;
+    acc.earned += r.total_earned;
+    acc.withdrawn += r.total_withdrawn;
+    return acc;
+  }, { available: 0, blocked: 0, earned: 0, withdrawn: 0 }), [rows]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        <SummaryCard icon={Wallet} title="Disponível" value={fmt(totals.available)} accent />
+        <SummaryCard icon={TrendingDown} title="Bloqueado" value={fmt(totals.blocked)} />
+        <SummaryCard icon={DollarSign} title="Total ganho" value={fmt(totals.earned)} />
+        <SummaryCard icon={Check} title="Total sacado" value={fmt(totals.withdrawn)} />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar nutricionista" className="w-full rounded-lg bg-white/5 border border-white/10 pl-9 pr-3 py-2 text-sm text-white" />
+        </div>
+        <button onClick={load} className="rounded-lg bg-white/5 p-2 text-white/70 hover:bg-white/10"><RefreshCw className="h-4 w-4" /></button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl p-12 text-center" style={{ backgroundColor: "#1A1A1A" }}>
+          <Salad className="h-10 w-10 text-white/20 mx-auto mb-3" />
+          <p className="text-white/50">Nenhuma carteira de nutricionista encontrada.</p>
+        </div>
+      ) : (
+        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
+          <table className="w-full text-sm">
+            <thead className="bg-white/5 text-xs uppercase tracking-wider text-white/40">
+              <tr>
+                <th className="text-left px-4 py-3">Nutricionista</th>
+                <th className="text-right px-4 py-3">Disponível</th>
+                <th className="text-right px-4 py-3">Bloqueado</th>
+                <th className="text-right px-4 py-3">Total ganho</th>
+                <th className="text-right px-4 py-3">Total sacado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => (
+                <tr key={r.profile_id} className="border-t border-white/5 hover:bg-white/[0.02]">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-white">{r.name}</span>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase text-white/45">Nutricionista</span>
+                    </div>
+                    <div className="text-xs text-white/40">{r.email}</div>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-primary">{fmt(r.available_balance)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(r.blocked_balance)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(r.total_earned)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-white/60">{fmt(r.total_withdrawn)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
