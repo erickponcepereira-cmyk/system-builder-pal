@@ -211,7 +211,10 @@ export function WalletTab() {
           <Unlock className="h-4 w-4 text-primary-foreground/80" />
         </div>
         <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(directAvail)}</p>
-        <p className="text-xs text-primary-foreground/70 mt-1">+ {mask(split?.direct.pending ?? 0)} pendente</p>
+        <p className="text-xs text-primary-foreground/70 mt-1 inline-flex items-center gap-1.5">
+          + {mask(split?.direct.pending ?? 0)} pendente
+          <PendingInfo days={3} />
+        </p>
       </div>
       <div className="grid gap-3 grid-cols-2">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
