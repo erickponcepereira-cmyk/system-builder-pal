@@ -52,6 +52,7 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
     (async () => {
       setLoading(true);
       try {
+        let list: Person[] = [];
         if (scope === "coach-month" && coachId) {
           const { data: students } = await supabase
             .from("students")
@@ -59,21 +60,34 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
             .eq("coach_id", coachId);
           const ids = (students || []).map((s) => s.profile_id);
           if (ids.length === 0) {
-            setPeople([]);
+            list = [];
           } else {
             const { data } = await supabase
               .from("profiles")
               .select("id,name,birthdate,avatar_url,role")
               .in("id", ids);
-            setPeople((data as Person[]) || []);
+            list = (data as Person[]) || [];
           }
         } else {
           const { data } = await supabase
             .from("profiles")
             .select("id,name,birthdate,avatar_url,role")
             .not("birthdate", "is", null);
-          setPeople((data as Person[]) || []);
+          list = (data as Person[]) || [];
         }
+
+        // Enriquecer com nome do coach vinculado quando houver registro de aluno
+        if (list.length) {
+          const profileIds = list.map((p) => p.id);
+          const { data: stu } = await supabase
+            .from("students")
+            .select("profile_id,coach:coaches!students_coach_id_fkey(profiles:profile_id(name))")
+            .in("profile_id", profileIds);
+          const map = new Map<string, string | null>();
+          ((stu || []) as any[]).forEach((r) => map.set(r.profile_id, r.coach?.profiles?.name || null));
+          list = list.map((p) => ({ ...p, coachName: map.get(p.id) || null }));
+        }
+        setPeople(list);
       } finally {
         setLoading(false);
       }
