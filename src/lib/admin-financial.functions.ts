@@ -186,11 +186,14 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       buckets.total += amt;
     }
 
-    // Referrals (aluno → aluno) — agregado por aluno indicador
+    // Referrals (aluno → aluno) — apenas a comissão do próprio aluno indicador
+    // (slot "aluno indicador"). Linhas/Vendedor da mesma venda vão para os buckets
+    // de coaches/rede.
     const { data: refRows } = await supabaseAdmin
       .from("commissions")
-      .select("amount, status, referred_by_student_id, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
-      .eq("is_referral", true);
+      .select("amount, status, referred_by_student_id, beneficiary_profile_id, slot_label, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
+      .eq("is_referral", true)
+      .ilike("slot_label", "aluno indicador%");
     const refMap = new Map<string, RecipientTotal>();
     let refPending = 0, refAvailable = 0, refPaid = 0;
     for (const r of refRows || []) {
