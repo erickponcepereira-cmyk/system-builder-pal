@@ -186,11 +186,14 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       buckets.total += amt;
     }
 
-    // Referrals (aluno → aluno) — agregado por aluno indicador
+    // Referrals (aluno → aluno) — apenas a comissão do próprio aluno indicador
+    // (slot "aluno indicador"). Linhas/Vendedor da mesma venda vão para os buckets
+    // de coaches/rede.
     const { data: refRows } = await supabaseAdmin
       .from("commissions")
-      .select("amount, status, referred_by_student_id, beneficiary_profile_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
-      .eq("is_referral", true);
+      .select("amount, status, referred_by_student_id, beneficiary_profile_id, slot_label, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
+      .eq("is_referral", true)
+      .ilike("slot_label", "aluno indicador%");
     const refMap = new Map<string, RecipientTotal>();
     let refPending = 0, refAvailable = 0, refPaid = 0;
     for (const r of refRows || []) {
@@ -357,6 +360,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         .from("commissions")
         .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, referred_by_student_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
         .eq("is_referral", true)
+        .ilike("slot_label", "aluno indicador%")
         .in("status", statuses as any)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -424,8 +428,9 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const filtered = (rows || []).filter((c: any) => {
-      if (c.is_referral) return false; // tratado pelo bucket "referrals"
       const slot = String(c.slot_label || "").toLowerCase();
+      // Apenas a comissão do aluno indicador vai para o bucket "referrals".
+      if (slot.startsWith("aluno indicador")) return false;
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
       const isNetwork = Number(c.level || 0) > 0;
       if (data.bucket === "network") return isNetwork && !isSystem;
