@@ -316,7 +316,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     setClients(baseClients);
     // Não selecionar aluno automaticamente — coach precisa escolher.
     // Sales history (orders for own students or created by this coach)
-    const studentIds = normalizedClients.map((s) => s.id);
+    const studentIds = baseClients.map((s: SaleClient) => s.id);
     const orFilter = [
       studentIds.length ? `student_id.in.(${studentIds.join(",")})` : null,
       `metadata->>created_by_coach_id.eq.${coach.id}`,
