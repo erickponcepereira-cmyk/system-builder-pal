@@ -178,9 +178,9 @@ export function ProductReviewModal({ table, productId, onClose, onChanged }: Pro
               <Row label="Taxa cartão" value={`${cardFeePct}%`} />
               <Row label="Taxa PIX" value={`${pixFeePct}%`} />
               <Row label="Imposto" value={`${taxPct}%`} />
-              <Row label="Taxa sistema" value={money(sysFee)} />
-              <Row label="Líquido (Cartão)" value={money(baseCard)} />
-              <Row label="Líquido (PIX)" value={money(basePix)} />
+              <Row label="Taxa sistema" value={`${sysFeePct}%`} />
+              <Row label="Líquido (Cartão)" value={money(cardBreakdown.partnerNet)} />
+              <Row label="Líquido (PIX)" value={money(pixBreakdown.partnerNet)} />
             </div>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
               {[
