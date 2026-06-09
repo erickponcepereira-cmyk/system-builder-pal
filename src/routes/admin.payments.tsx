@@ -12,6 +12,7 @@ import {
   registerManualPayout,
   updateWithdrawalStatus,
   type PayoutGroup,
+  type SellerRole,
   type PayoutsDashboard,
   type PayoutPersonRow,
   type PayoutDetails,
