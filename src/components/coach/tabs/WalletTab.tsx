@@ -144,6 +144,7 @@ export function WalletTab() {
     if (!bank.pix_key.trim()) { toast.error("Informe sua chave PIX"); return; }
     const value = Number(amount);
     if (!value || value <= 0) { toast.error("Informe o valor do saque"); return; }
+    if (value < MIN_WITHDRAWAL) { toast.error(`Saque mínimo: ${brl(MIN_WITHDRAWAL)}`); return; }
     if (value > withdrawableMax) {
       toast.error(networkLocked
         ? `Valor maior que o disponível para saque. Sua rede está bloqueada — bata a meta mensal para liberar ${brl(networkAvail)}.`
