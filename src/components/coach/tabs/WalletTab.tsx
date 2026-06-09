@@ -513,7 +513,7 @@ export function WalletTab() {
                 <span className="mb-1 block">Valor do saque (R$) * — mín {brl(MIN_WITHDRAWAL)} · máx {brl(withdrawableMax)}</span>
                 <input type="number" step="0.01" min={MIN_WITHDRAWAL} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" placeholder="0,00" />
               </label>
-              </label>
+
               <label className="block text-xs text-white/60">
                 <span className="mb-1 block">Tipo da chave PIX *</span>
                 <select value={bank.pix_key_type} onChange={(e) => setBank({ ...bank, pix_key_type: e.target.value })} className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
