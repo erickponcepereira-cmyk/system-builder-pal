@@ -291,7 +291,10 @@ function GroupPanel({ group, sellerRole, onChangeSellerRole }: { group: PayoutGr
               {filtered.map((p) => (
                 <tr key={p.profileId} className="border-t border-white/5 hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelected(p)}>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-white">{p.name}</div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-white">{p.name}</span>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase text-white/45">{roleLabel(p.role)}</span>
+                    </div>
                     <div className="text-xs text-white/40">{p.email}</div>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-primary">{fmt(p.available)}</td>
