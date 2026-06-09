@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2 } from "lucide-react";
+import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2, Salad } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,7 @@ import {
   type PayoutDetails,
   type PendingWithdrawalRow,
 } from "@/lib/admin-payouts.functions";
+import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 
 export const Route = createFileRoute("/admin/payments")({
   component: AdminPayments,
