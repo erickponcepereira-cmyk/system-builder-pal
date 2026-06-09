@@ -229,7 +229,7 @@ function WithdrawModal({ profileId, available, onClose }: { profileId: string; a
           <h3 className="text-base font-bold text-white">Solicitar saque PIX</h3>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X className="h-5 w-5" /></button>
         </div>
-        <p className="text-xs text-white/50">Disponível para saque: <b className="text-primary">{brl(available)}</b></p>
+        <p className="text-xs text-white/50">Disponível para saque: <b className="text-primary">{brl(available)}</b> · mín {brl(MIN_WITHDRAWAL)}</p>
         <div>
           <label className="text-[11px] text-white/60">Valor</label>
           <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full mt-1 rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white" />
