@@ -473,20 +473,43 @@ async function listFlowForOrder(sourceKind: string, sourceId: string) {
   if (sourceKind === "partner_product_order") {
     const { data: order } = await supabaseAdmin
       .from("partner_product_orders" as never)
-      .select("system_fee,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,status,student_id,partner_product_id,professional_product_id" as never)
+      .select("system_fee,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,status,student_id,partner_product_id,professional_product_id,selling_coach_id,upline_l1_coach_id,upline_l2_coach_id,upline_l3_coach_id,professional_coach_id,partner_id,master_coach_cross_bonus_amount,master_coach_cross_beneficiary_coach_id" as never)
       .eq("id" as never, sourceId as never)
       .maybeSingle();
     const o = (order as any) || {};
+
+    const coachIds = [o.selling_coach_id, o.upline_l1_coach_id, o.upline_l2_coach_id, o.upline_l3_coach_id, o.professional_coach_id, o.master_coach_cross_beneficiary_coach_id].filter(Boolean) as string[];
+    const coachNameMap = new Map<string, string>();
+    if (coachIds.length) {
+      const { data: cs } = await supabaseAdmin
+        .from("coaches")
+        .select("id,profiles:profile_id(name,email)")
+        .in("id", coachIds);
+      ((cs as any[]) || []).forEach((c) => coachNameMap.set(c.id, c.profiles?.name || c.profiles?.email || "Coach"));
+    }
+    let partnerName: string | null = null;
+    if (o.partner_id) {
+      const { data: p } = await supabaseAdmin
+        .from("partners" as never)
+        .select("trade_name,legal_name,profiles:profile_id(name)" as never)
+        .eq("id" as never, o.partner_id as never)
+        .maybeSingle();
+      const pr = p as any;
+      partnerName = pr?.trade_name || pr?.legal_name || pr?.profiles?.name || "Parceiro";
+    }
+    const ownerLabel = o.professional_product_id ? "Profissional" : "Parceiro";
+    const ownerName = o.professional_coach_id ? (coachNameMap.get(o.professional_coach_id) || null) : partnerName;
+
     const moneyRows: FlowItem[] = [
-      { label: "Sistema", amount: moneyNumber(o.system_fee), status: o.status, kind: "money" as const },
-      { label: "Coach vendedor", amount: moneyNumber(o.coach_net_amount), status: o.status, kind: "money" as const },
-      { label: "Rede nível 1", amount: moneyNumber(o.network_l1_amount), status: o.status, kind: "money" as const },
-      { label: "Rede nível 2", amount: moneyNumber(o.network_l2_amount), status: o.status, kind: "money" as const },
-      { label: "Rede nível 3", amount: moneyNumber(o.network_l3_amount), status: o.status, kind: "money" as const },
-      { label: "Profissional/parceiro", amount: moneyNumber(o.partner_net_amount), status: o.status, kind: "money" as const },
+      { label: "Sistema", amount: moneyNumber(o.system_fee), status: o.status, recipient: "Sistema (admin)", kind: "money" as const },
+      { label: "Coach vendedor", amount: moneyNumber(o.coach_net_amount), status: o.status, recipient: coachNameMap.get(o.selling_coach_id) || null, kind: "money" as const },
+      { label: "Rede nível 1", amount: moneyNumber(o.network_l1_amount), status: o.status, recipient: coachNameMap.get(o.upline_l1_coach_id) || null, kind: "money" as const },
+      { label: "Rede nível 2", amount: moneyNumber(o.network_l2_amount), status: o.status, recipient: coachNameMap.get(o.upline_l2_coach_id) || null, kind: "money" as const },
+      { label: "Rede nível 3", amount: moneyNumber(o.network_l3_amount), status: o.status, recipient: coachNameMap.get(o.upline_l3_coach_id) || null, kind: "money" as const },
+      { label: ownerLabel, amount: moneyNumber(o.partner_net_amount), status: o.status, recipient: ownerName, kind: "money" as const },
+      { label: "Bônus Master Coach", amount: moneyNumber(o.master_coach_cross_bonus_amount), status: o.status, recipient: coachNameMap.get(o.master_coach_cross_beneficiary_coach_id) || null, kind: "money" as const },
     ].filter((item) => item.amount > 0);
     items.push(...moneyRows);
-    // Benefits do parceiro (carteirinha estendida)
     if (o.student_id) {
       const benefits = await collectBenefits(o.student_id, null, null);
       items.push(...benefits);

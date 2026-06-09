@@ -12,7 +12,7 @@ import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 
-type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
+type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
 type ProductKind = "challenge" | "digital" | "store" | "item" | "partner" | "partner_company";
@@ -300,13 +300,23 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     setIsMasterCoach(!!masterFlag);
     const { data: clientRows, error: clientsError } = await supabase.rpc("list_coach_team_clients" as never);
     if (clientsError) toast.error(clientsError.message || "Erro ao carregar alunos da equipe");
-    const normalizedClients = ((clientRows || []) as any[]).map((s) => ({
-      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null,
+    const baseClients = ((clientRows || []) as any[]).map((s) => ({
+      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null, coachName: null as string | null,
     }));
-    setClients(normalizedClients);
+    // Enriquecer com nome do coach vinculado
+    if (baseClients.length) {
+      const { data: stu } = await supabase
+        .from("students")
+        .select("id,coach:coaches!students_coach_id_fkey(profiles:profile_id(name))")
+        .in("id", baseClients.map((c) => c.id));
+      const map = new Map<string, string | null>();
+      ((stu || []) as any[]).forEach((r) => map.set(r.id, r.coach?.profiles?.name || null));
+      baseClients.forEach((c) => { c.coachName = map.get(c.id) || null; });
+    }
+    setClients(baseClients);
     // Não selecionar aluno automaticamente — coach precisa escolher.
     // Sales history (orders for own students or created by this coach)
-    const studentIds = normalizedClients.map((s) => s.id);
+    const studentIds = baseClients.map((s: SaleClient) => s.id);
     const orFilter = [
       studentIds.length ? `student_id.in.(${studentIds.join(",")})` : null,
       `metadata->>created_by_coach_id.eq.${coach.id}`,
@@ -928,6 +938,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               <UserRound className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione seu aluno"}</p>
+                {selectedClient?.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {selectedClient.coachName}</p>}
                 {selectedClient?.email && <p className="text-[11px] text-muted-foreground">{selectedClient.email}</p>}
                 {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {selectedClient.cpf}</p>}
               </div>
@@ -1352,6 +1363,7 @@ function ClientPickerModal({
             {list.map((c) => (
               <button key={c.id} onClick={() => onPick(c)} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
                 <p className="text-sm font-bold text-foreground">{c.name}</p>
+                {c.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {c.coachName}</p>}
                 {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
                 {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {c.cpf}</p>}
               </button>
