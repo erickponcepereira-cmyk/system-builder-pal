@@ -428,8 +428,9 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const filtered = (rows || []).filter((c: any) => {
-      if (c.is_referral) return false; // tratado pelo bucket "referrals"
       const slot = String(c.slot_label || "").toLowerCase();
+      // Apenas a comissão do aluno indicador vai para o bucket "referrals".
+      if (slot.startsWith("aluno indicador")) return false;
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
       const isNetwork = Number(c.level || 0) > 0;
       if (data.bucket === "network") return isNetwork && !isSystem;
