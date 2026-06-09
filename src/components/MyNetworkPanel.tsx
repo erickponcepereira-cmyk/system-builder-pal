@@ -204,8 +204,10 @@ function WithdrawModal({ profileId, available, onClose }: { profileId: string; a
   const submit = async () => {
     const value = Number(amount.replace(",", "."));
     if (!value || value <= 0) return toast.error("Informe o valor do saque");
+    if (value < MIN_WITHDRAWAL) return toast.error(`Saque mínimo: ${brl(MIN_WITHDRAWAL)}`);
     if (value > available) return toast.error("Valor maior que o saldo disponível");
     if (!pixKey.trim()) return toast.error("Informe sua chave PIX");
+
     setSaving(true);
     const { error } = await supabase.from("withdrawal_requests").insert({
       profile_id: profileId,
