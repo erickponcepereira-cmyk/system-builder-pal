@@ -97,10 +97,10 @@ export function computeFromCharge(
  * o cliente paga MAIS para que o parceiro receba o valor desejado.
  *
  * Resolução algébrica direta (não iterativa):
- *   remaining_after_system = partnerNet / (1 - commPct/100)
- *   remaining_after_tax    = remaining_after_system + systemFee
- *   remaining_after_fee    = remaining_after_tax / (1 - taxPct/100)
- *   gross                  = remaining_after_fee / (1 - feePct/100)
+ *   remaining_after_commission = partnerNet / (1 - commPct/100)
+ *   remaining_after_system     = remaining_after_commission / (1 - systemFeePct/100)
+ *   remaining_after_tax        = remaining_after_system / (1 - taxPct/100)
+ *   gross                      = remaining_after_tax / (1 - feePct/100)
  */
 export function computeFromReceive(
   desiredNet: number,
@@ -112,14 +112,16 @@ export function computeFromReceive(
   const net = Math.max(0, desiredNet);
 
   const commFactor = 1 - coachCommissionPct / 100;
-  if (commFactor <= 0) return computeFromCharge(0, coachCommissionPct, method, fees);
-  const afterSystem = net / commFactor;
-  const afterTax = afterSystem + fees.systemFeeFixed;
-
+  const systemFactor = 1 - fees.systemFeePct / 100;
   const taxFactor = 1 - fees.taxPct / 100;
   const feeFactor = 1 - feePct / 100;
-  if (taxFactor <= 0 || feeFactor <= 0) return computeFromCharge(0, coachCommissionPct, method, fees);
 
+  if (commFactor <= 0 || systemFactor <= 0 || taxFactor <= 0 || feeFactor <= 0) {
+    return computeFromCharge(0, coachCommissionPct, method, fees);
+  }
+
+  const afterSystem = net / commFactor;
+  const afterTax = afterSystem / systemFactor;
   const afterFee = afterTax / taxFactor;
   const gross = round2(afterFee / feeFactor);
   return computeFromCharge(gross, coachCommissionPct, method, fees);
