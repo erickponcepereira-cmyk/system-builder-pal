@@ -125,8 +125,9 @@ export function MyNetworkPanel() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Stat icon={<Wallet className="h-4 w-4" />} label="Disponível" value={brl(stats.available)} accent />
-        <Stat icon={<Wallet className="h-4 w-4" />} label="A liberar" value={brl(stats.pending)} />
+        <Stat icon={<Wallet className="h-4 w-4" />} label="A liberar" value={brl(stats.pending)} pendingHelp />
         <Stat icon={<TrendingUp className="h-4 w-4" />} label="Total recebido" value={brl(stats.total)} />
+
         <button onClick={() => setShowNetwork(true)} className="text-left">
           <Stat icon={<Users className="h-4 w-4" />} label="Pessoas na rede" value={`${stats.network}`} hint="Toque para ver" />
         </button>
