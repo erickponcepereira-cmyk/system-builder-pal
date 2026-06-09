@@ -156,6 +156,7 @@ function ProfilePage() {
           .select("id,amount,status,available_at,created_at,transaction:transactions!commissions_transaction_id_fkey(gross_amount,purchase_type,product:products(name),student:students!transactions_student_id_fkey(profile:profiles!students_profile_id_fkey(name)))" as never)
           .eq("is_referral", true as never)
           .eq("referred_by_student_id", student.id as never)
+          .eq("beneficiary_profile_id", profileData.id as never)
           .order("created_at", { ascending: false })
           .limit(100);
         const mapped = ((comms as unknown as any[]) || []).map((c) => ({
@@ -366,10 +367,25 @@ function ProfilePage() {
         >
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">Minhas indicações</h2>
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">{referrals.length}</span>
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">{Math.max(referrals.length, referralCommissions.length)}</span>
           </div>
-          {referrals.length === 0 ? (
+          {referralCommissions.length === 0 && referrals.length === 0 ? (
             <p className="text-xs text-white/45">Nenhum amigo entrou pelo seu link ainda.</p>
+          ) : referralCommissions.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {referralCommissions.slice(0, 3).map((c) => (
+                  <div key={c.id} className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-white">{c.buyer_name || "Cliente"}</p>
+                      <p className="truncate text-[10px] text-white/40">{c.product_label || "Produto"}</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-center text-[10px] font-bold text-primary">Ver comissões →</p>
+            </>
           ) : (
             <>
               <div className="space-y-2">
