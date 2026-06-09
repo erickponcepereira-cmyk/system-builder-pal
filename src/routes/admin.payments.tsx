@@ -173,7 +173,7 @@ function PendingRow({ item, onChanged }: { item: PendingWithdrawalRow; onChanged
     catch (e: any) { toast.error(e?.message || "Erro"); }
     finally { setBusy(false); }
   };
-  const groupLabel = item.group === "professional" ? "profissional" : item.group === "partner" ? "parceiro" : item.group === "coach" ? "coach" : "—";
+  const groupLabel = item.sellerRole === "professional" ? "profissional" : item.sellerRole === "partner" ? "parceiro" : item.sellerRole === "coach" ? "coach" : item.group === "student_referrer" ? "aluno indicador" : "—";
   return (
     <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4">
       <div className="flex-1">
