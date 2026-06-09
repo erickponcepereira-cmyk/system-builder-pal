@@ -2132,6 +2132,7 @@ export type Database = {
           last_activity_at: string | null
           last_unlock_attempt_at: string | null
           last_unlock_failed_at: string | null
+          master_coach_commission_pct: number
           onboarding_stage: string
           pix_key: string | null
           pix_key_type: string | null
@@ -2188,6 +2189,7 @@ export type Database = {
           last_activity_at?: string | null
           last_unlock_attempt_at?: string | null
           last_unlock_failed_at?: string | null
+          master_coach_commission_pct?: number
           onboarding_stage?: string
           pix_key?: string | null
           pix_key_type?: string | null
@@ -2244,6 +2246,7 @@ export type Database = {
           last_activity_at?: string | null
           last_unlock_attempt_at?: string | null
           last_unlock_failed_at?: string | null
+          master_coach_commission_pct?: number
           onboarding_stage?: string
           pix_key?: string | null
           pix_key_type?: string | null
