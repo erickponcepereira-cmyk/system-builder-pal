@@ -903,7 +903,8 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
           <h1 className="text-2xl font-bold text-foreground">FitMind Club Store</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {coachMode && <MasterCoachCommissionSelector />}
           {coachMode && (
             <button onClick={() => setShowHistory((v) => !v)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-card px-3 text-[10px] font-bold text-foreground">
               <History className="h-3.5 w-3.5 text-primary" /> Histórico ({salesHistory.length})
