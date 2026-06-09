@@ -12,6 +12,7 @@ import {
   registerManualPayout,
   updateWithdrawalStatus,
   type PayoutGroup,
+  type SellerRole,
   type PayoutsDashboard,
   type PayoutPersonRow,
   type PayoutDetails,
@@ -42,22 +43,22 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "coach" | "partner" | "professional" | "orders" | "mp";
+  type Tab = "dashboard" | "seller" | "student_referrer" | "orders" | "mp";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [sellerRole, setSellerRole] = useState<SellerRole>("all");
 
   return (
     <>
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-white">Pagamentos</h1>
-        <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais e pedidos.</p>
+        <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais e alunos indicadores.</p>
       </div>
 
       <div className="mb-4 flex gap-1 rounded-xl bg-card p-1 overflow-x-auto">
         {[
           { k: "dashboard", l: "Dashboard" },
-          { k: "coach", l: "Coaches" },
-          { k: "partner", l: "Parceiros" },
-          { k: "professional", l: "Profissionais" },
+          { k: "seller", l: "Coach / Parceiro / Profissional" },
+          { k: "student_referrer", l: "Aluno Indicador" },
           { k: "orders", l: "Pedidos" },
           { k: "mp", l: "Mercado Pago" },
         ].map((t) => (
@@ -74,8 +75,11 @@ function AdminPayments() {
       </div>
 
       {activeTab === "dashboard" && <DashboardPanel onPickGroup={(g) => setActiveTab(g)} />}
-      {(activeTab === "coach" || activeTab === "partner" || activeTab === "professional") && (
-        <GroupPanel key={activeTab} group={activeTab} />
+      {activeTab === "seller" && (
+        <GroupPanel key={`seller-${sellerRole}`} group="seller" sellerRole={sellerRole} onChangeSellerRole={setSellerRole} />
+      )}
+      {activeTab === "student_referrer" && (
+        <GroupPanel key="stu" group="student_referrer" />
       )}
       {activeTab === "orders" && <LegacyOrders />}
       {activeTab === "mp" && <LegacyMp />}
@@ -107,17 +111,19 @@ function DashboardPanel({ onPickGroup }: { onPickGroup: (g: PayoutGroup) => void
   const totalAvailable = dash ? Object.values(dash.groups).reduce((s, g) => s + g.availableTotal, 0) : 0;
   const totalPending = dash ? Object.values(dash.groups).reduce((s, g) => s + g.pendingRequestsTotal, 0) : 0;
   const totalBlocked = dash ? Object.values(dash.groups).reduce((s, g) => s + g.blockedTotal, 0) : 0;
-  const groups: PayoutGroup[] = ["coach", "partner", "professional"];
+  const totalEarned = dash ? Object.values(dash.groups).reduce((s, g) => s + g.earnedTotal, 0) : 0;
+  const groups: PayoutGroup[] = ["seller", "student_referrer"];
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-4">
         <SummaryCard icon={Wallet} title="Disponível geral para saque" value={fmt(totalAvailable)} accent />
         <SummaryCard icon={Clock} title="Solicitações pendentes" value={fmt(totalPending)} sub={`${pending.length} pedido(s)`} />
         <SummaryCard icon={TrendingDown} title="Bloqueado (a liberar)" value={fmt(totalBlocked)} />
+        <SummaryCard icon={DollarSign} title="Total ganho (comissões)" value={fmt(totalEarned)} />
       </div>
 
-      <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
         {groups.map((g) => {
           const info = dash!.groups[g];
           return (
@@ -127,8 +133,9 @@ function DashboardPanel({ onPickGroup }: { onPickGroup: (g: PayoutGroup) => void
                 <ChevronRight className="h-4 w-4 text-white/40" />
               </div>
               <p className="text-3xl font-bold text-primary font-mono">{fmt(info.availableTotal)}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/60">
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-white/60">
                 <div>Bloqueado<br /><span className="text-white font-mono">{fmt(info.blockedTotal)}</span></div>
+                <div>Total ganho<br /><span className="text-white font-mono">{fmt(info.earnedTotal)}</span></div>
                 <div>Pendentes<br /><span className="text-white font-mono">{info.pendingRequestsCount}</span></div>
               </div>
               <p className="mt-2 text-[10px] text-white/40">{info.peopleCount} pessoa(s)</p>
@@ -136,6 +143,7 @@ function DashboardPanel({ onPickGroup }: { onPickGroup: (g: PayoutGroup) => void
           );
         })}
       </div>
+
 
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="p-5 border-b border-white/5">
@@ -165,7 +173,7 @@ function PendingRow({ item, onChanged }: { item: PendingWithdrawalRow; onChanged
     catch (e: any) { toast.error(e?.message || "Erro"); }
     finally { setBusy(false); }
   };
-  const groupLabel = item.group === "professional" ? "profissional" : item.group === "partner" ? "parceiro" : item.group === "coach" ? "coach" : "—";
+  const groupLabel = item.sellerRole === "professional" ? "profissional" : item.sellerRole === "partner" ? "parceiro" : item.sellerRole === "coach" ? "coach" : item.group === "student_referrer" ? "aluno indicador" : "—";
   return (
     <div className="flex flex-col lg:flex-row lg:items-center gap-3 p-4">
       <div className="flex-1">
@@ -213,7 +221,7 @@ function SummaryCard({ icon: Icon, title, value, sub, accent }: { icon: any; tit
 
 // ============= Grupo (Coach/Parceiro/Profissional) =============
 
-function GroupPanel({ group }: { group: PayoutGroup }) {
+function GroupPanel({ group, sellerRole, onChangeSellerRole }: { group: PayoutGroup; sellerRole?: SellerRole; onChangeSellerRole?: (r: SellerRole) => void }) {
   const fetchPeople = useServerFn(listPayoutPeople);
   const [people, setPeople] = useState<PayoutPersonRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,19 +230,35 @@ function GroupPanel({ group }: { group: PayoutGroup }) {
 
   const load = async () => {
     setLoading(true);
-    try { setPeople(await fetchPeople({ data: { group, search } })); }
+    try { setPeople(await fetchPeople({ data: { group, search, roleFilter: sellerRole } })); }
     catch (e: any) { toast.error(e?.message || "Erro"); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [group]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [group, sellerRole]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return q ? people.filter((p) => p.name.toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q)) : people;
   }, [people, search]);
 
+  const roleLabel = (r: PayoutPersonRow["role"]) =>
+    r === "coach" ? "Coach" : r === "partner" ? "Parceiro" : r === "professional" ? "Profissional" : "Aluno Indicador";
+
   return (
     <div className="space-y-4">
+      {group === "seller" && onChangeSellerRole && (
+        <div className="flex gap-1 rounded-lg bg-white/5 p-1 text-xs w-fit">
+          {(["all", "coach", "partner", "professional"] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => onChangeSellerRole(r)}
+              className={`px-3 py-1.5 rounded ${sellerRole === r ? "bg-primary text-primary-foreground font-bold" : "text-white/60"}`}
+            >
+              {r === "all" ? "Todos" : r === "coach" ? "Coaches" : r === "partner" ? "Parceiros" : "Profissionais"}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
@@ -267,7 +291,10 @@ function GroupPanel({ group }: { group: PayoutGroup }) {
               {filtered.map((p) => (
                 <tr key={p.profileId} className="border-t border-white/5 hover:bg-white/[0.02] cursor-pointer" onClick={() => setSelected(p)}>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-white">{p.name}</div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-white">{p.name}</span>
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase text-white/45">{roleLabel(p.role)}</span>
+                    </div>
                     <div className="text-xs text-white/40">{p.email}</div>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-primary">{fmt(p.available)}</td>
