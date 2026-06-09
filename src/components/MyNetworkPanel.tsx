@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Users, TrendingUp, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { PendingInfo } from "@/components/PendingInfo";
+
+const MIN_WITHDRAWAL = 100;
 
 type Stats = {
   available: number;
@@ -122,8 +125,9 @@ export function MyNetworkPanel() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Stat icon={<Wallet className="h-4 w-4" />} label="Disponível" value={brl(stats.available)} accent />
-        <Stat icon={<Wallet className="h-4 w-4" />} label="A liberar" value={brl(stats.pending)} />
+        <Stat icon={<Wallet className="h-4 w-4" />} label="A liberar" value={brl(stats.pending)} pendingHelp />
         <Stat icon={<TrendingUp className="h-4 w-4" />} label="Total recebido" value={brl(stats.total)} />
+
         <button onClick={() => setShowNetwork(true)} className="text-left">
           <Stat icon={<Users className="h-4 w-4" />} label="Pessoas na rede" value={`${stats.network}`} hint="Toque para ver" />
         </button>
@@ -177,17 +181,19 @@ export function MyNetworkPanel() {
   );
 }
 
-function Stat({ icon, label, value, hint, accent }: { icon: React.ReactNode; label: string; value: string; hint?: string; accent?: boolean }) {
+function Stat({ icon, label, value, hint, accent, pendingHelp }: { icon: React.ReactNode; label: string; value: string; hint?: string; accent?: boolean; pendingHelp?: boolean }) {
   return (
     <div className="rounded-2xl p-4 w-full" style={{ backgroundColor: "#1A1A1A" }}>
       <div className="flex items-center gap-1.5 text-[11px] text-white/50 mb-1">
         {icon} {label}
+        {pendingHelp && <PendingInfo days={3} />}
       </div>
       <p className={`text-xl font-bold ${accent ? "text-primary" : "text-white"}`}>{value}</p>
       {hint && <p className="text-[10px] text-white/40 mt-0.5">{hint}</p>}
     </div>
   );
 }
+
 
 function WithdrawModal({ profileId, available, onClose }: { profileId: string; available: number; onClose: () => void }) {
   const [amount, setAmount] = useState("");
@@ -198,8 +204,10 @@ function WithdrawModal({ profileId, available, onClose }: { profileId: string; a
   const submit = async () => {
     const value = Number(amount.replace(",", "."));
     if (!value || value <= 0) return toast.error("Informe o valor do saque");
+    if (value < MIN_WITHDRAWAL) return toast.error(`Saque mínimo: ${brl(MIN_WITHDRAWAL)}`);
     if (value > available) return toast.error("Valor maior que o saldo disponível");
     if (!pixKey.trim()) return toast.error("Informe sua chave PIX");
+
     setSaving(true);
     const { error } = await supabase.from("withdrawal_requests").insert({
       profile_id: profileId,
@@ -221,7 +229,7 @@ function WithdrawModal({ profileId, available, onClose }: { profileId: string; a
           <h3 className="text-base font-bold text-white">Solicitar saque PIX</h3>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X className="h-5 w-5" /></button>
         </div>
-        <p className="text-xs text-white/50">Disponível para saque: <b className="text-primary">{brl(available)}</b></p>
+        <p className="text-xs text-white/50">Disponível para saque: <b className="text-primary">{brl(available)}</b> · mín {brl(MIN_WITHDRAWAL)}</p>
         <div>
           <label className="text-[11px] text-white/60">Valor</label>
           <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full mt-1 rounded bg-black/40 border border-white/10 px-3 py-2 text-sm text-white" />

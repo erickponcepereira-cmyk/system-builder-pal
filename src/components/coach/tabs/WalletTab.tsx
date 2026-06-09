@@ -9,6 +9,9 @@ import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+import { PendingInfo } from "@/components/PendingInfo";
+
+const MIN_WITHDRAWAL = 100;
 
 
 
@@ -141,6 +144,7 @@ export function WalletTab() {
     if (!bank.pix_key.trim()) { toast.error("Informe sua chave PIX"); return; }
     const value = Number(amount);
     if (!value || value <= 0) { toast.error("Informe o valor do saque"); return; }
+    if (value < MIN_WITHDRAWAL) { toast.error(`Saque mínimo: ${brl(MIN_WITHDRAWAL)}`); return; }
     if (value > withdrawableMax) {
       toast.error(networkLocked
         ? `Valor maior que o disponível para saque. Sua rede está bloqueada — bata a meta mensal para liberar ${brl(networkAvail)}.`
@@ -207,7 +211,10 @@ export function WalletTab() {
           <Unlock className="h-4 w-4 text-primary-foreground/80" />
         </div>
         <p className="text-4xl font-bold text-primary-foreground mt-2 font-mono">{mask(directAvail)}</p>
-        <p className="text-xs text-primary-foreground/70 mt-1">+ {mask(split?.direct.pending ?? 0)} pendente</p>
+        <p className="text-xs text-primary-foreground/70 mt-1 inline-flex items-center gap-1.5">
+          + {mask(split?.direct.pending ?? 0)} pendente
+          <PendingInfo days={3} />
+        </p>
       </div>
       <div className="grid gap-3 grid-cols-2">
         <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
@@ -503,9 +510,10 @@ export function WalletTab() {
 
             <div className="space-y-3">
               <label className="block text-xs text-white/60">
-                <span className="mb-1 block">Valor do saque (R$) * — máx {brl(withdrawableMax)}</span>
-                <input type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" placeholder="0,00" />
+                <span className="mb-1 block">Valor do saque (R$) * — mín {brl(MIN_WITHDRAWAL)} · máx {brl(withdrawableMax)}</span>
+                <input type="number" step="0.01" min={MIN_WITHDRAWAL} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white" placeholder="0,00" />
               </label>
+
               <label className="block text-xs text-white/60">
                 <span className="mb-1 block">Tipo da chave PIX *</span>
                 <select value={bank.pix_key_type} onChange={(e) => setBank({ ...bank, pix_key_type: e.target.value })} className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">

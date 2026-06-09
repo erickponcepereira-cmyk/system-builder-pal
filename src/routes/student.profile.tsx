@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
+import { PendingInfo } from "@/components/PendingInfo";
 
 export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
@@ -337,7 +338,11 @@ function ProfilePage() {
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
         <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
         <p className="mt-1 text-3xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
-        <p className="text-[11px] text-white/40">+ R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente · total ganho R$ {wallet.total_earned.toFixed(2).replace(".", ",")}</p>
+        <p className="text-[11px] text-white/40 inline-flex items-center gap-1.5">
+          + R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente
+          <PendingInfo days={7} />
+          · total ganho R$ {wallet.total_earned.toFixed(2).replace(".", ",")}
+        </p>
         <button
           onClick={() => setWithdrawOpen(true)}
           disabled={wallet.available_balance < 50}
