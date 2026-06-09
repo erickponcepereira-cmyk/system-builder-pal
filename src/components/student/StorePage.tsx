@@ -1362,6 +1362,7 @@ function ClientPickerModal({
             {list.map((c) => (
               <button key={c.id} onClick={() => onPick(c)} className="w-full rounded-xl bg-muted p-3 text-left hover:bg-accent">
                 <p className="text-sm font-bold text-foreground">{c.name}</p>
+                {c.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {c.coachName}</p>}
                 {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
                 {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {c.cpf}</p>}
               </button>
