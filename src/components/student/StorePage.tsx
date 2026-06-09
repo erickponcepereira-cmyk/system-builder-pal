@@ -300,10 +300,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     setIsMasterCoach(!!masterFlag);
     const { data: clientRows, error: clientsError } = await supabase.rpc("list_coach_team_clients" as never);
     if (clientsError) toast.error(clientsError.message || "Erro ao carregar alunos da equipe");
-    const normalizedClients = ((clientRows || []) as any[]).map((s) => ({
-      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null,
+    const baseClients = ((clientRows || []) as any[]).map((s) => ({
+      id: s.id, name: s.name || "Cliente", email: s.email || null, phone: s.phone || null, cpf: s.cpf || null, coachName: null as string | null,
     }));
-    setClients(normalizedClients);
+    // Enriquecer com nome do coach vinculado
+    if (baseClients.length) {
+      const { data: stu } = await supabase
+        .from("students")
+        .select("id,coach:coaches!students_coach_id_fkey(profiles:profile_id(name))")
+        .in("id", baseClients.map((c) => c.id));
+      const map = new Map<string, string | null>();
+      ((stu || []) as any[]).forEach((r) => map.set(r.id, r.coach?.profiles?.name || null));
+      baseClients.forEach((c) => { c.coachName = map.get(c.id) || null; });
+    }
+    setClients(baseClients);
     // Não selecionar aluno automaticamente — coach precisa escolher.
     // Sales history (orders for own students or created by this coach)
     const studentIds = normalizedClients.map((s) => s.id);
