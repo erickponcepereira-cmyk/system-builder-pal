@@ -8748,10 +8748,10 @@ export type Database = {
       }
       create_scheduled_professional_order: {
         Args: {
-          _buyer_student_id?: string
           _payment_method?: string
           _professional_product_id: string
           _starts_at: string
+          _student_id?: string
         }
         Returns: string
       }
