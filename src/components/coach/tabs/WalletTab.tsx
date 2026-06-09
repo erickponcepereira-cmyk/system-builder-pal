@@ -9,6 +9,9 @@ import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+import { PendingInfo } from "@/components/PendingInfo";
+
+const MIN_WITHDRAWAL = 100;
 
 
 
