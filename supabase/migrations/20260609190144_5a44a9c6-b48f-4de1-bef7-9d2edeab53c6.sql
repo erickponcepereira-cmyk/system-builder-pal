@@ -1,0 +1,1 @@
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS master_coach_commission_pct numeric NOT NULL DEFAULT 10 CHECK (master_coach_commission_pct >= 10 AND master_coach_commission_pct <= 70);

@@ -5093,6 +5093,7 @@ export type Database = {
           instagram: string | null
           latitude: number | null
           longitude: number | null
+          master_coach_commission_pct: number
           photo_url: string | null
           profile_id: string
           referral_code: string | null
@@ -5124,6 +5125,7 @@ export type Database = {
           instagram?: string | null
           latitude?: number | null
           longitude?: number | null
+          master_coach_commission_pct?: number
           photo_url?: string | null
           profile_id: string
           referral_code?: string | null
@@ -5155,6 +5157,7 @@ export type Database = {
           instagram?: string | null
           latitude?: number | null
           longitude?: number | null
+          master_coach_commission_pct?: number
           photo_url?: string | null
           profile_id?: string
           referral_code?: string | null
