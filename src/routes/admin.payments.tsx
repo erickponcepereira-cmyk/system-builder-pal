@@ -43,22 +43,22 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "coach" | "partner" | "professional" | "orders" | "mp";
+  type Tab = "dashboard" | "seller" | "student_referrer" | "orders" | "mp";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [sellerRole, setSellerRole] = useState<SellerRole>("all");
 
   return (
     <>
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-white">Pagamentos</h1>
-        <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais e pedidos.</p>
+        <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais e alunos indicadores.</p>
       </div>
 
       <div className="mb-4 flex gap-1 rounded-xl bg-card p-1 overflow-x-auto">
         {[
           { k: "dashboard", l: "Dashboard" },
-          { k: "coach", l: "Coaches" },
-          { k: "partner", l: "Parceiros" },
-          { k: "professional", l: "Profissionais" },
+          { k: "seller", l: "Coach / Parceiro / Profissional" },
+          { k: "student_referrer", l: "Aluno Indicador" },
           { k: "orders", l: "Pedidos" },
           { k: "mp", l: "Mercado Pago" },
         ].map((t) => (
@@ -75,8 +75,11 @@ function AdminPayments() {
       </div>
 
       {activeTab === "dashboard" && <DashboardPanel onPickGroup={(g) => setActiveTab(g)} />}
-      {(activeTab === "coach" || activeTab === "partner" || activeTab === "professional") && (
-        <GroupPanel key={activeTab} group={activeTab} />
+      {activeTab === "seller" && (
+        <GroupPanel key={`seller-${sellerRole}`} group="seller" sellerRole={sellerRole} onChangeSellerRole={setSellerRole} />
+      )}
+      {activeTab === "student_referrer" && (
+        <GroupPanel key="stu" group="student_referrer" />
       )}
       {activeTab === "orders" && <LegacyOrders />}
       {activeTab === "mp" && <LegacyMp />}
