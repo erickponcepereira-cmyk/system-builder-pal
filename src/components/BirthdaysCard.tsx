@@ -166,6 +166,9 @@ export function BirthdaysCard({ scope, coachId, title }: Props) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">{p.name || "—"}</p>
+                  {p.coachName && (
+                    <p className="truncate text-[11px] font-semibold text-primary">Coach: {p.coachName}</p>
+                  )}
                   <p className="text-[11px] text-muted-foreground">
                     {dateStr} · {p.age + (p.days === 0 ? 0 : 1)} anos
                     {p.role ? ` · ${p.role}` : ""}
