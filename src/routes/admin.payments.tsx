@@ -221,7 +221,7 @@ function SummaryCard({ icon: Icon, title, value, sub, accent }: { icon: any; tit
 
 // ============= Grupo (Coach/Parceiro/Profissional) =============
 
-function GroupPanel({ group }: { group: PayoutGroup }) {
+function GroupPanel({ group, sellerRole, onChangeSellerRole }: { group: PayoutGroup; sellerRole?: SellerRole; onChangeSellerRole?: (r: SellerRole) => void }) {
   const fetchPeople = useServerFn(listPayoutPeople);
   const [people, setPeople] = useState<PayoutPersonRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,19 +230,35 @@ function GroupPanel({ group }: { group: PayoutGroup }) {
 
   const load = async () => {
     setLoading(true);
-    try { setPeople(await fetchPeople({ data: { group, search } })); }
+    try { setPeople(await fetchPeople({ data: { group, search, roleFilter: sellerRole } })); }
     catch (e: any) { toast.error(e?.message || "Erro"); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [group]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [group, sellerRole]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return q ? people.filter((p) => p.name.toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q)) : people;
   }, [people, search]);
 
+  const roleLabel = (r: PayoutPersonRow["role"]) =>
+    r === "coach" ? "Coach" : r === "partner" ? "Parceiro" : r === "professional" ? "Profissional" : "Aluno Indicador";
+
   return (
     <div className="space-y-4">
+      {group === "seller" && onChangeSellerRole && (
+        <div className="flex gap-1 rounded-lg bg-white/5 p-1 text-xs w-fit">
+          {(["all", "coach", "partner", "professional"] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => onChangeSellerRole(r)}
+              className={`px-3 py-1.5 rounded ${sellerRole === r ? "bg-primary text-primary-foreground font-bold" : "text-white/60"}`}
+            >
+              {r === "all" ? "Todos" : r === "coach" ? "Coaches" : r === "partner" ? "Parceiros" : "Profissionais"}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
