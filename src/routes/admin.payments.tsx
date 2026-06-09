@@ -111,17 +111,19 @@ function DashboardPanel({ onPickGroup }: { onPickGroup: (g: PayoutGroup) => void
   const totalAvailable = dash ? Object.values(dash.groups).reduce((s, g) => s + g.availableTotal, 0) : 0;
   const totalPending = dash ? Object.values(dash.groups).reduce((s, g) => s + g.pendingRequestsTotal, 0) : 0;
   const totalBlocked = dash ? Object.values(dash.groups).reduce((s, g) => s + g.blockedTotal, 0) : 0;
-  const groups: PayoutGroup[] = ["coach", "partner", "professional"];
+  const totalEarned = dash ? Object.values(dash.groups).reduce((s, g) => s + g.earnedTotal, 0) : 0;
+  const groups: PayoutGroup[] = ["seller", "student_referrer"];
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-4">
         <SummaryCard icon={Wallet} title="Disponível geral para saque" value={fmt(totalAvailable)} accent />
         <SummaryCard icon={Clock} title="Solicitações pendentes" value={fmt(totalPending)} sub={`${pending.length} pedido(s)`} />
         <SummaryCard icon={TrendingDown} title="Bloqueado (a liberar)" value={fmt(totalBlocked)} />
+        <SummaryCard icon={DollarSign} title="Total ganho (comissões)" value={fmt(totalEarned)} />
       </div>
 
-      <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+      <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
         {groups.map((g) => {
           const info = dash!.groups[g];
           return (
@@ -131,8 +133,9 @@ function DashboardPanel({ onPickGroup }: { onPickGroup: (g: PayoutGroup) => void
                 <ChevronRight className="h-4 w-4 text-white/40" />
               </div>
               <p className="text-3xl font-bold text-primary font-mono">{fmt(info.availableTotal)}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/60">
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-white/60">
                 <div>Bloqueado<br /><span className="text-white font-mono">{fmt(info.blockedTotal)}</span></div>
+                <div>Total ganho<br /><span className="text-white font-mono">{fmt(info.earnedTotal)}</span></div>
                 <div>Pendentes<br /><span className="text-white font-mono">{info.pendingRequestsCount}</span></div>
               </div>
               <p className="mt-2 text-[10px] text-white/40">{info.peopleCount} pessoa(s)</p>
@@ -140,6 +143,7 @@ function DashboardPanel({ onPickGroup }: { onPickGroup: (g: PayoutGroup) => void
           );
         })}
       </div>
+
 
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#1A1A1A" }}>
         <div className="p-5 border-b border-white/5">
