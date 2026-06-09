@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
+import { PendingInfo } from "@/components/PendingInfo";
 
 export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
