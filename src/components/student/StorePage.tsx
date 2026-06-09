@@ -12,7 +12,7 @@ import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 
-type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null };
+type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
 
 type ProductKind = "challenge" | "digital" | "store" | "item" | "partner" | "partner_company";
