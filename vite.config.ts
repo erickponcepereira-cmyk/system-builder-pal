@@ -11,7 +11,7 @@ export default defineConfig({
   vite: {
     plugins: [
       VitePWA({
-        injectRegister: false,
+        injectRegister: "auto",
         registerType: "autoUpdate",
         devOptions: {
           enabled: false,
