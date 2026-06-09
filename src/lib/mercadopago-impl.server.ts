@@ -240,8 +240,47 @@ export async function handleCreateCard(data: CardInput) {
 export async function handleGetStatus(paymentRowId: string) {
   const { data: row } = await supabaseAdmin
     .from("mercadopago_payments")
-    .select("status, status_detail, paid_at, source_kind, source_id, amount")
+    .select("id, mp_payment_id, status, status_detail, paid_at, source_kind, source_id, amount")
     .eq("id", paymentRowId)
     .maybeSingle();
+  if (!row) return null;
+
+  // Safety net: se ainda está pendente, consulta o MP diretamente e aplica a
+  // aprovação. O webhook pode atrasar/não chegar (preview, redirects, etc.),
+  // então o polling do frontend cobre esse caso automaticamente.
+  if ((row.status === "pending" || row.status === "in_process") && row.mp_payment_id) {
+    try {
+      const { getPayment, mapMpStatus } = await import("@/server/mercadopago.server");
+      const mp = await getPayment(String(row.mp_payment_id));
+      const newStatus = mapMpStatus(mp.status || "pending");
+      if (newStatus !== row.status) {
+        const paidAt = newStatus === "approved" ? new Date().toISOString() : null;
+        await supabaseAdmin
+          .from("mercadopago_payments")
+          .update({
+            status: newStatus,
+            status_detail: mp.status_detail || null,
+            paid_at: paidAt,
+            raw_webhook: mp,
+          })
+          .eq("id", row.id);
+        if (
+          newStatus === "approved" &&
+          (row.source_kind === "store_order" ||
+            row.source_kind === "transaction" ||
+            row.source_kind === "partner_product_order")
+        ) {
+          try {
+            await applyApproval(row.source_kind as SourceKind, row.source_id as string);
+          } catch (e) {
+            console.error("[mp poll] applyApproval failed:", e);
+          }
+        }
+        return { ...row, status: newStatus, status_detail: mp.status_detail || null, paid_at: paidAt };
+      }
+    } catch (e) {
+      console.error("[mp poll] getPayment failed:", e);
+    }
+  }
   return row;
 }
