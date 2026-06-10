@@ -115,17 +115,15 @@ export function computeFromReceive(
   const net = Math.max(0, desiredNet);
 
   const commFactor = 1 - coachCommissionPct / 100;
-  const networkFactor = 1 - (NETWORK_SPLIT.l1 + NETWORK_SPLIT.l2 + NETWORK_SPLIT.l3) / 100;
   const systemFactor = 1 - fees.systemFeePct / 100;
   const taxFactor = 1 - fees.taxPct / 100;
   const feeFactor = 1 - feePct / 100;
 
-  if (commFactor <= 0 || networkFactor <= 0 || systemFactor <= 0 || taxFactor <= 0 || feeFactor <= 0) {
+  if (commFactor <= 0 || systemFactor <= 0 || taxFactor <= 0 || feeFactor <= 0) {
     return computeFromCharge(0, coachCommissionPct, method, fees);
   }
 
-  const afterCoach = net / networkFactor;
-  const afterSystem = afterCoach / commFactor;
+  const afterSystem = net / commFactor;
   const afterTax = afterSystem / systemFactor;
   const afterFee = afterTax / taxFactor;
   const gross = round2(afterFee / feeFactor);
