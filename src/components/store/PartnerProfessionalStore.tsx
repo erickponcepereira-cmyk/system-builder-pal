@@ -52,6 +52,19 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
+  const myReferralCode = useMyReferralCode();
+
+  const handleShare = async (productId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!myReferralCode) {
+      toast.error("Seu código de indicação ainda não está disponível.");
+      return;
+    }
+    const ok = await shareReferralProduct(myReferralCode, productId);
+    if (ok) toast.success("Link de indicação copiado!");
+    else toast.error("Não foi possível compartilhar o link.");
+  };
+
 
   useEffect(() => {
     (async () => {
