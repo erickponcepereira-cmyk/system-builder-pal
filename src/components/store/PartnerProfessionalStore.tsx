@@ -79,7 +79,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .select("id,name,description,image_url,price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
-          .eq("is_active_by_partner" as never, true);
+          .eq("is_active_by_partner" as never, true)
+          .is("deleted_at" as never, null as never);
         if (error) console.error("[partner store]", error);
         setCards(
           ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
