@@ -350,19 +350,20 @@ export function getBodyFatCategoryACSM(
 type SmmBand = { min: number; max: number };
 
 function getJanssenBand(gender: "male" | "female", age: number): SmmBand {
+  // Faixas alinhadas ao FineShape (Janssen et al. 2002 / referência clínica).
   if (gender === "male") {
-    if (age < 40) return { min: 37, max: 43 };
-    if (age < 60) return { min: 34, max: 39 };
-    return            { min: 31, max: 35 };
+    if (age < 40) return { min: 33.3, max: 39.3 };
+    if (age < 60) return { min: 32.4, max: 37.4 };
+    return            { min: 30.1, max: 34.1 };
   }
-  if (age < 40) return { min: 28, max: 33 };
-  if (age < 60) return { min: 26, max: 30 };
-  return            { min: 24, max: 27 };
+  if (age < 40) return { min: 24.3, max: 30.3 };
+  if (age < 60) return { min: 24.1, max: 30.1 };
+  return            { min: 22.3, max: 27.3 };
 }
 
 export function getSkeletalMuscleReference(gender: "male" | "female", age = 30): string {
   const b = getJanssenBand(gender, age);
-  return `${b.min}–${b.max}%`;
+  return `${b.min.toFixed(1).replace(".", ",")}–${b.max.toFixed(1).replace(".", ",")}%`;
 }
 
 export function getSkeletalMuscleCategoryJanssen(
