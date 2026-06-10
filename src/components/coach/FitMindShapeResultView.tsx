@@ -590,6 +590,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
                 {[
                   { l: "Peso", ref: `Referência: ${refWeight}${weightDelta ? ` · ${weightDelta}` : ""}`, result: a.weight ? `${a.weight} kg` : "—", color: weightEval.c, tag: weightEval.t },
                   { l: "Músculo Esquelético", ref: `Referência: ${refSkeletal}`, result: a.skeletalMuscle ? `${a.skeletalMuscle}% (${skKg} kg)` : "—", color: skEval.c, tag: skEval.t },
+                  { l: "Massa Muscular", ref: `Referência: ${refMuscleMass}`, result: a.muscleMass ? `${a.muscleMass}% (${muscleKg} kg)` : "—", color: muscleEval.c, tag: muscleEval.t },
                   { l: "Idade Corporal", ref: `Idade real: ${a.age || "—"} anos`, result: bodyAgeYears ? `${bodyAgeYears} anos` : "—", color: bodyAgeEval.c, tag: bodyAgeEval.t },
                 ].map((r) => (
                   <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
