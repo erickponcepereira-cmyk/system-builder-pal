@@ -261,23 +261,9 @@ export const createCoachSale = createServerFn({ method: "POST" })
       }
     }
 
-    // ─── Atribuição automática de Nutricionista Parceiro ───
-    try {
-      const { data: nutriRow } = await supabaseAdmin.rpc("find_nutritionist_for", {
-        _coach_id: coachId,
-      });
-      const nutritionistCoachId = nutriRow as unknown as string | null;
-      if (nutritionistCoachId) {
-        await supabaseAdmin.from("sale_nutritionist_assignments").insert({
-          order_id: order.id,
-          seller_coach_id: coachId,
-          nutritionist_coach_id: nutritionistCoachId,
-          assignment_method: "auto_upline",
-        });
-      }
-    } catch (e) {
-      console.error("nutritionist assignment failed:", e);
-    }
+    // ─── Atribuição automática de Nutricionista desativada ───
+    // Em breve haverá um seletor por produto. Por ora, nenhuma atribuição.
+
 
     return {
       orderId: order.id,
