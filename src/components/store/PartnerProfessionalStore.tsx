@@ -277,18 +277,30 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {items.map((p) => (
-              <button key={p.id} onClick={() => setSelected(p)} className="rounded-2xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
-                <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-white/5">
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <ShoppingBag className="h-8 w-8 text-white/30" />
-                  )}
-                </div>
-                <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
-                <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
-                <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
-              </button>
+              <div key={p.id} className="relative">
+                <button onClick={() => setSelected(p)} className="w-full rounded-2xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
+                  <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-white/5">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <ShoppingBag className="h-8 w-8 text-white/30" />
+                    )}
+                  </div>
+                  <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
+                  <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
+                  <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
+                </button>
+                {myReferralCode && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleShare(p.id, e)}
+                    title="Compartilhar link de indicação"
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             ))}
             {items.length === 0 && <p className="col-span-full text-sm text-white/50">Nenhum produto nesta subcategoria.</p>}
           </div>
@@ -296,6 +308,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       );
     }
   }
+
 
   return (
     <>
