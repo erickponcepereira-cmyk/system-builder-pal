@@ -29,6 +29,12 @@ export function DigitalStoreTab() {
 }
 
 export function StoreGrid({ title, subtitle, items, loading, kind }: { title: string; subtitle: string; items: (StoreProductRow | DigitalProductRow)[]; loading: boolean; kind: "physical" | "digital" }) {
+  const referralCode = useMyReferralCode();
+  const onShare = async (id: string) => {
+    if (!referralCode) { toast.error("Código de indicação indisponível."); return; }
+    const ok = await shareReferralProduct(referralCode, id);
+    if (ok) toast.success("Link de indicação copiado!");
+  };
   return (
     <>
       <div className="mb-6">
