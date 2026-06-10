@@ -338,9 +338,11 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       const { data: entries, error } = await supabaseAdmin
         .from("admin_system_wallet_entries")
         .select("id, transaction_id, slot_label, amount, kind, created_at")
+        .not("slot_label", "ilike", "%nutricion%")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
+
       const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
       if (txIds.length) {
