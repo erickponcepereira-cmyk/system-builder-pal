@@ -94,7 +94,7 @@ export function OverviewTab({ coachId, coachName }: Props) {
       setStats({
         appointmentsTotal: apptTotal || 0,
         appointmentsMonth: apptMonth || 0,
-        activeStudents: studentsCount || 0,
+        activeStudents: uniqueStudents,
         activeProducts: productsCount || 0,
         referralCode: coachRow?.referral_code || null,
         referralLink: coachRow?.referral_link || null,
