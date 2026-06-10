@@ -88,8 +88,8 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const [aw, cw, sw, nw, ppo, wr, swr] = await Promise.all([
-      supabase.from("admin_system_wallet" as never).select("*" as never).maybeSingle(),
+    const [adminEntries, cw, sw, nw, ppo, wr, swr] = await Promise.all([
+      supabase.from("admin_system_wallet_entries" as never).select("slot_label,kind,amount" as never),
       supabase.from("wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
       supabase.from("student_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
@@ -99,12 +99,29 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     ]);
     const sum = (arr: any[] | null | undefined, k: string) =>
       (arr || []).reduce((a, r: any) => a + Number(r?.[k] || 0), 0);
-    const awd = aw.data as any;
+    let adminCredits = 0;
+    let adminDebits = 0;
+    let nutriAdminCredits = 0;
+    let nutriAdminDebits = 0;
+    ((adminEntries.data as any[]) || []).forEach((entry) => {
+      const slot = String(entry?.slot_label || "").toLowerCase();
+      const amount = Number(entry?.amount || 0);
+      const isNutritionist = slot.includes("nutricion");
+      if (isNutritionist) {
+        if (entry?.kind === "debit") nutriAdminDebits += amount;
+        else nutriAdminCredits += amount;
+      } else if (entry?.kind === "debit") adminDebits += amount;
+      else adminCredits += amount;
+    });
+    const adminAvailable = Math.max(0, adminCredits - adminDebits);
+    const nutriAdminAvailable = Math.max(0, nutriAdminCredits - nutriAdminDebits);
+    const nutritionistRows = (nw.data as any[]) || [];
+    const hasUnassignedNutritionist = nutriAdminCredits > 0 || nutriAdminDebits > 0;
     return {
       adminWallet: {
-        available: Number(awd?.available_balance || 0),
-        totalEarned: Number(awd?.total_earned || 0),
-        totalWithdrawn: Number(awd?.total_withdrawn || 0),
+        available: adminAvailable,
+        totalEarned: adminCredits,
+        totalWithdrawn: adminDebits,
       },
       coachWalletsTotal: {
         available: sum(cw.data as any[], "available_balance"),
@@ -119,10 +136,10 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         count: (sw.data as any[] | null)?.length || 0,
       },
       nutritionistTotal: {
-        available: sum(nw.data as any[], "available_balance"),
-        blocked: sum(nw.data as any[], "blocked_balance"),
-        totalEarned: sum(nw.data as any[], "total_earned"),
-        count: (nw.data as any[] | null)?.length || 0,
+        available: sum(nutritionistRows, "available_balance") + nutriAdminAvailable,
+        blocked: sum(nutritionistRows, "blocked_balance"),
+        totalEarned: sum(nutritionistRows, "total_earned") + nutriAdminCredits,
+        count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
       },
       partnerOrders: {
         paidCount: (ppo.data as any[] | null)?.length || 0,
