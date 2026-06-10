@@ -194,6 +194,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       } catch { /* ignore */ }
     }
 
+    if (coachMode && userData.user) {
+      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
+      if (profile?.id) {
+        const { data: coachRow } = await supabase.from("coaches").select("referral_code").eq("profile_id", profile.id).maybeSingle();
+        setMyReferralCode((coachRow as { referral_code?: string | null } | null)?.referral_code || null);
+      }
+    }
+
     setItems([
       ...((plans.data || []).map((p: any) => {
         const e = earningsById.get(p.id);
