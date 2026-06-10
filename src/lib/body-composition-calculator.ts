@@ -155,37 +155,10 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const calfCm = avg(leftCalf, rightCalf);
   const abdoAvg = avg(waist, abdomen);
 
-  // ── 2. MÚSCULO ESQUELÉTICO — Lee et al. (2000), versão antropométrica ──
-  //   SMM(kg) = Altura(m) × (0.00744·CB² + 0.00088·CC² + 0.00441·CP²)
-  //             + 2.4·sexo − 0.048·idade + etnia + 7.8
-  //   CB/CC/CP em cm. Fallback: equação simplificada por peso/altura.
   const sexScore = gender === "male" ? 1 : 0;
-  const ethScore = ETHNICITY_FACTOR[ethnicity] ?? 0;
+  void ETHNICITY_FACTOR; void ethnicity; void armCm; void thighCm; void calfCm;
 
-  let skeletalMuscleKg: number;
-  if (armCm !== undefined && thighCm !== undefined && calfCm !== undefined) {
-    skeletalMuscleKg =
-      heightM *
-        (0.00744 * armCm * armCm +
-          0.00088 * thighCm * thighCm +
-          0.00441 * calfCm * calfCm) +
-      2.4 * sexScore -
-      0.048 * age +
-      ethScore +
-      7.8;
-  } else {
-    // Fallback geral (Lee, versão por massa corporal)
-    skeletalMuscleKg =
-      0.244 * weight + 7.8 * heightM + 6.6 * sexScore - 0.098 * age + ethScore - 3.3;
-    warnings.push(
-      "Informe braço, coxa e panturrilha para cálculo de músculo esquelético mais preciso.",
-    );
-  }
-  skeletalMuscleKg = Math.max(5, round(skeletalMuscleKg));
-  const skeletalMuscle = round((skeletalMuscleKg / weight) * 100);
-
-  // ── 3. % GORDURA CORPORAL ───────────────────────────────
-  // Estratégia (alinhada ao FineShape):
+  // ── 2. % GORDURA CORPORAL (alinhado ao FineShape) ───────
   //  (a) Mulher → Tran & Weltman (1988): densidade corporal a partir de
   //      abdômen, quadril, altura e idade; %BF via Siri (495/BD − 450).
   //  (b) Homem  → Penrose-Nelson-Fisher (1985): LBM a partir de peso e
@@ -199,7 +172,6 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
     ((gender === "female" && waistOrAbd >= 80) || (gender === "male" && waistOrAbd >= 90));
 
   if (gender === "female" && abdoAvg !== undefined && hip !== undefined && hip > 0) {
-    // Tran-Weltman 1988 (mulheres)
     const BD =
       1.168297
       - 0.002824 * abdoAvg
@@ -209,7 +181,6 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
       - 0.000216161 * age;
     bodyFat = 495 / BD - 450;
   } else if (gender === "male" && waistOrAbd !== undefined) {
-    // Penrose-Nelson-Fisher 1985 (homens) — cintura em polegadas, peso em libras
     const waistIn = waistOrAbd / 2.54;
     const weightLb = weight * 2.20462;
     const lbmLb = 98.42 + 1.082 * weightLb - 4.15 * waistIn;
@@ -231,27 +202,33 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
   const fatMassKg = round((bodyFat / 100) * weight);
   const leanMassKg = round(weight - fatMassKg);
 
+  // ── 3. MASSA ÓSSEA (Heyward & Stolarczyk: ~2,5% do peso) ─
+  const boneMassKgEarly = round(weight * 0.025);
 
-  // ── 4. MASSA ÓSSEA (estimativa populacional) ─────────────
-  // Heyward & Stolarczyk: ~4–5% do peso corporal total.
-  const boneMassKgEarly = round(weight * 0.045);
+  // ── 4. MÚSCULO ESQUELÉTICO (modelo FineShape) ──────────
+  // SMM ≈ fração da massa magra (Janssen et al. 2002 — proporção do LBM
+  // ocupada por músculo esquelético: ~53% homens, ~48% mulheres).
+  const smmFraction = gender === "male" ? 0.535 : 0.485;
+  let skeletalMuscleKg = round(leanMassKg * smmFraction);
+  skeletalMuscleKg = Math.max(5, skeletalMuscleKg);
+  const skeletalMuscle = round((skeletalMuscleKg / weight) * 100);
 
-  // ── 5. MASSA MUSCULAR TOTAL ──────────────────────────────
-  // Massa magra menos massa óssea (modelo FineShape).
+  // ── 5. MASSA MUSCULAR TOTAL (massa magra menos massa óssea) ──
   const muscleMassKg = round(Math.max(0, leanMassKg - boneMassKgEarly));
   const muscleMass = round((muscleMassKg / weight) * 100);
 
-  // ── 5. METABOLISMO BASAL — Harris-Benedict revisado ─────
-  //    Roza & Shizgal (1984)
-  //    Homens:  88.36 + 13.4×Peso + 4.8×Altura(cm) − 5.7×Idade
-  //    Mulheres: 447.6 + 9.2×Peso + 3.1×Altura(cm) − 4.3×Idade
+  // ── 6. METABOLISMO BASAL — Harris-Benedict original (1919) ──
+  //    Mesma equação usada pelo FineShape.
+  //    Homens:   66.5 + 13.75×Peso + 5.003×Altura(cm) − 6.755×Idade
+  //    Mulheres: 655.1 + 9.563×Peso + 1.850×Altura(cm) − 4.676×Idade
   let basalMetabolism: number;
   if (gender === "male") {
-    basalMetabolism = 88.36 + 13.4 * weight + 4.8 * height - 5.7 * age;
+    basalMetabolism = 66.5 + 13.75 * weight + 5.003 * height - 6.755 * age;
   } else {
-    basalMetabolism = 447.6 + 9.2 * weight + 3.1 * height - 4.3 * age;
+    basalMetabolism = 655.1 + 9.563 * weight + 1.850 * height - 4.676 * age;
   }
   basalMetabolism = Math.round(basalMetabolism);
+  void sexScore;
 
   // ── 6. RELAÇÃO CINTURA-QUADRIL (WHO, 2000) ───────────────
   let waistHipRatio = 0;
