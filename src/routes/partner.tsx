@@ -97,7 +97,7 @@ function PartnerPanel() {
     const pt = p as unknown as Partner;
     setPartner(pt);
     const [pr, ps, v, coach, student] = await Promise.all([
-      supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }),
+      supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).is("deleted_at" as never, null as never).order("created_at" as never, { ascending: false }),
       supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }).limit(30),
       supabase.from("partner_visits" as never).select("id" as never, { count: "exact", head: true }).eq("partner_id" as never, pt.id),
       supabase.from("coaches").select("id, referral_code, upline_coach_id").eq("profile_id", profile.id).maybeSingle(),
