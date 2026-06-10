@@ -38,7 +38,7 @@ export function OverviewTab({ coachId, coachName }: Props) {
       const [
         { count: apptTotal },
         { count: apptMonth },
-        { count: studentsCount },
+        { data: studentsRows },
         { count: productsCount },
         { data: coachRow },
       ] = await Promise.all([
@@ -55,19 +55,28 @@ export function OverviewTab({ coachId, coachName }: Props) {
           .gte("starts_at" as never, monthStart.toISOString() as never),
         supabase
           .from("professional_appointments" as never)
-          .select("student_id", { count: "exact", head: true })
-          .eq("professional_coach_id" as never, coachId as never),
+          .select("student_id")
+          .eq("professional_coach_id" as never, coachId as never)
+          .neq("status" as never, "cancelled" as never),
         supabase
           .from("professional_products" as never)
           .select("id", { count: "exact", head: true })
-          .eq("professional_coach_id" as never, coachId as never)
-          .eq("is_active" as never, true as never),
+          .eq("coach_id" as never, coachId as never)
+          .eq("is_active_by_professional" as never, true as never)
+          .eq("status" as never, "approved" as never),
         supabase
           .from("coaches")
           .select("referral_code,referral_link,upline_coach_id")
           .eq("id", coachId)
           .maybeSingle(),
       ]);
+
+      const uniqueStudents = new Set(
+        ((studentsRows as Array<{ student_id: string | null }> | null) || [])
+          .map((r) => r.student_id)
+          .filter(Boolean),
+      ).size;
+
 
       let uplineName: string | null = null;
       let uplinePhone: string | null = null;
@@ -85,7 +94,7 @@ export function OverviewTab({ coachId, coachName }: Props) {
       setStats({
         appointmentsTotal: apptTotal || 0,
         appointmentsMonth: apptMonth || 0,
-        activeStudents: studentsCount || 0,
+        activeStudents: uniqueStudents,
         activeProducts: productsCount || 0,
         referralCode: coachRow?.referral_code || null,
         referralLink: coachRow?.referral_link || null,
