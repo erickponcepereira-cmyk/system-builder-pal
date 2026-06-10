@@ -304,14 +304,15 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
 type AcsmBand = { healthyMin: number; healthyMax: number; overweightMax: number };
 
 function getAcsmBand(gender: "male" | "female", age: number): AcsmBand {
+  // Faixas alinhadas ao FineShape (Lohman/ACSM, valores estreitos).
   if (gender === "male") {
-    if (age < 40) return { healthyMin: 8,  healthyMax: 19, overweightMax: 24 };
-    if (age < 60) return { healthyMin: 11, healthyMax: 21, overweightMax: 27 };
-    return            { healthyMin: 13, healthyMax: 24, overweightMax: 29 };
+    if (age < 40) return { healthyMin: 14, healthyMax: 19, overweightMax: 24 };
+    if (age < 60) return { healthyMin: 17, healthyMax: 21, overweightMax: 27 };
+    return            { healthyMin: 19, healthyMax: 23, overweightMax: 29 };
   }
-  if (age < 40) return { healthyMin: 21, healthyMax: 32, overweightMax: 38 };
-  if (age < 60) return { healthyMin: 23, healthyMax: 33, overweightMax: 39 };
-  return            { healthyMin: 24, healthyMax: 35, overweightMax: 41 };
+  if (age < 40) return { healthyMin: 24, healthyMax: 29, overweightMax: 35 };
+  if (age < 60) return { healthyMin: 25, healthyMax: 31, overweightMax: 37 };
+  return            { healthyMin: 26, healthyMax: 32, overweightMax: 39 };
 }
 
 export function getBodyFatReference(gender: "male" | "female", age = 30): string {
