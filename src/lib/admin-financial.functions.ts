@@ -794,11 +794,13 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("admin_system_wallet_entries")
       .select("id, transaction_id, slot_label, amount, kind, created_at")
+      .not("slot_label", "ilike", "%nutricion%")
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.filter === "credit" || data.filter === "debit") {
       q = q.eq("kind", data.filter);
     }
+
     const { data: entries, error } = await q;
     if (error) throw new Error(error.message);
     const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
