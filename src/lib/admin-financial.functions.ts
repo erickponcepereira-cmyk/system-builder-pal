@@ -754,11 +754,18 @@ export const getAdminWallet = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<AdminWalletSummary> => {
     await assertAdmin(context.userId);
-    const { data: wallet } = await supabaseAdmin
-      .from("admin_system_wallet")
-      .select("available_balance, total_earned, total_withdrawn")
-      .eq("id", true)
-      .maybeSingle();
+    // Soma somente entradas do sistema (exclui slots de nutricionista)
+    const { data: sysEntries } = await supabaseAdmin
+      .from("admin_system_wallet_entries")
+      .select("kind, amount")
+      .not("slot_label", "ilike", "%nutricion%");
+    let credits = 0;
+    let debits = 0;
+    (sysEntries || []).forEach((e: any) => {
+      const amt = Number(e.amount || 0);
+      if (e.kind === "debit") debits += amt;
+      else credits += amt;
+    });
     const { data: masters } = await supabaseAdmin
       .from("profiles")
       .select("id, name, email")
@@ -770,13 +777,14 @@ export const getAdminWallet = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .maybeSingle();
     return {
-      available: Number(wallet?.available_balance || 0),
-      totalEarned: Number(wallet?.total_earned || 0),
-      totalWithdrawn: Number(wallet?.total_withdrawn || 0),
+      available: Math.max(0, credits - debits),
+      totalEarned: credits,
+      totalWithdrawn: debits,
       masters: (masters || []).map((p: any) => ({ id: p.id, name: p.name || "—", email: p.email || null })),
       isMaster: !!(me as any)?.is_master_admin,
     };
   });
+
 
 export const listAdminWalletEntries = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
