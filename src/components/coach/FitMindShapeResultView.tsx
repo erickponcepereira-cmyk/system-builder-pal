@@ -316,6 +316,15 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
     return { c: "#dc2626", t: `+${bodyAgeDelta} anos` };
   })();
   const fatKg = a.bodyFat && a.weight ? +((a.bodyFat / 100) * a.weight).toFixed(1) : 0;
+  const muscleKg = a.muscleMass && a.weight ? +((a.muscleMass / 100) * a.weight).toFixed(1) : 0;
+  const muscleEval = (() => {
+    if (!a.muscleMass) return { c: "var(--muted-foreground)", t: "—" };
+    const min = client.gender === "male" ? 33 : 24;
+    const max = client.gender === "male" ? 39 : 30;
+    if (a.muscleMass < min) return { c: "#facc15", t: "Baixo" };
+    if (a.muscleMass <= max) return { c: "#22c55e", t: "Ótimo" };
+    return { c: "#16a34a", t: "Alto" };
+  })();
 
   const weightDelta = (() => {
     if (!a.weight || !idealWeightMax) return null as null | string;
