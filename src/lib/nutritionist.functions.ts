@@ -53,7 +53,32 @@ export const listNutritionistWallets = createServerFn({ method: "GET" })
       : { data: [] as any[] };
     const pMap = new Map<string, any>();
     (profiles || []).forEach((p: any) => pMap.set(p.id, p));
-    return (wallets || []).map((w: any) => ({
+
+    // Carteira virtual: valores de nutricionista ainda não atribuídos
+    // (vivem em admin_system_wallet_entries com slot "nutricionista")
+    const { data: adminEntries } = await supabaseAdmin
+      .from("admin_system_wallet_entries")
+      .select("slot_label, kind, amount")
+      .ilike("slot_label", "%nutricion%");
+    let nCredits = 0;
+    let nDebits = 0;
+    (adminEntries || []).forEach((e: any) => {
+      const amt = Number(e.amount || 0);
+      if (e.kind === "debit") nDebits += amt;
+      else nCredits += amt;
+    });
+    const unassigned: NutritionistWalletRow = {
+      profile_id: "admin-nutricionista",
+      name: "Admin Nutricionista (não atribuído)",
+      email: null,
+      available_balance: Math.max(0, nCredits - nDebits),
+      blocked_balance: 0,
+      total_earned: nCredits,
+      total_released: nCredits,
+      total_withdrawn: nDebits,
+    };
+
+    const rows = (wallets || []).map((w: any) => ({
       profile_id: w.profile_id,
       name: pMap.get(w.profile_id)?.name || "—",
       email: pMap.get(w.profile_id)?.email || null,
@@ -63,6 +88,7 @@ export const listNutritionistWallets = createServerFn({ method: "GET" })
       total_released: Number(w.total_released || 0),
       total_withdrawn: Number(w.total_withdrawn || 0),
     }));
+    return [unassigned, ...rows];
   });
 
 export const listNutritionistBlockedEntries = createServerFn({ method: "GET" })
