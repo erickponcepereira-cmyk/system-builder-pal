@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StorePage } from "@/components/student/StorePage";
 import { money } from "@/routes/coach";
+import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 
 type StoreProductRow = { id: string; name: string; description: string | null; price: number; original_price: number | null; category: string | null; stock: number | null; is_herbalife: boolean | null; status: string | null };
 type DigitalProductRow = { id: string; title: string; description: string | null; price: number; original_price: number | null; type: string; duration_hours: number | null; access_days: number | null; is_featured: boolean | null; instructor: string | null; status: string | null };
