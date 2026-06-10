@@ -404,8 +404,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
   const remove = async (id: string) => {
     if (!confirm("Excluir produto?")) return;
+    // Try hard delete first; if there are linked orders, fall back to soft delete
     const { error } = await supabase.from("partner_products" as never).delete().eq("id" as never, id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (error.code === "23503" || /foreign key/i.test(error.message)) {
+        const { error: e2 } = await supabase
+          .from("partner_products" as never)
+          .update({ deleted_at: new Date().toISOString(), is_active_by_partner: false } as never)
+          .eq("id" as never, id);
+        if (e2) return toast.error(e2.message);
+        toast.success("Produto arquivado (havia pedidos vinculados)"); onReload();
+        return;
+      }
+      return toast.error(error.message);
+    }
     toast.success("Removido"); onReload();
   };
 
