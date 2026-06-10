@@ -118,19 +118,35 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     const networkAgg = sumGroup(networkList);
 
     // Carteira compartilhada do admin (taxas de sistema). Administrada pelos master admins.
-    const { data: adminWallet } = await supabaseAdmin
-      .from("admin_system_wallet")
-      .select("available_balance, total_earned, total_withdrawn")
-      .eq("id", true)
-      .maybeSingle();
+    // Separa o "slot" nutricionista do "slot" sistema usando os lançamentos da carteira:
+    // o que for de nutricionista (ainda não atribuído) vai para o bucket Nutricionistas,
+    // o restante (sistema) fica no bucket Sistema (Admin).
+    const { data: walletEntries } = await supabaseAdmin
+      .from("admin_system_wallet_entries")
+      .select("slot_label, kind, amount");
+    let sysCredits = 0, sysDebits = 0;
+    let nutriAdminCredits = 0, nutriAdminDebits = 0;
+    for (const e of walletEntries || []) {
+      const slot = String((e as any).slot_label || "").toLowerCase();
+      const kind = String((e as any).kind || "credit");
+      const amt = Number((e as any).amount || 0);
+      const isNutri = slot.includes("nutricion");
+      if (isNutri) {
+        if (kind === "credit") nutriAdminCredits += amt;
+        else nutriAdminDebits += amt;
+      } else {
+        if (kind === "credit") sysCredits += amt;
+        else sysDebits += amt;
+      }
+    }
     const { data: masterAdmins } = await supabaseAdmin
       .from("profiles")
       .select("id, name, email, role")
       .eq("role", "admin")
       .eq("is_master_admin", true);
-    const sysAvailable = Number(adminWallet?.available_balance || 0);
-    const sysPaid = Number(adminWallet?.total_withdrawn || 0);
-    const sysTotal = Number(adminWallet?.total_earned || 0) + sysPaid;
+    const sysAvailable = Math.max(0, sysCredits - sysDebits);
+    const sysPaid = sysDebits;
+    const sysTotal = sysCredits;
     const systemList: RecipientTotal[] = (masterAdmins || []).map((p: any) => ({
       profileId: p.id,
       name: p.name || "—",
@@ -144,8 +160,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     const systemAgg = { pending: 0, available: sysAvailable, paid: sysPaid, total: sysTotal };
 
 
-    // Nutricionistas: não usa join embutido aqui porque a carteira pode não
-    // ter FK exposta no Data API; busca perfis separadamente para não zerar o bucket.
+    // Nutricionistas: carteiras individuais + slot "Admin Nutricionista (não atribuído)".
     const { data: nutriWallets, error: nutriErr } = await supabaseAdmin
       .from("nutritionist_wallets")
       .select("profile_id, available_balance, blocked_balance, total_earned, total_withdrawn");
@@ -172,6 +187,20 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
         total: pending + available + paid,
       };
     });
+    // Adiciona o saldo da fatia "Admin Nutricionista (não atribuído)" no bucket Nutricionistas.
+    const nutriAdminAvailable = Math.max(0, nutriAdminCredits - nutriAdminDebits);
+    if (nutriAdminCredits > 0 || nutriAdminDebits > 0) {
+      nutriList.unshift({
+        profileId: "admin-nutricionista",
+        name: "Admin Nutricionista (não atribuído)",
+        email: null,
+        role: "admin",
+        pending: 0,
+        available: nutriAdminAvailable,
+        paid: nutriAdminDebits,
+        total: nutriAdminCredits,
+      });
+    }
     const nutriAgg = sumGroup(nutriList);
 
     // Custos / pool de produtos
