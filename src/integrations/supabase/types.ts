@@ -4910,6 +4910,7 @@ export type Database = {
           coach_commission_amount: number | null
           coach_commission_percentage: number
           created_at: string
+          deleted_at: string | null
           description: string | null
           discount_percent: number | null
           id: string
@@ -4945,6 +4946,7 @@ export type Database = {
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           discount_percent?: number | null
           id?: string
@@ -4980,6 +4982,7 @@ export type Database = {
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           discount_percent?: number | null
           id?: string
