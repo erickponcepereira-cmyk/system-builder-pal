@@ -336,10 +336,12 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       }
       return (entries || []).map((e: any) => {
         const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
+        const slot = String(e.slot_label || "").toLowerCase();
+        const isNutri = slot.includes("nutricion");
         return {
           commissionId: e.id,
           transactionId: e.transaction_id,
-          beneficiaryName: "Carteira do Admin",
+          beneficiaryName: isNutri ? "Admin Nutricionista (não atribuído)" : "Carteira do Admin",
           beneficiaryEmail: null,
           clientName: tx?.studentName ?? null,
           productName: tx?.productName ?? null,
