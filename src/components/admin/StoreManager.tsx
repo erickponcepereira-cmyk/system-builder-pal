@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, ChevronDown, ChevronRight, FolderTree, CheckCircle2 } from "lucide-react";
+import { StoreImageUpload } from "./StoreImageUpload";
 
 interface Section {
   id: string;
@@ -210,10 +211,9 @@ export function StoreManager() {
               <option value="professional">Profissionais</option>
               <option value="fitmind">Fitmind</option>
             </select>
-            <input className="input-dark md:col-span-2" placeholder="URL da imagem (opcional)" value={newSection.image_url || ""} onChange={(e) => setNewSection({ ...newSection, image_url: e.target.value })} />
+            <div className="md:col-span-2"><StoreImageUpload value={newSection.image_url} onChange={(url) => setNewSection({ ...newSection, image_url: url })} folder="sections" placeholder="Enviar imagem (400x400px)" /></div>
             <input type="number" className="input-dark" placeholder="largura px (ex: 160)" value={newSection.card_width ?? ""} onChange={(e) => setNewSection({ ...newSection, card_width: e.target.value ? Number(e.target.value) : null })} />
             <input type="number" className="input-dark" placeholder="altura px (ex: 160)" value={newSection.card_height ?? ""} onChange={(e) => setNewSection({ ...newSection, card_height: e.target.value ? Number(e.target.value) : null })} />
-            {newSection.image_url && <img src={newSection.image_url} alt="" className="h-12 w-12 rounded-lg object-cover border border-white/10" />}
           </div>
           <div className="flex gap-2 justify-end">
             <button onClick={() => setNewSection(null)} className="px-3 py-1.5 text-sm text-white/60 hover:text-white">Cancelar</button>
@@ -252,7 +252,7 @@ export function StoreManager() {
                       <option value="professional">Profissionais</option>
                       <option value="fitmind">Fitmind</option>
                     </select>
-                    <input className="input-dark w-48" placeholder="URL da imagem" value={draftSection.image_url ?? s.image_url ?? ""} onChange={(e) => setDraftSection({ ...draftSection, image_url: e.target.value })} />
+                    <StoreImageUpload value={draftSection.image_url ?? s.image_url} onChange={(url) => setDraftSection({ ...draftSection, image_url: url })} folder="sections" placeholder="Imagem" />
                     <input type="number" className="input-dark w-20" placeholder="larg" value={draftSection.card_width ?? s.card_width ?? ""} onChange={(e) => setDraftSection({ ...draftSection, card_width: e.target.value ? Number(e.target.value) : null })} />
                     <input type="number" className="input-dark w-20" placeholder="alt" value={draftSection.card_height ?? s.card_height ?? ""} onChange={(e) => setDraftSection({ ...draftSection, card_height: e.target.value ? Number(e.target.value) : null })} />
                     <input type="number" className="input-dark w-16" value={draftSection.sort_order ?? s.sort_order} onChange={(e) => setDraftSection({ ...draftSection, sort_order: Number(e.target.value) })} />
@@ -300,7 +300,7 @@ export function StoreManager() {
                           <>
                             <input className="input-dark flex-1" value={draftCategory.name ?? c.name} onChange={(e) => setDraftCategory({ ...draftCategory, name: e.target.value })} />
                             <input className="input-dark w-28" value={draftCategory.slug ?? c.slug} onChange={(e) => setDraftCategory({ ...draftCategory, slug: e.target.value })} />
-                            <input className="input-dark w-40" placeholder="URL imagem" value={draftCategory.image_url ?? c.image_url ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, image_url: e.target.value })} />
+                            <StoreImageUpload value={draftCategory.image_url ?? c.image_url} onChange={(url) => setDraftCategory({ ...draftCategory, image_url: url })} folder="categories" placeholder="Imagem" />
                             <input type="number" className="input-dark w-16" placeholder="larg" value={draftCategory.card_width ?? c.card_width ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_width: e.target.value ? Number(e.target.value) : null })} />
                             <input type="number" className="input-dark w-16" placeholder="alt" value={draftCategory.card_height ?? c.card_height ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_height: e.target.value ? Number(e.target.value) : null })} />
                             <input type="number" className="input-dark w-16" value={draftCategory.sort_order ?? c.sort_order} onChange={(e) => setDraftCategory({ ...draftCategory, sort_order: Number(e.target.value) })} />
@@ -337,7 +337,7 @@ export function StoreManager() {
                     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-black/30 px-3 py-2">
                       <input autoFocus className="input-dark flex-1 min-w-[150px]" placeholder="Nome da categoria" value={newCategoryDraft.name || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, name: e.target.value })} />
                       <input className="input-dark w-28" placeholder="slug" value={newCategoryDraft.slug || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, slug: e.target.value })} />
-                      <input className="input-dark w-40" placeholder="URL imagem (opcional)" value={newCategoryDraft.image_url || ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, image_url: e.target.value })} />
+                      <StoreImageUpload value={newCategoryDraft.image_url} onChange={(url) => setNewCategoryDraft({ ...newCategoryDraft, image_url: url })} folder="categories" placeholder="Imagem" />
                       <input type="number" className="input-dark w-16" placeholder="larg" value={newCategoryDraft.card_width ?? ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, card_width: e.target.value ? Number(e.target.value) : null })} />
                       <input type="number" className="input-dark w-16" placeholder="alt" value={newCategoryDraft.card_height ?? ""} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, card_height: e.target.value ? Number(e.target.value) : null })} />
                       <input type="number" className="input-dark w-16" placeholder="ordem" value={newCategoryDraft.sort_order ?? cats.length} onChange={(e) => setNewCategoryDraft({ ...newCategoryDraft, sort_order: Number(e.target.value) })} />
