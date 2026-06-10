@@ -118,17 +118,19 @@ async function buildSalesReportForRange(
   }
 
 
-  // Transactions (paid)
+  // Transactions (paid) — exclui as que são "espelho" de um store_order
+  // (cada store_order pago gera uma transação com metadata.store_order_id;
+  // contar ambos duplicaria a venda em receita, pedidos e itens vendidos).
   const { data: txData } = await supabaseAdmin
     .from("transactions")
-    .select("id, student_id, product_id, gross_amount, paid_at, status")
+    .select("id, student_id, product_id, gross_amount, paid_at, status, metadata")
     .in("student_id", studentIds)
     .eq("status", "paid")
     .not("paid_at", "is", null)
     .gte("paid_at", fromIso)
     .lte("paid_at", toIso);
-  type Tx = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string };
-  const txs = (txData as Tx[] | null) || [];
+  type Tx = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string; metadata: { store_order_id?: string } | null };
+  const txs = ((txData as Tx[] | null) || []).filter((t) => !t.metadata?.store_order_id);
 
   // Product names for transactions
   const productIds = Array.from(new Set(txs.map((t) => t.product_id).filter(Boolean))) as string[];
