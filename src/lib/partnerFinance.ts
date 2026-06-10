@@ -68,19 +68,17 @@ export function computeFromCharge(
   const systemFee = round2(remaining * (fees.systemFeePct / 100));
   remaining = round2(remaining - systemFee);
 
-  // Comissão do coach: % do saldo atual, vai inteira pro coach
+  // Comissão do coach: % do saldo atual
   const coachCommission = round2(remaining * (coachCommissionPct / 100));
-  const coachNet = coachCommission;
-  const afterCoach = round2(remaining - coachCommission);
 
-  // Rede L1/L2/L3: paralelo sobre o saldo APÓS a comissão do coach (modelo admin)
-  const networkL1 = round2(afterCoach * (NETWORK_SPLIT.l1 / 100));
-  const networkL2 = round2(afterCoach * (NETWORK_SPLIT.l2 / 100));
-  const networkL3 = round2(afterCoach * (NETWORK_SPLIT.l3 / 100));
+  // Rede L1/L2/L3: descontada DA comissão do coach (não do parceiro)
+  const networkL1 = round2(coachCommission * (NETWORK_SPLIT.l1 / 100));
+  const networkL2 = round2(coachCommission * (NETWORK_SPLIT.l2 / 100));
+  const networkL3 = round2(coachCommission * (NETWORK_SPLIT.l3 / 100));
+  const coachNet = round2(coachCommission - networkL1 - networkL2 - networkL3);
 
-  // Sobra é do parceiro/profissional
-  const partnerNet = round2(afterCoach - networkL1 - networkL2 - networkL3);
-
+  // Sobra do parceiro: saldo menos a comissão bruta do coach
+  const partnerNet = round2(remaining - coachCommission);
 
   return {
     gross: round2(g),
