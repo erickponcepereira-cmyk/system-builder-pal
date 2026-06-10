@@ -263,10 +263,10 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const idealWeightMax = heightM ? +(24.9 * heightM * heightM).toFixed(1) : 0;
   const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
   const refSkeletal = getSkeletalMuscleReference(clientGenderBin, a.age || 30);
-  const refBMI = "18,5–24,9 kg/m²";
+  const refBMI = "18,5–25,0 kg/m²";
   const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
   const refVisceral = getVisceralFatReference();
-  void getMuscleMassReference(clientGenderBin);
+  const refMuscleMass = getMuscleMassReference(clientGenderBin);
   const refWater = getBodyWaterReference(clientGenderBin);
   const refBone = a.weight ? getBoneMassReference(clientGenderBin, a.weight) : "—";
 
@@ -274,17 +274,22 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const hipRef = a.circumferences?.hip;
   const rcq = waistRef && hipRef ? +(waistRef / hipRef).toFixed(2) : null;
   const rcqCat = rcq ? classifyRCQ(rcq, client.gender) : null;
-  const refRcq = client.gender === "male" ? "< 0,90" : "< 0,80";
-  const harrisBenedict = (() => {
-    if (!a.weight || !a.height || !a.age) return 0;
+  const refRcq = client.gender === "male" ? "0,90–0,95" : "0,80–0,85";
+  // Harris-Benedict original (1919) — alinhado ao FineShape
+  const harrisBenedictFor = (w: number) => {
+    if (!w || !a.height || !a.age) return 0;
     return Math.round(
       client.gender === "male"
-        ? 88.36 + 13.4 * a.weight + 4.8 * a.height - 5.7 * a.age
-        : 447.6 + 9.2 * a.weight + 3.1 * a.height - 4.3 * a.age,
+        ? 66.5 + 13.75 * w + 5.003 * a.height - 6.755 * a.age
+        : 655.1 + 9.563 * w + 1.850 * a.height - 4.676 * a.age,
     );
-  })();
+  };
+  const harrisBenedict = harrisBenedictFor(a.weight || 0);
   const basalKcal = a.basalMetabolism && a.basalMetabolism > 0 ? Math.round(a.basalMetabolism) : harrisBenedict;
-  const refBasal = harrisBenedict ? `${Math.round(harrisBenedict * 0.95)}–${Math.round(harrisBenedict * 1.05)} kcal` : "—";
+  // Faixa ideal = metabolismo para o peso ideal (faixa saudável de IMC)
+  const refBasal = idealWeightMin && idealWeightMax
+    ? `${harrisBenedictFor(idealWeightMin)}–${harrisBenedictFor(idealWeightMax)} kcal`
+    : "—";
 
   const weightEval = (() => {
     if (!a.weight || !idealWeightMax) return { c: "var(--muted-foreground)", t: "—" };
@@ -311,6 +316,15 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
     return { c: "#dc2626", t: `+${bodyAgeDelta} anos` };
   })();
   const fatKg = a.bodyFat && a.weight ? +((a.bodyFat / 100) * a.weight).toFixed(1) : 0;
+  const muscleKg = a.muscleMass && a.weight ? +((a.muscleMass / 100) * a.weight).toFixed(1) : 0;
+  const muscleEval = (() => {
+    if (!a.muscleMass) return { c: "var(--muted-foreground)", t: "—" };
+    const min = client.gender === "male" ? 33 : 24;
+    const max = client.gender === "male" ? 39 : 30;
+    if (a.muscleMass < min) return { c: "#facc15", t: "Baixo" };
+    if (a.muscleMass <= max) return { c: "#22c55e", t: "Ótimo" };
+    return { c: "#16a34a", t: "Alto" };
+  })();
 
   const weightDelta = (() => {
     if (!a.weight || !idealWeightMax) return null as null | string;
@@ -576,6 +590,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
                 {[
                   { l: "Peso", ref: `Referência: ${refWeight}${weightDelta ? ` · ${weightDelta}` : ""}`, result: a.weight ? `${a.weight} kg` : "—", color: weightEval.c, tag: weightEval.t },
                   { l: "Músculo Esquelético", ref: `Referência: ${refSkeletal}`, result: a.skeletalMuscle ? `${a.skeletalMuscle}% (${skKg} kg)` : "—", color: skEval.c, tag: skEval.t },
+                  { l: "Massa Muscular", ref: `Referência: ${refMuscleMass}`, result: a.muscleMass ? `${a.muscleMass}% (${muscleKg} kg)` : "—", color: muscleEval.c, tag: muscleEval.t },
                   { l: "Idade Corporal", ref: `Idade real: ${a.age || "—"} anos`, result: bodyAgeYears ? `${bodyAgeYears} anos` : "—", color: bodyAgeEval.c, tag: bodyAgeEval.t },
                 ].map((r) => (
                   <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
@@ -612,9 +627,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
                   { l: "Gordura Corporal", ref: `Ideal: ${refBodyFat}${fatDelta ? ` · ${fatDelta}` : ""}`, result: a.bodyFat ? `${a.bodyFat}% (${fatKg} kg)` : "—", color: evalColor(fatCat.eval), tag: `${evalLabel(fatCat.eval)} (${fatCat.label})` },
                   { l: "Gordura Visceral", ref: `Ideal: ${refVisceral}`, result: a.visceralFat ? `${a.visceralFat}` : "—", color: viscCat.color, tag: viscCat.label },
                   { l: "Metabolismo Basal", ref: `Ideal: ${refBasal}`, result: basalKcal ? `${basalKcal} kcal` : "—", color: basalEval.c, tag: basalEval.t },
-                  ...(rcq !== null
-                    ? [{ l: "Rel. Cintura-Quadril (RCQ)", ref: `Referência: ${refRcq} (baixo risco — WHO 2000)`, result: `${rcq}`, color: rcqCat?.color ?? "#94a3b8", tag: rcqCat?.label ?? "—" }]
-                    : []),
+                  { l: "Rel. Cintura-Quadril (RCQ)", ref: `Referência: ${refRcq} · informe cintura e quadril`, result: rcq !== null ? `${rcq.toFixed(2).replace(".", ",")}` : "—", color: rcqCat?.color ?? "#94a3b8", tag: rcqCat?.label ?? "—" },
                 ].map((r) => (
                   <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
                     <td style={{ padding: "10px 4px" }}>
