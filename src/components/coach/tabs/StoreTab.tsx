@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StorePage } from "@/components/student/StorePage";
 import { money } from "@/routes/coach";
+import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 
 type StoreProductRow = { id: string; name: string; description: string | null; price: number; original_price: number | null; category: string | null; stock: number | null; is_herbalife: boolean | null; status: string | null };
 type DigitalProductRow = { id: string; title: string; description: string | null; price: number; original_price: number | null; type: string; duration_hours: number | null; access_days: number | null; is_featured: boolean | null; instructor: string | null; status: string | null };
@@ -27,6 +29,12 @@ export function DigitalStoreTab() {
 }
 
 export function StoreGrid({ title, subtitle, items, loading, kind }: { title: string; subtitle: string; items: (StoreProductRow | DigitalProductRow)[]; loading: boolean; kind: "physical" | "digital" }) {
+  const referralCode = useMyReferralCode();
+  const onShare = async (id: string) => {
+    if (!referralCode) { toast.error("Código de indicação indisponível."); return; }
+    const ok = await shareReferralProduct(referralCode, id);
+    if (ok) toast.success("Link de indicação copiado!");
+  };
   return (
     <>
       <div className="mb-6">
@@ -54,7 +62,9 @@ export function StoreGrid({ title, subtitle, items, loading, kind }: { title: st
                       {original && original > item.price && <p className="text-xs text-white/35 line-through">{money(original)}</p>}
                       <p className="text-lg font-bold text-white">{money(item.price)}</p>
                     </div>
-                    <Button size="sm" variant="outline" className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20">Compartilhar</Button>
+                    <Button size="sm" variant="outline" onClick={() => onShare(item.id)} className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20">
+                      <Share2 className="mr-1 h-3.5 w-3.5" /> Compartilhar
+                    </Button>
                   </div>
                   <p className="mt-3 text-[10px] text-white/35">{isDigital ? `${(item as DigitalProductRow).duration_hours || 0}h · acesso ${((item as DigitalProductRow).access_days || 365)} dias` : `${(item as StoreProductRow).stock ?? 0} em estoque`}</p>
                 </div>
