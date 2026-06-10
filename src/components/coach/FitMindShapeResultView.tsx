@@ -627,9 +627,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
                   { l: "Gordura Corporal", ref: `Ideal: ${refBodyFat}${fatDelta ? ` · ${fatDelta}` : ""}`, result: a.bodyFat ? `${a.bodyFat}% (${fatKg} kg)` : "—", color: evalColor(fatCat.eval), tag: `${evalLabel(fatCat.eval)} (${fatCat.label})` },
                   { l: "Gordura Visceral", ref: `Ideal: ${refVisceral}`, result: a.visceralFat ? `${a.visceralFat}` : "—", color: viscCat.color, tag: viscCat.label },
                   { l: "Metabolismo Basal", ref: `Ideal: ${refBasal}`, result: basalKcal ? `${basalKcal} kcal` : "—", color: basalEval.c, tag: basalEval.t },
-                  ...(rcq !== null
-                    ? [{ l: "Rel. Cintura-Quadril (RCQ)", ref: `Referência: ${refRcq} (baixo risco — WHO 2000)`, result: `${rcq}`, color: rcqCat?.color ?? "#94a3b8", tag: rcqCat?.label ?? "—" }]
-                    : []),
+                  { l: "Rel. Cintura-Quadril (RCQ)", ref: `Referência: ${refRcq} · informe cintura e quadril`, result: rcq !== null ? `${rcq.toFixed(2).replace(".", ",")}` : "—", color: rcqCat?.color ?? "#94a3b8", tag: rcqCat?.label ?? "—" },
                 ].map((r) => (
                   <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
                     <td style={{ padding: "10px 4px" }}>
