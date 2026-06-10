@@ -1094,7 +1094,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
                   </span>
                 )}
               </button>
-              {!coachMode && myReferralCode && indicableProductIds.has(item.sourceId) && (
+              {myReferralCode && (!coachMode ? indicableProductIds.has(item.sourceId) : true) && (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId); }}
