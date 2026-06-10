@@ -263,10 +263,10 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const idealWeightMax = heightM ? +(24.9 * heightM * heightM).toFixed(1) : 0;
   const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
   const refSkeletal = getSkeletalMuscleReference(clientGenderBin, a.age || 30);
-  const refBMI = "18,5–24,9 kg/m²";
+  const refBMI = "18,5–25,0 kg/m²";
   const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
   const refVisceral = getVisceralFatReference();
-  void getMuscleMassReference(clientGenderBin);
+  const refMuscleMass = getMuscleMassReference(clientGenderBin);
   const refWater = getBodyWaterReference(clientGenderBin);
   const refBone = a.weight ? getBoneMassReference(clientGenderBin, a.weight) : "—";
 
@@ -274,17 +274,22 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const hipRef = a.circumferences?.hip;
   const rcq = waistRef && hipRef ? +(waistRef / hipRef).toFixed(2) : null;
   const rcqCat = rcq ? classifyRCQ(rcq, client.gender) : null;
-  const refRcq = client.gender === "male" ? "< 0,90" : "< 0,80";
-  const harrisBenedict = (() => {
-    if (!a.weight || !a.height || !a.age) return 0;
+  const refRcq = client.gender === "male" ? "0,90–0,95" : "0,80–0,85";
+  // Harris-Benedict original (1919) — alinhado ao FineShape
+  const harrisBenedictFor = (w: number) => {
+    if (!w || !a.height || !a.age) return 0;
     return Math.round(
       client.gender === "male"
-        ? 88.36 + 13.4 * a.weight + 4.8 * a.height - 5.7 * a.age
-        : 447.6 + 9.2 * a.weight + 3.1 * a.height - 4.3 * a.age,
+        ? 66.5 + 13.75 * w + 5.003 * a.height - 6.755 * a.age
+        : 655.1 + 9.563 * w + 1.850 * a.height - 4.676 * a.age,
     );
-  })();
+  };
+  const harrisBenedict = harrisBenedictFor(a.weight || 0);
   const basalKcal = a.basalMetabolism && a.basalMetabolism > 0 ? Math.round(a.basalMetabolism) : harrisBenedict;
-  const refBasal = harrisBenedict ? `${Math.round(harrisBenedict * 0.95)}–${Math.round(harrisBenedict * 1.05)} kcal` : "—";
+  // Faixa ideal = metabolismo para o peso ideal (faixa saudável de IMC)
+  const refBasal = idealWeightMin && idealWeightMax
+    ? `${harrisBenedictFor(idealWeightMin)}–${harrisBenedictFor(idealWeightMax)} kcal`
+    : "—";
 
   const weightEval = (() => {
     if (!a.weight || !idealWeightMax) return { c: "var(--muted-foreground)", t: "—" };
