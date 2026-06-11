@@ -16,6 +16,7 @@ import {
 
 import { getCoachDownlineReport, type DownlineReport } from "@/lib/coach-downline.functions";
 import { getCoachMinisteredReport, type MinisteredReport } from "@/lib/fitmind-events.functions";
+import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
