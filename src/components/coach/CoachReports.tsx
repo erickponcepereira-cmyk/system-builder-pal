@@ -377,6 +377,89 @@ function ChallengeDashboard() {
 const COACH_FORMATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
 
 function ReferralSalesDashboard() {
+  const [sub, setSub] = useState<"indicacoes" | "master">("indicacoes");
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1.5 flex-wrap">
+        <button onClick={() => setSub("indicacoes")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${sub === "indicacoes" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
+          Indicações
+        </button>
+        <button onClick={() => setSub("master")}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${sub === "master" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}>
+          Master Coach
+        </button>
+      </div>
+      {sub === "indicacoes" ? <ReferralSalesInner /> : <MasterCoachReferralPanel />}
+    </div>
+  );
+}
+
+function MasterCoachReferralPanel() {
+  const fetchData = useServerFn(getMyMasterCoachCrossSales);
+  const [rows, setRows] = useState<CrossSaleRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [crossTotal, setCrossTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchData()
+      .then((r) => { setRows(r.rows); setTotal(r.total); setCrossTotal(r.crossTotal); })
+      .catch(() => { setRows([]); setTotal(0); setCrossTotal(0); })
+      .finally(() => setLoading(false));
+  }, [fetchData]);
+
+  if (loading) return <p className="text-xs text-white/50">Carregando comissões Master Coach...</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+        <Kpi label="Total recebido (Master)" value={brl(total)} delta={null} />
+        <Kpi label="Cross-sales (outro coach vendeu)" value={brl(crossTotal)} delta={null} />
+        <Kpi label="Comissões registradas" value={String(rows.length)} delta={null} />
+      </div>
+      <Section title={`Comissões Master Coach (${rows.length})`}>
+        {rows.length === 0 ? (
+          <p className="text-sm text-white/50">Nenhuma comissão Master Coach registrada ainda.</p>
+        ) : (
+          <div className="max-h-[28rem] overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="text-white/50 text-left sticky top-0 bg-[#1A1A1A]">
+                <tr>
+                  <th className="py-2 pr-3">Data</th>
+                  <th className="pr-3">Pedido</th>
+                  <th className="pr-3">Coach vendedor</th>
+                  <th className="pr-3">Tipo</th>
+                  <th className="text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-t border-white/5">
+                    <td className="py-2 pr-3 text-white/60">{new Date(r.createdAt).toLocaleDateString("pt-BR")}</td>
+                    <td className="pr-3 text-white/80">{r.orderNumber || "—"}</td>
+                    <td className="pr-3 text-white">{r.sellerCoachName || "—"}</td>
+                    <td className="pr-3">
+                      {r.isCrossSale ? (
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-300 text-[10px] font-bold uppercase">Cross-sale</span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-[10px] font-bold uppercase">Direta</span>
+                      )}
+                    </td>
+                    <td className="text-right text-primary font-bold">{brl(r.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
+function ReferralSalesInner() {
   const fetchReferrals = useServerFn(getCoachReferralSales);
   const [from, setFrom] = useState(shiftMonths(todayISO(), -12));
   const [to, setTo] = useState(todayISO());
