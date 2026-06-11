@@ -17,7 +17,7 @@ import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { WalletTab } from "@/components/coach/tabs/WalletTab";
+import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
@@ -200,7 +200,7 @@ function PartnerPanel() {
         {tab === "fitmind_calendar" && <FitmindCalendar />}
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
-        {tab === "wallet" && <WalletTab />}
+        {tab === "wallet" && <PartnerWalletTab />}
         {tab === "reports" && <PartnerReports />}
 
       </main>
