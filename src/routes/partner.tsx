@@ -200,7 +200,7 @@ function PartnerPanel() {
         {tab === "fitmind_calendar" && <FitmindCalendar />}
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
-        {tab === "wallet" && <WalletTab />}
+        {tab === "wallet" && <PartnerWalletTab />}
         {tab === "reports" && <PartnerReports />}
 
       </main>
