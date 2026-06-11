@@ -2322,11 +2322,12 @@ export type Database = {
           is_referral: boolean | null
           level: number
           master_coach_id: string | null
+          partner_order_id: string | null
           percentage: number | null
           referred_by_student_id: string | null
           slot_label: string | null
           status: Database["public"]["Enums"]["commission_status"] | null
-          transaction_id: string
+          transaction_id: string | null
         }
         Insert: {
           amount: number
@@ -2339,11 +2340,12 @@ export type Database = {
           is_referral?: boolean | null
           level: number
           master_coach_id?: string | null
+          partner_order_id?: string | null
           percentage?: number | null
           referred_by_student_id?: string | null
           slot_label?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
-          transaction_id: string
+          transaction_id?: string | null
         }
         Update: {
           amount?: number
@@ -2356,11 +2358,12 @@ export type Database = {
           is_referral?: boolean | null
           level?: number
           master_coach_id?: string | null
+          partner_order_id?: string | null
           percentage?: number | null
           referred_by_student_id?: string | null
           slot_label?: string | null
           status?: Database["public"]["Enums"]["commission_status"] | null
-          transaction_id?: string
+          transaction_id?: string | null
         }
         Relationships: [
           {
@@ -2382,6 +2385,13 @@ export type Database = {
             columns: ["master_coach_id"]
             isOneToOne: false
             referencedRelation: "master_coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_partner_order_id_fkey"
+            columns: ["partner_order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
             referencedColumns: ["id"]
           },
           {
@@ -5073,6 +5083,41 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_wallets: {
+        Row: {
+          available_balance: number
+          partner_id: string
+          pending_balance: number
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string
+        }
+        Insert: {
+          available_balance?: number
+          partner_id: string
+          pending_balance?: number
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Update: {
+          available_balance?: number
+          partner_id?: string
+          pending_balance?: number
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_wallets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -8208,6 +8253,7 @@ export type Database = {
           id: string
           notes: string | null
           paid_at: string | null
+          partner_id: string | null
           pix_key: string | null
           pix_key_type: string | null
           profile_id: string
@@ -8221,6 +8267,7 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          partner_id?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           profile_id: string
@@ -8234,6 +8281,7 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          partner_id?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           profile_id?: string
@@ -8246,6 +8294,13 @@ export type Database = {
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
           {
