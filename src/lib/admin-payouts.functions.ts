@@ -150,11 +150,24 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       return { count: all.length, total: all.reduce((s, x) => s + x, 0) };
     };
 
-    // Sellers: wallets + nutritionist_wallets + student_wallets (caso seja também aluno indicador)
+    // Sellers: wallets + partner_wallets + nutritionist_wallets + student_wallets (caso seja também aluno indicador)
     const { data: walletsRaw } = await supabaseAdmin
       .from("wallets").select("profile_id,available_balance")
       .in("profile_id", cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]);
     const walletByProfile = new Map(((walletsRaw as Array<{ profile_id: string; available_balance: number }>) || []).map((w) => [w.profile_id, w]));
+    const { data: partnerRows } = await supabaseAdmin
+      .from("partners" as never).select("id,profile_id" as never)
+      .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+    const partnerIds = ((partnerRows as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const partnerProfileById = new Map(partnerIds.map((p) => [p.id, p.profile_id]));
+    const { data: partnerWalletsRaw } = partnerIds.length
+      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
+      : { data: [] as unknown };
+    const partnerWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((partnerWalletsRaw as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = partnerProfileById.get(w.partner_id);
+      if (pid) partnerWalletByProfile.set(pid, w);
+    });
     const { data: nutriRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
       .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
@@ -172,7 +185,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
-      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
       const sid = cls.studentByProfile.get(pid);
       if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = sellerAgg.get(pid);
