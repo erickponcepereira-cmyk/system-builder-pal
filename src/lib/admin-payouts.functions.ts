@@ -50,9 +50,7 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
   for (const id of coachSet) proSet.delete(id);
 
   const partnerSet = new Set<string>();
-  for (const p of partners) {
-    if (!coachSet.has(p.profile_id) && !proSet.has(p.profile_id)) partnerSet.add(p.profile_id);
-  }
+  for (const p of partners) partnerSet.add(p.profile_id);
 
   const studentByProfile = new Map<string, string>();
   for (const s of students) studentByProfile.set(s.profile_id, s.id);
@@ -62,7 +60,7 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
   for (const id of partnerSet) sellerRoleByProfile.set(id, "partner");
   for (const id of proSet) sellerRoleByProfile.set(id, "professional");
 
-  const sellerProfileIds = [...coachSet, ...partnerSet, ...proSet];
+  const sellerProfileIds = Array.from(new Set([...coachSet, ...partnerSet, ...proSet]));
 
   return {
     coachProfileIds: [...coachSet],

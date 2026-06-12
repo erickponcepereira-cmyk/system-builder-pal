@@ -110,8 +110,10 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       if (isNutritionist) {
         if (entry?.kind === "debit") nutriAdminDebits += amount;
         else nutriAdminCredits += amount;
-      } else if (entry?.kind === "debit") adminDebits += amount;
-      else adminCredits += amount;
+      } else if (!slot.includes("taxa de pagamento") && !slot.includes("imposto")) {
+        if (entry?.kind === "debit") adminDebits += amount;
+        else adminCredits += amount;
+      }
     });
     const adminAvailable = Math.max(0, adminCredits - adminDebits);
     const nutriAdminAvailable = Math.max(0, nutriAdminCredits - nutriAdminDebits);

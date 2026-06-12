@@ -117,7 +117,7 @@ export function PartnerWalletTab() {
         amount: value,
         pix_key: pixKey.trim(),
         pix_key_type: "other",
-        status: "pending",
+        status: "requested",
       } as never);
     setSaving(false);
     if (error) { toast.error(error.message); return; }

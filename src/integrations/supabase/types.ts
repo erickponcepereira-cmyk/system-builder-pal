@@ -141,6 +141,7 @@ export type Database = {
           id: string
           kind: string
           notes: string | null
+          partner_order_id: string | null
           slot_label: string | null
           transaction_id: string | null
         }
@@ -150,6 +151,7 @@ export type Database = {
           id?: string
           kind?: string
           notes?: string | null
+          partner_order_id?: string | null
           slot_label?: string | null
           transaction_id?: string | null
         }
@@ -159,10 +161,18 @@ export type Database = {
           id?: string
           kind?: string
           notes?: string | null
+          partner_order_id?: string | null
           slot_label?: string | null
           transaction_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "admin_system_wallet_entries_partner_order_id_fkey"
+            columns: ["partner_order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "admin_system_wallet_entries_transaction_id_fkey"
             columns: ["transaction_id"]
@@ -7753,8 +7763,9 @@ export type Database = {
           notes: string | null
           paid_at: string
           paid_by: string | null
+          partner_order_id: string | null
           payment_method: string | null
-          transaction_id: string
+          transaction_id: string | null
         }
         Insert: {
           amount: number
@@ -7764,8 +7775,9 @@ export type Database = {
           notes?: string | null
           paid_at?: string
           paid_by?: string | null
+          partner_order_id?: string | null
           payment_method?: string | null
-          transaction_id: string
+          transaction_id?: string | null
         }
         Update: {
           amount?: number
@@ -7775,8 +7787,9 @@ export type Database = {
           notes?: string | null
           paid_at?: string
           paid_by?: string | null
+          partner_order_id?: string | null
           payment_method?: string | null
-          transaction_id?: string
+          transaction_id?: string | null
         }
         Relationships: [
           {
@@ -7784,6 +7797,13 @@ export type Database = {
             columns: ["paid_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_fee_payouts_partner_order_id_fkey"
+            columns: ["partner_order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
             referencedColumns: ["id"]
           },
           {

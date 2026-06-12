@@ -13,6 +13,40 @@ async function assertAdmin(userId: string) {
   if (!data || data.role !== "admin") throw new Error("Acesso negado");
 }
 
+function isAdminSystemSlot(slotLabel: unknown) {
+  const slot = String(slotLabel || "").toLowerCase();
+  return !slot.includes("nutricion") && !slot.includes("taxa de pagamento") && !slot.includes("imposto");
+}
+
+async function resolvePartnerOrderContext(orderIds: string[]) {
+  const ids = Array.from(new Set(orderIds.filter(Boolean)));
+  const map = new Map<string, { studentName: string | null; productName: string | null }>();
+  if (!ids.length) return map;
+  const { data: orders } = await supabaseAdmin
+    .from("partner_product_orders" as never)
+    .select("id, order_number, student_id, partner_product_id, professional_product_id" as never)
+    .in("id" as never, ids as never);
+  const rows = (orders as unknown as Array<{ id: string; order_number: string; student_id: string | null; partner_product_id: string | null; professional_product_id: string | null }>) || [];
+  const studentIds = Array.from(new Set(rows.map((o) => o.student_id).filter(Boolean))) as string[];
+  const partnerProductIds = Array.from(new Set(rows.map((o) => o.partner_product_id).filter(Boolean))) as string[];
+  const professionalProductIds = Array.from(new Set(rows.map((o) => o.professional_product_id).filter(Boolean))) as string[];
+  const [{ data: students }, { data: partnerProducts }, { data: professionalProducts }] = await Promise.all([
+    studentIds.length ? supabaseAdmin.from("students").select("id, profiles(name)").in("id", studentIds) : Promise.resolve({ data: [] as any[] }),
+    partnerProductIds.length ? supabaseAdmin.from("partner_products" as never).select("id, name" as never).in("id" as never, partnerProductIds as never) : Promise.resolve({ data: [] as any[] }),
+    professionalProductIds.length ? supabaseAdmin.from("professional_products" as never).select("id, name" as never).in("id" as never, professionalProductIds as never) : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const sMap = new Map<string, string>();
+  (students || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+  const pMap = new Map<string, string>();
+  ((partnerProducts as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+  ((professionalProducts as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+  rows.forEach((o) => map.set(o.id, {
+    studentName: o.student_id ? sMap.get(o.student_id) || null : null,
+    productName: (o.partner_product_id ? pMap.get(o.partner_product_id) : null) || (o.professional_product_id ? pMap.get(o.professional_product_id) : null) || o.order_number,
+  }));
+  return map;
+}
+
 export interface RecipientTotal {
   profileId: string;
   name: string;
@@ -134,7 +168,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       if (isNutri) {
         if (kind === "credit") nutriAdminCredits += amt;
         else nutriAdminDebits += amt;
-      } else {
+      } else if (isAdminSystemSlot((e as any).slot_label)) {
         if (kind === "credit") sysCredits += amt;
         else sysDebits += amt;
       }
@@ -337,13 +371,14 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     if (data.bucket === "system") {
       const { data: entries, error } = await supabaseAdmin
         .from("admin_system_wallet_entries")
-        .select("id, transaction_id, slot_label, amount, kind, created_at")
+        .select("id, transaction_id, partner_order_id, slot_label, amount, kind, created_at")
         .not("slot_label", "ilike", "%nutricion%")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
 
       const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
+      const partnerOrderIds = Array.from(new Set((entries || []).map((e: any) => e.partner_order_id).filter(Boolean)));
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
       if (txIds.length) {
         const { data: txs } = await supabaseAdmin
@@ -365,17 +400,19 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
           productName: t.product_id ? pMap.get(t.product_id) || null : null,
         }));
       }
+      const partnerOrderMap = await resolvePartnerOrderContext(partnerOrderIds);
       return (entries || []).map((e: any) => {
         const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
+        const po = e.partner_order_id ? partnerOrderMap.get(e.partner_order_id) : null;
         const slot = String(e.slot_label || "").toLowerCase();
         const isNutri = slot.includes("nutricion");
         return {
           commissionId: e.id,
-          transactionId: e.transaction_id,
+          transactionId: e.transaction_id || e.partner_order_id,
           beneficiaryName: isNutri ? "Admin Nutricionista (não atribuído)" : "Carteira do Admin",
           beneficiaryEmail: null,
-          clientName: tx?.studentName ?? null,
-          productName: tx?.productName ?? null,
+          clientName: tx?.studentName ?? po?.studentName ?? null,
+          productName: tx?.productName ?? po?.productName ?? null,
           slotLabel: e.slot_label,
           level: 0,
           amount: Number(e.amount || 0) * (e.kind === "debit" ? -1 : 1),
@@ -548,16 +585,23 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
       .eq("status", "paid");
     if (error) throw new Error(error.message);
 
+    const { data: partnerOrders } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status" as never)
+      .eq("status" as never, "paid" as never);
+
     const { data: payouts } = await supabaseAdmin
       .from("system_fee_payouts")
-      .select("transaction_id, kind, amount");
+      .select("transaction_id, partner_order_id, kind, amount");
 
     const paidTax = new Map<string, number>();
     const paidFee = new Map<string, number>();
     for (const p of payouts || []) {
       const r = p as any;
-      if (r.kind === "tax") paidTax.set(r.transaction_id, Number(r.amount || 0));
-      else if (r.kind === "payment_fee") paidFee.set(r.transaction_id, Number(r.amount || 0));
+      const key = r.transaction_id || r.partner_order_id;
+      if (!key) continue;
+      if (r.kind === "tax") paidTax.set(key, Number(r.amount || 0));
+      else if (r.kind === "payment_fee") paidFee.set(key, Number(r.amount || 0));
     }
 
     const tax: FeeBreakdown = { total: 0, autoPaidCard: 0, manualPaid: 0, manualPending: 0 };
@@ -587,11 +631,33 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
       }
     }
 
+    for (const t of ((partnerOrders as any[]) || [])) {
+      const taxAmt = Number(t.tax_amount || 0);
+      const feeAmt = Number(t.payment_fee || 0);
+      const method = String(t.payment_method || "other").toLowerCase();
+      const isCard = method === "credit_card" || method === "debit_card" || method === "card";
+      tax.total += taxAmt;
+      fee.total += feeAmt;
+      if (isCard) {
+        tax.autoPaidCard += taxAmt;
+        fee.autoPaidCard += feeAmt;
+        sales.card += Number(t.gross_amount || 0);
+      } else {
+        if (paidTax.has(t.id)) tax.manualPaid += taxAmt; else tax.manualPending += taxAmt;
+        if (paidFee.has(t.id)) fee.manualPaid += feeAmt; else fee.manualPending += feeAmt;
+        if (method === "pix") sales.pix += Number(t.gross_amount || 0);
+        else if (method === "boleto") sales.boleto += Number(t.gross_amount || 0);
+        else sales.other += Number(t.gross_amount || 0);
+      }
+    }
+
     return { tax, paymentFee: fee, sales };
   });
 
 export interface PendingFeeRow {
   transactionId: string;
+  sourceKind: "transaction" | "partner_order";
+  sourceId: string;
   date: string | null;
   productName: string | null;
   clientName: string | null;
@@ -615,18 +681,33 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
       .limit(500);
     if (error) throw new Error(error.message);
 
+    const { data: partnerOrders } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, paid_at, student_id" as never)
+      .eq("status" as never, "paid" as never)
+      .order("paid_at" as never, { ascending: false })
+      .limit(500);
+
     const nonCard = (txs || []).filter((t: any) => {
+      const m = String(t.payment_method || "").toLowerCase();
+      return !(m === "credit_card" || m === "debit_card" || m === "card");
+    });
+    const nonCardPartnerOrders = ((partnerOrders as any[]) || []).filter((t: any) => {
       const m = String(t.payment_method || "").toLowerCase();
       return !(m === "credit_card" || m === "debit_card" || m === "card");
     });
 
     const txIds = nonCard.map((t: any) => t.id);
+    const partnerOrderIds = nonCardPartnerOrders.map((t: any) => t.id);
     const productIds = Array.from(new Set(nonCard.map((t: any) => t.product_id).filter(Boolean)));
     const studentIds = Array.from(new Set(nonCard.map((t: any) => t.student_id).filter(Boolean)));
 
-    const [{ data: payouts }, { data: products }, { data: students }] = await Promise.all([
+    const [{ data: txPayouts }, { data: partnerPayouts }, { data: products }, { data: students }] = await Promise.all([
       txIds.length
         ? supabaseAdmin.from("system_fee_payouts").select("transaction_id, kind").in("transaction_id", txIds)
+        : Promise.resolve({ data: [] as any[] }),
+      partnerOrderIds.length
+        ? supabaseAdmin.from("system_fee_payouts" as never).select("partner_order_id, kind" as never).in("partner_order_id" as never, partnerOrderIds as never)
         : Promise.resolve({ data: [] as any[] }),
       productIds.length
         ? supabaseAdmin.from("products").select("id, name").in("id", productIds)
@@ -638,18 +719,26 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
 
     const taxPaid = new Set<string>();
     const feePaid = new Set<string>();
-    for (const p of payouts || []) {
+    for (const p of txPayouts || []) {
       const r = p as any;
       if (r.kind === "tax") taxPaid.add(r.transaction_id);
       else if (r.kind === "payment_fee") feePaid.add(r.transaction_id);
+    }
+    for (const p of (partnerPayouts as any[]) || []) {
+      const r = p as any;
+      if (r.kind === "tax") taxPaid.add(r.partner_order_id);
+      else if (r.kind === "payment_fee") feePaid.add(r.partner_order_id);
     }
     const pName = new Map<string, string>();
     (products || []).forEach((p: any) => pName.set(p.id, p.name));
     const sName = new Map<string, string>();
     (students || []).forEach((s: any) => sName.set(s.id, s.profiles?.name || ""));
+    const partnerOrderMap = await resolvePartnerOrderContext(partnerOrderIds);
 
-    return nonCard.map((t: any) => ({
+    const txRows: PendingFeeRow[] = nonCard.map((t: any) => ({
       transactionId: t.id,
+      sourceKind: "transaction",
+      sourceId: t.id,
       date: t.paid_at,
       productName: t.product_id ? pName.get(t.product_id) || null : null,
       clientName: t.student_id ? sName.get(t.student_id) || null : null,
@@ -659,14 +748,57 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
       taxPaid: taxPaid.has(t.id),
       feePaid: feePaid.has(t.id),
     }));
+    const partnerRows: PendingFeeRow[] = nonCardPartnerOrders.map((t: any) => {
+      const ctx = partnerOrderMap.get(t.id);
+      return {
+        transactionId: t.id,
+        sourceKind: "partner_order",
+        sourceId: t.id,
+        date: t.paid_at,
+        productName: ctx?.productName ?? null,
+        clientName: ctx?.studentName ?? null,
+        paymentMethod: t.payment_method,
+        taxAmount: Number(t.tax_amount || 0),
+        feeAmount: Number(t.payment_fee || 0),
+        taxPaid: taxPaid.has(t.id),
+        feePaid: feePaid.has(t.id),
+      };
+    });
+    return [...txRows, ...partnerRows].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   });
 
 export const payManualSystemFee = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => d as { transactionId: string; kind: "tax" | "payment_fee" })
+  .inputValidator((d: unknown) => d as { transactionId?: string; partnerOrderId?: string; kind: "tax" | "payment_fee" })
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
 
+    if (data.partnerOrderId) {
+      const { data: order, error: orderErr } = await supabaseAdmin
+        .from("partner_product_orders" as never)
+        .select("id, tax_amount, payment_fee, payment_method" as never)
+        .eq("id" as never, data.partnerOrderId as never)
+        .maybeSingle();
+      if (orderErr) throw new Error(orderErr.message);
+      if (!order) throw new Error("Pedido de parceiro/profissional não encontrado");
+      const r = order as unknown as { tax_amount?: number; payment_fee?: number; payment_method?: string };
+      const amount = data.kind === "tax" ? Number(r.tax_amount || 0) : Number(r.payment_fee || 0);
+      if (amount <= 0) throw new Error("Valor zero — nada a pagar");
+      const { data: prof } = await supabaseAdmin
+        .from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+      const { error } = await supabaseAdmin.from("system_fee_payouts" as never).insert({
+        transaction_id: null,
+        partner_order_id: data.partnerOrderId,
+        kind: data.kind,
+        amount,
+        payment_method: r.payment_method,
+        paid_by: (prof as any)?.id ?? null,
+      } as never);
+      if (error) throw new Error(error.message);
+      return { ok: true, amount };
+    }
+
+    if (!data.transactionId) throw new Error("Origem não informada");
     const { data: tx, error: txErr } = await supabaseAdmin
       .from("transactions")
       .select("id, tax_amount, payment_fee, payment_method")
