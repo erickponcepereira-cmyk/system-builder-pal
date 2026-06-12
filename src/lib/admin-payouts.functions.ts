@@ -50,9 +50,7 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
   for (const id of coachSet) proSet.delete(id);
 
   const partnerSet = new Set<string>();
-  for (const p of partners) {
-    if (!coachSet.has(p.profile_id) && !proSet.has(p.profile_id)) partnerSet.add(p.profile_id);
-  }
+  for (const p of partners) partnerSet.add(p.profile_id);
 
   const studentByProfile = new Map<string, string>();
   for (const s of students) studentByProfile.set(s.profile_id, s.id);
@@ -62,7 +60,7 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
   for (const id of partnerSet) sellerRoleByProfile.set(id, "partner");
   for (const id of proSet) sellerRoleByProfile.set(id, "professional");
 
-  const sellerProfileIds = [...coachSet, ...partnerSet, ...proSet];
+  const sellerProfileIds = Array.from(new Set([...coachSet, ...partnerSet, ...proSet]));
 
   return {
     coachProfileIds: [...coachSet],
@@ -152,11 +150,24 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       return { count: all.length, total: all.reduce((s, x) => s + x, 0) };
     };
 
-    // Sellers: wallets + nutritionist_wallets + student_wallets (caso seja também aluno indicador)
+    // Sellers: wallets + partner_wallets + nutritionist_wallets + student_wallets (caso seja também aluno indicador)
     const { data: walletsRaw } = await supabaseAdmin
       .from("wallets").select("profile_id,available_balance")
       .in("profile_id", cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]);
     const walletByProfile = new Map(((walletsRaw as Array<{ profile_id: string; available_balance: number }>) || []).map((w) => [w.profile_id, w]));
+    const { data: partnerRows } = await supabaseAdmin
+      .from("partners" as never).select("id,profile_id" as never)
+      .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+    const partnerIds = ((partnerRows as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const partnerProfileById = new Map(partnerIds.map((p) => [p.id, p.profile_id]));
+    const { data: partnerWalletsRaw } = partnerIds.length
+      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
+      : { data: [] as unknown };
+    const partnerWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((partnerWalletsRaw as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = partnerProfileById.get(w.partner_id);
+      if (pid) partnerWalletByProfile.set(pid, w);
+    });
     const { data: nutriRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
       .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
@@ -174,7 +185,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
-      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
       const sid = cls.studentByProfile.get(pid);
       if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = sellerAgg.get(pid);
@@ -283,6 +294,20 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const swMap = new Map(((stuW as unknown as Array<{ student_id: string; available_balance: number; total_withdrawn: number }>) || []).map((w) => [w.student_id, w]));
+    const { data: partnerRows } = await supabaseAdmin
+      .from("partners" as never)
+      .select("id,profile_id" as never)
+      .in("profile_id" as never, profileIds as never);
+    const partnerIds = ((partnerRows as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const partnerProfileById = new Map(partnerIds.map((p) => [p.id, p.profile_id]));
+    const { data: partnerWallets } = partnerIds.length
+      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
+      : { data: [] as unknown };
+    const pwMap = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = partnerProfileById.get(w.partner_id);
+      if (pid) pwMap.set(pid, w);
+    });
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
@@ -294,6 +319,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
 
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const w = wMap.get(p.id);
+      const pw = pwMap.get(p.id);
       const nw = nMap.get(p.id);
       const sid = cls.studentByProfile.get(p.id);
       const sw = sid ? swMap.get(sid) : undefined;
@@ -307,10 +333,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const agg = commAgg.get(p.id);
       const available = role === "student_referrer"
         ? n(sw?.available_balance)
-        : n(w?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
+        : n(w?.available_balance) + n(pw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
       const totalWithdrawn = role === "student_referrer"
         ? n(sw?.total_withdrawn)
-        : n(w?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
+        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
       return {
         profileId: p.id,
         name: p.name || "—",

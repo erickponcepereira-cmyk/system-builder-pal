@@ -70,9 +70,9 @@ function AdminFinanceiro() {
     fetchPendingFees().then(setFeesRows).catch((e) => toast.error(e instanceof Error ? e.message : "Erro"));
   };
 
-  const handlePayFee = async (transactionId: string, kind: "tax" | "payment_fee") => {
+  const handlePayFee = async (row: PendingFeeRow, kind: "tax" | "payment_fee") => {
     try {
-      await callPayFee({ data: { transactionId, kind } });
+      await callPayFee({ data: row.sourceKind === "partner_order" ? { partnerOrderId: row.sourceId, kind } : { transactionId: row.sourceId, kind } });
       toast.success("Baixa registrada");
       fetchPendingFees().then(setFeesRows);
       fetchFees().then(setFees);
@@ -414,7 +414,7 @@ function AdminFinanceiro() {
                     </thead>
                     <tbody>
                       {rows.map((r) => (
-                        <tr key={r.transactionId} className="border-t border-white/5">
+                        <tr key={`${r.sourceKind}-${r.sourceId}`} className="border-t border-white/5">
                           <td className="px-2 py-1.5 text-white/70">{r.date ? new Date(r.date).toLocaleDateString("pt-BR") : "—"}</td>
                           <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
                           <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
@@ -424,7 +424,7 @@ function AdminFinanceiro() {
                           </td>
                           <td className="px-2 py-1.5 text-right">
                             <button
-                              onClick={() => handlePayFee(r.transactionId, feesOpen)}
+                              onClick={() => handlePayFee(r, feesOpen)}
                               className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/25"
                             >
                               <CheckCircle2 className="h-3 w-3" /> Pagar
