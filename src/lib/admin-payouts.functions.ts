@@ -294,6 +294,20 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const swMap = new Map(((stuW as unknown as Array<{ student_id: string; available_balance: number; total_withdrawn: number }>) || []).map((w) => [w.student_id, w]));
+    const { data: partnerRows } = await supabaseAdmin
+      .from("partners" as never)
+      .select("id,profile_id" as never)
+      .in("profile_id" as never, profileIds as never);
+    const partnerIds = ((partnerRows as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const partnerProfileById = new Map(partnerIds.map((p) => [p.id, p.profile_id]));
+    const { data: partnerWallets } = partnerIds.length
+      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
+      : { data: [] as unknown };
+    const pwMap = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = partnerProfileById.get(w.partner_id);
+      if (pid) pwMap.set(pid, w);
+    });
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
@@ -305,6 +319,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
 
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const w = wMap.get(p.id);
+      const pw = pwMap.get(p.id);
       const nw = nMap.get(p.id);
       const sid = cls.studentByProfile.get(p.id);
       const sw = sid ? swMap.get(sid) : undefined;
@@ -318,10 +333,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const agg = commAgg.get(p.id);
       const available = role === "student_referrer"
         ? n(sw?.available_balance)
-        : n(w?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
+        : n(w?.available_balance) + n(pw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
       const totalWithdrawn = role === "student_referrer"
         ? n(sw?.total_withdrawn)
-        : n(w?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
+        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
       return {
         profileId: p.id,
         name: p.name || "—",
