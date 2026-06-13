@@ -321,6 +321,19 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const pid = partnerProfileById.get(w.partner_id);
       if (pid) pwMap.set(pid, w);
     });
+    const { data: coachRows2 } = await supabaseAdmin
+      .from("coaches" as never).select("id,profile_id" as never)
+      .in("profile_id" as never, profileIds as never);
+    const coachIds2 = ((coachRows2 as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const coachProfileById2 = new Map(coachIds2.map((c) => [c.id, c.profile_id]));
+    const { data: profWallets } = coachIds2.length
+      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIds2.map((c) => c.id) as never)
+      : { data: [] as unknown };
+    const profwMap = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = coachProfileById2.get(w.professional_coach_id);
+      if (pid) profwMap.set(pid, w);
+    });
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
