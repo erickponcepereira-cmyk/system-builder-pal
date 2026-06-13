@@ -168,6 +168,19 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       const pid = partnerProfileById.get(w.partner_id);
       if (pid) partnerWalletByProfile.set(pid, w);
     });
+    const { data: coachRows } = await supabaseAdmin
+      .from("coaches" as never).select("id,profile_id" as never)
+      .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+    const coachIds = ((coachRows as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const coachProfileById = new Map(coachIds.map((c) => [c.id, c.profile_id]));
+    const { data: profWalletsRaw } = coachIds.length
+      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIds.map((c) => c.id) as never)
+      : { data: [] as unknown };
+    const profWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((profWalletsRaw as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = coachProfileById.get(w.professional_coach_id);
+      if (pid) profWalletByProfile.set(pid, w);
+    });
     const { data: nutriRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
       .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
