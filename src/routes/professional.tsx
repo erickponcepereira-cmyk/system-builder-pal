@@ -9,7 +9,7 @@ import { StorePage } from "@/components/student/StorePage";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
-import { WalletTab } from "@/components/coach/tabs/WalletTab";
+import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
