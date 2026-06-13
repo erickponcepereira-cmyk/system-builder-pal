@@ -128,10 +128,10 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         totalWithdrawn: adminDebits,
       },
       coachWalletsTotal: {
-        available: sum(cw.data as any[], "available_balance"),
-        totalEarned: sum(cw.data as any[], "total_earned"),
-        totalWithdrawn: sum(cw.data as any[], "total_withdrawn"),
-        count: (cw.data as any[] | null)?.length || 0,
+        available: sum(cw.data as any[], "available_balance") + sum(pw.data as any[], "available_balance") + sum(profw.data as any[], "available_balance"),
+        totalEarned: sum(cw.data as any[], "total_earned") + sum(pw.data as any[], "total_earned") + sum(profw.data as any[], "total_earned"),
+        totalWithdrawn: sum(cw.data as any[], "total_withdrawn") + sum(pw.data as any[], "total_withdrawn") + sum(profw.data as any[], "total_withdrawn"),
+        count: ((cw.data as any[] | null)?.length || 0) + ((pw.data as any[] | null)?.length || 0) + ((profw.data as any[] | null)?.length || 0),
       },
       studentWalletsTotal: {
         available: sum(sw.data as any[], "available_balance"),
