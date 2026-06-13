@@ -9,7 +9,7 @@ import { StorePage } from "@/components/student/StorePage";
 
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
-import { WalletTab } from "@/components/coach/tabs/WalletTab";
+import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
@@ -225,7 +225,7 @@ function ProfessionalPanel() {
 function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; assignments: AssignmentRow[] }) {
   if (tab === "overview") return <OverviewTab coachId={info.coachId} profileId={info.profileId} coachName={info.name} />;
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
-  if (tab === "wallet") return <WalletTab />;
+  if (tab === "wallet") return <ProfessionalWalletTab />;
   if (tab === "store") return <StorePage coachMode />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;

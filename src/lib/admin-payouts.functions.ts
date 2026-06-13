@@ -168,6 +168,19 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       const pid = partnerProfileById.get(w.partner_id);
       if (pid) partnerWalletByProfile.set(pid, w);
     });
+    const { data: coachRows } = await supabaseAdmin
+      .from("coaches" as never).select("id,profile_id" as never)
+      .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
+    const coachIds = ((coachRows as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const coachProfileById = new Map(coachIds.map((c) => [c.id, c.profile_id]));
+    const { data: profWalletsRaw } = coachIds.length
+      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIds.map((c) => c.id) as never)
+      : { data: [] as unknown };
+    const profWalletByProfile = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((profWalletsRaw as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = coachProfileById.get(w.professional_coach_id);
+      if (pid) profWalletByProfile.set(pid, w);
+    });
     const { data: nutriRaw } = await supabaseAdmin
       .from("nutritionist_wallets" as never).select("profile_id,available_balance" as never)
       .in("profile_id" as never, (cls.sellerProfileIds.length ? cls.sellerProfileIds : ["00000000-0000-0000-0000-000000000000"]) as never);
@@ -185,7 +198,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
-      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
       const sid = cls.studentByProfile.get(pid);
       if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = sellerAgg.get(pid);
@@ -308,6 +321,19 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const pid = partnerProfileById.get(w.partner_id);
       if (pid) pwMap.set(pid, w);
     });
+    const { data: coachRows2 } = await supabaseAdmin
+      .from("coaches" as never).select("id,profile_id" as never)
+      .in("profile_id" as never, profileIds as never);
+    const coachIds2 = ((coachRows2 as unknown as Array<{ id: string; profile_id: string }>) || []);
+    const coachProfileById2 = new Map(coachIds2.map((c) => [c.id, c.profile_id]));
+    const { data: profWallets } = coachIds2.length
+      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIds2.map((c) => c.id) as never)
+      : { data: [] as unknown };
+    const profwMap = new Map<string, { available_balance: number; total_withdrawn: number }>();
+    ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+      const pid = coachProfileById2.get(w.professional_coach_id);
+      if (pid) profwMap.set(pid, w);
+    });
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
@@ -320,6 +346,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const w = wMap.get(p.id);
       const pw = pwMap.get(p.id);
+      const profw = profwMap.get(p.id);
       const nw = nMap.get(p.id);
       const sid = cls.studentByProfile.get(p.id);
       const sw = sid ? swMap.get(sid) : undefined;
@@ -333,10 +360,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const agg = commAgg.get(p.id);
       const available = role === "student_referrer"
         ? n(sw?.available_balance)
-        : n(w?.available_balance) + n(pw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
+        : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
       const totalWithdrawn = role === "student_referrer"
         ? n(sw?.total_withdrawn)
-        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
+        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
       return {
         profileId: p.id,
         name: p.name || "—",

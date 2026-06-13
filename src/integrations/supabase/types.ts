@@ -6496,6 +6496,41 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_wallets: {
+        Row: {
+          available_balance: number
+          pending_balance: number
+          professional_coach_id: string
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string
+        }
+        Insert: {
+          available_balance?: number
+          pending_balance?: number
+          professional_coach_id: string
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Update: {
+          available_balance?: number
+          pending_balance?: number
+          professional_coach_id?: string
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_wallets_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: true
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           admin_permissions: Json
@@ -8276,6 +8311,7 @@ export type Database = {
           partner_id: string | null
           pix_key: string | null
           pix_key_type: string | null
+          professional_coach_id: string | null
           profile_id: string
           requested_at: string | null
           status: Database["public"]["Enums"]["withdrawal_status"] | null
@@ -8290,6 +8326,7 @@ export type Database = {
           partner_id?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          professional_coach_id?: string | null
           profile_id: string
           requested_at?: string | null
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
@@ -8304,6 +8341,7 @@ export type Database = {
           partner_id?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          professional_coach_id?: string | null
           profile_id?: string
           requested_at?: string | null
           status?: Database["public"]["Enums"]["withdrawal_status"] | null
@@ -8321,6 +8359,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
           {
