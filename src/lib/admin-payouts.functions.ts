@@ -346,6 +346,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const rows: PayoutPersonRow[] = ((profs as Array<{ id: string; name: string; email: string | null }>) || []).map((p) => {
       const w = wMap.get(p.id);
       const pw = pwMap.get(p.id);
+      const profw = profwMap.get(p.id);
       const nw = nMap.get(p.id);
       const sid = cls.studentByProfile.get(p.id);
       const sw = sid ? swMap.get(sid) : undefined;
@@ -359,10 +360,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const agg = commAgg.get(p.id);
       const available = role === "student_referrer"
         ? n(sw?.available_balance)
-        : n(w?.available_balance) + n(pw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
+        : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
       const totalWithdrawn = role === "student_referrer"
         ? n(sw?.total_withdrawn)
-        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
+        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
       return {
         profileId: p.id,
         name: p.name || "—",
