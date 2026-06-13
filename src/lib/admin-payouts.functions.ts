@@ -198,7 +198,7 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
-      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
       const sid = cls.studentByProfile.get(pid);
       if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = sellerAgg.get(pid);
