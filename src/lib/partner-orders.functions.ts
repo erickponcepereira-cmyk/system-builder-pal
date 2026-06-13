@@ -88,11 +88,13 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const [adminEntries, cw, sw, nw, ppo, wr, swr] = await Promise.all([
+    const [adminEntries, cw, sw, nw, pw, profw, ppo, wr, swr] = await Promise.all([
       supabase.from("admin_system_wallet_entries" as never).select("slot_label,kind,amount" as never),
       supabase.from("wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
       supabase.from("student_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
+      supabase.from("partner_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
+      supabase.from("professional_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
       supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee" as never).eq("status" as never, "paid" as never),
       supabase.from("withdrawal_requests" as never).select("amount,status" as never).in("status" as never, ["pending", "approved", "processing"] as never),
       supabase.from("student_withdrawal_requests" as never).select("amount,status" as never).in("status" as never, ["pending", "approved", "processing"] as never),
