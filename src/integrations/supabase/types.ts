@@ -8892,6 +8892,10 @@ export type Database = {
       current_partner_id: { Args: never; Returns: string }
       current_profile_id: { Args: never; Returns: string }
       current_student_id: { Args: never; Returns: string }
+      current_user_coach_ids: { Args: never; Returns: string[] }
+      current_user_is_admin: { Args: never; Returns: boolean }
+      current_user_is_master_coach: { Args: never; Returns: boolean }
+      current_user_student_ids: { Args: never; Returns: string[] }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
       enroll_student_in_competition: {
         Args: { _gender?: string; _student_id: string }
