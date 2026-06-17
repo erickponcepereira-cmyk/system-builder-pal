@@ -62,6 +62,7 @@ interface Product {
   category_id?: string | null;
   benefit_start_time?: string | null;
   benefit_end_time?: string | null;
+  monthly_redeem_limit?: number | null;
 }
 
 
@@ -345,6 +346,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
     benefit_end_time: null,
+    monthly_redeem_limit: null,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
@@ -395,6 +397,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       admin_notes: null,
       benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
       benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
+      monthly_redeem_limit: editing.kind === "free"
+        ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
+        : null,
     };
     if (editing.id) {
       const { id, ...up } = payload;
@@ -481,6 +486,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   <Clock className="h-3 w-3" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
                 </p>
               )}
+              {p.kind === "free" && p.monthly_redeem_limit ? (
+                <p className="mt-1 ml-1 inline-block rounded-md bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-400">
+                  Limite: {p.monthly_redeem_limit}x/mês por aluno
+                </p>
+              ) : null}
               <div className="mt-1.5 flex gap-2">
                 <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
@@ -568,6 +578,23 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                       {formatBenefitWindow(editing.benefit_start_time, editing.benefit_end_time)}
                     </p>
                   )}
+                  <div className="mt-4 border-t border-white/10 pt-3">
+                    <div className="text-xs font-bold text-primary">Limite mensal por aluno</div>
+                    <p className="mt-1 text-[10px] text-white/45">Opcional. Quantas vezes cada aluno pode resgatar este cupom no mês. Deixe em branco para ilimitado.</p>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="Ilimitado"
+                      value={editing.monthly_redeem_limit ?? ""}
+                      onChange={e => {
+                        const v = e.target.value.trim();
+                        const n = v === "" ? null : Math.max(1, Math.floor(Number(v)));
+                        setEditing({ ...editing, monthly_redeem_limit: n });
+                      }}
+                      className="field-input mt-2 w-32"
+                    />
+                  </div>
                 </div>
               )}
 
