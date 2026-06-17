@@ -3,7 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const ACTIVATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
-export const QUIZ_URL = "https://diagnostic-quiz-craft.lovable.app";
+export const QUIZ_URL = "https://quiz-remember-share.lovable.app";
+const QUIZ_URL_PREFIXES = [
+  "https://quiz-remember-share.lovable.app",
+  "https://diagnostic-quiz-craft.lovable.app",
+];
 
 export const getMyOnboardingStage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -18,7 +22,7 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
     if (profile.role !== "coach" && profile.role !== "admin") return { isCoach: false as const };
     const { data: coach } = await supabase
       .from("coaches")
-      .select("id, onboarding_stage, quiz_result_url, activation_paid_at, approved_at, upline_coach_id")
+      .select("id, onboarding_stage, quiz_result_url, activation_paid_at, approved_at, upline_coach_id, already_coach")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) return { isCoach: false as const };
@@ -100,7 +104,38 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       quizResultUrl: coach.quiz_result_url,
       uplineCoachId: coach.upline_coach_id,
       approvedAt: coach.approved_at,
+      alreadyCoach: Boolean((coach as { already_coach?: boolean }).already_coach),
     };
+  });
+
+export const markAlreadyCoach = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id, name").eq("user_id", userId).maybeSingle();
+    if (!profile) throw new Error("Perfil não encontrado");
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id, onboarding_stage").eq("profile_id", profile.id).maybeSingle();
+    if (!coach) throw new Error("Coach não encontrado");
+    if (coach.onboarding_stage !== "awaiting_payment") {
+      throw new Error("Esta opção só está disponível antes do pagamento da ativação.");
+    }
+    await supabaseAdmin
+      .from("coaches")
+      .update({
+        already_coach: true,
+        onboarding_stage: "awaiting_quiz_result",
+        activation_paid_at: new Date().toISOString(),
+      } as never)
+      .eq("id", coach.id);
+    const { notifyAdmins } = await import("./coach-onboarding.server");
+    await notifyAdmins(
+      "Coach já formado solicitou liberação",
+      `${profile.name} declarou que já fez o curso e já pagou a ativação. Avalie e libere o painel manualmente.`
+    );
+    return { ok: true };
   });
 
 // Verifica se o aluno (ainda não-coach) já comprou a Ativação Coach.
@@ -144,8 +179,8 @@ export const submitQuizResult = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const url = data.url.trim();
-    if (!url.startsWith("https://diagnostic-quiz-craft.lovable.app")) {
-      throw new Error("O link deve começar com https://diagnostic-quiz-craft.lovable.app");
+    if (!QUIZ_URL_PREFIXES.some((p) => url.startsWith(p))) {
+      throw new Error(`O link deve começar com ${QUIZ_URL}`);
     }
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

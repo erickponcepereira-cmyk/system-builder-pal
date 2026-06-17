@@ -1,17 +1,19 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard, ClipboardCheck, Clock, ExternalLink, KeyRound, Loader2, LogOut } from "lucide-react";
+import { CreditCard, ClipboardCheck, Clock, ExternalLink, KeyRound, Loader2, LogOut, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyOnboardingStage,
   submitQuizResult,
   unlockCoachWithId,
+  markAlreadyCoach,
   QUIZ_URL,
   ACTIVATION_PRODUCT_ID,
 } from "@/lib/coach-onboarding.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
@@ -29,12 +31,13 @@ export function CoachOnboardingGate({ children }: Props) {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
   const [name, setName] = useState<string>("");
+  const [alreadyCoach, setAlreadyCoach] = useState(false);
 
   const reload = async () => {
     try {
       const res = await fetchStage();
       if (!res || !res.isCoach) {
-        setStage("released"); // não é coach → não bloqueia
+        setStage("released");
         return;
       }
       setStage(res.stage);
@@ -42,6 +45,7 @@ export function CoachOnboardingGate({ children }: Props) {
       setCoachId(res.coachId);
       setEmail(res.email || "");
       setName(res.name || "");
+      setAlreadyCoach(Boolean((res as { alreadyCoach?: boolean }).alreadyCoach));
     } catch (e) {
       console.error(e);
       setStage("released");
@@ -89,7 +93,7 @@ export function CoachOnboardingGate({ children }: Props) {
   if (stage === "released") return <>{children}</>;
 
   return (
-    <GateShell stage={stage} email={email} name={name} profileId={profileId} onRefresh={reload} />
+    <GateShell stage={stage} email={email} name={name} profileId={profileId} alreadyCoach={alreadyCoach} onRefresh={reload} />
   );
 }
 
@@ -98,12 +102,14 @@ function GateShell({
   email,
   name,
   profileId,
+  alreadyCoach,
   onRefresh,
 }: {
   stage: Stage;
   email: string;
   name: string;
   profileId: string | null;
+  alreadyCoach: boolean;
   onRefresh: () => void;
 }) {
   const navigate = useNavigate();
@@ -128,24 +134,33 @@ function GateShell({
           </button>
         </header>
 
-        <Stepper stage={stage} />
+        <Stepper stage={stage} alreadyCoach={alreadyCoach} />
 
         {stage === "awaiting_payment" && (
           <PaymentStep email={email} name={name} profileId={profileId} onPaid={onRefresh} />
         )}
         {stage === "awaiting_quiz_result" && <QuizStep onSubmitted={onRefresh} />}
-        {stage === "awaiting_upline_release" && <WaitingReleaseStep onReleased={onRefresh} />}
+        {stage === "awaiting_upline_release" && (
+          alreadyCoach
+            ? <AlreadyCoachWaitingStep />
+            : <WaitingReleaseStep onReleased={onRefresh} />
+        )}
       </div>
     </div>
   );
 }
 
-function Stepper({ stage }: { stage: Stage }) {
-  const steps: { id: Stage; label: string }[] = [
-    { id: "awaiting_payment", label: "Pagar curso" },
-    { id: "awaiting_quiz_result", label: "Concluir & enviar resultado" },
-    { id: "awaiting_upline_release", label: "Liberar ID" },
-  ];
+function Stepper({ stage, alreadyCoach }: { stage: Stage; alreadyCoach?: boolean }) {
+  const steps: { id: Stage; label: string }[] = alreadyCoach
+    ? [
+        { id: "awaiting_quiz_result", label: "Quiz comportamental" },
+        { id: "awaiting_upline_release", label: "Aguardando admin" },
+      ]
+    : [
+        { id: "awaiting_payment", label: "Pagar curso" },
+        { id: "awaiting_quiz_result", label: "Concluir & enviar resultado" },
+        { id: "awaiting_upline_release", label: "Liberar ID" },
+      ];
   const currentIdx = steps.findIndex((s) => s.id === stage);
   return (
     <div className="flex items-center gap-2">
@@ -227,14 +242,17 @@ function PaymentStep({
       </div>
 
       {!orderId ? (
-        <Button
-          onClick={startCheckout}
-          disabled={creating}
-          className="w-full h-12 text-base font-bold"
-        >
-          {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Pagar Ativação Coach (R$ 179,90)
-        </Button>
+        <>
+          <Button
+            onClick={startCheckout}
+            disabled={creating}
+            className="w-full h-12 text-base font-bold"
+          >
+            {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Pagar Ativação Coach (R$ 179,90)
+          </Button>
+          <AlreadyCoachButton onDone={onPaid} />
+        </>
       ) : (
         <MercadoPagoCheckout
           source={{ kind: "store_order", id: orderId }}
@@ -245,6 +263,61 @@ function PaymentStep({
           onApproved={onPaid}
         />
       )}
+    </div>
+  );
+}
+
+function AlreadyCoachButton({ onDone }: { onDone: () => void }) {
+  const mark = useServerFn(markAlreadyCoach);
+  const [busy, setBusy] = useState(false);
+  const handle = async () => {
+    if (!confirm("Confirmar que você já fez o curso e já pagou a ativação? O admin será notificado para liberar seu acesso.")) return;
+    setBusy(true);
+    try {
+      await mark();
+      toast.success("Solicitação enviada ao admin!");
+      onDone();
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao enviar solicitação");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button
+      onClick={handle}
+      disabled={busy}
+      variant="outline"
+      className="w-full h-12 border-white/15 bg-white/5 text-white hover:bg-white/10 gap-2"
+    >
+      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+      Já sou coach (já fiz o curso e paguei)
+    </Button>
+  );
+}
+
+function AlreadyCoachWaitingStep() {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center">
+        <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+          <Clock className="h-6 w-6" />
+        </div>
+        <h1 className="text-xl font-bold text-white">Em breve o admin irá liberar seu acesso</h1>
+        <p className="mt-2 text-sm text-white/70">
+          Sua solicitação foi enviada. Converse com o seu coach para agilizar a liberação.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-white/60">
+          Mensalidade do coach
+        </h2>
+        <p className="mb-4 text-xs text-white/50">
+          Escolha o melhor dia de vencimento e pague a mensalidade abaixo. Assim que o admin liberar seu acesso, sua carteirinha já estará ativa.
+        </p>
+        <SubscriptionInvoicesTab walletSource="coach" />
+      </div>
     </div>
   );
 }
@@ -301,7 +374,7 @@ function QuizStep({ onSubmitted }: { onSubmitted: () => void }) {
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://diagnostic-quiz-craft.lovable.app/..."
+          placeholder="https://quiz-remember-share.lovable.app/..."
           className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary"
         />
         <Button onClick={handleSubmit} disabled={sending} className="w-full h-11 font-bold">
