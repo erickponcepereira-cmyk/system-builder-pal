@@ -9021,6 +9021,10 @@ export type Database = {
         Args: { _transaction_id: string }
         Returns: number
       }
+      auto_ensure_subscription_for_profile: {
+        Args: { _profile_id: string }
+        Returns: undefined
+      }
       backfill_career_points: { Args: never; Returns: Json }
       block_inactive_coach: {
         Args: { _coach_id: string; _reason?: string }
