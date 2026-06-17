@@ -48,7 +48,7 @@ export const listAdminInvoices = createServerFn({ method: "GET" })
     const { data: invs, error } = await q;
     if (error) throw new Error(error.message);
 
-    const userIds = Array.from(new Set((invs ?? []).map((i: any) => i.user_id)));
+    const userIds = Array.from(new Set((invs ?? []).map((i: any) => i.user_id))) as string[];
     const { data: profs } = await context.supabase
       .from("profiles").select("user_id, name, email")
       .in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
