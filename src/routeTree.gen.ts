@@ -56,6 +56,7 @@ import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-chec
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTestSalesRouteImport } from './routes/admin.test-sales'
+import { Route as AdminSubscriptionsRouteImport } from './routes/admin.subscriptions'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-reports'
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
@@ -336,6 +337,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
 const AdminTestSalesRoute = AdminTestSalesRouteImport.update({
   id: '/test-sales',
   path: '/test-sales',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
@@ -622,6 +628,7 @@ export interface FileRoutesByFullPath {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -714,6 +721,7 @@ export interface FileRoutesByTo {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -809,6 +817,7 @@ export interface FileRoutesById {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -905,6 +914,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
@@ -997,6 +1007,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
@@ -1091,6 +1102,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
@@ -1498,6 +1510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTestSalesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/subscriptions': {
+      id: '/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminSubscriptionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/students': {
       id: '/admin/students'
       path: '/students'
@@ -1864,6 +1883,7 @@ interface AdminRouteChildren {
   AdminStoreRoute: typeof AdminStoreRoute
   AdminStoreReportsRoute: typeof AdminStoreReportsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
   AdminTestSalesRoute: typeof AdminTestSalesRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1905,6 +1925,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminStoreRoute: AdminStoreRoute,
   AdminStoreReportsRoute: AdminStoreReportsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
+  AdminSubscriptionsRoute: AdminSubscriptionsRoute,
   AdminTestSalesRoute: AdminTestSalesRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
