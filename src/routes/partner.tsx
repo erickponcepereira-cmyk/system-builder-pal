@@ -42,6 +42,7 @@ interface Partner {
   status: string; document: string | null; document_type: string | null;
   business_area: string | null; specialty: string | null;
   referral_code: string | null; referral_link: string | null;
+  free_redeem_policy?: "all" | "one_per_month" | null;
 }
 
 interface Product {
