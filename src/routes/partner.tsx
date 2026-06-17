@@ -463,6 +463,38 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
         <button onClick={() => setEditing(blank())} className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"><Plus className="h-3.5 w-3.5" /> Novo</button>
       </div>
 
+      {showPolicyBanner && (
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-3">
+          <p className="text-xs font-bold text-white mb-1">⚠️ Regra de resgate dos benefícios gratuitos</p>
+          <p className="text-[11px] text-white/60 mb-2">
+            Você tem <b className="text-white">{activeFreeCount} benefícios gratuitos ativos</b>. Escolha se o aluno pode resgatar todos os cupons no mês ou apenas 1 por mês desta empresa.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              disabled={savingPolicy}
+              onClick={() => savePolicy("all")}
+              className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-bold transition ${policy === "all" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            >
+              Liberar todos os cupons
+              <span className="block text-[9px] font-normal opacity-80 mt-0.5">Aluno pode resgatar todos os benefícios gratuitos (respeitando horários e limite por produto).</span>
+            </button>
+            <button
+              type="button"
+              disabled={savingPolicy}
+              onClick={() => savePolicy("one_per_month")}
+              className={`flex-1 rounded-lg px-3 py-2 text-[11px] font-bold transition ${policy === "one_per_month" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            >
+              Apenas 1 por mês
+              <span className="block text-[9px] font-normal opacity-80 mt-0.5">Ao usar um cupom, os demais ficam bloqueados até o próximo mês.</span>
+            </button>
+          </div>
+          {!policyDismissed && (
+            <button onClick={() => setPolicyDismissed(true)} className="mt-2 text-[10px] text-white/40 hover:text-white/70">Ocultar aviso</button>
+          )}
+        </div>
+      )}
+
       {products.length === 0 && <p className="text-sm text-white/40 text-center py-8">Nenhum produto cadastrado ainda.</p>}
 
       <div className="space-y-2">
