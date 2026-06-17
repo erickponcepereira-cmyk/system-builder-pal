@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2 } from "lucide-react";
+import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X } from "lucide-react";
 import {
   getMySubscription, updateMySubscriptionPrefs, payInvoiceWithWallet, ensureMySubscription,
 } from "@/lib/subscriptions.functions";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
@@ -19,6 +20,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const [state, setState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [mpMethod, setMpMethod] = useState<"pix" | "card" | null>(null);
 
   const fnGet = useServerFn(getMySubscription);
   const fnUpd = useServerFn(updateMySubscriptionPrefs);
@@ -86,10 +88,31 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
               className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold disabled:opacity-40">
               <Wallet className="h-4 w-4" /> Descontar da carteira ({fmt(walletBalance)})
             </button>
-            <button disabled className="flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-bold opacity-60">
-              <CreditCard className="h-4 w-4" /> Pagar com PIX / Cartão (em breve)
+            <button onClick={() => setMpMethod("pix")}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold">
+              <QrCode className="h-4 w-4" /> Pagar com PIX
+            </button>
+            <button onClick={() => setMpMethod("card")}
+              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">
+              <CreditCard className="h-4 w-4" /> Pagar com Cartão
             </button>
           </div>
+          {mpMethod && (
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-bold text-white/80">Checkout Mercado Pago — {mpMethod === "pix" ? "PIX" : "Cartão"}</p>
+                <button onClick={() => setMpMethod(null)} className="text-white/50 hover:text-white"><X className="h-4 w-4" /></button>
+              </div>
+              <MercadoPagoCheckout
+                source={{ kind: "subscription_invoice", id: current.id }}
+                amount={Number(current.amount)}
+                description={`Mensalidade ${new Date(current.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}`}
+                defaultPayer={state.payer ? { email: state.payer.email || "", name: state.payer.name || "" } : undefined}
+                initialMethod={mpMethod}
+                onApproved={() => { setMpMethod(null); load(); }}
+              />
+            </div>
+          )}
         </div>
       )}
 

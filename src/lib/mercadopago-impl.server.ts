@@ -11,7 +11,7 @@ export function siteUrl() {
   }
 }
 
-export type SourceKind = "store_order" | "transaction" | "partner_product_order";
+export type SourceKind = "store_order" | "transaction" | "partner_product_order" | "subscription_invoice";
 
 export async function loadSource(kind: SourceKind, id: string) {
   if (kind === "store_order") {
@@ -45,6 +45,23 @@ export async function loadSource(kind: SourceKind, id: string) {
       existingPaymentId: row.mp_payment_id,
     };
   }
+  if (kind === "subscription_invoice") {
+    const { data, error } = await supabaseAdmin
+      .from("subscription_invoices" as never)
+      .select("id, amount, reference_month, status, mp_payment_id" as never)
+      .eq("id" as never, id as never)
+      .maybeSingle();
+    const row = data as unknown as { id: string; amount: number; reference_month: string; status: string; mp_payment_id: string | null } | null;
+    if (error || !row) throw new Error("Fatura não encontrada");
+    const ref = new Date(row.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" });
+    return {
+      amount: Number(row.amount),
+      description: `Mensalidade ${ref}`,
+      studentId: null as unknown as string,
+      alreadyPaid: row.status === "paid",
+      existingPaymentId: row.mp_payment_id,
+    };
+  }
   const { data, error } = await supabaseAdmin
     .from("transactions")
     .select("id, gross_amount, student_id, status, purchase_type, mp_payment_id")
@@ -72,6 +89,11 @@ export async function attachPaymentToSource(
       .from("partner_product_orders" as never)
       .update({ mp_payment_id: mpRowId } as never)
       .eq("id" as never, id as never);
+  } else if (kind === "subscription_invoice") {
+    await supabaseAdmin
+      .from("subscription_invoices" as never)
+      .update({ mp_payment_id: mpRowId } as never)
+      .eq("id" as never, id as never);
   } else {
     await supabaseAdmin.from("transactions").update({ mp_payment_id: mpRowId }).eq("id", id);
   }
@@ -88,8 +110,18 @@ export async function applyApproval(kind: SourceKind, id: string) {
       console.error("[coach-onboarding] activation hook failed:", e);
     }
   } else if (kind === "partner_product_order") {
-    // Atualiza status e distribui comissões via RPC.
     await supabaseAdmin.rpc("process_partner_product_order_paid" as never, { _order_id: id } as never);
+  } else if (kind === "subscription_invoice") {
+    // Marca fatura como paga via PIX/cartão (sem débito de carteira interna)
+    const { error } = await supabaseAdmin.rpc("process_subscription_invoice_payment" as never, {
+      _invoice_id: id,
+      _method: "pix",
+      _wallet_source: "external",
+      _performed_by: null,
+      _fee_amount: 0,
+      _mp_payment_id: null,
+    } as never);
+    if (error) throw new Error(error.message);
   } else {
     await supabaseAdmin
       .from("transactions")
@@ -268,7 +300,8 @@ export async function handleGetStatus(paymentRowId: string) {
           newStatus === "approved" &&
           (row.source_kind === "store_order" ||
             row.source_kind === "transaction" ||
-            row.source_kind === "partner_product_order")
+            row.source_kind === "partner_product_order" ||
+            row.source_kind === "subscription_invoice")
         ) {
           try {
             await applyApproval(row.source_kind as SourceKind, row.source_id as string);
