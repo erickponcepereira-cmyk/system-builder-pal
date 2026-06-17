@@ -299,6 +299,7 @@ function CoachDashboard() {
     { id: "challenge", label: "Desafio", icon: Trophy },
 
     { id: "wallet", label: "Carteira", icon: Wallet },
+    { id: "subscription", label: "Mensalidade", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
