@@ -222,6 +222,7 @@ function ProfessionalPanel() {
         <TabContent tab={tab} info={info} assignments={assignments} />
       </div>
     </div>
+    </SubscriptionGuard>
   );
 }
 
