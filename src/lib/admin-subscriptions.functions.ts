@@ -37,7 +37,7 @@ export const listAdminInvoices = createServerFn({ method: "GET" })
     z.object({ status: z.string().optional(), month: z.string().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    let q = context.supabase
+    let q: any = context.supabase
       .from("subscription_invoices")
       .select("*")
       .order("reference_month", { ascending: false })
