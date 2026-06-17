@@ -29,7 +29,7 @@ export const Route = createFileRoute("/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "profile" | "fitmind_calendar" | "reports";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports";
 
 
 interface Partner {
