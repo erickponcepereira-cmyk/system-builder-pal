@@ -22,7 +22,7 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
     if (profile.role !== "coach" && profile.role !== "admin") return { isCoach: false as const };
     const { data: coach } = await supabase
       .from("coaches")
-      .select("id, onboarding_stage, quiz_result_url, activation_paid_at, approved_at, upline_coach_id")
+      .select("id, onboarding_stage, quiz_result_url, activation_paid_at, approved_at, upline_coach_id, already_coach")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (!coach) return { isCoach: false as const };
