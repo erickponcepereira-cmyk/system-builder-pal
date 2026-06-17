@@ -15,6 +15,7 @@ interface Partner {
   id: string; fantasy_name: string; description: string | null; photo_url: string | null; cover_url: string | null;
   whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
+  free_redeem_policy?: "all" | "one_per_month" | null;
 }
 interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
