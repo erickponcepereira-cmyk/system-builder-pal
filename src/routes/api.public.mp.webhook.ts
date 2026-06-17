@@ -62,8 +62,8 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
             });
           }
 
-          if (status === "approved" && (kind === "store_order" || kind === "transaction" || kind === "partner_product_order")) {
-            await applyApproval(kind as "store_order" | "transaction" | "partner_product_order", sourceId);
+          if (status === "approved" && (kind === "store_order" || kind === "transaction" || kind === "partner_product_order" || kind === "subscription_invoice")) {
+            await applyApproval(kind as "store_order" | "transaction" | "partner_product_order" | "subscription_invoice", sourceId);
           }
 
           return new Response(JSON.stringify({ ok: true, status }), { status: 200, headers: { "content-type": "application/json" } });
