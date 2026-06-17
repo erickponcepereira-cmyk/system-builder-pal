@@ -3,7 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const ACTIVATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
-export const QUIZ_URL = "https://diagnostic-quiz-craft.lovable.app";
+export const QUIZ_URL = "https://quiz-remember-share.lovable.app";
+const QUIZ_URL_PREFIXES = [
+  "https://quiz-remember-share.lovable.app",
+  "https://diagnostic-quiz-craft.lovable.app",
+];
 
 export const getMyOnboardingStage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
