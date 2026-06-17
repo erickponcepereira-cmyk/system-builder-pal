@@ -338,6 +338,23 @@ function Stat({ label, value }: { label: string; value: number }) {
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [policy, setPolicy] = useState<"all" | "one_per_month">((partner.free_redeem_policy as "all" | "one_per_month") || "all");
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [policyDismissed, setPolicyDismissed] = useState(false);
+
+  const activeFreeCount = products.filter(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner).length;
+  const showPolicyBanner = activeFreeCount >= 2;
+
+  const savePolicy = async (next: "all" | "one_per_month") => {
+    setSavingPolicy(true);
+    const { error } = await supabase.from("partners" as never).update({ free_redeem_policy: next } as never).eq("id" as never, partner.id);
+    setSavingPolicy(false);
+    if (error) return toast.error(error.message);
+    setPolicy(next);
+    toast.success(next === "one_per_month" ? "Regra salva: 1 benefício gratuito por mês por aluno." : "Regra salva: aluno pode resgatar todos os benefícios.");
+    onReload();
+  };
+
 
   const blank = (): Partial<Product> => ({
     partner_id: partner.id,
