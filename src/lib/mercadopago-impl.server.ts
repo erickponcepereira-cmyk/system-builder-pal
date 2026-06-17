@@ -300,7 +300,8 @@ export async function handleGetStatus(paymentRowId: string) {
           newStatus === "approved" &&
           (row.source_kind === "store_order" ||
             row.source_kind === "transaction" ||
-            row.source_kind === "partner_product_order")
+            row.source_kind === "partner_product_order" ||
+            row.source_kind === "subscription_invoice")
         ) {
           try {
             await applyApproval(row.source_kind as SourceKind, row.source_id as string);
