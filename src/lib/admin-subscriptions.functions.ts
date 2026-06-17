@@ -70,7 +70,7 @@ export const updateSubscriptionAdmin = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { id, ...patch } = data;
     (patch as any).updated_at = new Date().toISOString();
-    const { error } = await context.supabase.from("user_subscriptions").update(patch).eq("id", id);
+    const { error } = await (context.supabase.from("user_subscriptions") as any).update(patch).eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
