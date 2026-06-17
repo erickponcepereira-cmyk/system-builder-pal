@@ -22,6 +22,7 @@ import { PhysicalStoreTab } from "@/components/coach/tabs/StoreTab";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
+import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
@@ -49,7 +50,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
+type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "subscription" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
 
 
 export const money = (value: number | null | undefined) =>
@@ -299,6 +300,7 @@ function CoachDashboard() {
     { id: "challenge", label: "Desafio", icon: Trophy },
 
     { id: "wallet", label: "Carteira", icon: Wallet },
+    { id: "subscription", label: "Mensalidade", icon: Wallet },
     { id: "career", label: "Carreira", icon: Trophy },
     { id: "profile", label: "Meu Perfil", icon: User },
   ];
@@ -505,7 +507,8 @@ function CoachDashboard() {
          {activeTab === "challenge" && <div className="p-4"><ChallengeTab coachId={coachContext?.coachId} /></div>}
 
           {activeTab === "career" && <CareerTab />}
-          {activeTab === "wallet" && <WalletTab />}
+         {activeTab === "wallet" && <WalletTab />}
+         {activeTab === "subscription" && <SubscriptionInvoicesTab walletSource="coach" />}
           </div>
         </div>
       </main>

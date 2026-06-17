@@ -18,6 +18,7 @@ import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
+import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "profile" | "fitmind_calendar" | "reports";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports";
 
 
 interface Partner {
@@ -160,6 +161,7 @@ function PartnerPanel() {
     ...benefitTabs,
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
     { key: "wallet" as Tab, label: "Carteira", icon: Wallet },
+    { key: "subscription" as Tab, label: "Mensalidade", icon: DollarSign },
     { key: "reports" as Tab, label: "Relatórios", icon: BarChart3 },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
@@ -201,6 +203,7 @@ function PartnerPanel() {
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
         {tab === "wallet" && <PartnerWalletTab />}
+        {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
         {tab === "reports" && <PartnerReports />}
 
       </main>

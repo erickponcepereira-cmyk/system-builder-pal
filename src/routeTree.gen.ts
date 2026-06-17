@@ -56,6 +56,7 @@ import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-chec
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTestSalesRouteImport } from './routes/admin.test-sales'
+import { Route as AdminSubscriptionsRouteImport } from './routes/admin.subscriptions'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-reports'
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
@@ -97,6 +98,7 @@ import { Route as AdminCoachesInactivityRouteImport } from './routes/admin.coach
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
+import { Route as ApiPublicHooksSubscriptionsTickRouteImport } from './routes/api/public/hooks/subscriptions-tick'
 import { Route as ApiPublicHooksNetworkUnlockSnapshotRouteImport } from './routes/api/public/hooks/network-unlock-snapshot'
 import { Route as ApiPublicCareerResetExpiredRouteImport } from './routes/api/public/career.reset-expired'
 import { Route as ApiOauthGoogleStartRouteImport } from './routes/api.oauth.google.start'
@@ -338,6 +340,11 @@ const AdminTestSalesRoute = AdminTestSalesRouteImport.update({
   path: '/test-sales',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/students',
   path: '/students',
@@ -548,6 +555,12 @@ const ApiPublicInviteTokenRoute = ApiPublicInviteTokenRouteImport.update({
   path: '/api/public/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksSubscriptionsTickRoute =
+  ApiPublicHooksSubscriptionsTickRouteImport.update({
+    id: '/api/public/hooks/subscriptions-tick',
+    path: '/api/public/hooks/subscriptions-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksNetworkUnlockSnapshotRoute =
   ApiPublicHooksNetworkUnlockSnapshotRouteImport.update({
     id: '/api/public/hooks/network-unlock-snapshot',
@@ -622,6 +635,7 @@ export interface FileRoutesByFullPath {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -661,6 +675,7 @@ export interface FileRoutesByFullPath {
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  '/api/public/hooks/subscriptions-tick': typeof ApiPublicHooksSubscriptionsTickRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
@@ -714,6 +729,7 @@ export interface FileRoutesByTo {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -753,6 +769,7 @@ export interface FileRoutesByTo {
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  '/api/public/hooks/subscriptions-tick': typeof ApiPublicHooksSubscriptionsTickRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
@@ -809,6 +826,7 @@ export interface FileRoutesById {
   '/admin/store': typeof AdminStoreRoute
   '/admin/store-reports': typeof AdminStoreReportsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/test-sales': typeof AdminTestSalesRoute
   '/admin/users': typeof AdminUsersRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -848,6 +866,7 @@ export interface FileRoutesById {
   '/api/oauth/google/start': typeof ApiOauthGoogleStartRoute
   '/api/public/career/reset-expired': typeof ApiPublicCareerResetExpiredRoute
   '/api/public/hooks/network-unlock-snapshot': typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  '/api/public/hooks/subscriptions-tick': typeof ApiPublicHooksSubscriptionsTickRoute
   '/api/public/invite/$token': typeof ApiPublicInviteTokenRoute
   '/api/public/mp/webhook': typeof ApiPublicMpWebhookRoute
   '/api/public/pay/$orderNumber': typeof ApiPublicPayOrderNumberRoute
@@ -905,6 +924,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
@@ -944,6 +964,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
     | '/api/public/hooks/network-unlock-snapshot'
+    | '/api/public/hooks/subscriptions-tick'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
@@ -997,6 +1018,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
@@ -1036,6 +1058,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
     | '/api/public/hooks/network-unlock-snapshot'
+    | '/api/public/hooks/subscriptions-tick'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
@@ -1091,6 +1114,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/store-reports'
     | '/admin/students'
+    | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
     | '/checkin/$studentId'
@@ -1130,6 +1154,7 @@ export interface FileRouteTypes {
     | '/api/oauth/google/start'
     | '/api/public/career/reset-expired'
     | '/api/public/hooks/network-unlock-snapshot'
+    | '/api/public/hooks/subscriptions-tick'
     | '/api/public/invite/$token'
     | '/api/public/mp/webhook'
     | '/api/public/pay/$orderNumber'
@@ -1162,6 +1187,7 @@ export interface RootRouteChildren {
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
   ApiPublicHooksNetworkUnlockSnapshotRoute: typeof ApiPublicHooksNetworkUnlockSnapshotRoute
+  ApiPublicHooksSubscriptionsTickRoute: typeof ApiPublicHooksSubscriptionsTickRoute
   ApiPublicInviteTokenRoute: typeof ApiPublicInviteTokenRoute
   ApiPublicMpWebhookRoute: typeof ApiPublicMpWebhookRoute
   ApiPublicPayOrderNumberRoute: typeof ApiPublicPayOrderNumberRoute
@@ -1498,6 +1524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTestSalesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/subscriptions': {
+      id: '/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminSubscriptionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/students': {
       id: '/admin/students'
       path: '/students'
@@ -1785,6 +1818,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/subscriptions-tick': {
+      id: '/api/public/hooks/subscriptions-tick'
+      path: '/api/public/hooks/subscriptions-tick'
+      fullPath: '/api/public/hooks/subscriptions-tick'
+      preLoaderRoute: typeof ApiPublicHooksSubscriptionsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/network-unlock-snapshot': {
       id: '/api/public/hooks/network-unlock-snapshot'
       path: '/api/public/hooks/network-unlock-snapshot'
@@ -1864,6 +1904,7 @@ interface AdminRouteChildren {
   AdminStoreRoute: typeof AdminStoreRoute
   AdminStoreReportsRoute: typeof AdminStoreReportsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
   AdminTestSalesRoute: typeof AdminTestSalesRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1905,6 +1946,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminStoreRoute: AdminStoreRoute,
   AdminStoreReportsRoute: AdminStoreReportsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
+  AdminSubscriptionsRoute: AdminSubscriptionsRoute,
   AdminTestSalesRoute: AdminTestSalesRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -2017,6 +2059,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
   ApiPublicHooksNetworkUnlockSnapshotRoute:
     ApiPublicHooksNetworkUnlockSnapshotRoute,
+  ApiPublicHooksSubscriptionsTickRoute: ApiPublicHooksSubscriptionsTickRoute,
   ApiPublicInviteTokenRoute: ApiPublicInviteTokenRoute,
   ApiPublicMpWebhookRoute: ApiPublicMpWebhookRoute,
   ApiPublicPayOrderNumberRoute: ApiPublicPayOrderNumberRoute,
@@ -2024,13 +2067,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

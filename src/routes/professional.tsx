@@ -10,6 +10,7 @@ import { StorePage } from "@/components/student/StorePage";
 import ProfessionalProductsPanel from "@/components/professional/ProfessionalProductsPanel";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
+import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
@@ -78,7 +79,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   settings: { label: "Configurações", icon: Settings },
   fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
   appointments: { label: "Atendimentos", icon: Calendar },
-
+  subscription: { label: "Mensalidade", icon: Wallet },
 };
 
 function ProfessionalPanel() {
@@ -166,7 +167,7 @@ function ProfessionalPanel() {
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
   const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "settings", "fitmind_calendar"];
-  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs])).filter((t) => t !== "collaborators" && t !== "network" && t !== "overview")];
+  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription"])).filter((t) => t !== "collaborators" && t !== "network" && t !== "overview")];
 
 
   return (
@@ -226,6 +227,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "overview") return <OverviewTab coachId={info.coachId} profileId={info.profileId} coachName={info.name} />;
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
   if (tab === "wallet") return <ProfessionalWalletTab />;
+  if (tab === "subscription") return <SubscriptionInvoicesTab walletSource="professional" />;
   if (tab === "store") return <StorePage coachMode />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
