@@ -20,9 +20,10 @@ export const getMySubscription = createServerFn({ method: "GET" })
       .order("reference_month", { ascending: false })
       .limit(24);
 
-    // Saldos por carteira (para decidir débito)
+    // Saldos por carteira (para decidir débito) + dados de pagador
     const { data: profile } = await supabase
-      .from("profiles").select("id").eq("user_id", userId).maybeSingle();
+      .from("profiles").select("id, name, email, document").eq("user_id", userId).maybeSingle();
+
 
     const wallets: Record<string, number> = { coach: 0, partner: 0, professional: 0 };
     if (profile?.id) {
