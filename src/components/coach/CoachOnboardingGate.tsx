@@ -102,12 +102,14 @@ function GateShell({
   email,
   name,
   profileId,
+  alreadyCoach,
   onRefresh,
 }: {
   stage: Stage;
   email: string;
   name: string;
   profileId: string | null;
+  alreadyCoach: boolean;
   onRefresh: () => void;
 }) {
   const navigate = useNavigate();
@@ -132,13 +134,17 @@ function GateShell({
           </button>
         </header>
 
-        <Stepper stage={stage} />
+        <Stepper stage={stage} alreadyCoach={alreadyCoach} />
 
         {stage === "awaiting_payment" && (
           <PaymentStep email={email} name={name} profileId={profileId} onPaid={onRefresh} />
         )}
         {stage === "awaiting_quiz_result" && <QuizStep onSubmitted={onRefresh} />}
-        {stage === "awaiting_upline_release" && <WaitingReleaseStep onReleased={onRefresh} />}
+        {stage === "awaiting_upline_release" && (
+          alreadyCoach
+            ? <AlreadyCoachWaitingStep />
+            : <WaitingReleaseStep onReleased={onRefresh} />
+        )}
       </div>
     </div>
   );
