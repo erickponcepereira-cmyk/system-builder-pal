@@ -104,7 +104,38 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       quizResultUrl: coach.quiz_result_url,
       uplineCoachId: coach.upline_coach_id,
       approvedAt: coach.approved_at,
+      alreadyCoach: Boolean((coach as { already_coach?: boolean }).already_coach),
     };
+  });
+
+export const markAlreadyCoach = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id, name").eq("user_id", userId).maybeSingle();
+    if (!profile) throw new Error("Perfil não encontrado");
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id, onboarding_stage").eq("profile_id", profile.id).maybeSingle();
+    if (!coach) throw new Error("Coach não encontrado");
+    if (coach.onboarding_stage !== "awaiting_payment") {
+      throw new Error("Esta opção só está disponível antes do pagamento da ativação.");
+    }
+    await supabaseAdmin
+      .from("coaches")
+      .update({
+        already_coach: true,
+        onboarding_stage: "awaiting_quiz_result",
+        activation_paid_at: new Date().toISOString(),
+      } as never)
+      .eq("id", coach.id);
+    const { notifyAdmins } = await import("./coach-onboarding.server");
+    await notifyAdmins(
+      "Coach já formado solicitou liberação",
+      `${profile.name} declarou que já fez o curso e já pagou a ativação. Avalie e libere o painel manualmente.`
+    );
+    return { ok: true };
   });
 
 // Verifica se o aluno (ainda não-coach) já comprou a Ativação Coach.
