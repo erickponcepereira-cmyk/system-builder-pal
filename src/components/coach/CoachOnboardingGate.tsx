@@ -93,7 +93,7 @@ export function CoachOnboardingGate({ children }: Props) {
   if (stage === "released") return <>{children}</>;
 
   return (
-    <GateShell stage={stage} email={email} name={name} profileId={profileId} onRefresh={reload} />
+    <GateShell stage={stage} email={email} name={name} profileId={profileId} alreadyCoach={alreadyCoach} onRefresh={reload} />
   );
 }
 
