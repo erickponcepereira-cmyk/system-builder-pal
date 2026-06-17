@@ -5142,6 +5142,7 @@ export type Database = {
           blocked_at: string | null
           blocked_reason: string | null
           business_area: string | null
+          card_valid_until: string | null
           city: string | null
           cover_url: string | null
           created_at: string
@@ -5174,6 +5175,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_reason?: string | null
           business_area?: string | null
+          card_valid_until?: string | null
           city?: string | null
           cover_url?: string | null
           created_at?: string
@@ -5206,6 +5208,7 @@ export type Database = {
           blocked_at?: string | null
           blocked_reason?: string | null
           business_area?: string | null
+          card_valid_until?: string | null
           city?: string | null
           cover_url?: string | null
           created_at?: string
@@ -9116,6 +9119,10 @@ export type Database = {
       }
       extend_student_card_access: {
         Args: { _days: number; _student_id: string }
+        Returns: undefined
+      }
+      extend_user_membership_cards: {
+        Args: { _days?: number; _user_id: string }
         Returns: undefined
       }
       find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
