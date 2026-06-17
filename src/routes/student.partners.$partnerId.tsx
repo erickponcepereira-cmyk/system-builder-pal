@@ -15,6 +15,7 @@ interface Partner {
   id: string; fantasy_name: string; description: string | null; photo_url: string | null; cover_url: string | null;
   whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
+  free_redeem_policy?: "all" | "one_per_month" | null;
 }
 interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
@@ -111,6 +112,11 @@ function PartnerProfilePage() {
           </div>
         )}
 
+        {tab === "products" && partner.free_redeem_policy === "one_per_month" && products.some(p => p.kind === "free") && (
+          <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            ⚠️ Esta empresa permite resgatar <b>apenas 1 benefício gratuito por mês</b>. Ao usar um cupom, os demais ficarão indisponíveis até o próximo mês.
+          </div>
+        )}
         {tab === "products" && (
           products.length === 0 ? <p className="text-center text-sm text-white/40 py-8">Sem produtos ativos.</p> : (
             <>
