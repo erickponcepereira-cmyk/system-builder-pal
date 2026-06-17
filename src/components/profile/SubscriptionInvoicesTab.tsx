@@ -20,6 +20,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const [state, setState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [mpMethod, setMpMethod] = useState<"pix" | "card" | null>(null);
 
   const fnGet = useServerFn(getMySubscription);
   const fnUpd = useServerFn(updateMySubscriptionPrefs);
