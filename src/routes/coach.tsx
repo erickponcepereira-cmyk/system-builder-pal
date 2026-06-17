@@ -311,6 +311,7 @@ function CoachDashboard() {
 
   return (
     <CoachOnboardingGate>
+    <SubscriptionGuard walletSource="coach">
     <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
 
       {/* Mobile header */}
