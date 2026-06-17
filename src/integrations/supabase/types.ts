@@ -143,6 +143,7 @@ export type Database = {
           notes: string | null
           partner_order_id: string | null
           slot_label: string | null
+          subscription_invoice_id: string | null
           transaction_id: string | null
         }
         Insert: {
@@ -153,6 +154,7 @@ export type Database = {
           notes?: string | null
           partner_order_id?: string | null
           slot_label?: string | null
+          subscription_invoice_id?: string | null
           transaction_id?: string | null
         }
         Update: {
@@ -163,6 +165,7 @@ export type Database = {
           notes?: string | null
           partner_order_id?: string | null
           slot_label?: string | null
+          subscription_invoice_id?: string | null
           transaction_id?: string | null
         }
         Relationships: [
@@ -7722,6 +7725,148 @@ export type Database = {
           },
         ]
       }
+      subscription_invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          fee_amount: number
+          id: string
+          mp_payment_id: string | null
+          net_to_admin: number
+          notes: string | null
+          paid_at: string | null
+          payment_method:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          tax_amount: number
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          wallet_source: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          fee_amount?: number
+          id?: string
+          mp_payment_id?: string | null
+          net_to_admin?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tax_amount?: number
+          updated_at?: string
+          user_id: string
+          user_subscription_id: string
+          wallet_source?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          fee_amount?: number
+          id?: string
+          mp_payment_id?: string | null
+          net_to_admin?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tax_amount?: number
+          updated_at?: string
+          user_id?: string
+          user_subscription_id?: string
+          wallet_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_user_subscription_id_fkey"
+            columns: ["user_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payment_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          invoice_id: string | null
+          performed_by: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          invoice_id?: string | null
+          performed_by?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          invoice_id?: string | null
+          performed_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payment_log_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          default_amount: number
+          grace_days: number
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          default_amount?: number
+          grace_days?: number
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          default_amount?: number
+          grace_days?: number
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           auto_renew: boolean | null
@@ -7800,6 +7945,7 @@ export type Database = {
           paid_by: string | null
           partner_order_id: string | null
           payment_method: string | null
+          subscription_invoice_id: string | null
           transaction_id: string | null
         }
         Insert: {
@@ -7812,6 +7958,7 @@ export type Database = {
           paid_by?: string | null
           partner_order_id?: string | null
           payment_method?: string | null
+          subscription_invoice_id?: string | null
           transaction_id?: string | null
         }
         Update: {
@@ -7824,6 +7971,7 @@ export type Database = {
           paid_by?: string | null
           partner_order_id?: string | null
           payment_method?: string | null
+          subscription_invoice_id?: string | null
           transaction_id?: string | null
         }
         Relationships: [
@@ -8085,6 +8233,59 @@ export type Database = {
             columns: ["subscription_id"]
             isOneToOne: false
             referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscriptions: {
+        Row: {
+          billing_day: number
+          created_at: string
+          custom_amount: number | null
+          exempt_until: string | null
+          id: string
+          notes: string | null
+          plan_id: string
+          preferred_payment_method: Database["public"]["Enums"]["invoice_payment_method"]
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_day?: number
+          created_at?: string
+          custom_amount?: number | null
+          exempt_until?: string | null
+          id?: string
+          notes?: string | null
+          plan_id: string
+          preferred_payment_method?: Database["public"]["Enums"]["invoice_payment_method"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_day?: number
+          created_at?: string
+          custom_amount?: number | null
+          exempt_until?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          preferred_payment_method?: Database["public"]["Enums"]["invoice_payment_method"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -8901,6 +9102,10 @@ export type Database = {
         Args: { _gender?: string; _student_id: string }
         Returns: string
       }
+      ensure_user_subscription: {
+        Args: { _billing_day?: number; _user_id: string }
+        Returns: string
+      }
       extend_coach_card_access: {
         Args: { _coach_id: string; _days: number }
         Returns: undefined
@@ -8929,6 +9134,7 @@ export type Database = {
         Returns: undefined
       }
       generate_competition_reminders: { Args: never; Returns: number }
+      generate_monthly_invoices: { Args: never; Returns: number }
       get_fitmind_events: {
         Args: { _from?: string; _to?: string }
         Returns: {
@@ -8971,6 +9177,10 @@ export type Database = {
       is_coach: { Args: { _user_id: string }; Returns: boolean }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
       is_master_coach: { Args: { _coach_id: string }; Returns: boolean }
+      is_user_blocked_by_subscription: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       join_student_challenge_group: {
         Args: { _group_id: string }
         Returns: undefined
@@ -9028,6 +9238,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_overdue_invoices: { Args: never; Returns: number }
       mark_store_order_paid_and_process: {
         Args: { _order_id: string }
         Returns: undefined
@@ -9080,6 +9291,43 @@ export type Database = {
       process_partner_product_order_paid: {
         Args: { _order_id: string }
         Returns: undefined
+      }
+      process_subscription_invoice_payment: {
+        Args: {
+          _fee_amount?: number
+          _invoice_id: string
+          _method: Database["public"]["Enums"]["invoice_payment_method"]
+          _mp_payment_id?: string
+          _performed_by?: string
+          _wallet_source?: string
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          due_date: string
+          fee_amount: number
+          id: string
+          mp_payment_id: string | null
+          net_to_admin: number
+          notes: string | null
+          paid_at: string | null
+          payment_method:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          tax_amount: number
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          wallet_source: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       profile_has_approved_coach: {
         Args: { _profile_id: string }
@@ -9176,6 +9424,10 @@ export type Database = {
             }
             Returns: string
           }
+      subscription_effective_amount: {
+        Args: { _sub_id: string }
+        Returns: number
+      }
       touch_my_activity: { Args: never; Returns: undefined }
       transfer_inactive_coach_network: {
         Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }
@@ -9262,6 +9514,19 @@ export type Database = {
         | "alunos"
         | "parceiros"
         | "profissionais"
+      invoice_payment_method:
+        | "pix"
+        | "card"
+        | "auto_debit"
+        | "wallet"
+        | "manual_admin"
+      invoice_status:
+        | "pending"
+        | "paid"
+        | "exempted"
+        | "overdue"
+        | "blocked"
+        | "cancelled"
       nutri_block_status: "blocked" | "released" | "cancelled" | "paid"
       order_pool_status:
         | "pending"
@@ -9491,6 +9756,21 @@ export const Constants = {
         "alunos",
         "parceiros",
         "profissionais",
+      ],
+      invoice_payment_method: [
+        "pix",
+        "card",
+        "auto_debit",
+        "wallet",
+        "manual_admin",
+      ],
+      invoice_status: [
+        "pending",
+        "paid",
+        "exempted",
+        "overdue",
+        "blocked",
+        "cancelled",
       ],
       nutri_block_status: ["blocked", "released", "cancelled", "paid"],
       order_pool_status: [
