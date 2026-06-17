@@ -172,6 +172,7 @@ function ProfessionalPanel() {
 
 
   return (
+    <SubscriptionGuard walletSource="professional">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header className="border-b border-white/5" style={{ backgroundColor: "#0F0F0F" }}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
