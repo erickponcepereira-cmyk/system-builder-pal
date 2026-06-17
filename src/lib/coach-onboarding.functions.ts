@@ -179,8 +179,8 @@ export const submitQuizResult = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const url = data.url.trim();
-    if (!url.startsWith("https://diagnostic-quiz-craft.lovable.app")) {
-      throw new Error("O link deve começar com https://diagnostic-quiz-craft.lovable.app");
+    if (!QUIZ_URL_PREFIXES.some((p) => url.startsWith(p))) {
+      throw new Error(`O link deve começar com ${QUIZ_URL}`);
     }
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
