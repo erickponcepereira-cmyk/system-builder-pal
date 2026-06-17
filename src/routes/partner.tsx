@@ -397,6 +397,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       admin_notes: null,
       benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
       benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
+      monthly_redeem_limit: editing.kind === "free"
+        ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
+        : null,
     };
     if (editing.id) {
       const { id, ...up } = payload;
