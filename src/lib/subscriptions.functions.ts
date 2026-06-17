@@ -44,7 +44,7 @@ export const getMySubscription = createServerFn({ method: "GET" })
     }
 
     const amount = Number((sub as any).custom_amount ?? (sub as any).plan?.default_amount ?? 100);
-    return { subscription: sub, invoices: invoices ?? [], wallets, effectiveAmount: amount };
+    return { subscription: sub, invoices: invoices ?? [], wallets, effectiveAmount: amount, payer: profile ? { email: (profile as any).email, name: (profile as any).name } : null };
   });
 
 export const updateMySubscriptionPrefs = createServerFn({ method: "POST" })
