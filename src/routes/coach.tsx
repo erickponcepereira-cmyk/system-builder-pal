@@ -22,6 +22,7 @@ import { PhysicalStoreTab } from "@/components/coach/tabs/StoreTab";
 import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
+import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
