@@ -8,7 +8,7 @@ const PayerSchema = z.object({
 });
 
 const SourceSchema = z.object({
-  kind: z.enum(["store_order", "transaction", "partner_product_order"]),
+  kind: z.enum(["store_order", "transaction", "partner_product_order", "subscription_invoice"]),
   id: z.string().uuid(),
 });
 
