@@ -82,7 +82,7 @@ export const payInvoiceWithWallet = createServerFn({ method: "POST" })
       _wallet_source: data.wallet_source,
       _performed_by: context.userId,
       _fee_amount: 0,
-      _mp_payment_id: null,
+      _mp_payment_id: undefined,
     });
     if (error) throw new Error(error.message);
     return result;
