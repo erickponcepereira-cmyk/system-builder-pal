@@ -202,6 +202,7 @@ function PartnerPanel() {
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
         {tab === "wallet" && <PartnerWalletTab />}
+        {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
         {tab === "reports" && <PartnerReports />}
 
       </main>
