@@ -9560,6 +9560,9 @@ export type Database = {
         | "expired"
         | "cancelled"
         | "pending_payment"
+        | "exempt_monthly"
+        | "exempt_annual"
+        | "exempt_permanent"
       transaction_status:
         | "pending"
         | "paid"
@@ -9808,6 +9811,9 @@ export const Constants = {
         "expired",
         "cancelled",
         "pending_payment",
+        "exempt_monthly",
+        "exempt_annual",
+        "exempt_permanent",
       ],
       transaction_status: [
         "pending",
