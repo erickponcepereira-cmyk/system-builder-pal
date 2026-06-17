@@ -37,7 +37,7 @@ export function CoachOnboardingGate({ children }: Props) {
     try {
       const res = await fetchStage();
       if (!res || !res.isCoach) {
-        setStage("released"); // não é coach → não bloqueia
+        setStage("released");
         return;
       }
       setStage(res.stage);
@@ -45,6 +45,7 @@ export function CoachOnboardingGate({ children }: Props) {
       setCoachId(res.coachId);
       setEmail(res.email || "");
       setName(res.name || "");
+      setAlreadyCoach(Boolean((res as { alreadyCoach?: boolean }).alreadyCoach));
     } catch (e) {
       console.error(e);
       setStage("released");
