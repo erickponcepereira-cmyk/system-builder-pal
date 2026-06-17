@@ -112,6 +112,11 @@ function PartnerProfilePage() {
           </div>
         )}
 
+        {tab === "products" && partner.free_redeem_policy === "one_per_month" && products.some(p => p.kind === "free") && (
+          <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+            ⚠️ Esta empresa permite resgatar <b>apenas 1 benefício gratuito por mês</b>. Ao usar um cupom, os demais ficarão indisponíveis até o próximo mês.
+          </div>
+        )}
         {tab === "products" && (
           products.length === 0 ? <p className="text-center text-sm text-white/40 py-8">Sem produtos ativos.</p> : (
             <>
