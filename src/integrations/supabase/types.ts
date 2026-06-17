@@ -4943,6 +4943,7 @@ export type Database = {
           image_url: string | null
           is_active_by_partner: boolean
           kind: string
+          monthly_redeem_limit: number | null
           name: string
           network_l1_amount: number | null
           network_l2_amount: number | null
@@ -4979,6 +4980,7 @@ export type Database = {
           image_url?: string | null
           is_active_by_partner?: boolean
           kind: string
+          monthly_redeem_limit?: number | null
           name: string
           network_l1_amount?: number | null
           network_l2_amount?: number | null
@@ -5015,6 +5017,7 @@ export type Database = {
           image_url?: string | null
           is_active_by_partner?: boolean
           kind?: string
+          monthly_redeem_limit?: number | null
           name?: string
           network_l1_amount?: number | null
           network_l2_amount?: number | null
