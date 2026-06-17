@@ -2117,6 +2117,7 @@ export type Database = {
         Row: {
           activation_order_id: string | null
           activation_paid_at: string | null
+          already_coach: boolean
           approved_at: string | null
           approved_by: string | null
           bank_account: string | null
@@ -2174,6 +2175,7 @@ export type Database = {
         Insert: {
           activation_order_id?: string | null
           activation_paid_at?: string | null
+          already_coach?: boolean
           approved_at?: string | null
           approved_by?: string | null
           bank_account?: string | null
@@ -2231,6 +2233,7 @@ export type Database = {
         Update: {
           activation_order_id?: string | null
           activation_paid_at?: string | null
+          already_coach?: boolean
           approved_at?: string | null
           approved_by?: string | null
           bank_account?: string | null
