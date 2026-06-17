@@ -514,6 +514,7 @@ function CoachDashboard() {
         </div>
       </main>
     </div>
+    </SubscriptionGuard>
     </CoachOnboardingGate>
   );
 }
