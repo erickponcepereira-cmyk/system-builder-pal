@@ -31,6 +31,7 @@ export function CoachOnboardingGate({ children }: Props) {
   const [coachId, setCoachId] = useState<string | null>(null);
   const [email, setEmail] = useState<string>("");
   const [name, setName] = useState<string>("");
+  const [alreadyCoach, setAlreadyCoach] = useState(false);
 
   const reload = async () => {
     try {
