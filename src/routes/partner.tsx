@@ -62,6 +62,7 @@ interface Product {
   category_id?: string | null;
   benefit_start_time?: string | null;
   benefit_end_time?: string | null;
+  monthly_redeem_limit?: number | null;
 }
 
 
