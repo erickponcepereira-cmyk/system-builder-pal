@@ -486,6 +486,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   <Clock className="h-3 w-3" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
                 </p>
               )}
+              {p.kind === "free" && p.monthly_redeem_limit ? (
+                <p className="mt-1 ml-1 inline-block rounded-md bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-400">
+                  Limite: {p.monthly_redeem_limit}x/mês por aluno
+                </p>
+              ) : null}
               <div className="mt-1.5 flex gap-2">
                 <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
