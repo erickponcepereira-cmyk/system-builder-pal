@@ -5157,6 +5157,7 @@ export type Database = {
           document_type: string | null
           facebook: string | null
           fantasy_name: string
+          free_redeem_policy: string
           id: string
           instagram: string | null
           latitude: number | null
@@ -5190,6 +5191,7 @@ export type Database = {
           document_type?: string | null
           facebook?: string | null
           fantasy_name: string
+          free_redeem_policy?: string
           id?: string
           instagram?: string | null
           latitude?: number | null
@@ -5223,6 +5225,7 @@ export type Database = {
           document_type?: string | null
           facebook?: string | null
           fantasy_name?: string
+          free_redeem_policy?: string
           id?: string
           instagram?: string | null
           latitude?: number | null
