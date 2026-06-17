@@ -573,6 +573,23 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                       {formatBenefitWindow(editing.benefit_start_time, editing.benefit_end_time)}
                     </p>
                   )}
+                  <div className="mt-4 border-t border-white/10 pt-3">
+                    <div className="text-xs font-bold text-primary">Limite mensal por aluno</div>
+                    <p className="mt-1 text-[10px] text-white/45">Opcional. Quantas vezes cada aluno pode resgatar este cupom no mês. Deixe em branco para ilimitado.</p>
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="Ilimitado"
+                      value={editing.monthly_redeem_limit ?? ""}
+                      onChange={e => {
+                        const v = e.target.value.trim();
+                        const n = v === "" ? null : Math.max(1, Math.floor(Number(v)));
+                        setEditing({ ...editing, monthly_redeem_limit: n });
+                      }}
+                      className="field-input mt-2 w-32"
+                    />
+                  </div>
                 </div>
               )}
 
