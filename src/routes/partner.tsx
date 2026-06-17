@@ -219,6 +219,7 @@ function PartnerPanel() {
         ))}
       </nav>
     </div>
+    </SubscriptionGuard>
   );
 }
 
