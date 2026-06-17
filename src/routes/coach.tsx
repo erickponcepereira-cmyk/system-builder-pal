@@ -49,7 +49,7 @@ export const Route = createFileRoute("/coach")({
   }),
   component: CoachDashboard,
 });
-type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
+type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "subscription" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";
 
 
 export const money = (value: number | null | undefined) =>
