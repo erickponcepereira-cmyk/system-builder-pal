@@ -175,12 +175,20 @@ export const hasPurchasedActivation = createServerFn({ method: "GET" })
 export const submitQuizResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
-    z.object({ url: z.string().url().max(500) }).parse(input)
+    z.object({ url: z.string().min(1).max(5000) }).parse(input)
   )
   .handler(async ({ data, context }) => {
-    const url = data.url.trim();
-    if (!QUIZ_URL_PREFIXES.some((p) => url.startsWith(p))) {
-      throw new Error(`O link deve começar com ${QUIZ_URL}`);
+    const raw = data.url.trim();
+    // Aceita tanto um link puro quanto o texto colado do resultado (extrai o primeiro URL válido).
+    let url = raw;
+    if (!/^https?:\/\//i.test(url)) {
+      const match = raw.match(/https?:\/\/[^\s)>\]"']+/i);
+      if (match) url = match[0];
+    }
+    url = url.replace(/[.,;)\]>"']+$/, "");
+    if (url.length > 1000) url = url.slice(0, 1000);
+    if (!/^https?:\/\//i.test(url) || !QUIZ_URL_PREFIXES.some((p) => url.startsWith(p))) {
+      throw new Error(`Cole o link da página de resultado (deve começar com ${QUIZ_URL}).`);
     }
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
