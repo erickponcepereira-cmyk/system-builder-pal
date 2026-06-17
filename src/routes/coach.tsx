@@ -23,6 +23,7 @@ import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { EvaluateTab } from "@/components/coach/tabs/EvaluateTab";
 import { WalletTab } from "@/components/coach/tabs/WalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
+import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { AttendanceTab } from "@/components/coach/tabs/AttendanceTab";
 import { CareerTab } from "@/components/coach/tabs/CareerTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
@@ -311,6 +312,7 @@ function CoachDashboard() {
 
   return (
     <CoachOnboardingGate>
+    <SubscriptionGuard walletSource="coach">
     <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
 
       {/* Mobile header */}
@@ -513,6 +515,7 @@ function CoachDashboard() {
         </div>
       </main>
     </div>
+    </SubscriptionGuard>
     </CoachOnboardingGate>
   );
 }

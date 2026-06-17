@@ -19,6 +19,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
+import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
@@ -170,6 +171,7 @@ function PartnerPanel() {
 
 
   return (
+    <SubscriptionGuard walletSource="partner">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header className="border-b border-white/5 px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "#111" }}>
         <div className="flex items-center gap-2">
@@ -217,6 +219,7 @@ function PartnerPanel() {
         ))}
       </nav>
     </div>
+    </SubscriptionGuard>
   );
 }
 
