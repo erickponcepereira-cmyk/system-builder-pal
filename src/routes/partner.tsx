@@ -171,6 +171,7 @@ function PartnerPanel() {
 
 
   return (
+    <SubscriptionGuard walletSource="partner">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header className="border-b border-white/5 px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "#111" }}>
         <div className="flex items-center gap-2">
