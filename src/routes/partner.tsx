@@ -346,6 +346,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
     benefit_end_time: null,
+    monthly_redeem_limit: null,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
