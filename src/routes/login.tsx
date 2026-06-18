@@ -95,7 +95,9 @@ function LoginPage() {
 
     if (coachError || studentError || partnerError) {
       setLoading(false);
-      const message = "Não foi possível validar seu acesso. Tente novamente.";
+      console.error("[login] role lookup errors:", { coachError, studentError, partnerError });
+      const detail = (coachError || studentError || partnerError)?.message || "";
+      const message = `Não foi possível validar seu acesso. ${detail}`.trim();
       setFormError(message);
       toast.error(message);
       return;
