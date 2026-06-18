@@ -112,14 +112,48 @@ export async function applyApproval(kind: SourceKind, id: string) {
   } else if (kind === "partner_product_order") {
     await supabaseAdmin.rpc("process_partner_product_order_paid" as never, { _order_id: id } as never);
   } else if (kind === "subscription_invoice") {
-    // Marca fatura como paga via PIX/cartão (sem débito de carteira interna)
+    // Marca fatura como paga via PIX/cartão (sem débito de carteira interna).
+    // Calcula a taxa da maquininha (PIX % ou Cartão %) a partir da config padrão
+    // para que ela seja descontada ANTES do imposto Simples Nacional.
+    const { data: invRow } = await supabaseAdmin
+      .from("subscription_invoices" as never)
+      .select("id, amount, mp_payment_id" as never)
+      .eq("id" as never, id as never)
+      .maybeSingle();
+    const inv = invRow as unknown as { id: string; amount: number; mp_payment_id: string | null } | null;
+
+    let method: "pix" | "card" = "pix";
+    let mpPaymentIdText: string | null = null;
+    if (inv?.mp_payment_id) {
+      const { data: mpRow } = await supabaseAdmin
+        .from("mercadopago_payments")
+        .select("payment_method, mp_payment_id")
+        .eq("id", inv.mp_payment_id)
+        .maybeSingle();
+      if (mpRow) {
+        method = (mpRow as any).payment_method === "credit_card" ? "card" : "pix";
+        mpPaymentIdText = (mpRow as any).mp_payment_id ?? null;
+      }
+    }
+
+    const { data: feeCfg } = await supabaseAdmin
+      .from("payment_fee_configs")
+      .select("pix_fee_percentage, card_fee_percentage")
+      .eq("is_default", true)
+      .maybeSingle();
+    const pixPct = Number((feeCfg as any)?.pix_fee_percentage ?? 0.99);
+    const cardPct = Number((feeCfg as any)?.card_fee_percentage ?? 4.98);
+    const pct = method === "card" ? cardPct : pixPct;
+    const amount = Number(inv?.amount || 0);
+    const feeAmount = Math.round(amount * pct) / 100;
+
     const { error } = await supabaseAdmin.rpc("process_subscription_invoice_payment" as never, {
       _invoice_id: id,
-      _method: "pix",
+      _method: method,
       _wallet_source: "external",
       _performed_by: null,
-      _fee_amount: 0,
-      _mp_payment_id: null,
+      _fee_amount: feeAmount,
+      _mp_payment_id: mpPaymentIdText,
     } as never);
     if (error) throw new Error(error.message);
   } else {
