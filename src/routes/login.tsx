@@ -21,7 +21,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  useNavigate();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +39,7 @@ function LoginPage() {
     const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "";
     const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : area === "professional" ? "/professional" : "/student";
     const target = safeRedirect.startsWith(areaRoot) ? safeRedirect : areaRoot;
-    window.location.assign(target);
+    navigate({ to: target as never, replace: true });
   };
 
 
