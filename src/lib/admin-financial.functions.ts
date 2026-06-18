@@ -712,7 +712,7 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
 
 export interface PendingFeeRow {
   transactionId: string;
-  sourceKind: "transaction" | "partner_order";
+  sourceKind: "transaction" | "partner_order" | "subscription_invoice";
   sourceId: string;
   date: string | null;
   productName: string | null;
