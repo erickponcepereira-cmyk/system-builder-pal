@@ -81,6 +81,21 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   useEffect(() => {
+    // Auto-reload quando o navegador tenta carregar um chunk JS antigo (após deploy)
+    const onPreloadError = (e: Event) => {
+      console.warn("[vite] preload error, reloading", e);
+      window.location.reload();
+    };
+    const onChunkError = (e: ErrorEvent) => {
+      const msg = e.message || "";
+      if (msg.includes("Failed to fetch dynamically imported module") || msg.includes("Importing a module script failed")) {
+        console.warn("[chunk] dynamic import failed, reloading", msg);
+        window.location.reload();
+      }
+    };
+    window.addEventListener("vite:preloadError", onPreloadError);
+    window.addEventListener("error", onChunkError);
+
     let done = false;
     const ping = async () => {
       if (done) return;
@@ -96,7 +111,11 @@ function RootComponent() {
         done = false; ping();
       }
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("vite:preloadError", onPreloadError);
+      window.removeEventListener("error", onChunkError);
+    };
   }, []);
   return (
     <ThemeProvider>
@@ -105,3 +124,4 @@ function RootComponent() {
     </ThemeProvider>
   );
 }
+
