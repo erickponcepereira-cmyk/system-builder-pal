@@ -165,12 +165,15 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       const kind = String((e as any).kind || "credit");
       const amt = Number((e as any).amount || 0);
       const isNutri = slot.includes("nutricion");
+      // Apenas kind "debit" (saques/baixas) é débito; demais (credit, subscription...)
+      // contam como crédito. Slots de imposto/taxa já foram filtrados.
+      const isDebit = kind === "debit";
       if (isNutri) {
-        if (kind === "credit") nutriAdminCredits += amt;
-        else nutriAdminDebits += amt;
+        if (isDebit) nutriAdminDebits += amt;
+        else nutriAdminCredits += amt;
       } else if (isAdminSystemSlot((e as any).slot_label)) {
-        if (kind === "credit") sysCredits += amt;
-        else sysDebits += amt;
+        if (isDebit) sysDebits += amt;
+        else sysCredits += amt;
       }
     }
     const { data: masterAdmins } = await supabaseAdmin
