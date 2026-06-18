@@ -744,6 +744,13 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
       .order("paid_at" as never, { ascending: false })
       .limit(500);
 
+    const { data: subInvoices } = await supabaseAdmin
+      .from("subscription_invoices")
+      .select("id, amount, tax_amount, fee_amount, payment_method, status, paid_at, user_id, reference_month")
+      .eq("status", "paid")
+      .order("paid_at", { ascending: false })
+      .limit(500);
+
     const nonCard = (txs || []).filter((t: any) => {
       const m = String(t.payment_method || "").toLowerCase();
       return !(m === "credit_card" || m === "debit_card" || m === "card");
@@ -752,24 +759,36 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
       const m = String(t.payment_method || "").toLowerCase();
       return !(m === "credit_card" || m === "debit_card" || m === "card");
     });
+    const nonCardSubs = ((subInvoices as any[]) || []).filter((t: any) => {
+      const m = String(t.payment_method || "").toLowerCase();
+      return !(m === "credit_card" || m === "debit_card" || m === "card");
+    });
 
     const txIds = nonCard.map((t: any) => t.id);
     const partnerOrderIds = nonCardPartnerOrders.map((t: any) => t.id);
+    const subIds = nonCardSubs.map((t: any) => t.id);
     const productIds = Array.from(new Set(nonCard.map((t: any) => t.product_id).filter(Boolean)));
     const studentIds = Array.from(new Set(nonCard.map((t: any) => t.student_id).filter(Boolean)));
+    const subUserIds = Array.from(new Set(nonCardSubs.map((t: any) => t.user_id).filter(Boolean))) as string[];
 
-    const [{ data: txPayouts }, { data: partnerPayouts }, { data: products }, { data: students }] = await Promise.all([
+    const [{ data: txPayouts }, { data: partnerPayouts }, { data: subPayouts }, { data: products }, { data: students }, { data: subProfiles }] = await Promise.all([
       txIds.length
         ? supabaseAdmin.from("system_fee_payouts").select("transaction_id, kind").in("transaction_id", txIds)
         : Promise.resolve({ data: [] as any[] }),
       partnerOrderIds.length
         ? supabaseAdmin.from("system_fee_payouts" as never).select("partner_order_id, kind" as never).in("partner_order_id" as never, partnerOrderIds as never)
         : Promise.resolve({ data: [] as any[] }),
+      subIds.length
+        ? supabaseAdmin.from("system_fee_payouts" as never).select("subscription_invoice_id, kind" as never).in("subscription_invoice_id" as never, subIds as never)
+        : Promise.resolve({ data: [] as any[] }),
       productIds.length
         ? supabaseAdmin.from("products").select("id, name").in("id", productIds)
         : Promise.resolve({ data: [] as any[] }),
       studentIds.length
         ? supabaseAdmin.from("students").select("id, profiles(name)").in("id", studentIds)
+        : Promise.resolve({ data: [] as any[] }),
+      subUserIds.length
+        ? supabaseAdmin.from("profiles").select("user_id, name").in("user_id", subUserIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
@@ -785,10 +804,17 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
       if (r.kind === "tax") taxPaid.add(r.partner_order_id);
       else if (r.kind === "payment_fee") feePaid.add(r.partner_order_id);
     }
+    for (const p of (subPayouts as any[]) || []) {
+      const r = p as any;
+      if (r.kind === "tax") taxPaid.add(r.subscription_invoice_id);
+      else if (r.kind === "payment_fee") feePaid.add(r.subscription_invoice_id);
+    }
     const pName = new Map<string, string>();
     (products || []).forEach((p: any) => pName.set(p.id, p.name));
     const sName = new Map<string, string>();
     (students || []).forEach((s: any) => sName.set(s.id, s.profiles?.name || ""));
+    const subUserName = new Map<string, string>();
+    (subProfiles || []).forEach((p: any) => subUserName.set(p.user_id, p.name || ""));
     const partnerOrderMap = await resolvePartnerOrderContext(partnerOrderIds);
 
     const txRows: PendingFeeRow[] = nonCard.map((t: any) => ({
@@ -820,7 +846,23 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
         feePaid: feePaid.has(t.id),
       };
     });
-    return [...txRows, ...partnerRows].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    const subRows: PendingFeeRow[] = nonCardSubs.map((t: any) => {
+      const ref = t.reference_month ? new Date(t.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" }) : "";
+      return {
+        transactionId: t.id,
+        sourceKind: "subscription_invoice" as any,
+        sourceId: t.id,
+        date: t.paid_at,
+        productName: ref ? `Mensalidade ${ref}` : "Mensalidade",
+        clientName: subUserName.get(t.user_id) || null,
+        paymentMethod: t.payment_method,
+        taxAmount: Number(t.tax_amount || 0),
+        feeAmount: Number(t.fee_amount || 0),
+        taxPaid: taxPaid.has(t.id),
+        feePaid: feePaid.has(t.id),
+      };
+    });
+    return [...txRows, ...partnerRows, ...subRows].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   });
 
 export const payManualSystemFee = createServerFn({ method: "POST" })
