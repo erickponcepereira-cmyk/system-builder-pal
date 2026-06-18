@@ -54,7 +54,9 @@ function LoginPage() {
 
     if (profileError) {
       setLoading(false);
-      const message = "Não foi possível verificar seu cadastro. Tente novamente em instantes.";
+      console.error("[login] profile lookup error:", profileError);
+      const detail = profileError.message || profileError.details || profileError.hint || "";
+      const message = `Não foi possível verificar seu cadastro. ${detail}`.trim();
       setFormError(message);
       toast.error(message);
       return;
