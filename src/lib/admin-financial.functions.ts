@@ -1049,7 +1049,7 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     let q = supabaseAdmin
       .from("admin_system_wallet_entries")
-      .select("id, transaction_id, slot_label, amount, kind, created_at")
+      .select("id, transaction_id, subscription_invoice_id, slot_label, amount, kind, created_at")
       .not("slot_label", "ilike", "%nutricion%")
       .order("created_at", { ascending: false })
       .limit(500);
@@ -1060,6 +1060,7 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
     const { data: entries, error } = await q;
     if (error) throw new Error(error.message);
     const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
+    const subIds = Array.from(new Set((entries || []).map((e: any) => e.subscription_invoice_id).filter(Boolean))) as string[];
     const txMap = new Map<string, { studentName: string | null; productName: string | null }>();
     if (txIds.length) {
       const { data: txs } = await supabaseAdmin
@@ -1081,11 +1082,32 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
         productName: t.product_id ? pMap.get(t.product_id) || null : null,
       }));
     }
+    const subMap = new Map<string, { studentName: string | null; productName: string | null }>();
+    if (subIds.length) {
+      const { data: invs } = await supabaseAdmin
+        .from("subscription_invoices")
+        .select("id, user_id, reference_month")
+        .in("id", subIds);
+      const userIds = Array.from(new Set((invs || []).map((i: any) => i.user_id).filter(Boolean)));
+      const { data: profs } = userIds.length
+        ? await supabaseAdmin.from("profiles").select("user_id, name").in("user_id", userIds)
+        : { data: [] as any[] };
+      const nameMap = new Map<string, string>();
+      (profs || []).forEach((p: any) => nameMap.set(p.user_id, p.name || ""));
+      (invs || []).forEach((i: any) => {
+        const ref = i.reference_month ? new Date(i.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" }) : "";
+        subMap.set(i.id, {
+          studentName: nameMap.get(i.user_id) || null,
+          productName: ref ? `Mensalidade ${ref}` : "Mensalidade",
+        });
+      });
+    }
     return (entries || []).map((e: any) => {
       const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
+      const sub = e.subscription_invoice_id ? subMap.get(e.subscription_invoice_id) : null;
       return {
         id: e.id,
-        transactionId: e.transaction_id,
+        transactionId: e.transaction_id || e.subscription_invoice_id,
         description: e.slot_label || (e.kind === "debit" ? "Saque/Repasse" : "Crédito"),
         amount: Number(e.amount || 0),
         kind: e.kind as "credit" | "debit",
