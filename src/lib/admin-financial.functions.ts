@@ -682,6 +682,31 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
       }
     }
 
+    // Subscription invoices (mensalidades pagas)
+    const { data: subInvoices } = await supabaseAdmin
+      .from("subscription_invoices")
+      .select("id, amount, tax_amount, fee_amount, payment_method, status")
+      .eq("status", "paid");
+    for (const t of ((subInvoices as any[]) || [])) {
+      const taxAmt = Number(t.tax_amount || 0);
+      const feeAmt = Number(t.fee_amount || 0);
+      const method = String(t.payment_method || "other").toLowerCase();
+      const isCard = method === "credit_card" || method === "debit_card" || method === "card";
+      tax.total += taxAmt;
+      fee.total += feeAmt;
+      if (isCard) {
+        tax.autoPaidCard += taxAmt;
+        fee.autoPaidCard += feeAmt;
+        sales.card += Number(t.amount || 0);
+      } else {
+        if (paidTax.has(t.id)) tax.manualPaid += taxAmt; else tax.manualPending += taxAmt;
+        if (paidFee.has(t.id)) fee.manualPaid += feeAmt; else fee.manualPending += feeAmt;
+        if (method === "pix") sales.pix += Number(t.amount || 0);
+        else if (method === "boleto") sales.boleto += Number(t.amount || 0);
+        else sales.other += Number(t.amount || 0);
+      }
+    }
+
     return { tax, paymentFee: fee, sales };
   });
 
