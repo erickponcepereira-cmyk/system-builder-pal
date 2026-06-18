@@ -369,13 +369,17 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
 
     // Bucket "system" = carteira compartilhada do admin (admin_system_wallet)
     if (data.bucket === "system") {
-      const { data: entries, error } = await supabaseAdmin
+      const { data: entriesRaw, error } = await supabaseAdmin
         .from("admin_system_wallet_entries")
         .select("id, transaction_id, partner_order_id, slot_label, amount, kind, created_at")
         .not("slot_label", "ilike", "%nutricion%")
+        .not("slot_label", "ilike", "%taxa de pagamento%")
+        .not("slot_label", "ilike", "%imposto%")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
+      // Defesa adicional: aplica a mesma regra do agregado (isAdminSystemSlot)
+      const entries = (entriesRaw || []).filter((e: any) => isAdminSystemSlot(e.slot_label));
 
       const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
       const partnerOrderIds = Array.from(new Set((entries || []).map((e: any) => e.partner_order_id).filter(Boolean)));
