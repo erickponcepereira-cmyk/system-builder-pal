@@ -160,7 +160,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
         professional_council: council || null,
         council_number: councilNumber || null,
         specialty_pending_setup: !!selectedSpecLocal?.requires_admin_setup,
-        approved_at: null as string | null,
+        approved_at: new Date().toISOString(),
+        onboarding_stage: "released",
       };
 
       if (existingMode) {
@@ -211,10 +212,10 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           if (insErr) throw insErr;
         }
 
-        await supabase.from("profiles").update({ status: "pending" }).eq("id", prof.id);
+        await supabase.from("profiles").update({ status: "active", role: "coach" }).eq("id", prof.id);
         await supabase.auth.signOut().catch(() => {});
         setRegisteredEmail(email.trim().toLowerCase());
-        toast.success("Conta vinculada como profissional! Aguarde aprovação do admin.");
+        toast.success("Conta vinculada como profissional! Acesso de coach liberado.");
         return;
       }
 
@@ -242,7 +243,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       });
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
-      toast.success("Cadastro criado! Confira seu e-mail para confirmar.");
+      toast.success("Cadastro profissional criado com acesso de coach liberado.");
     } catch (error) {
       const friendly = translateAuthError(error);
       setFormError(friendly); toast.error(friendly);
