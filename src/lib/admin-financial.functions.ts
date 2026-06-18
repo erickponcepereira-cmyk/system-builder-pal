@@ -623,13 +623,13 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
 
     const { data: payouts } = await supabaseAdmin
       .from("system_fee_payouts")
-      .select("transaction_id, partner_order_id, kind, amount");
+      .select("transaction_id, partner_order_id, subscription_invoice_id, kind, amount");
 
     const paidTax = new Map<string, number>();
     const paidFee = new Map<string, number>();
     for (const p of payouts || []) {
       const r = p as any;
-      const key = r.transaction_id || r.partner_order_id;
+      const key = r.transaction_id || r.partner_order_id || r.subscription_invoice_id;
       if (!key) continue;
       if (r.kind === "tax") paidTax.set(key, Number(r.amount || 0));
       else if (r.kind === "payment_fee") paidFee.set(key, Number(r.amount || 0));
