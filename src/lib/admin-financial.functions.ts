@@ -867,7 +867,7 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
 
 export const payManualSystemFee = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => d as { transactionId?: string; partnerOrderId?: string; kind: "tax" | "payment_fee" })
+  .inputValidator((d: unknown) => d as { transactionId?: string; partnerOrderId?: string; subscriptionInvoiceId?: string; kind: "tax" | "payment_fee" })
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
 
