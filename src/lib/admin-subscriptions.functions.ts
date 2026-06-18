@@ -105,16 +105,29 @@ export const markInvoicePaidAdmin = createServerFn({ method: "POST" })
     invoice_id: z.string().uuid(),
     method: z.enum(["pix","card","auto_debit","wallet","manual_admin"]).default("manual_admin"),
     wallet_source: z.enum(["coach","partner","professional","external"]).optional(),
-    fee_amount: z.number().min(0).default(0),
+    fee_amount: z.number().min(0).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
+    let feeAmount = Number(data.fee_amount ?? 0);
+    // Auto-calcula taxa da maquininha quando admin marca pago via pix/card sem informar
+    if (!feeAmount && (data.method === "pix" || data.method === "card")) {
+      const { data: inv } = await context.supabase
+        .from("subscription_invoices").select("amount").eq("id", data.invoice_id).maybeSingle();
+      const { data: cfg } = await context.supabase
+        .from("payment_fee_configs").select("pix_fee_percentage, card_fee_percentage").eq("is_default", true).maybeSingle();
+      const pct = data.method === "card"
+        ? Number((cfg as any)?.card_fee_percentage ?? 4.98)
+        : Number((cfg as any)?.pix_fee_percentage ?? 0.99);
+      const amt = Number((inv as any)?.amount || 0);
+      feeAmount = Math.round(amt * pct) / 100;
+    }
     const { data: r, error } = await context.supabase.rpc("process_subscription_invoice_payment", {
       _invoice_id: data.invoice_id,
       _method: data.method,
       _wallet_source: data.wallet_source ?? "external",
       _performed_by: context.userId,
-      _fee_amount: data.fee_amount,
+      _fee_amount: feeAmount,
       _mp_payment_id: undefined,
     });
     if (error) throw new Error(error.message);
