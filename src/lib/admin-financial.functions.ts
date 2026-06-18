@@ -896,6 +896,32 @@ export const payManualSystemFee = createServerFn({ method: "POST" })
       return { ok: true, amount };
     }
 
+    if (data.subscriptionInvoiceId) {
+      const { data: inv, error: invErr } = await supabaseAdmin
+        .from("subscription_invoices")
+        .select("id, tax_amount, fee_amount, payment_method")
+        .eq("id", data.subscriptionInvoiceId)
+        .maybeSingle();
+      if (invErr) throw new Error(invErr.message);
+      if (!inv) throw new Error("Fatura não encontrada");
+      const r = inv as any;
+      const amount = data.kind === "tax" ? Number(r.tax_amount || 0) : Number(r.fee_amount || 0);
+      if (amount <= 0) throw new Error("Valor zero — nada a pagar");
+      const { data: prof } = await supabaseAdmin
+        .from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+      const { error } = await supabaseAdmin.from("system_fee_payouts" as never).insert({
+        transaction_id: null,
+        partner_order_id: null,
+        subscription_invoice_id: data.subscriptionInvoiceId,
+        kind: data.kind,
+        amount,
+        payment_method: r.payment_method,
+        paid_by: (prof as any)?.id ?? null,
+      } as never);
+      if (error) throw new Error(error.message);
+      return { ok: true, amount };
+    }
+
     if (!data.transactionId) throw new Error("Origem não informada");
     const { data: tx, error: txErr } = await supabaseAdmin
       .from("transactions")
