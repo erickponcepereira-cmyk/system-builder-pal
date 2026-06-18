@@ -374,18 +374,18 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
     if (data.bucket === "system") {
       const { data: entriesRaw, error } = await supabaseAdmin
         .from("admin_system_wallet_entries")
-        .select("id, transaction_id, partner_order_id, slot_label, amount, kind, created_at")
+        .select("id, transaction_id, partner_order_id, subscription_invoice_id, slot_label, amount, kind, created_at")
         .not("slot_label", "ilike", "%nutricion%")
         .not("slot_label", "ilike", "%taxa de pagamento%")
         .not("slot_label", "ilike", "%imposto%")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw new Error(error.message);
-      // Defesa adicional: aplica a mesma regra do agregado (isAdminSystemSlot)
       const entries = (entriesRaw || []).filter((e: any) => isAdminSystemSlot(e.slot_label));
 
       const txIds = Array.from(new Set((entries || []).map((e: any) => e.transaction_id).filter(Boolean)));
       const partnerOrderIds = Array.from(new Set((entries || []).map((e: any) => e.partner_order_id).filter(Boolean)));
+      const subInvoiceIds = Array.from(new Set((entries || []).map((e: any) => e.subscription_invoice_id).filter(Boolean))) as string[];
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
       if (txIds.length) {
         const { data: txs } = await supabaseAdmin
@@ -408,18 +408,42 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         }));
       }
       const partnerOrderMap = await resolvePartnerOrderContext(partnerOrderIds);
+
+      // Subscription invoices → resolve cliente + produto ("Mensalidade MM/YYYY")
+      const subMap = new Map<string, { studentName: string | null; productName: string | null }>();
+      if (subInvoiceIds.length) {
+        const { data: invs } = await supabaseAdmin
+          .from("subscription_invoices")
+          .select("id, user_id, reference_month")
+          .in("id", subInvoiceIds);
+        const userIds = Array.from(new Set((invs || []).map((i: any) => i.user_id).filter(Boolean)));
+        const { data: profs } = userIds.length
+          ? await supabaseAdmin.from("profiles").select("user_id, name").in("user_id", userIds)
+          : { data: [] as any[] };
+        const nameMap = new Map<string, string>();
+        (profs || []).forEach((p: any) => nameMap.set(p.user_id, p.name || ""));
+        (invs || []).forEach((i: any) => {
+          const ref = i.reference_month ? new Date(i.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" }) : "";
+          subMap.set(i.id, {
+            studentName: nameMap.get(i.user_id) || null,
+            productName: ref ? `Mensalidade ${ref}` : "Mensalidade",
+          });
+        });
+      }
+
       return (entries || []).map((e: any) => {
         const tx = e.transaction_id ? txMap.get(e.transaction_id) : null;
         const po = e.partner_order_id ? partnerOrderMap.get(e.partner_order_id) : null;
+        const sub = e.subscription_invoice_id ? subMap.get(e.subscription_invoice_id) : null;
         const slot = String(e.slot_label || "").toLowerCase();
         const isNutri = slot.includes("nutricion");
         return {
           commissionId: e.id,
-          transactionId: e.transaction_id || e.partner_order_id,
+          transactionId: e.transaction_id || e.partner_order_id || e.subscription_invoice_id,
           beneficiaryName: isNutri ? "Admin Nutricionista (não atribuído)" : "Carteira do Admin",
           beneficiaryEmail: null,
-          clientName: tx?.studentName ?? po?.studentName ?? null,
-          productName: tx?.productName ?? po?.productName ?? null,
+          clientName: tx?.studentName ?? po?.studentName ?? sub?.studentName ?? null,
+          productName: tx?.productName ?? po?.productName ?? sub?.productName ?? null,
           slotLabel: e.slot_label,
           level: 0,
           amount: Number(e.amount || 0) * (e.kind === "debit" ? -1 : 1),
