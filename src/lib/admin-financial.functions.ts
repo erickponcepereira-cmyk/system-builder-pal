@@ -1110,9 +1110,9 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
         transactionId: e.transaction_id || e.subscription_invoice_id,
         description: e.slot_label || (e.kind === "debit" ? "Saque/Repasse" : "Crédito"),
         amount: Number(e.amount || 0),
-        kind: e.kind as "credit" | "debit",
-        studentName: tx?.studentName ?? null,
-        productName: tx?.productName ?? null,
+        kind: (e.kind === "debit" ? "debit" : "credit") as "credit" | "debit",
+        studentName: tx?.studentName ?? sub?.studentName ?? null,
+        productName: tx?.productName ?? sub?.productName ?? null,
         createdAt: e.created_at,
       };
     });
