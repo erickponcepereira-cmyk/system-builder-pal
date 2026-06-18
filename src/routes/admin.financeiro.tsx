@@ -72,7 +72,7 @@ function AdminFinanceiro() {
 
   const handlePayFee = async (row: PendingFeeRow, kind: "tax" | "payment_fee") => {
     try {
-      await callPayFee({ data: row.sourceKind === "partner_order" ? { partnerOrderId: row.sourceId, kind } : { transactionId: row.sourceId, kind } });
+      await callPayFee({ data: row.sourceKind === "partner_order" ? { partnerOrderId: row.sourceId, kind } : row.sourceKind === "subscription_invoice" ? { subscriptionInvoiceId: row.sourceId, kind } : { transactionId: row.sourceId, kind } });
       toast.success("Baixa registrada");
       fetchPendingFees().then(setFeesRows);
       fetchFees().then(setFees);
