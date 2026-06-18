@@ -140,6 +140,8 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
       throw new Error("Selecione um coach indicador para concluir o cadastro.");
     }
 
+    const isProfessional = input.coach.isProfessional ?? false;
+    const coachApprovedAt = isProfessional ? new Date().toISOString() : null;
     let referralCode = clean(input.coach.referralCode) || makeReferralCode();
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const { error: coachError } = await supabaseAdmin.from("coaches").upsert(
@@ -156,23 +158,23 @@ export async function finalizeRegistration(input: FinalizeRegistrationInput) {
           bank_account_type: clean(input.coach.bankAccountType),
           completed_coach_course: input.coach.completedCoachCourse ?? false,
           coach_course_notes: clean(input.coach.coachCourseNotes),
-          is_professional: input.coach.isProfessional ?? false,
+          is_professional: isProfessional,
           specialty_key: clean(input.coach.specialtyKey),
           specialty_custom_description: clean(input.coach.specialtyCustomDescription),
           professional_council: clean(input.coach.professionalCouncil),
           council_number: clean(input.coach.councilNumber),
           specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
-          // Coach NÃO é aprovado automaticamente — admin precisa liberar
-          approved_at: null,
+          approved_at: coachApprovedAt,
+          onboarding_stage: isProfessional ? "released" : "awaiting_payment",
         },
         { onConflict: "profile_id" }
       );
 
       if (!coachError) {
-        // Marca o profile como pendente até o admin aprovar
+        // Profissional já nasce com coach liberado; coach comum segue pendente até concluir o fluxo.
         await supabaseAdmin
           .from("profiles")
-          .update({ status: "pending" })
+          .update({ status: isProfessional ? "active" : "pending" })
           .eq("id", profile.id);
 
         // Cria registro de aluno para o coach (acesso ao app do aluno mesmo pendente)
