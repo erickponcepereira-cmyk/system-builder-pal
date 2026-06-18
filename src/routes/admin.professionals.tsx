@@ -52,7 +52,7 @@ function AdminProfessionals() {
   const approve = async (pro: Pro) => {
     const { error } = await supabase
       .from("coaches")
-      .update({ approved_at: new Date().toISOString() })
+      .update({ approved_at: new Date().toISOString(), onboarding_stage: "released" })
       .eq("id", pro.id);
     if (error) { toast.error(error.message); return; }
     if (pro.profile_id) {
