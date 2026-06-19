@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { X, Search, Copy, Share2, Gift, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
+
+const FitcoinIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
+  <img src={fitcoinAsset.url} alt="" aria-hidden className={`inline-block object-contain align-[-2px] ${className}`} />
+);
 
 type RefProduct = {
   id: string;
@@ -188,9 +193,11 @@ export function StudentReferralModal({
                           <p className="text-[11px] text-white/40">
                             {p.kind === "challenge" ? "Desafio/Plano" : "Digital"} · {money(p.price)}
                           </p>
-                          <p className="mt-0.5 text-[11px] font-bold text-primary">
+                          <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-primary">
+                            <FitcoinIcon />
                             Cashback: {isRevealed ? `${p.commission.toFixed(2).replace(".", ",")} Fitcoin` : "••••••"}
                           </p>
+
                         </div>
                       </button>
                       <button
@@ -227,9 +234,11 @@ export function StudentReferralModal({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white">{selected.title}</p>
                   <p className="text-[11px] text-white/40">{money(selected.price)}</p>
-                  <p className="mt-1 text-[11px] font-bold text-primary">
+                  <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-primary">
+                    <FitcoinIcon />
                     Você ganha {selected.commission.toFixed(2).replace(".", ",")} Fitcoin por venda (1 FC = R$ 1, use na loja)
                   </p>
+
                 </div>
               </div>
             </div>
@@ -250,9 +259,11 @@ export function StudentReferralModal({
             >
               <Share2 className="h-4 w-4" /> Compartilhar
             </button>
-            <p className="text-center text-[10px] text-white/40">
+            <p className="flex items-center justify-center gap-1 text-center text-[10px] text-white/40">
+              <FitcoinIcon className="h-3 w-3" />
               Quando alguém comprar pelo seu link, você recebe Fitcoin como cashback para usar na loja.
             </p>
+
           </div>
         )}
       </div>

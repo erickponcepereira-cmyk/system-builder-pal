@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { PendingInfo } from "@/components/PendingInfo";
+import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 
 export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
@@ -337,8 +338,14 @@ function ProfilePage() {
 
       {/* Fitcoin (cashback de indicações) */}
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Fitcoin · Cashback</p>
-        <p className="mt-1 text-3xl font-bold text-white">{wallet.fitcoin_balance.toFixed(2).replace(".", ",")} FC</p>
+        <div className="flex items-center gap-2">
+          <img src={fitcoinAsset.url} alt="Fitcoin" className="h-6 w-6 object-contain" />
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Fitcoin · Cashback</p>
+        </div>
+        <div className="mt-1 flex items-center gap-2">
+          <img src={fitcoinAsset.url} alt="" aria-hidden className="h-7 w-7 object-contain" />
+          <p className="text-3xl font-bold text-white">{wallet.fitcoin_balance.toFixed(2).replace(".", ",")} FC</p>
+        </div>
         <p className="text-[11px] text-white/40">
           1 Fitcoin = R$ 1,00 · use como desconto nas suas compras na loja.
         </p>
@@ -353,6 +360,7 @@ function ProfilePage() {
           Indique e ganhe
         </button>
       </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2">
         <button
