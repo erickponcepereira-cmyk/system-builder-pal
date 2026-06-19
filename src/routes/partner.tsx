@@ -359,19 +359,22 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
   const blank = (): Partial<Product> => ({
     partner_id: partner.id,
-    kind: hasActiveFree ? "paid" : "free",
+    kind: "free",
     redemption_mode: "free",
     name: "", description: "", image_url: "", price: 0, stock: null,
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
     benefit_end_time: null,
     monthly_redeem_limit: null,
+    estimated_value: null,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
     section_id: null,
     category_id: null,
   });
+
+
 
 
   const upload = async (file: File) => {
