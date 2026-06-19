@@ -390,7 +390,7 @@ export interface PayoutDetails {
   profile: { id: string; name: string; email: string | null };
   wallet: { available: number; blocked: number; totalEarned: number; totalWithdrawn: number };
   sales: Array<{ id: string; date: string | null; amount: number; status: string | null; product: string | null; student: string | null }>;
-  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; isReferral: boolean; studentName: string | null; studentEmail: string | null; productName: string | null; purchaseType: string | null; transactionDate: string | null }>;
+  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; isReferral: boolean; studentName: string | null; studentEmail: string | null; productName: string | null; purchaseType: string | null; transactionDate: string | null; availableAt: string | null }>;
   withdrawals: Array<{ id: string; amount: number; status: string | null; requested_at: string | null; paid_at: string | null; notes: string | null; pix_key: string | null }>;
   totals: { salesCount: number; salesAmount: number; commissionsAvailable: number; commissionsPending: number; commissionsPaid: number };
 }
