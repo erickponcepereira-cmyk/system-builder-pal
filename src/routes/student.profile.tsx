@@ -111,11 +111,12 @@ function ProfilePage() {
       setIsInfluencer(Boolean((student as any).is_influencer));
       setReferralLink((student as any).referral_link || `/r/${(student as any).referral_code || "ALUNO2026"}`);
       setReferralCode((student as any).referral_code || "ALUNO2026");
-      const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned").eq("student_id", student.id).maybeSingle();
+      const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned,fitcoin_balance" as never).eq("student_id", student.id).maybeSingle();
       setWallet({
-        available_balance: Number(walletData?.available_balance || 0),
-        pending_balance: Number(walletData?.pending_balance || 0),
-        total_earned: Number(walletData?.total_earned || 0),
+        available_balance: Number((walletData as any)?.available_balance || 0),
+        pending_balance: Number((walletData as any)?.pending_balance || 0),
+        total_earned: Number((walletData as any)?.total_earned || 0),
+        fitcoin_balance: Number((walletData as any)?.fitcoin_balance || 0),
       });
       const [referralRes, withdrawalRes, enrollmentRes] = await Promise.all([
         supabase
