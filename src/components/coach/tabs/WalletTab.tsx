@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions";
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
+import { getMyWalletHistory } from "@/lib/coach-wallet-history.functions";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
 import { PendingInfo } from "@/components/PendingInfo";
