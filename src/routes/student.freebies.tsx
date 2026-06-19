@@ -76,6 +76,7 @@ function StudentFreebies() {
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [savedTotal, setSavedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [selected, setSelected] = useState<FreebieDetail | null>(null);
