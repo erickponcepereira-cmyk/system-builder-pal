@@ -83,7 +83,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         }`}>
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs uppercase text-white/50">Fatura {new Date(current.reference_month).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
+              <p className="text-xs uppercase text-white/50">Fatura {fmtMonthLong(current.reference_month)}</p>
               <h2 className="text-2xl font-bold text-white">{fmt(current.amount)}</h2>
               <p className="text-sm text-white/60">Vence em {fmtDate(current.due_date)} · {STATUS_LABEL[current.status]}</p>
             </div>
