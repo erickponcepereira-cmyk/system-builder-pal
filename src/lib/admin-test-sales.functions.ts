@@ -376,13 +376,6 @@ async function createStoreSimulation(input: SimulateInput) {
       .update({ status: "paid", paid_at: new Date().toISOString() } as never)
       .eq("id", txId);
   }
-  // Garante distribuição (idempotente — o RPC apaga e recria as comissões da tx)
-  try {
-    await supabaseAdmin.rpc("process_paid_transaction" as never, { _transaction_id: txId } as never);
-  } catch (e) {
-    console.error("[createStoreSimulation] process_paid_transaction failed:", e);
-  }
-
   return { sourceKind: "store_order", sourceId: (order as any).id, orderNumber: (order as any).order_number };
 }
 
