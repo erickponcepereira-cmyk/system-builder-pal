@@ -133,8 +133,8 @@ export function WalletTab() {
         ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`s:${p.id}`, p.name));
       }
       if (digitalIds.length) {
-        const { data } = await supabase.from("digital_products").select("id,name").in("id", digitalIds);
-        ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`d:${p.id}`, p.name));
+        const { data } = await supabase.from("digital_products").select("id,title").in("id", digitalIds);
+        ((data as Array<{ id: string; title: string }>) || []).forEach((p) => productNameMap.set(`d:${p.id}`, p.title));
       }
 
       commRows.forEach((cm) => {
