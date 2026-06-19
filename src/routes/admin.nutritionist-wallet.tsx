@@ -2,12 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Lock, Unlock, X, Wallet } from "lucide-react";
+import { Loader2, Lock, Unlock, X, Wallet, UserPlus } from "lucide-react";
 import {
   listNutritionistWallets,
   listNutritionistBlockedEntries,
   releaseNutritionistEntry,
   cancelNutritionistEntry,
+  assignNutritionistToSystemEntry,
   type NutritionistWalletRow,
   type NutriBlockedEntry,
 } from "@/lib/nutritionist.functions";
