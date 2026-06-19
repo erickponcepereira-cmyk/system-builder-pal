@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { PendingInfo } from "@/components/PendingInfo";
+import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 
 export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
