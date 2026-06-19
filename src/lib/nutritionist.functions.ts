@@ -29,6 +29,7 @@ export type NutriBlockedEntry = {
   profile_name: string;
   student_id: string | null;
   student_name: string | null;
+  coach_name: string | null;
   product_id: string | null;
   product_name: string | null;
   slot_label: string | null;
@@ -38,6 +39,9 @@ export type NutriBlockedEntry = {
   notes: string | null;
   created_at: string;
   released_at: string | null;
+  /** Virtual entries originadas de admin_system_wallet_entries (não atribuídas) */
+  source: "nutritionist" | "admin_system";
+  transaction_id: string | null;
 };
 
 export const listNutritionistWallets = createServerFn({ method: "GET" })
