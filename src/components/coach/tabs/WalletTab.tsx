@@ -21,7 +21,7 @@ const TIER_COLOR_WALLET: Record<string, string> = {
   bronze: "#CD7F32", silver: "#C0C0C0", gold: "#FFD700", platinum: "#E5E4E2", crown: "#FFB300", club: "#FF6B35",
 };
 
-type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean };
+type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean; customer?: string; product?: string };
 
 
 export function WalletTab() {
@@ -89,20 +89,66 @@ export function WalletTab() {
       const items: HistoryItem[] = [];
       const commRows = ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string; transaction_id: string; slot_label: string | null }>) || []);
       const txIds = Array.from(new Set(commRows.map((c) => c.transaction_id).filter(Boolean)));
-      const txTypeMap = new Map<string, string>();
+      const txInfoMap = new Map<string, { purchase_type: string; student_id: string | null; product_id: string | null; store_product_id: string | null; digital_product_id: string | null }>();
       if (txIds.length) {
         const { data: txs } = await supabase
           .from("transactions" as never)
-          .select("id,purchase_type" as never)
+          .select("id,purchase_type,student_id,product_id,store_product_id,digital_product_id" as never)
           .in("id" as never, txIds as never);
-        ((txs as Array<{ id: string; purchase_type: string | null }>) || []).forEach((t) => {
-          txTypeMap.set(t.id, t.purchase_type || "");
+        ((txs as Array<{ id: string; purchase_type: string | null; student_id: string | null; product_id: string | null; store_product_id: string | null; digital_product_id: string | null }>) || []).forEach((t) => {
+          txInfoMap.set(t.id, {
+            purchase_type: t.purchase_type || "",
+            student_id: t.student_id,
+            product_id: t.product_id,
+            store_product_id: t.store_product_id,
+            digital_product_id: t.digital_product_id,
+          });
         });
       }
+
+      // Load student names (via students -> profiles)
+      const studentIds = Array.from(new Set(Array.from(txInfoMap.values()).map((t) => t.student_id).filter(Boolean) as string[]));
+      const studentNameMap = new Map<string, string>();
+      if (studentIds.length) {
+        const { data: studs } = await supabase
+          .from("students")
+          .select("id,profile:profiles(name)")
+          .in("id", studentIds);
+        ((studs as Array<{ id: string; profile: { name: string | null } | null }>) || []).forEach((s) => {
+          studentNameMap.set(s.id, s.profile?.name || "Cliente");
+        });
+      }
+
+      // Load product names by type
+      const productNameMap = new Map<string, string>();
+      const regularIds = Array.from(new Set(Array.from(txInfoMap.values()).filter((t) => t.purchase_type !== "store_order" && t.purchase_type !== "digital").map((t) => t.product_id).filter(Boolean) as string[]));
+      const storeIds = Array.from(new Set(Array.from(txInfoMap.values()).filter((t) => t.purchase_type === "store_order").map((t) => t.store_product_id).filter(Boolean) as string[]));
+      const digitalIds = Array.from(new Set(Array.from(txInfoMap.values()).filter((t) => t.purchase_type === "digital").map((t) => t.digital_product_id).filter(Boolean) as string[]));
+      if (regularIds.length) {
+        const { data } = await supabase.from("products").select("id,name").in("id", regularIds);
+        ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`p:${p.id}`, p.name));
+      }
+      if (storeIds.length) {
+        const { data } = await supabase.from("store_products").select("id,name").in("id", storeIds);
+        ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`s:${p.id}`, p.name));
+      }
+      if (digitalIds.length) {
+        const { data } = await supabase.from("digital_products").select("id,title").in("id", digitalIds);
+        ((data as Array<{ id: string; title: string }>) || []).forEach((p) => productNameMap.set(`d:${p.id}`, p.title));
+      }
+
       commRows.forEach((cm) => {
-        const ptype = txTypeMap.get(cm.transaction_id) || "";
+        const info = txInfoMap.get(cm.transaction_id);
+        const ptype = info?.purchase_type || "";
         const channel = ptype === "store_order" ? "🛒 Loja (auto)" : "🤝 Venda direta";
         const baseWho = cm.level === 0 ? "Comissão direta" : `Comissão rede nível ${cm.level}`;
+        const customer = info?.student_id ? studentNameMap.get(info.student_id) : undefined;
+        let product: string | undefined;
+        if (info) {
+          if (ptype === "store_order" && info.store_product_id) product = productNameMap.get(`s:${info.store_product_id}`);
+          else if (ptype === "digital" && info.digital_product_id) product = productNameMap.get(`d:${info.digital_product_id}`);
+          else if (info.product_id) product = productNameMap.get(`p:${info.product_id}`);
+        }
         items.push({
           id: `c-${cm.id}`,
           who: `${baseWho} · ${channel}`,
@@ -110,6 +156,8 @@ export function WalletTab() {
           value: Number(cm.amount),
           created_at: cm.created_at,
           isNetwork: cm.level > 0,
+          customer,
+          product,
         });
       });
       ((recentWithdrawsRes.data as Array<{ id: string; amount: number; status: string; requested_at: string; paid_at: string | null }>) || []).forEach((wr) => {
@@ -456,12 +504,20 @@ export function WalletTab() {
         ) : (
           <div className="space-y-2">
             {history.filter((h) => tab === "direct" ? !h.isNetwork || h.value < 0 : h.isNetwork || h.value < 0).map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
-                <div>
+              <div key={t.id} className="flex items-start justify-between gap-3 rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-white">{t.who}</p>
                   <p className="text-[10px] text-white/40">{t.type}</p>
+                  {(t.customer || t.product) && (
+                    <p className="text-[10px] text-white/60 mt-0.5 truncate">
+                      {t.customer && <>👤 {t.customer}</>}
+                      {t.customer && t.product && " · "}
+                      {t.product && <>📦 {t.product}</>}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-white/30 mt-0.5">{new Date(t.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
-                <span className={`text-sm font-bold ${t.value > 0 ? "text-success" : "text-white/70"}`}>
+                <span className={`text-sm font-bold whitespace-nowrap ${t.value > 0 ? "text-success" : "text-white/70"}`}>
                   {t.value > 0 ? "+" : "-"}{brl(Math.abs(t.value))}
                 </span>
               </div>
