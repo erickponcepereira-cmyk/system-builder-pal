@@ -9444,6 +9444,14 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: undefined
       }
+      recalculate_coach_card_access: {
+        Args: { _coach_id: string }
+        Returns: string
+      }
+      recalculate_student_card_access: {
+        Args: { _student_id: string }
+        Returns: string
+      }
       redeem_freebie: { Args: { _freebie_id: string }; Returns: string }
       refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
