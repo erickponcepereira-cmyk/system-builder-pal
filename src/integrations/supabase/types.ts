@@ -8320,6 +8320,7 @@ export type Database = {
           custom_amount: number | null
           exempt_until: string | null
           id: string
+          next_invoice_month: string | null
           notes: string | null
           plan_id: string
           preferred_payment_method: Database["public"]["Enums"]["invoice_payment_method"]
@@ -8334,6 +8335,7 @@ export type Database = {
           custom_amount?: number | null
           exempt_until?: string | null
           id?: string
+          next_invoice_month?: string | null
           notes?: string | null
           plan_id: string
           preferred_payment_method?: Database["public"]["Enums"]["invoice_payment_method"]
@@ -8348,6 +8350,7 @@ export type Database = {
           custom_amount?: number | null
           exempt_until?: string | null
           id?: string
+          next_invoice_month?: string | null
           notes?: string | null
           plan_id?: string
           preferred_payment_method?: Database["public"]["Enums"]["invoice_payment_method"]
