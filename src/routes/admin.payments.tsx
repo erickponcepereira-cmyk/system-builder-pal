@@ -438,14 +438,29 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                   <span>Pendente: <span className="text-amber-400 font-mono">{fmt(details.totals.commissionsPending)}</span></span>
                   <span>Pago: <span className="text-white font-mono">{fmt(details.totals.commissionsPaid)}</span></span>
                 </div>
-                <DataTable rows={details.commissions.map((c) => [
-                  c.date ? new Date(c.date).toLocaleString("pt-BR") : "—",
-                  c.studentName || "—",
-                  c.productName || (c.purchaseType || "—"),
-                  c.isReferral ? "Indicação" : (c.level !== null ? `L${c.level}` : "—"),
-                  <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusColor(c.status)}`}>{c.status}</span>,
-                  <span key="a" className="font-mono">{fmt(c.amount)}</span>,
-                ])} headers={["Data / Hora", "Aluno", "Produto", "Nível", "Status", "Valor"]} />
+                <DataTable rows={details.commissions.map((c) => {
+                  const now = Date.now();
+                  const availMs = c.availableAt ? new Date(c.availableAt).getTime() : 0;
+                  let label = c.status;
+                  let color = statusColor(c.status);
+                  if (c.status === "paid") { label = "Pago"; }
+                  else if (c.status === "available") { label = "Disponível"; }
+                  else if (c.status === "pending" && availMs > now) {
+                    label = `Liberação em ${new Date(c.availableAt!).toLocaleDateString("pt-BR")}`;
+                    color = "bg-amber-500/20 text-amber-400";
+                  } else if (c.status === "pending") {
+                    label = "Pendente (aguardando liberação)";
+                  } else if (c.status === "cancelled") { label = "Cancelada"; }
+                  return [
+                    c.date ? new Date(c.date).toLocaleString("pt-BR") : "—",
+                    c.studentName || "—",
+                    c.productName || (c.purchaseType || "—"),
+                    c.isReferral ? "Indicação" : (c.level !== null ? `L${c.level}` : "—"),
+                    <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${color}`}>{label}</span>,
+                    <span key="a" className="font-mono">{fmt(c.amount)}</span>,
+                  ];
+                })} headers={["Data / Hora", "Aluno", "Produto", "Nível", "Status", "Valor"]} />
+
 
               </div>
             )}
