@@ -113,7 +113,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
               <MercadoPagoCheckout
                 source={{ kind: "subscription_invoice", id: current.id }}
                 amount={Number(current.amount)}
-                description={`Mensalidade ${new Date(current.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}`}
+                description={`Mensalidade ${fmtMonth(current.reference_month)}`}
                 defaultPayer={state.payer ? { email: state.payer.email || "", name: state.payer.name || "" } : undefined}
                 initialMethod={mpMethod}
                 onApproved={() => { setMpMethod(null); load(); }}
