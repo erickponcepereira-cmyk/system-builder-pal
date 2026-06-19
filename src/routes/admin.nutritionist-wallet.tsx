@@ -26,11 +26,14 @@ function NutriWalletPage() {
   const fetchEntries = useServerFn(listNutritionistBlockedEntries);
   const releaseFn = useServerFn(releaseNutritionistEntry);
   const cancelFn = useServerFn(cancelNutritionistEntry);
+  const assignFn = useServerFn(assignNutritionistToSystemEntry);
 
   const [wallets, setWallets] = useState<NutritionistWalletRow[] | null>(null);
   const [entries, setEntries] = useState<NutriBlockedEntry[] | null>(null);
   const [filter, setFilter] = useState<"blocked" | "released" | "cancelled" | "all">("blocked");
   const [busy, setBusy] = useState<string | null>(null);
+  const [assignFor, setAssignFor] = useState<NutriBlockedEntry | null>(null);
+  const [assignTarget, setAssignTarget] = useState<string>("");
 
   const reload = () => {
     fetchWallets().then(setWallets).catch(() => toast.error("Erro ao carregar carteiras"));
