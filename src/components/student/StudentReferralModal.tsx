@@ -193,9 +193,11 @@ export function StudentReferralModal({
                           <p className="text-[11px] text-white/40">
                             {p.kind === "challenge" ? "Desafio/Plano" : "Digital"} · {money(p.price)}
                           </p>
-                          <p className="mt-0.5 text-[11px] font-bold text-primary">
+                          <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-primary">
+                            <FitcoinIcon />
                             Cashback: {isRevealed ? `${p.commission.toFixed(2).replace(".", ",")} Fitcoin` : "••••••"}
                           </p>
+
                         </div>
                       </button>
                       <button
