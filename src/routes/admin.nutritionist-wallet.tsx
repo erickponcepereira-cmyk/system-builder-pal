@@ -2,12 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Lock, Unlock, X, Wallet } from "lucide-react";
+import { Loader2, Lock, Unlock, X, Wallet, UserPlus } from "lucide-react";
 import {
   listNutritionistWallets,
   listNutritionistBlockedEntries,
   releaseNutritionistEntry,
   cancelNutritionistEntry,
+  assignNutritionistToSystemEntry,
   type NutritionistWalletRow,
   type NutriBlockedEntry,
 } from "@/lib/nutritionist.functions";
@@ -25,11 +26,14 @@ function NutriWalletPage() {
   const fetchEntries = useServerFn(listNutritionistBlockedEntries);
   const releaseFn = useServerFn(releaseNutritionistEntry);
   const cancelFn = useServerFn(cancelNutritionistEntry);
+  const assignFn = useServerFn(assignNutritionistToSystemEntry);
 
   const [wallets, setWallets] = useState<NutritionistWalletRow[] | null>(null);
   const [entries, setEntries] = useState<NutriBlockedEntry[] | null>(null);
   const [filter, setFilter] = useState<"blocked" | "released" | "cancelled" | "all">("blocked");
   const [busy, setBusy] = useState<string | null>(null);
+  const [assignFor, setAssignFor] = useState<NutriBlockedEntry | null>(null);
+  const [assignTarget, setAssignTarget] = useState<string>("");
 
   const reload = () => {
     fetchWallets().then(setWallets).catch(() => toast.error("Erro ao carregar carteiras"));
@@ -154,6 +158,7 @@ function NutriWalletPage() {
                 <tr>
                   <th className="p-3 text-left">Nutricionista</th>
                   <th className="p-3 text-left">Aluno</th>
+                  <th className="p-3 text-left">Coach</th>
                   <th className="p-3 text-left">Produto / Slot</th>
                   <th className="p-3 text-right">Valor</th>
                   <th className="p-3 text-left">Status</th>
@@ -164,8 +169,14 @@ function NutriWalletPage() {
               <tbody>
                 {entries.map((e) => (
                   <tr key={e.id} className="border-t border-white/5">
-                    <td className="p-3 text-white">{e.profile_name}</td>
+                    <td className="p-3 text-white">
+                      {e.profile_name}
+                      {e.source === "admin_system" && (
+                        <span className="ml-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">não atribuído</span>
+                      )}
+                    </td>
                     <td className="p-3 text-white/80">{e.student_name || "—"}</td>
+                    <td className="p-3 text-white/70">{e.coach_name || "—"}</td>
                     <td className="p-3 text-white/60">
                       {e.product_name || "—"}
                       <div className="text-[10px] text-white/40">{e.slot_label || ""}</div>
@@ -187,10 +198,19 @@ function NutriWalletPage() {
                       )}
                     </td>
                     <td className="p-3 text-xs text-white/40">
-                      {new Date(e.created_at).toLocaleDateString("pt-BR")}
+                      {new Date(e.created_at).toLocaleString("pt-BR")}
                     </td>
                     <td className="p-3 text-right">
-                      {e.status === "blocked" && (
+                      {e.status === "blocked" && e.source === "admin_system" && (
+                        <button
+                          disabled={busy === e.id}
+                          onClick={() => { setAssignFor(e); setAssignTarget(""); }}
+                          className="inline-flex items-center gap-1 rounded bg-primary/15 px-2 py-1 text-xs text-primary hover:bg-primary/25 disabled:opacity-50"
+                        >
+                          <UserPlus className="h-3 w-3" /> Atribuir
+                        </button>
+                      )}
+                      {e.status === "blocked" && e.source === "nutritionist" && (
                         <div className="flex justify-end gap-1">
                           <button
                             disabled={busy === e.id}
@@ -216,6 +236,56 @@ function NutriWalletPage() {
           </div>
         )}
       </section>
+
+      {assignFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setAssignFor(null)}>
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0F0F0F] p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold text-white">Atribuir nutricionista</h2>
+              <button onClick={() => setAssignFor(null)} className="rounded p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
+            <p className="text-xs text-white/60">
+              Venda de <strong className="text-white">{assignFor.student_name || "—"}</strong> {assignFor.coach_name ? <>· Coach <strong className="text-white">{assignFor.coach_name}</strong></> : null} · {money(assignFor.amount)}
+            </p>
+            <label className="mt-4 block text-xs font-semibold uppercase text-white/50">Nutricionista</label>
+            <select
+              value={assignTarget}
+              onChange={(e) => setAssignTarget(e.target.value)}
+              className="mt-1 w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione…</option>
+              {(wallets || []).filter((w) => w.profile_id !== "admin-nutricionista").map((w) => (
+                <option key={w.profile_id} value={w.profile_id}>{w.name}</option>
+              ))}
+            </select>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setAssignFor(null)} className="rounded bg-white/5 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10">Cancelar</button>
+              <button
+                disabled={!assignTarget || busy === assignFor.id}
+                onClick={async () => {
+                  if (!assignTarget) return;
+                  // systemEntryId = id sem o prefixo "sys-"
+                  const sysId = assignFor.id.startsWith("sys-") ? assignFor.id.slice(4) : assignFor.id;
+                  setBusy(assignFor.id);
+                  try {
+                    await assignFn({ data: { systemEntryId: sysId, profileId: assignTarget } });
+                    toast.success("Venda atribuída à nutricionista");
+                    setAssignFor(null);
+                    reload();
+                  } catch (err: any) {
+                    toast.error(err.message || "Erro");
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
+                className="rounded bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                Confirmar atribuição
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
