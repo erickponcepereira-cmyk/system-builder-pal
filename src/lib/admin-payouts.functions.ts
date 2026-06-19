@@ -457,12 +457,13 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (txIds.length) {
       const { data: txs } = await supabaseAdmin
         .from("transactions")
-        .select("id,student_id,product_id,purchase_type,paid_at,created_at,product_ids")
+        .select("id,student_id,product_id,purchase_type,paid_at,created_at")
         .in("id", txIds);
-      for (const t of ((txs as Array<{ id: string; student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; product_ids: string[] | null }>) || [])) {
-        txMap.set(t.id, t);
+      for (const t of ((txs as Array<{ id: string; student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null }>) || [])) {
+        txMap.set(t.id, { ...t, product_ids: null });
       }
     }
+
     const studentIdsSet = new Set<string>();
     const productIdsSet = new Set<string>();
     const storeProductIdsSet = new Set<string>();
