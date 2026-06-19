@@ -76,6 +76,7 @@ function StudentFreebies() {
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [savedTotal, setSavedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [selected, setSelected] = useState<FreebieDetail | null>(null);
@@ -138,6 +139,25 @@ function StudentFreebies() {
     setMine((b.data as unknown as Redemption[]) || []);
     const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
     setPartnerFreebies(pf);
+
+    // Total economizado: cupons já resgatados (status='redeemed') deste aluno
+    const sIdLocal = (await supabase.auth.getUser()).data.user
+      ? (await supabase.from("students").select("id").eq("profile_id", (await supabase.from("profiles").select("id").eq("user_id", (await supabase.auth.getUser()).data.user!.id).maybeSingle()).data?.id || "").maybeSingle()).data?.id
+      : null;
+    if (sIdLocal) {
+      const { data: redeemed } = await supabase
+        .from("partner_coupons" as never)
+        .select("partner_product_id,status,partner_products(estimated_value,discount_percent,redemption_mode)" as never)
+        .eq("student_id" as never, sIdLocal)
+        .eq("status" as never, "redeemed" as never);
+      const rows = (redeemed as unknown as Array<{ partner_products: { estimated_value: number | null; discount_percent: number | null; redemption_mode: string | null } | null }>) || [];
+      const total = rows.reduce((sum, r) => {
+        const ev = Number(r.partner_products?.estimated_value || 0);
+        if (r.partner_products?.redemption_mode === "discount") return sum + ev * (Number(r.partner_products?.discount_percent || 0) / 100);
+        return sum + ev;
+      }, 0);
+      setSavedTotal(total);
+    }
     setLoading(false);
   };
 
@@ -281,17 +301,24 @@ function StudentFreebies() {
               }, 0);
               return (
                 <div className="mb-6 space-y-5">
-                  {totalSavings > 0 && (
-                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Sua economia disponível</p>
-                      <p className="mt-1 text-2xl font-extrabold text-emerald-300">
-                        R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                      <p className="mt-1 text-[11px] text-white/60">
-                        {pageMode === "discount"
-                          ? "Total que você pode economizar usando todos os cupons de desconto ativos."
-                          : "Valor total dos benefícios gratuitos disponíveis pra você resgatar agora."}
-                      </p>
+                  {(totalSavings > 0 || savedTotal > 0) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Disponível pra economizar</p>
+                        <p className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-300">
+                          R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="mt-1 text-[10px] text-white/55">
+                          {pageMode === "discount" ? "Usando todos os cupons ativos." : "Resgatando os benefícios gratuitos."}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Você já economizou</p>
+                        <p className="mt-1 text-xl sm:text-2xl font-extrabold text-primary">
+                          R$ {savedTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p className="mt-1 text-[10px] text-white/55">Cupons já validados pelos parceiros.</p>
+                      </div>
                     </div>
                   )}
                   <h2 className="text-sm font-bold text-white flex items-center gap-2">
