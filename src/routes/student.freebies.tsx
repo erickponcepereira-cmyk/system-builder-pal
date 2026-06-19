@@ -329,6 +329,24 @@ function StudentFreebies() {
                                   {p.partners?.fantasy_name}
                                 </button>
                                 {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                                {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                                  <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
+                                    {isDiscount ? (
+                                      <>
+                                        <p className="text-[10px] text-white/55">
+                                          De <span className="line-through">R$ {Number(p.estimated_value).toFixed(2)}</span> por <span className="font-bold text-white">R$ {(p.estimated_value * (1 - Number(p.discount_percent || 0) / 100)).toFixed(2)}</span>
+                                        </p>
+                                        <p className="text-[11px] font-bold text-emerald-300">
+                                          Você economiza R$ {(p.estimated_value * (Number(p.discount_percent || 0) / 100)).toFixed(2)}
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <p className="text-[11px] font-bold text-emerald-300">
+                                        Você economiza R$ {Number(p.estimated_value).toFixed(2)} <span className="text-white/50 font-normal">(valor de mercado)</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
                                 {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                                   <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
                                     <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
