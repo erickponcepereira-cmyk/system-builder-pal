@@ -526,6 +526,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         productName,
         purchaseType: t?.purchase_type ?? null,
         transactionDate: t?.paid_at ?? t?.created_at ?? null,
+        availableAt: c.available_at,
       };
     });
 
