@@ -156,7 +156,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
             <tbody>
               {invoices.map((i) => (
                 <tr key={i.id} className="border-t border-white/5">
-                  <td className="p-2">{new Date(i.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}</td>
+                  <td className="p-2">{fmtMonth(i.reference_month)}</td>
                   <td className="p-2">{fmtDate(i.due_date)}</td>
                   <td className="p-2 text-right">{fmt(i.amount)}</td>
                   <td className="p-2">{STATUS_LABEL[i.status] ?? i.status}</td>
