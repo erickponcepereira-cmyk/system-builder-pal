@@ -310,3 +310,84 @@ export const createNutritionistEntry = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/**
+ * Atribui uma entrada virtual (admin_system_wallet_entries/credit não atribuída) a
+ * uma nutricionista real: cria nutritionist_blocked_entries, atualiza a carteira
+ * dela e lança um débito no admin para zerar a parte não atribuída.
+ */
+export const assignNutritionistToSystemEntry = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => d as { systemEntryId: string; profileId: string })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    await ensureAdmin(context.userId);
+    if (!data.systemEntryId || !data.profileId) throw new Error("Dados inválidos");
+
+    const { data: sysRow } = await supabaseAdmin
+      .from("admin_system_wallet_entries")
+      .select("id,transaction_id,slot_label,amount,kind")
+      .eq("id", data.systemEntryId)
+      .maybeSingle();
+    if (!sysRow) throw new Error("Lançamento não encontrado");
+    if ((sysRow as any).kind !== "credit") throw new Error("Lançamento já atribuído");
+
+    const amount = Number((sysRow as any).amount || 0);
+    const txId = (sysRow as any).transaction_id as string | null;
+
+    let studentId: string | null = null;
+    let productId: string | null = null;
+    if (txId) {
+      const { data: tx } = await supabaseAdmin
+        .from("transactions")
+        .select("student_id,product_id")
+        .eq("id", txId)
+        .maybeSingle();
+      studentId = (tx as any)?.student_id ?? null;
+      productId = (tx as any)?.product_id ?? null;
+    }
+
+    // 1) Inserir lançamento bloqueado para a nutricionista
+    const { error: insErr } = await supabaseAdmin.from("nutritionist_blocked_entries").insert({
+      profile_id: data.profileId,
+      amount,
+      slot_label: (sysRow as any).slot_label || "nutricionista",
+      reason: "Atribuição manual de venda",
+      student_id: studentId,
+      product_id: productId,
+    } as never);
+    if (insErr) throw new Error(insErr.message);
+
+    // 2) Atualizar carteira (blocked + total_earned)
+    const { data: existing } = await supabaseAdmin
+      .from("nutritionist_wallets")
+      .select("blocked_balance,total_earned")
+      .eq("profile_id", data.profileId)
+      .maybeSingle();
+    if (existing) {
+      await supabaseAdmin
+        .from("nutritionist_wallets")
+        .update({
+          blocked_balance: Number((existing as any).blocked_balance || 0) + amount,
+          total_earned: Number((existing as any).total_earned || 0) + amount,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("profile_id", data.profileId);
+    } else {
+      await supabaseAdmin.from("nutritionist_wallets").insert({
+        profile_id: data.profileId,
+        blocked_balance: amount,
+        total_earned: amount,
+      } as never);
+    }
+
+    // 3) Débito no admin_system_wallet_entries para zerar a parte virtual
+    await supabaseAdmin.from("admin_system_wallet_entries").insert({
+      transaction_id: txId,
+      slot_label: (sysRow as any).slot_label || "nutricionista",
+      amount,
+      kind: "debit",
+      notes: `Atribuído à nutricionista (profile_id=${data.profileId})`,
+    } as never);
+
+    return { ok: true };
+  });
