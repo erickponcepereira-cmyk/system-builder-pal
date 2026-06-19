@@ -259,9 +259,11 @@ export function StudentReferralModal({
             >
               <Share2 className="h-4 w-4" /> Compartilhar
             </button>
-            <p className="text-center text-[10px] text-white/40">
+            <p className="flex items-center justify-center gap-1 text-center text-[10px] text-white/40">
+              <FitcoinIcon className="h-3 w-3" />
               Quando alguém comprar pelo seu link, você recebe Fitcoin como cashback para usar na loja.
             </p>
+
           </div>
         )}
       </div>
