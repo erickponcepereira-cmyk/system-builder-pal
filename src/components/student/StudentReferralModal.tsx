@@ -189,14 +189,14 @@ export function StudentReferralModal({
                             {p.kind === "challenge" ? "Desafio/Plano" : "Digital"} · {money(p.price)}
                           </p>
                           <p className="mt-0.5 text-[11px] font-bold text-primary">
-                            Sua comissão: {isRevealed ? money(p.commission) : "••••••"}
+                            Cashback: {isRevealed ? `${p.commission.toFixed(2).replace(".", ",")} Fitcoin` : "••••••"}
                           </p>
                         </div>
                       </button>
                       <button
                         onClick={(e) => toggleReveal(p.id, e)}
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                        title={isRevealed ? "Ocultar comissão" : "Mostrar comissão"}
+                        title={isRevealed ? "Ocultar cashback" : "Mostrar cashback"}
                       >
                         {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
