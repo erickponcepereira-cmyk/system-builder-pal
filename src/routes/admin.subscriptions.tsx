@@ -13,7 +13,13 @@ export const Route = createFileRoute("/admin/subscriptions")({
 });
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
-const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
+const parseLocalDate = (d: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(d);
+};
+const fmtDate = (d?: string | null) => (d ? parseLocalDate(d).toLocaleDateString("pt-BR") : "—");
+const fmtMonth = (d: string) => parseLocalDate(d).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" });
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", paid: "Pago", exempted: "Isenta", overdue: "Atrasada",
   blocked: "Bloqueado", cancelled: "Cancelada",
@@ -125,7 +131,7 @@ function AdminSubscriptionsPage() {
               <tbody>
                 {invs.map((i) => (
                   <tr key={i.id} className="border-t border-white/5">
-                    <td className="p-3">{new Date(i.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}</td>
+                    <td className="p-3">{fmtMonth(i.reference_month)}</td>
                     <td className="p-3">{i.profile?.name ?? "—"}<br /><span className="text-xs text-white/40">{i.profile?.email}</span></td>
                     <td className="p-3">{fmtDate(i.due_date)}</td>
                     <td className="p-3 text-right">{fmt(i.amount)}</td>

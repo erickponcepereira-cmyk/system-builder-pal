@@ -8,7 +8,14 @@ import {
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
-const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
+const parseLocalDate = (d: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(d);
+};
+const fmtDate = (d?: string | null) => (d ? parseLocalDate(d).toLocaleDateString("pt-BR") : "—");
+const fmtMonthLong = (d: string) => parseLocalDate(d).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+const fmtMonth = (d: string) => parseLocalDate(d).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" });
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", paid: "Paga", exempted: "Isenta",
   overdue: "Atrasada", blocked: "Bloqueada", cancelled: "Cancelada",
@@ -76,7 +83,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         }`}>
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs uppercase text-white/50">Fatura {new Date(current.reference_month).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</p>
+              <p className="text-xs uppercase text-white/50">Fatura {fmtMonthLong(current.reference_month)}</p>
               <h2 className="text-2xl font-bold text-white">{fmt(current.amount)}</h2>
               <p className="text-sm text-white/60">Vence em {fmtDate(current.due_date)} · {STATUS_LABEL[current.status]}</p>
             </div>
@@ -106,7 +113,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
               <MercadoPagoCheckout
                 source={{ kind: "subscription_invoice", id: current.id }}
                 amount={Number(current.amount)}
-                description={`Mensalidade ${new Date(current.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}`}
+                description={`Mensalidade ${fmtMonth(current.reference_month)}`}
                 defaultPayer={state.payer ? { email: state.payer.email || "", name: state.payer.name || "" } : undefined}
                 initialMethod={mpMethod}
                 onApproved={() => { setMpMethod(null); load(); }}
@@ -149,7 +156,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
             <tbody>
               {invoices.map((i) => (
                 <tr key={i.id} className="border-t border-white/5">
-                  <td className="p-2">{new Date(i.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}</td>
+                  <td className="p-2">{fmtMonth(i.reference_month)}</td>
                   <td className="p-2">{fmtDate(i.due_date)}</td>
                   <td className="p-2 text-right">{fmt(i.amount)}</td>
                   <td className="p-2">{STATUS_LABEL[i.status] ?? i.status}</td>
