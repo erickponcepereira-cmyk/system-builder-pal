@@ -55,6 +55,7 @@ type PartnerFreeProduct = {
   partner_id: string;
   redemption_mode: "free" | "discount" | null;
   discount_percent: number | null;
+  estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
@@ -126,7 +127,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,partners(fantasy_name,photo_url,status,business_area)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,partners(fantasy_name,photo_url,status,business_area)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -273,8 +274,26 @@ function StudentFreebies() {
                 byArea.get(area)!.push(p);
               });
               const areas = Array.from(byArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+              const totalSavings = filteredPartner.reduce((sum, p) => {
+                const ev = Number(p.estimated_value || 0);
+                if (p.redemption_mode === "discount") return sum + ev * (Number(p.discount_percent || 0) / 100);
+                return sum + ev;
+              }, 0);
               return (
                 <div className="mb-6 space-y-5">
+                  {totalSavings > 0 && (
+                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Sua economia disponível</p>
+                      <p className="mt-1 text-2xl font-extrabold text-emerald-300">
+                        R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="mt-1 text-[11px] text-white/60">
+                        {pageMode === "discount"
+                          ? "Total que você pode economizar usando todos os cupons de desconto ativos."
+                          : "Valor total dos benefícios gratuitos disponíveis pra você resgatar agora."}
+                      </p>
+                    </div>
+                  )}
                   <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-primary" />
                     {pageMode === "discount" ? "Descontos de empresas parceiras" : "Brindes de empresas parceiras"}
@@ -310,6 +329,24 @@ function StudentFreebies() {
                                   {p.partners?.fantasy_name}
                                 </button>
                                 {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                                {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                                  <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
+                                    {isDiscount ? (
+                                      <>
+                                        <p className="text-[10px] text-white/55">
+                                          De <span className="line-through">R$ {Number(p.estimated_value).toFixed(2)}</span> por <span className="font-bold text-white">R$ {(p.estimated_value * (1 - Number(p.discount_percent || 0) / 100)).toFixed(2)}</span>
+                                        </p>
+                                        <p className="text-[11px] font-bold text-emerald-300">
+                                          Você economiza R$ {(p.estimated_value * (Number(p.discount_percent || 0) / 100)).toFixed(2)}
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <p className="text-[11px] font-bold text-emerald-300">
+                                        Você economiza R$ {Number(p.estimated_value).toFixed(2)} <span className="text-white/50 font-normal">(valor de mercado)</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
                                 {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                                   <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
                                     <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}

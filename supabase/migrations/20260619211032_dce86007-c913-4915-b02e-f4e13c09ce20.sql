@@ -1,0 +1,2 @@
+ALTER TABLE public.partner_products ADD COLUMN IF NOT EXISTS estimated_value numeric(10,2);
+COMMENT ON COLUMN public.partner_products.estimated_value IS 'Valor de mercado do produto/serviço gratuito ou base do desconto. Usado para calcular economia do aluno.';

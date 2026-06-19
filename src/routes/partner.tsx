@@ -52,6 +52,7 @@ interface Product {
   is_active_by_partner: boolean;
   redemption_mode?: "free" | "discount";
   discount_percent?: number | null;
+  estimated_value?: number | null;
   price_input_mode?: "charge" | "receive";
   coach_commission_percentage?: number;
   partner_net_amount?: number;
@@ -358,19 +359,22 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
   const blank = (): Partial<Product> => ({
     partner_id: partner.id,
-    kind: hasActiveFree ? "paid" : "free",
+    kind: "free",
     redemption_mode: "free",
     name: "", description: "", image_url: "", price: 0, stock: null,
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
     benefit_end_time: null,
     monthly_redeem_limit: null,
+    estimated_value: null,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
     partner_net_amount: 0,
     section_id: null,
     category_id: null,
   });
+
+
 
 
   const upload = async (file: File) => {
@@ -386,6 +390,14 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
+
+    // Valor estimado obrigatório para gratuitos/descontos
+    if (editing.kind === "free") {
+      const ev = Number(editing.estimated_value || 0);
+      if (!ev || ev <= 0) {
+        return toast.error("Informe o valor estimado deste benefício (quanto custaria fora do clube).");
+      }
+    }
 
     // Para produtos pagos, recalcula breakdown antes de salvar
     let extra: Partial<Product> = {};
@@ -413,6 +425,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       partner_id: partner.id,
       status: "pending" as const,
       admin_notes: null,
+      estimated_value: editing.kind === "free" ? Number(editing.estimated_value || 0) : null,
       benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
       benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
       monthly_redeem_limit: editing.kind === "free"
@@ -530,6 +543,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   )}
                 </div>
               )}
+              {p.kind === "free" && typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                <p className="mt-0.5 text-[11px] text-white/60">
+                  Valor estimado: <span className="text-green-400 font-semibold">R$ {Number(p.estimated_value).toFixed(2)}</span>
+                </p>
+              )}
               {p.status === "rejected" && p.admin_notes && <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>}
               {p.kind === "free" && formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                 <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
@@ -598,6 +616,27 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   <p className="mt-1 text-[10px] text-white/40">Aparece em destaque para o aluno como "X% OFF".</p>
                 </Field>
               )}
+
+              {editing.kind === "free" && (
+                <Field label="Valor estimado deste benefício (R$) *">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={editing.estimated_value ?? ""}
+                    onChange={e => setEditing({ ...editing, estimated_value: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })}
+                    placeholder="Ex.: 80.00"
+                    className="field-input"
+                    required
+                  />
+                  <p className="mt-1 text-[10px] text-white/45">
+                    {editing.redemption_mode === "discount"
+                      ? "Preço cheio do produto/serviço (sem o desconto). Usado para mostrar ao aluno quanto ele economiza."
+                      : "Quanto este benefício custaria fora do clube. Usado para mostrar ao aluno quanto ele economiza."}
+                  </p>
+                </Field>
+              )}
+
 
               {editing.kind === "free" && (
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
