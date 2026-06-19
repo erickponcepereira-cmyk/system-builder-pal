@@ -251,7 +251,7 @@ export function StudentReferralModal({
               <Share2 className="h-4 w-4" /> Compartilhar
             </button>
             <p className="text-center text-[10px] text-white/40">
-              Quando alguém comprar pelo seu link, você recebe a comissão de indicação.
+              Quando alguém comprar pelo seu link, você recebe Fitcoin como cashback para usar na loja.
             </p>
           </div>
         )}
