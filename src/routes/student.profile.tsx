@@ -64,7 +64,7 @@ function ProfilePage() {
   const [isSubcoach, setIsSubcoach] = useState(false);
   const [bioWeightDiff, setBioWeightDiff] = useState<number | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
-  const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
+  const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0, fitcoin_balance: 0 });
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
   const [referralCode, setReferralCode] = useState("ALUNO2026");
   const [referralModalOpen, setReferralModalOpen] = useState(false);
