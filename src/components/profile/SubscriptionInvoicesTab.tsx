@@ -8,7 +8,14 @@ import {
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
-const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
+const parseLocalDate = (d: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(d);
+};
+const fmtDate = (d?: string | null) => (d ? parseLocalDate(d).toLocaleDateString("pt-BR") : "—");
+const fmtMonthLong = (d: string) => parseLocalDate(d).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+const fmtMonth = (d: string) => parseLocalDate(d).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" });
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", paid: "Paga", exempted: "Isenta",
   overdue: "Atrasada", blocked: "Bloqueada", cancelled: "Cancelada",
