@@ -390,7 +390,7 @@ export interface PayoutDetails {
   profile: { id: string; name: string; email: string | null };
   wallet: { available: number; blocked: number; totalEarned: number; totalWithdrawn: number };
   sales: Array<{ id: string; date: string | null; amount: number; status: string | null; product: string | null; student: string | null }>;
-  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; isReferral: boolean; studentName: string | null; studentEmail: string | null; productName: string | null; purchaseType: string | null; transactionDate: string | null }>;
+  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; isReferral: boolean; studentName: string | null; studentEmail: string | null; productName: string | null; purchaseType: string | null; transactionDate: string | null; availableAt: string | null }>;
   withdrawals: Array<{ id: string; amount: number; status: string | null; requested_at: string | null; paid_at: string | null; notes: string | null; pix_key: string | null }>;
   totals: { salesCount: number; salesAmount: number; commissionsAvailable: number; commissionsPending: number; commissionsPaid: number };
 }
@@ -442,14 +442,14 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     // Comissões — sempre filtradas por beneficiary = essa pessoa
     let qc = supabaseAdmin
       .from("commissions")
-      .select("id,amount,status,level,created_at,transaction_id,is_referral")
+      .select("id,amount,status,level,created_at,transaction_id,is_referral,available_at")
       .eq("beneficiary_profile_id", data.profileId)
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.fromDate) qc = qc.gte("created_at", data.fromDate);
     if (data.toDate) qc = qc.lte("created_at", data.toDate);
     const { data: commsRaw } = await qc;
-    const commsBase = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null }>) || []);
+    const commsBase = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null; available_at: string | null }>) || []);
 
     // Enriquecimento: transação -> aluno + produto
     const txIds = Array.from(new Set(commsBase.map((c) => c.transaction_id).filter(Boolean) as string[]));
@@ -526,6 +526,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         productName,
         purchaseType: t?.purchase_type ?? null,
         transactionDate: t?.paid_at ?? t?.created_at ?? null,
+        availableAt: c.available_at,
       };
     });
 
