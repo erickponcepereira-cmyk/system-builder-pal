@@ -30,6 +30,7 @@ export function WalletTab() {
   const fetchSplit = useServerFn(getWalletSplit);
   const fetchCareer = useServerFn(getCareerProgress);
   const fetchMedals = useServerFn(getIndividualCareer);
+  const fetchHistory = useServerFn(getMyWalletHistory);
 
   const [bank, setBank] = useState<{
     coachId: string | null;
