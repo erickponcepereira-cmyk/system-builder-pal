@@ -504,12 +504,20 @@ export function WalletTab() {
         ) : (
           <div className="space-y-2">
             {history.filter((h) => tab === "direct" ? !h.isNetwork || h.value < 0 : h.isNetwork || h.value < 0).map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
-                <div>
+              <div key={t.id} className="flex items-start justify-between gap-3 rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-white">{t.who}</p>
                   <p className="text-[10px] text-white/40">{t.type}</p>
+                  {(t.customer || t.product) && (
+                    <p className="text-[10px] text-white/60 mt-0.5 truncate">
+                      {t.customer && <>👤 {t.customer}</>}
+                      {t.customer && t.product && " · "}
+                      {t.product && <>📦 {t.product}</>}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-white/30 mt-0.5">{new Date(t.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
-                <span className={`text-sm font-bold ${t.value > 0 ? "text-success" : "text-white/70"}`}>
+                <span className={`text-sm font-bold whitespace-nowrap ${t.value > 0 ? "text-success" : "text-white/70"}`}>
                   {t.value > 0 ? "+" : "-"}{brl(Math.abs(t.value))}
                 </span>
               </div>
