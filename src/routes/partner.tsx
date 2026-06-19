@@ -543,6 +543,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   )}
                 </div>
               )}
+              {p.kind === "free" && typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                <p className="mt-0.5 text-[11px] text-white/60">
+                  Valor estimado: <span className="text-green-400 font-semibold">R$ {Number(p.estimated_value).toFixed(2)}</span>
+                </p>
+              )}
               {p.status === "rejected" && p.admin_notes && <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>}
               {p.kind === "free" && formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                 <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
