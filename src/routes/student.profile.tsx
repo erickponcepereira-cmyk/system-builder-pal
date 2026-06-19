@@ -64,7 +64,7 @@ function ProfilePage() {
   const [isSubcoach, setIsSubcoach] = useState(false);
   const [bioWeightDiff, setBioWeightDiff] = useState<number | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
-  const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0 });
+  const [wallet, setWallet] = useState({ available_balance: 0, pending_balance: 0, total_earned: 0, fitcoin_balance: 0 });
   const [referralLink, setReferralLink] = useState("/r/ALUNO2026");
   const [referralCode, setReferralCode] = useState("ALUNO2026");
   const [referralModalOpen, setReferralModalOpen] = useState(false);
@@ -111,11 +111,12 @@ function ProfilePage() {
       setIsInfluencer(Boolean((student as any).is_influencer));
       setReferralLink((student as any).referral_link || `/r/${(student as any).referral_code || "ALUNO2026"}`);
       setReferralCode((student as any).referral_code || "ALUNO2026");
-      const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned").eq("student_id", student.id).maybeSingle();
+      const { data: walletData } = await supabase.from("student_wallets").select("available_balance,pending_balance,total_earned,fitcoin_balance" as never).eq("student_id", student.id).maybeSingle();
       setWallet({
-        available_balance: Number(walletData?.available_balance || 0),
-        pending_balance: Number(walletData?.pending_balance || 0),
-        total_earned: Number(walletData?.total_earned || 0),
+        available_balance: Number((walletData as any)?.available_balance || 0),
+        pending_balance: Number((walletData as any)?.pending_balance || 0),
+        total_earned: Number((walletData as any)?.total_earned || 0),
+        fitcoin_balance: Number((walletData as any)?.fitcoin_balance || 0),
       });
       const [referralRes, withdrawalRes, enrollmentRes] = await Promise.all([
         supabase
@@ -334,26 +335,16 @@ function ProfilePage() {
         </div>
       )}
 
-      {/* Carteira */}
+      {/* Fitcoin (cashback de indicações) */}
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
-        <p className="mt-1 text-3xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
-        <p className="text-[11px] text-white/40 inline-flex items-center gap-1.5">
-          + R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente
-          <PendingInfo days={7} />
-          · total ganho R$ {wallet.total_earned.toFixed(2).replace(".", ",")}
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Fitcoin · Cashback</p>
+        <p className="mt-1 text-3xl font-bold text-white">{wallet.fitcoin_balance.toFixed(2).replace(".", ",")} FC</p>
+        <p className="text-[11px] text-white/40">
+          1 Fitcoin = R$ 1,00 · use como desconto nas suas compras na loja.
         </p>
-        <button
-          onClick={() => setWithdrawOpen(true)}
-          disabled={wallet.available_balance < 50}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
-        >
-          <Wallet className="h-4 w-4" />
-          Solicitar saque
-        </button>
-        {wallet.available_balance < 50 && (
-          <p className="mt-2 text-center text-[10px] text-white/40">Saque mínimo R$ 50,00</p>
-        )}
+        <p className="mt-2 text-[10px] text-white/40">
+          Ganhe Fitcoin indicando produtos elegíveis. O cashback não é sacável em dinheiro.
+        </p>
         <button
           onClick={() => setReferralModalOpen(true)}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/20"

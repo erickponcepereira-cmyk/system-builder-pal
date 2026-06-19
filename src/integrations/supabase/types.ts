@@ -2333,6 +2333,7 @@ export type Database = {
           beneficiary_coach_id: string | null
           beneficiary_profile_id: string
           created_at: string | null
+          fitcoin_credited: boolean
           id: string
           is_master_coach_commission: boolean | null
           is_referral: boolean | null
@@ -2351,6 +2352,7 @@ export type Database = {
           beneficiary_coach_id?: string | null
           beneficiary_profile_id: string
           created_at?: string | null
+          fitcoin_credited?: boolean
           id?: string
           is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
@@ -2369,6 +2371,7 @@ export type Database = {
           beneficiary_coach_id?: string | null
           beneficiary_profile_id?: string
           created_at?: string | null
+          fitcoin_credited?: boolean
           id?: string
           is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
@@ -3280,6 +3283,61 @@ export type Database = {
             columns: ["created_by_coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fitcoin_ledger: {
+        Row: {
+          amount: number
+          balance_after: number
+          commission_id: string | null
+          created_at: string
+          id: string
+          order_id: string | null
+          reason: string
+          student_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number
+          commission_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          reason: string
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          commission_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          reason?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitcoin_ledger_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fitcoin_ledger_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fitcoin_ledger_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -6987,6 +7045,7 @@ export type Database = {
       store_orders: {
         Row: {
           created_at: string
+          fitcoin_used: number
           id: string
           metadata: Json
           mp_payment_id: string | null
@@ -7010,6 +7069,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fitcoin_used?: number
           id?: string
           metadata?: Json
           mp_payment_id?: string | null
@@ -7033,6 +7093,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fitcoin_used?: number
           id?: string
           metadata?: Json
           mp_payment_id?: string | null
@@ -7446,6 +7507,7 @@ export type Database = {
       student_wallets: {
         Row: {
           available_balance: number | null
+          fitcoin_balance: number
           id: string
           pending_balance: number | null
           student_id: string
@@ -7455,6 +7517,7 @@ export type Database = {
         }
         Insert: {
           available_balance?: number | null
+          fitcoin_balance?: number
           id?: string
           pending_balance?: number | null
           student_id: string
@@ -7464,6 +7527,7 @@ export type Database = {
         }
         Update: {
           available_balance?: number | null
+          fitcoin_balance?: number
           id?: string
           pending_balance?: number | null
           student_id?: string
@@ -9390,6 +9454,7 @@ export type Database = {
         Returns: Json
       }
       release_available_commissions: { Args: never; Returns: number }
+      release_due_commissions_cron: { Args: never; Returns: number }
       release_nutritionist_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
