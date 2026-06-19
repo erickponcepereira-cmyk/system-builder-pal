@@ -272,7 +272,7 @@ function AdminFinanceiro() {
               <tbody>
                 {history.slice(0, 100).map((h) => (
                   <tr key={`${h.kind}-${h.id}`} className="border-t border-white/5">
-                    <td className="px-2 py-1.5 text-white/70">{h.requestedAt ? new Date(h.requestedAt).toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="px-2 py-1.5 text-white/70">{h.requestedAt ? new Date(h.requestedAt).toLocaleString("pt-BR") : "—"}</td>
                     <td className="px-2 py-1.5 text-white/60">{h.kind === "coach" ? "Coach" : h.kind === "student" ? "Aluno" : "Nutri"}</td>
                     <td className="px-2 py-1.5 text-white">{h.name}<span className="text-white/30 ml-1">{h.email}</span></td>
                     <td className="px-2 py-1.5 text-right font-bold text-primary">{money(h.amount)}</td>
@@ -284,7 +284,7 @@ function AdminFinanceiro() {
                         "bg-amber-500/15 text-amber-300"
                       }`}>{h.status}</span>
                     </td>
-                    <td className="px-2 py-1.5 text-white/50">{h.paidAt ? new Date(h.paidAt).toLocaleDateString("pt-BR") : "—"}</td>
+                    <td className="px-2 py-1.5 text-white/50">{h.paidAt ? new Date(h.paidAt).toLocaleString("pt-BR") : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -337,7 +337,7 @@ function AdminFinanceiro() {
                   <tbody>
                     {bucketRows.map((r) => (
                       <tr key={r.commissionId} className="border-t border-white/5">
-                        <td className="px-2 py-1.5 text-white/70">{r.createdAt ? new Date(r.createdAt).toLocaleDateString("pt-BR") : "—"}</td>
+                        <td className="px-2 py-1.5 text-white/70">{r.createdAt ? new Date(r.createdAt).toLocaleString("pt-BR") : "—"}</td>
                         <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
                         <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
                         <td className="px-2 py-1.5 text-white">{r.beneficiaryName}<span className="ml-1 text-white/30">{r.beneficiaryEmail}</span></td>
@@ -415,7 +415,7 @@ function AdminFinanceiro() {
                     <tbody>
                       {rows.map((r) => (
                         <tr key={`${r.sourceKind}-${r.sourceId}`} className="border-t border-white/5">
-                          <td className="px-2 py-1.5 text-white/70">{r.date ? new Date(r.date).toLocaleDateString("pt-BR") : "—"}</td>
+                          <td className="px-2 py-1.5 text-white/70">{r.date ? new Date(r.date).toLocaleString("pt-BR") : "—"}</td>
                           <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
                           <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
                           <td className="px-2 py-1.5 text-white/60 uppercase">{r.paymentMethod || "—"}</td>
