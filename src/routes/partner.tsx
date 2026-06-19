@@ -391,6 +391,14 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
 
+    // Valor estimado obrigatório para gratuitos/descontos
+    if (editing.kind === "free") {
+      const ev = Number(editing.estimated_value || 0);
+      if (!ev || ev <= 0) {
+        return toast.error("Informe o valor estimado deste benefício (quanto custaria fora do clube).");
+      }
+    }
+
     // Para produtos pagos, recalcula breakdown antes de salvar
     let extra: Partial<Product> = {};
     if (editing.kind === "paid") {
@@ -417,6 +425,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       partner_id: partner.id,
       status: "pending" as const,
       admin_notes: null,
+      estimated_value: editing.kind === "free" ? Number(editing.estimated_value || 0) : null,
       benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
       benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
       monthly_redeem_limit: editing.kind === "free"
