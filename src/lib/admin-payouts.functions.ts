@@ -449,9 +449,85 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (data.fromDate) qc = qc.gte("created_at", data.fromDate);
     if (data.toDate) qc = qc.lte("created_at", data.toDate);
     const { data: commsRaw } = await qc;
-    const commissions = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null }>) || []).map((c) => ({
-      id: c.id, date: c.created_at, amount: n(c.amount), status: c.status, level: c.level, transactionId: c.transaction_id, isReferral: !!c.is_referral,
-    }));
+    const commsBase = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null }>) || []);
+
+    // Enriquecimento: transação -> aluno + produto
+    const txIds = Array.from(new Set(commsBase.map((c) => c.transaction_id).filter(Boolean) as string[]));
+    const txMap = new Map<string, { student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; product_ids: string[] | null }>();
+    if (txIds.length) {
+      const { data: txs } = await supabaseAdmin
+        .from("transactions")
+        .select("id,student_id,product_id,purchase_type,paid_at,created_at,product_ids")
+        .in("id", txIds);
+      for (const t of ((txs as Array<{ id: string; student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; product_ids: string[] | null }>) || [])) {
+        txMap.set(t.id, t);
+      }
+    }
+    const studentIdsSet = new Set<string>();
+    const productIdsSet = new Set<string>();
+    const storeProductIdsSet = new Set<string>();
+    const digitalProductIdsSet = new Set<string>();
+    for (const t of txMap.values()) {
+      if (t.student_id) studentIdsSet.add(t.student_id);
+      const pid = t.product_id;
+      const ptype = (t.purchase_type || "").toLowerCase();
+      if (pid) {
+        if (ptype.includes("store")) storeProductIdsSet.add(pid);
+        else if (ptype.includes("digital")) digitalProductIdsSet.add(pid);
+        else productIdsSet.add(pid);
+      }
+      for (const extra of (t.product_ids || [])) {
+        if (extra) productIdsSet.add(extra);
+      }
+    }
+
+    const [stuRowsRes, prodRowsRes, storeRowsRes, digitalRowsRes] = await Promise.all([
+      studentIdsSet.size
+        ? supabaseAdmin.from("students").select("id,profile_id,profiles!students_profile_id_fkey(name,email)").in("id", Array.from(studentIdsSet))
+        : Promise.resolve({ data: [] as unknown }),
+      productIdsSet.size
+        ? supabaseAdmin.from("products").select("id,name").in("id", Array.from(productIdsSet))
+        : Promise.resolve({ data: [] as unknown }),
+      storeProductIdsSet.size
+        ? supabaseAdmin.from("store_products").select("id,name").in("id", Array.from(storeProductIdsSet))
+        : Promise.resolve({ data: [] as unknown }),
+      digitalProductIdsSet.size
+        ? supabaseAdmin.from("digital_products").select("id,title").in("id", Array.from(digitalProductIdsSet))
+        : Promise.resolve({ data: [] as unknown }),
+    ]);
+    const stuNameById = new Map<string, { name: string | null; email: string | null }>();
+    for (const s of ((stuRowsRes.data as Array<{ id: string; profiles?: { name: string | null; email: string | null } | null }>) || [])) {
+      stuNameById.set(s.id, { name: s.profiles?.name ?? null, email: s.profiles?.email ?? null });
+    }
+    const prodNameById = new Map<string, string>();
+    for (const p of ((prodRowsRes.data as Array<{ id: string; name: string }>) || [])) prodNameById.set(p.id, p.name);
+    for (const p of ((storeRowsRes.data as Array<{ id: string; name: string }>) || [])) prodNameById.set(p.id, p.name);
+    for (const p of ((digitalRowsRes.data as Array<{ id: string; title: string }>) || [])) prodNameById.set(p.id, p.title);
+
+    const commissions = commsBase.map((c) => {
+      const t = c.transaction_id ? txMap.get(c.transaction_id) : null;
+      const stu = t?.student_id ? stuNameById.get(t.student_id) : null;
+      let productName: string | null = null;
+      if (t?.product_id) productName = prodNameById.get(t.product_id) || null;
+      if (!productName && t?.product_ids?.length) {
+        productName = t.product_ids.map((id) => prodNameById.get(id)).filter(Boolean).join(", ") || null;
+      }
+      return {
+        id: c.id,
+        date: c.created_at,
+        amount: n(c.amount),
+        status: c.status,
+        level: c.level,
+        transactionId: c.transaction_id,
+        isReferral: !!c.is_referral,
+        studentName: stu?.name ?? null,
+        studentEmail: stu?.email ?? null,
+        productName,
+        purchaseType: t?.purchase_type ?? null,
+        transactionDate: t?.paid_at ?? t?.created_at ?? null,
+      };
+    });
+
 
     // Saques: combina os dois canais
     const { data: wdRaw } = await supabaseAdmin
