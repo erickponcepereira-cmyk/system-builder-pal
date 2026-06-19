@@ -613,6 +613,27 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               )}
 
               {editing.kind === "free" && (
+                <Field label="Valor estimado deste benefício (R$) *">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={editing.estimated_value ?? ""}
+                    onChange={e => setEditing({ ...editing, estimated_value: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })}
+                    placeholder="Ex.: 80.00"
+                    className="field-input"
+                    required
+                  />
+                  <p className="mt-1 text-[10px] text-white/45">
+                    {editing.redemption_mode === "discount"
+                      ? "Preço cheio do produto/serviço (sem o desconto). Usado para mostrar ao aluno quanto ele economiza."
+                      : "Quanto este benefício custaria fora do clube. Usado para mostrar ao aluno quanto ele economiza."}
+                  </p>
+                </Field>
+              )}
+
+
+              {editing.kind === "free" && (
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-primary">
                     <Clock className="h-3.5 w-3.5" /> Horário permitido de uso
