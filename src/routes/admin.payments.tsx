@@ -439,11 +439,14 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                   <span>Pago: <span className="text-white font-mono">{fmt(details.totals.commissionsPaid)}</span></span>
                 </div>
                 <DataTable rows={details.commissions.map((c) => [
-                  c.date ? new Date(c.date).toLocaleDateString("pt-BR") : "—",
-                  c.level !== null ? `L${c.level}` : "—",
+                  c.date ? new Date(c.date).toLocaleString("pt-BR") : "—",
+                  c.studentName || "—",
+                  c.productName || (c.purchaseType || "—"),
+                  c.isReferral ? "Indicação" : (c.level !== null ? `L${c.level}` : "—"),
                   <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusColor(c.status)}`}>{c.status}</span>,
                   <span key="a" className="font-mono">{fmt(c.amount)}</span>,
-                ])} headers={["Data", "Nível", "Status", "Valor"]} />
+                ])} headers={["Data / Hora", "Aluno", "Produto", "Nível", "Status", "Valor"]} />
+
               </div>
             )}
 
