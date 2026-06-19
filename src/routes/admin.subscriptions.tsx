@@ -131,7 +131,7 @@ function AdminSubscriptionsPage() {
               <tbody>
                 {invs.map((i) => (
                   <tr key={i.id} className="border-t border-white/5">
-                    <td className="p-3">{new Date(i.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}</td>
+                    <td className="p-3">{fmtMonth(i.reference_month)}</td>
                     <td className="p-3">{i.profile?.name ?? "—"}<br /><span className="text-xs text-white/40">{i.profile?.email}</span></td>
                     <td className="p-3">{fmtDate(i.due_date)}</td>
                     <td className="p-3 text-right">{fmt(i.amount)}</td>
