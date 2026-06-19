@@ -4997,6 +4997,7 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           discount_percent: number | null
+          estimated_value: number | null
           id: string
           image_url: string | null
           is_active_by_partner: boolean
@@ -5034,6 +5035,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           discount_percent?: number | null
+          estimated_value?: number | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
@@ -5071,6 +5073,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           discount_percent?: number | null
+          estimated_value?: number | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
