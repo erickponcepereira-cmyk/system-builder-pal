@@ -139,6 +139,25 @@ function StudentFreebies() {
     setMine((b.data as unknown as Redemption[]) || []);
     const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
     setPartnerFreebies(pf);
+
+    // Total economizado: cupons já resgatados (status='redeemed') deste aluno
+    const sIdLocal = (await supabase.auth.getUser()).data.user
+      ? (await supabase.from("students").select("id").eq("profile_id", (await supabase.from("profiles").select("id").eq("user_id", (await supabase.auth.getUser()).data.user!.id).maybeSingle()).data?.id || "").maybeSingle()).data?.id
+      : null;
+    if (sIdLocal) {
+      const { data: redeemed } = await supabase
+        .from("partner_coupons" as never)
+        .select("partner_product_id,status,partner_products(estimated_value,discount_percent,redemption_mode)" as never)
+        .eq("student_id" as never, sIdLocal)
+        .eq("status" as never, "redeemed" as never);
+      const rows = (redeemed as unknown as Array<{ partner_products: { estimated_value: number | null; discount_percent: number | null; redemption_mode: string | null } | null }>) || [];
+      const total = rows.reduce((sum, r) => {
+        const ev = Number(r.partner_products?.estimated_value || 0);
+        if (r.partner_products?.redemption_mode === "discount") return sum + ev * (Number(r.partner_products?.discount_percent || 0) / 100);
+        return sum + ev;
+      }, 0);
+      setSavedTotal(total);
+    }
     setLoading(false);
   };
 
