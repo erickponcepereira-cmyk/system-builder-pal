@@ -274,8 +274,26 @@ function StudentFreebies() {
                 byArea.get(area)!.push(p);
               });
               const areas = Array.from(byArea.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+              const totalSavings = filteredPartner.reduce((sum, p) => {
+                const ev = Number(p.estimated_value || 0);
+                if (p.redemption_mode === "discount") return sum + ev * (Number(p.discount_percent || 0) / 100);
+                return sum + ev;
+              }, 0);
               return (
                 <div className="mb-6 space-y-5">
+                  {totalSavings > 0 && (
+                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Sua economia disponível</p>
+                      <p className="mt-1 text-2xl font-extrabold text-emerald-300">
+                        R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="mt-1 text-[11px] text-white/60">
+                        {pageMode === "discount"
+                          ? "Total que você pode economizar usando todos os cupons de desconto ativos."
+                          : "Valor total dos benefícios gratuitos disponíveis pra você resgatar agora."}
+                      </p>
+                    </div>
+                  )}
                   <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-primary" />
                     {pageMode === "discount" ? "Descontos de empresas parceiras" : "Brindes de empresas parceiras"}
