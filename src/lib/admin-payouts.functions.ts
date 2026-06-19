@@ -442,14 +442,14 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     // Comissões — sempre filtradas por beneficiary = essa pessoa
     let qc = supabaseAdmin
       .from("commissions")
-      .select("id,amount,status,level,created_at,transaction_id,is_referral")
+      .select("id,amount,status,level,created_at,transaction_id,is_referral,available_at")
       .eq("beneficiary_profile_id", data.profileId)
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.fromDate) qc = qc.gte("created_at", data.fromDate);
     if (data.toDate) qc = qc.lte("created_at", data.toDate);
     const { data: commsRaw } = await qc;
-    const commsBase = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null }>) || []);
+    const commsBase = ((commsRaw as Array<{ id: string; amount: number; status: string; level: number | null; created_at: string | null; transaction_id: string | null; is_referral: boolean | null; available_at: string | null }>) || []);
 
     // Enriquecimento: transação -> aluno + produto
     const txIds = Array.from(new Set(commsBase.map((c) => c.transaction_id).filter(Boolean) as string[]));
