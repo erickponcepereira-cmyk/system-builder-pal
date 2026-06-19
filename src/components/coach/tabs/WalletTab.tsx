@@ -89,20 +89,66 @@ export function WalletTab() {
       const items: HistoryItem[] = [];
       const commRows = ((commRes.data as Array<{ id: string; amount: number; level: number; created_at: string; transaction_id: string; slot_label: string | null }>) || []);
       const txIds = Array.from(new Set(commRows.map((c) => c.transaction_id).filter(Boolean)));
-      const txTypeMap = new Map<string, string>();
+      const txInfoMap = new Map<string, { purchase_type: string; student_id: string | null; product_id: string | null; store_product_id: string | null; digital_product_id: string | null }>();
       if (txIds.length) {
         const { data: txs } = await supabase
           .from("transactions" as never)
-          .select("id,purchase_type" as never)
+          .select("id,purchase_type,student_id,product_id,store_product_id,digital_product_id" as never)
           .in("id" as never, txIds as never);
-        ((txs as Array<{ id: string; purchase_type: string | null }>) || []).forEach((t) => {
-          txTypeMap.set(t.id, t.purchase_type || "");
+        ((txs as Array<{ id: string; purchase_type: string | null; student_id: string | null; product_id: string | null; store_product_id: string | null; digital_product_id: string | null }>) || []).forEach((t) => {
+          txInfoMap.set(t.id, {
+            purchase_type: t.purchase_type || "",
+            student_id: t.student_id,
+            product_id: t.product_id,
+            store_product_id: t.store_product_id,
+            digital_product_id: t.digital_product_id,
+          });
         });
       }
+
+      // Load student names (via students -> profiles)
+      const studentIds = Array.from(new Set(Array.from(txInfoMap.values()).map((t) => t.student_id).filter(Boolean) as string[]));
+      const studentNameMap = new Map<string, string>();
+      if (studentIds.length) {
+        const { data: studs } = await supabase
+          .from("students")
+          .select("id,profile:profiles(name)")
+          .in("id", studentIds);
+        ((studs as Array<{ id: string; profile: { name: string | null } | null }>) || []).forEach((s) => {
+          studentNameMap.set(s.id, s.profile?.name || "Cliente");
+        });
+      }
+
+      // Load product names by type
+      const productNameMap = new Map<string, string>();
+      const regularIds = Array.from(new Set(Array.from(txInfoMap.values()).filter((t) => t.purchase_type !== "store_order" && t.purchase_type !== "digital").map((t) => t.product_id).filter(Boolean) as string[]));
+      const storeIds = Array.from(new Set(Array.from(txInfoMap.values()).filter((t) => t.purchase_type === "store_order").map((t) => t.store_product_id).filter(Boolean) as string[]));
+      const digitalIds = Array.from(new Set(Array.from(txInfoMap.values()).filter((t) => t.purchase_type === "digital").map((t) => t.digital_product_id).filter(Boolean) as string[]));
+      if (regularIds.length) {
+        const { data } = await supabase.from("products").select("id,name").in("id", regularIds);
+        ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`p:${p.id}`, p.name));
+      }
+      if (storeIds.length) {
+        const { data } = await supabase.from("store_products").select("id,name").in("id", storeIds);
+        ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`s:${p.id}`, p.name));
+      }
+      if (digitalIds.length) {
+        const { data } = await supabase.from("digital_products").select("id,name").in("id", digitalIds);
+        ((data as Array<{ id: string; name: string }>) || []).forEach((p) => productNameMap.set(`d:${p.id}`, p.name));
+      }
+
       commRows.forEach((cm) => {
-        const ptype = txTypeMap.get(cm.transaction_id) || "";
+        const info = txInfoMap.get(cm.transaction_id);
+        const ptype = info?.purchase_type || "";
         const channel = ptype === "store_order" ? "🛒 Loja (auto)" : "🤝 Venda direta";
         const baseWho = cm.level === 0 ? "Comissão direta" : `Comissão rede nível ${cm.level}`;
+        const customer = info?.student_id ? studentNameMap.get(info.student_id) : undefined;
+        let product: string | undefined;
+        if (info) {
+          if (ptype === "store_order" && info.store_product_id) product = productNameMap.get(`s:${info.store_product_id}`);
+          else if (ptype === "digital" && info.digital_product_id) product = productNameMap.get(`d:${info.digital_product_id}`);
+          else if (info.product_id) product = productNameMap.get(`p:${info.product_id}`);
+        }
         items.push({
           id: `c-${cm.id}`,
           who: `${baseWho} · ${channel}`,
@@ -110,6 +156,8 @@ export function WalletTab() {
           value: Number(cm.amount),
           created_at: cm.created_at,
           isNetwork: cm.level > 0,
+          customer,
+          product,
         });
       });
       ((recentWithdrawsRes.data as Array<{ id: string; amount: number; status: string; requested_at: string; paid_at: string | null }>) || []).forEach((wr) => {
