@@ -335,26 +335,16 @@ function ProfilePage() {
         </div>
       )}
 
-      {/* Carteira */}
+      {/* Fitcoin (cashback de indicações) */}
       <div className="rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">Carteira de indicações</p>
-        <p className="mt-1 text-3xl font-bold text-white">R$ {wallet.available_balance.toFixed(2).replace(".", ",")}</p>
-        <p className="text-[11px] text-white/40 inline-flex items-center gap-1.5">
-          + R$ {wallet.pending_balance.toFixed(2).replace(".", ",")} pendente
-          <PendingInfo days={7} />
-          · total ganho R$ {wallet.total_earned.toFixed(2).replace(".", ",")}
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Fitcoin · Cashback</p>
+        <p className="mt-1 text-3xl font-bold text-white">{wallet.fitcoin_balance.toFixed(2).replace(".", ",")} FC</p>
+        <p className="text-[11px] text-white/40">
+          1 Fitcoin = R$ 1,00 · use como desconto nas suas compras na loja.
         </p>
-        <button
-          onClick={() => setWithdrawOpen(true)}
-          disabled={wallet.available_balance < 50}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
-        >
-          <Wallet className="h-4 w-4" />
-          Solicitar saque
-        </button>
-        {wallet.available_balance < 50 && (
-          <p className="mt-2 text-center text-[10px] text-white/40">Saque mínimo R$ 50,00</p>
-        )}
+        <p className="mt-2 text-[10px] text-white/40">
+          Ganhe Fitcoin indicando produtos elegíveis. O cashback não é sacável em dinheiro.
+        </p>
         <button
           onClick={() => setReferralModalOpen(true)}
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition hover:bg-primary/20"
