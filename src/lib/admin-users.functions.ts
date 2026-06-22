@@ -33,3 +33,49 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+export const approveCoachAndConfirmEmail = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ coachId: uuid }).parse(input),
+  )
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertAdminProfile, confirmAuthEmailByProfileId, notifyProfile } = await import("./admin-network.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const adminProfileId = await assertAdminProfile(context.userId);
+
+    const { data: coach, error: coachError } = await supabaseAdmin
+      .from("coaches")
+      .select("id, profile_id")
+      .eq("id", data.coachId)
+      .maybeSingle();
+
+    if (coachError || !coach) {
+      throw new Error("Coach não encontrado.");
+    }
+
+    await confirmAuthEmailByProfileId(coach.profile_id);
+
+    const now = new Date().toISOString();
+    const { error: updateCoachError } = await supabaseAdmin
+      .from("coaches")
+      .update({ approved_at: now, approved_by: adminProfileId, onboarding_stage: "released" })
+      .eq("id", coach.id);
+    if (updateCoachError) throw new Error("Falha ao aprovar coach: " + updateCoachError.message);
+
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ status: "active" })
+      .eq("id", coach.profile_id);
+    if (profileError) throw new Error("Falha ao ativar perfil: " + profileError.message);
+
+    await notifyProfile(
+      coach.profile_id,
+      "coach_approved",
+      "Cadastro de coach aprovado! 🎉",
+      "Seu e-mail foi confirmado e seu painel de coach foi liberado.",
+      "/coach",
+    );
+
+    return { ok: true };
+  });
