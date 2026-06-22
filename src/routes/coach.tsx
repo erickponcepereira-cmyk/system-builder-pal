@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   Users, Wallet, BarChart3, User, LogOut,
@@ -49,6 +49,10 @@ export const Route = createFileRoute("/coach")({
       { name: "description", content: "Gerencie sua rede, vendas e comissões." },
     ],
   }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw redirect({ to: "/login" });
+  },
   component: CoachDashboard,
 });
 type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "subscription" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";

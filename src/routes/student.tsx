@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/student/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,10 @@ export const Route = createFileRoute("/student")({
       { name: "description", content: "Acompanhe seu desafio fitness." },
     ],
   }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw redirect({ to: "/login" });
+  },
   component: StudentLayout,
 });
 

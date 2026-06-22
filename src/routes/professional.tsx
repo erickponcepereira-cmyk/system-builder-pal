@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -27,6 +27,10 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 export const Route = createFileRoute("/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw redirect({ to: "/login" });
+  },
   component: ProfessionalPanel,
 });
 
