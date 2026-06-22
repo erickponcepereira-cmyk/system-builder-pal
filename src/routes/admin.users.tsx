@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown } from "lucide-react";
+import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown, MailCheck } from "lucide-react";
 import { ADMIN_PERMISSIONS, type AdminPerms } from "@/lib/admin-permissions";
+import { confirmUserEmailByProfileId } from "@/lib/admin-users.functions";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Administradores — FitMind Club" }] }),
@@ -34,6 +36,7 @@ interface AuditRow {
 }
 
 function AdminUsersPage() {
+  const confirmEmailFn = useServerFn(confirmUserEmailByProfileId);
   const [tab, setTab] = useState<"users" | "audit">("users");
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
@@ -97,6 +100,18 @@ function AdminUsersPage() {
     load();
   };
 
+  const confirmEmail = async (p: ProfileRow) => {
+    setBusyId(p.id);
+    try {
+      await confirmEmailFn({ data: { profileId: p.id } });
+      toast.success("E-mail confirmado. O usuário já pode entrar.");
+    } catch (error) {
+      toast.error((error as Error).message || "Não foi possível confirmar o e-mail.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const filtered = profiles.filter((p) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -149,6 +164,7 @@ function AdminUsersPage() {
                   <Row key={p.id} profile={p} busy={busyId === p.id}
                     canManage={isMaster && !p.is_master_admin}
                     onToggle={() => setRole(p, false)}
+                    onConfirmEmail={() => confirmEmail(p)}
                     onEditPerms={() => setEditing(p)}
                     isAdmin />
                 ))}
@@ -158,6 +174,7 @@ function AdminUsersPage() {
                 {others.length === 0 ? <Empty text="Nenhum usuário encontrado" /> : others.slice(0, 100).map((p) => (
                   <Row key={p.id} profile={p} busy={busyId === p.id}
                     canManage={isMaster}
+                    onConfirmEmail={() => confirmEmail(p)}
                     onToggle={() => setRole(p, true)} isAdmin={false} />
                 ))}
                 {others.length > 100 && (
