@@ -79,3 +79,14 @@ export const approveCoachAndConfirmEmail = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+export const confirmUserEmailByProfileId = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ profileId: uuid }).parse(input),
+  )
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertAdminProfile, confirmAuthEmailByProfileId } = await import("./admin-network.server");
+    await assertAdminProfile(context.userId);
+    return confirmAuthEmailByProfileId(data.profileId);
+  });
