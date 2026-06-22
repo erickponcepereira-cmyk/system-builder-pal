@@ -418,6 +418,9 @@ export const releaseCoach = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
 
+    const { confirmAuthEmailByProfileId } = await import("./admin-network.server");
+    await confirmAuthEmailByProfileId(coach.profile_id);
+
     await supabaseAdmin
       .from("coaches")
       .update({
