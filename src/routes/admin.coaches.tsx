@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { approveCoachAndConfirmEmail } from "@/lib/admin-users.functions";
 
 export const Route = createFileRoute("/admin/coaches")({
   component: AdminCoaches,
@@ -34,6 +36,7 @@ interface CoachRow {
 }
 
 function AdminCoaches() {
+  const approveCoachFn = useServerFn(approveCoachAndConfirmEmail);
   const [coaches, setCoaches] = useState<CoachRow[]>([]);
   const [filter, setFilter] = useState<"pending" | "approved" | "all">("pending");
   const [search, setSearch] = useState("");
@@ -58,29 +61,16 @@ function AdminCoaches() {
   useEffect(() => { load(); }, []);
 
   const approve = async (coachId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: adminProfile } = await supabase
-      .from("profiles").select("id").eq("user_id", user.id).maybeSingle();
-    const { data: updated, error } = await supabase
-      .from("coaches")
-      .update({ approved_at: new Date().toISOString(), approved_by: adminProfile?.id })
-      .eq("id", coachId)
-      .select("profile_id")
-      .maybeSingle();
-    if (error) { toast.error("Erro ao aprovar"); return; }
-    // Cria notificação para o coach
-    if (updated?.profile_id) {
-      await supabase.from("notifications").insert({
-        profile_id: updated.profile_id,
-        type: "coach_approved",
-        title: "Cadastro de coach aprovado! 🎉",
-        message: "Você já pode acessar todos os recursos do painel de coach.",
-        action_url: "/coach",
-      });
+    setActing(`approve-${coachId}`);
+    try {
+      await approveCoachFn({ data: { coachId } });
+      toast.success("Coach aprovado e e-mail confirmado!");
+      await load();
+    } catch (error) {
+      toast.error((error as Error).message || "Erro ao aprovar");
+    } finally {
+      setActing(null);
     }
-    toast.success("Coach aprovado!");
-    load();
   };
 
   const reject = async (coachId: string) => {
@@ -294,9 +284,10 @@ function AdminCoaches() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => approve(c.id)}
+                      disabled={acting === `approve-${c.id}`}
                       className="flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-bold text-white hover:opacity-90"
                     >
-                      <Check className="h-3.5 w-3.5" /> Aprovar
+                      {acting === `approve-${c.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Aprovar
                     </button>
                     <button
                       onClick={() => reject(c.id)}
