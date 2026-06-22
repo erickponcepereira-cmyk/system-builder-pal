@@ -256,8 +256,8 @@ function Empty({ text }: { text: string }) {
 }
 
 function Row({
-  profile, busy, onToggle, isAdmin, canManage, onEditPerms,
-}: { profile: ProfileRow; busy: boolean; onToggle: () => void; isAdmin: boolean; canManage: boolean; onEditPerms?: () => void }) {
+  profile, busy, onToggle, isAdmin, canManage, onConfirmEmail, onEditPerms,
+}: { profile: ProfileRow; busy: boolean; onToggle: () => void; isAdmin: boolean; canManage: boolean; onConfirmEmail: () => void; onEditPerms?: () => void }) {
   const perms = (profile.admin_permissions || {}) as AdminPerms;
   const summary = profile.is_master_admin
     ? "Acesso total (máster)"
@@ -277,6 +277,10 @@ function Row({
         </p>
       </div>
       <div className="flex items-center gap-2">
+        <button onClick={onConfirmEmail} disabled={!canManage || busy}
+          className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40">
+          <MailCheck className="h-3.5 w-3.5" /> Confirmar e-mail
+        </button>
         {isAdmin && onEditPerms && !profile.is_master_admin && (
           <button onClick={onEditPerms} disabled={!canManage || busy}
             className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white hover:bg-white/10 disabled:opacity-40">
