@@ -9225,6 +9225,25 @@ export type Database = {
       }
       generate_competition_reminders: { Args: never; Returns: number }
       generate_monthly_invoices: { Args: never; Returns: number }
+      get_assessment_share_by_token: {
+        Args: { _token: string }
+        Returns: {
+          assessment_id: string
+          client_name: string
+          coach_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          token: string
+          view_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "assessment_shares"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_fitmind_events: {
         Args: { _from?: string; _to?: string }
         Returns: {

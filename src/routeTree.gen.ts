@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosCompraRouteImport } from './routes/termos-compra'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as StudentRouteImport } from './routes/student'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfessionalRouteImport } from './routes/professional'
@@ -116,6 +117,11 @@ const TermosRoute = TermosRouteImport.update({
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
   path: '/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -590,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
   '/student': typeof StudentRouteWithChildren
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
@@ -684,6 +691,7 @@ export interface FileRoutesByTo {
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
   '/admin/achievements': typeof AdminAchievementsRoute
@@ -779,6 +787,7 @@ export interface FileRoutesById {
   '/professional': typeof ProfessionalRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/security': typeof SecurityRoute
   '/student': typeof StudentRouteWithChildren
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
@@ -876,6 +885,7 @@ export interface FileRouteTypes {
     | '/professional'
     | '/register'
     | '/reset-password'
+    | '/security'
     | '/student'
     | '/termos'
     | '/termos-compra'
@@ -970,6 +980,7 @@ export interface FileRouteTypes {
     | '/professional'
     | '/register'
     | '/reset-password'
+    | '/security'
     | '/termos'
     | '/termos-compra'
     | '/admin/achievements'
@@ -1064,6 +1075,7 @@ export interface FileRouteTypes {
     | '/professional'
     | '/register'
     | '/reset-password'
+    | '/security'
     | '/student'
     | '/termos'
     | '/termos-compra'
@@ -1160,6 +1172,7 @@ export interface RootRouteChildren {
   ProfessionalRoute: typeof ProfessionalRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SecurityRoute: typeof SecurityRoute
   StudentRoute: typeof StudentRouteWithChildren
   TermosRoute: typeof TermosRoute
   TermosCompraRoute: typeof TermosCompraRoute
@@ -1200,6 +1213,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -2023,6 +2043,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfessionalRoute: ProfessionalRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SecurityRoute: SecurityRoute,
   StudentRoute: StudentRouteWithChildren,
   TermosRoute: TermosRoute,
   TermosCompraRoute: TermosCompraRoute,
@@ -2045,13 +2066,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

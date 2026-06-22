@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -28,6 +28,10 @@ import { PartnerReports } from "@/components/partner/PartnerReports";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw redirect({ to: "/login" });
+  },
   component: PartnerPanel,
 });
 
