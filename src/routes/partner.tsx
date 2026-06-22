@@ -28,6 +28,10 @@ import { PartnerReports } from "@/components/partner/PartnerReports";
 
 export const Route = createFileRoute("/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw redirect({ to: "/login" });
+  },
   component: PartnerPanel,
 });
 
