@@ -150,6 +150,12 @@ export async function removePushListeners(): Promise<void> {
  * Faz upsert pelo token (único) e vincula ao usuário autenticado.
  */
 export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => {
+  const debugAlert = (msg: string) => {
+    if (typeof alert === "function") {
+      try { alert(msg); } catch { /* ignore */ }
+    }
+  };
+
   try {
     const { supabase } = await import("@/integrations/supabase/client");
 
@@ -160,30 +166,42 @@ export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => 
       error: authError,
     } = await supabase.auth.getUser();
 
+    console.log("[Push] Usuário encontrado:", user?.id ?? null, "authError:", authError);
+
     if (authError || !user) {
       console.warn("[Push] Nenhum usuário logado. Token não será salvo.");
+      debugAlert("[Push] Nenhum usuário logado. Token não será salvo.");
       return;
     }
 
-    const { error: upsertError } = await supabase.from("device_tokens").upsert(
-      {
-        user_id: user.id,
-        token,
-        platform,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "token",
-      },
-    );
+    const payload = {
+      user_id: user.id,
+      token,
+      platform,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log("[Push] Tentando salvar token:", payload);
+
+    const { data, error: upsertError, status, statusText } = await supabase
+      .from("device_tokens")
+      .upsert(payload, { onConflict: "token" })
+      .select();
+
+    console.log("[Push] Resultado do upsert:", { data, status, statusText });
 
     if (upsertError) {
-      console.error("[Push] Erro ao salvar token:", upsertError);
+      console.error("[Push] Erro Supabase:", upsertError);
+      debugAlert(
+        `[Push] Erro Supabase:\n${upsertError.message}\ncode: ${upsertError.code}\ndetails: ${upsertError.details}\nhint: ${upsertError.hint}`,
+      );
       return;
     }
 
-    console.log("[Push] Token salvo com sucesso");
+    console.log("[Push] Token salvo com sucesso", data);
+    debugAlert(`[Push] Token salvo com sucesso (${data?.length ?? 0} linha)`);
   } catch (err) {
-    console.error("[Push] Erro ao salvar token:", err);
+    console.error("[Push] Erro Supabase:", err);
+    debugAlert(`[Push] Erro Supabase (catch):\n${(err as Error)?.message ?? String(err)}`);
   }
 };
