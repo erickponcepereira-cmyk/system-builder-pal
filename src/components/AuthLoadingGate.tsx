@@ -1,7 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+
+let nativeSplashHidden = false;
+async function hideNativeSplash() {
+  if (nativeSplashHidden) return;
+  nativeSplashHidden = true;
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const { SplashScreen } = await import("@capacitor/splash-screen");
+      await SplashScreen.hide({ fadeOutDuration: 200 });
+    }
+  } catch {
+    // ignore
+  }
+}
 
 /**
  * Splash inicial que bloqueia COMPLETAMENTE qualquer renderização até
@@ -62,7 +77,18 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   const stillRedirecting =
     sessionResolved && hasSession && (pathname === "/" || pathname === "/login");
 
-  if (!sessionResolved || stillRedirecting) {
+  const showSplash = !sessionResolved || stillRedirecting;
+
+  // Esconde o splash nativo do Capacitor APENAS quando o React já decidiu
+  // o destino final (portal selector ou login/children) e está pronto para
+  // pintar — evita ver a landing entre splash nativo e React.
+  useEffect(() => {
+    if (!showSplash) {
+      hideNativeSplash();
+    }
+  }, [showSplash]);
+
+  if (showSplash) {
     return (
       <div
         style={{
