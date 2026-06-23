@@ -103,17 +103,28 @@ function RootComponent() {
     window.addEventListener("vite:preloadError", onPreloadError);
     window.addEventListener("error", onChunkError);
 
+    try {
+      console.log("[AUTH] __root.tsx pathname:", window.location.pathname);
+      console.log(
+        "[AUTH] __root.tsx localStorage token raw:",
+        window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token"),
+      );
+    } catch (e) { console.log("[AUTH] __root.tsx localStorage read error:", e); }
+
     let done = false;
     const ping = async () => {
       if (done) return;
       const { data } = await supabase.auth.getSession();
+      console.log("[AUTH] __root.tsx getSession:", data.session);
+      console.log("[AUTH] __root.tsx user:", data.session?.user?.id);
       if (data.session) {
         done = true;
         try { await touchLastLogin(); } catch { /* ignore */ }
       }
     };
     ping();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[AUTH] __root.tsx onAuthStateChange event:", event, "user:", session?.user?.id);
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         done = false; ping();
       }
