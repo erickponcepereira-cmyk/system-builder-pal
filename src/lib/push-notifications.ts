@@ -146,20 +146,44 @@ export async function removePushListeners(): Promise<void> {
 }
 
 /**
- * Helper pronto para o futuro: persistir o token FCM no Supabase.
- * Implemente quando criar a tabela `device_tokens` (user_id, token, platform).
- *
- * Exemplo de uso:
- *   initPushNotifications({ onToken: saveTokenToSupabase });
+ * Persiste o token FCM no Supabase na tabela `device_tokens`.
+ * Faz upsert pelo token (único) e vincula ao usuário autenticado.
  */
 export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => {
-  // TODO: Implementar quando a tabela `device_tokens` existir.
-  // const { supabase } = await import("@/integrations/supabase/client");
-  // const { data: { user } } = await supabase.auth.getUser();
-  // if (!user) return;
-  // await supabase.from("device_tokens").upsert(
-  //   { user_id: user.id, token, platform },
-  //   { onConflict: "token" },
-  // );
-  console.log("[Push] (stub) salvar token no Supabase:", { token, platform });
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+
+    console.log("[Push] Salvando token");
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.warn("[Push] Nenhum usuário logado. Token não será salvo.");
+      return;
+    }
+
+    const { error: upsertError } = await supabase.from("device_tokens").upsert(
+      {
+        user_id: user.id,
+        token,
+        platform,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "token",
+      },
+    );
+
+    if (upsertError) {
+      console.error("[Push] Erro ao salvar token:", upsertError);
+      return;
+    }
+
+    console.log("[Push] Token salvo com sucesso");
+  } catch (err) {
+    console.error("[Push] Erro ao salvar token:", err);
+  }
 };
