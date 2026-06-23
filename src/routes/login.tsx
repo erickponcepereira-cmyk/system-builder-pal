@@ -27,143 +27,26 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; professional: boolean; student: boolean; partner: boolean } | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  const enterArea = (area: "coach" | "student" | "admin" | "partner" | "professional") => {
-    if (area !== "admin" && area !== "partner" && area !== "professional") sessionStorage.setItem("fitmind_selected_area", area);
-    else sessionStorage.removeItem("fitmind_selected_area");
-    const redirect = new URLSearchParams(window.location.search).get("redirect") || "";
-    const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "";
-    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : area === "professional" ? "/professional" : "/student";
-    const target = safeRedirect.startsWith(areaRoot) ? safeRedirect : areaRoot;
-    navigate({ to: target as never, replace: true });
+  // Se já existir sessão válida, mandar direto para o seletor de portal.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (active && session?.user) {
+        navigate({ to: "/portal-selector", replace: true });
+      }
+    })();
+    return () => { active = false; };
+  }, [navigate]);
+
+  const goToPortalSelector = () => {
+    sessionStorage.removeItem("fitmind_selected_area");
+    navigate({ to: "/portal-selector", replace: true });
   };
-
-
-  const routeSignedInUser = async (userId: string, showSuccess = false) => {
-    setLoading(true);
-    setFormError(null);
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, role, status")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (profileError) {
-      setLoading(false);
-      console.error("[login] profile lookup error:", profileError);
-      const detail = profileError.message || profileError.details || profileError.hint || "";
-      const message = `Não foi possível verificar seu cadastro. ${detail}`.trim();
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (!profile) {
-      setLoading(false);
-      const message = "Login criado, mas o cadastro está incompleto: perfil não encontrado.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    // Status "blocked" no profile não bloqueia mais o login global —
-    // bloqueio agora é escopado por papel (ex.: coaches.blocked_at bloqueia só o painel de coach).
-
-    // Reativa automaticamente se estava inativo por falta de atividade
-    if (profile.status === "inactive") {
-      await supabase.rpc("touch_my_activity" as never);
-    } else {
-      // Registra atividade silenciosamente
-      supabase.rpc("touch_my_activity" as never).then(() => {}, () => {});
-    }
-
-    const role = profile.role;
-
-    const [
-      { data: coach, error: coachError },
-      { data: student, error: studentError },
-      { data: partner, error: partnerError },
-    ] = await Promise.all([
-      supabase.from("coaches").select("id, approved_at, blocked_at, is_professional").eq("profile_id", profile.id).maybeSingle(),
-      supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-      supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
-    ]);
-
-    if (coachError || studentError || partnerError) {
-      setLoading(false);
-      console.error("[login] role lookup errors:", { coachError, studentError, partnerError });
-      const detail = (coachError || studentError || partnerError)?.message || "";
-      const message = `Não foi possível validar seu acesso. ${detail}`.trim();
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    const canAdmin = role === "admin" || role === "manager" || role === "director";
-    // Coach é considerado bloqueado se tiver blocked_at OU se o profile estiver explicitamente "blocked" (legado).
-    const coachBlocked = !!(coach && (coach as { blocked_at?: string | null }).blocked_at) || profile.status === "blocked";
-    const canCoach = canAdmin || (!!coach && !coachBlocked);
-    const isProfessional = !!(coach && (coach as { is_professional?: boolean }).is_professional);
-    const canProfessional = canAdmin || (isProfessional && !coachBlocked);
-    const canStudent = role === "student" || !!student;
-    const canPartner = role === "partner" || !!partner;
-
-    if (role === "coach" && !coach) {
-      setLoading(false);
-      const message = "Cadastro de coach incompleto: registro de coach não encontrado.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (role === "student" && !student) {
-      setLoading(false);
-      const message = "Cadastro de aluno incompleto: registro de aluno não encontrado.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (role === "partner" && !partner) {
-      setLoading(false);
-      const m = "Cadastro de parceiro incompleto. Contate o suporte.";
-      setFormError(m); toast.error(m); return;
-    }
-
-    const available = { admin: canAdmin, coach: canCoach, professional: canProfessional, student: canStudent, partner: canPartner };
-    const count = Number(canAdmin) + Number(canCoach) + Number(canProfessional) + Number(canStudent) + Number(canPartner);
-
-    if (count === 0) {
-      setLoading(false);
-      const message = "Login indisponível: nenhum painel liberado para este cadastro.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (showSuccess) toast.success("Login realizado com sucesso!");
-
-    if (count >= 2) {
-      setAccessOptions(available);
-      setLoading(false);
-      return;
-    }
-
-    if (canAdmin) enterArea("admin");
-    else if (canCoach) enterArea("coach");
-    else if (canProfessional) enterArea("professional");
-    else if (canStudent) enterArea("student");
-    else enterArea("partner");
-  };
-
-
-
-  // Auto-login desativado durante a fase de testes.
-  // O usuário precisa preencher e-mail/senha manualmente toda vez.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,8 +83,8 @@ function LoginPage() {
       }
 
       if (data.user) {
-        sessionStorage.removeItem("fitmind_selected_area");
-        await routeSignedInUser(data.user.id, true);
+        toast.success("Login realizado com sucesso!");
+        goToPortalSelector();
       } else {
         const message = "Login indisponível: a autenticação não retornou usuário.";
         setFormError(message);
@@ -215,6 +98,34 @@ function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+    setFormError(null);
+
+    if (!normalizedEmail.includes("@") || !normalizedEmail.includes(".")) {
+      const m = "Informe um e-mail válido para receber o link.";
+      setFormError(m); toast.error(m); return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast.success("Enviamos um link de redefinição para seu e-mail.");
+    } catch (err) {
+      const friendly = translateAuthError(err);
+      setFormError(friendly);
+      toast.error(friendly);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
