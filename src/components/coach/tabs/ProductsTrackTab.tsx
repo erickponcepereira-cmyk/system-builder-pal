@@ -3,7 +3,7 @@ import { Star, Calculator } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { MLMSimulator } from "@/components/coach/MLMSimulator";
-import { money } from "@/routes/coach";
+import { money } from "@/routes/_authenticated/coach";
 import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
 
 type ProductRow = {

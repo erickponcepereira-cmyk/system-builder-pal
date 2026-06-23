@@ -9,7 +9,7 @@ import {
   History, Camera, GraduationCap, Activity, Instagram, Globe, Youtube, Facebook, Music2, Package,
   Medal, Shield, Sparkles,
 } from "lucide-react";
-import { money, type CoachContext } from "@/routes/coach";
+import { money, type CoachContext } from "@/routes/_authenticated/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
 import { BadgeImage } from "@/components/coach/BadgeImage";
 import { getCoachProfileSummary, type ActivityItemRow, type CoachProfileSummary } from "@/lib/coach-profile-summary.functions";

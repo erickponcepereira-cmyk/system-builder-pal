@@ -4,7 +4,7 @@ import { Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { StorePage } from "@/components/student/StorePage";
-import { money } from "@/routes/coach";
+import { money } from "@/routes/_authenticated/coach";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 
 type StoreProductRow = { id: string; name: string; description: string | null; price: number; original_price: number | null; category: string | null; stock: number | null; is_herbalife: boolean | null; status: string | null };
