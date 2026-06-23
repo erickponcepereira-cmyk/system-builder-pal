@@ -127,6 +127,8 @@ function PushNotificationsPage() {
     } finally {
       setSending(false);
     }
+  };
+
   const sendTestPush = async () => {
     setTestSending(true);
     setTestResult(null);
