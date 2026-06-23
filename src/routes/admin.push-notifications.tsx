@@ -253,24 +253,33 @@ function PushNotificationsPage() {
 
       {/* Busca */}
       <div className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="mb-3 text-xs font-bold uppercase text-white/40">Buscar usuário</p>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-bold uppercase text-white/40">
+            Usuários ({results.length}{term ? ` de ${allUsers.length}` : ""})
+          </p>
+          <Button onClick={loadUsers} disabled={loading} variant="outline" size="sm" className="gap-2 border-white/10 hover:bg-white/5">
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+            Recarregar
+          </Button>
+        </div>
+        <div className="mt-3">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && search()}
-            placeholder="Nome ou email..."
-            className="field-control flex-1"
+            placeholder="Filtrar por nome ou email..."
+            className="field-control w-full"
           />
-          <Button onClick={search} disabled={searching} className="gap-2">
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Buscar
-          </Button>
         </div>
 
-        {results.length > 0 && (
-          <div className="mt-4 space-y-2">
+        {loading && (
+          <div className="mt-4 flex items-center justify-center py-8 text-white/40">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        )}
+
+        {!loading && results.length > 0 && (
+          <div className="mt-4 max-h-[480px] space-y-2 overflow-auto pr-1">
             {results.map((r) => {
               const active = selected?.user_id === r.user_id;
               return (
@@ -292,7 +301,7 @@ function PushNotificationsPage() {
                       }`}
                     >
                       <Smartphone className="h-3 w-3" />
-                      {r.device_count} disp.
+                      Dispositivos: {r.device_count}
                     </span>
                   </div>
                 </button>
@@ -301,10 +310,13 @@ function PushNotificationsPage() {
           </div>
         )}
 
-        {!searching && results.length === 0 && query && (
-          <p className="mt-4 text-center text-xs text-white/40">Nenhum usuário encontrado</p>
+        {!loading && results.length === 0 && (
+          <p className="mt-4 text-center text-xs text-white/40">
+            {allUsers.length === 0 ? "Nenhum usuário cadastrado" : "Nenhum usuário corresponde ao filtro"}
+          </p>
         )}
       </div>
+
 
       {/* Composição */}
       <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
