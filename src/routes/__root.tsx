@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
+import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 
 function NotFoundComponent() {
   return (
@@ -124,20 +125,9 @@ function RootComponent() {
     };
     ping();
 
-    // Capacitor (Android/iOS): ao abrir o app, sempre voltar ao seletor de portal
-    // se houver sessão, ou ao /login se não houver. Apenas dispara quando a rota
-    // inicial é "/" ou "/login" para não atrapalhar deep links explícitos.
-    import("@capacitor/core").then(({ Capacitor }) => {
-      if (!Capacitor.isNativePlatform()) return;
-      const path = window.location.pathname;
-      if (path !== "/" && path !== "/login") return;
-      supabase.auth.getSession().then(({ data }) => {
-        const target = data.session?.user ? "/portal-selector" : "/login";
-        if (window.location.pathname !== target) {
-          window.location.replace(target);
-        }
-      });
-    }).catch(() => { /* navegador web ignora */ });
+    // O redirect inicial baseado em sessão é tratado pelo <AuthLoadingGate />
+    // que envolve o <Outlet />. Isso evita o flash da tela de login antes
+    // da navegação para /portal-selector quando já existe sessão válida.
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[AUTH] __root.tsx onAuthStateChange event:", event, "user:", session?.user?.id);
@@ -153,7 +143,9 @@ function RootComponent() {
   }, []);
   return (
     <ThemeProvider>
-      <Outlet />
+      <AuthLoadingGate>
+        <Outlet />
+      </AuthLoadingGate>
       <Toaster richColors position="top-center" />
     </ThemeProvider>
   );
