@@ -63,6 +63,7 @@ import { Route as AdminStoreReportsRouteImport } from './routes/admin.store-repo
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminPushNotificationsRouteImport } from './routes/admin.push-notifications'
 import { Route as AdminProfessionalsRouteImport } from './routes/admin.professionals'
 import { Route as AdminProfessionalProductsRouteImport } from './routes/admin.professional-products'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
@@ -375,6 +376,11 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPushNotificationsRoute = AdminPushNotificationsRouteImport.update({
+  id: '/push-notifications',
+  path: '/push-notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProfessionalsRoute = AdminProfessionalsRouteImport.update({
   id: '/professionals',
   path: '/professionals',
@@ -630,6 +636,7 @@ export interface FileRoutesByFullPath {
   '/admin/products': typeof AdminProductsRoute
   '/admin/professional-products': typeof AdminProfessionalProductsRoute
   '/admin/professionals': typeof AdminProfessionalsRoute
+  '/admin/push-notifications': typeof AdminPushNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
@@ -724,6 +731,7 @@ export interface FileRoutesByTo {
   '/admin/products': typeof AdminProductsRoute
   '/admin/professional-products': typeof AdminProfessionalProductsRoute
   '/admin/professionals': typeof AdminProfessionalsRoute
+  '/admin/push-notifications': typeof AdminPushNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
@@ -821,6 +829,7 @@ export interface FileRoutesById {
   '/admin/products': typeof AdminProductsRoute
   '/admin/professional-products': typeof AdminProfessionalProductsRoute
   '/admin/professionals': typeof AdminProfessionalsRoute
+  '/admin/push-notifications': typeof AdminPushNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/store': typeof AdminStoreRoute
@@ -919,6 +928,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/professional-products'
     | '/admin/professionals'
+    | '/admin/push-notifications'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -1013,6 +1023,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/professional-products'
     | '/admin/professionals'
+    | '/admin/push-notifications'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -1109,6 +1120,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/professional-products'
     | '/admin/professionals'
+    | '/admin/push-notifications'
     | '/admin/reports'
     | '/admin/settings'
     | '/admin/store'
@@ -1572,6 +1584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/push-notifications': {
+      id: '/admin/push-notifications'
+      path: '/push-notifications'
+      fullPath: '/admin/push-notifications'
+      preLoaderRoute: typeof AdminPushNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/professionals': {
       id: '/admin/professionals'
       path: '/professionals'
@@ -1898,6 +1917,7 @@ interface AdminRouteChildren {
   AdminProductsRoute: typeof AdminProductsRoute
   AdminProfessionalProductsRoute: typeof AdminProfessionalProductsRoute
   AdminProfessionalsRoute: typeof AdminProfessionalsRoute
+  AdminPushNotificationsRoute: typeof AdminPushNotificationsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStoreRoute: typeof AdminStoreRoute
@@ -1940,6 +1960,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProductsRoute: AdminProductsRoute,
   AdminProfessionalProductsRoute: AdminProfessionalProductsRoute,
   AdminProfessionalsRoute: AdminProfessionalsRoute,
+  AdminPushNotificationsRoute: AdminPushNotificationsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStoreRoute: AdminStoreRoute,
