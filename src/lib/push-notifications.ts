@@ -47,6 +47,9 @@ export function isNativePlatform(): boolean {
 export async function initPushNotifications(
   options: PushNotificationOptions = {},
 ): Promise<boolean> {
+  if (typeof alert === "function") {
+    try { alert("Push inicializando"); } catch { /* ignore */ }
+  }
   console.log("[Push] Inicializando");
 
   if (!isNativePlatform()) {
