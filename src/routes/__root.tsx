@@ -81,6 +81,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   useEffect(() => {
+    // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
+    import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
+      initPushNotifications({ onToken: saveTokenToSupabase }).catch((err) => {
+        console.error("[Push] init falhou:", err);
+      });
+    });
+
     // Auto-reload quando o navegador tenta carregar um chunk JS antigo (após deploy)
     const onPreloadError = (e: Event) => {
       console.warn("[vite] preload error, reloading", e);
