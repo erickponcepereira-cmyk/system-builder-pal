@@ -27,6 +27,12 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  console.log("[INDEX] mounted");
+  useEffect(() => {
+    return () => {
+      console.log("[INDEX] unmounted");
+    };
+  }, []);
   return (
     <main
       style={{
