@@ -126,34 +126,6 @@ function LoginPage() {
     }
   };
 
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const normalizedEmail = email.trim().toLowerCase();
-    setFormError(null);
-
-    if (!normalizedEmail.includes("@") || !normalizedEmail.includes(".")) {
-      const m = "Informe um e-mail válido para receber o link.";
-      setFormError(m); toast.error(m); return;
-    }
-
-    setResetLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
-      setResetSent(true);
-      toast.success("Enviamos um link de redefinição para seu e-mail.");
-    } catch (err) {
-      const friendly = translateAuthError(err);
-      setFormError(friendly);
-      toast.error(friendly);
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen">
       {/* Left panel - Brand */}
@@ -168,7 +140,6 @@ function LoginPage() {
 
       {/* Right panel - Login form */}
       <div className="flex flex-1 items-center justify-center px-4 py-12" style={{ backgroundColor: "#111111" }}>
-        {/* Mobile logo */}
         <div className="w-full max-w-sm">
           <div className="md:hidden flex flex-col items-center gap-3 mb-10">
             <Logo className="h-20 w-20 object-contain" />
@@ -177,10 +148,10 @@ function LoginPage() {
 
           <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
             <h2 className="text-xl font-bold text-white mb-6">
-              {accessOptions ? "Entrar como" : resetMode ? "Redefinir senha" : "Acessar conta"}
+              {resetMode ? "Redefinir senha" : "Acessar conta"}
             </h2>
 
-            {resetMode && !accessOptions && (
+            {resetMode ? (
               <div className="mb-4">
                 {resetSent ? (
                   <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-3 text-xs text-white/80">
@@ -220,166 +191,107 @@ function LoginPage() {
                   ← Voltar para o login
                 </button>
               </div>
-            )}
-
-            {!resetMode && accessOptions ? (
-              <div className="space-y-3">
-                {accessOptions.admin && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("admin")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
-                  >
-                    <Shield className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Painel de Admin</span>
-                  </button>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                {formError && (
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                    {formError}
+                  </div>
                 )}
-                {accessOptions.coach && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("coach")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
-                  >
-                    <Dumbbell className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Painel de Coach</span>
-                  </button>
-                )}
-                {accessOptions.professional && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("professional")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-left text-white transition-colors hover:bg-cyan-400/20"
-                  >
-                    <Stethoscope className="h-5 w-5 text-cyan-400" />
-                    <span className="font-semibold">Painel de Profissional</span>
-                  </button>
-                )}
-                {accessOptions.student && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("student")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
-                  >
-                    <User className="h-5 w-5 text-white/70" />
-                    <span className="font-semibold">Painel de Aluno</span>
-                  </button>
-                )}
-                {accessOptions.partner && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("partner")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
-                  >
-                    <Briefcase className="h-5 w-5 text-white/70" />
-                    <span className="font-semibold">Painel de Parceiro</span>
-                  </button>
-                )}
-              </div>
-            ) : !resetMode ? (
-
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              {formError && (
-                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-                  {formError}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white/70">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (formError) setFormError(null);
-                  }}
-                  required
-                  disabled={loading}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/70">Senha</Label>
-                <div className="relative">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-white/70">E-mail</Label>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
                     onChange={(e) => {
-                      setPassword(e.target.value);
+                      setEmail(e.target.value);
                       if (formError) setFormError(null);
                     }}
                     required
                     disabled={loading}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-white/70">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
+                      required
+                      disabled={loading}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }}
+                    className="text-xs text-primary hover:underline"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    Esqueci minha senha
                   </button>
                 </div>
-              </div>
 
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Esqueci minha senha
-                </button>
-              </div>
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary-foreground" />
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </form>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary-foreground" />
-                ) : (
-                  "Entrar"
-                )}
-              </Button>
-            </form>
-            ) : null}
+            {!resetMode && (
+              <>
+                <div className="my-6 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-xs text-white/30">ou</span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
 
-            {!accessOptions && !resetMode && <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-xs text-white/30">ou</span>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>}
-
-            {!accessOptions && !resetMode && <div className="space-y-3 text-center">
-              <Link
-                to="/register"
-                search={{ role: "coach" }}
-                className="block text-sm font-medium text-primary hover:underline"
-              >
-                Sou novo por aqui → Cadastrar como Coach
-              </Link>
-              <Link
-                to="/register"
-                search={{ role: "student" }}
-                className="block text-xs text-white/40 hover:text-white/60"
-              >
-                Quero me inscrever em um desafio → Cadastrar como Aluno
-              </Link>
-            </div>}
+                <div className="space-y-3 text-center">
+                  <Link
+                    to="/register"
+                    search={{ role: "coach" }}
+                    className="block text-sm font-medium text-primary hover:underline"
+                  >
+                    Sou novo por aqui → Cadastrar como Coach
+                  </Link>
+                  <Link
+                    to="/register"
+                    search={{ role: "student" }}
+                    className="block text-xs text-white/40 hover:text-white/60"
+                  >
+                    Quero me inscrever em um desafio → Cadastrar como Aluno
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mt-6">
             <InstallAppButton />
           </div>
-
 
           <p className="mt-8 text-center text-[10px] text-white/15">
             v1.0.0 — Para suporte: suporte@fitmindclub.com
