@@ -47,10 +47,13 @@ export function isNativePlatform(): boolean {
 export async function initPushNotifications(
   options: PushNotificationOptions = {},
 ): Promise<boolean> {
+  console.log("[Push] Inicializando");
+
   if (!isNativePlatform()) {
     console.info("[Push] Ignorado: não está rodando no Capacitor (Android/iOS).");
     return false;
   }
+  console.log("[Push] Plataforma nativa detectada:", Capacitor.getPlatform());
 
   if (initialized) {
     console.info("[Push] Já inicializado.");
@@ -59,19 +62,37 @@ export async function initPushNotifications(
   initialized = true;
 
   try {
-    // 1. Solicitar permissão
+    // 1. Verificar e solicitar permissão
+    console.log("[Push] Verificando permissões atuais...");
     let permStatus = await PushNotifications.checkPermissions();
+    console.log("[Push] checkPermissions result:", permStatus.receive);
+
     if (permStatus.receive === "prompt" || permStatus.receive === "prompt-with-rationale") {
+      console.log("[Push] Solicitando permissão ao usuário...");
       permStatus = await PushNotifications.requestPermissions();
     }
+
+    console.log("[Push] Permissão:", permStatus.receive);
+
     if (permStatus.receive !== "granted") {
       console.warn("[Push] Permissão de notificações negada pelo usuário.");
+      initialized = false;
       return false;
     }
 
     // 2. Listeners ANTES do register() para não perder eventos
     await PushNotifications.addListener("registration", async (token: Token) => {
-      console.log("[Push] FCM Token:", token.value);
+      console.log("[Push] Token recebido:", token.value);
+
+      // Exibe temporariamente o token para facilitar testes no APK
+      if (typeof alert === "function") {
+        try {
+          alert(`[Push] Token FCM:\n${token.value}`);
+        } catch {
+          // ignore se alert não estiver disponível
+        }
+      }
+
       try {
         await options.onToken?.(token.value, Capacitor.getPlatform());
       } catch (err) {
@@ -101,7 +122,9 @@ export async function initPushNotifications(
     );
 
     // 3. Registrar no FCM (dispara o evento "registration" com o token)
+    console.log("[Push] Registrando dispositivo...");
     await PushNotifications.register();
+    console.log("[Push] register() concluído. Aguardando evento de token...");
 
     return true;
   } catch (err) {
