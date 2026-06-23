@@ -54,7 +54,9 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
-        setHasSession(Boolean(data.session?.user));
+        const ok = Boolean(data.session?.user);
+        if (ok) console.log("[AUTH_GATE] sessão encontrada");
+        setHasSession(ok);
       } catch {
         if (active) setHasSession(false);
       } finally {
