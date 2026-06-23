@@ -1,56 +1,68 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 
 /**
- * Bloqueia a renderização inicial até resolver a sessão Supabase.
+ * Splash inicial que bloqueia COMPLETAMENTE qualquer renderização até
+ * resolver a sessão Supabase no primeiro mount.
  *
- * Sem isso, ao abrir o APK em "/" ou "/login" a tela de login pisca por
- * alguns milissegundos antes do redirect para /portal-selector.
+ * Por que existe:
+ *  - Ao abrir o APK com sessão válida, qualquer render intermediário de
+ *    "/" (landing) ou "/login" aparece como flash antes do redirect.
+ *  - Mesmo um único frame de Outlet renderizando a rota errada é visível.
  *
- * Regras:
- *  - Só "trava" o render quando a rota atual é "/" ou "/login" — para não
- *    quebrar deep links (ex.: /pay/:order, /r/:code, /resultado/:token).
- *  - Mostra apenas o splash com a logo enquanto verifica.
- *  - Após a verificação, navega para /portal-selector (com sessão) ou
- *    libera a renderização normal de /login (sem sessão).
+ * Estratégia:
+ *  - No primeiro mount, NUNCA renderiza children até `supabase.auth.getSession()`
+ *    resolver. Mostra apenas o splash.
+ *  - Após resolver:
+ *      • com sessão e rota atual em "/" ou "/login" → navega para
+ *        /portal-selector e mantém o splash até a rota mudar.
+ *      • sem sessão → libera children normalmente.
+ *  - Deep links (ex.: /pay/:order, /r/:code, /resultado/:token, /invite/:token)
+ *    NÃO são afetados pelo redirect — o splash some assim que a sessão é
+ *    avaliada e o conteúdo da rota carrega normalmente.
  */
 export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [ready, setReady] = useState(false);
+  const [sessionResolved, setSessionResolved] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+  const redirectedRef = useRef(false);
 
-  const gateActive = pathname === "/" || pathname === "/login";
-
+  // Bloqueia qualquer render até resolver a primeira chamada de getSession().
   useEffect(() => {
-    if (!gateActive) {
-      setReady(true);
-      return;
-    }
     let active = true;
-    setReady(false);
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
-        if (data.session?.user) {
-          navigate({ to: "/portal-selector", replace: true });
-          // Mantém o splash visível durante a transição; o portal-selector
-          // assume o controle imediatamente após.
-          return;
-        }
-        setReady(true);
+        setHasSession(Boolean(data.session?.user));
       } catch {
-        if (active) setReady(true);
+        if (active) setHasSession(false);
+      } finally {
+        if (active) setSessionResolved(true);
       }
     })();
     return () => {
       active = false;
     };
-  }, [gateActive, pathname, navigate]);
+  }, []);
 
-  if (gateActive && !ready) {
+  // Com sessão válida, se ainda estamos em "/" ou "/login", manda para o
+  // seletor de portal. O splash continua visível até a rota mudar.
+  useEffect(() => {
+    if (!sessionResolved || !hasSession || redirectedRef.current) return;
+    if (pathname === "/" || pathname === "/login") {
+      redirectedRef.current = true;
+      navigate({ to: "/portal-selector", replace: true });
+    }
+  }, [sessionResolved, hasSession, pathname, navigate]);
+
+  const stillRedirecting =
+    sessionResolved && hasSession && (pathname === "/" || pathname === "/login");
+
+  if (!sessionResolved || stillRedirecting) {
     return (
       <div
         style={{
