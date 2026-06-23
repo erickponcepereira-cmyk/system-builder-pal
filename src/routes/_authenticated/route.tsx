@@ -21,20 +21,7 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getSession();
-    if (typeof window !== "undefined") {
-      console.log("[AUTH] pathname:", window.location.pathname);
-      console.log(
-        "[AUTH] localStorage token raw:",
-        window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token"),
-      );
-    }
-    console.log("[AUTH] _authenticated/route.tsx getSession:", data.session);
-    console.log("[AUTH] _authenticated/route.tsx user:", data.session?.user?.id);
     if (error || !data.session?.user) {
-      console.log(
-        "[AUTH] redirect executado em src/routes/_authenticated/route.tsx:32",
-        { hasError: !!error, hasSession: !!data.session, hasUser: !!data.session?.user },
-      );
       throw redirect({
         to: "/login",
         search: { redirect: location.href } as never,
