@@ -224,6 +224,28 @@ function PushNotificationsPage() {
         <p className="text-sm text-white/50">Envie notificações para usuários específicos via Firebase Cloud Messaging</p>
       </div>
 
+      {/* Teste rápido */}
+      <div className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+              <FlaskConical className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Enviar Push de Teste</p>
+              <p className="text-xs text-white/50">
+                Envia uma notificação de teste para o usuário logado: <strong className="text-white/80">FitMind Teste</strong>
+              </p>
+            </div>
+          </div>
+          <Button onClick={sendTestPush} disabled={testSending} variant="outline" className="gap-2 shrink-0 border-white/10 hover:bg-white/5">
+            {testSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Enviar Push de Teste
+          </Button>
+        </div>
+        {renderResult(testResult)}
+      </div>
+
       {/* Busca */}
       <div className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
         <p className="mb-3 text-xs font-bold uppercase text-white/40">Buscar usuário</p>
