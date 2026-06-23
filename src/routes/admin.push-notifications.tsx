@@ -127,6 +127,90 @@ function PushNotificationsPage() {
     } finally {
       setSending(false);
     }
+  const sendTestPush = async () => {
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        toast.error("Você precisa estar logado para enviar um push de teste");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("send-push-notification", {
+        body: {
+          userId: userData.user.id,
+          title: "FitMind Teste",
+          body: "Seu sistema de notificações está funcionando corretamente.",
+        },
+      });
+
+      if (error) {
+        toast.error(`Erro ao enviar push de teste: ${error.message}`);
+        setTestResult({ errors: [error.message] });
+        return;
+      }
+
+      const result = data as PushResult;
+      setTestResult(result);
+
+      const sent = result?.sent ?? 0;
+      const found = result?.tokensFound ?? 0;
+      const errs = result?.errors?.length ?? 0;
+
+      if (sent > 0) {
+        toast.success(`Push de teste enviado para ${sent}/${found} dispositivo(s)${errs ? ` · ${errs} erro(s)` : ""}`);
+      } else {
+        toast.error(`Nenhum push de teste entregue (${found} dispositivo(s) encontrados, ${errs} erro(s))`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(message);
+      setTestResult({ errors: [message] });
+    } finally {
+      setTestSending(false);
+    }
+  };
+
+  const renderResult = (result: PushResult | null) => {
+    if (!result) return null;
+    const found = result.tokensFound ?? 0;
+    const sent = result.sent ?? 0;
+    const errs = result.errors?.length ?? 0;
+    const cleaned = result.cleanedInvalidTokens ?? 0;
+
+    return (
+      <div className="mt-4 rounded-xl border border-white/5 bg-white/5 p-3 text-xs">
+        <p className="mb-1 font-semibold text-white/80">Resultado do envio</p>
+        <div className="grid grid-cols-2 gap-2 text-white/60 sm:grid-cols-4">
+          <div>
+            <span className="block text-[10px] uppercase text-white/40">Encontrados</span>
+            <span className="font-bold text-white">{found}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase text-white/40">Enviados</span>
+            <span className="font-bold text-primary">{sent}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase text-white/40">Erros</span>
+            <span className={`font-bold ${errs > 0 ? "text-red-400" : "text-white"}`}>{errs}</span>
+          </div>
+          {cleaned > 0 && (
+            <div>
+              <span className="block text-[10px] uppercase text-white/40">Limpados</span>
+              <span className="font-bold text-white">{cleaned}</span>
+            </div>
+          )}
+        </div>
+        {result.errors && result.errors.length > 0 && (
+          <div className="mt-2 max-h-32 overflow-auto rounded bg-black/30 p-2 font-mono text-[10px] text-red-300">
+            {result.errors.map((e, i) => (
+              <div key={i}>{typeof e === "string" ? e : JSON.stringify(e)}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
