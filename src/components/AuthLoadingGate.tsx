@@ -74,6 +74,7 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
     if (!sessionResolved || !hasSession || redirectedRef.current) return;
     if (pathname === "/" || pathname === "/login") {
       redirectedRef.current = true;
+      console.log("[AUTH_GATE] navegando para portal-selector");
       navigate({ to: "/portal-selector", replace: true });
     }
   }, [sessionResolved, hasSession, pathname, navigate]);
