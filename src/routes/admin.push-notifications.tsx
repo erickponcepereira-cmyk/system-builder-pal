@@ -1,9 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Bell, Loader2, Search, Send, Smartphone } from "lucide-react";
+import { Bell, FlaskConical, Loader2, Search, Send, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+type PushResult = {
+  tokensFound?: number;
+  sent?: number;
+  errors?: unknown[];
+  cleanedInvalidTokens?: number;
+};
 
 export const Route = createFileRoute("/admin/push-notifications")({
   component: PushNotificationsPage,
