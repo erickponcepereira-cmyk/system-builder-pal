@@ -9,13 +9,14 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { name: "description", content: "Painel administrativo FitMind Club." },
     ],
   }),
-  beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) throw redirect({ to: "/login" });
+  // Sessão é garantida pelo layout pai (_authenticated). Aqui validamos apenas o papel.
+  beforeLoad: async ({ context }) => {
+    const user = (context as { user?: { id: string } }).user;
+    if (!user) throw redirect({ to: "/login" });
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
     if (!profile || (profile as { role?: string }).role !== "admin") {
       throw redirect({ to: "/login" });
