@@ -155,6 +155,10 @@
     overscroll-behavior-x: none;
   }
 
+  html {
+    background-color: #0b0707;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -162,6 +166,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
 
   #root,
   #__next {
