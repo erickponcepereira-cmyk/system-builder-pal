@@ -31,6 +31,8 @@ function PushNotificationsPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<PushResult | null>(null);
 
   const search = async () => {
     const term = query.trim();
