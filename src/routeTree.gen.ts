@@ -19,6 +19,7 @@ import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ResultadoTokenRouteImport } from './routes/resultado.$token'
 import { Route as RCodeRouteImport } from './routes/r.$code'
@@ -155,6 +156,10 @@ const BecomePartnerRoute = BecomePartnerRouteImport.update({
   path: '/become-partner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -196,30 +201,30 @@ const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStudentRoute = AuthenticatedStudentRouteImport.update({
-  id: '/_authenticated/student',
+  id: '/student',
   path: '/student',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProfessionalRoute =
   AuthenticatedProfessionalRouteImport.update({
-    id: '/_authenticated/professional',
+    id: '/professional',
     path: '/professional',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPartnerRoute = AuthenticatedPartnerRouteImport.update({
-  id: '/_authenticated/partner',
+  id: '/partner',
   path: '/partner',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCoachRoute = AuthenticatedCoachRouteImport.update({
-  id: '/_authenticated/coach',
+  id: '/coach',
   path: '/coach',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/_authenticated/admin',
+  id: '/admin',
   path: '/admin',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStudentIndexRoute =
   AuthenticatedStudentIndexRouteImport.update({
@@ -841,6 +846,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
@@ -1132,6 +1138,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/become-partner'
     | '/login'
     | '/onboarding'
@@ -1230,6 +1237,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   BecomePartnerRoute: typeof BecomePartnerRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -1240,11 +1248,6 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   TermosRoute: typeof TermosRoute
   TermosCompraRoute: typeof TermosCompraRoute
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
-  AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
-  AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRoute
-  AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRoute
-  AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1333,6 +1336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BecomePartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -1394,35 +1404,35 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof AuthenticatedStudentRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/professional': {
       id: '/_authenticated/professional'
       path: '/professional'
       fullPath: '/professional'
       preLoaderRoute: typeof AuthenticatedProfessionalRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/partner': {
       id: '/_authenticated/partner'
       path: '/partner'
       fullPath: '/partner'
       preLoaderRoute: typeof AuthenticatedPartnerRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/coach': {
       id: '/_authenticated/coach'
       path: '/coach'
       fullPath: '/coach'
       preLoaderRoute: typeof AuthenticatedCoachRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/student/': {
       id: '/_authenticated/student/'
@@ -2131,8 +2141,28 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
 const AuthenticatedStudentRouteWithChildren =
   AuthenticatedStudentRoute._addFileChildren(AuthenticatedStudentRouteChildren)
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
+  AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRoute
+  AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRoute
+  AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedCoachRoute: AuthenticatedCoachRoute,
+  AuthenticatedPartnerRoute: AuthenticatedPartnerRoute,
+  AuthenticatedProfessionalRoute: AuthenticatedProfessionalRoute,
+  AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   BecomePartnerRoute: BecomePartnerRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
@@ -2143,11 +2173,6 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   TermosRoute: TermosRoute,
   TermosCompraRoute: TermosCompraRoute,
-  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
-  AuthenticatedCoachRoute: AuthenticatedCoachRoute,
-  AuthenticatedPartnerRoute: AuthenticatedPartnerRoute,
-  AuthenticatedProfessionalRoute: AuthenticatedProfessionalRoute,
-  AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,

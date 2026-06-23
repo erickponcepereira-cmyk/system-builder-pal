@@ -21,7 +21,7 @@ import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
-import type { CoachContext } from "@/routes/coach";
+import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
 
 

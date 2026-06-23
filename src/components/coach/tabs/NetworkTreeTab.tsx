@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Award, ChevronDown, ChevronRight, Dot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyNetworkStructure, type CoachTreeNode, type MyNetworkStructure, type NetworkRankMedal, type NetworkRankPatent, type StudentBreakdown } from "@/lib/network-ranking.functions";
-import { type CoachContext } from "@/routes/coach";
+import { type CoachContext } from "@/routes/_authenticated/coach";
 import CoachProfileModal from "@/components/coach/CoachProfileModal";
 
 function StudentsBreakdown({ b, downlineCoaches, downlineLabel = "coaches abaixo" }: { b: StudentBreakdown; downlineCoaches: number; downlineLabel?: string }) {
