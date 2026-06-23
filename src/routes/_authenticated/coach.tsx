@@ -49,10 +49,7 @@ export const Route = createFileRoute("/_authenticated/coach")({
       { name: "description", content: "Gerencie sua rede, vendas e comissões." },
     ],
   }),
-  beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) throw redirect({ to: "/login" });
-  },
+  // Sessão é garantida pelo layout pai _authenticated (ssr:false, client-side).
   component: CoachDashboard,
 });
 type Tab = "overview" | "network" | "networkRanking" | "profile" | "students" | "tree" | "physicalStore" | "benefits" | "evaluate" | "protocol" | "workouts" | "attendance" | "wallet" | "subscription" | "career" | "reports" | "partnerApprovals" | "fitmind_calendar" | "challenge";

@@ -27,10 +27,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 export const Route = createFileRoute("/_authenticated/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
-  beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) throw redirect({ to: "/login" });
-  },
+  // Sessão é garantida pelo layout pai _authenticated (ssr:false, client-side).
   component: ProfessionalPanel,
 });
 
