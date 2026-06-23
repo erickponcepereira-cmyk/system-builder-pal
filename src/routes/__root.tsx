@@ -123,6 +123,22 @@ function RootComponent() {
       }
     };
     ping();
+
+    // Capacitor (Android/iOS): ao abrir o app, sempre voltar ao seletor de portal
+    // se houver sessão, ou ao /login se não houver. Apenas dispara quando a rota
+    // inicial é "/" ou "/login" para não atrapalhar deep links explícitos.
+    import("@capacitor/core").then(({ Capacitor }) => {
+      if (!Capacitor.isNativePlatform()) return;
+      const path = window.location.pathname;
+      if (path !== "/" && path !== "/login") return;
+      supabase.auth.getSession().then(({ data }) => {
+        const target = data.session?.user ? "/portal-selector" : "/login";
+        if (window.location.pathname !== target) {
+          window.location.replace(target);
+        }
+      });
+    }).catch(() => { /* navegador web ignora */ });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[AUTH] __root.tsx onAuthStateChange event:", event, "user:", session?.user?.id);
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {

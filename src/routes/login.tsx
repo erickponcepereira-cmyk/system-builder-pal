@@ -2,10 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Briefcase, Dumbbell, Eye, EyeOff, Loader2, Shield, Stethoscope, User } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { InstallAppButton } from "@/components/InstallAppButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
@@ -27,143 +27,26 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [accessOptions, setAccessOptions] = useState<{ admin: boolean; coach: boolean; professional: boolean; student: boolean; partner: boolean } | null>(null);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  const enterArea = (area: "coach" | "student" | "admin" | "partner" | "professional") => {
-    if (area !== "admin" && area !== "partner" && area !== "professional") sessionStorage.setItem("fitmind_selected_area", area);
-    else sessionStorage.removeItem("fitmind_selected_area");
-    const redirect = new URLSearchParams(window.location.search).get("redirect") || "";
-    const safeRedirect = redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "";
-    const areaRoot = area === "admin" ? "/admin" : area === "coach" ? "/coach" : area === "partner" ? "/partner" : area === "professional" ? "/professional" : "/student";
-    const target = safeRedirect.startsWith(areaRoot) ? safeRedirect : areaRoot;
-    navigate({ to: target as never, replace: true });
+  // Se já existir sessão válida, mandar direto para o seletor de portal.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (active && session?.user) {
+        navigate({ to: "/portal-selector", replace: true });
+      }
+    })();
+    return () => { active = false; };
+  }, [navigate]);
+
+  const goToPortalSelector = () => {
+    sessionStorage.removeItem("fitmind_selected_area");
+    navigate({ to: "/portal-selector", replace: true });
   };
-
-
-  const routeSignedInUser = async (userId: string, showSuccess = false) => {
-    setLoading(true);
-    setFormError(null);
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, role, status")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (profileError) {
-      setLoading(false);
-      console.error("[login] profile lookup error:", profileError);
-      const detail = profileError.message || profileError.details || profileError.hint || "";
-      const message = `Não foi possível verificar seu cadastro. ${detail}`.trim();
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (!profile) {
-      setLoading(false);
-      const message = "Login criado, mas o cadastro está incompleto: perfil não encontrado.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    // Status "blocked" no profile não bloqueia mais o login global —
-    // bloqueio agora é escopado por papel (ex.: coaches.blocked_at bloqueia só o painel de coach).
-
-    // Reativa automaticamente se estava inativo por falta de atividade
-    if (profile.status === "inactive") {
-      await supabase.rpc("touch_my_activity" as never);
-    } else {
-      // Registra atividade silenciosamente
-      supabase.rpc("touch_my_activity" as never).then(() => {}, () => {});
-    }
-
-    const role = profile.role;
-
-    const [
-      { data: coach, error: coachError },
-      { data: student, error: studentError },
-      { data: partner, error: partnerError },
-    ] = await Promise.all([
-      supabase.from("coaches").select("id, approved_at, blocked_at, is_professional").eq("profile_id", profile.id).maybeSingle(),
-      supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-      supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
-    ]);
-
-    if (coachError || studentError || partnerError) {
-      setLoading(false);
-      console.error("[login] role lookup errors:", { coachError, studentError, partnerError });
-      const detail = (coachError || studentError || partnerError)?.message || "";
-      const message = `Não foi possível validar seu acesso. ${detail}`.trim();
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    const canAdmin = role === "admin" || role === "manager" || role === "director";
-    // Coach é considerado bloqueado se tiver blocked_at OU se o profile estiver explicitamente "blocked" (legado).
-    const coachBlocked = !!(coach && (coach as { blocked_at?: string | null }).blocked_at) || profile.status === "blocked";
-    const canCoach = canAdmin || (!!coach && !coachBlocked);
-    const isProfessional = !!(coach && (coach as { is_professional?: boolean }).is_professional);
-    const canProfessional = canAdmin || (isProfessional && !coachBlocked);
-    const canStudent = role === "student" || !!student;
-    const canPartner = role === "partner" || !!partner;
-
-    if (role === "coach" && !coach) {
-      setLoading(false);
-      const message = "Cadastro de coach incompleto: registro de coach não encontrado.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (role === "student" && !student) {
-      setLoading(false);
-      const message = "Cadastro de aluno incompleto: registro de aluno não encontrado.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (role === "partner" && !partner) {
-      setLoading(false);
-      const m = "Cadastro de parceiro incompleto. Contate o suporte.";
-      setFormError(m); toast.error(m); return;
-    }
-
-    const available = { admin: canAdmin, coach: canCoach, professional: canProfessional, student: canStudent, partner: canPartner };
-    const count = Number(canAdmin) + Number(canCoach) + Number(canProfessional) + Number(canStudent) + Number(canPartner);
-
-    if (count === 0) {
-      setLoading(false);
-      const message = "Login indisponível: nenhum painel liberado para este cadastro.";
-      setFormError(message);
-      toast.error(message);
-      return;
-    }
-
-    if (showSuccess) toast.success("Login realizado com sucesso!");
-
-    if (count >= 2) {
-      setAccessOptions(available);
-      setLoading(false);
-      return;
-    }
-
-    if (canAdmin) enterArea("admin");
-    else if (canCoach) enterArea("coach");
-    else if (canProfessional) enterArea("professional");
-    else if (canStudent) enterArea("student");
-    else enterArea("partner");
-  };
-
-
-
-  // Auto-login desativado durante a fase de testes.
-  // O usuário precisa preencher e-mail/senha manualmente toda vez.
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,8 +83,8 @@ function LoginPage() {
       }
 
       if (data.user) {
-        sessionStorage.removeItem("fitmind_selected_area");
-        await routeSignedInUser(data.user.id, true);
+        toast.success("Login realizado com sucesso!");
+        goToPortalSelector();
       } else {
         const message = "Login indisponível: a autenticação não retornou usuário.";
         setFormError(message);
@@ -257,7 +140,6 @@ function LoginPage() {
 
       {/* Right panel - Login form */}
       <div className="flex flex-1 items-center justify-center px-4 py-12" style={{ backgroundColor: "#111111" }}>
-        {/* Mobile logo */}
         <div className="w-full max-w-sm">
           <div className="md:hidden flex flex-col items-center gap-3 mb-10">
             <Logo className="h-20 w-20 object-contain" />
@@ -266,10 +148,10 @@ function LoginPage() {
 
           <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
             <h2 className="text-xl font-bold text-white mb-6">
-              {accessOptions ? "Entrar como" : resetMode ? "Redefinir senha" : "Acessar conta"}
+              {resetMode ? "Redefinir senha" : "Acessar conta"}
             </h2>
 
-            {resetMode && !accessOptions && (
+            {resetMode ? (
               <div className="mb-4">
                 {resetSent ? (
                   <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-3 text-xs text-white/80">
@@ -309,166 +191,107 @@ function LoginPage() {
                   ← Voltar para o login
                 </button>
               </div>
-            )}
-
-            {!resetMode && accessOptions ? (
-              <div className="space-y-3">
-                {accessOptions.admin && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("admin")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
-                  >
-                    <Shield className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Painel de Admin</span>
-                  </button>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                {formError && (
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+                    {formError}
+                  </div>
                 )}
-                {accessOptions.coach && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("coach")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-left text-white transition-colors hover:bg-primary/20"
-                  >
-                    <Dumbbell className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Painel de Coach</span>
-                  </button>
-                )}
-                {accessOptions.professional && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("professional")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-left text-white transition-colors hover:bg-cyan-400/20"
-                  >
-                    <Stethoscope className="h-5 w-5 text-cyan-400" />
-                    <span className="font-semibold">Painel de Profissional</span>
-                  </button>
-                )}
-                {accessOptions.student && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("student")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
-                  >
-                    <User className="h-5 w-5 text-white/70" />
-                    <span className="font-semibold">Painel de Aluno</span>
-                  </button>
-                )}
-                {accessOptions.partner && (
-                  <button
-                    type="button"
-                    onClick={() => enterArea("partner")}
-                    className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition-colors hover:bg-white/10"
-                  >
-                    <Briefcase className="h-5 w-5 text-white/70" />
-                    <span className="font-semibold">Painel de Parceiro</span>
-                  </button>
-                )}
-              </div>
-            ) : !resetMode ? (
-
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              {formError && (
-                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-                  {formError}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-white/70">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (formError) setFormError(null);
-                  }}
-                  required
-                  disabled={loading}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/70">Senha</Label>
-                <div className="relative">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-white/70">E-mail</Label>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
                     onChange={(e) => {
-                      setPassword(e.target.value);
+                      setEmail(e.target.value);
                       if (formError) setFormError(null);
                     }}
                     required
                     disabled={loading}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-white/70">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (formError) setFormError(null);
+                      }}
+                      required
+                      disabled={loading}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }}
+                    className="text-xs text-primary hover:underline"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    Esqueci minha senha
                   </button>
                 </div>
-              </div>
 
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={() => { setResetMode(true); setResetSent(false); setFormError(null); }}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Esqueci minha senha
-                </button>
-              </div>
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary-foreground" />
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </form>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-primary-foreground" />
-                ) : (
-                  "Entrar"
-                )}
-              </Button>
-            </form>
-            ) : null}
+            {!resetMode && (
+              <>
+                <div className="my-6 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-xs text-white/30">ou</span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
 
-            {!accessOptions && !resetMode && <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-xs text-white/30">ou</span>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>}
-
-            {!accessOptions && !resetMode && <div className="space-y-3 text-center">
-              <Link
-                to="/register"
-                search={{ role: "coach" }}
-                className="block text-sm font-medium text-primary hover:underline"
-              >
-                Sou novo por aqui → Cadastrar como Coach
-              </Link>
-              <Link
-                to="/register"
-                search={{ role: "student" }}
-                className="block text-xs text-white/40 hover:text-white/60"
-              >
-                Quero me inscrever em um desafio → Cadastrar como Aluno
-              </Link>
-            </div>}
+                <div className="space-y-3 text-center">
+                  <Link
+                    to="/register"
+                    search={{ role: "coach" }}
+                    className="block text-sm font-medium text-primary hover:underline"
+                  >
+                    Sou novo por aqui → Cadastrar como Coach
+                  </Link>
+                  <Link
+                    to="/register"
+                    search={{ role: "student" }}
+                    className="block text-xs text-white/40 hover:text-white/60"
+                  >
+                    Quero me inscrever em um desafio → Cadastrar como Aluno
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mt-6">
             <InstallAppButton />
           </div>
-
 
           <p className="mt-8 text-center text-[10px] text-white/15">
             v1.0.0 — Para suporte: suporte@fitmindclub.com

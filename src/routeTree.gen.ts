@@ -30,6 +30,7 @@ import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-chec
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated/student'
 import { Route as AuthenticatedProfessionalRouteImport } from './routes/_authenticated/professional'
+import { Route as AuthenticatedPortalSelectorRouteImport } from './routes/_authenticated/portal-selector'
 import { Route as AuthenticatedPartnerRouteImport } from './routes/_authenticated/partner'
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -209,6 +210,12 @@ const AuthenticatedProfessionalRoute =
   AuthenticatedProfessionalRouteImport.update({
     id: '/professional',
     path: '/professional',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPortalSelectorRoute =
+  AuthenticatedPortalSelectorRouteImport.update({
+    id: '/portal-selector',
+    path: '/portal-selector',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPartnerRoute = AuthenticatedPartnerRouteImport.update({
@@ -666,6 +673,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRoute
+  '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRoute
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -762,6 +770,7 @@ export interface FileRoutesByTo {
   '/termos-compra': typeof TermosCompraRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRoute
+  '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
@@ -860,6 +869,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
   '/_authenticated/partner': typeof AuthenticatedPartnerRoute
+  '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/_authenticated/professional': typeof AuthenticatedProfessionalRoute
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
@@ -959,6 +969,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coach'
     | '/partner'
+    | '/portal-selector'
     | '/professional'
     | '/student'
     | '/checkin/$studentId'
@@ -1055,6 +1066,7 @@ export interface FileRouteTypes {
     | '/termos-compra'
     | '/coach'
     | '/partner'
+    | '/portal-selector'
     | '/professional'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
@@ -1152,6 +1164,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/coach'
     | '/_authenticated/partner'
+    | '/_authenticated/portal-selector'
     | '/_authenticated/professional'
     | '/_authenticated/student'
     | '/checkin/$studentId'
@@ -1411,6 +1424,13 @@ declare module '@tanstack/react-router' {
       path: '/professional'
       fullPath: '/professional'
       preLoaderRoute: typeof AuthenticatedProfessionalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/portal-selector': {
+      id: '/_authenticated/portal-selector'
+      path: '/portal-selector'
+      fullPath: '/portal-selector'
+      preLoaderRoute: typeof AuthenticatedPortalSelectorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/partner': {
@@ -2145,6 +2165,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
   AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRoute
+  AuthenticatedPortalSelectorRoute: typeof AuthenticatedPortalSelectorRoute
   AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRoute
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
 }
@@ -2153,6 +2174,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
   AuthenticatedPartnerRoute: AuthenticatedPartnerRoute,
+  AuthenticatedPortalSelectorRoute: AuthenticatedPortalSelectorRoute,
   AuthenticatedProfessionalRoute: AuthenticatedProfessionalRoute,
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
 }
