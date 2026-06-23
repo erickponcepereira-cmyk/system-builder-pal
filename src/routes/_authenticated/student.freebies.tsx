@@ -9,7 +9,7 @@ import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
 
-export const Route = createFileRoute("/student/freebies")({
+export const Route = createFileRoute("/_authenticated/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
   component: StudentFreebies,
 });

@@ -4,7 +4,7 @@ import { Plus, Trash2, Save, Gift, Loader2, Image as ImageIcon, X } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/admin/freebies")({
+export const Route = createFileRoute("/_authenticated/admin/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — Admin" }] }),
   component: FreebiesAdmin,
 });

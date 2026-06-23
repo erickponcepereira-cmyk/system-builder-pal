@@ -5,7 +5,7 @@ import { listPendingReleases, releaseCoach } from "@/lib/coach-onboarding.functi
 import { toast } from "sonner";
 import { Loader2, ExternalLink, CheckCircle2, Clock } from "lucide-react";
 
-export const Route = createFileRoute("/admin/coach-releases")({
+export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
   head: () => ({
     meta: [{ title: "Liberar Coaches — Admin" }],
   }),

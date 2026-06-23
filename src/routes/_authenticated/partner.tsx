@@ -26,7 +26,7 @@ import { PartnerReports } from "@/components/partner/PartnerReports";
 
 
 
-export const Route = createFileRoute("/partner")({
+export const Route = createFileRoute("/_authenticated/partner")({
   head: () => ({ meta: [{ title: "Painel Parceiro — FitMind Club" }] }),
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();

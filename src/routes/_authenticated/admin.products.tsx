@@ -25,7 +25,7 @@ import {
   type SlotValueType,
 } from "@/lib/financialEngine";
 
-export const Route = createFileRoute("/admin/products")({
+export const Route = createFileRoute("/_authenticated/admin/products")({
   head: () => ({ meta: [{ title: "Produtos — Motor Financeiro" }] }),
   component: AdminProductsPage,
 });

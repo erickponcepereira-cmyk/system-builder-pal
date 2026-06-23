@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
 
-export const Route = createFileRoute("/student/evolution")({ component: StudentEvolution });
+export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
 
 type Student = { id: string; current_weight: number | null; goal_weight: number | null };
 type EvolutionPhoto = { id: string; photo_url: string; photo_date: string; week_number: number | null; caption: string | null };

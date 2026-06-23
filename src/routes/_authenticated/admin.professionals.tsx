@@ -6,7 +6,7 @@ import { Loader2, CheckCircle2, Stethoscope, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export const Route = createFileRoute("/admin/professionals")({
+export const Route = createFileRoute("/_authenticated/admin/professionals")({
   head: () => ({ meta: [{ title: "Profissionais — Admin" }] }),
   component: AdminProfessionals,
 });

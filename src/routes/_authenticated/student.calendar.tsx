@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { StudentAppointmentsCard } from "@/components/student/StudentAppointmentsCard";
 
-export const Route = createFileRoute("/student/calendar")({
+export const Route = createFileRoute("/_authenticated/student/calendar")({
   head: () => ({
     meta: [
       { title: "Calendário de Eventos — FitMind Club" },

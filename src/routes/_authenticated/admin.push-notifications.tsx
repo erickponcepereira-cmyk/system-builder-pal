@@ -12,7 +12,7 @@ type PushResult = {
   cleanedInvalidTokens?: number;
 };
 
-export const Route = createFileRoute("/admin/push-notifications")({
+export const Route = createFileRoute("/_authenticated/admin/push-notifications")({
   component: PushNotificationsPage,
 });
 

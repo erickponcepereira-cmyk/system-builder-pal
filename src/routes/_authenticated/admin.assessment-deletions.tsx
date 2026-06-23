@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
-export const Route = createFileRoute("/admin/assessment-deletions")({
+export const Route = createFileRoute("/_authenticated/admin/assessment-deletions")({
   head: () => ({ meta: [{ title: "Exclusões de Avaliações — Admin" }] }),
   component: AssessmentDeletionsPage,
 });

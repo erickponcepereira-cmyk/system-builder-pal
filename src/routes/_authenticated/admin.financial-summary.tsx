@@ -5,7 +5,7 @@ import { Loader2, Wallet, Users, GraduationCap, Stethoscope, BadgeDollarSign, Cl
 import { toast } from "sonner";
 import { getFinancialSummary, type FinancialSummary } from "@/lib/partner-orders.functions";
 
-export const Route = createFileRoute("/admin/financial-summary")({
+export const Route = createFileRoute("/_authenticated/admin/financial-summary")({
   head: () => ({ meta: [{ title: "Resumo Financeiro — Admin" }] }),
   component: FinancialSummaryPage,
 });

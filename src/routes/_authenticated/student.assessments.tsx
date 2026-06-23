@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, Activity, ExternalLink, Scale, Droplets, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/student/assessments")({
+export const Route = createFileRoute("/_authenticated/student/assessments")({
   head: () => ({
     meta: [
       { title: "Minhas Avaliações — FitMind Club" },

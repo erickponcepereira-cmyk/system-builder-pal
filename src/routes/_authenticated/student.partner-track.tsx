@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, Sparkles, TrendingUp, Users, Trophy, Award, Building2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/student/partner-track")({ component: PartnerTrackPage });
+export const Route = createFileRoute("/_authenticated/student/partner-track")({ component: PartnerTrackPage });
 
 function PartnerTrackPage() {
   const navigate = useNavigate();

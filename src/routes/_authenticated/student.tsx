@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { MobileShell } from "@/components/student/MobileShell";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/student")({
+export const Route = createFileRoute("/_authenticated/student")({
   head: () => ({
     meta: [
       { title: "Minha Área — FitMind Club" },

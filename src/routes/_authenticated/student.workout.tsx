@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import fitmindLogo from "@/assets/fitmind-logo.png";
 
-export const Route = createFileRoute("/student/workout")({
+export const Route = createFileRoute("/_authenticated/student/workout")({
   head: () => ({ meta: [{ title: "Meu Treino — FitMind Club" }] }),
   component: WorkoutPage,
 });

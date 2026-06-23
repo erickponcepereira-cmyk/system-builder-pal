@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
 
-export const Route = createFileRoute("/student/protocol")({
+export const Route = createFileRoute("/_authenticated/student/protocol")({
   head: () => ({
     meta: [
       { title: "Meu Protocolo — FitMind Club" },

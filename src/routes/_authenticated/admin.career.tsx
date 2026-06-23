@@ -17,7 +17,7 @@ import {
 } from "@/lib/coach-badges.functions";
 import { BadgeImageUploader } from "@/components/admin/BadgeImageUploader";
 
-export const Route = createFileRoute("/admin/career")({
+export const Route = createFileRoute("/_authenticated/admin/career")({
   head: () => ({ meta: [{ title: "Carreira — Admin" }] }),
   component: AdminCareerPage,
 });

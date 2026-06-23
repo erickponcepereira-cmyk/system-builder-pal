@@ -23,7 +23,7 @@ import {
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
 import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
 
-export const Route = createFileRoute("/admin/financeiro")({ component: AdminFinanceiro });
+export const Route = createFileRoute("/_authenticated/admin/financeiro")({ component: AdminFinanceiro });
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 

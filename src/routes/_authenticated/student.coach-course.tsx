@@ -33,7 +33,7 @@ import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/student/coach-course")({ component: CoachCoursePage });
+export const Route = createFileRoute("/_authenticated/student/coach-course")({ component: CoachCoursePage });
 
 type CoachInfo = { name: string | null; phone: string | null; avatar_url: string | null };
 type ApplicationRow = { id: string; status: string; admin_notes: string | null; created_at: string | null };

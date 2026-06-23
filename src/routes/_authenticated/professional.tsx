@@ -25,7 +25,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
 
 
-export const Route = createFileRoute("/professional")({
+export const Route = createFileRoute("/_authenticated/professional")({
   head: () => ({ meta: [{ title: "Painel Profissional — FitMind Club" }] }),
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();

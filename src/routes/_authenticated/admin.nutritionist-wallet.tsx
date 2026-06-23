@@ -13,7 +13,7 @@ import {
   type NutriBlockedEntry,
 } from "@/lib/nutritionist.functions";
 
-export const Route = createFileRoute("/admin/nutritionist-wallet")({
+export const Route = createFileRoute("/_authenticated/admin/nutritionist-wallet")({
   head: () => ({ meta: [{ title: "Carteira da Nutricionista — Admin" }] }),
   component: NutriWalletPage,
 });

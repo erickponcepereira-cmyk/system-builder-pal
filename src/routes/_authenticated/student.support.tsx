@@ -4,7 +4,7 @@ import { ChevronLeft, HelpCircle, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { whatsappUrl } from "@/lib/whatsapp";
 
-export const Route = createFileRoute("/student/support")({ component: StudentSupportPage });
+export const Route = createFileRoute("/_authenticated/student/support")({ component: StudentSupportPage });
 
 type Admin = { name: string; role: string; match: string; phone: string };
 

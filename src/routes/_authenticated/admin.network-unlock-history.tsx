@@ -196,7 +196,7 @@ function RouteComponent() {
   );
 }
 
-export const Route = createFileRoute("/admin/network-unlock-history")({
+export const Route = createFileRoute("/_authenticated/admin/network-unlock-history")({
   head: () => ({ meta: [{ title: "Histórico Liberação da Rede — Admin" }] }),
   component: RouteComponent,
 });

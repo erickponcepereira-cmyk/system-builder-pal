@@ -9,7 +9,7 @@ import {
   type PartnerOrderRow,
 } from "@/lib/partner-orders.functions";
 
-export const Route = createFileRoute("/admin/partner-orders")({
+export const Route = createFileRoute("/_authenticated/admin/partner-orders")({
   head: () => ({ meta: [{ title: "Pedidos de Parceiros — Admin" }] }),
   component: AdminPartnerOrdersPage,
 });

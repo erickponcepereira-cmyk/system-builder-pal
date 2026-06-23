@@ -18,7 +18,7 @@ import {
 } from "@/lib/timezone";
 
 
-export const Route = createFileRoute("/admin/fitmind-events")({
+export const Route = createFileRoute("/_authenticated/admin/fitmind-events")({
   head: () => ({ meta: [{ title: "Calendário de Eventos — Admin FitMind" }] }),
   component: AdminFitmindEventsPage,
 });

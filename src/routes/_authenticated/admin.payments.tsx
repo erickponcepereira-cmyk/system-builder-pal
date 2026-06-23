@@ -20,7 +20,7 @@ import {
 } from "@/lib/admin-payouts.functions";
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 
-export const Route = createFileRoute("/admin/payments")({
+export const Route = createFileRoute("/_authenticated/admin/payments")({
   component: AdminPayments,
 });
 

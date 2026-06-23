@@ -7,7 +7,7 @@ import { Trophy, Plus, Scale, Award, ChevronDown, ChevronUp, Loader2, Trash2, Pe
 import { useServerFn } from "@tanstack/react-start";
 import { getAdminTokenAttempts, type AdminTokenAttemptRow } from "@/lib/challenge-tokens.functions";
 
-export const Route = createFileRoute("/admin/challenge")({
+export const Route = createFileRoute("/_authenticated/admin/challenge")({
   component: AdminChallengePage,
 });
 

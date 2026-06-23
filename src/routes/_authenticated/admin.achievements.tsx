@@ -135,7 +135,6 @@ function AdminAchievementsPage() {
           <Plus className="h-4 w-4" /> Nova conquista
         </button>
       </div>
-
       <div className="rounded-2xl bg-[#1A1A1A] p-4">
         {loading ? (
           <p className="py-8 text-center text-sm text-white/40">Carregando...</p>
@@ -175,7 +174,6 @@ function AdminAchievementsPage() {
           </div>
         )}
       </div>
-
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setModalOpen(false)}>
           <div className="w-full max-w-lg rounded-2xl bg-[#1A1A1A] p-5" onClick={(e) => e.stopPropagation()}>
@@ -235,10 +233,10 @@ function AdminAchievementsPage() {
         </div>
       )}
     </div>
-  );
+  )
 }
 
-export const Route = createFileRoute("/admin/achievements")({
+export const Route = createFileRoute("/_authenticated/admin/achievements")({
   head: () => ({
     meta: [
       { title: "Conquistas — Admin FitMind" },

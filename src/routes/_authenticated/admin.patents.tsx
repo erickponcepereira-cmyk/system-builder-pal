@@ -4,7 +4,7 @@ import { Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/admin/patents")({
+export const Route = createFileRoute("/_authenticated/admin/patents")({
   component: AdminPatents,
 });
 

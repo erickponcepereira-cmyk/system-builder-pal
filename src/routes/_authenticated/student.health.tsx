@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Plus, Trash2 } from "luci
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/student/health")({
+export const Route = createFileRoute("/_authenticated/student/health")({
   head: () => ({
     meta: [
       { title: "Anamnese — FitMind Club" },

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, Sparkles, TrendingUp, Users, Trophy, Award, Briefcase, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/student/professional-track")({ component: ProfessionalTrackPage });
+export const Route = createFileRoute("/_authenticated/student/professional-track")({ component: ProfessionalTrackPage });
 
 function ProfessionalTrackPage() {
   const navigate = useNavigate();

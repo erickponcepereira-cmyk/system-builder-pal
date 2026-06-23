@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { approveCoachAndConfirmEmail } from "@/lib/admin-users.functions";
 
-export const Route = createFileRoute("/admin/coaches")({
+export const Route = createFileRoute("/_authenticated/admin/coaches")({
   component: AdminCoaches,
 });
 

@@ -4,7 +4,7 @@ import { ArrowLeft, Building2, Loader2, MapPin, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 
-export const Route = createFileRoute("/student/partners")({
+export const Route = createFileRoute("/_authenticated/student/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — FitMind Club" }] }),
   component: PartnersList,
 });

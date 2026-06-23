@@ -6,7 +6,7 @@ import {
   adminListCoachConnections,
 } from "@/lib/google-calendar.functions";
 
-export const Route = createFileRoute("/admin/calendars")({
+export const Route = createFileRoute("/_authenticated/admin/calendars")({
   head: () => ({
     meta: [
       { title: "Agendas — Admin FitMind Club" },

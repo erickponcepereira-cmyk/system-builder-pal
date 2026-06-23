@@ -7,7 +7,7 @@ import {
   listPlansAdmin, updatePlanAdmin, markInvoicePaidAdmin, exemptInvoiceAdmin, generateInvoicesNow,
 } from "@/lib/admin-subscriptions.functions";
 
-export const Route = createFileRoute("/admin/subscriptions")({
+export const Route = createFileRoute("/_authenticated/admin/subscriptions")({
   head: () => ({ meta: [{ title: "Mensalidades — Admin" }] }),
   component: AdminSubscriptionsPage,
 });

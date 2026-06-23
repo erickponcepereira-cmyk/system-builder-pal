@@ -7,7 +7,7 @@ import { Loader2, Search, ShieldCheck, ShieldOff, History, Settings2, Crown, Mai
 import { ADMIN_PERMISSIONS, type AdminPerms } from "@/lib/admin-permissions";
 import { confirmUserEmailByProfileId } from "@/lib/admin-users.functions";
 
-export const Route = createFileRoute("/admin/users")({
+export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({ meta: [{ title: "Administradores — FitMind Club" }] }),
   component: AdminUsersPage,
 });

@@ -4,7 +4,7 @@ import { ArrowLeft, ShieldCheck, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/student/card")({
+export const Route = createFileRoute("/_authenticated/student/card")({
   head: () => ({
     meta: [
       { title: "Minha Carteirinha — FitMind Club" },

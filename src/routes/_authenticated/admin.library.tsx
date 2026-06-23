@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Dumbbell, Video, Image as ImageIcon, Film, X, ClipboardList } from "lucide-react";
 import { WorkoutTemplatesPanel } from "@/components/workouts/WorkoutTemplatesPanel";
 
-export const Route = createFileRoute("/admin/library")({
+export const Route = createFileRoute("/_authenticated/admin/library")({
   head: () => ({
     meta: [
       { title: "Biblioteca — Admin" },

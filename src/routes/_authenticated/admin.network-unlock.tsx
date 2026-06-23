@@ -248,7 +248,7 @@ function RuleCard({ rule, products, patents, onUpdate, onRemove }: {
   );
 }
 
-export const Route = createFileRoute("/admin/network-unlock")({
+export const Route = createFileRoute("/_authenticated/admin/network-unlock")({
   head: () => ({ meta: [{ title: "Liberação da Rede — Admin" }] }),
   component: RouteComponent,
 });

@@ -42,7 +42,7 @@ import { CoachOnboardingGate } from "@/components/coach/CoachOnboardingGate";
 // Link "/" usage to satisfy unused import warnings (not required)
 void Link;
 
-export const Route = createFileRoute("/coach")({
+export const Route = createFileRoute("/_authenticated/coach")({
   head: () => ({
     meta: [
       { title: "Painel Coach — FitMind Club" },

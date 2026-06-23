@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CouponModal } from "@/components/student/CouponModal";
 
 
-export const Route = createFileRoute("/student/partners/$partnerId")({
+export const Route = createFileRoute("/_authenticated/student/partners/$partnerId")({
   head: () => ({ meta: [{ title: "Parceiro — FitMind Club" }] }),
   component: PartnerProfilePage,
 });

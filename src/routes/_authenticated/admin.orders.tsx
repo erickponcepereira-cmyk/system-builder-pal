@@ -11,7 +11,7 @@ import {
 } from "@/lib/cross-sales.functions";
 
 
-export const Route = createFileRoute("/admin/orders")({ component: AdminOrders });
+export const Route = createFileRoute("/_authenticated/admin/orders")({ component: AdminOrders });
 
 type OrderRow = {
   id: string;

@@ -8,7 +8,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { InstallAppButton } from "@/components/InstallAppButton";
 
-export const Route = createFileRoute("/student/")({
+export const Route = createFileRoute("/_authenticated/student/")({
   component: StudentHome,
 });
 

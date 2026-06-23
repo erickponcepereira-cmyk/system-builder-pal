@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Heart, AlertTriangle, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/student/medical-record")({
+export const Route = createFileRoute("/_authenticated/student/medical-record")({
   head: () => ({
     meta: [
       { title: "Ficha médica — FitMind Club" },

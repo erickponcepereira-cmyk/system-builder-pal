@@ -4,7 +4,7 @@ import { Apple, BadgePercent, BookOpen, Check, Copy, Dumbbell, Gift, HeartPulse,
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/student/benefits")({
+export const Route = createFileRoute("/_authenticated/student/benefits")({
   component: BenefitsPage,
 });
 

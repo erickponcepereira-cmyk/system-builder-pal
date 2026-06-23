@@ -4,7 +4,7 @@ import { Stethoscope, Loader2, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductReviewModal } from "@/components/admin/ProductReviewModal";
 
-export const Route = createFileRoute("/admin/professional-products")({
+export const Route = createFileRoute("/_authenticated/admin/professional-products")({
   head: () => ({ meta: [{ title: "Produtos de Profissionais — Admin" }] }),
   component: AdminProfessionalProducts,
 });

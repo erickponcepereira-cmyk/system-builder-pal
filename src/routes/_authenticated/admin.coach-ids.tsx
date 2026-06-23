@@ -5,7 +5,7 @@ import { listCoachIds } from "@/lib/coach-onboarding.functions";
 import { toast } from "sonner";
 import { Loader2, KeyRound, CheckCircle2, Clock, ShieldAlert, Search } from "lucide-react";
 
-export const Route = createFileRoute("/admin/coach-ids")({
+export const Route = createFileRoute("/_authenticated/admin/coach-ids")({
   head: () => ({ meta: [{ title: "IDs dos Coaches — Admin" }] }),
   component: CoachIdsPage,
 });

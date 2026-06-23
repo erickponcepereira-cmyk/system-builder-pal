@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { listDetailedSales, type DetailedSale } from "@/lib/admin-reports.functions";
 
-export const Route = createFileRoute("/admin/reports")({ component: AdminReports });
+export const Route = createFileRoute("/_authenticated/admin/reports")({ component: AdminReports });
 
 type AttendanceRow = { student_id: string; log_date: string; attended: boolean | null; students: { profiles: { name: string; email: string } | null } | null };
 type OrderRow = { id: string; order_number: string; status: string; total_amount: number; created_at: string | null; students: { profiles: { name: string; email: string } | null } | null };

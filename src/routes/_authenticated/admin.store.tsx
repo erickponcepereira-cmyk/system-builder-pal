@@ -2,7 +2,7 @@ import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { StoreManager } from "@/components/admin/StoreManager";
 import { StoreItemsManager } from "@/components/admin/StoreItemsManager";
 
-export const Route = createFileRoute("/admin/store")({
+export const Route = createFileRoute("/_authenticated/admin/store")({
   head: () => ({ meta: [{ title: "Loja — Admin FitMind Club" }] }),
   component: StoreAdminPage,
 });

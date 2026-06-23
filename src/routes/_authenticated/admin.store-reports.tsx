@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, TrendingUp, Package, Gift, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/admin/store-reports")({
+export const Route = createFileRoute("/_authenticated/admin/store-reports")({
   head: () => ({ meta: [{ title: "Relatórios da Loja — Admin" }] }),
   component: StoreReports,
 });

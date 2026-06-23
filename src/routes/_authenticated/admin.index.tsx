@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 
-export const Route = createFileRoute("/admin/")({
+export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboard,
 });
 

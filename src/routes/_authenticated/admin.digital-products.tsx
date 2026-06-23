@@ -4,7 +4,7 @@ import { Edit, Library, Plus, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/admin/digital-products")({
+export const Route = createFileRoute("/_authenticated/admin/digital-products")({
   component: AdminDigitalProducts,
 });
 

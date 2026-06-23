@@ -13,7 +13,7 @@ import {
   type SimulatedSaleRow,
 } from "@/lib/admin-test-sales.functions";
 
-export const Route = createFileRoute("/admin/test-sales")({
+export const Route = createFileRoute("/_authenticated/admin/test-sales")({
   head: () => ({ meta: [{ title: "Testes de Vendas — Admin" }] }),
   component: AdminTestSalesPage,
 });

@@ -10,7 +10,7 @@ import {
   type OrderPoolStatus,
 } from "@/lib/orderpool.functions";
 
-export const Route = createFileRoute("/admin/product-orders")({
+export const Route = createFileRoute("/_authenticated/admin/product-orders")({
   head: () => ({ meta: [{ title: "Painel de Pedidos — Admin" }] }),
   component: AdminProductOrdersPage,
 });

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/student/notifications")({ component: NotificationsPage });
+export const Route = createFileRoute("/_authenticated/student/notifications")({ component: NotificationsPage });
 
 type NotificationRow = {
   id: string;

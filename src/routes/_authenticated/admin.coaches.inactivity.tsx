@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/admin/coaches/inactivity")({
+export const Route = createFileRoute("/_authenticated/admin/coaches/inactivity")({
   component: CoachInactivityPage,
 });
 

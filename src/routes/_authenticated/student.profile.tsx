@@ -9,7 +9,7 @@ import { StudentReferralModal } from "@/components/student/StudentReferralModal"
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 
-export const Route = createFileRoute("/student/profile")({
+export const Route = createFileRoute("/_authenticated/student/profile")({
   component: ProfilePage,
 });
 

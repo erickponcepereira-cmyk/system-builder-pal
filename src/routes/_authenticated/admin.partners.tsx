@@ -6,7 +6,7 @@ import { Building2, Loader2, Eye } from "lucide-react";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { ProductReviewModal } from "@/components/admin/ProductReviewModal";
 
-export const Route = createFileRoute("/admin/partners")({
+export const Route = createFileRoute("/_authenticated/admin/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — Admin" }] }),
   component: AdminPartners,
 });

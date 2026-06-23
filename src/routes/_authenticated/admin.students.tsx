@@ -7,7 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { adminDeleteUser } from "@/lib/admin-users.functions";
 
 
-export const Route = createFileRoute("/admin/students")({
+export const Route = createFileRoute("/_authenticated/admin/students")({
   component: AdminStudents,
 });
 

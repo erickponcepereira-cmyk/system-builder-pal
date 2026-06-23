@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getEventsReport, type EventReportRow } from "@/lib/fitmind-events.functions";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/admin/fitmind-events-reports")({
+export const Route = createFileRoute("/_authenticated/admin/fitmind-events-reports")({
   head: () => ({ meta: [{ title: "Relatórios — Eventos FitMind" }] }),
   component: ReportsPage,
 });

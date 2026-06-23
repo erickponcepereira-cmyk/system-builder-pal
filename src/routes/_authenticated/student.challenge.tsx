@@ -14,7 +14,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummary, type CurrentTurma } from "@/lib/challenge-tokens.functions";
 
 
-export const Route = createFileRoute("/student/challenge")({
+export const Route = createFileRoute("/_authenticated/student/challenge")({
   component: StudentChallengePage,
 });
 
@@ -322,7 +322,6 @@ function StudentChallengePage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-24 space-y-4">
-
       {/* Tabs */}
       <div className="grid grid-cols-2 gap-2 pt-4">
         {(["challenge","hall"] as const).map(t => (
@@ -332,7 +331,6 @@ function StudentChallengePage() {
           </button>
         ))}
       </div>
-
       {/* ── TAB: Meu Desafio ── */}
       {activeTab === "challenge" && (
         <>
@@ -387,18 +385,18 @@ function StudentChallengePage() {
 
           {!hasAccess && !(tokens && tokens.balance > 0) ? (
             /* Sem acesso */
-            <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
+            (<div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
               <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
               <p className="font-bold text-foreground">Desafio Indisponível</p>
               <p className="text-sm text-muted-foreground">
                 O Desafio FitMind está disponível para alunos com planos específicos.
                 Fale com seu coach para participar!
               </p>
-            </div>
+            </div>)
 
           ) : !enrollment ? (
             /* Tem acesso mas não está inscrito */
-            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center space-y-3">
+            (<div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center space-y-3">
               <Trophy className="h-12 w-12 text-primary mx-auto" />
               <p className="font-bold text-foreground">Você tem acesso ao Desafio!</p>
               <p className="text-sm text-muted-foreground">
@@ -406,7 +404,7 @@ function StudentChallengePage() {
                   ? "Use um ticket acima para entrar agora na turma em pesagem inicial."
                   : "Sua inscrição será feita automaticamente na próxima competição ativa, ou peça ao seu coach para te inscrever manualmente."}
               </p>
-            </div>
+            </div>)
 
           ) : (
             <>
@@ -605,11 +603,8 @@ function StudentChallengePage() {
           )}
         </>
       )}
-
       {/* ── TAB: Hall da Fama ── */}
       {activeTab === "hall" && <HallOfFame highlightStudentId={studentId || undefined} />}
-
-
       {/* Modal: Agendar Pesagem */}
       {scheduleModal && enrollment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
@@ -654,7 +649,6 @@ function StudentChallengePage() {
           </div>
         </div>
       )}
-
       {/* Modal de confirmação de entrada no desafio com moeda */}
       {confirmTurma && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -695,7 +689,6 @@ function StudentChallengePage() {
           </div>
         </div>
       )}
-
     </div>
-  );
+  )
 }

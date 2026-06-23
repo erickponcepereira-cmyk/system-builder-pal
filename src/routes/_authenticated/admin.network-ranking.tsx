@@ -8,7 +8,7 @@ import {
   type NetworkRankingRow,
 } from "@/lib/network-ranking.functions";
 
-export const Route = createFileRoute("/admin/network-ranking")({
+export const Route = createFileRoute("/_authenticated/admin/network-ranking")({
   component: AdminNetworkRanking,
 });
 

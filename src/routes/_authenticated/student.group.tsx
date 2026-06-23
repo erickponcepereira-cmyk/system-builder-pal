@@ -4,7 +4,7 @@ import { Image as ImageIcon, Loader2, Send, Shield, Trash2, Users } from "lucide
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/student/group")({
+export const Route = createFileRoute("/_authenticated/student/group")({
   component: GroupPage,
 });
 

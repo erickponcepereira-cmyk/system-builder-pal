@@ -11,7 +11,7 @@ import {
   type AdminWalletEntry,
 } from "@/lib/admin-financial.functions";
 
-export const Route = createFileRoute("/admin/admin-wallet")({
+export const Route = createFileRoute("/_authenticated/admin/admin-wallet")({
   head: () => ({ meta: [{ title: "Carteira do Admin — FitMind Club" }] }),
   component: AdminWalletPage,
 });
