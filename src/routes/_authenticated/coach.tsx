@@ -154,8 +154,12 @@ function CoachDashboard() {
     let active = true;
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
+      console.log("[AUTH] coach.tsx getUser user:", user?.id);
+      console.log("[AUTH] coach.tsx pathname:", typeof window !== "undefined" ? window.location.pathname : "");
+      console.log("[AUTH] coach.tsx localStorage token raw:", typeof window !== "undefined" ? window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token") : null);
       if (!active) return;
       if (!user) {
+        console.log("[AUTH] redirect executado em src/routes/_authenticated/coach.tsx:164 (no user)");
         navigate({ to: "/login", replace: true });
         return;
       }

@@ -24,8 +24,12 @@ function StudentLayout() {
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log("[AUTH] student.tsx getUser user:", user?.id);
+        console.log("[AUTH] student.tsx pathname:", window.location.pathname);
+        console.log("[AUTH] student.tsx localStorage token raw:", window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token"));
         if (!active) return;
         if (!user) {
+          console.log("[AUTH] redirect executado em src/routes/_authenticated/student.tsx:34 (no user)");
           const redirect = `${window.location.pathname}${window.location.search}`;
           navigate({ to: "/login", search: { redirect } as never, replace: true });
           return;
