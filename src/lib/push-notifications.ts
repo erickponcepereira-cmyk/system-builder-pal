@@ -84,15 +84,6 @@ export async function initPushNotifications(
     await PushNotifications.addListener("registration", async (token: Token) => {
       console.log("[Push] Token recebido:", token.value);
 
-      // Exibe temporariamente o token para facilitar testes no APK
-      if (typeof alert === "function") {
-        try {
-          alert(`[Push] Token FCM:\n${token.value}`);
-        } catch {
-          // ignore se alert não estiver disponível
-        }
-      }
-
       try {
         await options.onToken?.(token.value, Capacitor.getPlatform());
       } catch (err) {
@@ -147,12 +138,6 @@ export async function removePushListeners(): Promise<void> {
  * Faz upsert pelo token (único) e vincula ao usuário autenticado.
  */
 export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => {
-  const debugAlert = (msg: string) => {
-    if (typeof alert === "function") {
-      try { alert(msg); } catch { /* ignore */ }
-    }
-  };
-
   try {
     const { supabase } = await import("@/integrations/supabase/client");
 
@@ -167,7 +152,6 @@ export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => 
 
     if (authError || !user) {
       console.warn("[Push] Nenhum usuário logado. Token não será salvo.");
-      debugAlert("[Push] Nenhum usuário logado. Token não será salvo.");
       return;
     }
 
@@ -189,16 +173,11 @@ export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => 
 
     if (upsertError) {
       console.error("[Push] Erro Supabase:", upsertError);
-      debugAlert(
-        `[Push] Erro Supabase:\n${upsertError.message}\ncode: ${upsertError.code}\ndetails: ${upsertError.details}\nhint: ${upsertError.hint}`,
-      );
       return;
     }
 
     console.log("[Push] Token salvo com sucesso", data);
-    debugAlert(`[Push] Token salvo com sucesso (${data?.length ?? 0} linha)`);
   } catch (err) {
     console.error("[Push] Erro Supabase:", err);
-    debugAlert(`[Push] Erro Supabase (catch):\n${(err as Error)?.message ?? String(err)}`);
   }
 };
