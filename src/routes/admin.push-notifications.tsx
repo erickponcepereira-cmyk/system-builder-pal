@@ -25,8 +25,8 @@ type UserResult = {
 
 function PushNotificationsPage() {
   const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<UserResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [allUsers, setAllUsers] = useState<UserResult[]>([]);
   const [selected, setSelected] = useState<UserResult | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -34,46 +34,37 @@ function PushNotificationsPage() {
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<PushResult | null>(null);
 
-  const search = async () => {
-    const term = query.trim();
-    if (term.length < 2) {
-      toast.error("Informe ao menos 2 caracteres");
-      return;
-    }
-    setSearching(true);
-    setResults([]);
-    setSelected(null);
-
+  const loadUsers = async () => {
+    setLoading(true);
+    // Carrega TODOS os usuários da tabela profiles (fonte principal)
     const { data: profiles, error } = await supabase
       .from("profiles" as never)
       .select("user_id,name,email" as never)
-      .or(`name.ilike.%${term}%,email.ilike.%${term}%` as never)
-      .limit(20);
+      .order("name" as never, { ascending: true })
+      .limit(1000);
 
     if (error) {
       toast.error(error.message);
-      setSearching(false);
+      setLoading(false);
       return;
     }
 
     const rows = (profiles as unknown as Array<{ user_id: string; name: string | null; email: string | null }>) || [];
-    if (rows.length === 0) {
-      setSearching(false);
-      return;
+
+    // LEFT JOIN lógico com device_tokens apenas para contar dispositivos
+    const counts = new Map<string, number>();
+    if (rows.length > 0) {
+      const ids = rows.map((r) => r.user_id);
+      const { data: tokens } = await supabase
+        .from("device_tokens" as never)
+        .select("user_id" as never)
+        .in("user_id" as never, ids as never);
+      ((tokens as unknown as Array<{ user_id: string }>) || []).forEach((t) => {
+        counts.set(t.user_id, (counts.get(t.user_id) || 0) + 1);
+      });
     }
 
-    const ids = rows.map((r) => r.user_id);
-    const { data: tokens } = await supabase
-      .from("device_tokens" as never)
-      .select("user_id" as never)
-      .in("user_id" as never, ids as never);
-
-    const counts = new Map<string, number>();
-    ((tokens as unknown as Array<{ user_id: string }>) || []).forEach((t) => {
-      counts.set(t.user_id, (counts.get(t.user_id) || 0) + 1);
-    });
-
-    setResults(
+    setAllUsers(
       rows.map((r) => ({
         user_id: r.user_id,
         name: r.name,
@@ -81,8 +72,22 @@ function PushNotificationsPage() {
         device_count: counts.get(r.user_id) || 0,
       })),
     );
-    setSearching(false);
+    setLoading(false);
   };
+
+  useEffect(() => {
+    void loadUsers();
+  }, []);
+
+  const term = query.trim().toLowerCase();
+  const results = term
+    ? allUsers.filter(
+        (u) =>
+          (u.name || "").toLowerCase().includes(term) ||
+          (u.email || "").toLowerCase().includes(term),
+      )
+    : allUsers;
+
 
   const send = async () => {
     if (!selected) return;
