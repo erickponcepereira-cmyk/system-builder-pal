@@ -47,43 +47,24 @@ export function isNativePlatform(): boolean {
 export async function initPushNotifications(
   options: PushNotificationOptions = {},
 ): Promise<boolean> {
-  console.log("[Push] Inicializando");
-
-  if (!isNativePlatform()) {
-    console.info("[Push] Ignorado: não está rodando no Capacitor (Android/iOS).");
-    return false;
-  }
-  console.log("[Push] Plataforma nativa detectada:", Capacitor.getPlatform());
-
-  if (initialized) {
-    console.info("[Push] Já inicializado.");
-    return true;
-  }
+  if (!isNativePlatform()) return false;
+  if (initialized) return true;
   initialized = true;
 
   try {
-    // 1. Verificar e solicitar permissão
-    console.log("[Push] Verificando permissões atuais...");
     let permStatus = await PushNotifications.checkPermissions();
-    console.log("[Push] checkPermissions result:", permStatus.receive);
 
     if (permStatus.receive === "prompt" || permStatus.receive === "prompt-with-rationale") {
-      console.log("[Push] Solicitando permissão ao usuário...");
       permStatus = await PushNotifications.requestPermissions();
     }
 
-    console.log("[Push] Permissão:", permStatus.receive);
-
     if (permStatus.receive !== "granted") {
-      console.warn("[Push] Permissão de notificações negada pelo usuário.");
       initialized = false;
       return false;
     }
 
-    // 2. Listeners ANTES do register() para não perder eventos
+    // Listeners ANTES do register() para não perder eventos
     await PushNotifications.addListener("registration", async (token: Token) => {
-      console.log("[Push] Token recebido:", token.value);
-
       try {
         await options.onToken?.(token.value, Capacitor.getPlatform());
       } catch (err) {
@@ -99,7 +80,6 @@ export async function initPushNotifications(
     await PushNotifications.addListener(
       "pushNotificationReceived",
       (notification: PushNotificationSchema) => {
-        console.log("[Push] Notificação recebida:", notification);
         options.onNotification?.(notification);
       },
     );
@@ -107,16 +87,11 @@ export async function initPushNotifications(
     await PushNotifications.addListener(
       "pushNotificationActionPerformed",
       (action: ActionPerformed) => {
-        console.log("[Push] Ação na notificação:", action);
         options.onNotificationAction?.(action);
       },
     );
 
-    // 3. Registrar no FCM (dispara o evento "registration" com o token)
-    console.log("[Push] Registrando dispositivo...");
     await PushNotifications.register();
-    console.log("[Push] register() concluído. Aguardando evento de token...");
-
     return true;
   } catch (err) {
     console.error("[Push] Falha ao inicializar:", err);
@@ -141,43 +116,27 @@ export const saveTokenToSupabase: PushTokenHandler = async (token, platform) => 
   try {
     const { supabase } = await import("@/integrations/supabase/client");
 
-    console.log("[Push] Salvando token");
-
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
-    console.log("[Push] Usuário encontrado:", user?.id ?? null, "authError:", authError);
+    if (authError || !user) return;
 
-    if (authError || !user) {
-      console.warn("[Push] Nenhum usuário logado. Token não será salvo.");
-      return;
-    }
-
-    const payload = {
-      user_id: user.id,
-      token,
-      platform,
-      updated_at: new Date().toISOString(),
-    };
-
-    console.log("[Push] Tentando salvar token:", payload);
-
-    const { data, error: upsertError, status, statusText } = await supabase
+    const { error: upsertError } = await supabase
       .from("device_tokens")
-      .upsert(payload, { onConflict: "token" })
-      .select();
+      .upsert(
+        {
+          user_id: user.id,
+          token,
+          platform,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "token" },
+      );
 
-    console.log("[Push] Resultado do upsert:", { data, status, statusText });
-
-    if (upsertError) {
-      console.error("[Push] Erro Supabase:", upsertError);
-      return;
-    }
-
-    console.log("[Push] Token salvo com sucesso", data);
+    if (upsertError) console.error("[Push] Erro ao salvar token:", upsertError);
   } catch (err) {
-    console.error("[Push] Erro Supabase:", err);
+    console.error("[Push] Erro ao salvar token:", err);
   }
 };
