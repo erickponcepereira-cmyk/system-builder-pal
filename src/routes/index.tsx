@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Logo } from "@/components/Logo";
 import { InstallAppButton } from "@/components/InstallAppButton";
 
