@@ -72,14 +72,9 @@ export function AdminShell() {
     let active = true;
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      console.log("[AUTH] AdminShell.tsx getSession:", session);
-      console.log("[AUTH] AdminShell.tsx user:", session?.user?.id);
       if (typeof window !== "undefined") {
-        console.log("[AUTH] AdminShell.tsx pathname:", window.location.pathname);
-        console.log("[AUTH] AdminShell.tsx localStorage token raw:", window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token"));
       }
       if (!session?.user) {
-        console.log("[AUTH] redirect executado em src/components/admin/AdminShell.tsx:82 (no session)");
         if (active) navigate({ to: "/login" });
         return;
       }

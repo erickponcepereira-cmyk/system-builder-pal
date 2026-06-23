@@ -95,11 +95,7 @@ function PartnerPanel() {
   const load = async () => {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
-    console.log("[AUTH] partner.tsx getUser user:", userData.user?.id);
-    console.log("[AUTH] partner.tsx pathname:", typeof window !== "undefined" ? window.location.pathname : "");
-    console.log("[AUTH] partner.tsx localStorage token raw:", typeof window !== "undefined" ? window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token") : null);
     if (!userData.user) {
-      console.log("[AUTH] redirect executado em src/routes/_authenticated/partner.tsx:102 (no user)");
       navigate({ to: "/login" }); return;
     }
     const { data: profile } = await supabase.from("profiles").select("id, role").eq("user_id", userData.user.id).maybeSingle();

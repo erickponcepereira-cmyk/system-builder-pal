@@ -94,19 +94,13 @@ function ProfessionalPanel() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log("[AUTH] professional.tsx getUser user:", user?.id);
-      console.log("[AUTH] professional.tsx pathname:", typeof window !== "undefined" ? window.location.pathname : "");
-      console.log("[AUTH] professional.tsx localStorage token raw:", typeof window !== "undefined" ? window.localStorage.getItem("sb-myqyjifvrlwvesrwubsg-auth-token") : null);
       if (!user) {
-        console.log("[AUTH] redirect executado em src/routes/_authenticated/professional.tsx:101 (no user)");
         navigate({ to: "/login" }); return;
       }
 
       const { data: profile } = await supabase
         .from("profiles").select("id,name,avatar_url,status").eq("user_id", user.id).maybeSingle();
-      console.log("[AUTH] professional.tsx profile id:", profile?.id);
       if (!profile) {
-        console.log("[AUTH] redirect executado em src/routes/_authenticated/professional.tsx:109 (no profile)");
         navigate({ to: "/login" }); return;
       }
 
