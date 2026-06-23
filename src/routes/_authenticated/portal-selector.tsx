@@ -24,10 +24,17 @@ export const Route = createFileRoute("/_authenticated/portal-selector")({
 });
 
 function PortalSelectorPage() {
+  console.log("[PORTAL] mounted");
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<AccessOptions | null>(null);
+
+  useEffect(() => {
+    return () => {
+      console.log("[PORTAL] unmounted");
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
