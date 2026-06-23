@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, FlaskConical, Loader2, Search, Send, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,8 +25,8 @@ type UserResult = {
 
 function PushNotificationsPage() {
   const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<UserResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [allUsers, setAllUsers] = useState<UserResult[]>([]);
   const [selected, setSelected] = useState<UserResult | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -34,46 +34,37 @@ function PushNotificationsPage() {
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<PushResult | null>(null);
 
-  const search = async () => {
-    const term = query.trim();
-    if (term.length < 2) {
-      toast.error("Informe ao menos 2 caracteres");
-      return;
-    }
-    setSearching(true);
-    setResults([]);
-    setSelected(null);
-
+  const loadUsers = async () => {
+    setLoading(true);
+    // Carrega TODOS os usuários da tabela profiles (fonte principal)
     const { data: profiles, error } = await supabase
       .from("profiles" as never)
       .select("user_id,name,email" as never)
-      .or(`name.ilike.%${term}%,email.ilike.%${term}%` as never)
-      .limit(20);
+      .order("name" as never, { ascending: true })
+      .limit(1000);
 
     if (error) {
       toast.error(error.message);
-      setSearching(false);
+      setLoading(false);
       return;
     }
 
     const rows = (profiles as unknown as Array<{ user_id: string; name: string | null; email: string | null }>) || [];
-    if (rows.length === 0) {
-      setSearching(false);
-      return;
+
+    // LEFT JOIN lógico com device_tokens apenas para contar dispositivos
+    const counts = new Map<string, number>();
+    if (rows.length > 0) {
+      const ids = rows.map((r) => r.user_id);
+      const { data: tokens } = await supabase
+        .from("device_tokens" as never)
+        .select("user_id" as never)
+        .in("user_id" as never, ids as never);
+      ((tokens as unknown as Array<{ user_id: string }>) || []).forEach((t) => {
+        counts.set(t.user_id, (counts.get(t.user_id) || 0) + 1);
+      });
     }
 
-    const ids = rows.map((r) => r.user_id);
-    const { data: tokens } = await supabase
-      .from("device_tokens" as never)
-      .select("user_id" as never)
-      .in("user_id" as never, ids as never);
-
-    const counts = new Map<string, number>();
-    ((tokens as unknown as Array<{ user_id: string }>) || []).forEach((t) => {
-      counts.set(t.user_id, (counts.get(t.user_id) || 0) + 1);
-    });
-
-    setResults(
+    setAllUsers(
       rows.map((r) => ({
         user_id: r.user_id,
         name: r.name,
@@ -81,8 +72,22 @@ function PushNotificationsPage() {
         device_count: counts.get(r.user_id) || 0,
       })),
     );
-    setSearching(false);
+    setLoading(false);
   };
+
+  useEffect(() => {
+    void loadUsers();
+  }, []);
+
+  const term = query.trim().toLowerCase();
+  const results = term
+    ? allUsers.filter(
+        (u) =>
+          (u.name || "").toLowerCase().includes(term) ||
+          (u.email || "").toLowerCase().includes(term),
+      )
+    : allUsers;
+
 
   const send = async () => {
     if (!selected) return;
@@ -248,24 +253,33 @@ function PushNotificationsPage() {
 
       {/* Busca */}
       <div className="rounded-2xl border border-white/5 p-5 mb-5" style={{ backgroundColor: "#1A1A1A" }}>
-        <p className="mb-3 text-xs font-bold uppercase text-white/40">Buscar usuário</p>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-bold uppercase text-white/40">
+            Usuários ({results.length}{term ? ` de ${allUsers.length}` : ""})
+          </p>
+          <Button onClick={loadUsers} disabled={loading} variant="outline" size="sm" className="gap-2 border-white/10 hover:bg-white/5">
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+            Recarregar
+          </Button>
+        </div>
+        <div className="mt-3">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && search()}
-            placeholder="Nome ou email..."
-            className="field-control flex-1"
+            placeholder="Filtrar por nome ou email..."
+            className="field-control w-full"
           />
-          <Button onClick={search} disabled={searching} className="gap-2">
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Buscar
-          </Button>
         </div>
 
-        {results.length > 0 && (
-          <div className="mt-4 space-y-2">
+        {loading && (
+          <div className="mt-4 flex items-center justify-center py-8 text-white/40">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        )}
+
+        {!loading && results.length > 0 && (
+          <div className="mt-4 max-h-[480px] space-y-2 overflow-auto pr-1">
             {results.map((r) => {
               const active = selected?.user_id === r.user_id;
               return (
@@ -287,7 +301,7 @@ function PushNotificationsPage() {
                       }`}
                     >
                       <Smartphone className="h-3 w-3" />
-                      {r.device_count} disp.
+                      Dispositivos: {r.device_count}
                     </span>
                   </div>
                 </button>
@@ -296,10 +310,13 @@ function PushNotificationsPage() {
           </div>
         )}
 
-        {!searching && results.length === 0 && query && (
-          <p className="mt-4 text-center text-xs text-white/40">Nenhum usuário encontrado</p>
+        {!loading && results.length === 0 && (
+          <p className="mt-4 text-center text-xs text-white/40">
+            {allUsers.length === 0 ? "Nenhum usuário cadastrado" : "Nenhum usuário corresponde ao filtro"}
+          </p>
         )}
       </div>
+
 
       {/* Composição */}
       <div className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
