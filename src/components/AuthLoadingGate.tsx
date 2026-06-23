@@ -11,11 +11,10 @@ async function hideNativeSplash() {
   try {
     if (Capacitor.isNativePlatform()) {
       const { SplashScreen } = await import("@capacitor/splash-screen");
-      // DIAGNÓSTICO TEMPORÁRIO — segura o splash nativo por 1s antes de esconder
-      await new Promise((r) => setTimeout(r, 1000));
       await SplashScreen.hide({ fadeOutDuration: 200 });
     }
   } catch {
+
     // ignore
   }
 }
