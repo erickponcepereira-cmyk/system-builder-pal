@@ -64,7 +64,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="pt-BR" className="dark" data-theme="dark">
       <head>
         <HeadContent />
-        <link rel="manifest" href="/manifest.webmanifest" />
+        {/* manifest desabilitado temporariamente para teste PWA-off no APK */}
         <link rel="apple-touch-icon" href="/fitmind-logo.png" />
         <script
           dangerouslySetInnerHTML={{
