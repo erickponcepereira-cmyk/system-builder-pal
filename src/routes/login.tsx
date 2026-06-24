@@ -31,6 +31,13 @@ function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  useEffect(() => {
+    console.log("[LOGIN] mounted", performance.now());
+    return () => {
+      console.log("[LOGIN] unmounted", performance.now());
+    };
+  }, []);
+
   // Se já existir sessão válida, mandar direto para o seletor de portal.
   useEffect(() => {
     let active = true;
@@ -42,6 +49,7 @@ function LoginPage() {
     })();
     return () => { active = false; };
   }, [navigate]);
+
 
   const goToPortalSelector = () => {
     sessionStorage.removeItem("fitmind_selected_area");
