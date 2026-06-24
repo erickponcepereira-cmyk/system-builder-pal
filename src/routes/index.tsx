@@ -1,7 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Logo } from "@/components/Logo";
-import { InstallAppButton } from "@/components/InstallAppButton";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,5 +31,14 @@ function Index() {
       console.log("[INDEX] unmounted");
     };
   }, []);
-  return null;
+
+  return (
+    <div
+      style={{
+        width: "100vw",
+        height: "100vh",
+        background: "#0b0707",
+      }}
+    />
+  );
 }
