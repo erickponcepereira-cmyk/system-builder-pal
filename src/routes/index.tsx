@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,10 +36,16 @@ function Index() {
   return (
     <div
       style={{
-        width: "100vw",
-        height: "100vh",
+        position: "fixed",
+        inset: 0,
         background: "#0b0707",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
       }}
-    />
+    >
+      <Logo className="h-32 w-auto object-contain" alt="FitMind" />
+    </div>
   );
 }
