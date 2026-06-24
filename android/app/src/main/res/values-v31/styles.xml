@@ -15,5 +15,10 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="android:windowSplashScreenAnimationDuration">200</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <!-- Android 12+: usa o ícone do splash mesmo em cold start,
+             evita revelar snapshot/branco durante o fade. -->
+        <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+        <!-- Bloqueia snapshot da Activity anterior. -->
+        <item name="android:windowDisablePreview">true</item>
     </style>
 </resources>
