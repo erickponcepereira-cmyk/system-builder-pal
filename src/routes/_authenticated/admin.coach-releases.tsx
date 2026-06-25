@@ -208,7 +208,7 @@ function CoachReleasesPage() {
                     <div className="ml-auto">
                       <button
                         disabled={quizDone || (busy?.id === r.id && busy?.step === "quiz")}
-                        onClick={() => run(r.id, "quiz", () => approveQuiz({ data: { coachId: r.id } }), "Quiz aprovado")}
+                        onClick={() => run(r.id, "quiz", () => approveQuiz({ data: { coachId: r.id } }), "Quiz aprovado", r.profile?.id)}
                         className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/15 disabled:opacity-40"
                       >
                         {busy?.id === r.id && busy?.step === "quiz" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
