@@ -343,23 +343,36 @@ function CoachReleasesPage() {
                   </button>
 
                   {/* 2. Marcar pagamento (concessão admin — exige justificativa) */}
-                  <button
-                    disabled={paymentDone || (busy?.id === r.id && busy?.step === "payment")}
-                    onClick={() => {
-                      const note = window.prompt(
-                        "Justifique a concessão da ativação (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 25/06'."
+                  <div className="flex flex-col gap-1">
+                    <button
+                      disabled={paymentDone || (busy?.id === r.id && busy?.step === "payment")}
+                      onClick={() => {
+                        const note = window.prompt(
+                          "Justifique a concessão da ativação (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 25/06'."
+                        );
+                        if (!note || note.trim().length < 5) {
+                          toast.error("Justificativa obrigatória.");
+                          return;
+                        }
+                        run(r.id, "payment", () => markPaid({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
+                    >
+                      {busy?.id === r.id && busy?.step === "payment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                      {paymentDone ? `Pago em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Conceder ativação"}
+                    </button>
+                    {paymentDone && (() => {
+                      const src = r.activation_source ?? (r.already_coach ? "already_coach" : null);
+                      const b = src ? ACTIVATION_SOURCE_BADGE[src] : null;
+                      return (
+                        <span className={`self-start inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b?.cls ?? "bg-white/10 text-white/60"}`}>
+                          Origem: {b?.label ?? "não informada"}
+                          {r.activation_note ? ` · ${r.activation_note}` : ""}
+                        </span>
                       );
-                      if (!note || note.trim().length < 5) {
-                        toast.error("Justificativa obrigatória.");
-                        return;
-                      }
-                      run(r.id, "payment", () => markPaid({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
-                  >
-                    {busy?.id === r.id && busy?.step === "payment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
-                    {paymentDone ? `Pago em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Conceder ativação"}
-                  </button>
+                    })()}
+                  </div>
+
 
 
                   {/* 3. Aprovar quiz */}
