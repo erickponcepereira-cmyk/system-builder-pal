@@ -77,7 +77,7 @@ function Index() {
             color: "rgba(255,255,255,0.72)",
           }}
         >
-          Conectando corpo e mente para a sua melhor versão.
+          Conectando corpo e mente para uma versão melhor.
         </p>
         <p
           style={{
