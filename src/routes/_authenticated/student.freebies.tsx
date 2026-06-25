@@ -335,26 +335,6 @@ function StudentFreebies() {
               }, 0);
               return (
                 <div className="mb-6 space-y-5">
-                  {(totalSavings > 0 || savedTotal > 0) && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Disponível pra economizar</p>
-                        <p className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-300">
-                          R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <p className="mt-1 text-[10px] text-white/55">
-                          {pageMode === "discount" ? "Usando todos os cupons ativos." : "Resgatando os benefícios gratuitos."}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Você já economizou</p>
-                        <p className="mt-1 text-xl sm:text-2xl font-extrabold text-primary">
-                          R$ {savedTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <p className="mt-1 text-[10px] text-white/55">Cupons já validados pelos parceiros.</p>
-                      </div>
-                    </div>
-                  )}
                   <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-primary" />
                     {pageMode === "discount" ? "Descontos de empresas parceiras" : "Brindes de empresas parceiras"}
