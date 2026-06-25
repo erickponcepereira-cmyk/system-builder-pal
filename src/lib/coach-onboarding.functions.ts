@@ -87,12 +87,14 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
               onboarding_stage: "awaiting_quiz_result",
               activation_paid_at: new Date().toISOString(),
               activation_order_id: (orderWithActivation as { id: string }).id,
-            })
+              activation_source: "purchased",
+            } as never)
             .eq("id", coach.id);
           stage = "awaiting_quiz_result";
         }
       }
     }
+
 
     return {
       isCoach: true as const,
