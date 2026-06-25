@@ -186,7 +186,7 @@ function CoachReleasesPage() {
                   {/* 2. Marcar pagamento */}
                   <button
                     disabled={paymentDone || (busy?.id === r.id && busy?.step === "payment")}
-                    onClick={() => run(r.id, "payment", () => markPaid({ data: { coachId: r.id } }), "Ativação marcada como paga")}
+                    onClick={() => run(r.id, "payment", () => markPaid({ data: { coachId: r.id } }), "Ativação marcada como paga", r.profile?.id)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
                   >
                     {busy?.id === r.id && busy?.step === "payment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
