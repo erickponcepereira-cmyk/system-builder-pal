@@ -72,11 +72,27 @@ type AuditEntry = {
 };
 
 const ACTION_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
-  coach_email_confirmed: { label: "E-mail confirmado", icon: Mail },
-  coach_activation_paid: { label: "Ativação paga", icon: CreditCard },
-  coach_quiz_approved: { label: "Quiz aprovado", icon: FileCheck2 },
-  coach_id_assigned_released: { label: "ID atribuído e painel liberado", icon: KeyRound },
+  coach_email_confirmed:          { label: "E-mail confirmado", icon: Mail },
+  coach_activation_paid:          { label: "Ativação concedida pelo admin", icon: CreditCard },
+  coach_activation_already_coach: { label: "Ativação: clicou em 'Já sou coach'", icon: CreditCard },
+  coach_activation_purchased:     { label: "Ativação: comprou na loja", icon: CreditCard },
+  coach_activation_mercadopago:   { label: "Ativação: paga via Mercado Pago", icon: CreditCard },
+  coach_activation_partner:       { label: "Ativação: parceiro aprovado", icon: CreditCard },
+  coach_activation_unknown:       { label: "Ativação registrada (origem desconhecida)", icon: CreditCard },
+  coach_quiz_submitted:           { label: "Quiz enviado pelo coach", icon: FileCheck2 },
+  coach_quiz_approved:            { label: "Quiz aprovado", icon: FileCheck2 },
+  coach_self_unlocked:            { label: "Coach liberou painel com ID", icon: KeyRound },
+  coach_id_assigned_released:     { label: "ID atribuído e painel liberado", icon: KeyRound },
 };
+
+const ACTIVATION_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
+  already_coach:    { label: "Já sou coach",       cls: "bg-blue-500/15 text-blue-300" },
+  purchased:        { label: "Comprou na loja",    cls: "bg-emerald-500/15 text-emerald-300" },
+  mercadopago:      { label: "Pago no Mercado Pago", cls: "bg-emerald-500/15 text-emerald-300" },
+  partner_approved: { label: "Parceiro aprovado",  cls: "bg-cyan-500/15 text-cyan-300" },
+  admin_grant:      { label: "Concedida pelo admin", cls: "bg-amber-500/15 text-amber-300" },
+};
+
 
 function CoachReleasesPage() {
   const fetchList = useServerFn(listAllCoachReleases);
