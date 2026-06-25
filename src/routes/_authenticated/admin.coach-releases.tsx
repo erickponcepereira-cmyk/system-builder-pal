@@ -46,17 +46,35 @@ function Step({
   );
 }
 
+type AuditEntry = {
+  id: string;
+  action: string;
+  notes: string | null;
+  created_at: string;
+  actor_name: string;
+};
+
+const ACTION_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  coach_email_confirmed: { label: "E-mail confirmado", icon: Mail },
+  coach_activation_paid: { label: "Ativação paga", icon: CreditCard },
+  coach_quiz_approved: { label: "Quiz aprovado", icon: FileCheck2 },
+  coach_id_assigned_released: { label: "ID atribuído e painel liberado", icon: KeyRound },
+};
+
 function CoachReleasesPage() {
   const fetchList = useServerFn(listAllCoachReleases);
   const confirmEmail = useServerFn(adminConfirmCoachEmail);
   const markPaid = useServerFn(adminMarkActivationPaid);
   const approveQuiz = useServerFn(adminApproveQuiz);
   const assignAndRelease = useServerFn(adminAssignCoachIdAndRelease);
+  const fetchAudit = useServerFn(getCoachReleaseAudit);
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<{ id: string; step: StepKey } | null>(null);
   const [idDrafts, setIdDrafts] = useState<Record<string, string>>({});
+  const [openAudit, setOpenAudit] = useState<Record<string, boolean>>({});
+  const [auditByCoach, setAuditByCoach] = useState<Record<string, AuditEntry[] | "loading">>({});
 
   const reload = async () => {
     setLoading(true);
