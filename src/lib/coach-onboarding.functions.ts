@@ -531,10 +531,57 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
       })
     );
 
+    // Mensalidade por user_id: pega assinatura + última fatura
+    const subUserIds = rows.map((r) => r.profile?.user_id).filter(Boolean) as string[];
+    const { data: subs } = subUserIds.length
+      ? await supabaseAdmin
+          .from("user_subscriptions")
+          .select("user_id, status, paid_until, exempt_until")
+          .in("user_id", subUserIds)
+      : { data: [] };
+    const subMap = new Map(
+      ((subs || []) as Array<{ user_id: string; status: string; paid_until: string | null; exempt_until: string | null }>)
+        .map((s) => [s.user_id, s])
+    );
+    const { data: invs } = subUserIds.length
+      ? await supabaseAdmin
+          .from("subscription_invoices")
+          .select("user_id, status, reference_month, due_date")
+          .in("user_id", subUserIds)
+          .order("reference_month", { ascending: false })
+      : { data: [] };
+    const invMap = new Map<string, { status: string; reference_month: string; due_date: string }>();
+    for (const i of (invs || []) as Array<{ user_id: string; status: string; reference_month: string; due_date: string }>) {
+      if (!invMap.has(i.user_id)) invMap.set(i.user_id, i);
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const computeMonthly = (uid?: string) => {
+      if (!uid) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+      const sub = subMap.get(uid);
+      const inv = invMap.get(uid) || null;
+      if (!sub && !inv) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+      let status: "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none" = "none";
+      if (sub && (sub.status === "exempt_monthly" || sub.status === "exempt_annual" || sub.status === "exempt_permanent")) status = "exempt";
+      else if (inv?.status === "blocked") status = "blocked";
+      else if (inv?.status === "overdue") status = "overdue";
+      else if (inv?.status === "pending") status = "pending";
+      else if (sub?.paid_until && sub.paid_until >= today) status = "paid";
+      else if (inv?.status === "paid") status = "paid";
+      else if (inv?.status === "exempted") status = "exempt";
+      else if (inv?.status === "cancelled") status = "cancelled";
+      return {
+        status,
+        paid_until: sub?.paid_until ?? null,
+        last_invoice_status: inv?.status ?? null,
+        last_invoice_month: inv?.reference_month ?? null,
+      };
+    };
+
     return rows.map((r) => ({
       ...r,
       upline_name: r.upline_coach_id ? uplineMap.get(r.upline_coach_id) || null : null,
       email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
+      monthly: computeMonthly(r.profile?.user_id),
     }));
   });
 
