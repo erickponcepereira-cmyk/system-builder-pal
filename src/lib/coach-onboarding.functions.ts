@@ -592,6 +592,7 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
       upline_name: r.upline_coach_id ? uplineMap.get(r.upline_coach_id) || null : null,
       email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
       monthly: computeMonthly(r.profile?.user_id),
+      partner_status: r.profile?.id ? partnerMap.get(r.profile.id) ?? null : null,
     }));
   });
 
