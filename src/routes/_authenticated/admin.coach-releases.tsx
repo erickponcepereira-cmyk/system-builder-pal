@@ -79,10 +79,16 @@ function CoachReleasesPage() {
   const [openAudit, setOpenAudit] = useState<Record<string, boolean>>({});
   const [auditByCoach, setAuditByCoach] = useState<Record<string, AuditEntry[] | "loading">>({});
 
+  // Filtros
+  const [query, setQuery] = useState("");
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [alreadyCoach, setAlreadyCoach] = useState<AlreadyCoachFilter>("all");
+  const [includeReleased, setIncludeReleased] = useState(false);
+
   const reload = async () => {
     setLoading(true);
     try {
-      const data = (await fetchList()) as unknown as Row[];
+      const data = (await fetchList({ data: { includeReleased } })) as unknown as Row[];
       setRows(data || []);
     } catch (e) {
       toast.error((e as Error).message);
@@ -90,7 +96,7 @@ function CoachReleasesPage() {
       setLoading(false);
     }
   };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [includeReleased]);
 
   const loadAudit = async (coachId: string, profileId: string) => {
     setAuditByCoach((s) => ({ ...s, [coachId]: "loading" }));
