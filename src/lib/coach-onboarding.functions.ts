@@ -87,12 +87,14 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
               onboarding_stage: "awaiting_quiz_result",
               activation_paid_at: new Date().toISOString(),
               activation_order_id: (orderWithActivation as { id: string }).id,
-            })
+              activation_source: "purchased",
+            } as never)
             .eq("id", coach.id);
           stage = "awaiting_quiz_result";
         }
       }
     }
+
 
     return {
       isCoach: true as const,
@@ -128,8 +130,10 @@ export const markAlreadyCoach = createServerFn({ method: "POST" })
         already_coach: true,
         onboarding_stage: "awaiting_quiz_result",
         activation_paid_at: new Date().toISOString(),
+        activation_source: "already_coach",
       } as never)
       .eq("id", coach.id);
+
     const { notifyAdmins } = await import("./coach-onboarding.server");
     await notifyAdmins(
       "Coach já formado solicitou liberação",
@@ -551,7 +555,12 @@ export const adminConfirmCoachEmail = createServerFn({ method: "POST" })
 
 export const adminMarkActivationPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
+  .inputValidator((input) =>
+    z.object({
+      coachId: z.string().uuid(),
+      note: z.string().trim().min(5, "Justificativa obrigatória (mín. 5 caracteres)").max(500),
+    }).parse(input)
+  )
   .handler(async ({ data, context }) => {
     const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -565,8 +574,11 @@ export const adminMarkActivationPaid = createServerFn({ method: "POST" })
       : coach.onboarding_stage;
     await supabaseAdmin.from("coaches").update({
       activation_paid_at: coach.activation_paid_at || nowIso,
+      activation_source: "admin_grant",
+      activation_granted_by: context.userId,
+      activation_note: data.note,
       onboarding_stage: nextStage,
-    }).eq("id", coach.id);
+    } as never).eq("id", coach.id);
     await supabaseAdmin.from("notifications").insert({
       profile_id: coach.profile_id,
       type: "coach_onboarding",
@@ -574,9 +586,10 @@ export const adminMarkActivationPaid = createServerFn({ method: "POST" })
       message: "Agora envie o resultado do quiz comportamental para seguir.",
       action_url: "/coach",
     });
-    await logCoachAudit(actorId, coach.profile_id, "coach_activation_paid", "Ativação marcada como paga pelo admin");
+    await logCoachAudit(actorId, coach.profile_id, "coach_activation_paid", `Ativação concedida pelo admin. Motivo: ${data.note}`);
     return { ok: true };
   });
+
 
 export const adminApproveQuiz = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

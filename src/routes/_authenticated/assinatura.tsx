@@ -161,7 +161,11 @@ function AssinaturaPage() {
                     <div className="rounded-lg bg-black/30 p-3">
                       <p className="text-xs uppercase text-white/40">Status</p>
                       <p className="font-bold">
-                        {annual.active ? "Ativa" : annual.source === "none" ? "Não iniciada" : "Vencida"}
+                        {!annual.active ? (annual.source === "none" ? "Não iniciada" : "Vencida") :
+                          annual.source === "purchased" ? "Ativa (paga)" :
+                          annual.source === "already_coach" ? "Ativa (já era coach)" :
+                          annual.source === "admin_grant" ? "Ativa (concedida)" :
+                          "Ativa (isenta)"}
                       </p>
                     </div>
                     <div className="rounded-lg bg-black/30 p-3">
@@ -183,7 +187,18 @@ function AssinaturaPage() {
                       Você é isento: a anuidade começa a contar a partir da finalização do seu cadastro.
                     </p>
                   )}
+                  {annual.source === "already_coach" && (
+                    <p className="mt-3 text-xs text-white/50">
+                      Ativação registrada via opção "Já sou coach". Não houve cobrança financeira.
+                    </p>
+                  )}
+                  {annual.source === "admin_grant" && (
+                    <p className="mt-3 text-xs text-white/50">
+                      Ativação concedida manualmente pelo administrador{annual.note ? ` — motivo: ${annual.note}` : ""}.
+                    </p>
+                  )}
                 </div>
+
 
                 {!annual.active && annual.isCoach && (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/70">

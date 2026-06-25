@@ -2115,8 +2115,11 @@ export type Database = {
       }
       coaches: {
         Row: {
+          activation_granted_by: string | null
+          activation_note: string | null
           activation_order_id: string | null
           activation_paid_at: string | null
+          activation_source: string | null
           already_coach: boolean
           approved_at: string | null
           approved_by: string | null
@@ -2173,8 +2176,11 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          activation_granted_by?: string | null
+          activation_note?: string | null
           activation_order_id?: string | null
           activation_paid_at?: string | null
+          activation_source?: string | null
           already_coach?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -2231,8 +2237,11 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          activation_granted_by?: string | null
+          activation_note?: string | null
           activation_order_id?: string | null
           activation_paid_at?: string | null
+          activation_source?: string | null
           already_coach?: boolean
           approved_at?: string | null
           approved_by?: string | null
