@@ -140,19 +140,94 @@ function CoachReleasesPage() {
         </p>
       </div>
 
+  const q = query.trim().toLowerCase();
+  const filtered = rows.filter((r) => {
+    if (alreadyCoach === "yes" && !r.already_coach) return false;
+    if (alreadyCoach === "no" && r.already_coach) return false;
+
+    if (stageFilter !== "all") {
+      const emailDone = r.email_confirmed;
+      const paymentDone = !!r.activation_paid_at;
+      const quizDone = r.onboarding_stage === "awaiting_upline_release" || !!r.approved_at;
+      const released = r.onboarding_stage === "released";
+      if (stageFilter === "released" && !released) return false;
+      if (stageFilter === "email" && emailDone) return false;
+      if (stageFilter === "payment" && (!emailDone || paymentDone)) return false;
+      if (stageFilter === "quiz" && (!paymentDone || quizDone)) return false;
+      if (stageFilter === "id" && (!quizDone || released)) return false;
+    }
+
+    if (q) {
+      const hay = [
+        r.profile?.name, r.profile?.email, r.profile?.phone,
+        r.coach_number ? String(r.coach_number) : "",
+      ].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Liberar Coaches</h1>
+        <p className="mt-1 text-sm text-white/60">
+          Liberação por etapas. Cada checkpoint pode ser confirmado manualmente pelo admin.
+        </p>
+      </div>
+
+      {/* Filtros */}
+      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto]">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por nome, e-mail, telefone ou ID"
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <select
+          value={stageFilter}
+          onChange={(e) => setStageFilter(e.target.value as StageFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Todas as etapas</option>
+          <option value="email">Aguardando e-mail</option>
+          <option value="payment">Aguardando ativação</option>
+          <option value="quiz">Aguardando quiz</option>
+          <option value="id">Aguardando ID + liberação</option>
+          <option value="released">Já liberados</option>
+        </select>
+        <select
+          value={alreadyCoach}
+          onChange={(e) => setAlreadyCoach(e.target.value as AlreadyCoachFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Todos</option>
+          <option value="yes">Já era coach</option>
+          <option value="no">Novo coach</option>
+        </select>
+        <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
+          <input
+            type="checkbox"
+            checked={includeReleased}
+            onChange={(e) => setIncludeReleased(e.target.checked)}
+          />
+          Incluir liberados
+        </label>
+      </div>
+
       {loading ? (
         <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
-      ) : rows.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
-          Nenhum coach pendente.
+          Nenhum coach encontrado com os filtros atuais.
         </div>
       ) : (
         <div className="space-y-3">
-          {rows.map((r) => {
+          {filtered.map((r) => {
             const emailDone = r.email_confirmed;
             const paymentDone = !!r.activation_paid_at;
             const quizDone = r.onboarding_stage === "awaiting_upline_release" || !!r.approved_at;
-            const releaseDone = false; // se aparece aqui, ainda não está liberado
+            const releaseDone = r.onboarding_stage === "released";
             const draftId = idDrafts[r.id] ?? "";
 
             return (
