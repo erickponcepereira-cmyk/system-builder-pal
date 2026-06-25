@@ -239,7 +239,9 @@ function CoachReleasesPage() {
                         {r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
                       </span>
                     )}
+                  </div>
                 </div>
+
 
                 {/* Trilha de etapas */}
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
