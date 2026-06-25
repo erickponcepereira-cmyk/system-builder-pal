@@ -487,7 +487,7 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
     const { data: coaches } = await supabaseAdmin
       .from("coaches")
       .select(
-        "id, onboarding_stage, quiz_result_url, quiz_result_submitted_at, activation_paid_at, approved_at, coach_number, upline_coach_id, already_coach, profile:profiles!coaches_profile_id_fkey(id,name,email,phone,user_id)"
+        "id, onboarding_stage, quiz_result_url, quiz_result_submitted_at, activation_paid_at, approved_at, coach_number, upline_coach_id, already_coach, is_professional, profile:profiles!coaches_profile_id_fkey(id,name,email,phone,user_id)"
       )
       .in("onboarding_stage", stages)
       .order("created_at", { ascending: false });
@@ -502,8 +502,18 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
       coach_number: number | null;
       upline_coach_id: string | null;
       already_coach: boolean | null;
+      is_professional: boolean | null;
       profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
     }>;
+
+    // Partner status por profile_id
+    const profileIds = rows.map((r) => r.profile?.id).filter(Boolean) as string[];
+    const { data: partnersData } = profileIds.length
+      ? await supabaseAdmin.from("partners").select("profile_id, status").in("profile_id", profileIds)
+      : { data: [] };
+    const partnerMap = new Map(
+      ((partnersData || []) as Array<{ profile_id: string; status: string }>).map((p) => [p.profile_id, p.status])
+    );
 
     // upline names
     const uplineIds = [...new Set(rows.map((r) => r.upline_coach_id).filter(Boolean) as string[])];
@@ -582,6 +592,7 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
       upline_name: r.upline_coach_id ? uplineMap.get(r.upline_coach_id) || null : null,
       email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
       monthly: computeMonthly(r.profile?.user_id),
+      partner_status: r.profile?.id ? partnerMap.get(r.profile.id) ?? null : null,
     }));
   });
 
