@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.lovable.fitmind",
-  appName: "FitMind",
+  appName: "FitMind Club",
   webDir: "dist",
   // Cor de fundo do WebView ANTES do primeiro paint do React.
   // Evita o frame branco entre o SplashScreen nativo e o React.
