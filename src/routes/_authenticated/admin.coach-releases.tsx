@@ -219,6 +219,20 @@ function CoachReleasesPage() {
           <option value="yes">Já era coach</option>
           <option value="no">Novo coach</option>
         </select>
+        <select
+          value={monthlyFilter}
+          onChange={(e) => setMonthlyFilter(e.target.value as MonthlyFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Mensalidade: todas</option>
+          <option value="paid">Paga</option>
+          <option value="exempt">Isenta</option>
+          <option value="pending">Pendente</option>
+          <option value="overdue">Atrasada</option>
+          <option value="blocked">Bloqueada</option>
+          <option value="cancelled">Cancelada</option>
+          <option value="none">Sem mensalidade</option>
+        </select>
         <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
           <input
             type="checkbox"
