@@ -378,6 +378,23 @@ function CoachReleasesPage() {
                       onChange={(e) => setIdDrafts((s) => ({ ...s, [r.id]: e.target.value.replace(/\D/g, "") }))}
                       className="w-28 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-primary"
                     />
+                    {(() => {
+                      const m = r.monthly ?? { status: "none" as MonthlyStatus, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+                      const b = MONTHLY_BADGE[m.status];
+                      const tip = [
+                        m.paid_until ? `Paga até ${new Date(m.paid_until).toLocaleDateString("pt-BR")}` : null,
+                        m.last_invoice_month ? `Última fatura: ${m.last_invoice_month}${m.last_invoice_status ? ` (${m.last_invoice_status})` : ""}` : null,
+                        "A cadeia só finaliza quando a mensalidade for paga.",
+                      ].filter(Boolean).join(" · ");
+                      return (
+                        <span
+                          title={tip}
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b.cls}`}
+                        >
+                          {b.label}
+                        </span>
+                      );
+                    })()}
                     <div className="ml-auto">
                       <button
                         disabled={!quizDone || (busy?.id === r.id && busy?.step === "release")}
