@@ -7946,8 +7946,10 @@ export type Database = {
       subscription_plans: {
         Row: {
           active: boolean
+          billing_cycle: Database["public"]["Enums"]["subscription_billing_cycle"]
           created_at: string
           default_amount: number
+          description: string | null
           grace_days: number
           id: string
           name: string
@@ -7955,8 +7957,10 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          billing_cycle?: Database["public"]["Enums"]["subscription_billing_cycle"]
           created_at?: string
           default_amount?: number
+          description?: string | null
           grace_days?: number
           id?: string
           name: string
@@ -7964,8 +7968,10 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          billing_cycle?: Database["public"]["Enums"]["subscription_billing_cycle"]
           created_at?: string
           default_amount?: number
+          description?: string | null
           grace_days?: number
           id?: string
           name?: string
@@ -8345,6 +8351,9 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          billing_cycle:
+            | Database["public"]["Enums"]["subscription_billing_cycle"]
+            | null
           billing_day: number
           created_at: string
           custom_amount: number | null
@@ -8352,6 +8361,7 @@ export type Database = {
           id: string
           next_invoice_month: string | null
           notes: string | null
+          paid_until: string | null
           plan_id: string
           preferred_payment_method: Database["public"]["Enums"]["invoice_payment_method"]
           start_date: string
@@ -8360,6 +8370,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_cycle?:
+            | Database["public"]["Enums"]["subscription_billing_cycle"]
+            | null
           billing_day?: number
           created_at?: string
           custom_amount?: number | null
@@ -8367,6 +8380,7 @@ export type Database = {
           id?: string
           next_invoice_month?: string | null
           notes?: string | null
+          paid_until?: string | null
           plan_id: string
           preferred_payment_method?: Database["public"]["Enums"]["invoice_payment_method"]
           start_date?: string
@@ -8375,6 +8389,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_cycle?:
+            | Database["public"]["Enums"]["subscription_billing_cycle"]
+            | null
           billing_day?: number
           created_at?: string
           custom_amount?: number | null
@@ -8382,6 +8399,7 @@ export type Database = {
           id?: string
           next_invoice_month?: string | null
           notes?: string | null
+          paid_until?: string | null
           plan_id?: string
           preferred_payment_method?: Database["public"]["Enums"]["invoice_payment_method"]
           start_date?: string
@@ -9313,6 +9331,7 @@ export type Database = {
         Args: { _student_id?: string }
         Returns: Json
       }
+      has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_coach_badge: {
         Args: {
           _badge: Database["public"]["Enums"]["coach_badge_key"]
@@ -9712,6 +9731,7 @@ export type Database = {
         | "health_pro_course"
         | "room_rental"
         | "live_class"
+      subscription_billing_cycle: "monthly" | "yearly"
       subscription_status:
         | "active"
         | "expired"
@@ -9963,6 +9983,7 @@ export const Constants = {
         "room_rental",
         "live_class",
       ],
+      subscription_billing_cycle: ["monthly", "yearly"],
       subscription_status: [
         "active",
         "expired",
