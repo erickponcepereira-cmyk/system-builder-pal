@@ -30,6 +30,8 @@ type Row = {
   upline_coach_id: string | null;
   upline_name: string | null;
   already_coach: boolean | null;
+  is_professional: boolean | null;
+  partner_status: string | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
   monthly: {
