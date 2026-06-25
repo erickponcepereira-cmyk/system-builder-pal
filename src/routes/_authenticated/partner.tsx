@@ -605,18 +605,22 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   </p>
                 </div>
               )}
-              {editing.kind === "free" && editing.redemption_mode === "discount" && (
+              {editing.kind === "free" && (
                 <Field label="Porcentagem do desconto (%)">
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     max={100}
                     value={editing.discount_percent ?? ""}
-                    onChange={e => setEditing({ ...editing, discount_percent: e.target.value === "" ? null : Math.min(100, Math.max(1, Number(e.target.value))) })}
-                    placeholder="Ex.: 20"
+                    onChange={e => setEditing({ ...editing, discount_percent: e.target.value === "" ? null : Math.min(100, Math.max(0, Number(e.target.value))) })}
+                    placeholder={editing.redemption_mode === "discount" ? "Ex.: 20" : "Opcional (ex.: 20)"}
                     className="field-input"
                   />
-                  <p className="mt-1 text-[10px] text-white/40">Aparece em destaque para o aluno como "X% OFF".</p>
+                  <p className="mt-1 text-[10px] text-white/40">
+                    {editing.redemption_mode === "discount"
+                      ? 'Aparece em destaque para o aluno como "X% OFF".'
+                      : "Opcional. Se preencher, o cupom também mostrará o desconto ao aluno."}
+                  </p>
                 </Field>
               )}
 
