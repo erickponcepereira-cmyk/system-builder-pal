@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
 
 type Row = {
   id: string;
-  onboarding_stage: "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release";
+  onboarding_stage: "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release" | "released";
   quiz_result_url: string | null;
   quiz_result_submitted_at: string | null;
   activation_paid_at: string | null;
@@ -31,6 +31,9 @@ type Row = {
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
 };
+
+type StageFilter = "all" | "email" | "payment" | "quiz" | "id" | "released";
+type AlreadyCoachFilter = "all" | "yes" | "no";
 
 type StepKey = "email" | "payment" | "quiz" | "release";
 
