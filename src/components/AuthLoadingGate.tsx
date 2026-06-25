@@ -103,7 +103,7 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 28,
+          gap: 0,
           zIndex: 9999,
           padding: "0 32px",
         }}
@@ -119,11 +119,12 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
           }
         `}</style>
         <Logo
-          className="h-28 sm:h-36 w-auto object-contain"
+          className="h-32 sm:h-42 w-auto object-contain"
           alt="FitMind Club"
           style={{
             animation: "fm-splash-logo 400ms cubic-bezier(0.22, 1, 0.36, 1) both",
             willChange: "opacity, transform",
+            marginBottom: 16,
           } as React.CSSProperties}
         />
         <p
