@@ -487,7 +487,7 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
     const { data: coaches } = await supabaseAdmin
       .from("coaches")
       .select(
-        "id, onboarding_stage, quiz_result_url, quiz_result_submitted_at, activation_paid_at, approved_at, coach_number, upline_coach_id, already_coach, is_professional, profile:profiles!coaches_profile_id_fkey(id,name,email,phone,user_id)"
+        "id, onboarding_stage, quiz_result_url, quiz_result_submitted_at, activation_paid_at, approved_at, coach_number, upline_coach_id, already_coach, is_professional, activation_source, activation_note, activation_granted_by, profile:profiles!coaches_profile_id_fkey(id,name,email,phone,user_id)"
       )
       .in("onboarding_stage", stages)
       .order("created_at", { ascending: false });
@@ -503,8 +503,12 @@ export const listAllCoachReleases = createServerFn({ method: "GET" })
       upline_coach_id: string | null;
       already_coach: boolean | null;
       is_professional: boolean | null;
+      activation_source: string | null;
+      activation_note: string | null;
+      activation_granted_by: string | null;
       profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
     }>;
+
 
     // Partner status por profile_id
     const profileIds = rows.map((r) => r.profile?.id).filter(Boolean) as string[];
