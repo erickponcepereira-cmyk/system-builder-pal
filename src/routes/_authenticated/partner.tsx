@@ -588,17 +588,27 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </select>
               </div>
               {editing.kind === "free" && (
-                <div>
-                  <label className="text-xs text-white/60">Modalidade do benefício</label>
-                  <select
-                    value={editing.redemption_mode || "free"}
-                    onChange={e => setEditing({ ...editing, redemption_mode: e.target.value as "free" | "discount" })}
-                    className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-white"
-                  >
-                    <option value="free">Gratuito — produto/serviço sem custo</option>
-                    <option value="discount">Desconto — cupom de desconto sobre o preço normal</option>
-                  </select>
-                  <p className="mt-1 text-[10px] text-white/40">
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+                  <label className="text-xs font-bold text-primary">Modalidade do benefício</label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ ...editing, redemption_mode: "free" })}
+                      className={`rounded-lg px-3 py-2 text-xs font-bold transition ${(editing.redemption_mode || "free") === "free" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+                    >
+                      Gratuito
+                      <span className="block text-[9px] font-normal opacity-80 mt-0.5">Produto/serviço sem custo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ ...editing, redemption_mode: "discount" })}
+                      className={`rounded-lg px-3 py-2 text-xs font-bold transition ${editing.redemption_mode === "discount" ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+                    >
+                      Cupom de desconto
+                      <span className="block text-[9px] font-normal opacity-80 mt-0.5">% OFF sobre o preço normal</span>
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[10px] text-white/50">
                     {editing.redemption_mode === "discount"
                       ? "O aluno gera um cupom para apresentar e receber desconto no estabelecimento."
                       : "O aluno gera um cupom para resgatar o item/serviço gratuitamente."}
