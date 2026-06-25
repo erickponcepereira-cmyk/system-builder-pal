@@ -17,14 +17,20 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchAutoHide: false,
       launchShowDuration: 0,
-      backgroundColor: "#0b0707",
+      backgroundColor: "#0B0707",
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true,
-      // Android 12+ SplashScreen API
       useDialog: false,
+    },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_notify",
+      iconColor: "#FF4A3D",
     },
   },
 };
