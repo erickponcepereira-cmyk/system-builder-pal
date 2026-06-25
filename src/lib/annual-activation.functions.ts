@@ -70,3 +70,59 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
       daysRemaining,
     };
   });
+
+/**
+ * Admin: retorna o estado da anuidade de TODOS os usuários (indexado por user_id).
+ * Usado na aba "Faturas" da página de Mensalidades para exibir uma coluna extra
+ * com o status da anuidade ao lado da mensalidade.
+ */
+export const listAllAnnualActivationsAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coaches } = await supabaseAdmin
+      .from("coaches")
+      .select("id, profile_id, activation_paid_at, created_at, already_coach, onboarding_stage, profile:profiles!coaches_profile_id_fkey(user_id, status)");
+
+    const today = new Date();
+    type Row = {
+      user_id: string;
+      paid_at: string | null;
+      valid_until: string | null;
+      source: "paid" | "exempt" | "none";
+      active: boolean;
+    };
+    const rows: Row[] = [];
+    for (const c of (coaches || []) as Array<{
+      activation_paid_at: string | null;
+      created_at: string;
+      already_coach: boolean | null;
+      onboarding_stage: string | null;
+      profile?: { user_id?: string; status?: string } | null;
+    }>) {
+      const uid = c.profile?.user_id;
+      if (!uid) continue;
+      let paidAt: Date | null = null;
+      let source: "paid" | "exempt" | "none" = "none";
+      if (c.activation_paid_at) {
+        paidAt = new Date(c.activation_paid_at);
+        source = "paid";
+      } else if (c.profile?.status === "active") {
+        paidAt = new Date(c.created_at);
+        source = "exempt";
+      }
+      const validUntil = paidAt ? addOneYear(paidAt) : null;
+      rows.push({
+        user_id: uid,
+        paid_at: paidAt ? paidAt.toISOString() : null,
+        valid_until: validUntil ? validUntil.toISOString() : null,
+        source,
+        active: validUntil ? validUntil >= today : false,
+      });
+    }
+    return rows;
+  });
