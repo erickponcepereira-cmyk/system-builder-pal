@@ -237,7 +237,7 @@ function CoachReleasesPage() {
                           if (!confirm(`Atribuir ID ${n} e liberar o painel de ${r.profile?.name || "este coach"}?`)) return;
                           run(r.id, "release",
                             () => assignAndRelease({ data: { coachId: r.id, coachNumber: n } }),
-                            "Coach liberado!");
+                            "Coach liberado!", r.profile?.id);
                         }}
                         className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                       >
