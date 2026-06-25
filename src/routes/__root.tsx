@@ -37,18 +37,18 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "google", content: "notranslate" },
-        { name: "theme-color", content: "#0b0707" },
+        { name: "theme-color", content: "#0B0707" },
         { name: "mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-        { name: "apple-mobile-web-app-title", content: "FitMind" },
-      { title: "FitMindClub" },
-      { name: "description", content: "Conectando corpo e mente para sua melhor versão" },
-      { property: "og:title", content: "FitMindClub" },
-      { property: "og:description", content: "Conectando corpo e mente para sua melhor versão" },
+        { name: "apple-mobile-web-app-title", content: "FitMind Club" },
+      { title: "FitMind Club" },
+      { name: "description", content: "Conectando corpo e mente para uma versão melhor" },
+      { property: "og:title", content: "FitMind Club" },
+      { property: "og:description", content: "Conectando corpo e mente para uma versão melhor" },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "FitMindClub" },
-      { name: "twitter:description", content: "Conectando corpo e mente para sua melhor versão" },
+      { name: "twitter:title", content: "FitMind Club" },
+      { name: "twitter:description", content: "Conectando corpo e mente para uma versão melhor" },
       { name: "twitter:card", content: "summary" },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d768d0e4-7126-4c16-beb9-93af0700e741/id-preview-8360213d--57e54ea4-86cc-4948-814d-71b2815329a0.lovable.app-1778073116639.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d768d0e4-7126-4c16-beb9-93af0700e741/id-preview-8360213d--57e54ea4-86cc-4948-814d-71b2815329a0.lovable.app-1778073116639.png" },
@@ -64,8 +64,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="pt-BR" className="dark" data-theme="dark">
       <head>
         <HeadContent />
-        {/* manifest desabilitado temporariamente para teste PWA-off no APK */}
-        <link rel="apple-touch-icon" href="/fitmind-logo.png" />
+        <link rel="icon" type="image/png" href="/fitmind-icon.png" />
+        <link rel="apple-touch-icon" href="/fitmind-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('fitmind_theme')||'dark';var r=document.documentElement;r.classList.remove('light','dark');r.classList.add(t);r.dataset.theme=t;}catch(e){}})();`,
