@@ -146,6 +146,8 @@ function CoachReleasesPage() {
     if (alreadyCoach === "yes" && !r.already_coach) return false;
     if (alreadyCoach === "no" && r.already_coach) return false;
 
+    if (monthlyFilter !== "all" && (r.monthly?.status ?? "none") !== monthlyFilter) return false;
+
     if (stageFilter !== "all") {
       const emailDone = r.email_confirmed;
       const paymentDone = !!r.activation_paid_at;
@@ -167,6 +169,16 @@ function CoachReleasesPage() {
     }
     return true;
   });
+
+  const MONTHLY_BADGE: Record<MonthlyStatus, { label: string; cls: string }> = {
+    paid:      { label: "Mensalidade paga",     cls: "bg-emerald-500/15 text-emerald-300" },
+    exempt:    { label: "Mensalidade isenta",   cls: "bg-blue-500/15 text-blue-300" },
+    pending:   { label: "Mensalidade pendente", cls: "bg-amber-500/15 text-amber-300" },
+    overdue:   { label: "Mensalidade atrasada", cls: "bg-orange-500/15 text-orange-300" },
+    blocked:   { label: "Mensalidade bloqueada",cls: "bg-red-500/15 text-red-300" },
+    cancelled: { label: "Mensalidade cancelada",cls: "bg-white/10 text-white/60" },
+    none:      { label: "Sem mensalidade",      cls: "bg-white/5 text-white/50" },
+  };
 
 
   return (
