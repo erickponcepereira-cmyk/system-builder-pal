@@ -532,13 +532,14 @@ export const adminConfirmCoachEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id").eq("id", data.coachId).maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
     const { confirmAuthEmailByProfileId } = await import("./admin-network.server");
     await confirmAuthEmailByProfileId(coach.profile_id);
+    await logCoachAudit(actorId, coach.profile_id, "coach_email_confirmed", "E-mail confirmado manualmente pelo admin");
     return { ok: true };
   });
 
