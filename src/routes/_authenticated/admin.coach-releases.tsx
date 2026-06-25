@@ -176,7 +176,7 @@ function CoachReleasesPage() {
                   {/* 1. Confirmar e-mail */}
                   <button
                     disabled={emailDone || (busy?.id === r.id && busy?.step === "email")}
-                    onClick={() => run(r.id, "email", () => confirmEmail({ data: { coachId: r.id } }), "E-mail confirmado")}
+                    onClick={() => run(r.id, "email", () => confirmEmail({ data: { coachId: r.id } }), "E-mail confirmado", r.profile?.id)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
                   >
                     {busy?.id === r.id && busy?.step === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
