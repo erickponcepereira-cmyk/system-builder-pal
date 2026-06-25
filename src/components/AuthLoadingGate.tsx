@@ -119,7 +119,7 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
           }
         `}</style>
         <Logo
-          className="h-32 sm:h-42 w-auto object-contain"
+          className="h-32 sm:h-40 w-auto object-contain"
           alt="FitMind Club"
           style={{
             animation: "fm-splash-logo 400ms cubic-bezier(0.22, 1, 0.36, 1) both",
