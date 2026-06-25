@@ -6,6 +6,7 @@ import {
   listAdminSubscriptions, listAdminInvoices, updateSubscriptionAdmin,
   listPlansAdmin, updatePlanAdmin, markInvoicePaidAdmin, exemptInvoiceAdmin, generateInvoicesNow,
 } from "@/lib/admin-subscriptions.functions";
+import { listAllAnnualActivationsAdmin } from "@/lib/annual-activation.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/subscriptions")({
   head: () => ({ meta: [{ title: "Mensalidades — Admin" }] }),
