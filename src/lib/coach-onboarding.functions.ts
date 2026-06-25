@@ -454,6 +454,21 @@ async function assertAdmin(userId: string) {
   return me.id as string;
 }
 
+async function logCoachAudit(
+  actorProfileId: string,
+  targetProfileId: string,
+  action: string,
+  notes?: string,
+) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.from("admin_audit_log").insert({
+    actor_profile_id: actorProfileId,
+    target_profile_id: targetProfileId,
+    action,
+    notes: notes ?? null,
+  });
+}
+
 export const listAllCoachReleases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
