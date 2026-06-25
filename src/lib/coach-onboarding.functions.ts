@@ -130,8 +130,10 @@ export const markAlreadyCoach = createServerFn({ method: "POST" })
         already_coach: true,
         onboarding_stage: "awaiting_quiz_result",
         activation_paid_at: new Date().toISOString(),
+        activation_source: "already_coach",
       } as never)
       .eq("id", coach.id);
+
     const { notifyAdmins } = await import("./coach-onboarding.server");
     await notifyAdmins(
       "Coach já formado solicitou liberação",
