@@ -247,6 +247,53 @@ function CoachReleasesPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Histórico / timeline */}
+                {r.profile?.id && (
+                  <div className="mt-3 rounded-lg border border-white/10 bg-black/20">
+                    <button
+                      onClick={() => toggleAudit(r.id, r.profile!.id)}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-white/70 hover:text-white"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <History className="h-3.5 w-3.5" />
+                        Histórico de aprovações
+                      </span>
+                      {openAudit[r.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                    {openAudit[r.id] && (
+                      <div className="border-t border-white/10 p-3">
+                        {auditByCoach[r.id] === "loading" ? (
+                          <div className="flex items-center gap-2 text-xs text-white/50"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando...</div>
+                        ) : !auditByCoach[r.id] || (auditByCoach[r.id] as AuditEntry[]).length === 0 ? (
+                          <p className="text-xs text-white/40">Nenhuma ação registrada ainda.</p>
+                        ) : (
+                          <ol className="relative space-y-3 border-l border-white/10 pl-4">
+                            {(auditByCoach[r.id] as AuditEntry[]).map((entry) => {
+                              const meta = ACTION_LABELS[entry.action] || { label: entry.action, icon: CheckCircle2 };
+                              const Icon = meta.icon;
+                              return (
+                                <li key={entry.id} className="relative">
+                                  <span className="absolute -left-[21px] top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/80 text-primary-foreground">
+                                    <Icon className="h-2.5 w-2.5" />
+                                  </span>
+                                  <div className="text-xs font-semibold text-white">{meta.label}</div>
+                                  <div className="mt-0.5 text-[11px] text-white/50">
+                                    por <span className="text-white/80">{entry.actor_name}</span> ·{" "}
+                                    {new Date(entry.created_at).toLocaleString("pt-BR")}
+                                  </div>
+                                  {entry.notes && (
+                                    <div className="mt-0.5 text-[11px] text-white/40">{entry.notes}</div>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
