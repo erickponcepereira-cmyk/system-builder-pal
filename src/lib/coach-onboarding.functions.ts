@@ -441,3 +441,188 @@ export const releaseCoach = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+// ============================================================
+// ADMIN: liberação de coach por etapas (checkpoints individuais)
+// ============================================================
+
+async function assertAdmin(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: me } = await supabaseAdmin
+    .from("profiles").select("id, role").eq("user_id", userId).maybeSingle();
+  if (!me || me.role !== "admin") throw new Error("Acesso negado");
+  return me.id as string;
+}
+
+export const listAllCoachReleases = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coaches } = await supabaseAdmin
+      .from("coaches")
+      .select(
+        "id, onboarding_stage, quiz_result_url, quiz_result_submitted_at, activation_paid_at, approved_at, coach_number, upline_coach_id, already_coach, profile:profiles!coaches_profile_id_fkey(id,name,email,phone,user_id)"
+      )
+      .in("onboarding_stage", ["awaiting_payment", "awaiting_quiz_result", "awaiting_upline_release"])
+      .order("created_at", { ascending: false });
+
+    const rows = (coaches || []) as Array<{
+      id: string;
+      onboarding_stage: string;
+      quiz_result_url: string | null;
+      quiz_result_submitted_at: string | null;
+      activation_paid_at: string | null;
+      approved_at: string | null;
+      coach_number: number | null;
+      upline_coach_id: string | null;
+      already_coach: boolean | null;
+      profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
+    }>;
+
+    // upline names
+    const uplineIds = [...new Set(rows.map((r) => r.upline_coach_id).filter(Boolean) as string[])];
+    const { data: uplines } = uplineIds.length
+      ? await supabaseAdmin.from("coaches")
+          .select("id, profile:profiles!coaches_profile_id_fkey(name)").in("id", uplineIds)
+      : { data: [] };
+    const uplineMap = new Map(
+      ((uplines || []) as Array<{ id: string; profile?: { name?: string } | null }>).map(
+        (u) => [u.id, u.profile?.name || "—"]
+      )
+    );
+
+    // email_confirmed por user_id (best-effort, paralelo)
+    const userIds = rows.map((r) => r.profile?.user_id).filter(Boolean) as string[];
+    const confirmedMap = new Map<string, boolean>();
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          const { data } = await supabaseAdmin.auth.admin.getUserById(uid);
+          confirmedMap.set(uid, !!data.user?.email_confirmed_at);
+        } catch {
+          confirmedMap.set(uid, false);
+        }
+      })
+    );
+
+    return rows.map((r) => ({
+      ...r,
+      upline_name: r.upline_coach_id ? uplineMap.get(r.upline_coach_id) || null : null,
+      email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
+    }));
+  });
+
+export const adminConfirmCoachEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id, profile_id").eq("id", data.coachId).maybeSingle();
+    if (!coach) throw new Error("Coach não encontrado");
+    const { confirmAuthEmailByProfileId } = await import("./admin-network.server");
+    await confirmAuthEmailByProfileId(coach.profile_id);
+    return { ok: true };
+  });
+
+export const adminMarkActivationPaid = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id, profile_id, onboarding_stage, activation_paid_at")
+      .eq("id", data.coachId).maybeSingle();
+    if (!coach) throw new Error("Coach não encontrado");
+    const nowIso = new Date().toISOString();
+    const nextStage = coach.onboarding_stage === "awaiting_payment"
+      ? "awaiting_quiz_result"
+      : coach.onboarding_stage;
+    await supabaseAdmin.from("coaches").update({
+      activation_paid_at: coach.activation_paid_at || nowIso,
+      onboarding_stage: nextStage,
+    }).eq("id", coach.id);
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: coach.profile_id,
+      type: "coach_onboarding",
+      title: "Pagamento da ativação confirmado",
+      message: "Agora envie o resultado do quiz comportamental para seguir.",
+      action_url: "/coach",
+    });
+    return { ok: true };
+  });
+
+export const adminApproveQuiz = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at")
+      .eq("id", data.coachId).maybeSingle();
+    if (!coach) throw new Error("Coach não encontrado");
+    const nowIso = new Date().toISOString();
+    await supabaseAdmin.from("coaches").update({
+      onboarding_stage: "awaiting_upline_release",
+      quiz_result_submitted_at: coach.quiz_result_submitted_at || nowIso,
+    }).eq("id", coach.id);
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: coach.profile_id,
+      type: "coach_onboarding",
+      title: "Quiz aprovado",
+      message: "Aguarde a liberação final do seu painel de coach.",
+      action_url: "/coach",
+    });
+    return { ok: true };
+  });
+
+export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      coachId: z.string().uuid(),
+      coachNumber: z.number().int().positive().max(9999999).optional(),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coach } = await supabaseAdmin
+      .from("coaches").select("id, profile_id, coach_number, onboarding_stage")
+      .eq("id", data.coachId).maybeSingle();
+    if (!coach) throw new Error("Coach não encontrado");
+
+    let nextNumber = coach.coach_number as number | null;
+    if (data.coachNumber) {
+      // garante unicidade
+      const { data: dup } = await supabaseAdmin
+        .from("coaches").select("id").eq("coach_number", data.coachNumber).neq("id", coach.id).maybeSingle();
+      if (dup) throw new Error("Este ID já está em uso por outro coach.");
+      nextNumber = data.coachNumber;
+    }
+    if (!nextNumber) throw new Error("Informe o ID de coach para liberar.");
+
+    // garante email confirmado
+    const { confirmAuthEmailByProfileId } = await import("./admin-network.server");
+    try { await confirmAuthEmailByProfileId(coach.profile_id); } catch { /* ignore se já confirmado */ }
+
+    const nowIso = new Date().toISOString();
+    await supabaseAdmin.from("coaches").update({
+      coach_number: nextNumber,
+      onboarding_stage: "released",
+      approved_at: nowIso,
+    }).eq("id", coach.id);
+    await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", coach.profile_id);
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: coach.profile_id,
+      type: "coach_onboarding",
+      title: "🎉 Seu painel de coach foi liberado!",
+      message: `Seu ID de coach é ${nextNumber}. Acesso completo disponível.`,
+      action_url: "/coach",
+    });
+    return { ok: true, coachNumber: nextNumber };
+  });
