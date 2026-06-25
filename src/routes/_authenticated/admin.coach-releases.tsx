@@ -32,6 +32,8 @@ type Row = {
   already_coach: boolean | null;
   is_professional: boolean | null;
   partner_status: string | null;
+  activation_source: string | null;
+  activation_note: string | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
   monthly: {
@@ -41,6 +43,7 @@ type Row = {
     last_invoice_month: string | null;
   };
 };
+
 
 type StageFilter = "all" | "email" | "payment" | "quiz" | "id" | "released";
 type AlreadyCoachFilter = "all" | "yes" | "no";
