@@ -7,9 +7,10 @@ import {
   adminMarkActivationPaid,
   adminApproveQuiz,
   adminAssignCoachIdAndRelease,
+  getCoachReleaseAudit,
 } from "@/lib/coach-onboarding.functions";
 import { toast } from "sonner";
-import { Loader2, ExternalLink, CheckCircle2, Circle, Mail, CreditCard, FileCheck2, KeyRound } from "lucide-react";
+import { Loader2, ExternalLink, CheckCircle2, Circle, Mail, CreditCard, FileCheck2, KeyRound, History, ChevronDown, ChevronUp } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
   head: () => ({ meta: [{ title: "Liberar Coaches — Admin" }] }),
@@ -45,17 +46,35 @@ function Step({
   );
 }
 
+type AuditEntry = {
+  id: string;
+  action: string;
+  notes: string | null;
+  created_at: string;
+  actor_name: string;
+};
+
+const ACTION_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  coach_email_confirmed: { label: "E-mail confirmado", icon: Mail },
+  coach_activation_paid: { label: "Ativação paga", icon: CreditCard },
+  coach_quiz_approved: { label: "Quiz aprovado", icon: FileCheck2 },
+  coach_id_assigned_released: { label: "ID atribuído e painel liberado", icon: KeyRound },
+};
+
 function CoachReleasesPage() {
   const fetchList = useServerFn(listAllCoachReleases);
   const confirmEmail = useServerFn(adminConfirmCoachEmail);
   const markPaid = useServerFn(adminMarkActivationPaid);
   const approveQuiz = useServerFn(adminApproveQuiz);
   const assignAndRelease = useServerFn(adminAssignCoachIdAndRelease);
+  const fetchAudit = useServerFn(getCoachReleaseAudit);
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<{ id: string; step: StepKey } | null>(null);
   const [idDrafts, setIdDrafts] = useState<Record<string, string>>({});
+  const [openAudit, setOpenAudit] = useState<Record<string, boolean>>({});
+  const [auditByCoach, setAuditByCoach] = useState<Record<string, AuditEntry[] | "loading">>({});
 
   const reload = async () => {
     setLoading(true);
@@ -70,12 +89,32 @@ function CoachReleasesPage() {
   };
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
 
-  const run = async (id: string, step: StepKey, fn: () => Promise<unknown>, okMsg: string) => {
+  const loadAudit = async (coachId: string, profileId: string) => {
+    setAuditByCoach((s) => ({ ...s, [coachId]: "loading" }));
+    try {
+      const data = (await fetchAudit({ data: { profileId } })) as unknown as AuditEntry[];
+      setAuditByCoach((s) => ({ ...s, [coachId]: data || [] }));
+    } catch (e) {
+      toast.error((e as Error).message);
+      setAuditByCoach((s) => ({ ...s, [coachId]: [] }));
+    }
+  };
+
+  const toggleAudit = (coachId: string, profileId: string) => {
+    setOpenAudit((s) => {
+      const next = !s[coachId];
+      if (next && !auditByCoach[coachId]) void loadAudit(coachId, profileId);
+      return { ...s, [coachId]: next };
+    });
+  };
+
+  const run = async (id: string, step: StepKey, fn: () => Promise<unknown>, okMsg: string, profileId?: string) => {
     setBusy({ id, step });
     try {
       await fn();
       toast.success(okMsg);
       await reload();
+      if (profileId && openAudit[id]) await loadAudit(id, profileId);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -137,7 +176,7 @@ function CoachReleasesPage() {
                   {/* 1. Confirmar e-mail */}
                   <button
                     disabled={emailDone || (busy?.id === r.id && busy?.step === "email")}
-                    onClick={() => run(r.id, "email", () => confirmEmail({ data: { coachId: r.id } }), "E-mail confirmado")}
+                    onClick={() => run(r.id, "email", () => confirmEmail({ data: { coachId: r.id } }), "E-mail confirmado", r.profile?.id)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
                   >
                     {busy?.id === r.id && busy?.step === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
@@ -147,7 +186,7 @@ function CoachReleasesPage() {
                   {/* 2. Marcar pagamento */}
                   <button
                     disabled={paymentDone || (busy?.id === r.id && busy?.step === "payment")}
-                    onClick={() => run(r.id, "payment", () => markPaid({ data: { coachId: r.id } }), "Ativação marcada como paga")}
+                    onClick={() => run(r.id, "payment", () => markPaid({ data: { coachId: r.id } }), "Ativação marcada como paga", r.profile?.id)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
                   >
                     {busy?.id === r.id && busy?.step === "payment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
@@ -169,7 +208,7 @@ function CoachReleasesPage() {
                     <div className="ml-auto">
                       <button
                         disabled={quizDone || (busy?.id === r.id && busy?.step === "quiz")}
-                        onClick={() => run(r.id, "quiz", () => approveQuiz({ data: { coachId: r.id } }), "Quiz aprovado")}
+                        onClick={() => run(r.id, "quiz", () => approveQuiz({ data: { coachId: r.id } }), "Quiz aprovado", r.profile?.id)}
                         className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/15 disabled:opacity-40"
                       >
                         {busy?.id === r.id && busy?.step === "quiz" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
@@ -198,7 +237,7 @@ function CoachReleasesPage() {
                           if (!confirm(`Atribuir ID ${n} e liberar o painel de ${r.profile?.name || "este coach"}?`)) return;
                           run(r.id, "release",
                             () => assignAndRelease({ data: { coachId: r.id, coachNumber: n } }),
-                            "Coach liberado!");
+                            "Coach liberado!", r.profile?.id);
                         }}
                         className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                       >
@@ -208,6 +247,53 @@ function CoachReleasesPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Histórico / timeline */}
+                {r.profile?.id && (
+                  <div className="mt-3 rounded-lg border border-white/10 bg-black/20">
+                    <button
+                      onClick={() => toggleAudit(r.id, r.profile!.id)}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-xs font-semibold text-white/70 hover:text-white"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <History className="h-3.5 w-3.5" />
+                        Histórico de aprovações
+                      </span>
+                      {openAudit[r.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                    {openAudit[r.id] && (
+                      <div className="border-t border-white/10 p-3">
+                        {auditByCoach[r.id] === "loading" ? (
+                          <div className="flex items-center gap-2 text-xs text-white/50"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando...</div>
+                        ) : !auditByCoach[r.id] || (auditByCoach[r.id] as AuditEntry[]).length === 0 ? (
+                          <p className="text-xs text-white/40">Nenhuma ação registrada ainda.</p>
+                        ) : (
+                          <ol className="relative space-y-3 border-l border-white/10 pl-4">
+                            {(auditByCoach[r.id] as AuditEntry[]).map((entry) => {
+                              const meta = ACTION_LABELS[entry.action] || { label: entry.action, icon: CheckCircle2 };
+                              const Icon = meta.icon;
+                              return (
+                                <li key={entry.id} className="relative">
+                                  <span className="absolute -left-[21px] top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/80 text-primary-foreground">
+                                    <Icon className="h-2.5 w-2.5" />
+                                  </span>
+                                  <div className="text-xs font-semibold text-white">{meta.label}</div>
+                                  <div className="mt-0.5 text-[11px] text-white/50">
+                                    por <span className="text-white/80">{entry.actor_name}</span> ·{" "}
+                                    {new Date(entry.created_at).toLocaleString("pt-BR")}
+                                  </div>
+                                  {entry.notes && (
+                                    <div className="mt-0.5 text-[11px] text-white/40">{entry.notes}</div>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

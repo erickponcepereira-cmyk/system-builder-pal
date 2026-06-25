@@ -454,6 +454,21 @@ async function assertAdmin(userId: string) {
   return me.id as string;
 }
 
+async function logCoachAudit(
+  actorProfileId: string,
+  targetProfileId: string,
+  action: string,
+  notes?: string,
+) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.from("admin_audit_log").insert({
+    actor_profile_id: actorProfileId,
+    target_profile_id: targetProfileId,
+    action,
+    notes: notes ?? null,
+  });
+}
+
 export const listAllCoachReleases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -517,13 +532,14 @@ export const adminConfirmCoachEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id").eq("id", data.coachId).maybeSingle();
     if (!coach) throw new Error("Coach não encontrado");
     const { confirmAuthEmailByProfileId } = await import("./admin-network.server");
     await confirmAuthEmailByProfileId(coach.profile_id);
+    await logCoachAudit(actorId, coach.profile_id, "coach_email_confirmed", "E-mail confirmado manualmente pelo admin");
     return { ok: true };
   });
 
@@ -531,7 +547,7 @@ export const adminMarkActivationPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id, onboarding_stage, activation_paid_at")
@@ -552,6 +568,7 @@ export const adminMarkActivationPaid = createServerFn({ method: "POST" })
       message: "Agora envie o resultado do quiz comportamental para seguir.",
       action_url: "/coach",
     });
+    await logCoachAudit(actorId, coach.profile_id, "coach_activation_paid", "Ativação marcada como paga pelo admin");
     return { ok: true };
   });
 
@@ -559,7 +576,7 @@ export const adminApproveQuiz = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at")
@@ -577,6 +594,7 @@ export const adminApproveQuiz = createServerFn({ method: "POST" })
       message: "Aguarde a liberação final do seu painel de coach.",
       action_url: "/coach",
     });
+    await logCoachAudit(actorId, coach.profile_id, "coach_quiz_approved", "Quiz comportamental aprovado pelo admin");
     return { ok: true };
   });
 
@@ -589,7 +607,7 @@ export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id, coach_number, onboarding_stage")
@@ -624,5 +642,52 @@ export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
       message: `Seu ID de coach é ${nextNumber}. Acesso completo disponível.`,
       action_url: "/coach",
     });
+    await logCoachAudit(
+      actorId,
+      coach.profile_id,
+      "coach_id_assigned_released",
+      `ID ${nextNumber} atribuído e painel liberado`,
+    );
     return { ok: true, coachNumber: nextNumber };
+  });
+
+export const getCoachReleaseAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ profileId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("admin_audit_log")
+      .select("id, action, notes, created_at, actor_profile_id")
+      .eq("target_profile_id", data.profileId)
+      .in("action", [
+        "coach_email_confirmed",
+        "coach_activation_paid",
+        "coach_quiz_approved",
+        "coach_id_assigned_released",
+      ])
+      .order("created_at", { ascending: false });
+
+    const actorIds = [
+      ...new Set(((rows || []) as Array<{ actor_profile_id: string | null }>)
+        .map((r) => r.actor_profile_id)
+        .filter(Boolean) as string[]),
+    ];
+    const { data: actors } = actorIds.length
+      ? await supabaseAdmin.from("profiles").select("id, name").in("id", actorIds)
+      : { data: [] };
+    const actorMap = new Map(
+      ((actors || []) as Array<{ id: string; name?: string }>).map((a) => [a.id, a.name || "—"]),
+    );
+    return ((rows || []) as Array<{
+      id: string;
+      action: string;
+      notes: string | null;
+      created_at: string;
+      actor_profile_id: string | null;
+    }>).map((r) => ({
+      ...r,
+      actor_name: r.actor_profile_id ? actorMap.get(r.actor_profile_id) || "—" : "—",
+    }));
   });
