@@ -98,14 +98,51 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
         style={{
           position: "fixed",
           inset: 0,
-          background: "#0b0707",
+          background: "#0B0707",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          gap: 28,
           zIndex: 9999,
+          padding: "0 32px",
         }}
       >
-        <Logo className="h-32 w-auto object-contain" alt="FitMind" />
+        <style>{`
+          @keyframes fm-splash-logo {
+            0% { opacity: 0; transform: scale(0.85); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+          @keyframes fm-splash-slogan {
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+        <Logo
+          className="h-28 sm:h-36 w-auto object-contain"
+          alt="FitMind Club"
+          style={{
+            animation: "fm-splash-logo 400ms cubic-bezier(0.22, 1, 0.36, 1) both",
+            willChange: "opacity, transform",
+          } as React.CSSProperties}
+        />
+        <p
+          style={{
+            margin: 0,
+            color: "#FFFFFF",
+            fontSize: 14,
+            letterSpacing: 0.3,
+            textAlign: "center",
+            maxWidth: 320,
+            lineHeight: 1.5,
+            opacity: 0,
+            animation: "fm-splash-slogan 600ms ease-out 1200ms forwards",
+          }}
+        >
+          Conectando corpo e mente
+          <br />
+          <span style={{ color: "#FF4A3D", fontWeight: 600 }}>para uma versão melhor</span>
+        </p>
       </div>
     );
   }
