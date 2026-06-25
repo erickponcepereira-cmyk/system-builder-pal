@@ -642,5 +642,52 @@ export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
       message: `Seu ID de coach é ${nextNumber}. Acesso completo disponível.`,
       action_url: "/coach",
     });
+    await logCoachAudit(
+      actorId,
+      coach.profile_id,
+      "coach_id_assigned_released",
+      `ID ${nextNumber} atribuído e painel liberado`,
+    );
     return { ok: true, coachNumber: nextNumber };
+  });
+
+export const getCoachReleaseAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ profileId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin
+      .from("admin_audit_log")
+      .select("id, action, notes, created_at, actor_profile_id")
+      .eq("target_profile_id", data.profileId)
+      .in("action", [
+        "coach_email_confirmed",
+        "coach_activation_paid",
+        "coach_quiz_approved",
+        "coach_id_assigned_released",
+      ])
+      .order("created_at", { ascending: false });
+
+    const actorIds = [
+      ...new Set(((rows || []) as Array<{ actor_profile_id: string | null }>)
+        .map((r) => r.actor_profile_id)
+        .filter(Boolean) as string[]),
+    ];
+    const { data: actors } = actorIds.length
+      ? await supabaseAdmin.from("profiles").select("id, name").in("id", actorIds)
+      : { data: [] };
+    const actorMap = new Map(
+      ((actors || []) as Array<{ id: string; name?: string }>).map((a) => [a.id, a.name || "—"]),
+    );
+    return ((rows || []) as Array<{
+      id: string;
+      action: string;
+      notes: string | null;
+      created_at: string;
+      actor_profile_id: string | null;
+    }>).map((r) => ({
+      ...r,
+      actor_name: r.actor_profile_id ? actorMap.get(r.actor_profile_id) || "—" : "—",
+    }));
   });
