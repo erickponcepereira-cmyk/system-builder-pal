@@ -233,7 +233,12 @@ function CoachReleasesPage() {
                     {r.already_coach && (
                       <span className="mt-1 inline-flex rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold text-blue-300">já era coach</span>
                     )}
-                  </div>
+                    {releaseDone && (
+                      <span className="ml-1 mt-1 inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                        Liberado{r.coach_number ? ` · ID ${r.coach_number}` : ""}
+                        {r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
+                      </span>
+                    )}
                 </div>
 
                 {/* Trilha de etapas */}
