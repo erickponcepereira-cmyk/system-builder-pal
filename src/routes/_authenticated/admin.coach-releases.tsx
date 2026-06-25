@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
   component: CoachReleasesPage,
 });
 
+type MonthlyStatus = "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none";
+
 type Row = {
   id: string;
   onboarding_stage: "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release" | "released";
@@ -30,10 +32,17 @@ type Row = {
   already_coach: boolean | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
+  monthly: {
+    status: MonthlyStatus;
+    paid_until: string | null;
+    last_invoice_status: string | null;
+    last_invoice_month: string | null;
+  };
 };
 
 type StageFilter = "all" | "email" | "payment" | "quiz" | "id" | "released";
 type AlreadyCoachFilter = "all" | "yes" | "no";
+type MonthlyFilter = "all" | MonthlyStatus;
 
 type StepKey = "email" | "payment" | "quiz" | "release";
 
@@ -83,6 +92,7 @@ function CoachReleasesPage() {
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [alreadyCoach, setAlreadyCoach] = useState<AlreadyCoachFilter>("all");
+  const [monthlyFilter, setMonthlyFilter] = useState<MonthlyFilter>("all");
   const [includeReleased, setIncludeReleased] = useState(false);
 
   const reload = async () => {
@@ -136,6 +146,8 @@ function CoachReleasesPage() {
     if (alreadyCoach === "yes" && !r.already_coach) return false;
     if (alreadyCoach === "no" && r.already_coach) return false;
 
+    if (monthlyFilter !== "all" && (r.monthly?.status ?? "none") !== monthlyFilter) return false;
+
     if (stageFilter !== "all") {
       const emailDone = r.email_confirmed;
       const paymentDone = !!r.activation_paid_at;
@@ -158,6 +170,16 @@ function CoachReleasesPage() {
     return true;
   });
 
+  const MONTHLY_BADGE: Record<MonthlyStatus, { label: string; cls: string }> = {
+    paid:      { label: "Mensalidade paga",     cls: "bg-emerald-500/15 text-emerald-300" },
+    exempt:    { label: "Mensalidade isenta",   cls: "bg-blue-500/15 text-blue-300" },
+    pending:   { label: "Mensalidade pendente", cls: "bg-amber-500/15 text-amber-300" },
+    overdue:   { label: "Mensalidade atrasada", cls: "bg-orange-500/15 text-orange-300" },
+    blocked:   { label: "Mensalidade bloqueada",cls: "bg-red-500/15 text-red-300" },
+    cancelled: { label: "Mensalidade cancelada",cls: "bg-white/10 text-white/60" },
+    none:      { label: "Sem mensalidade",      cls: "bg-white/5 text-white/50" },
+  };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
@@ -169,7 +191,7 @@ function CoachReleasesPage() {
       </div>
 
       {/* Filtros */}
-      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto]">
+      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto_auto]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -196,6 +218,20 @@ function CoachReleasesPage() {
           <option value="all">Todos</option>
           <option value="yes">Já era coach</option>
           <option value="no">Novo coach</option>
+        </select>
+        <select
+          value={monthlyFilter}
+          onChange={(e) => setMonthlyFilter(e.target.value as MonthlyFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Mensalidade: todas</option>
+          <option value="paid">Paga</option>
+          <option value="exempt">Isenta</option>
+          <option value="pending">Pendente</option>
+          <option value="overdue">Atrasada</option>
+          <option value="blocked">Bloqueada</option>
+          <option value="cancelled">Cancelada</option>
+          <option value="none">Sem mensalidade</option>
         </select>
         <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
           <input
@@ -239,6 +275,22 @@ function CoachReleasesPage() {
                         {r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
                       </span>
                     )}
+                    {(() => {
+                      const m = r.monthly ?? { status: "none" as MonthlyStatus, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+                      const b = MONTHLY_BADGE[m.status];
+                      const tip = [
+                        m.paid_until ? `Paga até ${new Date(m.paid_until).toLocaleDateString("pt-BR")}` : null,
+                        m.last_invoice_month ? `Última fatura: ${m.last_invoice_month}${m.last_invoice_status ? ` (${m.last_invoice_status})` : ""}` : null,
+                      ].filter(Boolean).join(" · ");
+                      return (
+                        <span
+                          title={tip || undefined}
+                          className={`ml-1 mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b.cls}`}
+                        >
+                          {b.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 
