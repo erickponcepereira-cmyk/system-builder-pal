@@ -35,6 +35,7 @@ function AdminSubscriptionsPage() {
   const [subs, setSubs] = useState<any[]>([]);
   const [invs, setInvs] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
+  const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; active: boolean }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
 
@@ -46,12 +47,19 @@ function AdminSubscriptionsPage() {
   const fnPay = useServerFn(markInvoicePaidAdmin);
   const fnExempt = useServerFn(exemptInvoiceAdmin);
   const fnGen = useServerFn(generateInvoicesNow);
+  const fnAnnual = useServerFn(listAllAnnualActivationsAdmin);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [s, i, p] = await Promise.all([fnSubs(), fnInvs({ data: { status: filterStatus || undefined } } as any), fnPlans()]);
+      const [s, i, p, a] = await Promise.all([
+        fnSubs(),
+        fnInvs({ data: { status: filterStatus || undefined } } as any),
+        fnPlans(),
+        fnAnnual(),
+      ]);
       setSubs(s as any); setInvs(i as any); setPlans(p as any);
+      setAnnualMap(new Map((a as any[]).map((r) => [r.user_id, r])));
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
