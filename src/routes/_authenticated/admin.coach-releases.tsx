@@ -89,12 +89,32 @@ function CoachReleasesPage() {
   };
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
 
-  const run = async (id: string, step: StepKey, fn: () => Promise<unknown>, okMsg: string) => {
+  const loadAudit = async (coachId: string, profileId: string) => {
+    setAuditByCoach((s) => ({ ...s, [coachId]: "loading" }));
+    try {
+      const data = (await fetchAudit({ data: { profileId } })) as unknown as AuditEntry[];
+      setAuditByCoach((s) => ({ ...s, [coachId]: data || [] }));
+    } catch (e) {
+      toast.error((e as Error).message);
+      setAuditByCoach((s) => ({ ...s, [coachId]: [] }));
+    }
+  };
+
+  const toggleAudit = (coachId: string, profileId: string) => {
+    setOpenAudit((s) => {
+      const next = !s[coachId];
+      if (next && !auditByCoach[coachId]) void loadAudit(coachId, profileId);
+      return { ...s, [coachId]: next };
+    });
+  };
+
+  const run = async (id: string, step: StepKey, fn: () => Promise<unknown>, okMsg: string, profileId?: string) => {
     setBusy({ id, step });
     try {
       await fn();
       toast.success(okMsg);
       await reload();
+      if (profileId && openAudit[id]) await loadAudit(id, profileId);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
