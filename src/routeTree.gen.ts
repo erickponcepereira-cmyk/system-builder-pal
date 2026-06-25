@@ -33,6 +33,7 @@ import { Route as AuthenticatedProfessionalRouteImport } from './routes/_authent
 import { Route as AuthenticatedPortalSelectorRouteImport } from './routes/_authenticated/portal-selector'
 import { Route as AuthenticatedPartnerRouteImport } from './routes/_authenticated/partner'
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
+import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
@@ -226,6 +227,11 @@ const AuthenticatedPartnerRoute = AuthenticatedPartnerRouteImport.update({
 const AuthenticatedCoachRoute = AuthenticatedCoachRouteImport.update({
   id: '/coach',
   path: '/coach',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAssinaturaRoute = AuthenticatedAssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -671,6 +677,7 @@ export interface FileRoutesByFullPath {
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRoute
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
@@ -768,6 +775,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRoute
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
@@ -867,6 +875,7 @@ export interface FileRoutesById {
   '/termos': typeof TermosRoute
   '/termos-compra': typeof TermosCompraRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
   '/_authenticated/partner': typeof AuthenticatedPartnerRoute
   '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
@@ -967,6 +976,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/termos-compra'
     | '/admin'
+    | '/assinatura'
     | '/coach'
     | '/partner'
     | '/portal-selector'
@@ -1064,6 +1074,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/termos'
     | '/termos-compra'
+    | '/assinatura'
     | '/coach'
     | '/partner'
     | '/portal-selector'
@@ -1162,6 +1173,7 @@ export interface FileRouteTypes {
     | '/termos'
     | '/termos-compra'
     | '/_authenticated/admin'
+    | '/_authenticated/assinatura'
     | '/_authenticated/coach'
     | '/_authenticated/partner'
     | '/_authenticated/portal-selector'
@@ -1445,6 +1457,13 @@ declare module '@tanstack/react-router' {
       path: '/coach'
       fullPath: '/coach'
       preLoaderRoute: typeof AuthenticatedCoachRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assinatura': {
+      id: '/_authenticated/assinatura'
+      path: '/assinatura'
+      fullPath: '/assinatura'
+      preLoaderRoute: typeof AuthenticatedAssinaturaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
@@ -2163,6 +2182,7 @@ const AuthenticatedStudentRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
   AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRoute
   AuthenticatedPortalSelectorRoute: typeof AuthenticatedPortalSelectorRoute
@@ -2172,6 +2192,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
   AuthenticatedPartnerRoute: AuthenticatedPartnerRoute,
   AuthenticatedPortalSelectorRoute: AuthenticatedPortalSelectorRoute,

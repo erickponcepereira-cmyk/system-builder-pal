@@ -7946,10 +7946,8 @@ export type Database = {
       subscription_plans: {
         Row: {
           active: boolean
-          billing_cycle: Database["public"]["Enums"]["subscription_billing_cycle"]
           created_at: string
           default_amount: number
-          description: string | null
           grace_days: number
           id: string
           name: string
@@ -7957,10 +7955,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          billing_cycle?: Database["public"]["Enums"]["subscription_billing_cycle"]
           created_at?: string
           default_amount?: number
-          description?: string | null
           grace_days?: number
           id?: string
           name: string
@@ -7968,10 +7964,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          billing_cycle?: Database["public"]["Enums"]["subscription_billing_cycle"]
           created_at?: string
           default_amount?: number
-          description?: string | null
           grace_days?: number
           id?: string
           name?: string
@@ -8351,9 +8345,6 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
-          billing_cycle:
-            | Database["public"]["Enums"]["subscription_billing_cycle"]
-            | null
           billing_day: number
           created_at: string
           custom_amount: number | null
@@ -8370,9 +8361,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          billing_cycle?:
-            | Database["public"]["Enums"]["subscription_billing_cycle"]
-            | null
           billing_day?: number
           created_at?: string
           custom_amount?: number | null
@@ -8389,9 +8377,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          billing_cycle?:
-            | Database["public"]["Enums"]["subscription_billing_cycle"]
-            | null
           billing_day?: number
           created_at?: string
           custom_amount?: number | null
@@ -9731,7 +9716,6 @@ export type Database = {
         | "health_pro_course"
         | "room_rental"
         | "live_class"
-      subscription_billing_cycle: "monthly" | "yearly"
       subscription_status:
         | "active"
         | "expired"
@@ -9983,7 +9967,6 @@ export const Constants = {
         "room_rental",
         "live_class",
       ],
-      subscription_billing_cycle: ["monthly", "yearly"],
       subscription_status: [
         "active",
         "expired",
