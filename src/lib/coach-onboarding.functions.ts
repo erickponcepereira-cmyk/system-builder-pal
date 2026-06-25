@@ -471,15 +471,21 @@ async function logCoachAudit(
 
 export const listAllCoachReleases = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: { includeReleased?: boolean } | undefined) =>
+    z.object({ includeReleased: z.boolean().optional() }).parse(input ?? {})
+  )
+  .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const stages = data.includeReleased
+      ? ["awaiting_payment", "awaiting_quiz_result", "awaiting_upline_release", "released"]
+      : ["awaiting_payment", "awaiting_quiz_result", "awaiting_upline_release"];
     const { data: coaches } = await supabaseAdmin
       .from("coaches")
       .select(
         "id, onboarding_stage, quiz_result_url, quiz_result_submitted_at, activation_paid_at, approved_at, coach_number, upline_coach_id, already_coach, profile:profiles!coaches_profile_id_fkey(id,name,email,phone,user_id)"
       )
-      .in("onboarding_stage", ["awaiting_payment", "awaiting_quiz_result", "awaiting_upline_release"])
+      .in("onboarding_stage", stages)
       .order("created_at", { ascending: false });
 
     const rows = (coaches || []) as Array<{

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
 
 type Row = {
   id: string;
-  onboarding_stage: "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release";
+  onboarding_stage: "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release" | "released";
   quiz_result_url: string | null;
   quiz_result_submitted_at: string | null;
   activation_paid_at: string | null;
@@ -31,6 +31,9 @@ type Row = {
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
 };
+
+type StageFilter = "all" | "email" | "payment" | "quiz" | "id" | "released";
+type AlreadyCoachFilter = "all" | "yes" | "no";
 
 type StepKey = "email" | "payment" | "quiz" | "release";
 
@@ -76,10 +79,16 @@ function CoachReleasesPage() {
   const [openAudit, setOpenAudit] = useState<Record<string, boolean>>({});
   const [auditByCoach, setAuditByCoach] = useState<Record<string, AuditEntry[] | "loading">>({});
 
+  // Filtros
+  const [query, setQuery] = useState("");
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [alreadyCoach, setAlreadyCoach] = useState<AlreadyCoachFilter>("all");
+  const [includeReleased, setIncludeReleased] = useState(false);
+
   const reload = async () => {
     setLoading(true);
     try {
-      const data = (await fetchList()) as unknown as Row[];
+      const data = (await fetchList({ data: { includeReleased } })) as unknown as Row[];
       setRows(data || []);
     } catch (e) {
       toast.error((e as Error).message);
@@ -87,7 +96,7 @@ function CoachReleasesPage() {
       setLoading(false);
     }
   };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [includeReleased]);
 
   const loadAudit = async (coachId: string, profileId: string) => {
     setAuditByCoach((s) => ({ ...s, [coachId]: "loading" }));
@@ -122,6 +131,34 @@ function CoachReleasesPage() {
     }
   };
 
+  const q = query.trim().toLowerCase();
+  const filtered = rows.filter((r) => {
+    if (alreadyCoach === "yes" && !r.already_coach) return false;
+    if (alreadyCoach === "no" && r.already_coach) return false;
+
+    if (stageFilter !== "all") {
+      const emailDone = r.email_confirmed;
+      const paymentDone = !!r.activation_paid_at;
+      const quizDone = r.onboarding_stage === "awaiting_upline_release" || !!r.approved_at;
+      const released = r.onboarding_stage === "released";
+      if (stageFilter === "released" && !released) return false;
+      if (stageFilter === "email" && emailDone) return false;
+      if (stageFilter === "payment" && (!emailDone || paymentDone)) return false;
+      if (stageFilter === "quiz" && (!paymentDone || quizDone)) return false;
+      if (stageFilter === "id" && (!quizDone || released)) return false;
+    }
+
+    if (q) {
+      const hay = [
+        r.profile?.name, r.profile?.email, r.profile?.phone,
+        r.coach_number ? String(r.coach_number) : "",
+      ].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
       <div className="mb-6">
@@ -131,19 +168,58 @@ function CoachReleasesPage() {
         </p>
       </div>
 
+      {/* Filtros */}
+      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto]">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por nome, e-mail, telefone ou ID"
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <select
+          value={stageFilter}
+          onChange={(e) => setStageFilter(e.target.value as StageFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Todas as etapas</option>
+          <option value="email">Aguardando e-mail</option>
+          <option value="payment">Aguardando ativação</option>
+          <option value="quiz">Aguardando quiz</option>
+          <option value="id">Aguardando ID + liberação</option>
+          <option value="released">Já liberados</option>
+        </select>
+        <select
+          value={alreadyCoach}
+          onChange={(e) => setAlreadyCoach(e.target.value as AlreadyCoachFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="all">Todos</option>
+          <option value="yes">Já era coach</option>
+          <option value="no">Novo coach</option>
+        </select>
+        <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
+          <input
+            type="checkbox"
+            checked={includeReleased}
+            onChange={(e) => setIncludeReleased(e.target.checked)}
+          />
+          Incluir liberados
+        </label>
+      </div>
+
       {loading ? (
         <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
-      ) : rows.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
-          Nenhum coach pendente.
+          Nenhum coach encontrado com os filtros atuais.
         </div>
       ) : (
         <div className="space-y-3">
-          {rows.map((r) => {
+          {filtered.map((r) => {
             const emailDone = r.email_confirmed;
             const paymentDone = !!r.activation_paid_at;
             const quizDone = r.onboarding_stage === "awaiting_upline_release" || !!r.approved_at;
-            const releaseDone = false; // se aparece aqui, ainda não está liberado
+            const releaseDone = r.onboarding_stage === "released";
             const draftId = idDrafts[r.id] ?? "";
 
             return (
@@ -157,8 +233,15 @@ function CoachReleasesPage() {
                     {r.already_coach && (
                       <span className="mt-1 inline-flex rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold text-blue-300">já era coach</span>
                     )}
+                    {releaseDone && (
+                      <span className="ml-1 mt-1 inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                        Liberado{r.coach_number ? ` · ID ${r.coach_number}` : ""}
+                        {r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
+                      </span>
+                    )}
                   </div>
                 </div>
+
 
                 {/* Trilha de etapas */}
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
