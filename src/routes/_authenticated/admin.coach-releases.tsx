@@ -92,6 +92,7 @@ function CoachReleasesPage() {
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [alreadyCoach, setAlreadyCoach] = useState<AlreadyCoachFilter>("all");
+  const [monthlyFilter, setMonthlyFilter] = useState<MonthlyFilter>("all");
   const [includeReleased, setIncludeReleased] = useState(false);
 
   const reload = async () => {
