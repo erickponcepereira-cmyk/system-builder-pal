@@ -53,6 +53,38 @@ const makeReferralCode = () =>
   `FC${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
 export async function finalizeRegistration(input: FinalizeRegistrationInput) {
+  try {
+    return await finalizeRegistrationInner(input);
+  } catch (err) {
+    // Compensação: se algo falhou após o profile ter sido criado, removemos
+    // profile + auth user para que o cadastro possa ser refeito do zero.
+    // Sem isso, o usuário fica "preso" com perfil ativo sem coach/student.
+    try {
+      const email = input.email.trim().toLowerCase();
+      const { data: orphanProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id, user_id, role")
+        .eq("user_id", input.userId)
+        .maybeSingle();
+      if (orphanProfile && orphanProfile.role !== "admin") {
+        // Só remove se não há coach nem student vinculado (ou seja, está realmente quebrado)
+        const [{ count: coachCount }, { count: studentCount }] = await Promise.all([
+          supabaseAdmin.from("coaches").select("id", { count: "exact", head: true }).eq("profile_id", orphanProfile.id),
+          supabaseAdmin.from("students").select("id", { count: "exact", head: true }).eq("profile_id", orphanProfile.id),
+        ]);
+        if (!coachCount && !studentCount) {
+          await supabaseAdmin.from("profiles").delete().eq("id", orphanProfile.id);
+          await supabaseAdmin.auth.admin.deleteUser(orphanProfile.user_id).catch(() => {});
+        }
+      }
+    } catch {
+      // compensação best-effort; não mascarar o erro original
+    }
+    throw err;
+  }
+}
+
+async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
   const email = input.email.trim().toLowerCase();
   const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(input.userId);
   let userId = userData.user?.id || input.userId;
