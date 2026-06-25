@@ -49,10 +49,12 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [coachId, setCoachId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [cardValidUntil, setCardValidUntil] = useState<string | null>(null);
+  const [savedTotal, setSavedTotal] = useState(0);
   const cardActive = forceActive || !!(cardValidUntil && new Date(cardValidUntil).getTime() > Date.now());
 
   useEffect(() => {
     (async () => {
+      let sId: string | null = null;
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
         const { data: profile } = await supabase
@@ -67,13 +69,16 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
           }
           const { data: student } = await supabase
             .from("students").select("id").eq("profile_id", profile.id).maybeSingle();
-          if (student) setStudentId((student as { id: string }).id);
+          if (student) {
+            sId = (student as { id: string }).id;
+            setStudentId(sId);
+          }
         }
       }
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -81,6 +86,21 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         .order("created_at" as never, { ascending: false });
       const pf = ((data as unknown as PartnerFreeProduct[]) || []).filter((x) => x.partners?.status === "approved");
       setPartnerFreebies(pf);
+
+      if (sId) {
+        const { data: redeemed } = await supabase
+          .from("partner_coupons" as never)
+          .select("partner_products(estimated_value,discount_percent,redemption_mode)" as never)
+          .eq("student_id" as never, sId)
+          .eq("status" as never, "redeemed" as never);
+        const rows = (redeemed as unknown as Array<{ partner_products: { estimated_value: number | null; discount_percent: number | null; redemption_mode: string | null } | null }>) || [];
+        const total = rows.reduce((sum, r) => {
+          const ev = Number(r.partner_products?.estimated_value || 0);
+          if (r.partner_products?.redemption_mode === "discount") return sum + ev * (Number(r.partner_products?.discount_percent || 0) / 100);
+          return sum + ev;
+        }, 0);
+        setSavedTotal(total);
+      }
       setLoading(false);
     })();
   }, []);
