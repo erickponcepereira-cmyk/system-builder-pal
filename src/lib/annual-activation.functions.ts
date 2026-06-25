@@ -48,7 +48,7 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
       source = "paid";
     } else if (coach?.id && profile?.status === "active") {
       // Isento: usa created_at do coach (ou profile como fallback) como ponto zero
-      paidAt = new Date(coach.created_at ?? profile.created_at);
+      paidAt = new Date(coach.created_at ?? profile.created_at ?? Date.now());
       source = "exempt";
     }
 
