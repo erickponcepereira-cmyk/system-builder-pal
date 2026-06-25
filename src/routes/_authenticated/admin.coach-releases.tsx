@@ -7,9 +7,10 @@ import {
   adminMarkActivationPaid,
   adminApproveQuiz,
   adminAssignCoachIdAndRelease,
+  getCoachReleaseAudit,
 } from "@/lib/coach-onboarding.functions";
 import { toast } from "sonner";
-import { Loader2, ExternalLink, CheckCircle2, Circle, Mail, CreditCard, FileCheck2, KeyRound } from "lucide-react";
+import { Loader2, ExternalLink, CheckCircle2, Circle, Mail, CreditCard, FileCheck2, KeyRound, History, ChevronDown, ChevronUp } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
   head: () => ({ meta: [{ title: "Liberar Coaches — Admin" }] }),
