@@ -248,7 +248,7 @@ function ResultadoPage() {
         <div className="text-center pt-2 pb-4">
           <Logo className="mx-auto h-8 w-8 object-contain opacity-40 mb-2" />
           <p className="text-[11px] text-white/25">
-            FitMind Club · Conectando corpo e mente para sua melhor versão
+            FitMind Club · Conectando corpo e mente para uma versão melhor
           </p>
         </div>
       </div>
