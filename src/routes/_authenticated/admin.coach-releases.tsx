@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/admin/coach-releases")({
   component: CoachReleasesPage,
 });
 
+type MonthlyStatus = "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none";
+
 type Row = {
   id: string;
   onboarding_stage: "awaiting_payment" | "awaiting_quiz_result" | "awaiting_upline_release" | "released";
@@ -30,10 +32,17 @@ type Row = {
   already_coach: boolean | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
+  monthly: {
+    status: MonthlyStatus;
+    paid_until: string | null;
+    last_invoice_status: string | null;
+    last_invoice_month: string | null;
+  };
 };
 
 type StageFilter = "all" | "email" | "payment" | "quiz" | "id" | "released";
 type AlreadyCoachFilter = "all" | "yes" | "no";
+type MonthlyFilter = "all" | MonthlyStatus;
 
 type StepKey = "email" | "payment" | "quiz" | "release";
 
