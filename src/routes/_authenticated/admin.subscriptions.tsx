@@ -164,10 +164,16 @@ function AdminSubscriptionsPage() {
                         <div className="flex flex-col gap-0.5">
                           <span className={`inline-flex w-fit rounded px-2 py-0.5 text-[10px] font-semibold ${
                             !annual.active ? "bg-red-500/20 text-red-300" :
-                            annual.source === "exempt" ? "bg-blue-500/20 text-blue-300" :
-                            "bg-green-500/20 text-green-300"
-                          }`}>
-                            {!annual.active ? "Vencida" : annual.source === "exempt" ? "Isenta" : "Paga"}
+                            annual.source === "purchased" ? "bg-green-500/20 text-green-300" :
+                            annual.source === "already_coach" ? "bg-purple-500/20 text-purple-300" :
+                            annual.source === "admin_grant" ? "bg-yellow-500/20 text-yellow-300" :
+                            "bg-blue-500/20 text-blue-300"
+                          }`} title={annual.note ?? undefined}>
+                            {!annual.active ? "Vencida" :
+                              annual.source === "purchased" ? "Paga" :
+                              annual.source === "already_coach" ? "Já era coach" :
+                              annual.source === "admin_grant" ? "Concedida (admin)" :
+                              "Isenta"}
                           </span>
                           <span className="text-[10px] text-white/40">
                             até {fmtDate(annual.valid_until)}
@@ -175,6 +181,7 @@ function AdminSubscriptionsPage() {
                         </div>
                       )}
                     </td>
+
                     <td className="p-3 text-right">
                       {i.status !== "paid" && i.status !== "exempted" && (
                         <div className="flex justify-end gap-1">
