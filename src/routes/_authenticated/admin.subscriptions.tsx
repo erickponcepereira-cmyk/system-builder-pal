@@ -35,7 +35,7 @@ function AdminSubscriptionsPage() {
   const [subs, setSubs] = useState<any[]>([]);
   const [invs, setInvs] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
-  const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; active: boolean }>>(new Map());
+  const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; note: string | null; active: boolean }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
 
