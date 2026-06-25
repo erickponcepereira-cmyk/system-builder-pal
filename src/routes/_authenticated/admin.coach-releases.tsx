@@ -271,30 +271,33 @@ function CoachReleasesPage() {
                     {r.already_coach && (
                       <span className="mt-1 inline-flex rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold text-blue-300">já era coach</span>
                     )}
+                    {r.is_professional && (
+                      <span className="ml-1 mt-1 inline-flex rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-bold text-fuchsia-300">
+                        Profissional ativo
+                      </span>
+                    )}
+                    {r.partner_status && (
+                      <span
+                        className={`ml-1 mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          r.partner_status === "approved" || r.partner_status === "active"
+                            ? "bg-cyan-500/15 text-cyan-300"
+                            : r.partner_status === "pending"
+                            ? "bg-amber-500/15 text-amber-300"
+                            : "bg-white/10 text-white/60"
+                        }`}
+                      >
+                        Parceiro: {r.partner_status}
+                      </span>
+                    )}
                     {releaseDone && (
                       <span className="ml-1 mt-1 inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
                         Liberado{r.coach_number ? ` · ID ${r.coach_number}` : ""}
                         {r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
                       </span>
                     )}
-                    {(() => {
-                      const m = r.monthly ?? { status: "none" as MonthlyStatus, paid_until: null, last_invoice_status: null, last_invoice_month: null };
-                      const b = MONTHLY_BADGE[m.status];
-                      const tip = [
-                        m.paid_until ? `Paga até ${new Date(m.paid_until).toLocaleDateString("pt-BR")}` : null,
-                        m.last_invoice_month ? `Última fatura: ${m.last_invoice_month}${m.last_invoice_status ? ` (${m.last_invoice_status})` : ""}` : null,
-                      ].filter(Boolean).join(" · ");
-                      return (
-                        <span
-                          title={tip || undefined}
-                          className={`ml-1 mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b.cls}`}
-                        >
-                          {b.label}
-                        </span>
-                      );
-                    })()}
                   </div>
                 </div>
+
 
 
                 {/* Trilha de etapas */}
