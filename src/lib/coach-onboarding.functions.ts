@@ -761,7 +761,8 @@ export const getCoachReleaseAudit = createServerFn({ method: "GET" })
     const actorMap = new Map(
       ((actors || []) as Array<{ id: string; name?: string }>).map((a) => [a.id, a.name || "—"]),
     );
-    return ((rows || []) as Array<{
+
+    const realEntries = ((rows || []) as Array<{
       id: string;
       action: string;
       notes: string | null;
@@ -771,4 +772,75 @@ export const getCoachReleaseAudit = createServerFn({ method: "GET" })
       ...r,
       actor_name: r.actor_profile_id ? actorMap.get(r.actor_profile_id) || "—" : "—",
     }));
+
+    // Entradas sintéticas: refletem fluxos que não escrevem em admin_audit_log
+    // (clique "já sou coach", compra da Ativação Coach na loja, parceiro aprovado, pagamento MP).
+    const { data: coachRow } = await supabaseAdmin
+      .from("coaches")
+      .select("activation_source, activation_paid_at, activation_note, activation_order_id, already_coach, quiz_result_submitted_at, approved_at, coach_number")
+      .eq("profile_id", data.profileId)
+      .maybeSingle();
+
+    const synthetic: typeof realEntries = [];
+    const c = coachRow as {
+      activation_source: string | null;
+      activation_paid_at: string | null;
+      activation_note: string | null;
+      activation_order_id: string | null;
+      already_coach: boolean | null;
+      quiz_result_submitted_at: string | null;
+      approved_at: string | null;
+      coach_number: number | null;
+    } | null;
+
+    if (c?.activation_paid_at) {
+      // Só injeta se não houver um coach_activation_paid já no log real
+      const hasReal = realEntries.some((e) => e.action === "coach_activation_paid");
+      if (!hasReal) {
+        const src = c.activation_source ?? (c.already_coach ? "already_coach" : null);
+        const map: Record<string, { action: string; note: string; actor: string }> = {
+          already_coach:    { action: "coach_activation_already_coach", note: "Usuário clicou em 'Já sou coach' — declarou que já fez o curso.", actor: "Auto (usuário)" },
+          purchased:        { action: "coach_activation_purchased",     note: "Ativação Coach comprada na loja (pedido pago).", actor: "Auto (loja)" },
+          mercadopago:      { action: "coach_activation_mercadopago",   note: "Pagamento da ativação confirmado via Mercado Pago.", actor: "Auto (Mercado Pago)" },
+          partner_approved: { action: "coach_activation_partner",       note: "Parceiro aprovado — ativação liberada automaticamente.", actor: "Auto (parceiro)" },
+          admin_grant:      { action: "coach_activation_paid",          note: c.activation_note || "Ativação concedida pelo admin.", actor: "Admin" },
+        };
+        const meta = (src && map[src]) || { action: "coach_activation_unknown", note: "Ativação registrada (origem não informada).", actor: "Sistema" };
+        synthetic.push({
+          id: `syn-activation-${data.profileId}`,
+          action: meta.action,
+          notes: meta.note,
+          created_at: c.activation_paid_at,
+          actor_profile_id: null,
+          actor_name: meta.actor,
+        });
+      }
+    }
+
+    if (c?.quiz_result_submitted_at && !realEntries.some((e) => e.action === "coach_quiz_approved")) {
+      synthetic.push({
+        id: `syn-quiz-${data.profileId}`,
+        action: "coach_quiz_submitted",
+        notes: "Resultado do quiz comportamental enviado pelo próprio coach.",
+        created_at: c.quiz_result_submitted_at,
+        actor_profile_id: null,
+        actor_name: "Auto (coach)",
+      });
+    }
+
+    if (c?.approved_at && c.coach_number && !realEntries.some((e) => e.action === "coach_id_assigned_released")) {
+      synthetic.push({
+        id: `syn-release-${data.profileId}`,
+        action: "coach_self_unlocked",
+        notes: `Coach digitou o ID ${c.coach_number} e liberou o próprio painel.`,
+        created_at: c.approved_at,
+        actor_profile_id: null,
+        actor_name: "Auto (coach)",
+      });
+    }
+
+    return [...realEntries, ...synthetic].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
   });
+
