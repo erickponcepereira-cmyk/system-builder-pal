@@ -1,11 +1,47 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // ============================================================
 // CHECK EMAIL NOTICE — exibido após cadastro, antes da confirmação
 // ============================================================
 export function CheckEmailNotice({ email }: { email: string }) {
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  async function handleResend() {
+    if (resending || cooldown > 0) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/login` },
+      });
+      if (error) throw error;
+      toast.success("E-mail de confirmação reenviado!");
+      // cooldown 60s para evitar spam
+      setCooldown(60);
+      const interval = setInterval(() => {
+        setCooldown((c) => {
+          if (c <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      const msg = err?.message ?? "Não foi possível reenviar o e-mail.";
+      toast.error(msg);
+    } finally {
+      setResending(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="w-full max-w-md text-center">
@@ -26,6 +62,22 @@ export function CheckEmailNotice({ email }: { email: string }) {
             Não encontrou o e-mail? Verifique a caixa de spam ou lixo eletrônico.
           </p>
           <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending || cooldown > 0}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Reenviando...
+                </>
+              ) : cooldown > 0 ? (
+                `Reenviar em ${cooldown}s`
+              ) : (
+                "Reenviar e-mail de confirmação"
+              )}
+            </button>
             <Link to="/login" className="block w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
               Ir para o login
             </Link>
