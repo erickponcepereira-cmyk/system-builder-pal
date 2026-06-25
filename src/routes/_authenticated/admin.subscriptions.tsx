@@ -134,11 +134,14 @@ function AdminSubscriptionsPage() {
                   <th className="p-3 text-right">Valor</th>
                   <th className="p-3 text-left">Status</th>
                   <th className="p-3 text-left">Pago em</th>
+                  <th className="p-3 text-left">Anuidade</th>
                   <th className="p-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {invs.map((i) => (
+                {invs.map((i) => {
+                  const annual = annualMap.get(i.user_id);
+                  return (
                   <tr key={i.id} className="border-t border-white/5">
                     <td className="p-3">{fmtMonth(i.reference_month)}</td>
                     <td className="p-3">{i.profile?.name ?? "—"}<br /><span className="text-xs text-white/40">{i.profile?.email}</span></td>
@@ -154,6 +157,24 @@ function AdminSubscriptionsPage() {
                       }`}>{STATUS_LABEL[i.status] ?? i.status}</span>
                     </td>
                     <td className="p-3 text-xs text-white/50">{fmtDate(i.paid_at)}</td>
+                    <td className="p-3 text-xs">
+                      {!annual || annual.source === "none" ? (
+                        <span className="text-white/30">—</span>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`inline-flex w-fit rounded px-2 py-0.5 text-[10px] font-semibold ${
+                            !annual.active ? "bg-red-500/20 text-red-300" :
+                            annual.source === "exempt" ? "bg-blue-500/20 text-blue-300" :
+                            "bg-green-500/20 text-green-300"
+                          }`}>
+                            {!annual.active ? "Vencida" : annual.source === "exempt" ? "Isenta" : "Paga"}
+                          </span>
+                          <span className="text-[10px] text-white/40">
+                            até {fmtDate(annual.valid_until)}
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td className="p-3 text-right">
                       {i.status !== "paid" && i.status !== "exempted" && (
                         <div className="flex justify-end gap-1">
@@ -169,7 +190,8 @@ function AdminSubscriptionsPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
