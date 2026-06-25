@@ -70,10 +70,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     (async () => {
       setLoading(true);
       const [{ data: s }, { data: c }] = await Promise.all([
-        supabase.from("store_sections").select("id,name,image_url").eq("is_active", true).order("sort_order"),
+        supabase.from("store_sections").select("id,name,image_url,target_audience").eq("is_active", true).order("sort_order"),
         supabase.from("store_categories").select("id,section_id,name,image_url").eq("is_active", true).order("sort_order"),
       ]);
-      setSections((s as Section[]) || []);
+      // Mostra apenas seções sem audiência definida ou marcadas para este tipo (parceiro/profissional)
+      const filteredSections = ((s as Section[]) || []).filter((x) => !x.target_audience || x.target_audience === kind);
+      setSections(filteredSections);
       setCategories((c as Category[]) || []);
 
       if (mode === "student") {
