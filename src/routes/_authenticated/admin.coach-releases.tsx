@@ -32,6 +32,8 @@ type Row = {
   already_coach: boolean | null;
   is_professional: boolean | null;
   partner_status: string | null;
+  activation_source: string | null;
+  activation_note: string | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
   monthly: {
@@ -41,6 +43,7 @@ type Row = {
     last_invoice_month: string | null;
   };
 };
+
 
 type StageFilter = "all" | "email" | "payment" | "quiz" | "id" | "released";
 type AlreadyCoachFilter = "all" | "yes" | "no";
@@ -69,11 +72,27 @@ type AuditEntry = {
 };
 
 const ACTION_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
-  coach_email_confirmed: { label: "E-mail confirmado", icon: Mail },
-  coach_activation_paid: { label: "Ativação paga", icon: CreditCard },
-  coach_quiz_approved: { label: "Quiz aprovado", icon: FileCheck2 },
-  coach_id_assigned_released: { label: "ID atribuído e painel liberado", icon: KeyRound },
+  coach_email_confirmed:          { label: "E-mail confirmado", icon: Mail },
+  coach_activation_paid:          { label: "Ativação concedida pelo admin", icon: CreditCard },
+  coach_activation_already_coach: { label: "Ativação: clicou em 'Já sou coach'", icon: CreditCard },
+  coach_activation_purchased:     { label: "Ativação: comprou na loja", icon: CreditCard },
+  coach_activation_mercadopago:   { label: "Ativação: paga via Mercado Pago", icon: CreditCard },
+  coach_activation_partner:       { label: "Ativação: parceiro aprovado", icon: CreditCard },
+  coach_activation_unknown:       { label: "Ativação registrada (origem desconhecida)", icon: CreditCard },
+  coach_quiz_submitted:           { label: "Quiz enviado pelo coach", icon: FileCheck2 },
+  coach_quiz_approved:            { label: "Quiz aprovado", icon: FileCheck2 },
+  coach_self_unlocked:            { label: "Coach liberou painel com ID", icon: KeyRound },
+  coach_id_assigned_released:     { label: "ID atribuído e painel liberado", icon: KeyRound },
 };
+
+const ACTIVATION_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
+  already_coach:    { label: "Já sou coach",       cls: "bg-blue-500/15 text-blue-300" },
+  purchased:        { label: "Comprou na loja",    cls: "bg-emerald-500/15 text-emerald-300" },
+  mercadopago:      { label: "Pago no Mercado Pago", cls: "bg-emerald-500/15 text-emerald-300" },
+  partner_approved: { label: "Parceiro aprovado",  cls: "bg-cyan-500/15 text-cyan-300" },
+  admin_grant:      { label: "Concedida pelo admin", cls: "bg-amber-500/15 text-amber-300" },
+};
+
 
 function CoachReleasesPage() {
   const fetchList = useServerFn(listAllCoachReleases);
@@ -324,23 +343,36 @@ function CoachReleasesPage() {
                   </button>
 
                   {/* 2. Marcar pagamento (concessão admin — exige justificativa) */}
-                  <button
-                    disabled={paymentDone || (busy?.id === r.id && busy?.step === "payment")}
-                    onClick={() => {
-                      const note = window.prompt(
-                        "Justifique a concessão da ativação (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 25/06'."
+                  <div className="flex flex-col gap-1">
+                    <button
+                      disabled={paymentDone || (busy?.id === r.id && busy?.step === "payment")}
+                      onClick={() => {
+                        const note = window.prompt(
+                          "Justifique a concessão da ativação (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 25/06'."
+                        );
+                        if (!note || note.trim().length < 5) {
+                          toast.error("Justificativa obrigatória.");
+                          return;
+                        }
+                        run(r.id, "payment", () => markPaid({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
+                    >
+                      {busy?.id === r.id && busy?.step === "payment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                      {paymentDone ? `Pago em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Conceder ativação"}
+                    </button>
+                    {paymentDone && (() => {
+                      const src = r.activation_source ?? (r.already_coach ? "already_coach" : null);
+                      const b = src ? ACTIVATION_SOURCE_BADGE[src] : null;
+                      return (
+                        <span className={`self-start inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b?.cls ?? "bg-white/10 text-white/60"}`}>
+                          Origem: {b?.label ?? "não informada"}
+                          {r.activation_note ? ` · ${r.activation_note}` : ""}
+                        </span>
                       );
-                      if (!note || note.trim().length < 5) {
-                        toast.error("Justificativa obrigatória.");
-                        return;
-                      }
-                      run(r.id, "payment", () => markPaid({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
-                  >
-                    {busy?.id === r.id && busy?.step === "payment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
-                    {paymentDone ? `Pago em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Conceder ativação"}
-                  </button>
+                    })()}
+                  </div>
+
 
 
                   {/* 3. Aprovar quiz */}
