@@ -136,25 +136,6 @@ function LoginPage() {
 
   return (
     <>
-      {/* DEBUG: marcador visual para confirmar se login.tsx monta durante o boot */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 9999,
-          backgroundColor: "#ff0000",
-          color: "#ffffff",
-          textAlign: "center",
-          padding: "8px",
-          fontWeight: "bold",
-          fontSize: "14px",
-          letterSpacing: "1px",
-        }}
-      >
-        LOGIN_ROUTE_DEBUG
-      </div>
       <div className="flex min-h-screen">
         {/* Left panel - Brand */}
 
