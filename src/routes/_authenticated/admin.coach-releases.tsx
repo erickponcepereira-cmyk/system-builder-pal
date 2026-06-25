@@ -275,6 +275,22 @@ function CoachReleasesPage() {
                         {r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
                       </span>
                     )}
+                    {(() => {
+                      const m = r.monthly ?? { status: "none" as MonthlyStatus, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+                      const b = MONTHLY_BADGE[m.status];
+                      const tip = [
+                        m.paid_until ? `Paga até ${new Date(m.paid_until).toLocaleDateString("pt-BR")}` : null,
+                        m.last_invoice_month ? `Última fatura: ${m.last_invoice_month}${m.last_invoice_status ? ` (${m.last_invoice_status})` : ""}` : null,
+                      ].filter(Boolean).join(" · ");
+                      return (
+                        <span
+                          title={tip || undefined}
+                          className={`ml-1 mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b.cls}`}
+                        >
+                          {b.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 
