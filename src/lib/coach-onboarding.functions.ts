@@ -547,7 +547,7 @@ export const adminMarkActivationPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id, onboarding_stage, activation_paid_at")
@@ -568,6 +568,7 @@ export const adminMarkActivationPaid = createServerFn({ method: "POST" })
       message: "Agora envie o resultado do quiz comportamental para seguir.",
       action_url: "/coach",
     });
+    await logCoachAudit(actorId, coach.profile_id, "coach_activation_paid", "Ativação marcada como paga pelo admin");
     return { ok: true };
   });
 
