@@ -9238,6 +9238,18 @@ export type Database = {
       find_hbl_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_master_coach_for: { Args: { _coach_id: string }; Returns: string }
       find_nutritionist_for: { Args: { _coach_id: string }; Returns: string }
+      find_orphan_registrations: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          missing: string
+          name: string
+          profile_id: string
+          role: string
+          user_id: string
+        }[]
+      }
       find_student_id_by_email: { Args: { _email: string }; Returns: string }
       find_upline_with_badge: {
         Args: {
