@@ -594,6 +594,7 @@ export const adminApproveQuiz = createServerFn({ method: "POST" })
       message: "Aguarde a liberação final do seu painel de coach.",
       action_url: "/coach",
     });
+    await logCoachAudit(actorId, coach.profile_id, "coach_quiz_approved", "Quiz comportamental aprovado pelo admin");
     return { ok: true };
   });
 
