@@ -156,7 +156,9 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       .order("created_at" as never, { ascending: false });
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
-    const sections = (sectionsRes.data as unknown as SectionRow[]) || [];
+    const allSections = (sectionsRes.data as unknown as Array<SectionRow & { target_audience?: string | null }>) || [];
+    // Loja FitMind: oculta seções marcadas para parceiros/profissionais
+    const sections = allSections.filter((s) => !s.target_audience || s.target_audience === "fitmind") as SectionRow[];
     setStoreSections(sections);
     const sectionName = (id: string) => sections.find((s) => s.id === id)?.name || "Loja";
 
