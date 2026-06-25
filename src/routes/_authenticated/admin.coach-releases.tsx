@@ -191,7 +191,7 @@ function CoachReleasesPage() {
       </div>
 
       {/* Filtros */}
-      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto]">
+      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto_auto]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
