@@ -158,6 +158,33 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         </div>
       ) : (
         <>
+          {(() => {
+            const totalSavings = partnerFreebies.reduce((sum, p) => {
+              const ev = Number(p.estimated_value || 0);
+              if (p.redemption_mode === "discount") return sum + ev * (Number(p.discount_percent || 0) / 100);
+              return sum + ev;
+            }, 0);
+            if (totalSavings <= 0 && savedTotal <= 0) return null;
+            return (
+              <div className="mb-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Disponível pra economizar</p>
+                  <p className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-300">
+                    R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="mt-1 text-[10px] text-white/55">Usando todos os benefícios ativos.</p>
+                </div>
+                <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Você já economizou</p>
+                  <p className="mt-1 text-xl sm:text-2xl font-extrabold text-primary">
+                    R$ {savedTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="mt-1 text-[10px] text-white/55">Cupons já validados pelos parceiros.</p>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => setShowMyQR(true)}
