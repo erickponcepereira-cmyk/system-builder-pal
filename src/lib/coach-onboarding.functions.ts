@@ -576,7 +576,7 @@ export const adminApproveQuiz = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id, onboarding_stage, quiz_result_submitted_at")
