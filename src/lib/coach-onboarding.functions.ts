@@ -607,7 +607,7 @@ export const adminAssignCoachIdAndRelease = createServerFn({ method: "POST" })
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    const actorId = await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: coach } = await supabaseAdmin
       .from("coaches").select("id, profile_id, coach_number, onboarding_stage")
