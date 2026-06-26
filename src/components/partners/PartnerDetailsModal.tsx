@@ -141,9 +141,9 @@ export function PartnerDetailsModal({
             <div className="relative z-10 px-4 sm:px-6 -mt-10 pb-5">
               <div className="relative z-10 flex items-end gap-3">
                 {data.partner.photo_url ? (
-                  <img src={data.partner.photo_url} alt={data.partner.fantasy_name} className="h-20 w-20 rounded-2xl object-cover border-4 border-[#111]" />
+                  <img src={data.partner.photo_url} alt={data.partner.fantasy_name} className="h-20 w-20 rounded-2xl object-cover border-4 border-[#111] shadow-xl shadow-black/40" />
                 ) : (
-                  <div className="h-20 w-20 rounded-2xl bg-white/10 border-4 border-[#111] flex items-center justify-center text-2xl">🏢</div>
+                  <div className="h-20 w-20 rounded-2xl bg-white/10 border-4 border-[#111] shadow-xl shadow-black/40 flex items-center justify-center text-2xl">🏢</div>
                 )}
                 <div className="pb-2">
                   <h2 className="text-lg sm:text-xl font-bold leading-tight">{data.partner.fantasy_name}</h2>
