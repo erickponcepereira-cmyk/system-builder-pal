@@ -222,6 +222,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               upline_coach_id: uplineCoachId,
               completed_coach_course: false,
               ...professionalPatch,
+              ...activationExtras,
             });
           if (insErr) throw insErr;
         }
