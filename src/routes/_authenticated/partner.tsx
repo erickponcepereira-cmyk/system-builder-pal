@@ -422,12 +422,18 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       };
     }
 
+    const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
     const payload = {
       ...editing,
       ...extra,
       partner_id: partner.id,
       status: "pending" as const,
       admin_notes: null,
+      image_url: emptyToNull(editing.image_url) as string | null,
+      description: emptyToNull(editing.description) as string | null,
+      redemption_instructions: emptyToNull(editing.redemption_instructions) as string | null,
+      section_id: emptyToNull(editing.section_id) as string | null,
+      category_id: emptyToNull(editing.category_id) as string | null,
       estimated_value: editing.kind === "free" ? Number(editing.estimated_value || 0) : null,
       benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
       benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
@@ -435,14 +441,19 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
         ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
         : null,
     };
-    if (editing.id) {
-      const { id, ...up } = payload;
-      const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
-      if (error) return toast.error(error.message);
-    } else {
-      const { error } = await supabase.from("partner_products" as never).insert(payload as never);
-      if (error) return toast.error(error.message);
+    try {
+      if (editing.id) {
+        const { id, ...up } = payload;
+        const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
+        if (error) return toast.error(error.message);
+      } else {
+        const { error } = await supabase.from("partner_products" as never).insert(payload as never);
+        if (error) return toast.error(error.message);
+      }
+    } catch (e: any) {
+      return toast.error(`Falha de rede ao salvar: ${e?.message || e}. Verifique sua conexão e tente novamente.`);
     }
+
     toast.success("Salvo. Aguardando aprovação do admin.");
     setEditing(null); onReload();
   };
