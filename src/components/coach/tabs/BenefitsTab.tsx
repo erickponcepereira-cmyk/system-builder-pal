@@ -268,32 +268,38 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded uppercase bg-green-500/20 text-green-300">Grátis</span>}
                           </div>
                           <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
-                          {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
-                          {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
-                            <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
-                              <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
-                            </p>
-                          )}
-                          {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
-                            <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
-                              {isDiscount ? (
-                                <>
-                                  <p className="text-[10px] text-white/55">
-                                    De <span className="line-through">R$ {Number(p.estimated_value).toFixed(2)}</span> por <span className="font-bold text-white">R$ {(p.estimated_value * (1 - Number(p.discount_percent || 0) / 100)).toFixed(2)}</span>
-                                  </p>
-                                  <p className="text-[11px] font-bold text-emerald-300">
-                                    Você economiza R$ {(p.estimated_value * (Number(p.discount_percent || 0) / 100)).toFixed(2)}
-                                  </p>
-                                </>
-                              ) : (
-                                <p className="text-[11px] font-bold text-emerald-300">
-                                  Você economiza R$ {Number(p.estimated_value).toFixed(2)} <span className="text-white/50 font-normal">(valor de mercado)</span>
-                                </p>
-                              )}
+                          {p.description && (
+                            <div className="flex-1 min-h-0 mt-2">
+                              <p className="text-xs text-white/60 leading-relaxed">{p.description}</p>
                             </div>
                           )}
-                          {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                          {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                          <div className="mt-auto pt-3 flex flex-col gap-2">
+                            {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                              <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                                <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                              </p>
+                            )}
+                            {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                              <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
+                                {isDiscount ? (
+                                  <>
+                                    <p className="text-[10px] text-white/55">
+                                      De <span className="line-through">R$ {Number(p.estimated_value).toFixed(2)}</span> por <span className="font-bold text-white">R$ {(p.estimated_value * (1 - Number(p.discount_percent || 0) / 100)).toFixed(2)}</span>
+                                    </p>
+                                    <p className="text-[11px] font-bold text-emerald-300">
+                                      Você economiza R$ {(p.estimated_value * (Number(p.discount_percent || 0) / 100)).toFixed(2)}
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className="text-[11px] font-bold text-emerald-300">
+                                    Você economiza R$ {Number(p.estimated_value).toFixed(2)} <span className="text-white/50 font-normal">(valor de mercado)</span>
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {p.redemption_instructions && <p className="text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                            {p.stock !== null && <p className="text-[10px] text-white/40">Estoque: {p.stock}</p>}
+                          </div>
                           <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
                             <button
                               type="button"
