@@ -58,9 +58,13 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     // Commissions split. Treat a commission as "available" once its
     // available_at has elapsed, even if status still says pending — there is
     // no cron job promoting pending → available yet.
-    const { data: comms } = await supabaseAdmin
-      .from("commissions").select("amount, level, status, available_at")
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
+    let commQ = supabaseAdmin
+      .from("commissions").select("amount, level, status, available_at, created_at")
       .eq("beneficiary_profile_id", profile.id);
+    if (cutoff) commQ = commQ.gte("created_at", cutoff);
+    const { data: comms } = await commQ;
     const direct = { available: 0, pending: 0, total: 0 };
     const network = { available: 0, pending: 0, total: 0, locked: !snap.anyCompleted };
     const nowMs = Date.now();
