@@ -1,10 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard } from "lucide-react";
+import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { approveCoachAndConfirmEmail } from "@/lib/admin-users.functions";
+
+interface TransferRow {
+  id: string;
+  from_coach_id: string;
+  to_coach_id: string;
+  reason: string | null;
+  students_transferred: number | null;
+  coaches_transferred: number | null;
+  performed_by: string | null;
+  transferred_at: string;
+}
 
 export const Route = createFileRoute("/_authenticated/admin/coaches")({
   component: AdminCoaches,
@@ -23,6 +34,7 @@ interface CoachRow {
   created_at: string | null;
   card_valid_until: string | null;
   can_create_fitmind_events: boolean | null;
+  upline_coach_id: string | null;
   profiles: {
     id: string;
     name: string;
@@ -47,6 +59,28 @@ function AdminCoaches() {
   const [acting, setActing] = useState<string | null>(null);
   const [cardEditing, setCardEditing] = useState<CoachRow | null>(null);
   const [cardDate, setCardDate] = useState<string>("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<TransferRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from("coach_transfers")
+      .select("*")
+      .order("transferred_at", { ascending: false })
+      .limit(200);
+    if (error) toast.error("Erro ao carregar histórico");
+    setHistory((data as unknown as TransferRow[]) || []);
+    setHistoryLoading(false);
+  };
+
+  const openHistory = () => { setShowHistory(true); loadHistory(); };
+
+  const coachLabel = (id: string) => {
+    const c = coaches.find((x) => x.id === id);
+    return c?.profiles?.name || id.slice(0, 8);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -80,16 +114,34 @@ function AdminCoaches() {
     else { toast.success("Cadastro rejeitado"); load(); }
   };
 
-  const blockCoach = async (coachId: string) => {
-    if (!confirm("Bloquear este coach? Ele perderá o acesso ao painel.")) return;
-    setActing(`block-${coachId}`);
-    const { error } = await supabase.rpc("block_inactive_coach" as never, {
-      _coach_id: coachId,
-      _reason: "Bloqueado manualmente pelo administrador.",
-    } as never);
-    setActing(null);
-    if (error) { console.error("[block]", error); toast.error(error.message || "Erro ao desativar coach"); }
-    else { toast.success("Coach bloqueado"); load(); }
+  const blockCoach = async (c: CoachRow) => {
+    const upline = coaches.find((x) => x.id === (c as any).upline_coach_id);
+    const target = upline?.profiles?.name || null;
+    const msg = target
+      ? `Desativar este coach e transferir TODA a rede (alunos + sub-coaches) para o upline "${target}"?`
+      : `Este coach não possui upline. A desativação falhará a menos que você use "Migrar rede" para escolher um destino antes.\n\nDeseja apenas desativar mesmo assim?`;
+    if (!confirm(msg)) return;
+    setActing(`block-${c.id}`);
+    if (target) {
+      const { data, error } = await supabase.rpc("admin_block_and_transfer_to_upline" as never, {
+        _coach_id: c.id,
+        _reason: "Coach desativado pelo administrador.",
+      } as never);
+      setActing(null);
+      if (error) { console.error("[block-transfer]", error); toast.error(error.message || "Erro ao desativar"); return; }
+      const r = data as any;
+      toast.success(`Desativado. ${r?.students_transferred || 0} aluno(s) e ${r?.coaches_transferred || 0} coach(es) movidos para o upline.`);
+      load();
+    } else {
+      const { error } = await supabase.rpc("block_inactive_coach" as never, {
+        _coach_id: c.id,
+        _reason: "Bloqueado manualmente pelo administrador.",
+      } as never);
+      setActing(null);
+      if (error) { toast.error(error.message || "Erro ao desativar coach"); return; }
+      toast.success("Coach bloqueado (rede mantida, pois não há upline).");
+      load();
+    }
   };
 
   const unblockCoach = async (coachId: string) => {
@@ -187,9 +239,17 @@ function AdminCoaches() {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Coaches</h1>
-        <p className="text-sm text-white/50">Aprovar, gerenciar e visualizar coaches da rede</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Coaches</h1>
+          <p className="text-sm text-white/50">Aprovar, gerenciar e visualizar coaches da rede</p>
+        </div>
+        <button
+          onClick={openHistory}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10"
+        >
+          <History className="h-3.5 w-3.5" /> Histórico de transferências
+        </button>
       </div>
 
       {/* Filters */}
@@ -321,7 +381,7 @@ function AdminCoaches() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => blockCoach(c.id)}
+                        onClick={() => blockCoach(c)}
                         disabled={acting === `block-${c.id}`}
                         className="flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
                       >
@@ -452,6 +512,46 @@ function AdminCoaches() {
                 {acting === `card-${cardEditing.id}` && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar data
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowHistory(false)}>
+          <div className="w-full max-w-2xl rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Histórico de transferências de rede</h2>
+                <p className="text-xs text-white/50">Toda vez que um coach é desativado/migrado, a rede sobe para outro coach. Registro completo abaixo.</p>
+              </div>
+              <button onClick={() => setShowHistory(false)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {historyLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : history.length === 0 ? (
+              <p className="py-8 text-center text-sm text-white/50">Nenhuma transferência registrada ainda.</p>
+            ) : (
+              <div className="max-h-[60vh] overflow-y-auto space-y-2">
+                {history.map((h) => (
+                  <div key={h.id} className="rounded-lg border border-white/5 bg-white/[0.03] p-3 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-white">
+                        {coachLabel(h.from_coach_id)} <span className="text-white/40">→</span> {coachLabel(h.to_coach_id)}
+                      </span>
+                      <span className="text-white/40">{new Date(h.transferred_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <p className="mt-1 text-white/60">
+                      <span className="text-primary font-bold">{h.students_transferred || 0}</span> aluno(s) e
+                      {" "}<span className="text-primary font-bold">{h.coaches_transferred || 0}</span> sub-coach(es) movidos.
+                    </p>
+                    {h.reason && <p className="mt-1 text-white/50 italic">"{h.reason}"</p>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
