@@ -162,9 +162,10 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     // Separa o "slot" nutricionista do "slot" sistema usando os lançamentos da carteira:
     // o que for de nutricionista (ainda não atribuído) vai para o bucket Nutricionistas,
     // o restante (sistema) fica no bucket Sistema (Admin).
-    const { data: walletEntries } = await supabaseAdmin
+    const cutoff = await getServerCutoffIso();
+    const { data: walletEntries } = await applyCutoff(supabaseAdmin
       .from("admin_system_wallet_entries")
-      .select("slot_label, kind, amount");
+      .select("slot_label, kind, amount, created_at"), "created_at", cutoff);
     let sysCredits = 0, sysDebits = 0;
     let nutriAdminCredits = 0, nutriAdminDebits = 0;
     for (const e of walletEntries || []) {
@@ -379,14 +380,15 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
 
     // Bucket "system" = carteira compartilhada do admin (admin_system_wallet)
     if (data.bucket === "system") {
-      const { data: entriesRaw, error } = await supabaseAdmin
+      const cutoff = await getServerCutoffIso();
+      const { data: entriesRaw, error } = await applyCutoff(supabaseAdmin
         .from("admin_system_wallet_entries")
         .select("id, transaction_id, partner_order_id, subscription_invoice_id, slot_label, amount, kind, created_at")
         .not("slot_label", "ilike", "%nutricion%")
         .not("slot_label", "ilike", "%taxa de pagamento%")
         .not("slot_label", "ilike", "%imposto%")
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(500), "created_at", cutoff);
       if (error) throw new Error(error.message);
       const entries = (entriesRaw || []).filter((e: any) => isAdminSystemSlot(e.slot_label));
 
@@ -617,16 +619,17 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<FeesAndTaxesOverview> => {
     await assertAdmin(context.userId);
 
-    const { data: txs, error } = await supabaseAdmin
+    const cutoff = await getServerCutoffIso();
+    const { data: txs, error } = await applyCutoff(supabaseAdmin
       .from("transactions")
-      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status")
-      .eq("status", "paid");
+      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, created_at")
+      .eq("status", "paid"), "created_at", cutoff);
     if (error) throw new Error(error.message);
 
-    const { data: partnerOrders } = await supabaseAdmin
+    const { data: partnerOrders } = await applyCutoff(supabaseAdmin
       .from("partner_product_orders" as never)
-      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status" as never)
-      .eq("status" as never, "paid" as never);
+      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, created_at" as never)
+      .eq("status" as never, "paid" as never), "created_at", cutoff);
 
     const { data: payouts } = await supabaseAdmin
       .from("system_fee_payouts")
@@ -690,10 +693,10 @@ export const getFeesAndTaxesBreakdown = createServerFn({ method: "POST" })
     }
 
     // Subscription invoices (mensalidades pagas)
-    const { data: subInvoices } = await supabaseAdmin
+    const { data: subInvoices } = await applyCutoff(supabaseAdmin
       .from("subscription_invoices")
-      .select("id, amount, tax_amount, fee_amount, payment_method, status")
-      .eq("status", "paid");
+      .select("id, amount, tax_amount, fee_amount, payment_method, status, created_at")
+      .eq("status", "paid"), "created_at", cutoff);
     for (const t of ((subInvoices as any[]) || [])) {
       const taxAmt = Number(t.tax_amount || 0);
       const feeAmt = Number(t.fee_amount || 0);
@@ -736,27 +739,28 @@ export const listPendingSystemFees = createServerFn({ method: "POST" })
   .handler(async ({ context }): Promise<PendingFeeRow[]> => {
     await assertAdmin(context.userId);
 
-    const { data: txs, error } = await supabaseAdmin
+    const cutoff = await getServerCutoffIso();
+    const { data: txs, error } = await applyCutoff(supabaseAdmin
       .from("transactions")
-      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, paid_at, product_id, student_id")
+      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, paid_at, created_at, product_id, student_id")
       .eq("status", "paid")
       .order("paid_at", { ascending: false })
-      .limit(500);
+      .limit(500), "created_at", cutoff);
     if (error) throw new Error(error.message);
 
-    const { data: partnerOrders } = await supabaseAdmin
+    const { data: partnerOrders } = await applyCutoff(supabaseAdmin
       .from("partner_product_orders" as never)
-      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, paid_at, student_id" as never)
+      .select("id, gross_amount, tax_amount, payment_fee, payment_method, status, paid_at, created_at, student_id" as never)
       .eq("status" as never, "paid" as never)
       .order("paid_at" as never, { ascending: false })
-      .limit(500);
+      .limit(500), "created_at", cutoff);
 
-    const { data: subInvoices } = await supabaseAdmin
+    const { data: subInvoices } = await applyCutoff(supabaseAdmin
       .from("subscription_invoices")
-      .select("id, amount, tax_amount, fee_amount, payment_method, status, paid_at, user_id, reference_month")
+      .select("id, amount, tax_amount, fee_amount, payment_method, status, paid_at, created_at, user_id, reference_month")
       .eq("status", "paid")
       .order("paid_at", { ascending: false })
-      .limit(500);
+      .limit(500), "created_at", cutoff);
 
     const nonCard = (txs || []).filter((t: any) => {
       const m = String(t.payment_method || "").toLowerCase();
@@ -1018,12 +1022,13 @@ export const getAdminWallet = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<AdminWalletSummary> => {
     await assertAdmin(context.userId);
     // Soma somente entradas do sistema (exclui nutricionista, imposto e taxa de pagamento)
-    const { data: sysEntries } = await supabaseAdmin
+    const cutoff = await getServerCutoffIso();
+    const { data: sysEntries } = await applyCutoff(supabaseAdmin
       .from("admin_system_wallet_entries")
-      .select("kind, amount, slot_label")
+      .select("kind, amount, slot_label, created_at")
       .not("slot_label", "ilike", "%nutricion%")
       .not("slot_label", "ilike", "%imposto%")
-      .not("slot_label", "ilike", "%taxa de pagamento%");
+      .not("slot_label", "ilike", "%taxa de pagamento%"), "created_at", cutoff);
 
     let credits = 0;
     let debits = 0;
@@ -1057,6 +1062,7 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => d as { filter?: "all" | "credit" | "debit" })
   .handler(async ({ context, data }): Promise<AdminWalletEntry[]> => {
     await assertAdmin(context.userId);
+    const cutoff = await getServerCutoffIso();
     let q = supabaseAdmin
       .from("admin_system_wallet_entries")
       .select("id, transaction_id, subscription_invoice_id, slot_label, amount, kind, created_at")
@@ -1065,6 +1071,7 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
       .not("slot_label", "ilike", "%taxa de pagamento%")
       .order("created_at", { ascending: false })
       .limit(500);
+    if (cutoff) q = q.gte("created_at", cutoff);
 
     if (data.filter === "credit" || data.filter === "debit") {
       q = q.eq("kind", data.filter);
