@@ -4,6 +4,7 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { supabase } from "@/integrations/supabase/client";
+import { getClientCutoffIso } from "@/lib/test-mode";
 import { RewardsPanel } from "@/components/coach/RewardsPanel";
 import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
