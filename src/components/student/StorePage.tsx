@@ -406,9 +406,18 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     [activeSection, storeCategories],
   );
 
+  const vis = useStoreVisibility(coachMode);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
+    const fitmindHidden = vis.isHiddenForViewer("vendor_fitmind", null, null);
     return items.filter((item) => {
+      // Aplicar deny-list da cadeia de uplines (apenas para viewers; coach vê tudo)
+      if (!coachMode) {
+        const pk = mapStoreItemKind(item.kind);
+        if (pk && isFitmindKind(pk) && fitmindHidden) return false;
+        if (item.sectionId && vis.isHiddenForViewer("section", null, item.sectionId)) return false;
+        if (pk && vis.isHiddenForViewer("product", pk, item.sourceId)) return false;
+      }
       if (activeSection) {
         const inSection = item.sectionId === activeSection.id || item.category === activeSection.name;
         if (!inSection) return false;
@@ -417,7 +426,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       if (needle && !item.title.toLowerCase().includes(needle) && !(item.description || "").toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [activeSection, activeSubcategory, items, query]);
+  }, [activeSection, activeSubcategory, items, query, vis, coachMode]);
+
+  const visibleStoreSections = useMemo(() => {
+    if (coachMode) return storeSections;
+    return storeSections.filter((s) => !vis.isHiddenForViewer("section", null, s.id));
+  }, [storeSections, vis, coachMode]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   // Sem taxas — total = subtotal. Taxas de cartão são cobradas no checkout/maquininha.
