@@ -1107,23 +1107,44 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
       {activeSection && !activeSubcategory && subcatsOfActive.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {subcatsOfActive.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveSubcategory(c)}
-              className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
-              style={{ width: c.card_width ? `${c.card_width}px` : undefined, height: c.card_height ? `${c.card_height}px` : undefined }}
-            >
-              {c.image_url ? (
-                <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover" />
-              ) : (
-                <div className="flex h-28 w-full items-center justify-center bg-muted"><ShoppingBag className="h-7 w-7 text-muted-foreground" /></div>
-              )}
-              <p className="px-3 py-2 text-sm font-bold text-foreground">{c.name}</p>
-            </button>
-          ))}
+          {subcatsOfActive.map((c) => {
+            const catHidden = coachMode && vis.isHiddenByMe("category", null, c.id);
+            return (
+              <div key={c.id} className="relative">
+                <button
+                  onClick={() => setActiveSubcategory(c)}
+                  className={`w-full overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${catHidden ? "opacity-40" : ""}`}
+                  style={{ width: c.card_width ? `${c.card_width}px` : undefined, height: c.card_height ? `${c.card_height}px` : undefined }}
+                >
+                  {c.image_url ? (
+                    <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-28 w-full items-center justify-center bg-muted"><ShoppingBag className="h-7 w-7 text-muted-foreground" /></div>
+                  )}
+                  <p className="px-3 py-2 text-sm font-bold text-foreground">{c.name}</p>
+                </button>
+                {coachMode && (
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await vis.toggleHidden("category", null, c.id, !catHidden);
+                        toast.success(catHidden ? "Categoria reativada para sua rede." : "Categoria oculta da sua rede.");
+                      } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                    }}
+                    title={catHidden ? "Mostrar categoria para sua rede" : "Ocultar categoria da sua rede"}
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                  >
+                    {catHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+
 
       {!coachMode && !activeSection && orders.length > 0 && (
         <section className="rounded-2xl bg-card p-4">
