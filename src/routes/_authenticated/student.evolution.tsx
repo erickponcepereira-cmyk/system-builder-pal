@@ -5,6 +5,7 @@ import { Camera, Droplet, GlassWater, ImagePlus, Loader2, Plus, Target, Trophy, 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
+import { ProtectedImage } from "@/components/security/ProtectedImage";
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
 
@@ -22,6 +23,7 @@ function StudentEvolution() {
   const [saving, setSaving] = useState(false);
   const [caption, setCaption] = useState("");
   const [week, setWeek] = useState("1");
+  const [viewerTag, setViewerTag] = useState<string>("");
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Gallery / compare state
@@ -40,6 +42,7 @@ function StudentEvolution() {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return setLoading(false);
+    setViewerTag(userData.user.email || userData.user.id);
     const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
     const { data: studentData } = profile?.id
       ? await supabase.from("students").select("id,current_weight,goal_weight").eq("profile_id", profile.id).maybeSingle()
@@ -138,7 +141,7 @@ function StudentEvolution() {
           <button type="button" onClick={() => setGalleryOpen(true)} className="mt-4 grid w-full grid-cols-2 gap-2 text-left">
             {[firstPhoto, latestPhoto].filter(Boolean).map((photo, index) => (
               <div key={`${photo.id}-${index}`} className="overflow-hidden rounded-xl bg-muted">
-                <img src={photo.signedUrl || ""} alt={index === 0 ? "Primeira foto" : "Foto mais recente"} className="aspect-[3/4] w-full object-cover" />
+                <ProtectedImage src={photo.signedUrl || ""} alt={index === 0 ? "Primeira foto" : "Foto mais recente"} watermark={viewerTag} className="aspect-[3/4] w-full" />
                 <div className="p-2">
                   <p className="text-[10px] font-bold text-foreground">{index === 0 ? "Primeira" : "Atual"}</p>
                   <p className="text-[9px] text-muted-foreground">Semana {photo.week_number || "—"}</p>
@@ -167,7 +170,8 @@ function StudentEvolution() {
                 <div className="grid grid-cols-2 gap-2">
                   {compareSelection.map((p) => (
                     <div key={p.id} className="overflow-hidden rounded-xl bg-muted">
-                      <img src={p.signedUrl || ""} alt={p.caption || "Foto"} className="aspect-[3/4] w-full object-cover" />
+                      <ProtectedImage src={p.signedUrl || ""} alt={p.caption || "Foto"} watermark={viewerTag} className="aspect-[3/4] w-full" />
+
                       <div className="p-1.5">
                         <p className="text-[10px] font-bold text-white">Semana {p.week_number || "—"}</p>
                         <p className="text-[9px] text-white/50">{p.photo_date}</p>
@@ -189,7 +193,7 @@ function StudentEvolution() {
                         onClick={() => toggleCompare(p.id)}
                         className={`block w-full overflow-hidden rounded-lg border-2 transition-all ${selected ? "border-primary" : "border-transparent"}`}
                       >
-                        <img src={p.signedUrl || ""} alt={p.caption || "Foto"} className="aspect-[3/4] w-full object-cover" />
+                        <ProtectedImage src={p.signedUrl || ""} alt={p.caption || "Foto"} watermark={viewerTag} className="aspect-[3/4] w-full" />
                         <div className="bg-card/90 p-1">
                           <p className="text-[9px] font-bold text-white">Sem {p.week_number || "—"}</p>
                           <p className="text-[8px] text-white/50">{p.photo_date.slice(5)}</p>
