@@ -9813,6 +9813,7 @@ export type Database = {
         Args: { _sub_id: string }
         Returns: number
       }
+      test_mode_cutoff: { Args: never; Returns: string }
       touch_my_activity: { Args: never; Returns: undefined }
       transfer_inactive_coach_network: {
         Args: { _from_coach_id: string; _reason?: string; _to_coach_id: string }

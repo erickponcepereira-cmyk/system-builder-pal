@@ -4,6 +4,7 @@ import { Bell, BookOpenCheck, LayoutDashboard, MessageCircle, Plane, Plus, Quote
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { TestModeCard } from "@/components/admin/TestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
   component: AdminSettings,
@@ -181,6 +182,10 @@ function AdminSettings() {
         </div>
         <Button onClick={saveAll} disabled={saving} className="gap-2"><Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar tudo"}</Button>
       </div>
+
+      <div className="mb-5"><TestModeCard /></div>
+
+
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <Metric label="Frases ativas" value={String(enabledQuotes)} />

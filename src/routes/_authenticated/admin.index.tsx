@@ -4,6 +4,8 @@ import { Users, UserCheck, DollarSign, TrendingUp, Activity, Clock, Wallet, Trop
 import { supabase } from "@/integrations/supabase/client";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
+import { getClientCutoffIso } from "@/lib/test-mode";
+import { TestModeBanner } from "@/components/admin/TestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboard,
@@ -41,6 +43,12 @@ function AdminDashboard() {
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const cutoff = await getClientCutoffIso();
+      const effFirst = cutoff && cutoff > firstDay.toISOString() ? cutoff : firstDay.toISOString();
+      const effSix = cutoff && cutoff > sixMonthsAgo.toISOString() ? cutoff : sixMonthsAgo.toISOString();
+
+      const recentQ = supabase.from("transactions").select("id, gross_amount, paid_at, student_id, product_id").eq("status", "paid").order("paid_at", { ascending: false }).limit(5);
+      const recentQFinal = cutoff ? recentQ.gte("created_at", cutoff) : recentQ;
 
       const [coaches, pending, students, products, subs, txsMonth, txs6m, commPending, commAvail, withdrawals, recent] = await Promise.all([
         supabase.from("coaches").select("id", { count: "exact", head: true }).not("approved_at", "is", null),
@@ -48,12 +56,12 @@ function AdminDashboard() {
         supabase.from("students").select("id", { count: "exact", head: true }),
         supabase.from("products").select("id", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("transactions").select("gross_amount").eq("status", "paid").gte("paid_at", firstDay.toISOString()),
-        supabase.from("transactions").select("gross_amount, paid_at, student_id, product_id").eq("status", "paid").gte("paid_at", sixMonthsAgo.toISOString()),
+        supabase.from("transactions").select("gross_amount").eq("status", "paid").gte("paid_at", effFirst),
+        supabase.from("transactions").select("gross_amount, paid_at, student_id, product_id").eq("status", "paid").gte("paid_at", effSix),
         supabase.from("commissions").select("amount").eq("status", "pending"),
         supabase.from("commissions").select("amount").eq("status", "available"),
         supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"]),
-        supabase.from("transactions").select("id, gross_amount, paid_at, student_id, product_id").eq("status", "paid").order("paid_at", { ascending: false }).limit(5),
+        recentQFinal,
       ]);
 
       // Revenue by month (last 6)
@@ -165,6 +173,7 @@ function AdminDashboard() {
 
   return (
     <>
+      <TestModeBanner hiddenLabel="Vendas/lançamentos" />
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Dashboard Admin</h1>
         <p className="text-sm text-white/50">Visão geral da plataforma FitMind Club</p>
