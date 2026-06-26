@@ -137,15 +137,15 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     // Solicitações pendentes (saques) — sellers usam withdrawal_requests; alunos usam student_withdrawal_requests
     let wReqsQ = supabaseAdmin
       .from("withdrawal_requests")
-      .select("profile_id,amount,status,created_at")
+      .select("profile_id,amount,status,requested_at")
       .in("status", ["requested", "approved", "processing"]);
-    if (cutoff) wReqsQ = wReqsQ.gte("created_at", cutoff);
+    if (cutoff) wReqsQ = wReqsQ.gte("requested_at", cutoff);
     const { data: wReqs } = await wReqsQ;
     let swReqsQ = supabaseAdmin
       .from("student_withdrawal_requests" as never)
-      .select("student_id,amount,status,created_at" as never)
+      .select("student_id,amount,status,requested_at" as never)
       .in("status" as never, ["requested", "approved", "processing"] as never);
-    if (cutoff) swReqsQ = (swReqsQ as any).gte("created_at", cutoff);
+    if (cutoff) swReqsQ = (swReqsQ as any).gte("requested_at", cutoff);
     const { data: swReqs } = await swReqsQ;
 
     const wReqsArr = ((wReqs as Array<{ profile_id: string; amount: number }>) || []);
