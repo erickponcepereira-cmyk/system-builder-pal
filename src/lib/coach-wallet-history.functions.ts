@@ -22,10 +22,14 @@ export const getMyWalletHistory = createServerFn({ method: "GET" })
     ).data?.id;
     if (!profileId) return [];
 
-    const { data: comm } = await supabaseAdmin
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
+    let commQ = supabaseAdmin
       .from("commissions")
       .select("id,amount,level,created_at,transaction_id,slot_label")
-      .eq("beneficiary_profile_id", profileId)
+      .eq("beneficiary_profile_id", profileId);
+    if (cutoff) commQ = commQ.gte("created_at", cutoff);
+    const { data: comm } = await commQ
       .order("created_at", { ascending: false })
       .limit(30);
     const rows = (comm || []) as Array<{ id: string; amount: number; level: number; created_at: string; transaction_id: string | null; slot_label: string | null }>;
