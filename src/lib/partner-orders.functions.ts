@@ -88,16 +88,23 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const [adminEntries, cw, sw, nw, pw, profw, ppo, wr, swr] = await Promise.all([
-      supabase.from("admin_system_wallet_entries" as never).select("slot_label,kind,amount" as never),
-      supabase.from("wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
-      supabase.from("student_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
+    const applyCutoff = <T extends { gte: (col: any, v: any) => T }>(q: T, col: string): T =>
+      (cutoff ? q.gte(col as any, cutoff as any) : q);
+    const [adminEntries, cw, sw, nw, pw, profw, ppo, wr, swr, commAll] = await Promise.all([
+      applyCutoff(supabase.from("admin_system_wallet_entries" as never).select("slot_label,kind,amount,created_at" as never), "created_at"),
+      supabase.from("wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
+      supabase.from("student_wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
-      supabase.from("partner_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
-      supabase.from("professional_wallets" as never).select("available_balance,total_earned,total_withdrawn" as never),
-      supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee" as never).eq("status" as never, "paid" as never),
-      supabase.from("withdrawal_requests" as never).select("amount,status" as never).in("status" as never, ["pending", "approved", "processing"] as never),
-      supabase.from("student_withdrawal_requests" as never).select("amount,status" as never).in("status" as never, ["pending", "approved", "processing"] as never),
+      supabase.from("partner_wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
+      supabase.from("professional_wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
+      applyCutoff(supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee,paid_at" as never).eq("status" as never, "paid" as never), "paid_at"),
+      applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
+      applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
+      cutoff
+        ? supabase.from("commissions" as never).select("amount,beneficiary_profile_id,created_at" as never).gte("created_at" as never, cutoff as never)
+        : Promise.resolve({ data: null as any }),
     ]);
     const sum = (arr: any[] | null | undefined, k: string) =>
       (arr || []).reduce((a, r: any) => a + Number(r?.[k] || 0), 0);
@@ -127,19 +134,47 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         totalEarned: adminCredits,
         totalWithdrawn: adminDebits,
       },
-      coachWalletsTotal: {
-        available: sum(cw.data as any[], "available_balance") + sum(pw.data as any[], "available_balance") + sum(profw.data as any[], "available_balance"),
-        totalEarned: sum(cw.data as any[], "total_earned") + sum(pw.data as any[], "total_earned") + sum(profw.data as any[], "total_earned"),
-        totalWithdrawn: sum(cw.data as any[], "total_withdrawn") + sum(pw.data as any[], "total_withdrawn") + sum(profw.data as any[], "total_withdrawn"),
-        count: ((cw.data as any[] | null)?.length || 0) + ((pw.data as any[] | null)?.length || 0) + ((profw.data as any[] | null)?.length || 0),
-      },
-      studentWalletsTotal: {
-        available: sum(sw.data as any[], "available_balance"),
-        totalEarned: sum(sw.data as any[], "total_earned"),
-        totalWithdrawn: sum(sw.data as any[], "total_withdrawn"),
-        count: (sw.data as any[] | null)?.length || 0,
-      },
-      nutritionistTotal: {
+      coachWalletsTotal: (() => {
+        if (cutoff) {
+          const byProfile = new Map<string, number>();
+          ((commAll.data as any[] | null) || []).forEach((c: any) => {
+            byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
+          });
+          const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
+          const total = sumIn(cw.data as any[]) + sumIn(pw.data as any[]) + sumIn(profw.data as any[]);
+          return { available: total, totalEarned: total, totalWithdrawn: 0,
+            count: ((cw.data as any[] | null)?.length || 0) + ((pw.data as any[] | null)?.length || 0) + ((profw.data as any[] | null)?.length || 0) };
+        }
+        return {
+          available: sum(cw.data as any[], "available_balance") + sum(pw.data as any[], "available_balance") + sum(profw.data as any[], "available_balance"),
+          totalEarned: sum(cw.data as any[], "total_earned") + sum(pw.data as any[], "total_earned") + sum(profw.data as any[], "total_earned"),
+          totalWithdrawn: sum(cw.data as any[], "total_withdrawn") + sum(pw.data as any[], "total_withdrawn") + sum(profw.data as any[], "total_withdrawn"),
+          count: ((cw.data as any[] | null)?.length || 0) + ((pw.data as any[] | null)?.length || 0) + ((profw.data as any[] | null)?.length || 0),
+        };
+      })(),
+      studentWalletsTotal: (() => {
+        if (cutoff) {
+          const byProfile = new Map<string, number>();
+          ((commAll.data as any[] | null) || []).forEach((c: any) => {
+            byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
+          });
+          const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
+          const total = sumIn(sw.data as any[]);
+          return { available: total, totalEarned: total, totalWithdrawn: 0, count: (sw.data as any[] | null)?.length || 0 };
+        }
+        return {
+          available: sum(sw.data as any[], "available_balance"),
+          totalEarned: sum(sw.data as any[], "total_earned"),
+          totalWithdrawn: sum(sw.data as any[], "total_withdrawn"),
+          count: (sw.data as any[] | null)?.length || 0,
+        };
+      })(),
+      nutritionistTotal: cutoff ? {
+        available: nutriAdminAvailable,
+        blocked: 0,
+        totalEarned: nutriAdminCredits,
+        count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
+      } : {
         available: sum(nutritionistRows, "available_balance") + nutriAdminAvailable,
         blocked: sum(nutritionistRows, "blocked_balance"),
         totalEarned: sum(nutritionistRows, "total_earned") + nutriAdminCredits,

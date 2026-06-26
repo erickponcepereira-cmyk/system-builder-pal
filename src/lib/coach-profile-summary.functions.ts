@@ -71,11 +71,17 @@ export const getCoachProfileSummary = createServerFn({ method: "GET" })
 
     let totalSales = 0;
     if (studentIds.length) {
-      const { data: txs } = await supabaseAdmin
-        .from("transactions").select("gross_amount").in("student_id", studentIds).eq("status", "paid");
+      const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+      const cutoff = await getServerCutoffIso();
+      let txq = supabaseAdmin
+        .from("transactions").select("gross_amount,paid_at").in("student_id", studentIds).eq("status", "paid");
+      if (cutoff) txq = txq.gte("paid_at", cutoff);
+      const { data: txs } = await txq;
       ((txs || []) as Array<{ gross_amount: number }>).forEach((t) => { totalSales += Number(t.gross_amount) || 0; });
-      const { data: orders } = await supabaseAdmin
-        .from("store_orders").select("total_amount").in("student_id", studentIds).eq("status", "paid");
+      let oq = supabaseAdmin
+        .from("store_orders").select("total_amount,updated_at").in("student_id", studentIds).eq("status", "paid");
+      if (cutoff) oq = oq.gte("updated_at", cutoff);
+      const { data: orders } = await oq;
       ((orders || []) as Array<{ total_amount: number }>).forEach((o) => { totalSales += Number(o.total_amount) || 0; });
     }
     const totalActiveStudents = ownStudents.length;

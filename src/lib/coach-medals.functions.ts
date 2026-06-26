@@ -44,18 +44,21 @@ async function resolveCoachId(userId: string): Promise<string | null> {
 }
 
 async function sumOwnVp(coachId: string, sinceIso: string | null): Promise<number> {
+  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+  const cutoff = await getServerCutoffIso();
+  const effectiveSince = cutoff
+    ? (sinceIso && sinceIso > cutoff ? sinceIso : cutoff)
+    : sinceIso;
   const { data: studs } = await supabaseAdmin
     .from("students").select("id").eq("coach_id", coachId);
   const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
   if (ids.length === 0) return 0;
   let total = 0;
-  // VP = soma única dos pagamentos. Cada store_order paga gera uma transação,
-  // então somar ambos duplicaria o VP. Usamos apenas transactions (fonte canônica).
   let txq = supabaseAdmin
     .from("transactions").select("gross_amount")
     .in("student_id", ids).eq("status", "paid")
     .not("paid_at", "is", null);
-  if (sinceIso) txq = txq.gte("paid_at", sinceIso);
+  if (effectiveSince) txq = txq.gte("paid_at", effectiveSince);
   const { data: txs } = await txq;
   ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
   return total;

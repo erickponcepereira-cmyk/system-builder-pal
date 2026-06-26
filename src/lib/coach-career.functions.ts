@@ -51,26 +51,27 @@ async function resolveCoachId(userId: string): Promise<string | null> {
 
 async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promise<number> {
   if (coachIds.length === 0) return 0;
+  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+  const cutoff = await getServerCutoffIso();
+  const effectiveSince = cutoff && cutoff > sinceIso ? cutoff : sinceIso;
   const { data: studs } = await supabaseAdmin
     .from("students").select("id").in("coach_id", coachIds);
   const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
   if (ids.length === 0) return 0;
   let total = 0;
-  // Transactions são a fonte canônica (incluem store_orders via metadata.store_order_id)
   const { data: txs } = await supabaseAdmin
     .from("transactions").select("gross_amount, metadata")
     .in("student_id", ids).eq("status", "paid")
-    .not("paid_at", "is", null).gte("paid_at", sinceIso);
+    .not("paid_at", "is", null).gte("paid_at", effectiveSince);
   const linkedOrderIds = new Set<string>();
   ((txs as { gross_amount: number; metadata: any }[] | null) || []).forEach((t) => {
     total += Number(t.gross_amount) || 0;
     const linked = t?.metadata?.store_order_id;
     if (linked) linkedOrderIds.add(String(linked));
   });
-  // Store orders sem transaction espelho (compras puras de loja)
   const { data: orders } = await supabaseAdmin
     .from("store_orders").select("id,total_amount")
-    .in("student_id", ids).eq("status", "paid").gte("updated_at", sinceIso);
+    .in("student_id", ids).eq("status", "paid").gte("updated_at", effectiveSince);
   ((orders as { id: string; total_amount: number }[] | null) || []).forEach((o) => {
     if (linkedOrderIds.has(o.id)) return;
     total += Number(o.total_amount) || 0;

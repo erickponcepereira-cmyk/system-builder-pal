@@ -39,12 +39,15 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }): Promise<OrderPoolEntry[]> => {
     await ensureAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     let q = supabaseAdmin
       .from("product_order_pool_entries")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.status && data.status !== "all") q = q.eq("status", data.status);
+    if (cutoff) q = q.gte("created_at", cutoff);
     const { data: rows } = await q;
     if (!rows?.length) return [];
 
