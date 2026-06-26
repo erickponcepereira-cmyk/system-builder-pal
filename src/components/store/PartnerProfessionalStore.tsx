@@ -54,6 +54,25 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const myReferralCode = useMyReferralCode();
+  const vis = useStoreVisibility(mode === "reseller");
+  const productKind: HideProductKind = kind === "partner" ? "partner_product" : "professional_product";
+  const vendorType = kind === "partner" ? "vendor_partner" : "vendor_professional";
+
+  const handleToggleHide = async (
+    targetType: Parameters<typeof vis.toggleHidden>[0],
+    pKind: HideProductKind,
+    targetId: string | null,
+    e?: React.MouseEvent,
+  ) => {
+    e?.stopPropagation();
+    const currentlyHidden = vis.isHiddenByMe(targetType, pKind, targetId);
+    try {
+      await vis.toggleHidden(targetType, pKind, targetId, !currentlyHidden);
+      toast.success(currentlyHidden ? "Reativado para a sua rede." : "Ocultado da sua rede.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao alterar visibilidade.");
+    }
+  };
 
   const handleShare = async (productId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
