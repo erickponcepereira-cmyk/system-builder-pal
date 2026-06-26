@@ -280,6 +280,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
   .inputValidator((data: { group: PayoutGroup; search?: string; roleFilter?: SellerRole }) => data)
   .handler(async ({ context, data }): Promise<PayoutPersonRow[]> => {
     await assertAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     const cls = await classifyProfiles();
 
     let profileIds: string[] = [];
@@ -294,8 +296,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       roleOf = (pid) => cls.sellerRoleByProfile.get(pid) || "coach";
     } else {
       const sellerSet = new Set(cls.sellerProfileIds);
-      const { data: refRecvRaw } = await supabaseAdmin
-        .from("commissions").select("beneficiary_profile_id").eq("is_referral", true);
+      let refQ = supabaseAdmin
+        .from("commissions").select("beneficiary_profile_id,created_at").eq("is_referral", true);
+      if (cutoff) refQ = refQ.gte("created_at", cutoff);
+      const { data: refRecvRaw } = await refQ;
       profileIds = Array.from(new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
         .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id))));
@@ -304,24 +308,33 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
 
     if (profileIds.length === 0) return [];
 
+    const pendingReqsQ = (() => {
+      let q = supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]);
+      if (cutoff) q = q.gte("requested_at", cutoff);
+      return q;
+    })();
+    const stuReqsQ = (async () => {
+      const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
+      if (!sids.length) return { data: [] as unknown };
+      let q = supabaseAdmin.from("student_withdrawal_requests" as never).select("id,student_id,amount,status,requested_at" as never).in("student_id" as never, sids as never).in("status" as never, ["requested", "approved", "processing"] as never);
+      if (cutoff) q = (q as any).gte("requested_at", cutoff);
+      return q;
+    })();
+
     const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }, { data: stuW }, { data: stuReqs }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
       supabaseAdmin.from("wallets").select("profile_id,available_balance,total_withdrawn").in("profile_id", profileIds),
-      supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]),
+      pendingReqsQ,
       supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,total_withdrawn" as never).in("profile_id" as never, profileIds as never),
       (async () => {
         const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
         if (!sids.length) return { data: [] as unknown };
         return supabaseAdmin.from("student_wallets").select("student_id,available_balance,total_withdrawn").in("student_id", sids);
       })(),
-      (async () => {
-        const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
-        if (!sids.length) return { data: [] as unknown };
-        return supabaseAdmin.from("student_withdrawal_requests" as never).select("id,student_id,amount,status,requested_at" as never).in("student_id" as never, sids as never).in("status" as never, ["requested", "approved", "processing"] as never);
-      })(),
+      stuReqsQ,
     ]);
 
-    const commAgg = await aggregateCommissionsBy(profileIds);
+    const commAgg = await aggregateCommissionsBy(profileIds, cutoff);
 
     const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
