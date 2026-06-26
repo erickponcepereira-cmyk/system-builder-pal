@@ -52,6 +52,7 @@ function AdminPayments() {
 
   return (
     <>
+      <TestModeBanner hiddenLabel="Pagamentos/transações" />
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-white">Pagamentos</h1>
         <p className="text-sm text-white/50">Saques de coaches, parceiros, profissionais, nutricionistas e alunos indicadores.</p>
