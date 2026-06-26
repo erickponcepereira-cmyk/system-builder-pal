@@ -13,6 +13,7 @@ import { PartnerProfessionalStore } from "@/components/store/PartnerProfessional
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
 import { useStoreVisibility, mapStoreItemKind, isFitmindKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
+import { maskCPFSensitive } from "@/lib/masks";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -797,7 +798,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
                 <div>
                   <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione seu aluno"}</p>
                   {selectedClient?.email && <p className="text-[11px] text-muted-foreground">{selectedClient.email}</p>}
-                  {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {selectedClient.cpf}</p>}
+                  {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {maskCPFSensitive(selectedClient.cpf)}</p>}
                 </div>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -985,7 +986,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
                 <p className="text-sm font-bold text-foreground">{selectedClient?.name || "Selecione seu aluno"}</p>
                 {selectedClient?.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {selectedClient.coachName}</p>}
                 {selectedClient?.email && <p className="text-[11px] text-muted-foreground">{selectedClient.email}</p>}
-                {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {selectedClient.cpf}</p>}
+                {selectedClient?.cpf && <p className="text-[11px] text-muted-foreground">CPF: {maskCPFSensitive(selectedClient.cpf)}</p>}
               </div>
             </div>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -1436,8 +1437,10 @@ function ClientPickerModal({
     const termDigits = onlyDigits(term);
     return clients.filter((c) => {
       const nameMatch = c.name.toLowerCase().includes(term);
-      const cpfMatch = termDigits.length > 0 && c.cpf && onlyDigits(c.cpf).includes(termDigits);
-      return nameMatch || cpfMatch;
+      const emailMatch = !!c.email && c.email.toLowerCase().includes(term);
+      const phoneMatch = termDigits.length > 0 && !!c.phone && onlyDigits(c.phone).includes(termDigits);
+      // LGPD: removida busca por CPF — não é permitido descobrir clientes por CPF.
+      return nameMatch || emailMatch || phoneMatch;
     });
   }, [clients, q]);
 
@@ -1480,7 +1483,7 @@ function ClientPickerModal({
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={tab === "all" ? "Buscar por nome, CPF ou e-mail..." : "Buscar por nome ou CPF..."}
+            placeholder={tab === "all" ? "Buscar por nome, telefone ou e-mail..." : "Buscar por nome, telefone ou e-mail..."}
             className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -1499,7 +1502,7 @@ function ClientPickerModal({
                 <p className="text-sm font-bold text-foreground">{c.name}</p>
                 {c.coachName && <p className="text-[11px] font-semibold text-primary">Coach: {c.coachName}</p>}
                 {c.email && <p className="text-[11px] text-muted-foreground">{c.email}</p>}
-                {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {c.cpf}</p>}
+                {c.cpf && <p className="text-[11px] text-muted-foreground">CPF: {maskCPFSensitive(c.cpf)}</p>}
               </button>
             ))}
           </div>
