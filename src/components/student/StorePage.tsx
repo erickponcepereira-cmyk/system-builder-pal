@@ -1437,8 +1437,10 @@ function ClientPickerModal({
     const termDigits = onlyDigits(term);
     return clients.filter((c) => {
       const nameMatch = c.name.toLowerCase().includes(term);
-      const cpfMatch = termDigits.length > 0 && c.cpf && onlyDigits(c.cpf).includes(termDigits);
-      return nameMatch || cpfMatch;
+      const emailMatch = !!c.email && c.email.toLowerCase().includes(term);
+      const phoneMatch = termDigits.length > 0 && !!c.phone && onlyDigits(c.phone).includes(termDigits);
+      // LGPD: removida busca por CPF — não é permitido descobrir clientes por CPF.
+      return nameMatch || emailMatch || phoneMatch;
     });
   }, [clients, q]);
 
