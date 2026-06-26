@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type HideTargetType =
   | "product"
   | "section"
+  | "category"
   | "vendor_partner"
   | "vendor_professional"
   | "vendor_fitmind";
