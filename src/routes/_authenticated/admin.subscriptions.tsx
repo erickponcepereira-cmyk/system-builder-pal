@@ -189,19 +189,41 @@ function AdminSubscriptionsPage() {
                     </td>
 
                     <td className="p-3 text-right">
-                      {i.status !== "paid" && i.status !== "exempted" && (
-                        <div className="flex justify-end gap-1">
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {(i.status === "paid" || i.status === "exempted") && (
                           <button onClick={async () => {
-                            try { await fnPay({ data: { invoice_id: i.id, method: "manual_admin", wallet_source: "external" } } as any); toast.success("Marcada como paga"); load(); }
+                            if (!confirm("Desfazer este pagamento/isenção? A fatura volta para pendente e os lançamentos são removidos do relatório.")) return;
+                            try { await fnRevert({ data: { invoice_id: i.id } } as any); toast.success("Pagamento desfeito"); load(); }
                             catch (e: any) { toast.error(e.message); }
-                          }} className="rounded bg-green-600 px-2 py-1 text-xs">Marcar pago</button>
-                          <button onClick={async () => {
-                            try { await fnExempt({ data: { invoice_id: i.id } } as any); toast.success("Isenta"); load(); }
-                            catch (e: any) { toast.error(e.message); }
-                          }} className="rounded bg-blue-600 px-2 py-1 text-xs">Isentar</button>
-                        </div>
-                      )}
+                          }} className="rounded bg-yellow-600 px-2 py-1 text-xs">Desfazer</button>
+                        )}
+                        {i.status !== "paid" && i.status !== "exempted" && i.status !== "cancelled" && (
+                          <>
+                            <button onClick={async () => {
+                              try { await fnPay({ data: { invoice_id: i.id, method: "manual_admin", wallet_source: "external" } } as any); toast.success("Marcada como paga"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-green-600 px-2 py-1 text-xs">Marcar pago</button>
+                            <button onClick={async () => {
+                              try { await fnExempt({ data: { invoice_id: i.id } } as any); toast.success("Isenta"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-blue-600 px-2 py-1 text-xs">Isentar</button>
+                            <button onClick={async () => {
+                              const current = i.due_date ? String(i.due_date).slice(0, 10) : new Date().toISOString().slice(0, 10);
+                              const input = prompt("Novo vencimento (AAAA-MM-DD):", current);
+                              if (!input) return;
+                              if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) { toast.error("Data inválida"); return; }
+                              try { await fnPostpone({ data: { invoice_id: i.id, new_due_date: input } } as any); toast.success("Vencimento adiado"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-orange-600 px-2 py-1 text-xs">Adiar</button>
+                            <button onClick={async () => {
+                              try { await fnResetDue({ data: { invoice_id: i.id } } as any); toast.success("Vencimento restaurado"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-white/10 px-2 py-1 text-xs">Restaurar data</button>
+                          </>
+                        )}
+                      </div>
                     </td>
+
                   </tr>
                   );
                 })}
