@@ -9126,6 +9126,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_block_and_transfer_to_upline: {
+        Args: {
+          _coach_id: string
+          _reason?: string
+          _to_coach_id_override?: string
+        }
+        Returns: Json
+      }
       admin_change_student_coach: {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
