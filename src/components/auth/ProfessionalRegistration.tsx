@@ -248,6 +248,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
             referralCode,
             referralLink: `${window.location.origin}/r/${referralCode}`,
             completedCoachCourse: false,
+            alreadyCoach: isAlreadyPro,
+            activationNote: alreadyProfessionalNote.trim() || null,
             isProfessional: true,
             specialtyKey,
             specialtyCustomDescription: selectedSpecLocal?.requires_admin_setup ? specialtyCustom.trim() : null,
