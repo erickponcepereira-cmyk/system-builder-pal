@@ -126,20 +126,20 @@ export function PartnerDetailsModal({
         ) : (
           <>
             {/* Cover */}
-            <div className="relative h-32 sm:h-44 bg-gradient-to-br from-primary/30 to-black overflow-hidden">
+            <div className="relative h-32 sm:h-44 bg-gradient-to-br from-primary/30 to-black overflow-hidden z-0">
               {data.partner.cover_url && (
-                <img src={data.partner.cover_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+                <img src={data.partner.cover_url} alt="" className="absolute inset-0 z-0 h-full w-full object-cover opacity-80" />
               )}
               <button
                 onClick={onClose}
-                className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black"
+                className="absolute top-3 right-3 z-20 h-8 w-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="px-4 sm:px-6 -mt-10 pb-5">
-              <div className="flex items-end gap-3">
+            <div className="relative z-10 px-4 sm:px-6 -mt-10 pb-5">
+              <div className="relative z-10 flex items-end gap-3">
                 {data.partner.photo_url ? (
                   <img src={data.partner.photo_url} alt={data.partner.fantasy_name} className="h-20 w-20 rounded-2xl object-cover border-4 border-[#111]" />
                 ) : (
