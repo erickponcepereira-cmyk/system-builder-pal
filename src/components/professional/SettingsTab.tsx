@@ -25,10 +25,11 @@ type PublicProfile = {
   social_links: SocialLink[];
   services: string;
   specializations: string[];
+  cover_url: string | null;
 };
 
 const EMPTY_PROFILE: PublicProfile = {
-  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [],
+  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [], cover_url: null,
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
@@ -50,7 +51,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
       const { data: pubRow } = await supabase
         .from("professional_public_profile" as never)
-        .select("headline,bio_long,instagram,website,social_links,services,specializations" as never)
+        .select("headline,bio_long,instagram,website,social_links,services,specializations,cover_url" as never)
         .eq("profile_id" as never, profileId as never)
         .maybeSingle();
       if (pubRow) {
@@ -63,6 +64,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
           social_links: Array.isArray(r.social_links) ? r.social_links : [],
           services: r.services || "",
           specializations: Array.isArray(r.specializations) ? r.specializations : [],
+          cover_url: r.cover_url || null,
         });
       }
 
@@ -88,6 +90,17 @@ export function SettingsTab({ coachId, profileId }: Props) {
     toast.success("Foto atualizada");
   };
 
+  const uploadCover = async (file: File) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
+    const path = `${user.id}/cover-${Date.now()}-${file.name}`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (upErr) return toast.error(upErr.message);
+    const { data: pubUrl } = supabase.storage.from("avatars").getPublicUrl(path);
+    setPub((prev) => ({ ...prev, cover_url: pubUrl.publicUrl }));
+    toast.success("Capa atualizada (clique em Salvar perfil)");
+  };
+
   const saveProfile = async () => {
     setSaving(true);
     const { error: e1 } = await supabase.from("profiles").update({ bio: profileBio.slice(0, 2000) }).eq("id", profileId);
@@ -102,6 +115,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
         social_links: pub.social_links,
         services: pub.services.slice(0, 2000) || null,
         specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
+        cover_url: pub.cover_url,
       } as never, { onConflict: "profile_id" } as never);
     setSaving(false);
     if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
@@ -178,6 +192,28 @@ export function SettingsTab({ coachId, profileId }: Props) {
               <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
             </div>
           </div>
+
+          {/* Capa */}
+          <Field label="Capa do perfil" hint="Banner exibido no topo do seu perfil público. Recomendado 1200×400px.">
+            <div className="space-y-2">
+              {pub.cover_url ? (
+                <img src={pub.cover_url} alt="Capa" className="h-28 w-full rounded-lg object-cover" />
+              ) : (
+                <div className="h-28 w-full rounded-lg bg-white/5 border border-dashed border-white/15 flex items-center justify-center text-[11px] text-white/40">
+                  Nenhuma capa adicionada
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
+                  {pub.cover_url ? "Trocar capa" : "Adicionar capa"}
+                </label>
+                {pub.cover_url && (
+                  <button type="button" onClick={() => setPub({ ...pub, cover_url: null })} className="text-[11px] text-red-300 hover:underline">Remover</button>
+                )}
+              </div>
+            </div>
+          </Field>
 
           <Field label="Título / Headline" hint="Aparece ao lado do seu nome (ex: 'Nutricionista Esportiva — Performance & Estética')">
             <input value={pub.headline} onChange={(e) => setPub({ ...pub, headline: e.target.value })} className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />

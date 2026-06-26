@@ -1,0 +1,1 @@
+ALTER TABLE public.professional_public_profile ADD COLUMN IF NOT EXISTS cover_url text;
