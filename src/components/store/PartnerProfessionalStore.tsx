@@ -267,7 +267,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white">Seções</h2>
-          {mode === "reseller" && (
+          {mode === "reseller" && !uplineHidesVendor && (
             <button
               type="button"
               onClick={() => handleToggleHide(vendorType, null, null)}
@@ -279,6 +279,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 : `Ocultar todos (${kind === "partner" ? "parceiros" : "profissionais"}) da rede`}
             </button>
           )}
+          {mode === "reseller" && uplineHidesVendor && (
+            <span className="text-[11px] rounded-full border border-white/10 px-3 py-1 text-white/40">Bloqueado pelo seu upline</span>
+          )}
+
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {visibleSections.map((s) => {
