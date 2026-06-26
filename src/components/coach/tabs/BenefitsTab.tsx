@@ -294,7 +294,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           )}
                           {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                           {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                          <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
                             <button
                               type="button"
                               onClick={() => setOpenPartner(p.partner_id)}
