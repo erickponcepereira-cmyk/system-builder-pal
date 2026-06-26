@@ -87,8 +87,19 @@ export function useStoreVisibility(coachMode: boolean) {
     targetId: string | null,
   ) => myHidden.has(visibilityKey(targetType, productKind, targetId));
 
-  return { loaded, hiddenForViewer, myHidden, toggleHidden, isHiddenForViewer, isHiddenByMe, refresh };
+  // Hidden by some upline coach (not by me). These MUST be filtered out even in coach mode.
+  const isHiddenByUpline = (
+    targetType: HideTargetType,
+    productKind: HideProductKind,
+    targetId: string | null,
+  ) => {
+    const k = visibilityKey(targetType, productKind, targetId);
+    return hiddenForViewer.has(k) && !myHidden.has(k);
+  };
+
+  return { loaded, hiddenForViewer, myHidden, toggleHidden, isHiddenForViewer, isHiddenByMe, isHiddenByUpline, refresh };
 }
+
 
 /** Map kind do StorePage para product_kind do override. */
 export function mapStoreItemKind(

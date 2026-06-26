@@ -411,12 +411,17 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   const vis = useStoreVisibility(coachMode);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const fitmindHidden = vis.isHiddenForViewer("vendor_fitmind", null, null);
+    const fitmindHiddenViewer = vis.isHiddenForViewer("vendor_fitmind", null, null);
+    const fitmindHiddenByUpline = vis.isHiddenByUpline("vendor_fitmind", null, null);
     return items.filter((item) => {
-      // Aplicar deny-list da cadeia de uplines (apenas para viewers; coach vê tudo)
+      const pk = mapStoreItemKind(item.kind);
+      // Upline hides são SEMPRE aplicadas (inclusive em coach mode).
+      if (pk && isFitmindKind(pk) && fitmindHiddenByUpline) return false;
+      if (item.sectionId && vis.isHiddenByUpline("section", null, item.sectionId)) return false;
+      if (pk && vis.isHiddenByUpline("product", pk, item.sourceId)) return false;
+      // Para viewers (aluno/parceiro/profissional), também esconde as minhas próprias hides.
       if (!coachMode) {
-        const pk = mapStoreItemKind(item.kind);
-        if (pk && isFitmindKind(pk) && fitmindHidden) return false;
+        if (pk && isFitmindKind(pk) && fitmindHiddenViewer) return false;
         if (item.sectionId && vis.isHiddenForViewer("section", null, item.sectionId)) return false;
         if (pk && vis.isHiddenForViewer("product", pk, item.sourceId)) return false;
       }
@@ -431,9 +436,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   }, [activeSection, activeSubcategory, items, query, vis, coachMode]);
 
   const visibleStoreSections = useMemo(() => {
-    if (coachMode) return storeSections;
-    return storeSections.filter((s) => !vis.isHiddenForViewer("section", null, s.id));
+    return storeSections.filter((s) => {
+      if (vis.isHiddenByUpline("section", null, s.id)) return false;
+      if (!coachMode && vis.isHiddenForViewer("section", null, s.id)) return false;
+      return true;
+    });
   }, [storeSections, vis, coachMode]);
+
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   // Sem taxas — total = subtotal. Taxas de cartão são cobradas no checkout/maquininha.
@@ -1023,7 +1032,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
       {!activeSection && (
         <>
-          {coachMode && (
+          {coachMode && !vis.isHiddenByUpline("vendor_fitmind", null, null) && (
             <div className="flex justify-end">
               <button
                 type="button"
@@ -1040,6 +1049,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               </button>
             </div>
           )}
+          {coachMode && vis.isHiddenByUpline("vendor_fitmind", null, null) && (
+            <div className="flex justify-end">
+              <span className="text-[11px] rounded-full border border-white/10 px-3 py-1 text-white/40">FitMind bloqueada pelo seu upline</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {visibleStoreSections.map((s) => {
               const secHidden = coachMode && vis.isHiddenByMe("section", null, s.id);
