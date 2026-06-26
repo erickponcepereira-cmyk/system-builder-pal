@@ -11,6 +11,8 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
+import { useStoreVisibility, mapStoreItemKind, isFitmindKind } from "@/lib/coach-store-overrides";
+import { Eye, EyeOff } from "lucide-react";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
