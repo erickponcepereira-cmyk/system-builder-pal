@@ -4,6 +4,7 @@ import { GoalsCard } from "@/components/coach/GoalsCard";
 import { UpcomingAppointments } from "@/components/coach/UpcomingAppointments";
 import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { supabase } from "@/integrations/supabase/client";
+import { getClientCutoffIso } from "@/lib/test-mode";
 import { RewardsPanel } from "@/components/coach/RewardsPanel";
 import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
@@ -35,15 +36,23 @@ export function OverviewTab({
       startMonth.setDate(1);
       startMonth.setHours(0, 0, 0, 0);
       const startIso = startMonth.toISOString();
+      const cutoff = await getClientCutoffIso();
+      const effectiveStart = cutoff && cutoff > startIso ? cutoff : startIso;
 
       const studentsQ = coachId
         ? supabase.from("students").select("id", { count: "exact", head: true }).eq("coach_id", coachId)
         : Promise.resolve({ count: 0 } as { count: number });
 
-      const [studentsRes, commMonthRes, walletRes] = await Promise.all([
+      // Em Modo de Testes ignoramos o saldo cumulativo da carteira; usamos soma das comissões pós-corte
+      const commAllQ = cutoff
+        ? supabase.from("commissions").select("amount,created_at").eq("beneficiary_profile_id", profile.id).gte("created_at", cutoff)
+        : null;
+
+      const [studentsRes, commMonthRes, walletRes, commAllRes] = await Promise.all([
         studentsQ,
-        supabase.from("commissions").select("amount").eq("beneficiary_profile_id", profile.id).gte("created_at", startIso),
-        supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
+        supabase.from("commissions").select("amount").eq("beneficiary_profile_id", profile.id).gte("created_at", effectiveStart),
+        cutoff ? Promise.resolve({ data: null }) : supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
+        commAllQ ?? Promise.resolve({ data: null as unknown }),
       ]);
 
       const commMonth = ((commMonthRes.data as Array<{ amount: number }>) || []).reduce((s, r) => s + Number(r.amount || 0), 0);
@@ -59,16 +68,20 @@ export function OverviewTab({
             .select("gross_amount")
             .in("student_id", ids)
             .eq("status", "paid")
-            .gte("paid_at", startIso);
+            .gte("paid_at", effectiveStart);
           salesMonth = ((tx as Array<{ gross_amount: number }>) || []).reduce((s, r) => s + Number(r.gross_amount || 0), 0);
         }
       }
+
+      const balance = cutoff
+        ? ((commAllRes.data as Array<{ amount: number }> | null) || []).reduce((s, r) => s + Number(r.amount || 0), 0)
+        : Number((walletRes.data as { available_balance?: number } | null)?.available_balance ?? 0);
 
       setData({
         students: (studentsRes as { count: number | null }).count ?? 0,
         salesMonth,
         commissionsMonth: commMonth,
-        balance: Number((walletRes.data as { available_balance?: number } | null)?.available_balance ?? 0),
+        balance,
       });
     })();
   }, [coachId]);

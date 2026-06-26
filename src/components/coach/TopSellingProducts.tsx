@@ -82,12 +82,16 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     (async () => {
       setLoading(true);
       const { from, to } = getRange(period, customFrom, customTo);
+      const { getClientCutoffIso } = await import("@/lib/test-mode");
+      const cutoff = await getClientCutoffIso();
 
-      const { data: comms } = await supabase
+      let commQ = supabase
         .from("commissions")
-        .select("transaction_id")
+        .select("transaction_id,created_at")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
+      if (cutoff) commQ = commQ.gte("created_at", cutoff);
+      const { data: comms } = await commQ;
       const txIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
       if (txIds.length === 0) { if (!cancelled) { setSales(new Map()); setLoading(false); } return; }
 
@@ -98,6 +102,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
         .eq("status", "paid");
       if (from) q = q.gte("paid_at", from.toISOString());
       if (to) q = q.lte("paid_at", to.toISOString());
+      if (cutoff) q = q.gte("paid_at", cutoff);
       const { data: txs } = await q;
 
       const map = new Map<string, SaleRow>();

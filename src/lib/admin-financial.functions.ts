@@ -80,9 +80,12 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
 
     // Commissions grouped by beneficiary
-    const { data: commissions, error: cErr } = await supabaseAdmin
+    const _cutoffComm = await getServerCutoffIso();
+    let _commQ = supabaseAdmin
       .from("commissions")
-      .select("amount, status, slot_label, level, beneficiary_profile_id, beneficiary_coach_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
+      .select("amount, status, slot_label, level, beneficiary_profile_id, beneficiary_coach_id, created_at, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
+    if (_cutoffComm) _commQ = _commQ.gte("created_at", _cutoffComm);
+    const { data: commissions, error: cErr } = await _commQ;
     if (cErr) throw new Error(cErr.message);
 
     const coachesMap = new Map<string, RecipientTotal>();
@@ -218,9 +221,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     (nutriProfiles || []).forEach((p: any) => nutriProfileMap.set(p.id, p));
     const nutriList: RecipientTotal[] = (nutriWallets || []).map((w: any) => {
       const prof = nutriProfileMap.get(w.profile_id);
-      const pending = Number(w.blocked_balance || 0);
-      const available = Number(w.available_balance || 0);
-      const paid = Number(w.total_withdrawn || 0);
+      const pending = cutoff ? 0 : Number(w.blocked_balance || 0);
+      const available = cutoff ? 0 : Number(w.available_balance || 0);
+      const paid = cutoff ? 0 : Number(w.total_withdrawn || 0);
       return {
         profileId: w.profile_id,
         name: prof?.name || "—",

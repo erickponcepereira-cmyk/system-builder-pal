@@ -74,8 +74,11 @@ async function buildSalesReportForRange(
   from: string,
   to: string,
 ): Promise<SalesReport> {
-  const fromIso = new Date(from + "T00:00:00").toISOString();
+  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+  const cutoff = await getServerCutoffIso();
+  const fromIsoRaw = new Date(from + "T00:00:00").toISOString();
   const toIso = new Date(to + "T23:59:59").toISOString();
+  const fromIso = cutoff && cutoff > fromIsoRaw ? cutoff : fromIsoRaw;
 
   // Students of this coach
   const { data: studentRows } = await supabaseAdmin
@@ -366,11 +369,15 @@ export const getCoachReferralSales = createServerFn({ method: "POST" })
     const refMap = new Map(refList.map((r) => [r.id, r]));
 
     // Referral commissions where referrer is one of my students
-    const { data: comms } = await supabaseAdmin
+    const { getServerCutoffIso: _g2 } = await import("@/lib/test-mode.functions");
+    const _cut = await _g2();
+    let commQ = supabaseAdmin
       .from("commissions")
       .select("id, transaction_id, amount, status, created_at, referred_by_student_id")
       .eq("is_referral", true)
-      .in("referred_by_student_id", refIds)
+      .in("referred_by_student_id", refIds);
+    if (_cut) commQ = commQ.gte("created_at", _cut);
+    const { data: comms } = await commQ
       .order("created_at", { ascending: false })
       .limit(1000);
     type Comm = { id: string; transaction_id: string | null; amount: number; status: string; created_at: string; referred_by_student_id: string };

@@ -74,13 +74,15 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
 
 // Retorna totais de comissões agregados por beneficiary_profile_id.
 interface CommissionAgg { earned: number; blocked: number; available: number; paid: number; }
-async function aggregateCommissionsBy(profileIds: string[]): Promise<Map<string, CommissionAgg>> {
+async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | null): Promise<Map<string, CommissionAgg>> {
   const map = new Map<string, CommissionAgg>();
   if (!profileIds.length) return map;
-  const { data } = await supabaseAdmin
+  let q = supabaseAdmin
     .from("commissions")
-    .select("beneficiary_profile_id,amount,status")
+    .select("beneficiary_profile_id,amount,status,created_at")
     .in("beneficiary_profile_id", profileIds);
+  if (cutoff) q = q.gte("created_at", cutoff);
+  const { data } = await q;
   for (const r of ((data as Array<{ beneficiary_profile_id: string; amount: number; status: string }>) || [])) {
     const cur = map.get(r.beneficiary_profile_id) || { earned: 0, blocked: 0, available: 0, paid: 0 };
     cur.earned += n(r.amount);
@@ -110,14 +112,18 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<PayoutsDashboard> => {
     await assertAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     const cls = await classifyProfiles();
 
     // student_referrer: alunos que receberam comissão de indicação e NÃO estão em seller
     const sellerSet = new Set(cls.sellerProfileIds);
-    const { data: refRecvRaw } = await supabaseAdmin
+    let refRecvQ = supabaseAdmin
       .from("commissions")
-      .select("beneficiary_profile_id")
+      .select("beneficiary_profile_id,created_at")
       .eq("is_referral", true);
+    if (cutoff) refRecvQ = refRecvQ.gte("created_at", cutoff);
+    const { data: refRecvRaw } = await refRecvQ;
     const studentReferrerIds = Array.from(
       new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
@@ -125,18 +131,22 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
-    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds);
-    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds);
+    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds, cutoff);
+    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds, cutoff);
 
     // Solicitações pendentes (saques) — sellers usam withdrawal_requests; alunos usam student_withdrawal_requests
-    const { data: wReqs } = await supabaseAdmin
+    let wReqsQ = supabaseAdmin
       .from("withdrawal_requests")
-      .select("profile_id,amount,status")
+      .select("profile_id,amount,status,requested_at")
       .in("status", ["requested", "approved", "processing"]);
-    const { data: swReqs } = await supabaseAdmin
+    if (cutoff) wReqsQ = wReqsQ.gte("requested_at", cutoff);
+    const { data: wReqs } = await wReqsQ;
+    let swReqsQ = supabaseAdmin
       .from("student_withdrawal_requests" as never)
-      .select("student_id,amount,status" as never)
+      .select("student_id,amount,status,requested_at" as never)
       .in("status" as never, ["requested", "approved", "processing"] as never);
+    if (cutoff) swReqsQ = (swReqsQ as any).gte("requested_at", cutoff);
+    const { data: swReqs } = await swReqsQ;
 
     const wReqsArr = ((wReqs as Array<{ profile_id: string; amount: number }>) || []);
     const swReqsArr = ((swReqs as unknown as Array<{ student_id: string; amount: number }>) || []);
@@ -198,19 +208,28 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
-      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
-      const sid = cls.studentByProfile.get(pid);
-      if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = sellerAgg.get(pid);
-      if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+      if (cutoff) {
+        // Modo de Testes: ignora saldos cumulativos das carteiras; usa apenas comissões pós-corte
+        if (agg) { sellerAvail += agg.available; sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+      } else {
+        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+        const sid = cls.studentByProfile.get(pid);
+        if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
+        if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+      }
     }
 
     let studRefAvail = 0, studRefBlocked = 0, studRefEarned = 0;
     for (const pid of studentReferrerIds) {
-      const sid = cls.studentByProfile.get(pid)!;
-      studRefAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = studentRefAgg.get(pid);
-      if (agg) { studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+      if (cutoff) {
+        if (agg) { studRefAvail += agg.available; studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+      } else {
+        const sid = cls.studentByProfile.get(pid)!;
+        studRefAvail += n(stuWalletByStudent.get(sid)?.available_balance);
+        if (agg) { studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+      }
     }
 
     const sellerReqInfo = sumReq(new Set(cls.sellerProfileIds));
@@ -261,6 +280,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
   .inputValidator((data: { group: PayoutGroup; search?: string; roleFilter?: SellerRole }) => data)
   .handler(async ({ context, data }): Promise<PayoutPersonRow[]> => {
     await assertAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     const cls = await classifyProfiles();
 
     let profileIds: string[] = [];
@@ -275,8 +296,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       roleOf = (pid) => cls.sellerRoleByProfile.get(pid) || "coach";
     } else {
       const sellerSet = new Set(cls.sellerProfileIds);
-      const { data: refRecvRaw } = await supabaseAdmin
-        .from("commissions").select("beneficiary_profile_id").eq("is_referral", true);
+      let refQ = supabaseAdmin
+        .from("commissions").select("beneficiary_profile_id,created_at").eq("is_referral", true);
+      if (cutoff) refQ = refQ.gte("created_at", cutoff);
+      const { data: refRecvRaw } = await refQ;
       profileIds = Array.from(new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
         .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id))));
@@ -285,24 +308,33 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
 
     if (profileIds.length === 0) return [];
 
+    const pendingReqsQ = (() => {
+      let q = supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]);
+      if (cutoff) q = q.gte("requested_at", cutoff);
+      return q;
+    })();
+    const stuReqsQ = (async () => {
+      const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
+      if (!sids.length) return { data: [] as unknown };
+      let q = supabaseAdmin.from("student_withdrawal_requests" as never).select("id,student_id,amount,status,requested_at" as never).in("student_id" as never, sids as never).in("status" as never, ["requested", "approved", "processing"] as never);
+      if (cutoff) q = (q as any).gte("requested_at", cutoff);
+      return q;
+    })();
+
     const [{ data: profs }, { data: wallets }, { data: pendingReqs }, { data: nutriW }, { data: stuW }, { data: stuReqs }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id,name,email").in("id", profileIds),
       supabaseAdmin.from("wallets").select("profile_id,available_balance,total_withdrawn").in("profile_id", profileIds),
-      supabaseAdmin.from("withdrawal_requests").select("id,profile_id,amount,status,requested_at").in("profile_id", profileIds).in("status", ["requested", "approved", "processing"]),
+      pendingReqsQ,
       supabaseAdmin.from("nutritionist_wallets" as never).select("profile_id,available_balance,total_withdrawn" as never).in("profile_id" as never, profileIds as never),
       (async () => {
         const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
         if (!sids.length) return { data: [] as unknown };
         return supabaseAdmin.from("student_wallets").select("student_id,available_balance,total_withdrawn").in("student_id", sids);
       })(),
-      (async () => {
-        const sids = profileIds.map((p) => cls.studentByProfile.get(p)).filter(Boolean) as string[];
-        if (!sids.length) return { data: [] as unknown };
-        return supabaseAdmin.from("student_withdrawal_requests" as never).select("id,student_id,amount,status,requested_at" as never).in("student_id" as never, sids as never).in("status" as never, ["requested", "approved", "processing"] as never);
-      })(),
+      stuReqsQ,
     ]);
 
-    const commAgg = await aggregateCommissionsBy(profileIds);
+    const commAgg = await aggregateCommissionsBy(profileIds, cutoff);
 
     const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
@@ -358,12 +390,16 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         if (sr) r = sr;
       }
       const agg = commAgg.get(p.id);
-      const available = role === "student_referrer"
-        ? n(sw?.available_balance)
-        : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
-      const totalWithdrawn = role === "student_referrer"
-        ? n(sw?.total_withdrawn)
-        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
+      const available = cutoff
+        ? (agg?.available || 0)
+        : (role === "student_referrer"
+          ? n(sw?.available_balance)
+          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance));
+      const totalWithdrawn = cutoff
+        ? 0
+        : (role === "student_referrer"
+          ? n(sw?.total_withdrawn)
+          : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn));
       return {
         profileId: p.id,
         name: p.name || "—",
