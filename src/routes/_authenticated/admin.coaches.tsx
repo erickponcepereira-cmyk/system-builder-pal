@@ -91,16 +91,34 @@ function AdminCoaches() {
     else { toast.success("Cadastro rejeitado"); load(); }
   };
 
-  const blockCoach = async (coachId: string) => {
-    if (!confirm("Bloquear este coach? Ele perderá o acesso ao painel.")) return;
-    setActing(`block-${coachId}`);
-    const { error } = await supabase.rpc("block_inactive_coach" as never, {
-      _coach_id: coachId,
-      _reason: "Bloqueado manualmente pelo administrador.",
-    } as never);
-    setActing(null);
-    if (error) { console.error("[block]", error); toast.error(error.message || "Erro ao desativar coach"); }
-    else { toast.success("Coach bloqueado"); load(); }
+  const blockCoach = async (c: CoachRow) => {
+    const upline = coaches.find((x) => x.id === (c as any).upline_coach_id);
+    const target = upline?.profiles?.name || null;
+    const msg = target
+      ? `Desativar este coach e transferir TODA a rede (alunos + sub-coaches) para o upline "${target}"?`
+      : `Este coach não possui upline. A desativação falhará a menos que você use "Migrar rede" para escolher um destino antes.\n\nDeseja apenas desativar mesmo assim?`;
+    if (!confirm(msg)) return;
+    setActing(`block-${c.id}`);
+    if (target) {
+      const { data, error } = await supabase.rpc("admin_block_and_transfer_to_upline" as never, {
+        _coach_id: c.id,
+        _reason: "Coach desativado pelo administrador.",
+      } as never);
+      setActing(null);
+      if (error) { console.error("[block-transfer]", error); toast.error(error.message || "Erro ao desativar"); return; }
+      const r = data as any;
+      toast.success(`Desativado. ${r?.students_transferred || 0} aluno(s) e ${r?.coaches_transferred || 0} coach(es) movidos para o upline.`);
+      load();
+    } else {
+      const { error } = await supabase.rpc("block_inactive_coach" as never, {
+        _coach_id: c.id,
+        _reason: "Bloqueado manualmente pelo administrador.",
+      } as never);
+      setActing(null);
+      if (error) { toast.error(error.message || "Erro ao desativar coach"); return; }
+      toast.success("Coach bloqueado (rede mantida, pois não há upline).");
+      load();
+    }
   };
 
   const unblockCoach = async (coachId: string) => {
