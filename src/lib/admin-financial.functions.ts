@@ -2,6 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+import { getServerCutoffIso } from "@/lib/test-mode.functions";
+
+/** Aplica filtro do Modo de Testes quando ativo: only registros após o marco. */
+function applyCutoff<T>(q: T, col: string, cutoff: string | null): T {
+  if (!cutoff) return q;
+  return (q as any).gte(col, cutoff) as T;
+}
 
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
