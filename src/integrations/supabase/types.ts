@@ -6726,6 +6726,7 @@ export type Database = {
           blood_type: string | null
           city: string | null
           cpf: string | null
+          cpf_hash: string | null
           created_at: string | null
           email: string
           gender: string | null
@@ -6758,6 +6759,7 @@ export type Database = {
           blood_type?: string | null
           city?: string | null
           cpf?: string | null
+          cpf_hash?: string | null
           created_at?: string | null
           email: string
           gender?: string | null
@@ -6790,6 +6792,7 @@ export type Database = {
           blood_type?: string | null
           city?: string | null
           cpf?: string | null
+          cpf_hash?: string | null
           created_at?: string | null
           email?: string
           gender?: string | null
