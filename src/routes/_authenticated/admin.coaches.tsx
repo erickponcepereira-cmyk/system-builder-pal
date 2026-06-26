@@ -350,7 +350,7 @@ function AdminCoaches() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => blockCoach(c.id)}
+                        onClick={() => blockCoach(c)}
                         disabled={acting === `block-${c.id}`}
                         className="flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
                       >
