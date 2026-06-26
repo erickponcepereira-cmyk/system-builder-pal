@@ -12,6 +12,7 @@ import {
   reviewPartnerStatus,
   reviewPartnerProduct,
 } from "@/lib/partner-approvals.functions";
+import { maskDocumentSensitive } from "@/lib/masks";
 
 type Tab = "overview" | "products" | "timeline" | "collaborators";
 const allTabs: Tab[] = ["overview", "products", "timeline", "collaborators"];
