@@ -56,6 +56,8 @@ export const getCoachRewards = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<RewardPlan[]> => {
     const coachId = await resolveCoachId(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     const { data: plans } = await supabaseAdmin
       .from("career_plan_config")
       .select("id,name,description,plan_type,duration_months,min_monthly_points,required_period_points,reward_description,reward_details,reward_value,reward_image_url,is_active")
@@ -74,13 +76,14 @@ export const getCoachRewards = createServerFn({ method: "GET" })
         ? Number(p.min_monthly_points) || 0
         : Number(p.required_period_points) || 0;
       const { start, end } = windowForPlan(p.plan_type, p.duration_months);
+      const effectiveStartIso = cutoff && cutoff > start.toISOString() ? cutoff : start.toISOString();
       let current = 0;
       if (coachId) {
         const { data: pts } = await supabaseAdmin
           .from("coach_points_log")
           .select("points")
           .eq("coach_id", coachId)
-          .gte("created_at", start.toISOString())
+          .gte("created_at", effectiveStartIso)
           .lt("created_at", end.toISOString());
         current = ((pts as { points: number }[] | null) || []).reduce((s, r) => s + (Number(r.points) || 0), 0);
       }
