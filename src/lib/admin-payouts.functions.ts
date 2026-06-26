@@ -118,10 +118,12 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     // student_referrer: alunos que receberam comissão de indicação e NÃO estão em seller
     const sellerSet = new Set(cls.sellerProfileIds);
-    const { data: refRecvRaw } = await supabaseAdmin
+    let refRecvQ = supabaseAdmin
       .from("commissions")
-      .select("beneficiary_profile_id")
+      .select("beneficiary_profile_id,created_at")
       .eq("is_referral", true);
+    if (cutoff) refRecvQ = refRecvQ.gte("created_at", cutoff);
+    const { data: refRecvRaw } = await refRecvQ;
     const studentReferrerIds = Array.from(
       new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
@@ -129,18 +131,22 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
-    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds);
-    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds);
+    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds, cutoff);
+    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds, cutoff);
 
     // Solicitações pendentes (saques) — sellers usam withdrawal_requests; alunos usam student_withdrawal_requests
-    const { data: wReqs } = await supabaseAdmin
+    let wReqsQ = supabaseAdmin
       .from("withdrawal_requests")
-      .select("profile_id,amount,status")
+      .select("profile_id,amount,status,created_at")
       .in("status", ["requested", "approved", "processing"]);
-    const { data: swReqs } = await supabaseAdmin
+    if (cutoff) wReqsQ = wReqsQ.gte("created_at", cutoff);
+    const { data: wReqs } = await wReqsQ;
+    let swReqsQ = supabaseAdmin
       .from("student_withdrawal_requests" as never)
-      .select("student_id,amount,status" as never)
+      .select("student_id,amount,status,created_at" as never)
       .in("status" as never, ["requested", "approved", "processing"] as never);
+    if (cutoff) swReqsQ = (swReqsQ as any).gte("created_at", cutoff);
+    const { data: swReqs } = await swReqsQ;
 
     const wReqsArr = ((wReqs as Array<{ profile_id: string; amount: number }>) || []);
     const swReqsArr = ((swReqs as unknown as Array<{ student_id: string; amount: number }>) || []);
