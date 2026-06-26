@@ -403,12 +403,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     return () => { cancelled = true; };
   }, [detailProduct]);
 
+  const vis = useStoreVisibility(coachMode);
   const subcatsOfActive = useMemo(
-    () => activeSection ? storeCategories.filter((c) => c.section_id === activeSection.id) : [],
-    [activeSection, storeCategories],
+    () => {
+      if (!activeSection) return [] as CategoryRow[];
+      return storeCategories.filter((c) => {
+        if (c.section_id !== activeSection.id) return false;
+        if (vis.isHiddenByUpline("category", null, c.id)) return false;
+        if (!coachMode && vis.isHiddenForViewer("category", null, c.id)) return false;
+        return true;
+      });
+    },
+    [activeSection, storeCategories, vis, coachMode],
   );
 
-  const vis = useStoreVisibility(coachMode);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const fitmindHiddenViewer = vis.isHiddenForViewer("vendor_fitmind", null, null);
