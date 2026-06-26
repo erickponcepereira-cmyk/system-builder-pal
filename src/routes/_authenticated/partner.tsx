@@ -1236,6 +1236,27 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
           </div>
         </div>
       </Field>
+      <Field label="Capa do perfil">
+        <div className="space-y-2">
+          {form.cover_url ? (
+            <img src={form.cover_url} className="h-28 w-full rounded-lg object-cover" />
+          ) : (
+            <div className="h-28 w-full rounded-lg bg-white/5 border border-dashed border-white/15 flex items-center justify-center text-[11px] text-white/40">
+              Nenhuma capa adicionada
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (form.cover_url ? "Trocar capa" : "Adicionar capa")}
+              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "cover_url")} />
+            </label>
+            {form.cover_url && (
+              <button type="button" onClick={() => setForm({ ...form, cover_url: null })} className="text-[11px] text-red-300 hover:underline">Remover</button>
+            )}
+          </div>
+          <p className="text-[10px] text-white/40">Recomendado: 1200×400px (banner)</p>
+        </div>
+      </Field>
       <Field label="Nome fantasia"><input className="field-input" value={form.fantasy_name} onChange={e => setForm({ ...form, fantasy_name: e.target.value })} /></Field>
       <Field label="Descrição"><textarea className="field-input" rows={3} value={form.description || ""} onChange={e => setForm({ ...form, description: e.target.value })} /></Field>
       <div className="grid grid-cols-2 gap-2">
