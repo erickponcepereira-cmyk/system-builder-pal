@@ -452,7 +452,14 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                 </p>
               </div>
 
-
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
+                <span className="text-xs text-white/60">
+                  Aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
+                  os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a> e a{" "}
+                  <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Política de Privacidade</a>.
+                </span>
+              </label>
 
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
