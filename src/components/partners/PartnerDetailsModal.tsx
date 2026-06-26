@@ -125,11 +125,8 @@ export function PartnerDetailsModal({
           </div>
         ) : (
           <>
-            {/* Cover */}
-            <div className="relative h-32 sm:h-44 bg-gradient-to-br from-primary/30 to-black overflow-hidden z-0">
-              {data.partner.cover_url && (
-                <img src={data.partner.cover_url} alt="" className="absolute inset-0 z-0 h-full w-full object-cover opacity-80" />
-              )}
+            {/* Close button */}
+            <div className="relative">
               <button
                 onClick={onClose}
                 className="absolute top-3 right-3 z-20 h-8 w-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black"
@@ -138,8 +135,9 @@ export function PartnerDetailsModal({
               </button>
             </div>
 
-            <div className="relative z-10 px-4 sm:px-6 -mt-10 pb-5">
-              <div className="relative z-10 flex items-end gap-3">
+            <div className="px-4 sm:px-6 pt-5 pb-5">
+              {/* Profile header (above cover) */}
+              <div className="flex items-end gap-3">
                 {data.partner.photo_url ? (
                   <img src={data.partner.photo_url} alt={data.partner.fantasy_name} className="h-20 w-20 rounded-2xl object-cover border-4 border-[#111] shadow-xl shadow-black/40" />
                 ) : (
@@ -157,6 +155,14 @@ export function PartnerDetailsModal({
                   </div>
                 </div>
               </div>
+
+              {/* Cover (below profile) */}
+              {data.partner.cover_url && (
+                <div className="mt-4 relative h-32 sm:h-44 rounded-xl overflow-hidden bg-gradient-to-br from-primary/30 to-black">
+                  <img src={data.partner.cover_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                </div>
+              )}
+
 
               {/* Stats */}
               <div className={`mt-4 grid gap-2 ${readOnly ? "grid-cols-2" : "grid-cols-3"}`}>

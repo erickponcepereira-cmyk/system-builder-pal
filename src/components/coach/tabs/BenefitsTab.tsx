@@ -249,7 +249,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     return (
                       <div
                         key={p.id}
-                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative"
+                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full"
                         style={{ backgroundColor: "#0F0F0F" }}
                       >
                         {isDiscount && p.discount_percent ? (
@@ -262,7 +262,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />
                           </button>
                         )}
-                        <div className="p-4">
+                        <div className="p-4 flex flex-col flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="text-sm font-bold text-white">{p.name}</h3>
                             {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded uppercase bg-green-500/20 text-green-300">Grátis</span>}
@@ -294,7 +294,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           )}
                           {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
                           {p.stock !== null && <p className="mt-2 text-[10px] text-white/40">Estoque: {p.stock}</p>}
-                          <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="mt-auto pt-3 grid grid-cols-2 gap-2">
                             <button
                               type="button"
                               onClick={() => setOpenPartner(p.partner_id)}
