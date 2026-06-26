@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { TestModeBanner } from "@/components/admin/TestModeBanner";
 import {
   listAdminSubscriptions, listAdminInvoices, updateSubscriptionAdmin,
   listPlansAdmin, updatePlanAdmin, markInvoicePaidAdmin, exemptInvoiceAdmin, generateInvoicesNow,
@@ -73,6 +74,7 @@ function AdminSubscriptionsPage() {
 
   return (
     <div className="p-6 text-white">
+      <TestModeBanner hiddenLabel="Faturas/assinaturas" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Mensalidades</h1>

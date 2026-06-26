@@ -22,6 +22,7 @@ import {
 } from "@/lib/admin-financial.functions";
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
 import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
+import { TestModeCard, TestModeBanner } from "@/components/admin/TestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/admin/financeiro")({ component: AdminFinanceiro });
 
@@ -108,6 +109,8 @@ function AdminFinanceiro() {
 
   return (
     <>
+      <TestModeBanner hiddenLabel="Vendas/lançamentos financeiros" />
+      <div className="mb-5"><TestModeCard /></div>
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-white">Financeiro</h1>
