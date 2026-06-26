@@ -193,7 +193,7 @@ function StudentEvolution() {
                         onClick={() => toggleCompare(p.id)}
                         className={`block w-full overflow-hidden rounded-lg border-2 transition-all ${selected ? "border-primary" : "border-transparent"}`}
                       >
-                        <img src={p.signedUrl || ""} alt={p.caption || "Foto"} className="aspect-[3/4] w-full object-cover" />
+                        <ProtectedImage src={p.signedUrl || ""} alt={p.caption || "Foto"} watermark={viewerTag} className="aspect-[3/4] w-full" />
                         <div className="bg-card/90 p-1">
                           <p className="text-[9px] font-bold text-white">Sem {p.week_number || "—"}</p>
                           <p className="text-[8px] text-white/50">{p.photo_date.slice(5)}</p>
