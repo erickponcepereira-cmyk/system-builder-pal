@@ -74,13 +74,15 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
 
 // Retorna totais de comissões agregados por beneficiary_profile_id.
 interface CommissionAgg { earned: number; blocked: number; available: number; paid: number; }
-async function aggregateCommissionsBy(profileIds: string[]): Promise<Map<string, CommissionAgg>> {
+async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | null): Promise<Map<string, CommissionAgg>> {
   const map = new Map<string, CommissionAgg>();
   if (!profileIds.length) return map;
-  const { data } = await supabaseAdmin
+  let q = supabaseAdmin
     .from("commissions")
-    .select("beneficiary_profile_id,amount,status")
+    .select("beneficiary_profile_id,amount,status,created_at")
     .in("beneficiary_profile_id", profileIds);
+  if (cutoff) q = q.gte("created_at", cutoff);
+  const { data } = await q;
   for (const r of ((data as Array<{ beneficiary_profile_id: string; amount: number; status: string }>) || [])) {
     const cur = map.get(r.beneficiary_profile_id) || { earned: 0, blocked: 0, available: 0, paid: 0 };
     cur.earned += n(r.amount);
