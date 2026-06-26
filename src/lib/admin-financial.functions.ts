@@ -1010,11 +1010,14 @@ export const getAdminWallet = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<AdminWalletSummary> => {
     await assertAdmin(context.userId);
-    // Soma somente entradas do sistema (exclui slots de nutricionista)
+    // Soma somente entradas do sistema (exclui nutricionista, imposto e taxa de pagamento)
     const { data: sysEntries } = await supabaseAdmin
       .from("admin_system_wallet_entries")
-      .select("kind, amount")
-      .not("slot_label", "ilike", "%nutricion%");
+      .select("kind, amount, slot_label")
+      .not("slot_label", "ilike", "%nutricion%")
+      .not("slot_label", "ilike", "%imposto%")
+      .not("slot_label", "ilike", "%taxa de pagamento%");
+
     let credits = 0;
     let debits = 0;
     (sysEntries || []).forEach((e: any) => {
@@ -1051,8 +1054,11 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
       .from("admin_system_wallet_entries")
       .select("id, transaction_id, subscription_invoice_id, slot_label, amount, kind, created_at")
       .not("slot_label", "ilike", "%nutricion%")
+      .not("slot_label", "ilike", "%imposto%")
+      .not("slot_label", "ilike", "%taxa de pagamento%")
       .order("created_at", { ascending: false })
       .limit(500);
+
     if (data.filter === "credit" || data.filter === "debit") {
       q = q.eq("kind", data.filter);
     }
