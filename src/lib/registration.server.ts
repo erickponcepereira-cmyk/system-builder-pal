@@ -268,3 +268,110 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
 
   return { ok: true, profileId: profile.id, role: input.role };
 }
+
+export type FinalizePartnerInput = {
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  fantasyName: string;
+  document: string;
+  documentType: "cnpj" | "cpf";
+  whatsapp: string;
+  city?: string | null;
+  state?: string | null;
+  businessArea?: string | null;
+  specialty?: string | null;
+  uplineCoachId: string;
+  alreadyPartner?: boolean;
+  activationNote?: string | null;
+};
+
+export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
+  const email = input.email.trim().toLowerCase();
+  const phoneDigits = digits(input.whatsapp);
+  const docDigits = digits(input.document);
+  if (!docDigits) throw new Error("Documento inválido.");
+  if (input.documentType === "cpf" && !isValidCPF(docDigits)) {
+    throw new Error("CPF inválido. Verifique os dados informados.");
+  }
+
+  try {
+    // 1) Garante profile (trigger handle_new_user já criou; upsert é idempotente)
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .upsert(
+        {
+          user_id: input.userId,
+          name: input.name.trim(),
+          email,
+          role: "partner",
+          phone: phoneDigits,
+          status: "active",
+        },
+        { onConflict: "user_id" }
+      )
+      .select("id")
+      .single();
+    if (profileError || !profile) {
+      throw new Error(profileError?.message || "Não foi possível salvar o perfil.");
+    }
+
+    // 2) Insere/atualiza linha em partners (idempotente via onConflict)
+    const nowIso = new Date().toISOString();
+    const activationPatch = input.alreadyPartner
+      ? {
+          already_partner: true,
+          activation_paid_at: nowIso,
+          activation_source: "already_partner",
+          activation_note: clean(input.activationNote),
+        }
+      : { already_partner: false };
+
+    const { error: partnerError } = await supabaseAdmin
+      .from("partners")
+      .upsert(
+        {
+          profile_id: profile.id,
+          fantasy_name: input.fantasyName.trim(),
+          document: docDigits,
+          document_type: input.documentType,
+          whatsapp: phoneDigits,
+          city: clean(input.city),
+          state: clean(input.state)?.toUpperCase() || null,
+          business_area: clean(input.businessArea),
+          specialty: clean(input.specialty),
+          status: "pending",
+          upline_coach_id: input.uplineCoachId,
+          ...activationPatch,
+        },
+        { onConflict: "profile_id" }
+      );
+    if (partnerError) throw new Error(partnerError.message);
+
+    return { ok: true, profileId: profile.id };
+  } catch (err) {
+    // Compensação: se algo falhou, remove profile órfão + auth user
+    try {
+      const { data: orphan } = await supabaseAdmin
+        .from("profiles")
+        .select("id, user_id, role")
+        .eq("user_id", input.userId)
+        .maybeSingle();
+      if (orphan && orphan.role !== "admin") {
+        const [{ count: partnerCount }, { count: coachCount }, { count: studentCount }] = await Promise.all([
+          supabaseAdmin.from("partners").select("id", { count: "exact", head: true }).eq("profile_id", orphan.id),
+          supabaseAdmin.from("coaches").select("id", { count: "exact", head: true }).eq("profile_id", orphan.id),
+          supabaseAdmin.from("students").select("id", { count: "exact", head: true }).eq("profile_id", orphan.id),
+        ]);
+        if (!partnerCount && !coachCount && !studentCount) {
+          await supabaseAdmin.from("profiles").delete().eq("id", orphan.id);
+          await supabaseAdmin.auth.admin.deleteUser(orphan.user_id).catch(() => {});
+        }
+      }
+    } catch {
+      // best-effort
+    }
+    throw err;
+  }
+}
