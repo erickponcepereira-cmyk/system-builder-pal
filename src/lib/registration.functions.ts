@@ -56,3 +56,28 @@ export const finalizeRegistrationFn = createServerFn({ method: "POST" })
     const { finalizeRegistration } = await import("./registration.server");
     return finalizeRegistration(data);
   });
+
+const partnerSchema = z.object({
+  userId: z.string().uuid(),
+  name: z.string().min(2),
+  email: z.string().email(),
+  phone: z.string().optional().nullable(),
+  fantasyName: z.string().min(2),
+  document: z.string().min(11),
+  documentType: z.enum(["cnpj", "cpf"]),
+  whatsapp: z.string().min(10),
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  businessArea: z.string().optional().nullable(),
+  specialty: z.string().optional().nullable(),
+  uplineCoachId: z.string().uuid(),
+  alreadyPartner: z.boolean().optional(),
+  activationNote: z.string().max(500).optional().nullable(),
+});
+
+export const finalizePartnerRegistrationFn = createServerFn({ method: "POST" })
+  .inputValidator((data) => partnerSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { finalizePartnerRegistration } = await import("./registration.server");
+    return finalizePartnerRegistration(data);
+  });
