@@ -304,7 +304,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         </div>
       );
     } else {
-      const items = cards.filter((c) => c.section_id === activeSection && c.category_id === activeCategory);
+      const items = visibleCards.filter((c) => c.section_id === activeSection && c.category_id === activeCategory);
       const currentCat = categories.find((c) => c.id === activeCategory);
       body = (
         <div className="space-y-3">
