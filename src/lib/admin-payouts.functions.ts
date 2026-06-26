@@ -208,19 +208,28 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
 
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
-      sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
-      const sid = cls.studentByProfile.get(pid);
-      if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = sellerAgg.get(pid);
-      if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+      if (cutoff) {
+        // Modo de Testes: ignora saldos cumulativos das carteiras; usa apenas comissões pós-corte
+        if (agg) { sellerAvail += agg.available; sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+      } else {
+        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+        const sid = cls.studentByProfile.get(pid);
+        if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
+        if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+      }
     }
 
     let studRefAvail = 0, studRefBlocked = 0, studRefEarned = 0;
     for (const pid of studentReferrerIds) {
-      const sid = cls.studentByProfile.get(pid)!;
-      studRefAvail += n(stuWalletByStudent.get(sid)?.available_balance);
       const agg = studentRefAgg.get(pid);
-      if (agg) { studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+      if (cutoff) {
+        if (agg) { studRefAvail += agg.available; studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+      } else {
+        const sid = cls.studentByProfile.get(pid)!;
+        studRefAvail += n(stuWalletByStudent.get(sid)?.available_balance);
+        if (agg) { studRefBlocked += agg.blocked; studRefEarned += agg.earned; }
+      }
     }
 
     const sellerReqInfo = sumReq(new Set(cls.sellerProfileIds));
