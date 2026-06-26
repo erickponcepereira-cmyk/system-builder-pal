@@ -59,6 +59,28 @@ function AdminCoaches() {
   const [acting, setActing] = useState<string | null>(null);
   const [cardEditing, setCardEditing] = useState<CoachRow | null>(null);
   const [cardDate, setCardDate] = useState<string>("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<TransferRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    const { data, error } = await supabase
+      .from("coach_transfers")
+      .select("*")
+      .order("transferred_at", { ascending: false })
+      .limit(200);
+    if (error) toast.error("Erro ao carregar histórico");
+    setHistory((data as unknown as TransferRow[]) || []);
+    setHistoryLoading(false);
+  };
+
+  const openHistory = () => { setShowHistory(true); loadHistory(); };
+
+  const coachLabel = (id: string) => {
+    const c = coaches.find((x) => x.id === id);
+    return c?.profiles?.name || id.slice(0, 8);
+  };
 
   const load = async () => {
     setLoading(true);
