@@ -259,7 +259,7 @@ export function PartnerDetailsModal({
                     </Block>
                   )}
                   <Block title="Documento & contato">
-                    {!readOnly && <KV k="CNPJ/CPF" v={data.partner.document || "—"} />}
+                    {!readOnly && <KV k="CNPJ/CPF" v={data.partner.document ? maskDocumentSensitive(data.partner.document) : "—"} />}
                     <KV k="WhatsApp" v={data.partner.whatsapp || "—"} />
                     <KV k="Endereço" v={data.partner.address || "—"} />
                     <KV k="Cidade" v={`${data.partner.city || "—"}${data.partner.state ? "/" + data.partner.state : ""}`} />
