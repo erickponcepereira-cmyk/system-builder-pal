@@ -74,8 +74,11 @@ async function buildSalesReportForRange(
   from: string,
   to: string,
 ): Promise<SalesReport> {
-  const fromIso = new Date(from + "T00:00:00").toISOString();
+  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+  const cutoff = await getServerCutoffIso();
+  const fromIsoRaw = new Date(from + "T00:00:00").toISOString();
   const toIso = new Date(to + "T23:59:59").toISOString();
+  const fromIso = cutoff && cutoff > fromIsoRaw ? cutoff : fromIsoRaw;
 
   // Students of this coach
   const { data: studentRows } = await supabaseAdmin
