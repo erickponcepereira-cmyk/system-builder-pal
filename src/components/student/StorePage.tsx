@@ -1032,7 +1032,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
       {!activeSection && (
         <>
-          {coachMode && (
+          {coachMode && !vis.isHiddenByUpline("vendor_fitmind", null, null) && (
             <div className="flex justify-end">
               <button
                 type="button"
@@ -1049,6 +1049,12 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
               </button>
             </div>
           )}
+          {coachMode && vis.isHiddenByUpline("vendor_fitmind", null, null) && (
+            <div className="flex justify-end">
+              <span className="text-[11px] rounded-full border border-white/10 px-3 py-1 text-white/40">FitMind bloqueada pelo seu upline</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {visibleStoreSections.map((s) => {
               const secHidden = coachMode && vis.isHiddenByMe("section", null, s.id);
