@@ -2017,6 +2017,41 @@ export type Database = {
           },
         ]
       }
+      coach_store_hidden_items: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          product_kind: string | null
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          product_kind?: string | null
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          product_kind?: string | null
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_store_hidden_items_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_transfers: {
         Row: {
           coaches_transferred: number | null
@@ -9176,6 +9211,23 @@ export type Database = {
         Args: { _coach_id: string }
         Returns: boolean
       }
+      coach_store_list_my_hidden: {
+        Args: never
+        Returns: {
+          product_kind: string
+          target_id: string
+          target_type: string
+        }[]
+      }
+      coach_store_set_hidden: {
+        Args: {
+          _hidden: boolean
+          _product_kind: string
+          _target_id: string
+          _target_type: string
+        }
+        Returns: undefined
+      }
       count_active_admins: { Args: never; Returns: number }
       create_coach_sale: {
         Args: {
@@ -9335,6 +9387,12 @@ export type Database = {
       get_student_attendance_summary: {
         Args: { _student_id?: string }
         Returns: Json
+      }
+      get_viewer_upline_coach_ids: {
+        Args: { _user_id: string }
+        Returns: {
+          coach_id: string
+        }[]
       }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_coach_badge: {
@@ -9569,6 +9627,14 @@ export type Database = {
           _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]
         }
         Returns: string
+      }
+      store_hidden_for_viewer: {
+        Args: never
+        Returns: {
+          product_kind: string
+          target_id: string
+          target_type: string
+        }[]
       }
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
