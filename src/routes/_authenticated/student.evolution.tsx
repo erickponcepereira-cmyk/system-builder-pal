@@ -5,6 +5,7 @@ import { Camera, Droplet, GlassWater, ImagePlus, Loader2, Plus, Target, Trophy, 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
+import { ProtectedImage } from "@/components/security/ProtectedImage";
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
 
