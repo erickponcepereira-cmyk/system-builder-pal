@@ -34,6 +34,7 @@ interface CoachRow {
   created_at: string | null;
   card_valid_until: string | null;
   can_create_fitmind_events: boolean | null;
+  upline_coach_id: string | null;
   profiles: {
     id: string;
     name: string;
