@@ -50,6 +50,10 @@ function AdminSubscriptionsPage() {
   const fnExempt = useServerFn(exemptInvoiceAdmin);
   const fnGen = useServerFn(generateInvoicesNow);
   const fnAnnual = useServerFn(listAllAnnualActivationsAdmin);
+  const fnRevert = useServerFn(revertInvoiceAdmin);
+  const fnPostpone = useServerFn(postponeInvoiceAdmin);
+  const fnResetDue = useServerFn(resetInvoiceDueDateAdmin);
+
 
   const load = async () => {
     setLoading(true);
