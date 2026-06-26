@@ -208,7 +208,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
         if (existingCoach) {
           const { error: updErr } = await supabase
             .from("coaches")
-            .update({ ...professionalPatch, upline_coach_id: uplineCoachId })
+            .update({ ...professionalPatch, ...activationExtras, upline_coach_id: uplineCoachId })
             .eq("id", existingCoach.id);
           if (updErr) throw updErr;
         } else {
