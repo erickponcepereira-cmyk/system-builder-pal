@@ -115,7 +115,19 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
 
     const uplineCoachId = referral?.coachId || selectedCoach?.id || null;
     if (!uplineCoachId) return setErr("Selecione um coach indicador para continuar.");
+    if (!alreadyPartner) return setErr("Informe se você já é parceiro FitMind.");
     if (!acceptTerms) return setErr("Aceite os Termos de Uso, Termos de Compra e Política de Privacidade para continuar.");
+
+    const isAlreadyPartner = alreadyPartner === "yes";
+    const nowIso = new Date().toISOString();
+    const activationPatch = isAlreadyPartner
+      ? {
+          already_partner: true,
+          activation_paid_at: nowIso,
+          activation_source: "already_partner",
+          activation_note: alreadyPartnerNote.trim() || null,
+        }
+      : { already_partner: false };
 
     setLoading(true);
     setFormError(null);
