@@ -6,6 +6,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
+import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
 
 type Kind = "partner" | "professional";
 
@@ -53,6 +54,25 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const myReferralCode = useMyReferralCode();
+  const vis = useStoreVisibility(mode === "reseller");
+  const productKind: HideProductKind = kind === "partner" ? "partner_product" : "professional_product";
+  const vendorType = kind === "partner" ? "vendor_partner" : "vendor_professional";
+
+  const handleToggleHide = async (
+    targetType: Parameters<typeof vis.toggleHidden>[0],
+    pKind: HideProductKind,
+    targetId: string | null,
+    e?: React.MouseEvent,
+  ) => {
+    e?.stopPropagation();
+    const currentlyHidden = vis.isHiddenByMe(targetType, pKind, targetId);
+    try {
+      await vis.toggleHidden(targetType, pKind, targetId, !currentlyHidden);
+      toast.success(currentlyHidden ? "Reativado para a sua rede." : "Ocultado da sua rede.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao alterar visibilidade.");
+    }
+  };
 
   const handleShare = async (productId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -218,34 +238,76 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (cards.length === 0) return <p className="text-sm text-white/50 text-center py-10">Nenhum produto disponível ainda.</p>;
 
-  const usedSectionIds = new Set(cards.map((c) => c.section_id).filter(Boolean) as string[]);
-  const visibleSections = sections.filter((s) => usedSectionIds.has(s.id));
+  // Para alunos/parceiros/profissionais, filtra cards/sections escondidos por algum upline.
+  // Para o coach (mode='reseller'), mostra tudo e oferece toggle visual.
+  const isViewerFilter = mode !== "reseller";
+  const visibleCards = isViewerFilter
+    ? cards.filter((c) => {
+        if (vis.isHiddenForViewer(vendorType, null, null)) return false;
+        if (c.section_id && vis.isHiddenForViewer("section", null, c.section_id)) return false;
+        if (vis.isHiddenForViewer("product", productKind, c.id)) return false;
+        return true;
+      })
+    : cards;
+  const usedSectionIds = new Set(visibleCards.map((c) => c.section_id).filter(Boolean) as string[]);
+  const visibleSections = sections
+    .filter((s) => usedSectionIds.has(s.id))
+    .filter((s) => isViewerFilter ? !vis.isHiddenForViewer("section", null, s.id) : true);
 
   // Drill-down: section list → categories → products of category
   let body: ReactNode;
   if (!activeSection) {
     body = (
       <div className="space-y-3">
-        <h2 className="text-base font-bold text-white">Seções</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-white">Seções</h2>
+          {mode === "reseller" && (
+            <button
+              type="button"
+              onClick={() => handleToggleHide(vendorType, null, null)}
+              className="text-[11px] rounded-full border border-white/15 px-3 py-1 text-white/80 hover:bg-white/10"
+              title="Ocultar/exibir todos os produtos deste tipo para sua rede"
+            >
+              {vis.isHiddenByMe(vendorType, null, null)
+                ? `✓ Mostrar todos (${kind === "partner" ? "parceiros" : "profissionais"})`
+                : `Ocultar todos (${kind === "partner" ? "parceiros" : "profissionais"}) da rede`}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {visibleSections.map((s) => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)} className="group overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent" style={{ backgroundColor: "#1A1A1A" }}>
-              <div className="aspect-square w-full overflow-hidden bg-white/5">
-                {s.image_url ? (
-                  <img src={s.image_url} alt={s.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
+          {visibleSections.map((s) => {
+            const sectionHidden = vis.isHiddenByMe("section", null, s.id);
+            return (
+              <div key={s.id} className="relative">
+                <button onClick={() => setActiveSection(s.id)} className={`group w-full overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent ${sectionHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
+                  <div className="aspect-square w-full overflow-hidden bg-white/5">
+                    {s.image_url ? (
+                      <img src={s.image_url} alt={s.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
+                    )}
+                  </div>
+                  <p className="px-3 py-2 text-sm font-bold text-white">{s.name}</p>
+                </button>
+                {mode === "reseller" && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleHide("section", null, s.id, e)}
+                    title={sectionHidden ? "Mostrar seção para sua rede" : "Ocultar seção da sua rede"}
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                  >
+                    {sectionHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 )}
               </div>
-              <p className="px-3 py-2 text-sm font-bold text-white">{s.name}</p>
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
   } else {
     const sectionCats = categories.filter((c) => c.section_id === activeSection);
-    const usedCatIds = new Set(cards.filter((c) => c.section_id === activeSection).map((c) => c.category_id).filter(Boolean) as string[]);
+    const usedCatIds = new Set(visibleCards.filter((c) => c.section_id === activeSection).map((c) => c.category_id).filter(Boolean) as string[]);
     const visibleCats = sectionCats.filter((c) => usedCatIds.has(c.id));
     const currentSection = sections.find((s) => s.id === activeSection);
 
@@ -271,16 +333,18 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         </div>
       );
     } else {
-      const items = cards.filter((c) => c.section_id === activeSection && c.category_id === activeCategory);
+      const items = visibleCards.filter((c) => c.section_id === activeSection && c.category_id === activeCategory);
       const currentCat = categories.find((c) => c.id === activeCategory);
       body = (
         <div className="space-y-3">
           <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-            {items.map((p) => (
+            {items.map((p) => {
+              const productHidden = vis.isHiddenByMe("product", productKind, p.id);
+              return (
               <div key={p.id} className="relative">
-                <button onClick={() => setSelected(p)} className="w-full rounded-2xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40" style={{ backgroundColor: "#1A1A1A" }}>
+                <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40 ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
                   <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-white/5">
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
@@ -292,18 +356,31 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
                   <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
                 </button>
-                {myReferralCode && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleShare(p.id, e)}
-                    title="Compartilhar link de indicação"
-                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </button>
-                )}
+                <div className="absolute right-2 top-2 flex flex-col gap-1.5">
+                  {mode === "reseller" && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleHide("product", productKind, p.id, e)}
+                      title={productHidden ? "Mostrar para sua rede" : "Ocultar da sua rede"}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                    >
+                      {productHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  )}
+                  {myReferralCode && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleShare(p.id, e)}
+                      title="Compartilhar link de indicação"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-            ))}
+              );
+            })}
             {items.length === 0 && <p className="col-span-full text-sm text-white/50">Nenhum produto nesta subcategoria.</p>}
           </div>
         </div>
