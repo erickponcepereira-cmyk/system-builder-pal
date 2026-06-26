@@ -30,7 +30,7 @@ export const adminRevealCpf = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: cpf, error } = await context.supabase.rpc("admin_reveal_cpf", {
       target_user_id: data.targetUserId,
-      reason: data.reason ?? null,
+      reason: data.reason ?? undefined,
     });
     if (error) {
       // 42501 = insufficient_privilege from PG
