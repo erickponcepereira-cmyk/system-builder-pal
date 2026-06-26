@@ -48,31 +48,28 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *", lo
     const handle = window.setTimeout(async () => {
       setLoading(true);
       try {
-        let request = supabase
-          .from("coaches")
-          .select("id, profile_id, profiles!coaches_profile_id_fkey!inner(name, city, state)")
-          .not("approved_at", "is", null)
-          .is("blocked_at", null)
-          .limit(200);
-
-        if (normalizedQuery) {
-          request = request.ilike("profiles.name", `%${normalizedQuery}%`);
+        const { data, error } = await supabase.rpc("search_approved_coaches" as never, {
+          _query: normalizedQuery || null,
+          _limit: 200,
+        } as never);
+        if (error) {
+          console.error("[CoachSelector] erro ao buscar coaches:", error);
+          throw error;
         }
-
-        const { data, error } = await request;
-        if (error) throw error;
         const rows = ((data || []) as Array<{
-          id: string;
+          coach_id: string;
           profile_id: string;
-          profiles?: { name?: string | null; city?: string | null; state?: string | null } | null;
+          name: string | null;
+          city: string | null;
+          state: string | null;
         }>)
-          .filter((row) => row.profiles?.name)
+          .filter((row) => row.name)
           .map((row) => ({
-            id: row.id,
+            id: row.coach_id,
             profileId: row.profile_id,
-            name: row.profiles?.name || "Coach sem nome",
-            city: row.profiles?.city,
-            state: row.profiles?.state,
+            name: row.name || "Coach sem nome",
+            city: row.city,
+            state: row.state,
           }))
           .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
         const shouldShowMaster = !normalizedQuery || "master".includes(normalizedQuery.toLowerCase());
@@ -80,7 +77,8 @@ export function CoachSelector({ value, onChange, label = "Coach indicador *", lo
           ? [MASTER_COACH, ...rows]
           : rows;
         setCoaches(mergedRows);
-
+      } catch (err) {
+        console.error("[CoachSelector] falha:", err);
       } finally {
         setLoading(false);
       }
