@@ -200,9 +200,17 @@ function AdminSubscriptionsPage() {
                         {i.status !== "paid" && i.status !== "exempted" && i.status !== "cancelled" && (
                           <>
                             <button onClick={async () => {
-                              try { await fnPay({ data: { invoice_id: i.id, method: "manual_admin", wallet_source: "external" } } as any); toast.success("Marcada como paga"); load(); }
+                              try { await fnPay({ data: { invoice_id: i.id, method: "pix", wallet_source: "external" } } as any); toast.success("Marcada como paga (PIX)"); load(); }
                               catch (e: any) { toast.error(e.message); }
-                            }} className="rounded bg-green-600 px-2 py-1 text-xs">Marcar pago</button>
+                            }} className="rounded bg-green-600 px-2 py-1 text-xs" title="Aplica taxa PIX (0,99%) + 6% imposto em cascata">Pago PIX</button>
+                            <button onClick={async () => {
+                              try { await fnPay({ data: { invoice_id: i.id, method: "card", wallet_source: "external" } } as any); toast.success("Marcada como paga (Cartão)"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-emerald-700 px-2 py-1 text-xs" title="Aplica taxa Cartão (4,98%) + 6% imposto em cascata">Pago Cartão</button>
+                            <button onClick={async () => {
+                              try { await fnPay({ data: { invoice_id: i.id, method: "manual_admin", wallet_source: "external" } } as any); toast.success("Marcada como paga (sem taxa)"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-green-900 px-2 py-1 text-xs" title="Sem taxa de gateway — apenas 6% imposto">Pago manual</button>
                             <button onClick={async () => {
                               try { await fnExempt({ data: { invoice_id: i.id } } as any); toast.success("Isenta"); load(); }
                               catch (e: any) { toast.error(e.message); }
