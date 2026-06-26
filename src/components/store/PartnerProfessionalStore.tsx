@@ -6,6 +6,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
+import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
 
 type Kind = "partner" | "professional";
 
