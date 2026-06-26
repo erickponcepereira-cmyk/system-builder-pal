@@ -60,7 +60,7 @@ function AdminDashboard() {
         supabase.from("transactions").select("gross_amount, paid_at, student_id, product_id").eq("status", "paid").gte("paid_at", effSix),
         (cutoff ? supabase.from("commissions").select("amount").eq("status", "pending").gte("created_at", cutoff) : supabase.from("commissions").select("amount").eq("status", "pending")),
         (cutoff ? supabase.from("commissions").select("amount").eq("status", "available").gte("created_at", cutoff) : supabase.from("commissions").select("amount").eq("status", "available")),
-        (cutoff ? supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"]).gte("created_at", cutoff) : supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"])),
+        (cutoff ? supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"]).gte("requested_at", cutoff) : supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"])),
         recentQFinal,
       ]);
 
