@@ -51,7 +51,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
       const { data: pubRow } = await supabase
         .from("professional_public_profile" as never)
-        .select("headline,bio_long,instagram,website,social_links,services,specializations" as never)
+        .select("headline,bio_long,instagram,website,social_links,services,specializations,cover_url" as never)
         .eq("profile_id" as never, profileId as never)
         .maybeSingle();
       if (pubRow) {
@@ -64,6 +64,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
           social_links: Array.isArray(r.social_links) ? r.social_links : [],
           services: r.services || "",
           specializations: Array.isArray(r.specializations) ? r.specializations : [],
+          cover_url: r.cover_url || null,
         });
       }
 
