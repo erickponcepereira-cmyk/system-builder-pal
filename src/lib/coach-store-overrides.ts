@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type HideTargetType =
   | "product"
   | "section"
+  | "category"
   | "vendor_partner"
   | "vendor_professional"
   | "vendor_fitmind";
@@ -87,15 +88,14 @@ export function useStoreVisibility(coachMode: boolean) {
     targetId: string | null,
   ) => myHidden.has(visibilityKey(targetType, productKind, targetId));
 
-  // Hidden by some upline coach (not by me). These MUST be filtered out even in coach mode.
+  // Hidden by some upline coach. Backend (get_viewer_upline_coach_ids) já exclui
+  // o próprio viewer da cadeia, então hiddenForViewer contém estritamente itens
+  // ocultados por uplines — basta consultar este set.
   const isHiddenByUpline = (
     targetType: HideTargetType,
     productKind: HideProductKind,
     targetId: string | null,
-  ) => {
-    const k = visibilityKey(targetType, productKind, targetId);
-    return hiddenForViewer.has(k) && !myHidden.has(k);
-  };
+  ) => hiddenForViewer.has(visibilityKey(targetType, productKind, targetId));
 
   return { loaded, hiddenForViewer, myHidden, toggleHidden, isHiddenForViewer, isHiddenByMe, isHiddenByUpline, refresh };
 }

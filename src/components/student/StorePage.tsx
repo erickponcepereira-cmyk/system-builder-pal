@@ -403,12 +403,20 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
     return () => { cancelled = true; };
   }, [detailProduct]);
 
+  const vis = useStoreVisibility(coachMode);
   const subcatsOfActive = useMemo(
-    () => activeSection ? storeCategories.filter((c) => c.section_id === activeSection.id) : [],
-    [activeSection, storeCategories],
+    () => {
+      if (!activeSection) return [] as CategoryRow[];
+      return storeCategories.filter((c) => {
+        if (c.section_id !== activeSection.id) return false;
+        if (vis.isHiddenByUpline("category", null, c.id)) return false;
+        if (!coachMode && vis.isHiddenForViewer("category", null, c.id)) return false;
+        return true;
+      });
+    },
+    [activeSection, storeCategories, vis, coachMode],
   );
 
-  const vis = useStoreVisibility(coachMode);
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const fitmindHiddenViewer = vis.isHiddenForViewer("vendor_fitmind", null, null);
@@ -418,11 +426,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       // Upline hides são SEMPRE aplicadas (inclusive em coach mode).
       if (pk && isFitmindKind(pk) && fitmindHiddenByUpline) return false;
       if (item.sectionId && vis.isHiddenByUpline("section", null, item.sectionId)) return false;
+      if (item.categoryId && vis.isHiddenByUpline("category", null, item.categoryId)) return false;
       if (pk && vis.isHiddenByUpline("product", pk, item.sourceId)) return false;
       // Para viewers (aluno/parceiro/profissional), também esconde as minhas próprias hides.
       if (!coachMode) {
         if (pk && isFitmindKind(pk) && fitmindHiddenViewer) return false;
         if (item.sectionId && vis.isHiddenForViewer("section", null, item.sectionId)) return false;
+        if (item.categoryId && vis.isHiddenForViewer("category", null, item.categoryId)) return false;
         if (pk && vis.isHiddenForViewer("product", pk, item.sourceId)) return false;
       }
       if (activeSection) {
@@ -1097,23 +1107,44 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
 
       {activeSection && !activeSubcategory && subcatsOfActive.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {subcatsOfActive.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveSubcategory(c)}
-              className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
-              style={{ width: c.card_width ? `${c.card_width}px` : undefined, height: c.card_height ? `${c.card_height}px` : undefined }}
-            >
-              {c.image_url ? (
-                <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover" />
-              ) : (
-                <div className="flex h-28 w-full items-center justify-center bg-muted"><ShoppingBag className="h-7 w-7 text-muted-foreground" /></div>
-              )}
-              <p className="px-3 py-2 text-sm font-bold text-foreground">{c.name}</p>
-            </button>
-          ))}
+          {subcatsOfActive.map((c) => {
+            const catHidden = coachMode && vis.isHiddenByMe("category", null, c.id);
+            return (
+              <div key={c.id} className="relative">
+                <button
+                  onClick={() => setActiveSubcategory(c)}
+                  className={`w-full overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${catHidden ? "opacity-40" : ""}`}
+                  style={{ width: c.card_width ? `${c.card_width}px` : undefined, height: c.card_height ? `${c.card_height}px` : undefined }}
+                >
+                  {c.image_url ? (
+                    <img src={c.image_url} alt={c.name} className="h-28 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-28 w-full items-center justify-center bg-muted"><ShoppingBag className="h-7 w-7 text-muted-foreground" /></div>
+                  )}
+                  <p className="px-3 py-2 text-sm font-bold text-foreground">{c.name}</p>
+                </button>
+                {coachMode && (
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await vis.toggleHidden("category", null, c.id, !catHidden);
+                        toast.success(catHidden ? "Categoria reativada para sua rede." : "Categoria oculta da sua rede.");
+                      } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                    }}
+                    title={catHidden ? "Mostrar categoria para sua rede" : "Ocultar categoria da sua rede"}
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                  >
+                    {catHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+
 
       {!coachMode && !activeSection && orders.length > 0 && (
         <section className="rounded-2xl bg-card p-4">
