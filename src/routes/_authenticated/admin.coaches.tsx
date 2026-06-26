@@ -86,7 +86,7 @@ function AdminCoaches() {
     setLoading(true);
     const { data } = await supabase
       .from("coaches")
-      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,cpf,status)")
+      .select("*, profiles!coaches_profile_id_fkey(id,name,email,phone,city,state,status)")
       .order("created_at", { ascending: false });
     setCoaches((data as unknown as CoachRow[]) || []);
     setLoading(false);
