@@ -3995,6 +3995,42 @@ export type Database = {
           },
         ]
       }
+      lgpd_access_log: {
+        Row: {
+          actor_role: string
+          actor_user_id: string
+          created_at: string
+          field: string
+          id: string
+          ip_address: string | null
+          reason: string | null
+          target_user_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          actor_role: string
+          actor_user_id: string
+          created_at?: string
+          field: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          target_user_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          actor_role?: string
+          actor_user_id?: string
+          created_at?: string
+          field?: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          target_user_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       live_events: {
         Row: {
           cover_url: string | null
@@ -9174,6 +9210,10 @@ export type Database = {
         Returns: undefined
       }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
+      admin_reveal_cpf: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
       admin_set_coach_card_validity: {
         Args: { _coach_id: string; _valid_until: string }
         Returns: undefined
@@ -9383,6 +9423,7 @@ export type Database = {
           visibility: Database["public"]["Enums"]["event_visibility"]
         }[]
       }
+      get_my_cpf: { Args: never; Returns: string }
       get_or_create_daily_quote: { Args: never; Returns: Json }
       get_student_attendance_summary: {
         Args: { _student_id?: string }
