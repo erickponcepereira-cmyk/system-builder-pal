@@ -42,6 +42,7 @@ function StudentEvolution() {
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return setLoading(false);
+    setViewerTag(userData.user.email || userData.user.id);
     const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user.id).maybeSingle();
     const { data: studentData } = profile?.id
       ? await supabase.from("students").select("id,current_weight,goal_weight").eq("profile_id", profile.id).maybeSingle()
