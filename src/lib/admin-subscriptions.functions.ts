@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getServerCutoffIso } from "@/lib/test-mode.functions";
 
 async function assertAdmin(ctx: { supabase: any; userId: string }) {
   const { data } = await ctx.supabase.rpc("is_admin", { _user_id: ctx.userId });
@@ -45,6 +46,8 @@ export const listAdminInvoices = createServerFn({ method: "GET" })
       .limit(500);
     if (data.status) q = q.eq("status", data.status);
     if (data.month) q = q.eq("reference_month", data.month);
+    const cutoff = await getServerCutoffIso();
+    if (cutoff) q = q.gte("created_at", cutoff);
     const { data: invs, error } = await q;
     if (error) throw new Error(error.message);
 
