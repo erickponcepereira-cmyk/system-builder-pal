@@ -151,6 +151,18 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
 
   const handleSubmit = async () => {
     if (!acceptTerms) return fail("Aceite os Termos de Uso para continuar.");
+    if (!alreadyProfessional) return fail("Informe se você já é coach/profissional FitMind.");
+
+    const isAlreadyPro = alreadyProfessional === "yes";
+    const nowIso = new Date().toISOString();
+    const activationExtras = isAlreadyPro
+      ? {
+          already_coach: true,
+          activation_paid_at: nowIso,
+          activation_source: "already_professional",
+          activation_note: alreadyProfessionalNote.trim() || null,
+        }
+      : {};
 
     setLoading(true); setFormError(null);
     try {
