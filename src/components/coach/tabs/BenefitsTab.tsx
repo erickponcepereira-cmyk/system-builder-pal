@@ -249,7 +249,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                     return (
                       <div
                         key={p.id}
-                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative"
+                        className="text-left rounded-xl border border-white/5 overflow-hidden transition hover:border-primary/40 relative flex flex-col h-full"
                         style={{ backgroundColor: "#0F0F0F" }}
                       >
                         {isDiscount && p.discount_percent ? (
