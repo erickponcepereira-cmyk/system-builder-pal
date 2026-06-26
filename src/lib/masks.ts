@@ -28,6 +28,16 @@ export function maskCPFSensitive(value: string | null | undefined): string {
   return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
 }
 
+// LGPD: máscara de CPF/CNPJ (aceita ambos) para exibição pública
+// CPF (11)  -> ***.456.789-**
+// CNPJ (14) -> **.345.678/0001-**
+export function maskDocumentSensitive(value: string | null | undefined): string {
+  const d = (value || "").replace(/\D/g, "");
+  if (d.length === 11) return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
+  if (d.length === 14) return `**.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-**`;
+  return value ? "***" : "";
+}
+
 // LGPD: máscara de email (oculta a maior parte do local part)
 // Ex.: nathan.utuari@hotmail.com -> n***@hotmail.com
 export function maskEmailSensitive(value: string | null | undefined): string {
