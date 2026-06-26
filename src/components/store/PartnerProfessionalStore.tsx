@@ -238,8 +238,21 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (cards.length === 0) return <p className="text-sm text-white/50 text-center py-10">Nenhum produto disponível ainda.</p>;
 
-  const usedSectionIds = new Set(cards.map((c) => c.section_id).filter(Boolean) as string[]);
-  const visibleSections = sections.filter((s) => usedSectionIds.has(s.id));
+  // Para alunos/parceiros/profissionais, filtra cards/sections escondidos por algum upline.
+  // Para o coach (mode='reseller'), mostra tudo e oferece toggle visual.
+  const isViewerFilter = mode !== "reseller";
+  const visibleCards = isViewerFilter
+    ? cards.filter((c) => {
+        if (vis.isHiddenForViewer(vendorType, null, null)) return false;
+        if (c.section_id && vis.isHiddenForViewer("section", null, c.section_id)) return false;
+        if (vis.isHiddenForViewer("product", productKind, c.id)) return false;
+        return true;
+      })
+    : cards;
+  const usedSectionIds = new Set(visibleCards.map((c) => c.section_id).filter(Boolean) as string[]);
+  const visibleSections = sections
+    .filter((s) => usedSectionIds.has(s.id))
+    .filter((s) => isViewerFilter ? !vis.isHiddenForViewer("section", null, s.id) : true);
 
   // Drill-down: section list → categories → products of category
   let body: ReactNode;
