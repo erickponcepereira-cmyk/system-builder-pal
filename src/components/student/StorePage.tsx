@@ -1022,23 +1022,62 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       )}
 
       {!activeSection && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {storeSections.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => { setActiveSection(s); setActiveSubcategory(null); }}
-              className="overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
-              style={{ width: s.card_width ? `${s.card_width}px` : undefined, height: s.card_height ? `${s.card_height}px` : undefined }}
-            >
-              {s.image_url ? (
-                <img src={s.image_url} alt={s.name} className="h-32 w-full object-cover" />
-              ) : (
-                <div className="flex h-32 w-full items-center justify-center bg-muted"><ShoppingBag className="h-8 w-8 text-muted-foreground" /></div>
-              )}
-              <p className="px-3 py-2 text-sm font-bold text-foreground">{s.name}</p>
-            </button>
-          ))}
-        </div>
+        <>
+          {coachMode && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={async () => {
+                  const hidden = vis.isHiddenByMe("vendor_fitmind", null, null);
+                  try {
+                    await vis.toggleHidden("vendor_fitmind", null, null, !hidden);
+                    toast.success(hidden ? "FitMind reativada para sua rede." : "FitMind oculta para sua rede.");
+                  } catch (e) { toast.error(e instanceof Error ? e.message : "Erro"); }
+                }}
+                className="text-[11px] rounded-full border border-white/15 px-3 py-1 text-white/80 hover:bg-white/10"
+              >
+                {vis.isHiddenByMe("vendor_fitmind", null, null) ? "✓ Mostrar todos (FitMind) para a rede" : "Ocultar todos (FitMind) da rede"}
+              </button>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {visibleStoreSections.map((s) => {
+              const secHidden = coachMode && vis.isHiddenByMe("section", null, s.id);
+              return (
+                <div key={s.id} className="relative">
+                  <button
+                    onClick={() => { setActiveSection(s); setActiveSubcategory(null); }}
+                    className={`w-full overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${secHidden ? "opacity-40" : ""}`}
+                    style={{ width: s.card_width ? `${s.card_width}px` : undefined, height: s.card_height ? `${s.card_height}px` : undefined }}
+                  >
+                    {s.image_url ? (
+                      <img src={s.image_url} alt={s.name} className="h-32 w-full object-cover" />
+                    ) : (
+                      <div className="flex h-32 w-full items-center justify-center bg-muted"><ShoppingBag className="h-8 w-8 text-muted-foreground" /></div>
+                    )}
+                    <p className="px-3 py-2 text-sm font-bold text-foreground">{s.name}</p>
+                  </button>
+                  {coachMode && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await vis.toggleHidden("section", null, s.id, !secHidden);
+                          toast.success(secHidden ? "Seção reativada para sua rede." : "Seção oculta da sua rede.");
+                        } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                      }}
+                      title={secHidden ? "Mostrar seção para sua rede" : "Ocultar seção da sua rede"}
+                      className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                    >
+                      {secHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {activeSection && !activeSubcategory && subcatsOfActive.length > 0 && (
