@@ -78,8 +78,12 @@ export async function computePatentLevelForCoach(coachId: string): Promise<numbe
     (byUpline.get(cur) || []).forEach((c) => queue.push(c));
   }
 
+  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+  const cutoff = await getServerCutoffIso();
+
   const sumFor = async (coachIds: string[], sinceIso: string) => {
     if (coachIds.length === 0) return 0;
+    const effSince = cutoff && cutoff > sinceIso ? cutoff : sinceIso;
     const { data: studs } = await supabaseAdmin
       .from("students").select("id").in("coach_id", coachIds);
     const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
@@ -88,11 +92,11 @@ export async function computePatentLevelForCoach(coachId: string): Promise<numbe
     const { data: txs } = await supabaseAdmin
       .from("transactions").select("gross_amount")
       .in("student_id", ids).eq("status", "paid")
-      .not("paid_at", "is", null).gte("paid_at", sinceIso);
+      .not("paid_at", "is", null).gte("paid_at", effSince);
     ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
     const { data: orders } = await supabaseAdmin
       .from("store_orders").select("total_amount")
-      .in("student_id", ids).eq("status", "paid").gte("updated_at", sinceIso);
+      .in("student_id", ids).eq("status", "paid").gte("updated_at", effSince);
     ((orders as { total_amount: number }[] | null) || []).forEach((o) => { total += Number(o.total_amount) || 0; });
     return total;
   };
