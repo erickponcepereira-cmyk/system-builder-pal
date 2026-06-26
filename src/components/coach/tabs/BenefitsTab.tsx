@@ -40,6 +40,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [openPartner, setOpenPartner] = useState<string | null>(null);
+  const [openBenefit, setOpenBenefit] = useState<PartnerFreeProduct | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
