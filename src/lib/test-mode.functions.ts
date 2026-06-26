@@ -48,13 +48,17 @@ export const setTestMode = createServerFn({ method: "POST" })
       ? (data.cutoffAt && data.cutoffAt.trim() ? data.cutoffAt : new Date().toISOString())
       : (data.cutoffAt ?? "");
     const now = new Date().toISOString();
+    // Resolve profile.id from auth user id (updated_by FK references profiles.id)
+    const { data: prof } = await supabaseAdmin
+      .from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+    const updatedBy = (prof as any)?.id ?? null;
     const { error: e1 } = await supabaseAdmin
       .from("app_settings")
-      .upsert({ key: "test_mode_enabled", value: data.enabled ? "true" : "false", updated_by: context.userId, updated_at: now }, { onConflict: "key" });
+      .upsert({ key: "test_mode_enabled", value: data.enabled ? "true" : "false", updated_by: updatedBy, updated_at: now }, { onConflict: "key" });
     if (e1) throw new Error(e1.message);
     const { error: e2 } = await supabaseAdmin
       .from("app_settings")
-      .upsert({ key: "test_mode_cutoff_at", value: cutoff || "", updated_by: context.userId, updated_at: now }, { onConflict: "key" });
+      .upsert({ key: "test_mode_cutoff_at", value: cutoff || "", updated_by: updatedBy, updated_at: now }, { onConflict: "key" });
     if (e2) throw new Error(e2.message);
     return { ok: true, enabled: data.enabled, cutoffAt: cutoff || null };
   });
