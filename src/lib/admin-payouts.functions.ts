@@ -390,12 +390,16 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         if (sr) r = sr;
       }
       const agg = commAgg.get(p.id);
-      const available = role === "student_referrer"
-        ? n(sw?.available_balance)
-        : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance);
-      const totalWithdrawn = role === "student_referrer"
-        ? n(sw?.total_withdrawn)
-        : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn);
+      const available = cutoff
+        ? (agg?.available || 0)
+        : (role === "student_referrer"
+          ? n(sw?.available_balance)
+          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance));
+      const totalWithdrawn = cutoff
+        ? 0
+        : (role === "student_referrer"
+          ? n(sw?.total_withdrawn)
+          : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn));
       return {
         profileId: p.id,
         name: p.name || "—",
