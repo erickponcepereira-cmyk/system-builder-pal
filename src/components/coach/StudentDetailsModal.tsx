@@ -595,8 +595,11 @@ function Info({ label, value }: { label: string; value: string | null | undefine
 
 function EvolutionPhotos({ photos }: { photos: PhotoRow[] }) {
   const [signed, setSigned] = useState<Record<string, string>>({});
+  const [viewerTag, setViewerTag] = useState<string>("");
   useEffect(() => {
     (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      setViewerTag(u.user?.email || u.user?.id || "");
       const out: Record<string, string> = {};
       await Promise.all(photos.map(async (p) => {
         // photo_url can be a storage path (private bucket) or a full URL (legacy)
@@ -609,7 +612,7 @@ function EvolutionPhotos({ photos }: { photos: PhotoRow[] }) {
   }, [photos]);
   return (
     <div>
-      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Fotos de evolução</p>
+      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">Fotos de evolução · LGPD: marca d'água com seu identificador</p>
       {photos.length === 0 ? (
         <p className="text-xs text-white/40">Aluno ainda não enviou fotos.</p>
       ) : (
@@ -617,14 +620,14 @@ function EvolutionPhotos({ photos }: { photos: PhotoRow[] }) {
           {photos.map((p) => {
             const url = signed[p.id];
             return (
-              <a key={p.id} href={url || "#"} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border border-white/5">
+              <div key={p.id} className="group block overflow-hidden rounded-lg border border-white/5">
                 {url ? (
-                  <img src={url} alt={p.caption || ""} loading="lazy" className="aspect-square w-full object-cover transition group-hover:scale-105" />
+                  <ProtectedImage src={url} alt={p.caption || ""} watermark={viewerTag} className="aspect-square w-full" />
                 ) : (
                   <div className="aspect-square w-full bg-white/5 animate-pulse" />
                 )}
                 <p className="bg-black/50 p-1 text-center text-[10px] text-white/70">{new Date(p.photo_date).toLocaleDateString("pt-BR")}</p>
-              </a>
+              </div>
             );
           })}
         </div>
