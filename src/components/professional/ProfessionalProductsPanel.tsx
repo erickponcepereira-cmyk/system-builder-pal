@@ -92,6 +92,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
     if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
 
+    const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
     const payload = {
       ...editing,
       coach_id: coachId,
@@ -103,16 +104,26 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       network_l3_amount: b.networkL3,
       status: "pending" as const,
       admin_notes: null,
+      image_url: emptyToNull(editing.image_url) as string | null,
+      description: emptyToNull(editing.description) as string | null,
+      redemption_instructions: emptyToNull(editing.redemption_instructions) as string | null,
+      section_id: emptyToNull(editing.section_id) as string | null,
+      category_id: emptyToNull(editing.category_id) as string | null,
     };
 
-    if (editing.id) {
-      const { id, ...up } = payload;
-      const { error } = await supabase.from("professional_products" as never).update(up as never).eq("id" as never, id!);
-      if (error) return toast.error(error.message);
-    } else {
-      const { error } = await supabase.from("professional_products" as never).insert(payload as never);
-      if (error) return toast.error(error.message);
+    try {
+      if (editing.id) {
+        const { id, ...up } = payload;
+        const { error } = await supabase.from("professional_products" as never).update(up as never).eq("id" as never, id!);
+        if (error) return toast.error(error.message);
+      } else {
+        const { error } = await supabase.from("professional_products" as never).insert(payload as never);
+        if (error) return toast.error(error.message);
+      }
+    } catch (e: any) {
+      return toast.error(`Falha de rede ao salvar: ${e?.message || e}. Verifique sua conexão e tente novamente.`);
     }
+
     toast.success("Salvo. Aguardando aprovação do admin.");
     setEditing(null); load();
   };
