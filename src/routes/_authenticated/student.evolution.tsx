@@ -141,7 +141,7 @@ function StudentEvolution() {
           <button type="button" onClick={() => setGalleryOpen(true)} className="mt-4 grid w-full grid-cols-2 gap-2 text-left">
             {[firstPhoto, latestPhoto].filter(Boolean).map((photo, index) => (
               <div key={`${photo.id}-${index}`} className="overflow-hidden rounded-xl bg-muted">
-                <img src={photo.signedUrl || ""} alt={index === 0 ? "Primeira foto" : "Foto mais recente"} className="aspect-[3/4] w-full object-cover" />
+                <ProtectedImage src={photo.signedUrl || ""} alt={index === 0 ? "Primeira foto" : "Foto mais recente"} watermark={viewerTag} className="aspect-[3/4] w-full" />
                 <div className="p-2">
                   <p className="text-[10px] font-bold text-foreground">{index === 0 ? "Primeira" : "Atual"}</p>
                   <p className="text-[9px] text-muted-foreground">Semana {photo.week_number || "—"}</p>
