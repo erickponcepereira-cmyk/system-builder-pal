@@ -19,6 +19,8 @@ import {
   type PendingWithdrawalRow,
 } from "@/lib/admin-payouts.functions";
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
+import { getClientCutoffIso } from "@/lib/test-mode";
+import { TestModeBanner } from "@/components/admin/TestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
   component: AdminPayments,
@@ -543,11 +545,14 @@ function LegacyOrders() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const cutoff = await getClientCutoffIso();
+    let q: any = supabase
       .from("transactions")
       .select("id,gross_amount,status,purchase_type,payment_method,created_at,paid_at,metadata,students!transactions_student_id_fkey(profiles!students_profile_id_fkey(name,email)),products!transactions_product_id_fkey(name)")
       .order("created_at", { ascending: false })
       .limit(100);
+    if (cutoff) q = q.gte("created_at", cutoff);
+    const { data } = await q;
     setTransactions((data as unknown as Transaction[]) || []);
     setLoading(false);
   };
