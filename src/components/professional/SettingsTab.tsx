@@ -193,6 +193,28 @@ export function SettingsTab({ coachId, profileId }: Props) {
             </div>
           </div>
 
+          {/* Capa */}
+          <Field label="Capa do perfil" hint="Banner exibido no topo do seu perfil público. Recomendado 1200×400px.">
+            <div className="space-y-2">
+              {pub.cover_url ? (
+                <img src={pub.cover_url} alt="Capa" className="h-28 w-full rounded-lg object-cover" />
+              ) : (
+                <div className="h-28 w-full rounded-lg bg-white/5 border border-dashed border-white/15 flex items-center justify-center text-[11px] text-white/40">
+                  Nenhuma capa adicionada
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
+                  {pub.cover_url ? "Trocar capa" : "Adicionar capa"}
+                </label>
+                {pub.cover_url && (
+                  <button type="button" onClick={() => setPub({ ...pub, cover_url: null })} className="text-[11px] text-red-300 hover:underline">Remover</button>
+                )}
+              </div>
+            </div>
+          </Field>
+
           <Field label="Título / Headline" hint="Aparece ao lado do seu nome (ex: 'Nutricionista Esportiva — Performance & Estética')">
             <input value={pub.headline} onChange={(e) => setPub({ ...pub, headline: e.target.value })} className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
           </Field>
