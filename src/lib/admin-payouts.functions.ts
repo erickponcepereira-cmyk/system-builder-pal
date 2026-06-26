@@ -112,6 +112,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<PayoutsDashboard> => {
     await assertAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     const cls = await classifyProfiles();
 
     // student_referrer: alunos que receberam comissão de indicação e NÃO estão em seller
