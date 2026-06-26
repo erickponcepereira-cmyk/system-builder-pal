@@ -262,7 +262,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />
                           </button>
                         )}
-                        <div className="p-4">
+                        <div className="p-4 flex flex-col flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="text-sm font-bold text-white">{p.name}</h3>
                             {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded uppercase bg-green-500/20 text-green-300">Grátis</span>}
