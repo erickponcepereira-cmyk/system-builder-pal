@@ -258,7 +258,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           </div>
                         ) : null}
                         {p.image_url && (
-                          <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="block w-full">
+                          <button type="button" onClick={() => setOpenBenefit(p)} className="block w-full">
                             <img src={p.image_url} alt={p.name} className="h-32 w-full object-cover" />
                           </button>
                         )}
