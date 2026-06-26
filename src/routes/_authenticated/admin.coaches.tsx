@@ -1,10 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard } from "lucide-react";
+import { Check, X, Mail, Phone, MapPin, CreditCard, Search, Ban, Unlock, ArrowRightLeft, Loader2, IdCard, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { approveCoachAndConfirmEmail } from "@/lib/admin-users.functions";
+
+interface TransferRow {
+  id: string;
+  from_coach_id: string;
+  to_coach_id: string;
+  reason: string | null;
+  students_transferred: number | null;
+  coaches_transferred: number | null;
+  performed_by: string | null;
+  transferred_at: string;
+}
 
 export const Route = createFileRoute("/_authenticated/admin/coaches")({
   component: AdminCoaches,
