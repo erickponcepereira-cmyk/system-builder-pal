@@ -31,6 +31,8 @@ const registrationSchema = z.object({
       referralLink: z.string().optional().nullable(),
       completedCoachCourse: z.boolean().optional(),
       coachCourseNotes: z.string().optional().nullable(),
+      alreadyCoach: z.boolean().optional(),
+      activationNote: z.string().max(500).optional().nullable(),
       isProfessional: z.boolean().optional(),
       specialtyKey: z.string().optional().nullable(),
       specialtyCustomDescription: z.string().max(500).optional().nullable(),

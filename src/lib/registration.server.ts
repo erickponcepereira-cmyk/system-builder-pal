@@ -28,6 +28,8 @@ export type FinalizeRegistrationInput = {
     referralLink?: string | null;
     completedCoachCourse?: boolean;
     coachCourseNotes?: string | null;
+    alreadyCoach?: boolean;
+    activationNote?: string | null;
     isProfessional?: boolean;
     specialtyKey?: string | null;
     specialtyCustomDescription?: string | null;
@@ -173,7 +175,17 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
     }
 
     const isProfessional = input.coach.isProfessional ?? false;
+    const isAlreadyCoach = input.coach.alreadyCoach ?? false;
     const coachApprovedAt = isProfessional ? new Date().toISOString() : null;
+    const nowIso = new Date().toISOString();
+    const activationPatch = isAlreadyCoach
+      ? {
+          already_coach: true,
+          activation_paid_at: nowIso,
+          activation_source: isProfessional ? "already_professional" : "already_coach",
+          activation_note: clean(input.coach.activationNote),
+        }
+      : {};
     let referralCode = clean(input.coach.referralCode) || makeReferralCode();
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const { error: coachError } = await supabaseAdmin.from("coaches").upsert(
@@ -198,6 +210,7 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
           specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
           approved_at: coachApprovedAt,
           onboarding_stage: isProfessional ? "released" : "awaiting_payment",
+          ...activationPatch,
         },
         { onConflict: "profile_id" }
       );
