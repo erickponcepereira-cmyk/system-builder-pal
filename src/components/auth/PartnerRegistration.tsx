@@ -161,6 +161,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             specialty: specialty.trim() || null,
             status: "pending",
             upline_coach_id: uplineCoachId,
+            ...activationPatch,
           } as never);
         if (insertErr) throw insertErr;
 
