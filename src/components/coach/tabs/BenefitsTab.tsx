@@ -268,11 +268,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded uppercase bg-green-500/20 text-green-300">Grátis</span>}
                           </div>
                           <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
-                          {p.description && (
-                            <div className="flex-1 min-h-0 mt-2">
-                              <p className="text-xs text-white/60 leading-relaxed">{p.description}</p>
-                            </div>
-                          )}
+                          {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
                           <div className="mt-auto pt-3 flex flex-col gap-2">
                             {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                               <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
