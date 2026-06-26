@@ -169,7 +169,12 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
           count: (sw.data as any[] | null)?.length || 0,
         };
       })(),
-      nutritionistTotal: {
+      nutritionistTotal: cutoff ? {
+        available: nutriAdminAvailable,
+        blocked: 0,
+        totalEarned: nutriAdminCredits,
+        count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
+      } : {
         available: sum(nutritionistRows, "available_balance") + nutriAdminAvailable,
         blocked: sum(nutritionistRows, "blocked_balance"),
         totalEarned: sum(nutritionistRows, "total_earned") + nutriAdminCredits,
