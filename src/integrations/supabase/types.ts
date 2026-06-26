@@ -5316,6 +5316,7 @@ export type Database = {
           activation_paid_at: string | null
           activation_source: string | null
           address: string | null
+          already_partner: boolean
           approved_at: string | null
           blocked_at: string | null
           blocked_reason: string | null
@@ -5356,6 +5357,7 @@ export type Database = {
           activation_paid_at?: string | null
           activation_source?: string | null
           address?: string | null
+          already_partner?: boolean
           approved_at?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
@@ -5396,6 +5398,7 @@ export type Database = {
           activation_paid_at?: string | null
           activation_source?: string | null
           address?: string | null
+          already_partner?: boolean
           approved_at?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
