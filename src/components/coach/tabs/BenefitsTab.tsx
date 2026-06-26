@@ -159,7 +159,10 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
       ) : (
         <>
           {(() => {
-            const totalSavings = partnerFreebies.reduce((sum, p) => {
+            const filteredPartner = partnerFreebies.filter((p) =>
+              pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+            );
+            const totalSavings = filteredPartner.reduce((sum, p) => {
               const ev = Number(p.estimated_value || 0);
               if (p.redemption_mode === "discount") return sum + ev * (Number(p.discount_percent || 0) / 100);
               return sum + ev;
@@ -172,7 +175,9 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                   <p className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-300">
                     R$ {totalSavings.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
-                  <p className="mt-1 text-[10px] text-white/55">Usando todos os benefícios ativos.</p>
+                  <p className="mt-1 text-[10px] text-white/55">
+                    {pageMode === "discount" ? "Usando todos os cupons ativos." : "Resgatando os benefícios gratuitos."}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Você já economizou</p>
