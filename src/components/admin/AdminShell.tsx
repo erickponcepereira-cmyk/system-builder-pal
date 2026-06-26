@@ -24,6 +24,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/coach-releases", label: "Liberar Coaches", icon: UserCheck, perm: "coach_applications" },
   { to: "/admin/coach-ids", label: "IDs dos Coaches", icon: Lock, perm: "coach_applications" },
   { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
+  { to: "/admin/financeiro", label: "Financeiro", icon: DollarSign, perm: "financeiro" },
   { to: "/admin/fitmind-events", label: "Eventos FitMind", icon: CalendarDays, perm: "fitmind_events" },
   { to: "/admin/challenge", label: "Desafio Emagrecimento", icon: Trophy, perm: "challenge" },
   { to: "/admin/achievements", label: "Conquistas", icon: Award, perm: "library" },
