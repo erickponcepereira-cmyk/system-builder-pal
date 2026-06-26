@@ -1483,7 +1483,7 @@ function ClientPickerModal({
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={tab === "all" ? "Buscar por nome, CPF ou e-mail..." : "Buscar por nome ou CPF..."}
+            placeholder={tab === "all" ? "Buscar por nome, telefone ou e-mail..." : "Buscar por nome, telefone ou e-mail..."}
             className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
