@@ -199,6 +199,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             business_area: businessArea.trim() || null,
             specialty: specialty.trim() || null,
             upline_coach_id: uplineCoachId,
+            ...activationPatch,
           } as never)
           .eq("profile_id" as never, profile.id);
 
