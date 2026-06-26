@@ -259,20 +259,49 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   if (!activeSection) {
     body = (
       <div className="space-y-3">
-        <h2 className="text-base font-bold text-white">Seções</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-white">Seções</h2>
+          {mode === "reseller" && (
+            <button
+              type="button"
+              onClick={() => handleToggleHide(vendorType, null, null)}
+              className="text-[11px] rounded-full border border-white/15 px-3 py-1 text-white/80 hover:bg-white/10"
+              title="Ocultar/exibir todos os produtos deste tipo para sua rede"
+            >
+              {vis.isHiddenByMe(vendorType, null, null)
+                ? `✓ Mostrar todos (${kind === "partner" ? "parceiros" : "profissionais"})`
+                : `Ocultar todos (${kind === "partner" ? "parceiros" : "profissionais"}) da rede`}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {visibleSections.map((s) => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)} className="group overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent" style={{ backgroundColor: "#1A1A1A" }}>
-              <div className="aspect-square w-full overflow-hidden bg-white/5">
-                {s.image_url ? (
-                  <img src={s.image_url} alt={s.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
+          {visibleSections.map((s) => {
+            const sectionHidden = vis.isHiddenByMe("section", null, s.id);
+            return (
+              <div key={s.id} className="relative">
+                <button onClick={() => setActiveSection(s.id)} className={`group w-full overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent ${sectionHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
+                  <div className="aspect-square w-full overflow-hidden bg-white/5">
+                    {s.image_url ? (
+                      <img src={s.image_url} alt={s.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
+                    )}
+                  </div>
+                  <p className="px-3 py-2 text-sm font-bold text-white">{s.name}</p>
+                </button>
+                {mode === "reseller" && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleHide("section", null, s.id, e)}
+                    title={sectionHidden ? "Mostrar seção para sua rede" : "Ocultar seção da sua rede"}
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                  >
+                    {sectionHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 )}
               </div>
-              <p className="px-3 py-2 text-sm font-bold text-white">{s.name}</p>
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
