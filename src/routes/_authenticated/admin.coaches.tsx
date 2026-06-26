@@ -515,6 +515,46 @@ function AdminCoaches() {
           </div>
         </div>
       )}
+
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowHistory(false)}>
+          <div className="w-full max-w-2xl rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Histórico de transferências de rede</h2>
+                <p className="text-xs text-white/50">Toda vez que um coach é desativado/migrado, a rede sobe para outro coach. Registro completo abaixo.</p>
+              </div>
+              <button onClick={() => setShowHistory(false)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {historyLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+            ) : history.length === 0 ? (
+              <p className="py-8 text-center text-sm text-white/50">Nenhuma transferência registrada ainda.</p>
+            ) : (
+              <div className="max-h-[60vh] overflow-y-auto space-y-2">
+                {history.map((h) => (
+                  <div key={h.id} className="rounded-lg border border-white/5 bg-white/[0.03] p-3 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-white">
+                        {coachLabel(h.from_coach_id)} <span className="text-white/40">→</span> {coachLabel(h.to_coach_id)}
+                      </span>
+                      <span className="text-white/40">{new Date(h.transferred_at).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <p className="mt-1 text-white/60">
+                      <span className="text-primary font-bold">{h.students_transferred || 0}</span> aluno(s) e
+                      {" "}<span className="text-primary font-bold">{h.coaches_transferred || 0}</span> sub-coach(es) movidos.
+                    </p>
+                    {h.reason && <p className="mt-1 text-white/50 italic">"{h.reason}"</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
