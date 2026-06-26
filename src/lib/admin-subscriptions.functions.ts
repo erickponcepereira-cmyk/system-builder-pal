@@ -156,3 +156,47 @@ export const generateInvoicesNow = createServerFn({ method: "POST" })
     await context.supabase.rpc("mark_overdue_invoices");
     return { generated: data };
   });
+
+export const revertInvoiceAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) => z.object({ invoice_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.rpc("revert_subscription_invoice_payment", {
+      _invoice_id: data.invoice_id,
+      _performed_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const postponeInvoiceAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) => z.object({
+    invoice_id: z.string().uuid(),
+    new_due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.rpc("postpone_subscription_invoice", {
+      _invoice_id: data.invoice_id,
+      _new_due_date: data.new_due_date,
+      _performed_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const resetInvoiceDueDateAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) => z.object({ invoice_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.rpc("reset_subscription_invoice_due_date", {
+      _invoice_id: data.invoice_id,
+      _performed_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
