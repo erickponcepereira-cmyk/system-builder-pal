@@ -421,14 +421,38 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               )}
 
 
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
-                <span className="text-xs text-white/60">
-                  Aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
-                  os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a> e a{" "}
-                  <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Política de Privacidade</a>.
-                </span>
-              </label>
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <Label className="text-white/80 text-sm">Você já é coach/profissional FitMind? *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAlreadyProfessional("yes")}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${alreadyProfessional === "yes" ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}
+                  >Sim, já sou</button>
+                  <button
+                    type="button"
+                    onClick={() => setAlreadyProfessional("no")}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${alreadyProfessional === "no" ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}
+                  >Ainda não</button>
+                </div>
+                {alreadyProfessional === "yes" && (
+                  <Input
+                    value={alreadyProfessionalNote}
+                    onChange={(e) => setAlreadyProfessionalNote(e.target.value)}
+                    placeholder="Ex: já fiz curso de coach em 2024"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  />
+                )}
+                <p className="text-[11px] text-white/40">
+                  {alreadyProfessional === "yes"
+                    ? "A anuidade (R$ 179,90) será marcada como já paga e ficará registrada para o admin."
+                    : alreadyProfessional === "no"
+                    ? "Após o cadastro, a anuidade (R$ 179,90) será cobrada antes da liberação completa."
+                    : "Esta informação determina se a anuidade será cobrada."}
+                </p>
+              </div>
+
+
 
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
