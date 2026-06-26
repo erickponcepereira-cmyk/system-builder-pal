@@ -221,3 +221,267 @@ export const reviewPartnerProduct = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============================================================
+// ADMIN: liberação de parceiros por etapas (mesmo modelo dos coaches)
+// ============================================================
+
+async function assertAdmin(userId: string) {
+  const { data: me } = await supabaseAdmin
+    .from("profiles").select("id, role").eq("user_id", userId).maybeSingle();
+  if (!me || me.role !== "admin") throw new Error("Acesso negado");
+  return me.id as string;
+}
+
+async function logPartnerAudit(
+  actorProfileId: string,
+  targetProfileId: string,
+  action: string,
+  notes?: string,
+) {
+  await supabaseAdmin.from("admin_audit_log").insert({
+    actor_profile_id: actorProfileId,
+    target_profile_id: targetProfileId,
+    action,
+    notes: notes ?? null,
+  });
+}
+
+export const listAllPartnerReleases = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { includeApproved?: boolean } | undefined) =>
+    z.object({ includeApproved: z.boolean().optional() }).parse(input ?? {})
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const statuses = data.includeApproved
+      ? ["pending", "approved", "blocked"]
+      : ["pending", "blocked"];
+    const { data: partners } = await supabaseAdmin
+      .from("partners")
+      .select(
+        "id, fantasy_name, document, document_type, whatsapp, city, state, status, photo_url, description, business_area, specialty, approved_at, blocked_at, blocked_reason, activation_paid_at, activation_source, activation_note, activation_granted_by, documents_reviewed_at, documents_reviewed_by, created_at, profile:profiles!partners_profile_id_fkey(id, name, email, phone, user_id)"
+      )
+      .in("status", statuses)
+      .order("created_at", { ascending: false });
+
+    const rows = (partners || []) as Array<{
+      id: string;
+      fantasy_name: string;
+      document: string | null;
+      whatsapp: string | null;
+      city: string | null;
+      state: string | null;
+      status: string;
+      photo_url: string | null;
+      description: string | null;
+      business_area: string | null;
+      specialty: string | null;
+      approved_at: string | null;
+      activation_paid_at: string | null;
+      activation_source: string | null;
+      activation_note: string | null;
+      documents_reviewed_at: string | null;
+      profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
+    }>;
+
+    const userIds = rows.map((r) => r.profile?.user_id).filter(Boolean) as string[];
+    const confirmedMap = new Map<string, boolean>();
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(uid);
+          confirmedMap.set(uid, !!u.user?.email_confirmed_at);
+        } catch {
+          confirmedMap.set(uid, false);
+        }
+      })
+    );
+
+    // Mensalidade
+    const { data: subs } = userIds.length
+      ? await supabaseAdmin
+          .from("user_subscriptions")
+          .select("user_id, status, paid_until, exempt_until")
+          .in("user_id", userIds)
+      : { data: [] };
+    const subMap = new Map(((subs || []) as Array<{ user_id: string; status: string; paid_until: string | null }>).map((s) => [s.user_id, s]));
+    const { data: invs } = userIds.length
+      ? await supabaseAdmin
+          .from("subscription_invoices")
+          .select("user_id, status, reference_month, due_date")
+          .in("user_id", userIds)
+          .order("reference_month", { ascending: false })
+      : { data: [] };
+    const invMap = new Map<string, { status: string; reference_month: string; due_date: string }>();
+    for (const i of (invs || []) as Array<{ user_id: string; status: string; reference_month: string; due_date: string }>) {
+      if (!invMap.has(i.user_id)) invMap.set(i.user_id, i);
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const computeMonthly = (uid?: string) => {
+      if (!uid) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+      const sub = subMap.get(uid);
+      const inv = invMap.get(uid) || null;
+      if (!sub && !inv) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+      let status: "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none" = "none";
+      if (sub && (sub.status === "exempt_monthly" || sub.status === "exempt_annual" || sub.status === "exempt_permanent")) status = "exempt";
+      else if (inv?.status === "blocked") status = "blocked";
+      else if (inv?.status === "overdue") status = "overdue";
+      else if (inv?.status === "pending") status = "pending";
+      else if (sub?.paid_until && sub.paid_until >= today) status = "paid";
+      else if (inv?.status === "paid") status = "paid";
+      else if (inv?.status === "exempted") status = "exempt";
+      else if (inv?.status === "cancelled") status = "cancelled";
+      return {
+        status,
+        paid_until: sub?.paid_until ?? null,
+        last_invoice_status: inv?.status ?? null,
+        last_invoice_month: inv?.reference_month ?? null,
+      };
+    };
+
+    return rows.map((r) => ({
+      ...r,
+      email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
+      monthly: computeMonthly(r.profile?.user_id),
+    }));
+  });
+
+export const adminConfirmPartnerEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ partnerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const actorId = await assertAdmin(context.userId);
+    const { data: partner } = await supabaseAdmin
+      .from("partners").select("id, profile_id").eq("id", data.partnerId).maybeSingle();
+    if (!partner) throw new Error("Parceiro não encontrado");
+    const { confirmAuthEmailByProfileId } = await import("./admin-network.server");
+    await confirmAuthEmailByProfileId((partner as { profile_id: string }).profile_id);
+    await logPartnerAudit(actorId, (partner as { profile_id: string }).profile_id, "partner_email_confirmed", "E-mail confirmado manualmente pelo admin");
+    return { ok: true };
+  });
+
+export const adminGrantPartnerActivation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      partnerId: z.string().uuid(),
+      note: z.string().trim().min(5, "Justificativa obrigatória (mín. 5 caracteres)").max(500),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    const actorId = await assertAdmin(context.userId);
+    const { data: partner } = await supabaseAdmin
+      .from("partners").select("id, profile_id, activation_paid_at").eq("id", data.partnerId).maybeSingle();
+    if (!partner) throw new Error("Parceiro não encontrado");
+    const p = partner as { id: string; profile_id: string; activation_paid_at: string | null };
+    const nowIso = new Date().toISOString();
+    await supabaseAdmin.from("partners").update({
+      activation_paid_at: p.activation_paid_at || nowIso,
+      activation_source: "admin_grant",
+      activation_granted_by: context.userId,
+      activation_note: data.note,
+    } as never).eq("id", p.id);
+    // Espelha no coach quando existir
+    await supabaseAdmin.from("coaches").update({
+      activation_paid_at: nowIso,
+      activation_source: "partner_approved",
+      onboarding_stage: "awaiting_quiz_result",
+    } as never).eq("profile_id", p.profile_id).eq("onboarding_stage", "awaiting_payment");
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: p.profile_id,
+      type: "partner_onboarding",
+      title: "Anuidade liberada",
+      message: "A anuidade da sua empresa parceira foi liberada pelo admin.",
+      action_url: "/partner",
+    });
+    await logPartnerAudit(actorId, p.profile_id, "partner_activation_paid", `Anuidade concedida pelo admin. Motivo: ${data.note}`);
+    return { ok: true };
+  });
+
+export const adminReviewPartnerDocuments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ partnerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const actorId = await assertAdmin(context.userId);
+    const { data: partner } = await supabaseAdmin
+      .from("partners").select("id, profile_id, documents_reviewed_at").eq("id", data.partnerId).maybeSingle();
+    if (!partner) throw new Error("Parceiro não encontrado");
+    const p = partner as { id: string; profile_id: string; documents_reviewed_at: string | null };
+    await supabaseAdmin.from("partners").update({
+      documents_reviewed_at: p.documents_reviewed_at || new Date().toISOString(),
+      documents_reviewed_by: context.userId,
+    } as never).eq("id", p.id);
+    await logPartnerAudit(actorId, p.profile_id, "partner_documents_reviewed", "Documentos / perfil revisados pelo admin");
+    return { ok: true };
+  });
+
+export const adminApprovePartnerFinal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ partnerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const actorId = await assertAdmin(context.userId);
+    const { data: partner } = await supabaseAdmin
+      .from("partners").select("id, profile_id, status").eq("id", data.partnerId).maybeSingle();
+    if (!partner) throw new Error("Parceiro não encontrado");
+    const p = partner as { id: string; profile_id: string; status: string };
+    const nowIso = new Date().toISOString();
+    await supabaseAdmin.from("partners").update({
+      status: "approved",
+      approved_at: nowIso,
+      blocked_at: null,
+      blocked_reason: null,
+    }).eq("id", p.id);
+    // Garante anuidade marcada se ainda não estava
+    await supabaseAdmin.from("partners").update({
+      activation_paid_at: nowIso,
+      activation_source: "partner_approved",
+    } as never).eq("id", p.id).is("activation_paid_at", null);
+    // Espelha no coach
+    await supabaseAdmin.from("coaches").update({
+      onboarding_stage: "awaiting_quiz_result",
+      activation_paid_at: nowIso,
+      activation_source: "partner_approved",
+    } as never).eq("profile_id", p.profile_id).eq("onboarding_stage", "awaiting_payment");
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: p.profile_id,
+      type: "partner_onboarding",
+      title: "🎉 Empresa parceira aprovada!",
+      message: "Seu painel de parceiro foi liberado. Acesse e configure seus produtos.",
+      action_url: "/partner",
+    });
+    await logPartnerAudit(actorId, p.profile_id, "partner_approved_final", "Parceiro aprovado e painel liberado");
+    return { ok: true };
+  });
+
+export const getPartnerReleaseAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ profileId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { data: rows } = await supabaseAdmin
+      .from("admin_audit_log")
+      .select("id, action, notes, created_at, actor_profile_id")
+      .eq("target_profile_id", data.profileId)
+      .in("action", [
+        "partner_email_confirmed",
+        "partner_activation_paid",
+        "partner_documents_reviewed",
+        "partner_approved_final",
+      ])
+      .order("created_at", { ascending: false });
+
+    const actorIds = [
+      ...new Set(((rows || []) as Array<{ actor_profile_id: string | null }>)
+        .map((r) => r.actor_profile_id)
+        .filter(Boolean) as string[]),
+    ];
+    const { data: actors } = actorIds.length
+      ? await supabaseAdmin.from("profiles").select("id, name").in("id", actorIds)
+      : { data: [] };
+    const actorMap = new Map(((actors || []) as Array<{ id: string; name?: string }>).map((a) => [a.id, a.name || "—"]));
+    return ((rows || []) as Array<{ id: string; action: string; notes: string | null; created_at: string; actor_profile_id: string | null }>).map((r) => ({
+      ...r,
+      actor_name: r.actor_profile_id ? actorMap.get(r.actor_profile_id) || "—" : "—",
+    }));
+  });
