@@ -9558,6 +9558,40 @@ export type Database = {
           reason: string
         }[]
       }
+      postpone_subscription_invoice: {
+        Args: {
+          _invoice_id: string
+          _new_due_date: string
+          _performed_by: string
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          due_date: string
+          fee_amount: number
+          id: string
+          mp_payment_id: string | null
+          net_to_admin: number
+          notes: string | null
+          paid_at: string | null
+          payment_method:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          tax_amount: number
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          wallet_source: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       process_paid_transaction: {
         Args: { _transaction_id: string }
         Returns: undefined
@@ -9658,6 +9692,66 @@ export type Database = {
         Returns: undefined
       }
       reset_expired_career_period_plans: { Args: never; Returns: undefined }
+      reset_subscription_invoice_due_date: {
+        Args: { _invoice_id: string; _performed_by: string }
+        Returns: {
+          amount: number
+          created_at: string
+          due_date: string
+          fee_amount: number
+          id: string
+          mp_payment_id: string | null
+          net_to_admin: number
+          notes: string | null
+          paid_at: string | null
+          payment_method:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          tax_amount: number
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          wallet_source: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revert_subscription_invoice_payment: {
+        Args: { _invoice_id: string; _performed_by: string }
+        Returns: {
+          amount: number
+          created_at: string
+          due_date: string
+          fee_amount: number
+          id: string
+          mp_payment_id: string | null
+          net_to_admin: number
+          notes: string | null
+          paid_at: string | null
+          payment_method:
+            | Database["public"]["Enums"]["invoice_payment_method"]
+            | null
+          reference_month: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          tax_amount: number
+          updated_at: string
+          user_id: string
+          user_subscription_id: string
+          wallet_source: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscription_invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       review_coach_application: {
         Args: {
           _admin_notes?: string
