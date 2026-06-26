@@ -9760,6 +9760,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      search_approved_coaches: {
+        Args: { _limit?: number; _query?: string }
+        Returns: {
+          city: string
+          coach_id: string
+          name: string
+          profile_id: string
+          state: string
+        }[]
+      }
       slot_target_profile_id: {
         Args: {
           _slot: Database["public"]["Tables"]["product_value_slots"]["Row"]
