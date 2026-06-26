@@ -5311,6 +5311,10 @@ export type Database = {
       }
       partners: {
         Row: {
+          activation_granted_by: string | null
+          activation_note: string | null
+          activation_paid_at: string | null
+          activation_source: string | null
           address: string | null
           approved_at: string | null
           blocked_at: string | null
@@ -5323,6 +5327,8 @@ export type Database = {
           description: string | null
           document: string | null
           document_type: string | null
+          documents_reviewed_at: string | null
+          documents_reviewed_by: string | null
           facebook: string | null
           fantasy_name: string
           free_redeem_policy: string
@@ -5345,6 +5351,10 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          activation_granted_by?: string | null
+          activation_note?: string | null
+          activation_paid_at?: string | null
+          activation_source?: string | null
           address?: string | null
           approved_at?: string | null
           blocked_at?: string | null
@@ -5357,6 +5367,8 @@ export type Database = {
           description?: string | null
           document?: string | null
           document_type?: string | null
+          documents_reviewed_at?: string | null
+          documents_reviewed_by?: string | null
           facebook?: string | null
           fantasy_name: string
           free_redeem_policy?: string
@@ -5379,6 +5391,10 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          activation_granted_by?: string | null
+          activation_note?: string | null
+          activation_paid_at?: string | null
+          activation_source?: string | null
           address?: string | null
           approved_at?: string | null
           blocked_at?: string | null
@@ -5391,6 +5407,8 @@ export type Database = {
           description?: string | null
           document?: string | null
           document_type?: string | null
+          documents_reviewed_at?: string | null
+          documents_reviewed_by?: string | null
           facebook?: string | null
           fantasy_name?: string
           free_redeem_policy?: string
