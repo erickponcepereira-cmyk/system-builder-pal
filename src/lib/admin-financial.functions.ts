@@ -221,9 +221,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     (nutriProfiles || []).forEach((p: any) => nutriProfileMap.set(p.id, p));
     const nutriList: RecipientTotal[] = (nutriWallets || []).map((w: any) => {
       const prof = nutriProfileMap.get(w.profile_id);
-      const pending = Number(w.blocked_balance || 0);
-      const available = Number(w.available_balance || 0);
-      const paid = Number(w.total_withdrawn || 0);
+      const pending = cutoff ? 0 : Number(w.blocked_balance || 0);
+      const available = cutoff ? 0 : Number(w.available_balance || 0);
+      const paid = cutoff ? 0 : Number(w.total_withdrawn || 0);
       return {
         profileId: w.profile_id,
         name: prof?.name || "—",
