@@ -170,7 +170,8 @@ function StudentEvolution() {
                 <div className="grid grid-cols-2 gap-2">
                   {compareSelection.map((p) => (
                     <div key={p.id} className="overflow-hidden rounded-xl bg-muted">
-                      <img src={p.signedUrl || ""} alt={p.caption || "Foto"} className="aspect-[3/4] w-full object-cover" />
+                      <ProtectedImage src={p.signedUrl || ""} alt={p.caption || "Foto"} watermark={viewerTag} className="aspect-[3/4] w-full" />
+
                       <div className="p-1.5">
                         <p className="text-[10px] font-bold text-white">Semana {p.week_number || "—"}</p>
                         <p className="text-[9px] text-white/50">{p.photo_date}</p>
