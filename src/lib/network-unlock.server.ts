@@ -127,7 +127,9 @@ export async function computePatentLevelForCoach(coachId: string): Promise<numbe
  */
 export async function computeMonthlySnapshot(profileId: string, year: number, month: number): Promise<MonthlySnapshot> {
   const { start, end } = monthBounds(year, month);
-  const startIso = start.toISOString();
+  const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+  const cutoff = await getServerCutoffIso();
+  const startIso = cutoff && cutoff > start.toISOString() ? cutoff : start.toISOString();
   const endIso = end.toISOString();
 
   const { data: coach } = await supabaseAdmin
