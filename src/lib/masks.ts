@@ -20,6 +20,35 @@ export function formatCPF(value: string | null | undefined): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+// LGPD: máscara de CPF para exibição pública (oculta 3 primeiros e 2 últimos)
+// Ex.: 123.456.789-01 -> ***.456.789-**
+export function maskCPFSensitive(value: string | null | undefined): string {
+  const d = (value || "").replace(/\D/g, "");
+  if (d.length !== 11) return value ? "***.***.***-**" : "";
+  return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
+}
+
+// LGPD: máscara de email (oculta a maior parte do local part)
+// Ex.: nathan.utuari@hotmail.com -> n***@hotmail.com
+export function maskEmailSensitive(value: string | null | undefined): string {
+  if (!value) return "";
+  const [local, domain] = value.split("@");
+  if (!domain) return value;
+  const head = local.slice(0, 1);
+  return `${head}${"*".repeat(Math.max(3, local.length - 1))}@${domain}`;
+}
+
+// LGPD: máscara de telefone (mostra DDD + últimos 4)
+// Ex.: 11999991234 -> (11) *****-1234
+export function maskPhoneSensitive(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = value.replace(/\D/g, "");
+  if (d.length < 10) return value;
+  const ddd = d.slice(0, 2);
+  const last4 = d.slice(-4);
+  return `(${ddd}) *****-${last4}`;
+}
+
 // Validates CPF using the official algorithm
 export function isValidCPF(value: string | null | undefined): boolean {
   const cpf = (value || "").replace(/\D/g, "");
