@@ -25,10 +25,11 @@ type PublicProfile = {
   social_links: SocialLink[];
   services: string;
   specializations: string[];
+  cover_url: string | null;
 };
 
 const EMPTY_PROFILE: PublicProfile = {
-  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [],
+  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [], cover_url: null,
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
