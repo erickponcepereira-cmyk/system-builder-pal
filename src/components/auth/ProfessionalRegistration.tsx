@@ -44,6 +44,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [selectedCoach, setSelectedCoach] = useState<CoachOption | null>(null);
   const [coachLocked, setCoachLocked] = useState(false);
+  const [alreadyProfessional, setAlreadyProfessional] = useState<"yes" | "no" | "">("");
+  const [alreadyProfessionalNote, setAlreadyProfessionalNote] = useState("");
 
   // Captura referral da sessão (link /r/:code) — trava o coach indicador
   useEffect(() => {
