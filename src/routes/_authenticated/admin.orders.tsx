@@ -9,6 +9,8 @@ import {
   listNutritionistPartners,
   overrideOrderNutritionist,
 } from "@/lib/cross-sales.functions";
+import { getClientCutoffIso } from "@/lib/test-mode";
+import { TestModeBanner } from "@/components/admin/TestModeBanner";
 
 
 export const Route = createFileRoute("/_authenticated/admin/orders")({ component: AdminOrders });
@@ -43,11 +45,14 @@ function AdminOrders() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const cutoff = await getClientCutoffIso();
+    let q: any = supabase
       .from("store_orders" as never)
       .select("id,order_number,status,payment_method,total_amount,shipping_name,shipping_city,shipping_state,created_at,students!store_orders_student_id_fkey(profiles!students_profile_id_fkey(name,email)),store_order_items(title,quantity,total_price)" as never)
       .order("created_at" as never, { ascending: false })
       .limit(100);
+    if (cutoff) q = q.gte("created_at", cutoff);
+    const { data, error } = await q;
     if (error) toast.error(error.message);
     const rows = (data as unknown as OrderRow[]) || [];
     setOrders(rows);
