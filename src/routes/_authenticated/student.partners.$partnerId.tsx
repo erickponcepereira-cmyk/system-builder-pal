@@ -79,10 +79,10 @@ function PartnerProfilePage() {
         <h1 className="text-base font-bold text-white truncate">{partner.fantasy_name}</h1>
       </div>
 
-      {partner.cover_url && <img src={partner.cover_url} alt="" className="h-40 w-full object-cover" />}
+      {partner.cover_url && <img src={partner.cover_url} alt="" className="h-40 w-full object-cover z-0" />}
 
-      <div className="px-4 pt-4 flex items-center gap-3">
-        {partner.photo_url ? <img src={partner.photo_url} className="h-20 w-20 rounded-2xl object-cover -mt-12 border-2 border-[#0A0A0A]" alt="" /> : <div className="h-20 w-20 rounded-2xl bg-white/5 flex items-center justify-center"><Building2 className="h-8 w-8 text-white/30" /></div>}
+      <div className="relative z-10 px-4 pt-4 flex items-center gap-3">
+        {partner.photo_url ? <img src={partner.photo_url} className="relative z-10 h-20 w-20 rounded-2xl object-cover -mt-12 border-2 border-[#0A0A0A] shadow-lg" alt="" /> : <div className="h-20 w-20 rounded-2xl bg-white/5 flex items-center justify-center"><Building2 className="h-8 w-8 text-white/30" /></div>}
         <div className="flex-1 min-w-0">
           <h2 className="font-bold text-white truncate">{partner.fantasy_name}</h2>
           {(partner.city || partner.state) && <p className="text-[11px] text-white/40 flex items-center gap-1"><MapPin className="h-3 w-3" /> {[partner.city, partner.state].filter(Boolean).join(" / ")}</p>}
