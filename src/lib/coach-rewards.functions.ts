@@ -115,6 +115,8 @@ export const getRewardContributions = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ planId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ plan: RewardPlan | null; contributions: RewardContribution[] }> => {
     const coachId = await resolveCoachId(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     const { data: planRow } = await supabaseAdmin
       .from("career_plan_config")
       .select("id,name,description,plan_type,duration_months,min_monthly_points,required_period_points,reward_description,reward_details,reward_value,reward_image_url")
@@ -128,6 +130,7 @@ export const getRewardContributions = createServerFn({ method: "GET" })
       reward_value: number | null; reward_image_url: string | null;
     };
     const { start, end } = windowForPlan(p.plan_type, p.duration_months);
+    const effectiveStartIso = cutoff && cutoff > start.toISOString() ? cutoff : start.toISOString();
     const target = p.plan_type === "monthly_challenge"
       ? Number(p.min_monthly_points) || 0
       : Number(p.required_period_points) || 0;
@@ -138,7 +141,7 @@ export const getRewardContributions = createServerFn({ method: "GET" })
         .from("coach_points_log")
         .select("id,created_at,points,reason,product_id,transaction_id")
         .eq("coach_id", coachId)
-        .gte("created_at", start.toISOString())
+        .gte("created_at", effectiveStartIso)
         .lt("created_at", end.toISOString())
         .order("created_at", { ascending: false })
         .limit(200);
