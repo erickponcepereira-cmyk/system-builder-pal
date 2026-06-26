@@ -175,39 +175,34 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
         return;
       }
 
-      // Fluxo padrão: cria nova conta de parceiro
+      // Fluxo padrão: cria nova conta de parceiro de forma atômica.
+      // Se a inserção em partners falhar, o server fn remove profile + auth user
+      // para que o usuário possa refazer o cadastro do zero (sem ficar "preso"
+      // com perfil ativo sem vínculo de parceiro).
       const user = await createAuthUser(email, password, responsibleName, "partner", {
         fantasy_name: fantasyName.trim(),
       });
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (profile?.id) {
-        await supabase
-          .from("partners" as never)
-          .update({
-            fantasy_name: fantasyName.trim(),
-            document: doc.replace(/\D/g, ""),
-            document_type: docType,
-            whatsapp,
-            city: city || null,
-            state: state || null,
-            business_area: businessArea.trim() || null,
-            specialty: specialty.trim() || null,
-            upline_coach_id: uplineCoachId,
-            ...activationPatch,
-          } as never)
-          .eq("profile_id" as never, profile.id);
-
-        await supabase
-          .from("profiles")
-          .update({ name: responsibleName, phone: whatsapp })
-          .eq("id", profile.id);
-      }
+      const { finalizePartnerRegistrationFn } = await import("@/lib/registration.functions");
+      await finalizePartnerRegistrationFn({
+        data: {
+          userId: user.id,
+          name: responsibleName,
+          email,
+          phone: whatsapp,
+          fantasyName: fantasyName.trim(),
+          document: doc,
+          documentType: docType,
+          whatsapp,
+          city: city || null,
+          state: state || null,
+          businessArea: businessArea.trim() || null,
+          specialty: specialty.trim() || null,
+          uplineCoachId,
+          alreadyPartner: isAlreadyPartner,
+          activationNote: alreadyPartnerNote.trim() || null,
+        },
+      });
 
       sessionStorage.removeItem("fitmind_referral");
       await supabase.auth.signOut().catch(() => {});
