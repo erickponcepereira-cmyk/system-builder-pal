@@ -24,6 +24,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/coach-releases", label: "Liberar Coaches", icon: UserCheck, perm: "coach_applications" },
   { to: "/admin/coach-ids", label: "IDs dos Coaches", icon: Lock, perm: "coach_applications" },
   { to: "/admin/payments", label: "Pagamentos", icon: CreditCard, perm: "payments" },
+  { to: "/admin/financeiro", label: "Financeiro", icon: DollarSign, perm: "financeiro" },
   { to: "/admin/fitmind-events", label: "Eventos FitMind", icon: CalendarDays, perm: "fitmind_events" },
   { to: "/admin/challenge", label: "Desafio Emagrecimento", icon: Trophy, perm: "challenge" },
   { to: "/admin/achievements", label: "Conquistas", icon: Award, perm: "library" },
@@ -34,13 +35,9 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
 
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
   { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
-  { to: "/admin/fitmind-events", label: "Eventos FitMind", icon: CalendarDays, perm: "fitmind_events" },
-
-  { to: "/admin/calendars", label: "Agendas", icon: Calendar, perm: "calendars" },
   { to: "/admin/store", label: "Loja", icon: Store, perm: "store" },
   { to: "/admin/freebies", label: "Gratuitos", icon: Gift, perm: "freebies" },
   { to: "/admin/store-reports", label: "Relatórios da Loja", icon: TrendingUp, perm: "store_reports" },
-  { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },
   { to: "/admin/product-orders", label: "Painel de Pedidos", icon: Truck, perm: "product_orders" },
   { to: "/admin/partner-orders", label: "Pedidos de Parceiros", icon: Stethoscope, perm: "partner_orders" },
 
