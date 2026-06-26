@@ -90,6 +90,17 @@ export function SettingsTab({ coachId, profileId }: Props) {
     toast.success("Foto atualizada");
   };
 
+  const uploadCover = async (file: File) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
+    const path = `${user.id}/cover-${Date.now()}-${file.name}`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (upErr) return toast.error(upErr.message);
+    const { data: pubUrl } = supabase.storage.from("avatars").getPublicUrl(path);
+    setPub((prev) => ({ ...prev, cover_url: pubUrl.publicUrl }));
+    toast.success("Capa atualizada (clique em Salvar perfil)");
+  };
+
   const saveProfile = async () => {
     setSaving(true);
     const { error: e1 } = await supabase.from("profiles").update({ bio: profileBio.slice(0, 2000) }).eq("id", profileId);
@@ -104,6 +115,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
         social_links: pub.social_links,
         services: pub.services.slice(0, 2000) || null,
         specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
+        cover_url: pub.cover_url,
       } as never, { onConflict: "profile_id" } as never);
     setSaving(false);
     if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
