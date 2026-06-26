@@ -173,6 +173,7 @@ function AdminDashboard() {
 
   return (
     <>
+      <TestModeBanner hiddenLabel="Vendas/lançamentos" />
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Dashboard Admin</h1>
         <p className="text-sm text-white/50">Visão geral da plataforma FitMind Club</p>
