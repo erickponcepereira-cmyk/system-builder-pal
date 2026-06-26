@@ -1151,16 +1151,39 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
                   </span>
                 )}
               </button>
-              {myReferralCode && (!coachMode ? indicableProductIds.has(item.sourceId) : true) && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId); }}
-                  title="Copiar link de indicação"
-                  className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
-                >
-                  <Share2 className="h-4 w-4" />
-                </button>
-              )}
+              <div className="absolute right-2 top-2 flex flex-col gap-1.5">
+                {coachMode && (() => {
+                  const pk = mapStoreItemKind(item.kind);
+                  if (!pk) return null;
+                  const itemHidden = vis.isHiddenByMe("product", pk, item.sourceId);
+                  return (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await vis.toggleHidden("product", pk, item.sourceId, !itemHidden);
+                          toast.success(itemHidden ? "Produto reativado para sua rede." : "Produto oculto da sua rede.");
+                        } catch (err) { toast.error(err instanceof Error ? err.message : "Erro"); }
+                      }}
+                      title={itemHidden ? "Mostrar para sua rede" : "Ocultar da sua rede"}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
+                    >
+                      {itemHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  );
+                })()}
+                {myReferralCode && (!coachMode ? indicableProductIds.has(item.sourceId) : true) && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); copyReferralLink(item.sourceId); }}
+                    title="Copiar link de indicação"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {filtered.length === 0 && (
