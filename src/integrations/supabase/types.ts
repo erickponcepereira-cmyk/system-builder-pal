@@ -6522,6 +6522,7 @@ export type Database = {
       professional_public_profile: {
         Row: {
           bio_long: string | null
+          cover_url: string | null
           created_at: string
           headline: string | null
           instagram: string | null
@@ -6534,6 +6535,7 @@ export type Database = {
         }
         Insert: {
           bio_long?: string | null
+          cover_url?: string | null
           created_at?: string
           headline?: string | null
           instagram?: string | null
@@ -6546,6 +6548,7 @@ export type Database = {
         }
         Update: {
           bio_long?: string | null
+          cover_url?: string | null
           created_at?: string
           headline?: string | null
           instagram?: string | null
