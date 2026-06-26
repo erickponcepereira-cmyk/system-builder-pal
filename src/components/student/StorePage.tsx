@@ -418,11 +418,13 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       // Upline hides são SEMPRE aplicadas (inclusive em coach mode).
       if (pk && isFitmindKind(pk) && fitmindHiddenByUpline) return false;
       if (item.sectionId && vis.isHiddenByUpline("section", null, item.sectionId)) return false;
+      if (item.categoryId && vis.isHiddenByUpline("category", null, item.categoryId)) return false;
       if (pk && vis.isHiddenByUpline("product", pk, item.sourceId)) return false;
       // Para viewers (aluno/parceiro/profissional), também esconde as minhas próprias hides.
       if (!coachMode) {
         if (pk && isFitmindKind(pk) && fitmindHiddenViewer) return false;
         if (item.sectionId && vis.isHiddenForViewer("section", null, item.sectionId)) return false;
+        if (item.categoryId && vis.isHiddenForViewer("category", null, item.categoryId)) return false;
         if (pk && vis.isHiddenForViewer("product", pk, item.sourceId)) return false;
       }
       if (activeSection) {
