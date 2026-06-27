@@ -112,12 +112,20 @@ export const listProfessorBlockedEntries = createServerFn({ method: "GET" })
 
     let virtualRows: any[] = [];
     if (!data.status || data.status === "blocked" || data.status === "all") {
-      const { data: sysRowsRaw } = await supabaseAdmin
-        .from("admin_system_wallet_entries")
-        .select("id,transaction_id,slot_label,amount,kind,notes,created_at")
-        .ilike("slot_label", "%professor%")
-        .order("created_at", { ascending: false })
-        .limit(500);
+      const { data: sysRowsRaw } = await (cutoff
+        ? supabaseAdmin
+            .from("admin_system_wallet_entries")
+            .select("id,transaction_id,slot_label,amount,kind,notes,created_at")
+            .ilike("slot_label", "%professor%")
+            .gte("created_at", cutoff)
+            .order("created_at", { ascending: false })
+            .limit(500)
+        : supabaseAdmin
+            .from("admin_system_wallet_entries")
+            .select("id,transaction_id,slot_label,amount,kind,notes,created_at")
+            .ilike("slot_label", "%professor%")
+            .order("created_at", { ascending: false })
+            .limit(500));
       const sysRows = (sysRowsRaw as any[]) || [];
       const debits = new Map<string, number>();
       for (const r of sysRows) {
