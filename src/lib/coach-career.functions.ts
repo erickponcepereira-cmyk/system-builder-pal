@@ -86,6 +86,38 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
   ((partnerOrders as unknown as { gross_amount: number }[] | null) || []).forEach((o) => {
     total += Number(o.gross_amount) || 0;
   });
+
+  const { data: coachProfiles } = await supabaseAdmin
+    .from("coaches")
+    .select("id,profile_id")
+    .in("id", coachIds);
+  const profileIds = ((coachProfiles as Array<{ id: string; profile_id: string | null }> | null) || [])
+    .map((c) => c.profile_id)
+    .filter(Boolean) as string[];
+  const { data: partnerRows } = profileIds.length
+    ? await supabaseAdmin.from("partners" as never).select("id" as never).in("profile_id" as never, profileIds as never)
+    : { data: [] as unknown };
+  const partnerIds = (((partnerRows as unknown as Array<{ id: string }>) || []).map((p) => p.id));
+  const partnerOrderMap = new Map<string, number>();
+  const loadPartnerOrders = async (column: "selling_coach_id" | "professional_coach_id" | "partner_id", values: string[]) => {
+    if (!values.length) return;
+    const { data: rows } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id,gross_amount" as never)
+      .in(column as never, values as never)
+      .eq("status" as never, "paid" as never)
+      .not("paid_at" as never, "is" as never, null as never)
+      .gte("paid_at" as never, effectiveSince as never);
+    ((rows as unknown as Array<{ id: string; gross_amount: number }>) || []).forEach((o) => {
+      partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
+    });
+  };
+  await Promise.all([
+    loadPartnerOrders("selling_coach_id", coachIds),
+    loadPartnerOrders("professional_coach_id", coachIds),
+    loadPartnerOrders("partner_id", partnerIds),
+  ]);
+  partnerOrderMap.forEach((amount) => { total += amount; });
   return total;
 }
 
