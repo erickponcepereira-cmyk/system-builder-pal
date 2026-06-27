@@ -115,7 +115,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
       supabase.from("partner_wallets" as never).select("partner_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_earned,total_withdrawn" as never),
-      applyPaidCutoff(supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee,paid_at" as never).eq("status" as never, "paid" as never)),
+      applyPaidCutoff(supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee,payment_fee,tax_amount,paid_at,created_at" as never).eq("status" as never, "paid" as never)),
       applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       cutoff
@@ -196,13 +196,17 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         totalEarned: sum(nutritionistRows, "total_earned") + nutriAdminCredits,
         count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
       },
-      partnerOrders: {
-        paidCount: (ppo.data as any[] | null)?.length || 0,
-        paidGross: sum(ppo.data as any[], "gross_amount"),
-        partnerNet: sum(ppo.data as any[], "partner_net_amount"),
-        coachNet: sum(ppo.data as any[], "coach_net_amount"),
-        systemFee: sum(ppo.data as any[], "system_fee"),
-      },
+      partnerOrders: (() => {
+        const rows = (ppo.data as any[] | null) || [];
+        // Sistema arrecadou = somente taxa do sistema. Não inclui taxa de gateway nem imposto.
+        return {
+          paidCount: rows.length,
+          paidGross: sum(rows, "gross_amount"),
+          partnerNet: sum(rows, "partner_net_amount"),
+          coachNet: sum(rows, "coach_net_amount"),
+          systemFee: Math.round(sum(rows, "system_fee") * 100) / 100,
+        };
+      })(),
       pendingWithdrawals: {
         coachAmount: sum(wr.data as any[], "amount"),
         coachCount: (wr.data as any[] | null)?.length || 0,
