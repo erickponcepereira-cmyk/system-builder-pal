@@ -492,12 +492,15 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
+      student?: { profile?: { name: string | null; email: string | null } | null } | null;
+      partner_product?: { name: string | null } | null;
+      professional_product?: { name: string | null } | null;
     }> = [];
     const addPartnerOrders = async (column: "partner_id" | "professional_coach_id" | "selling_coach_id", value: string | null) => {
       if (!value) return;
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .eq(column as never, value as never)
         .order("created_at" as never, { ascending: false })
         .limit(200);
@@ -536,7 +539,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (commissionPartnerOrderIds.length) {
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .in("id" as never, commissionPartnerOrderIds as never);
       if (fromDate) q = (q as any).gte("created_at", fromDate);
       if (data.toDate) q = (q as any).lte("created_at", data.toDate);
@@ -634,9 +637,12 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
 
     const partnerOrderProductName = (po: typeof partnerOrderRows[number]) => {
       const id = po.partner_product_id || po.professional_product_id || "";
-      return prodNameById.get(id) || null;
+      return prodNameById.get(id) || po.partner_product?.name || po.professional_product?.name || null;
     };
-    const partnerOrderStudent = (po: typeof partnerOrderRows[number]) => po.student_id ? stuNameById.get(po.student_id) || null : null;
+    const partnerOrderStudent = (po: typeof partnerOrderRows[number]) => {
+      const byId = po.student_id ? stuNameById.get(po.student_id) || null : null;
+      return byId || po.student?.profile || null;
+    };
 
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
       id: o.id,
