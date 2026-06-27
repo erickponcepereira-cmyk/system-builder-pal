@@ -99,12 +99,15 @@ export const listProfessorBlockedEntries = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context, data }): Promise<ProfessorBlockedEntry[]> => {
     await ensureAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
     let q = (supabaseAdmin as any)
       .from("professor_blocked_entries")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.status && data.status !== "all") q = q.eq("status", data.status);
+    if (cutoff) q = q.gte("created_at", cutoff);
     const { data: rows } = await q;
 
     let virtualRows: any[] = [];
