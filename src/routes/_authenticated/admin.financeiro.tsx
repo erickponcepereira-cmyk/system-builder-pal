@@ -197,7 +197,33 @@ function AdminFinanceiro() {
           accent="#888780"
           onClick={() => openBucket("system", "Sistema")}
         />
+        <CreatorBucketCard
+          title="Parceiros (criadores)"
+          subtitle="Saldo dos parceiros como criadores de produto"
+          icon={Handshake}
+          wallets={partnerWallets.map(w => ({ available: w.available_balance, pending: w.pending_balance, earned: w.total_earned, withdrawn: w.total_withdrawn }))}
+          accent="#F59E0B"
+          onClick={() => setCreatorOpen({ kind: "partner", title: "Carteira de Parceiros", link: "/admin/partner-wallet" })}
+        />
+        <CreatorBucketCard
+          title="Profissionais (criadores)"
+          subtitle="Saldo dos profissionais como criadores de produto"
+          icon={Briefcase}
+          wallets={professionalWallets.map(w => ({ available: w.available_balance, pending: w.pending_balance, earned: w.total_earned, withdrawn: w.total_withdrawn }))}
+          accent="#38BDF8"
+          onClick={() => setCreatorOpen({ kind: "professional", title: "Carteira de Profissionais", link: "/admin/professional-wallet" })}
+        />
+        <CreatorBucketCard
+          title="Professores"
+          subtitle="Saldo dos professores de cursos"
+          icon={GraduationCap}
+          wallets={professorWallets.map(w => ({ available: w.available_balance, pending: w.blocked_balance, earned: w.total_earned, withdrawn: w.total_withdrawn }))}
+          accent="#C084FC"
+          onClick={() => setCreatorOpen({ kind: "professor", title: "Carteira de Professores", link: "/admin/professor-wallet" })}
+        />
       </div>
+
+
 
       <div className="grid gap-4 lg:grid-cols-2 mb-6">
         <section className="rounded-2xl border border-white/5 p-5" style={{ backgroundColor: "#1A1A1A" }}>
