@@ -5,8 +5,11 @@ import { toast } from "sonner";
 import { Loader2, Wallet } from "lucide-react";
 import {
   listProfessionalCreatorWallets,
+  listProfessionalCreatorEntries,
   type CreatorWalletRow,
+  type CreatorEntryRow,
 } from "@/lib/creator-wallets.functions";
+import { EntriesSection } from "./admin.partner-wallet";
 
 export const Route = createFileRoute("/_authenticated/admin/professional-wallet")({
   head: () => ({ meta: [{ title: "Carteira do Profissional — Admin" }] }),
@@ -18,12 +21,13 @@ const money = (v: number) =>
 
 function ProfessionalWalletPage() {
   const fetchWallets = useServerFn(listProfessionalCreatorWallets);
+  const fetchEntries = useServerFn(listProfessionalCreatorEntries);
   const [wallets, setWallets] = useState<CreatorWalletRow[] | null>(null);
+  const [entries, setEntries] = useState<CreatorEntryRow[] | null>(null);
 
   useEffect(() => {
-    fetchWallets()
-      .then(setWallets)
-      .catch(() => toast.error("Erro ao carregar carteiras"));
+    fetchWallets().then(setWallets).catch(() => toast.error("Erro ao carregar carteiras"));
+    fetchEntries().then(setEntries).catch(() => toast.error("Erro ao carregar lançamentos"));
   }, []);
 
   const totals = (wallets || []).reduce(
