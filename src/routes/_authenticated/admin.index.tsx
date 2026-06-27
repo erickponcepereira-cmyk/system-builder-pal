@@ -49,8 +49,10 @@ function AdminDashboard() {
 
       const recentQ = supabase.from("transactions").select("id, gross_amount, paid_at, student_id, product_id").eq("status", "paid").order("paid_at", { ascending: false }).limit(5);
       const recentQFinal = cutoff ? recentQ.gte("created_at", cutoff) : recentQ;
+      const recentPpoQ = supabase.from("partner_product_orders" as never).select("id, gross_amount, paid_at, student_id, partner_product_id, professional_product_id" as never).eq("status" as never, "paid" as never).order("paid_at" as never, { ascending: false }).limit(5);
+      const recentPpoQFinal = cutoff ? (recentPpoQ as any).gte("created_at", cutoff) : recentPpoQ;
 
-      const [coaches, pending, students, products, subs, txsMonth, txs6m, commPending, commAvail, withdrawals, recent] = await Promise.all([
+      const [coaches, pending, students, products, subs, txsMonth, txs6m, commPending, commAvail, withdrawals, recent, ppoMonth, ppo6m, recentPpo] = await Promise.all([
         supabase.from("coaches").select("id", { count: "exact", head: true }).not("approved_at", "is", null),
         supabase.from("coaches").select("id", { count: "exact", head: true }).is("approved_at", null),
         supabase.from("students").select("id", { count: "exact", head: true }),
@@ -62,6 +64,9 @@ function AdminDashboard() {
         (cutoff ? supabase.from("commissions").select("amount").eq("status", "available").gte("created_at", cutoff) : supabase.from("commissions").select("amount").eq("status", "available")),
         (cutoff ? supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"]).gte("requested_at", cutoff) : supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"])),
         recentQFinal,
+        supabase.from("partner_product_orders" as never).select("gross_amount" as never).eq("status" as never, "paid" as never).gte("paid_at" as never, effFirst as never),
+        supabase.from("partner_product_orders" as never).select("gross_amount, paid_at, student_id" as never).eq("status" as never, "paid" as never).gte("paid_at" as never, effSix as never),
+        recentPpoQFinal,
       ]);
 
       // Revenue by month (last 6)
