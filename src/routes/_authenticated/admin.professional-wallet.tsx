@@ -93,6 +93,8 @@ function ProfessionalWalletPage() {
           </div>
         )}
       </section>
+
+      <EntriesSection entries={entries} ownerLabel="Profissional" />
     </div>
   );
 }
