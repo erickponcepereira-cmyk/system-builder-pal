@@ -49,8 +49,10 @@ function AdminDashboard() {
 
       const recentQ = supabase.from("transactions").select("id, gross_amount, paid_at, student_id, product_id").eq("status", "paid").order("paid_at", { ascending: false }).limit(5);
       const recentQFinal = cutoff ? recentQ.gte("created_at", cutoff) : recentQ;
+      const recentPpoQ = supabase.from("partner_product_orders" as never).select("id, gross_amount, paid_at, student_id, partner_product_id, professional_product_id" as never).eq("status" as never, "paid" as never).order("paid_at" as never, { ascending: false }).limit(5);
+      const recentPpoQFinal = cutoff ? (recentPpoQ as any).gte("created_at", cutoff) : recentPpoQ;
 
-      const [coaches, pending, students, products, subs, txsMonth, txs6m, commPending, commAvail, withdrawals, recent] = await Promise.all([
+      const [coaches, pending, students, products, subs, txsMonth, txs6m, commPending, commAvail, withdrawals, recent, ppoMonth, ppo6m, recentPpo] = await Promise.all([
         supabase.from("coaches").select("id", { count: "exact", head: true }).not("approved_at", "is", null),
         supabase.from("coaches").select("id", { count: "exact", head: true }).is("approved_at", null),
         supabase.from("students").select("id", { count: "exact", head: true }),
@@ -62,6 +64,9 @@ function AdminDashboard() {
         (cutoff ? supabase.from("commissions").select("amount").eq("status", "available").gte("created_at", cutoff) : supabase.from("commissions").select("amount").eq("status", "available")),
         (cutoff ? supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"]).gte("requested_at", cutoff) : supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"])),
         recentQFinal,
+        supabase.from("partner_product_orders" as never).select("gross_amount" as never).eq("status" as never, "paid" as never).gte("paid_at" as never, effFirst as never),
+        supabase.from("partner_product_orders" as never).select("gross_amount, paid_at, student_id" as never).eq("status" as never, "paid" as never).gte("paid_at" as never, effSix as never),
+        recentPpoQFinal,
       ]);
 
       // Revenue by month (last 6)
@@ -70,7 +75,11 @@ function AdminDashboard() {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         buckets.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, 0);
       }
-      (txs6m.data || []).forEach((t) => {
+      const allMonthly: Array<{ paid_at: string | null; gross_amount: number | null; student_id?: string }> = [
+        ...((txs6m.data || []) as any[]),
+        ...(((ppo6m as any).data || []) as any[]),
+      ];
+      allMonthly.forEach((t) => {
         if (!t.paid_at) return;
         const d = new Date(t.paid_at);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -111,13 +120,28 @@ function AdminDashboard() {
         }
       }
 
-      // Recent transactions enrich
-      const recentData = recent.data || [];
-      const sIds = Array.from(new Set(recentData.map((t) => t.student_id)));
-      const pIds = Array.from(new Set(recentData.map((t) => t.product_id)));
-      const [sRes, pRes] = await Promise.all([
+      // Recent transactions enrich (merge transactions + partner_product_orders)
+      const recentTxRows = (recent.data || []).map((t: any) => ({
+        id: t.id, paid_at: t.paid_at, gross_amount: t.gross_amount,
+        student_id: t.student_id, product_id: t.product_id, partner_product_id: null as string | null, professional_product_id: null as string | null,
+      }));
+      const recentPpoRows = (((recentPpo as any).data || []) as any[]).map((t) => ({
+        id: t.id, paid_at: t.paid_at, gross_amount: t.gross_amount,
+        student_id: t.student_id, product_id: null as string | null,
+        partner_product_id: t.partner_product_id, professional_product_id: t.professional_product_id,
+      }));
+      const recentData = [...recentTxRows, ...recentPpoRows]
+        .sort((a, b) => new Date(b.paid_at || 0).getTime() - new Date(a.paid_at || 0).getTime())
+        .slice(0, 8);
+      const sIds = Array.from(new Set(recentData.map((t) => t.student_id).filter(Boolean) as string[]));
+      const pIds = Array.from(new Set(recentData.map((t) => t.product_id).filter(Boolean) as string[]));
+      const ppIds = Array.from(new Set(recentData.map((t) => t.partner_product_id).filter(Boolean) as string[]));
+      const prIds = Array.from(new Set(recentData.map((t) => t.professional_product_id).filter(Boolean) as string[]));
+      const [sRes, pRes, ppRes, prRes] = await Promise.all([
         sIds.length ? supabase.from("students").select("id, profile_id").in("id", sIds) : Promise.resolve({ data: [] as Array<{ id: string; profile_id: string }> }),
         pIds.length ? supabase.from("products").select("id, name").in("id", pIds) : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
+        ppIds.length ? supabase.from("partner_products" as never).select("id, name" as never).in("id" as never, ppIds as never) : Promise.resolve({ data: [] as unknown }),
+        prIds.length ? supabase.from("professional_products" as never).select("id, name" as never).in("id" as never, prIds as never) : Promise.resolve({ data: [] as unknown }),
       ]);
       const sProfileIds = (sRes.data || []).map((s) => s.profile_id);
       const { data: sProfs } = sProfileIds.length
@@ -128,17 +152,24 @@ function AdminDashboard() {
         const name = (sProfs || []).find((p) => p.id === s.profile_id)?.name || "—";
         studentNameMap.set(s.id, name);
       });
-      const productNameMap = new Map((pRes.data || []).map((p) => [p.id, p.name]));
-      setRecentTxs(recentData.map((t) => ({
+      const productNameMap = new Map<string, string>([
+        ...((pRes.data || []) as Array<{ id: string; name: string }>).map((p) => [p.id, p.name] as [string, string]),
+        ...(((ppRes as any).data || []) as Array<{ id: string; name: string }>).map((p) => [p.id, `[Parceiro] ${p.name}`] as [string, string]),
+        ...(((prRes as any).data || []) as Array<{ id: string; name: string }>).map((p) => [p.id, `[Profissional] ${p.name}`] as [string, string]),
+      ]);
+      setRecentTxs(recentData.slice(0, 5).map((t) => ({
         id: t.id,
         amount: Number(t.gross_amount),
         paid_at: t.paid_at || "",
-        student_name: studentNameMap.get(t.student_id) || "—",
-        product_name: productNameMap.get(t.product_id) || "—",
+        student_name: t.student_id ? studentNameMap.get(t.student_id) || "—" : "—",
+        product_name: productNameMap.get((t.product_id || t.partner_product_id || t.professional_product_id || "")) || "—",
       })));
 
       const sumAmt = (arr: Array<{ amount: number | null }> | null) =>
         (arr || []).reduce((s, x) => s + Number(x.amount || 0), 0);
+
+      const txsMonthTotal = (txsMonth.data || []).reduce((s, t) => s + Number(t.gross_amount || 0), 0);
+      const ppoMonthTotal = (((ppoMonth as any).data || []) as any[]).reduce((s, t) => s + Number(t.gross_amount || 0), 0);
 
       setStats({
         totalCoaches: coaches.count || 0,
@@ -146,7 +177,7 @@ function AdminDashboard() {
         totalStudents: students.count || 0,
         totalProducts: products.count || 0,
         activeSubscriptions: subs.count || 0,
-        monthRevenue: (txsMonth.data || []).reduce((s, t) => s + Number(t.gross_amount || 0), 0),
+        monthRevenue: txsMonthTotal + ppoMonthTotal,
         pendingCommissions: sumAmt(commPending.data),
         paidCommissions: sumAmt(commAvail.data),
         pendingWithdrawals: sumAmt(withdrawals.data),
