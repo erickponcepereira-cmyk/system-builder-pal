@@ -491,6 +491,20 @@ function AdminFinanceiro() {
           </div>
         </div>
       )}
+      {creatorOpen && (
+        <CreatorWalletModal
+          title={creatorOpen.title}
+          link={creatorOpen.link}
+          rows={
+            creatorOpen.kind === "partner"
+              ? partnerWallets.map(w => ({ id: w.id, name: w.name, email: w.email, available: w.available_balance, pending: w.pending_balance, earned: w.total_earned }))
+              : creatorOpen.kind === "professional"
+              ? professionalWallets.map(w => ({ id: w.id, name: w.name, email: w.email, available: w.available_balance, pending: w.pending_balance, earned: w.total_earned }))
+              : professorWallets.map(w => ({ id: w.profile_id, name: w.name, email: w.email, available: w.available_balance, pending: w.blocked_balance, earned: w.total_earned }))
+          }
+          onClose={() => setCreatorOpen(null)}
+        />
+      )}
     </>
   );
 }
