@@ -76,6 +76,16 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
     if (linkedOrderIds.has(o.id)) return;
     total += Number(o.total_amount) || 0;
   });
+  const { data: partnerOrders } = await supabaseAdmin
+    .from("partner_product_orders" as never)
+    .select("gross_amount" as never)
+    .in("student_id" as never, ids as never)
+    .eq("status" as never, "paid" as never)
+    .not("paid_at" as never, "is" as never, null as never)
+    .gte("paid_at" as never, effectiveSince as never);
+  ((partnerOrders as unknown as { gross_amount: number }[] | null) || []).forEach((o) => {
+    total += Number(o.gross_amount) || 0;
+  });
   return total;
 }
 
