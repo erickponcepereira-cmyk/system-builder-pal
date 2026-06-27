@@ -159,8 +159,10 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
   const exportExcel = () => {
     if (!data) return;
     const wb = XLSX.utils.book_new();
+    const totalCommission = data.rows.reduce((s, r) => s + (r.my_commission || 0), 0);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
       { Métrica: "Receita", Valor: data.totals.revenue },
+      { Métrica: "Minhas comissões", Valor: totalCommission },
       { Métrica: "Pedidos", Valor: data.totals.orders },
       { Métrica: "Itens vendidos", Valor: data.totals.itemsSold },
       { Métrica: "Clientes únicos", Valor: data.totals.uniqueCustomers },
@@ -171,7 +173,10 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredCustomers.map((c) => ({ Cliente: c.name, Email: c.email, Pedidos: c.orders, "Total gasto": c.revenue }))), "Top clientes");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredRows.map((r) => ({
       Data: r.paid_at.slice(0, 10), Cliente: r.student_name, Email: r.student_email,
-      Produto: r.product_name, Quantidade: r.quantity, Valor: r.amount, Origem: r.source,
+      Produto: r.product_name, Quantidade: r.quantity, Valor: r.amount,
+      "Minha comissão": r.my_commission || 0,
+      "Níveis comissão": r.commission_levels.map((l) => l === 0 ? "direta" : `N${l}`).join("+"),
+      Origem: r.source,
     }))), "Detalhado");
     XLSX.writeFile(wb, `relatorio-vendas-${data.range.from}-${data.range.to}.xlsx`);
   };
