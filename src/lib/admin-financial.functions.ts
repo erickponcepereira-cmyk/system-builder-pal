@@ -467,16 +467,18 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
 
     const statuses = (data.statuses?.length ? data.statuses : ["pending", "available"]) as Array<"pending" | "available">;
 
+    const cutoffIso = await getServerCutoffIso();
+
     // Bucket "referrals" = comissões com is_referral=true (alunos indicadores)
     if (data.bucket === "referrals") {
-      const { data: rows, error } = await supabaseAdmin
+      const { data: rows, error } = await applyCutoff(supabaseAdmin
         .from("commissions")
-        .select("id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, referred_by_student_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
+        .select("id, transaction_id, partner_order_id, slot_label, level, amount, status, created_at, beneficiary_profile_id, referred_by_student_id, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
         .eq("is_referral", true)
         .ilike("slot_label", "aluno indicador%")
         .in("status", statuses as any)
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(500), "created_at", cutoffIso);
       if (error) throw new Error(error.message);
       const txIds = Array.from(new Set((rows || []).map((c: any) => c.transaction_id).filter(Boolean)));
       const referrerIds = Array.from(new Set((rows || []).map((c: any) => c.referred_by_student_id).filter(Boolean)));
@@ -530,14 +532,14 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       });
     }
 
-    const { data: rows, error } = await supabaseAdmin
+    const { data: rows, error } = await applyCutoff(supabaseAdmin
       .from("commissions")
       .select(
-        "id, transaction_id, slot_label, level, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, is_referral, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
+        "id, transaction_id, partner_order_id, slot_label, level, amount, status, created_at, beneficiary_coach_id, beneficiary_profile_id, is_referral, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)",
       )
       .in("status", statuses)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(500), "created_at", cutoffIso);
     if (error) throw new Error(error.message);
 
     const filtered = (rows || []).filter((c: any) => {
@@ -553,6 +555,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
 
     // Resolve transactions → student + product names
     const txIds = Array.from(new Set(filtered.map((c: any) => c.transaction_id).filter(Boolean)));
+    const partnerOrderIds = Array.from(new Set(filtered.map((c: any) => c.partner_order_id).filter(Boolean))) as string[];
     let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
     if (txIds.length) {
       const { data: txs } = await supabaseAdmin
@@ -580,16 +583,18 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         });
       });
     }
+    const partnerOrderMap = await resolvePartnerOrderContext(partnerOrderIds);
 
     return filtered.map((c: any) => {
       const tx = c.transaction_id ? txMap.get(c.transaction_id) : null;
+      const po = c.partner_order_id ? partnerOrderMap.get(c.partner_order_id) : null;
       return {
         commissionId: c.id,
-        transactionId: c.transaction_id,
+        transactionId: c.transaction_id || c.partner_order_id,
         beneficiaryName: c.profiles?.name || "—",
         beneficiaryEmail: c.profiles?.email || null,
-        clientName: tx?.studentName ?? null,
-        productName: tx?.productName ?? null,
+        clientName: tx?.studentName ?? po?.studentName ?? null,
+        productName: tx?.productName ?? po?.productName ?? null,
         slotLabel: c.slot_label,
         level: Number(c.level || 0),
         amount: Number(c.amount || 0),
