@@ -16,6 +16,8 @@ export type SaleRow = {
   quantity: number;
   amount: number;
   paid_at: string;
+  my_commission: number;
+  commission_levels: number[];
 };
 
 export type SalesReport = {
@@ -169,10 +171,45 @@ async function buildSalesReportForRange(
     });
   }
 
+  // Commissions for this coach on these sales
+  // For transactions: commission.transaction_id == tx.id
+  // For store orders: there's a "mirror" tx with metadata.store_order_id; lookup its id.
+  const mirrorTxByOrder = new Map<string, string>();
+  if (orderIds.length) {
+    const { data: mirrors } = await supabaseAdmin
+      .from("transactions")
+      .select("id, metadata")
+      .eq("status", "paid")
+      .in("student_id", studentIds);
+    ((mirrors as Array<{ id: string; metadata: { store_order_id?: string } | null }> | null) || []).forEach((m) => {
+      const sid = m.metadata?.store_order_id;
+      if (sid && orderIds.includes(sid)) mirrorTxByOrder.set(sid, m.id);
+    });
+  }
+  const allTxIds = [
+    ...txs.map((t) => t.id),
+    ...Array.from(mirrorTxByOrder.values()),
+  ];
+  const commByTx = new Map<string, { amount: number; levels: number[] }>();
+  if (allTxIds.length) {
+    const { data: comms } = await supabaseAdmin
+      .from("commissions")
+      .select("amount, level, transaction_id")
+      .eq("beneficiary_coach_id", coachId)
+      .in("transaction_id", allTxIds);
+    ((comms as Array<{ amount: number; level: number; transaction_id: string }> | null) || []).forEach((c) => {
+      const cur = commByTx.get(c.transaction_id) || { amount: 0, levels: [] };
+      cur.amount += Number(c.amount) || 0;
+      if (!cur.levels.includes(c.level)) cur.levels.push(c.level);
+      commByTx.set(c.transaction_id, cur);
+    });
+  }
+
   // Build unified rows
   const rows: SaleRow[] = [];
   for (const t of txs) {
     const sp = studentMap.get(t.student_id);
+    const comm = commByTx.get(t.id) || { amount: 0, levels: [] };
     rows.push({
       id: t.id,
       source: "transaction",
@@ -185,6 +222,8 @@ async function buildSalesReportForRange(
       quantity: 1,
       amount: Number(t.gross_amount) || 0,
       paid_at: t.paid_at,
+      my_commission: comm.amount,
+      commission_levels: comm.levels.sort((a, b) => a - b),
     });
 
   }
@@ -193,6 +232,8 @@ async function buildSalesReportForRange(
     const its = orderItemsMap.get(o.id) || [];
     const totalQty = its.reduce((s, x) => s + x.qty, 0) || 1;
     const label = its.length === 0 ? "Pedido da loja" : its.map((x) => `${x.qty}× ${x.name}`).join(", ");
+    const mirrorTxId = mirrorTxByOrder.get(o.id);
+    const comm = mirrorTxId ? (commByTx.get(mirrorTxId) || { amount: 0, levels: [] }) : { amount: 0, levels: [] };
     rows.push({
       id: o.id,
       source: "store",
@@ -205,6 +246,8 @@ async function buildSalesReportForRange(
       quantity: totalQty,
       amount: Number(o.total_amount) || 0,
       paid_at: o.updated_at,
+      my_commission: comm.amount,
+      commission_levels: comm.levels.sort((a, b) => a - b),
     });
 
   }

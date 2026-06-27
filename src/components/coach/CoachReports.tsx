@@ -150,16 +150,19 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
   const kpis = useMemo(() => {
     const revenue = filteredRows.reduce((s, r) => s + r.amount, 0);
     const itemsSold = filteredRows.reduce((s, r) => s + r.quantity, 0);
+    const commission = filteredRows.reduce((s, r) => s + (r.my_commission || 0), 0);
     const customers = new Set(filteredRows.map((r) => r.student_id));
-    return { revenue, orders: filteredRows.length, itemsSold, uniqueCustomers: customers.size };
+    return { revenue, orders: filteredRows.length, itemsSold, uniqueCustomers: customers.size, commission };
   }, [filteredRows]);
 
 
   const exportExcel = () => {
     if (!data) return;
     const wb = XLSX.utils.book_new();
+    const totalCommission = data.rows.reduce((s, r) => s + (r.my_commission || 0), 0);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
       { Métrica: "Receita", Valor: data.totals.revenue },
+      { Métrica: "Minhas comissões", Valor: totalCommission },
       { Métrica: "Pedidos", Valor: data.totals.orders },
       { Métrica: "Itens vendidos", Valor: data.totals.itemsSold },
       { Métrica: "Clientes únicos", Valor: data.totals.uniqueCustomers },
@@ -170,7 +173,10 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredCustomers.map((c) => ({ Cliente: c.name, Email: c.email, Pedidos: c.orders, "Total gasto": c.revenue }))), "Top clientes");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredRows.map((r) => ({
       Data: r.paid_at.slice(0, 10), Cliente: r.student_name, Email: r.student_email,
-      Produto: r.product_name, Quantidade: r.quantity, Valor: r.amount, Origem: r.source,
+      Produto: r.product_name, Quantidade: r.quantity, Valor: r.amount,
+      "Minha comissão": r.my_commission || 0,
+      "Níveis comissão": r.commission_levels.map((l) => l === 0 ? "direta" : `N${l}`).join("+"),
+      Origem: r.source,
     }))), "Detalhado");
     XLSX.writeFile(wb, `relatorio-vendas-${data.range.from}-${data.range.to}.xlsx`);
   };
@@ -227,8 +233,9 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
       {!loading && data && (
         <>
           {/* KPIs (refletem o filtro de grupo) */}
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
             <Kpi label="Receita" value={brl(kpis.revenue)} delta={groupTab === "all" && data.compare ? pct(kpis.revenue, data.compare.totals.revenue) : null} />
+            <Kpi label="Minhas comissões" value={brl(kpis.commission)} delta={null} />
             <Kpi label="Pedidos" value={String(kpis.orders)} delta={groupTab === "all" && data.compare ? pct(kpis.orders, data.compare.totals.orders) : null} />
             <Kpi label="Itens vendidos" value={String(kpis.itemsSold)} delta={groupTab === "all" && data.compare ? pct(kpis.itemsSold, data.compare.totals.itemsSold) : null} />
             <Kpi label="Clientes únicos" value={String(kpis.uniqueCustomers)} delta={groupTab === "all" && data.compare ? pct(kpis.uniqueCustomers, data.compare.totals.uniqueCustomers) : null} />
@@ -255,18 +262,27 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
                 <div className="max-h-96 overflow-auto">
                   <table className="w-full text-xs">
                     <thead className="text-white/50 text-left sticky top-0 bg-[#1A1A1A]">
-                      <tr><th className="py-2 pr-3">Data</th><th className="pr-3">Cliente</th><th className="pr-3">Produto</th><th className="pr-3 text-right">Qtd</th><th className="text-right">Valor</th></tr>
+                      <tr><th className="py-2 pr-3">Data</th><th className="pr-3">Cliente</th><th className="pr-3">Produto</th><th className="pr-3 text-right">Qtd</th><th className="pr-3 text-right">Valor</th><th className="text-right">Minha comissão</th></tr>
                     </thead>
                     <tbody>
-                      {filteredRows.slice(0, 200).map((r) => (
-                        <tr key={r.id + r.source} className="border-t border-white/5">
-                          <td className="py-2 pr-3 text-white/60">{new Date(r.paid_at).toLocaleDateString("pt-BR")}</td>
-                          <td className="pr-3 text-white">{r.student_name}</td>
-                          <td className="pr-3 text-white/80 truncate max-w-xs">{r.product_name}</td>
-                          <td className="pr-3 text-right text-white/70">{r.quantity}</td>
-                          <td className="text-right text-primary font-bold">{brl(r.amount)}</td>
-                        </tr>
-                      ))}
+                      {filteredRows.slice(0, 200).map((r) => {
+                        const lvl = r.commission_levels.length
+                          ? r.commission_levels.map((l) => l === 0 ? "direta" : `N${l}`).join("+")
+                          : null;
+                        return (
+                          <tr key={r.id + r.source} className="border-t border-white/5">
+                            <td className="py-2 pr-3 text-white/60">{new Date(r.paid_at).toLocaleDateString("pt-BR")}</td>
+                            <td className="pr-3 text-white">{r.student_name}</td>
+                            <td className="pr-3 text-white/80 truncate max-w-xs">{r.product_name}</td>
+                            <td className="pr-3 text-right text-white/70">{r.quantity}</td>
+                            <td className="pr-3 text-right text-primary font-bold">{brl(r.amount)}</td>
+                            <td className="text-right">
+                              <span className="text-emerald-400 font-bold">{brl(r.my_commission || 0)}</span>
+                              {lvl && <span className="ml-1 text-[10px] text-white/40">({lvl})</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
