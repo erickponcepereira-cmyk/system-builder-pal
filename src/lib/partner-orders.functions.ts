@@ -115,7 +115,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
       supabase.from("partner_wallets" as never).select("partner_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_earned,total_withdrawn" as never),
-      applyPaidCutoff(supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee,payment_fee,tax_amount,paid_at,created_at" as never).eq("status" as never, "paid" as never)),
+      applyPaidCutoff(supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee,payment_fee,tax_amount,network_l1_amount,network_l2_amount,network_l3_amount,master_coach_cross_bonus_amount,paid_at,created_at" as never).eq("status" as never, "paid" as never)),
       applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       cutoff
@@ -198,13 +198,27 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       },
       partnerOrders: (() => {
         const rows = (ppo.data as any[] | null) || [];
-        // Sistema arrecadou = somente taxa do sistema. Não inclui taxa de gateway nem imposto.
+        // Sistema arrecadou = somente taxa real do sistema.
+        // Recalcula pelo líquido do pedido para não puxar gateway/imposto/comissões gravadas em system_fee legado.
+        const realSystemFee = rows.reduce((acc, r: any) => {
+          const gross = Number(r.gross_amount || 0);
+          const paidOut = Number(r.partner_net_amount || 0)
+            + Number(r.coach_net_amount || 0)
+            + Number(r.network_l1_amount || 0)
+            + Number(r.network_l2_amount || 0)
+            + Number(r.network_l3_amount || 0)
+            + Number(r.master_coach_cross_bonus_amount || 0)
+            + Number(r.payment_fee || 0)
+            + Number(r.tax_amount || 0);
+          const computed = gross - paidOut;
+          return acc + (Number.isFinite(computed) ? Math.max(0, computed) : Number(r.system_fee || 0));
+        }, 0);
         return {
           paidCount: rows.length,
           paidGross: sum(rows, "gross_amount"),
           partnerNet: sum(rows, "partner_net_amount"),
           coachNet: sum(rows, "coach_net_amount"),
-          systemFee: Math.round(sum(rows, "system_fee") * 100) / 100,
+          systemFee: Math.round(realSystemFee * 100) / 100,
         };
       })(),
       pendingWithdrawals: {
