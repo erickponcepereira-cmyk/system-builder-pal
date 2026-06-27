@@ -228,8 +228,9 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
       {!loading && data && (
         <>
           {/* KPIs (refletem o filtro de grupo) */}
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
             <Kpi label="Receita" value={brl(kpis.revenue)} delta={groupTab === "all" && data.compare ? pct(kpis.revenue, data.compare.totals.revenue) : null} />
+            <Kpi label="Minhas comissões" value={brl(kpis.commission)} delta={null} />
             <Kpi label="Pedidos" value={String(kpis.orders)} delta={groupTab === "all" && data.compare ? pct(kpis.orders, data.compare.totals.orders) : null} />
             <Kpi label="Itens vendidos" value={String(kpis.itemsSold)} delta={groupTab === "all" && data.compare ? pct(kpis.itemsSold, data.compare.totals.itemsSold) : null} />
             <Kpi label="Clientes únicos" value={String(kpis.uniqueCustomers)} delta={groupTab === "all" && data.compare ? pct(kpis.uniqueCustomers, data.compare.totals.uniqueCustomers) : null} />
