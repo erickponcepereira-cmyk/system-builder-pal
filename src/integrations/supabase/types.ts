@@ -9671,8 +9671,16 @@ export type Database = {
         Returns: boolean
       }
       recalc_nutritionist_wallets: { Args: never; Returns: undefined }
+      recalc_partner_wallet: {
+        Args: { _partner_id: string }
+        Returns: undefined
+      }
       recalc_product_points: {
         Args: { _product_id: string }
+        Returns: undefined
+      }
+      recalc_professional_wallet: {
+        Args: { _professional_coach_id: string }
         Returns: undefined
       }
       recalc_student_wallet_for_referral: {
@@ -9708,6 +9716,7 @@ export type Database = {
       }
       release_available_commissions: { Args: never; Returns: number }
       release_due_commissions_cron: { Args: never; Returns: number }
+      release_due_partner_product_wallets: { Args: never; Returns: number }
       release_nutritionist_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
