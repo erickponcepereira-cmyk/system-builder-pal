@@ -121,7 +121,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       }
 
       if (partnerOrderIds.length > 0) {
-        let poQ = supabase
+        let poQ = (supabase as any)
           .from("partner_product_orders" as any)
           .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status" as any)
           .in("id" as any, partnerOrderIds as any)
