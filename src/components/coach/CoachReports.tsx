@@ -257,18 +257,27 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
                 <div className="max-h-96 overflow-auto">
                   <table className="w-full text-xs">
                     <thead className="text-white/50 text-left sticky top-0 bg-[#1A1A1A]">
-                      <tr><th className="py-2 pr-3">Data</th><th className="pr-3">Cliente</th><th className="pr-3">Produto</th><th className="pr-3 text-right">Qtd</th><th className="text-right">Valor</th></tr>
+                      <tr><th className="py-2 pr-3">Data</th><th className="pr-3">Cliente</th><th className="pr-3">Produto</th><th className="pr-3 text-right">Qtd</th><th className="pr-3 text-right">Valor</th><th className="text-right">Minha comissão</th></tr>
                     </thead>
                     <tbody>
-                      {filteredRows.slice(0, 200).map((r) => (
-                        <tr key={r.id + r.source} className="border-t border-white/5">
-                          <td className="py-2 pr-3 text-white/60">{new Date(r.paid_at).toLocaleDateString("pt-BR")}</td>
-                          <td className="pr-3 text-white">{r.student_name}</td>
-                          <td className="pr-3 text-white/80 truncate max-w-xs">{r.product_name}</td>
-                          <td className="pr-3 text-right text-white/70">{r.quantity}</td>
-                          <td className="text-right text-primary font-bold">{brl(r.amount)}</td>
-                        </tr>
-                      ))}
+                      {filteredRows.slice(0, 200).map((r) => {
+                        const lvl = r.commission_levels.length
+                          ? r.commission_levels.map((l) => l === 0 ? "direta" : `N${l}`).join("+")
+                          : null;
+                        return (
+                          <tr key={r.id + r.source} className="border-t border-white/5">
+                            <td className="py-2 pr-3 text-white/60">{new Date(r.paid_at).toLocaleDateString("pt-BR")}</td>
+                            <td className="pr-3 text-white">{r.student_name}</td>
+                            <td className="pr-3 text-white/80 truncate max-w-xs">{r.product_name}</td>
+                            <td className="pr-3 text-right text-white/70">{r.quantity}</td>
+                            <td className="pr-3 text-right text-primary font-bold">{brl(r.amount)}</td>
+                            <td className="text-right">
+                              <span className="text-emerald-400 font-bold">{brl(r.my_commission || 0)}</span>
+                              {lvl && <span className="ml-1 text-[10px] text-white/40">({lvl})</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
