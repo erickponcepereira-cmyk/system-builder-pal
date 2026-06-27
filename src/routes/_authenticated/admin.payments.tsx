@@ -427,10 +427,14 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                 <DataTable rows={details.sales.map((s) => [
                   s.date ? new Date(s.date).toLocaleDateString("pt-BR") : "—",
                   s.student || "—",
-                  s.product || "—",
+                  <span key="p" className="inline-flex items-center gap-2">
+                    <span>{s.product || "—"}</span>
+                    {s.tag && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{s.tag}</span>}
+                  </span>,
                   <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusColor(s.status)}`}>{s.status}</span>,
+                  s.creatorAmount != null ? <span key="ce" className="font-mono text-primary">{fmt(s.creatorAmount)}</span> : <span key="ce" className="text-white/30">—</span>,
                   <span key="a" className="font-mono">{fmt(s.amount)}</span>,
-                ])} headers={["Data", "Aluno", "Produto", "Status", "Valor"]} />
+                ])} headers={["Data", "Aluno", "Produto", "Status", "Criador recebe", "Valor"]} />
               </div>
             )}
 
@@ -440,8 +444,27 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                   <span>Disponível: <span className="text-success font-mono">{fmt(details.totals.commissionsAvailable)}</span></span>
                   <span>Pendente: <span className="text-amber-400 font-mono">{fmt(details.totals.commissionsPending)}</span></span>
                   <span>Pago: <span className="text-white font-mono">{fmt(details.totals.commissionsPaid)}</span></span>
+                  <span>Produto criado: <span className="text-primary font-mono">{fmt(details.totals.productEarningsTotal)}</span></span>
                 </div>
-                <DataTable rows={details.commissions.map((c) => {
+                <DataTable rows={[
+                  ...details.productEarnings.map((e) => {
+                    const now = Date.now();
+                    const availMs = e.availableAt ? new Date(e.availableAt).getTime() : 0;
+                    const label = e.status === "available" ? "Disponível" : availMs > now ? `Liberação em ${new Date(e.availableAt!).toLocaleDateString("pt-BR")}` : "Pendente";
+                    const color = e.status === "available" ? statusColor("available") : "bg-amber-500/20 text-amber-400";
+                    return [
+                      e.date ? new Date(e.date).toLocaleString("pt-BR") : "—",
+                      e.studentName || "—",
+                      <span key="p" className="inline-flex items-center gap-2">
+                        <span>{e.productName || "—"}</span>
+                        <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">Produto criado</span>
+                      </span>,
+                      "Criador",
+                      <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${color}`}>{label}</span>,
+                      <span key="a" className="font-mono text-primary">{fmt(e.amount)}</span>,
+                    ];
+                  }),
+                  ...details.commissions.map((c) => {
                   const now = Date.now();
                   const availMs = c.availableAt ? new Date(c.availableAt).getTime() : 0;
                   let label = c.status;
@@ -462,7 +485,7 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                     <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${color}`}>{label}</span>,
                     <span key="a" className="font-mono">{fmt(c.amount)}</span>,
                   ];
-                })} headers={["Data / Hora", "Aluno", "Produto", "Nível", "Status", "Valor"]} />
+                })]} headers={["Data / Hora", "Aluno", "Produto", "Nível", "Status", "Valor"]} />
 
 
               </div>

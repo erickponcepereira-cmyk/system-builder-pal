@@ -52,15 +52,48 @@ async function sumOwnVp(coachId: string, sinceIso: string | null): Promise<numbe
   const { data: studs } = await supabaseAdmin
     .from("students").select("id").eq("coach_id", coachId);
   const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
-  if (ids.length === 0) return 0;
   let total = 0;
-  let txq = supabaseAdmin
-    .from("transactions").select("gross_amount")
-    .in("student_id", ids).eq("status", "paid")
-    .not("paid_at", "is", null);
-  if (effectiveSince) txq = txq.gte("paid_at", effectiveSince);
-  const { data: txs } = await txq;
-  ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
+  if (ids.length > 0) {
+    let txq = supabaseAdmin
+      .from("transactions").select("gross_amount")
+      .in("student_id", ids).eq("status", "paid")
+      .not("paid_at", "is", null);
+    if (effectiveSince) txq = txq.gte("paid_at", effectiveSince);
+    const { data: txs } = await txq;
+    ((txs as { gross_amount: number }[] | null) || []).forEach((t) => { total += Number(t.gross_amount) || 0; });
+  }
+
+  const { data: coachProfile } = await supabaseAdmin
+    .from("coaches")
+    .select("profile_id")
+    .eq("id", coachId)
+    .maybeSingle();
+  const profileId = (coachProfile as { profile_id?: string } | null)?.profile_id;
+  const { data: partnerRows } = profileId
+    ? await supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, profileId as never)
+    : { data: [] as unknown };
+  const partnerIds = (((partnerRows as unknown as Array<{ id: string }>) || []).map((p) => p.id));
+  const partnerOrderMap = new Map<string, number>();
+  const loadPartnerOrders = async (column: "selling_coach_id" | "professional_coach_id" | "partner_id", values: string[]) => {
+    if (!values.length) return;
+    let q = supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id,gross_amount" as never)
+      .in(column as never, values as never)
+      .eq("status" as never, "paid" as never)
+      .not("paid_at" as never, "is" as never, null as never);
+    if (effectiveSince) q = (q as any).gte("paid_at", effectiveSince);
+    const { data: rows } = await q;
+    ((rows as unknown as Array<{ id: string; gross_amount: number }>) || []).forEach((o) => {
+      partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
+    });
+  };
+  await Promise.all([
+    loadPartnerOrders("selling_coach_id", [coachId]),
+    loadPartnerOrders("professional_coach_id", [coachId]),
+    loadPartnerOrders("partner_id", partnerIds),
+  ]);
+  partnerOrderMap.forEach((amount) => { total += amount; });
   return total;
 }
 

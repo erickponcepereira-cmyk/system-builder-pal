@@ -100,7 +100,7 @@ function FinancialSummaryPage() {
           <Stat icon={BadgeDollarSign} label="Pedidos pagos" value={String(data.partnerOrders.paidCount)} />
           <Stat icon={TrendingUp} label="Bruto faturado" value={brl(data.partnerOrders.paidGross)} />
           <Stat icon={Stethoscope} label="Parceiros receberam" value={brl(data.partnerOrders.partnerNet)} highlight />
-          <Stat icon={Wallet} label="Sistema arrecadou" value={brl(data.partnerOrders.systemFee + data.partnerOrders.coachNet)} />
+          <Stat icon={Wallet} label="Sistema arrecadou" value={brl(data.partnerOrders.systemFee)} />
         </div>
         <Link
           to="/admin/partner-orders"

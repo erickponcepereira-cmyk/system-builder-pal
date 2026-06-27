@@ -110,7 +110,8 @@ export async function applyApproval(kind: SourceKind, id: string) {
       console.error("[coach-onboarding] activation hook failed:", e);
     }
   } else if (kind === "partner_product_order") {
-    await supabaseAdmin.rpc("process_partner_product_order_paid" as never, { _order_id: id } as never);
+    const { error } = await supabaseAdmin.rpc("process_partner_product_order_paid" as never, { _order_id: id } as never);
+    if (error) throw new Error(error.message);
   } else if (kind === "subscription_invoice") {
     // Marca fatura como paga via PIX/cartão (sem débito de carteira interna).
     // Calcula a taxa da maquininha (PIX % ou Cartão %) a partir da config padrão
