@@ -67,6 +67,7 @@ import { Route as AuthenticatedAdminStoreRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin.reports'
 import { Route as AuthenticatedAdminPushNotificationsRouteImport } from './routes/_authenticated/admin.push-notifications'
+import { Route as AuthenticatedAdminProfessorWalletRouteImport } from './routes/_authenticated/admin.professor-wallet'
 import { Route as AuthenticatedAdminProfessionalsRouteImport } from './routes/_authenticated/admin.professionals'
 import { Route as AuthenticatedAdminProfessionalProductsRouteImport } from './routes/_authenticated/admin.professional-products'
 import { Route as AuthenticatedAdminProductsRouteImport } from './routes/_authenticated/admin.products'
@@ -429,6 +430,12 @@ const AuthenticatedAdminPushNotificationsRoute =
     path: '/push-notifications',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminProfessorWalletRoute =
+  AuthenticatedAdminProfessorWalletRouteImport.update({
+    id: '/professor-wallet',
+    path: '/professor-wallet',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminProfessionalsRoute =
   AuthenticatedAdminProfessionalsRouteImport.update({
     id: '/professionals',
@@ -728,6 +735,7 @@ export interface FileRoutesByFullPath {
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/professional-products': typeof AuthenticatedAdminProfessionalProductsRoute
   '/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
+  '/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
@@ -826,6 +834,7 @@ export interface FileRoutesByTo {
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/professional-products': typeof AuthenticatedAdminProfessionalProductsRoute
   '/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
+  '/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
   '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
@@ -928,6 +937,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/products': typeof AuthenticatedAdminProductsRoute
   '/_authenticated/admin/professional-products': typeof AuthenticatedAdminProfessionalProductsRoute
   '/_authenticated/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
+  '/_authenticated/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/_authenticated/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
   '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
@@ -1030,6 +1040,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/professional-products'
     | '/admin/professionals'
+    | '/admin/professor-wallet'
     | '/admin/push-notifications'
     | '/admin/reports'
     | '/admin/settings'
@@ -1128,6 +1139,7 @@ export interface FileRouteTypes {
     | '/admin/products'
     | '/admin/professional-products'
     | '/admin/professionals'
+    | '/admin/professor-wallet'
     | '/admin/push-notifications'
     | '/admin/reports'
     | '/admin/settings'
@@ -1229,6 +1241,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/products'
     | '/_authenticated/admin/professional-products'
     | '/_authenticated/admin/professionals'
+    | '/_authenticated/admin/professor-wallet'
     | '/_authenticated/admin/push-notifications'
     | '/_authenticated/admin/reports'
     | '/_authenticated/admin/settings'
@@ -1710,6 +1723,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPushNotificationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/professor-wallet': {
+      id: '/_authenticated/admin/professor-wallet'
+      path: '/professor-wallet'
+      fullPath: '/admin/professor-wallet'
+      preLoaderRoute: typeof AuthenticatedAdminProfessorWalletRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/professionals': {
       id: '/_authenticated/admin/professionals'
       path: '/professionals'
@@ -2047,6 +2067,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminProductsRoute: typeof AuthenticatedAdminProductsRoute
   AuthenticatedAdminProfessionalProductsRoute: typeof AuthenticatedAdminProfessionalProductsRoute
   AuthenticatedAdminProfessionalsRoute: typeof AuthenticatedAdminProfessionalsRoute
+  AuthenticatedAdminProfessorWalletRoute: typeof AuthenticatedAdminProfessorWalletRoute
   AuthenticatedAdminPushNotificationsRoute: typeof AuthenticatedAdminPushNotificationsRoute
   AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
@@ -2100,6 +2121,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminProfessionalProductsRoute:
     AuthenticatedAdminProfessionalProductsRoute,
   AuthenticatedAdminProfessionalsRoute: AuthenticatedAdminProfessionalsRoute,
+  AuthenticatedAdminProfessorWalletRoute:
+    AuthenticatedAdminProfessorWalletRoute,
   AuthenticatedAdminPushNotificationsRoute:
     AuthenticatedAdminPushNotificationsRoute,
   AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,

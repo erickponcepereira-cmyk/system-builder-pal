@@ -39,6 +39,7 @@ const DEST_META: Record<string, DestMeta> = {
   platform_reserve:    { label: "Comissão do vendedor",     barClass: "bg-[#E24B4A]", borderClass: "border-l-[#E24B4A]", Icon: UserCircle },
   product_order_pool:  { label: "Painel de Pedidos (custos)",barClass: "bg-[#B4B2A9]", borderClass: "border-l-[#B4B2A9]", Icon: Package },
   nutritionist_blocked:{ label: "Nutricionista (bloqueado)", barClass: "bg-white/40",  borderClass: "border-l-white/40",  Icon: Stethoscope },
+  professor_blocked:   { label: "Professor (bloqueado)",     barClass: "bg-white/40",  borderClass: "border-l-white/40",  Icon: Stethoscope },
   referral_student:    { label: "Aluno indicador",           barClass: "bg-[#F09595]", borderClass: "border-l-[#F09595]", Icon: Users },
   custom:              { label: "Personalizado",             barClass: "bg-[#B4B2A9]", borderClass: "border-l-[#B4B2A9]", Icon: SlidersHorizontal },
 };
