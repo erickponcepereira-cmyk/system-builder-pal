@@ -135,10 +135,10 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
         const professionalIds = Array.from(new Set(orders.map((o) => o.professional_product_id).filter(Boolean)));
         const [partnerProductsRes, professionalProductsRes] = await Promise.all([
           partnerIds.length
-            ? supabase.from("partner_products" as any).select("id,name" as any).in("id" as any, partnerIds as any)
+            ? (supabase as any).from("partner_products").select("id,name").in("id", partnerIds)
             : Promise.resolve({ data: [] as any[] }),
           professionalIds.length
-            ? supabase.from("professional_products" as any).select("id,name" as any).in("id" as any, professionalIds as any)
+            ? (supabase as any).from("professional_products").select("id,name").in("id", professionalIds)
             : Promise.resolve({ data: [] as any[] }),
         ]);
         const partnerNames = new Map(((partnerProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
