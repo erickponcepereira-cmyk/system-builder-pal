@@ -577,6 +577,110 @@ function Mini({ label, value }: { label: string; value: string }) {
   );
 }
 
+function CreatorBucketCard({
+  title, subtitle, icon: Icon, wallets, accent, onClick,
+}: {
+  title: string;
+  subtitle: string;
+  icon: typeof Wallet;
+  wallets: Array<{ available: number; pending: number; earned: number; withdrawn: number }>;
+  accent: string;
+  onClick?: () => void;
+}) {
+  const totals = wallets.reduce(
+    (a, w) => ({
+      available: a.available + w.available,
+      pending: a.pending + w.pending,
+      earned: a.earned + w.earned,
+      withdrawn: a.withdrawn + w.withdrawn,
+    }),
+    { available: 0, pending: 0, earned: 0, withdrawn: 0 },
+  );
+  const aPagar = totals.pending + totals.available;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left rounded-2xl border border-white/5 p-4 transition hover:border-white/20 hover:bg-white/[0.03]"
+      style={{ backgroundColor: "#1A1A1A" }}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase text-white/50">{title}</p>
+          <p className="text-[10px] text-white/40">{subtitle}</p>
+        </div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}22`, color: accent }}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="text-2xl font-bold" style={{ color: accent }}>{money(aPagar)}</p>
+      <p className="text-[10px] text-white/40 mb-3">Disponível + bloqueado · {wallets.length} carteira(s)</p>
+      <div className="grid grid-cols-3 gap-1 text-[10px]">
+        <Mini label="Bloqueado" value={money(totals.pending)} />
+        <Mini label="Disponível" value={money(totals.available)} />
+        <Mini label="Sacado" value={money(totals.withdrawn)} />
+      </div>
+    </button>
+  );
+}
+
+type CreatorWalletModalRow = { id: string | null; name: string; email: string | null; available: number; pending: number; earned: number };
+
+function CreatorWalletModal({
+  title, link, rows, onClose,
+}: { title: string; link: string; rows: CreatorWalletModalRow[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-white">{title}</h2>
+            <p className="text-xs text-white/50">Saldos por beneficiário. Use "Abrir carteira" para o relatório completo.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={link}
+              className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
+              onClick={onClose}
+            >
+              Abrir carteira <ArrowRight className="h-3 w-3" />
+            </Link>
+            <button onClick={onClose} className="rounded p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+          </div>
+        </div>
+        {rows.length === 0 ? (
+          <p className="text-sm text-white/50">Nenhuma carteira com saldo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase text-white/40">
+                <tr>
+                  <th className="px-2 py-1 text-left">Beneficiário</th>
+                  <th className="px-2 py-1 text-right">Bloqueado</th>
+                  <th className="px-2 py-1 text-right">Disponível</th>
+                  <th className="px-2 py-1 text-right">Total ganho</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, idx) => (
+                  <tr key={r.id || idx} className="border-t border-white/5">
+                    <td className="px-2 py-1.5 text-white">{r.name}{r.email && <span className="ml-1 text-white/30">{r.email}</span>}</td>
+                    <td className="px-2 py-1.5 text-right text-amber-300">{money(r.pending)}</td>
+                    <td className="px-2 py-1.5 text-right text-sky-300">{money(r.available)}</td>
+                    <td className="px-2 py-1.5 text-right font-bold text-primary">{money(r.earned)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+
 function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className={`rounded-lg p-3 ${highlight ? "bg-primary/15" : "bg-white/5"}`}>
