@@ -59,6 +59,8 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
   const ids = ((studs as { id: string }[] | null) || []).map((s) => s.id);
   let total = 0;
   const linkedOrderIds = new Set<string>();
+  // Dedupe partner orders por id — contam apenas uma vez, independente do caminho (aluno, selling coach, professional, partner)
+  const partnerOrderMap = new Map<string, number>();
   if (ids.length > 0) {
     const { data: txs } = await supabaseAdmin
       .from("transactions").select("gross_amount, metadata")
@@ -76,14 +78,14 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
       if (linkedOrderIds.has(o.id)) return;
       total += Number(o.total_amount) || 0;
     });
-    const { data: partnerOrders } = await supabaseAdmin
+    const { data: partnerOrdersByStudent } = await supabaseAdmin
       .from("partner_product_orders" as never)
-      .select("gross_amount" as never)
+      .select("id,gross_amount" as never)
       .in("student_id" as never, ids as never)
       .eq("status" as never, "paid" as never)
       .gte("created_at" as never, effectiveSince as never);
-    ((partnerOrders as unknown as { gross_amount: number }[] | null) || []).forEach((o) => {
-      total += Number(o.gross_amount) || 0;
+    ((partnerOrdersByStudent as unknown as { id: string; gross_amount: number }[] | null) || []).forEach((o) => {
+      partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
     });
   }
 
@@ -98,7 +100,6 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
     ? await supabaseAdmin.from("partners" as never).select("id" as never).in("profile_id" as never, profileIds as never)
     : { data: [] as unknown };
   const partnerIds = (((partnerRows as unknown as Array<{ id: string }>) || []).map((p) => p.id));
-  const partnerOrderMap = new Map<string, number>();
   const loadPartnerOrders = async (column: "selling_coach_id" | "professional_coach_id" | "partner_id", values: string[]) => {
     if (!values.length) return;
     const { data: rows } = await supabaseAdmin
@@ -108,7 +109,8 @@ async function sumRevenueForCoaches(coachIds: string[], sinceIso: string): Promi
       .eq("status" as never, "paid" as never)
       .gte("created_at" as never, effectiveSince as never);
     ((rows as unknown as Array<{ id: string; gross_amount: number }>) || []).forEach((o) => {
-      partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
+      // setIfAbsent: já contado via outro caminho? Mantém valor (dedup por id)
+      if (!partnerOrderMap.has(o.id)) partnerOrderMap.set(o.id, Number(o.gross_amount) || 0);
     });
   };
   await Promise.all([

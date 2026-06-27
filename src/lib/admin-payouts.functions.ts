@@ -206,17 +206,53 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
       .in("student_id", allStudentIds.length ? allStudentIds : ["00000000-0000-0000-0000-000000000000"]);
     const stuWalletByStudent = new Map(((stuWalletsRaw as Array<{ student_id: string; available_balance: number }>) || []).map((w) => [w.student_id, w]));
 
+    // Ganhos como criador de produto (partner_net_amount) — soma 7-day rule por seller
+    const allPartnerIdList = partnerIds.map((p) => p.id);
+    const allCoachIdList = coachIds.map((c) => c.id);
+    let creatorQ: any = null;
+    if (allPartnerIdList.length || allCoachIdList.length) {
+      const filters: string[] = [];
+      if (allPartnerIdList.length) filters.push(`partner_id.in.(${allPartnerIdList.join(",")})`);
+      if (allCoachIdList.length) filters.push(`professional_coach_id.in.(${allCoachIdList.join(",")})`);
+      creatorQ = supabaseAdmin
+        .from("partner_product_orders" as never)
+        .select("id,partner_id,professional_coach_id,partner_net_amount,paid_at,created_at,status" as never)
+        .eq("status" as never, "paid" as never)
+        .or(filters.join(",") as never);
+      if (cutoff) creatorQ = creatorQ.gte("created_at" as never, cutoff as never);
+    }
+    const creatorRowsDash = creatorQ ? await creatorQ : { data: [] as unknown };
+    const nowMsDash = Date.now();
+    const creatorAggDash = new Map<string, { available: number; blocked: number; earned: number }>();
+    ((creatorRowsDash.data as unknown as Array<{ partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []).forEach((o) => {
+      const amt = n(o.partner_net_amount);
+      if (amt <= 0) return;
+      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
+        || (o.professional_coach_id && coachProfileById.get(o.professional_coach_id))
+        || null;
+      if (!pid) return;
+      const cur = creatorAggDash.get(pid) || { available: 0, blocked: 0, earned: 0 };
+      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
+      const released = availableAt <= nowMsDash;
+      cur.earned += amt;
+      if (released) cur.available += amt; else cur.blocked += amt;
+      creatorAggDash.set(pid, cur);
+    });
+
     let sellerAvail = 0, sellerBlocked = 0, sellerEarned = 0;
     for (const pid of cls.sellerProfileIds) {
       const agg = sellerAgg.get(pid);
+      const cre = creatorAggDash.get(pid) || { available: 0, blocked: 0, earned: 0 };
       if (cutoff) {
-        // Modo de Testes: ignora saldos cumulativos das carteiras; usa apenas comissões pós-corte
+        // Modo de Testes: ignora saldos cumulativos das carteiras; usa apenas comissões pós-corte + ganhos como criador
         if (agg) { sellerAvail += agg.available; sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+        sellerAvail += cre.available; sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       } else {
-        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance);
+        sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance) + cre.available;
         const sid = cls.studentByProfile.get(pid);
         if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
         if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
+        sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       }
     }
 
@@ -366,6 +402,40 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const pid = coachProfileById2.get(w.professional_coach_id);
       if (pid) profwMap.set(pid, w);
     });
+
+    // ===== Ganhos como criador de produto (partner_net_amount) — agrega 7-day rule =====
+    const partnerIdList = partnerIds.map((p) => p.id);
+    const coachIdList = coachIds2.map((c) => c.id);
+    let creatorOrdersQ: any = null;
+    if (partnerIdList.length || coachIdList.length) {
+      const filters: string[] = [];
+      if (partnerIdList.length) filters.push(`partner_id.in.(${partnerIdList.join(",")})`);
+      if (coachIdList.length) filters.push(`professional_coach_id.in.(${coachIdList.join(",")})`);
+      creatorOrdersQ = supabaseAdmin
+        .from("partner_product_orders" as never)
+        .select("id,partner_id,professional_coach_id,partner_net_amount,paid_at,created_at,status" as never)
+        .eq("status" as never, "paid" as never)
+        .or(filters.join(",") as never);
+      if (cutoff) creatorOrdersQ = creatorOrdersQ.gte("created_at" as never, cutoff as never);
+    }
+    const creatorRowsRes = creatorOrdersQ ? await creatorOrdersQ : { data: [] as unknown };
+    const nowMs = Date.now();
+    const creatorAgg = new Map<string, { available: number; blocked: number; earned: number }>();
+    ((creatorRowsRes.data as unknown as Array<{ id: string; partner_id: string | null; professional_coach_id: string | null; partner_net_amount: number | null; paid_at: string | null; created_at: string }>) || []).forEach((o) => {
+      const amt = n(o.partner_net_amount);
+      if (amt <= 0) return;
+      const pid = (o.partner_id && partnerProfileById.get(o.partner_id))
+        || (o.professional_coach_id && coachProfileById2.get(o.professional_coach_id))
+        || null;
+      if (!pid) return;
+      const cur = creatorAgg.get(pid) || { available: 0, blocked: 0, earned: 0 };
+      const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
+      const released = availableAt <= nowMs;
+      cur.earned += amt;
+      if (released) cur.available += amt; else cur.blocked += amt;
+      creatorAgg.set(pid, cur);
+    });
+
     const reqMap = new Map<string, { id: string; amount: number; status: string }>();
     for (const r of ((pendingReqs as Array<{ id: string; profile_id: string; amount: number; status: string }>) || [])) {
       if (!reqMap.has(r.profile_id)) reqMap.set(r.profile_id, { id: r.id, amount: n(r.amount), status: r.status });
@@ -383,18 +453,18 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const sid = cls.studentByProfile.get(p.id);
       const sw = sid ? swMap.get(sid) : undefined;
       const role = roleOf(p.id);
-      // saque: para aluno indicador puro usamos student_withdrawal_requests; sellers normalmente o withdrawal_requests
       let r = reqMap.get(p.id);
       if (!r && role === "student_referrer" && sid) {
         const sr = stuReqsByStudent.get(sid);
         if (sr) r = sr;
       }
       const agg = commAgg.get(p.id);
+      const cre = creatorAgg.get(p.id) || { available: 0, blocked: 0, earned: 0 };
       const available = cutoff
-        ? (agg?.available || 0)
+        ? (agg?.available || 0) + cre.available
         : (role === "student_referrer"
           ? n(sw?.available_balance)
-          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance));
+          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance) + cre.available);
       const totalWithdrawn = cutoff
         ? 0
         : (role === "student_referrer"
@@ -405,8 +475,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         name: p.name || "—",
         email: p.email,
         available,
-        blocked: agg?.blocked || 0,
-        totalEarned: agg?.earned || 0,
+        blocked: (agg?.blocked || 0) + cre.blocked,
+        totalEarned: (agg?.earned || 0) + cre.earned,
         totalWithdrawn,
         pendingRequestId: r?.id || null,
         pendingRequestAmount: r?.amount || 0,
