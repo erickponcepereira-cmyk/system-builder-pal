@@ -76,7 +76,7 @@ export function PartnerWalletTab() {
         .maybeSingle(),
       supabase
         .from("partner_product_orders")
-        .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at")
+        .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
         .eq("partner_id", partner.id)
         .order("created_at", { ascending: false })
         .limit(50),
@@ -91,7 +91,36 @@ export function PartnerWalletTab() {
     setWallet(((walletRes.data as unknown as WalletRow | null)) || {
       available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
     });
-    setOrders((ordersRes.data as OrderRow[]) || []);
+    const baseOrders = (ordersRes.data as OrderRow[]) || [];
+    // Resolve student names + product names
+    const studentIds = Array.from(new Set(baseOrders.map((o) => o.student_id).filter(Boolean))) as string[];
+    const partnerProductIds = Array.from(new Set(baseOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
+    const professionalProductIds = Array.from(new Set(baseOrders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
+    const [studentsRes, ppRes, profProdRes] = await Promise.all([
+      studentIds.length
+        ? supabase.from("students").select("id, profiles(name)").in("id", studentIds)
+        : Promise.resolve({ data: [] as any[] }),
+      partnerProductIds.length
+        ? supabase.from("partner_products" as never).select("id, name" as never).in("id" as never, partnerProductIds as never)
+        : Promise.resolve({ data: [] as any[] }),
+      professionalProductIds.length
+        ? supabase.from("professional_products" as never).select("id, name" as never).in("id" as never, professionalProductIds as never)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const sMap = new Map<string, string>();
+    ((studentsRes.data as any[]) || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+    const pMap = new Map<string, string>();
+    ((ppRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+    ((profProdRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+    const enriched = baseOrders.map((o) => ({
+      ...o,
+      student_name: o.student_id ? sMap.get(o.student_id) || null : null,
+      product_name:
+        (o.partner_product_id ? pMap.get(o.partner_product_id) : null) ||
+        (o.professional_product_id ? pMap.get(o.professional_product_id) : null) ||
+        null,
+    }));
+    setOrders(enriched);
     setWithdraws((withdrawsRes.data as WithdrawRow[]) || []);
     setLoading(false);
   }
