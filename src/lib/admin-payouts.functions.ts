@@ -492,6 +492,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
+      buyer_name?: string | null; buyer_email?: string | null; product_name?: string | null;
     }> = [];
     const addPartnerOrders = async (column: "partner_id" | "professional_coach_id" | "selling_coach_id", value: string | null) => {
       if (!value) return;
@@ -512,7 +513,11 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       addPartnerOrders("selling_coach_id", coachId),
     ]);
     const partnerOrdersById = new Map<string, typeof partnerOrderRows[number]>();
-    partnerOrderRows.forEach((r) => partnerOrdersById.set(r.id, r));
+    const upsertPartnerOrder = (r: typeof partnerOrderRows[number]) => {
+      const prev = partnerOrdersById.get(r.id);
+      partnerOrdersById.set(r.id, { ...(prev || {}), ...r });
+    };
+    partnerOrderRows.forEach(upsertPartnerOrder);
 
     // Comissões — sempre filtradas por beneficiary = essa pessoa
     let qc = supabaseAdmin
@@ -537,7 +542,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (fromDate) q = (q as any).gte("created_at", fromDate);
       if (data.toDate) q = (q as any).lte("created_at", data.toDate);
       const { data: rows } = await q;
-      ((rows as unknown as typeof partnerOrderRows) || []).forEach((r) => partnerOrdersById.set(r.id, r));
+      ((rows as unknown as typeof partnerOrderRows) || []).forEach(upsertPartnerOrder);
     }
     const txMap = new Map<string, { student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; product_ids: string[] | null; store_order_id: string | null }>();
     if (txIds.length) {
@@ -629,9 +634,12 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
 
     const partnerOrderProductName = (po: typeof partnerOrderRows[number]) => {
       const id = po.partner_product_id || po.professional_product_id || "";
-      return prodNameById.get(id) || null;
+      return po.product_name || prodNameById.get(id) || null;
     };
-    const partnerOrderStudent = (po: typeof partnerOrderRows[number]) => po.student_id ? stuNameById.get(po.student_id) || null : null;
+    const partnerOrderStudent = (po: typeof partnerOrderRows[number]) => {
+      const byStudent = po.student_id ? stuNameById.get(po.student_id) || null : null;
+      return byStudent || (po.buyer_name || po.buyer_email ? { name: po.buyer_name ?? null, email: po.buyer_email ?? null } : null);
+    };
 
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
       id: o.id,
@@ -646,6 +654,22 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     sales = [...sales, ...ppoSales]
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .slice(0, 200);
+
+    // Fallback absoluto: se o join por IDs falhar, usa os campos desnormalizados do próprio pedido.
+    const partnerOrdersNeedingFallback = Array.from(partnerOrdersById.values()).filter((po) =>
+      (!partnerOrderProductName(po) || !partnerOrderStudent(po)) && po.id
+    );
+    if (partnerOrdersNeedingFallback.length) {
+      const ids = partnerOrdersNeedingFallback.map((po) => po.id);
+      const { data: fallbackRows } = await supabaseAdmin
+        .from("partner_product_orders" as never)
+        .select("id,buyer_name,buyer_email,product_name" as never)
+        .in("id" as never, ids as never);
+      for (const row of (((fallbackRows as unknown as Array<{ id: string; buyer_name: string | null; buyer_email: string | null; product_name: string | null }>) || []))) {
+        const prev = partnerOrdersById.get(row.id);
+        if (prev) partnerOrdersById.set(row.id, { ...prev, buyer_name: row.buyer_name, buyer_email: row.buyer_email, product_name: row.product_name });
+      }
+    }
 
     const commissions = commsBase.map((c) => {
       const t = c.transaction_id ? txMap.get(c.transaction_id) : null;
