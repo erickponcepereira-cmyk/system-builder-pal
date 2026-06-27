@@ -150,8 +150,9 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
   const kpis = useMemo(() => {
     const revenue = filteredRows.reduce((s, r) => s + r.amount, 0);
     const itemsSold = filteredRows.reduce((s, r) => s + r.quantity, 0);
+    const commission = filteredRows.reduce((s, r) => s + (r.my_commission || 0), 0);
     const customers = new Set(filteredRows.map((r) => r.student_id));
-    return { revenue, orders: filteredRows.length, itemsSold, uniqueCustomers: customers.size };
+    return { revenue, orders: filteredRows.length, itemsSold, uniqueCustomers: customers.size, commission };
   }, [filteredRows]);
 
 
