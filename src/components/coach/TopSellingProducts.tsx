@@ -8,6 +8,8 @@ type SaleRow = {
   revenue: number;
 };
 
+type ProductMeta = { id: string; name: string; category_id: string | null; section_id: string | null };
+
 type ProductNode = { id: string; name: string; qty: number; revenue: number; rank: number };
 type CategoryNode = { id: string; name: string; qty: number; revenue: number; rank: number; products: ProductNode[] };
 type SectionNode = { id: string; name: string; qty: number; revenue: number; rank: number; categories: CategoryNode[] };
@@ -50,7 +52,7 @@ function getRange(period: PeriodKey, customFrom: string, customTo: string): { fr
 export function TopSellingProducts({ coachProfileId }: { coachProfileId: string | null }) {
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Map<string, SaleRow>>(new Map());
-  const [allProducts, setAllProducts] = useState<Array<{ id: string; name: string; category_id: string | null; section_id: string | null }>>([]);
+  const [allProducts, setAllProducts] = useState<ProductMeta[]>([]);
   const [allCategories, setAllCategories] = useState<Array<{ id: string; name: string; section_id: string | null }>>([]);
   const [allSections, setAllSections] = useState<Array<{ id: string; name: string }>>([]);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -87,35 +89,102 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
       let commQ = supabase
         .from("commissions")
-        .select("transaction_id,created_at")
+        .select("transaction_id,partner_order_id,created_at")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
       if (cutoff) commQ = commQ.gte("created_at", cutoff);
       const { data: comms } = await commQ;
       const txIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
-      if (txIds.length === 0) { if (!cancelled) { setSales(new Map()); setLoading(false); } return; }
-
-      let q = supabase
-        .from("transactions")
-        .select("id,product_id,status,gross_amount,paid_at,created_at")
-        .in("id", txIds as string[])
-        .eq("status", "paid");
-      if (from) q = q.gte("paid_at", from.toISOString());
-      if (to) q = q.lte("paid_at", to.toISOString());
-      if (cutoff) q = q.gte("paid_at", cutoff);
-      const { data: txs } = await q;
+      const partnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
 
       const map = new Map<string, SaleRow>();
-      (txs || []).forEach((t: any) => {
-        if (!t.product_id) return;
-        const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0 };
-        existing.qty += 1;
-        existing.revenue += Number(t.gross_amount) || 0;
-        map.set(t.product_id, existing);
-      });
+      const extraProducts: ProductMeta[] = [];
+
+      if (txIds.length > 0) {
+        let q = supabase
+          .from("transactions")
+          .select("id,product_id,status,gross_amount,paid_at,created_at")
+          .in("id", txIds as string[])
+          .eq("status", "paid");
+        if (from) q = q.gte("paid_at", from.toISOString());
+        if (to) q = q.lte("paid_at", to.toISOString());
+        if (cutoff) q = q.gte("paid_at", cutoff);
+        const { data: txs } = await q;
+
+        (txs || []).forEach((t: any) => {
+          if (!t.product_id) return;
+          const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0 };
+          existing.qty += 1;
+          existing.revenue += Number(t.gross_amount) || 0;
+          map.set(t.product_id, existing);
+        });
+      }
+
+      if (partnerOrderIds.length > 0) {
+        let poQ = supabase
+          .from("partner_product_orders" as any)
+          .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status" as any)
+          .in("id" as any, partnerOrderIds as any)
+          .eq("status" as any, "paid" as any);
+        if (from) poQ = poQ.gte("paid_at" as any, from.toISOString() as any);
+        if (to) poQ = poQ.lte("paid_at" as any, to.toISOString() as any);
+        if (cutoff) poQ = poQ.gte("paid_at" as any, cutoff as any);
+        const { data: ordersData } = await poQ;
+        const orders = (ordersData as any[]) || [];
+        const partnerIds = Array.from(new Set(orders.map((o) => o.partner_product_id).filter(Boolean)));
+        const professionalIds = Array.from(new Set(orders.map((o) => o.professional_product_id).filter(Boolean)));
+        const [partnerProductsRes, professionalProductsRes] = await Promise.all([
+          partnerIds.length
+            ? supabase.from("partner_products" as any).select("id,name" as any).in("id" as any, partnerIds as any)
+            : Promise.resolve({ data: [] as any[] }),
+          professionalIds.length
+            ? supabase.from("professional_products" as any).select("id,name" as any).in("id" as any, professionalIds as any)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const partnerNames = new Map(((partnerProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
+        const professionalNames = new Map(((professionalProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
+
+        orders.forEach((o: any) => {
+          const isPartner = !!o.partner_product_id;
+          const rawId = o.partner_product_id || o.professional_product_id;
+          if (!rawId) return;
+          const productId = `${isPartner ? "partner" : "professional"}:${rawId}`;
+          const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0 };
+          existing.qty += 1;
+          existing.revenue += Number(o.gross_amount) || 0;
+          map.set(productId, existing);
+          extraProducts.push({
+            id: productId,
+            name: isPartner ? (partnerNames.get(rawId) || "Produto de parceiro") : (professionalNames.get(rawId) || "Produto profissional"),
+            category_id: isPartner ? "__partner_products" : "__professional_products",
+            section_id: isPartner ? "__partner_store" : "__professional_store",
+          });
+        });
+      }
 
       if (!cancelled) {
         setSales(map);
+        setAllProducts((base) => {
+          const regular = base.filter((p) => !p.id.startsWith("partner:") && !p.id.startsWith("professional:"));
+          const byId = new Map([...regular, ...extraProducts].map((p) => [p.id, p]));
+          return Array.from(byId.values());
+        });
+        setAllSections((base) => {
+          const regular = base.filter((s) => !s.id.startsWith("__partner") && !s.id.startsWith("__professional"));
+          return [
+            ...regular,
+            { id: "__partner_store", name: "Parceiros da loja" },
+            { id: "__professional_store", name: "Profissionais da loja" },
+          ];
+        });
+        setAllCategories((base) => {
+          const regular = base.filter((c) => !c.id.startsWith("__partner") && !c.id.startsWith("__professional"));
+          return [
+            ...regular,
+            { id: "__partner_products", name: "Produtos de parceiros", section_id: "__partner_store" },
+            { id: "__professional_products", name: "Produtos profissionais", section_id: "__professional_store" },
+          ];
+        });
         setLoading(false);
       }
     })();
