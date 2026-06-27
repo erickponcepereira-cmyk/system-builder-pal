@@ -75,7 +75,11 @@ function AdminDashboard() {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         buckets.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, 0);
       }
-      (txs6m.data || []).forEach((t) => {
+      const allMonthly: Array<{ paid_at: string | null; gross_amount: number | null; student_id?: string }> = [
+        ...((txs6m.data || []) as any[]),
+        ...(((ppo6m as any).data || []) as any[]),
+      ];
+      allMonthly.forEach((t) => {
         if (!t.paid_at) return;
         const d = new Date(t.paid_at);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
