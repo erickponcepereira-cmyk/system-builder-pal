@@ -6738,6 +6738,134 @@ export type Database = {
           },
         ]
       }
+      professor_blocked_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          product_id: string | null
+          profile_id: string
+          reason: string | null
+          released_at: string | null
+          slot_label: string | null
+          status: string
+          student_id: string | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          profile_id: string
+          reason?: string | null
+          released_at?: string | null
+          slot_label?: string | null
+          status?: string
+          student_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          profile_id?: string
+          reason?: string | null
+          released_at?: string | null
+          slot_label?: string | null
+          status?: string
+          student_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_blocked_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_blocked_entries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_blocked_entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_blocked_entries_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_blocked_entries_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professor_wallets: {
+        Row: {
+          available_balance: number
+          blocked_balance: number
+          created_at: string
+          id: string
+          profile_id: string
+          total_earned: number
+          total_released: number
+          total_withdrawn: number
+          updated_at: string
+        }
+        Insert: {
+          available_balance?: number
+          blocked_balance?: number
+          created_at?: string
+          id?: string
+          profile_id: string
+          total_earned?: number
+          total_released?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Update: {
+          available_balance?: number
+          blocked_balance?: number
+          created_at?: string
+          id?: string
+          profile_id?: string
+          total_earned?: number
+          total_released?: number
+          total_withdrawn?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_wallets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           admin_permissions: Json
@@ -9267,6 +9395,10 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      cancel_professor_blocked_entry: {
+        Args: { _entry_id: string; _notes?: string }
+        Returns: undefined
+      }
       coach_gets_product_free: {
         Args: { _coach_id: string; _product_id: string }
         Returns: boolean
@@ -9718,6 +9850,10 @@ export type Database = {
       release_due_commissions_cron: { Args: never; Returns: number }
       release_due_partner_product_wallets: { Args: never; Returns: number }
       release_nutritionist_blocked_entry: {
+        Args: { _entry_id: string; _notes?: string }
+        Returns: undefined
+      }
+      release_professor_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
