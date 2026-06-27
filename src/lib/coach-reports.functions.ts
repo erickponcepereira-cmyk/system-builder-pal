@@ -16,6 +16,8 @@ export type SaleRow = {
   quantity: number;
   amount: number;
   paid_at: string;
+  my_commission: number;
+  commission_levels: number[];
 };
 
 export type SalesReport = {
