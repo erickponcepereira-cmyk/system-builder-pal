@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X, Receipt, CreditCard, CheckCircle2, Users, RefreshCw } from "lucide-react";
+import { Loader2, Wallet, Network, Stethoscope, Shield, Package, ArrowRight, X, Receipt, CreditCard, CheckCircle2, Users, RefreshCw, Handshake, Briefcase, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
@@ -23,6 +23,12 @@ import {
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
 import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
 import { TestModeCard, TestModeBanner } from "@/components/admin/TestModeBanner";
+import {
+  listPartnerCreatorWallets,
+  listProfessionalCreatorWallets,
+  type CreatorWalletRow,
+} from "@/lib/creator-wallets.functions";
+import { listProfessorWallets, type ProfessorWalletRow } from "@/lib/professor.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/financeiro")({ component: AdminFinanceiro });
 
