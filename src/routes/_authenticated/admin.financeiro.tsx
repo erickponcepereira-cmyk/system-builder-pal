@@ -54,11 +54,26 @@ function AdminFinanceiro() {
   const [feesOpen, setFeesOpen] = useState<"tax" | "payment_fee" | null>(null);
   const [feesRows, setFeesRows] = useState<PendingFeeRow[] | null>(null);
 
+  const fetchPartnerW = useServerFn(listPartnerCreatorWallets);
+  const fetchProfessionalW = useServerFn(listProfessionalCreatorWallets);
+  const fetchProfessorW = useServerFn(listProfessorWallets);
+  const [partnerWallets, setPartnerWallets] = useState<CreatorWalletRow[]>([]);
+  const [professionalWallets, setProfessionalWallets] = useState<CreatorWalletRow[]>([]);
+  const [professorWallets, setProfessorWallets] = useState<ProfessorWalletRow[]>([]);
+  const [creatorOpen, setCreatorOpen] = useState<null | {
+    kind: "partner" | "professional" | "professor";
+    title: string;
+    link: string;
+  }>(null);
+
   const reload = () => {
     Promise.all([fetchOverview(), fetchHistory(), fetchFees()])
       .then(([ov, hi, fe]) => { setData(ov); setHistory(hi); setFees(fe); })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao carregar"))
       .finally(() => setLoading(false));
+    fetchPartnerW().then(setPartnerWallets).catch(() => {});
+    fetchProfessionalW().then(setProfessionalWallets).catch(() => {});
+    fetchProfessorW().then(setProfessorWallets).catch(() => {});
   };
 
   useEffect(() => { reload(); }, []);
