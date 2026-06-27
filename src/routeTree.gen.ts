@@ -69,6 +69,7 @@ import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPushNotificationsRouteImport } from './routes/_authenticated/admin.push-notifications'
 import { Route as AuthenticatedAdminProfessorWalletRouteImport } from './routes/_authenticated/admin.professor-wallet'
 import { Route as AuthenticatedAdminProfessionalsRouteImport } from './routes/_authenticated/admin.professionals'
+import { Route as AuthenticatedAdminProfessionalWalletRouteImport } from './routes/_authenticated/admin.professional-wallet'
 import { Route as AuthenticatedAdminProfessionalProductsRouteImport } from './routes/_authenticated/admin.professional-products'
 import { Route as AuthenticatedAdminProductsRouteImport } from './routes/_authenticated/admin.products'
 import { Route as AuthenticatedAdminProductOrdersRouteImport } from './routes/_authenticated/admin.product-orders'
@@ -443,6 +444,12 @@ const AuthenticatedAdminProfessionalsRoute =
     path: '/professionals',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminProfessionalWalletRoute =
+  AuthenticatedAdminProfessionalWalletRouteImport.update({
+    id: '/professional-wallet',
+    path: '/professional-wallet',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminProfessionalProductsRoute =
   AuthenticatedAdminProfessionalProductsRouteImport.update({
     id: '/professional-products',
@@ -742,6 +749,7 @@ export interface FileRoutesByFullPath {
   '/admin/product-orders': typeof AuthenticatedAdminProductOrdersRoute
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/professional-products': typeof AuthenticatedAdminProfessionalProductsRoute
+  '/admin/professional-wallet': typeof AuthenticatedAdminProfessionalWalletRoute
   '/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
   '/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
@@ -842,6 +850,7 @@ export interface FileRoutesByTo {
   '/admin/product-orders': typeof AuthenticatedAdminProductOrdersRoute
   '/admin/products': typeof AuthenticatedAdminProductsRoute
   '/admin/professional-products': typeof AuthenticatedAdminProfessionalProductsRoute
+  '/admin/professional-wallet': typeof AuthenticatedAdminProfessionalWalletRoute
   '/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
   '/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
@@ -946,6 +955,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/product-orders': typeof AuthenticatedAdminProductOrdersRoute
   '/_authenticated/admin/products': typeof AuthenticatedAdminProductsRoute
   '/_authenticated/admin/professional-products': typeof AuthenticatedAdminProfessionalProductsRoute
+  '/_authenticated/admin/professional-wallet': typeof AuthenticatedAdminProfessionalWalletRoute
   '/_authenticated/admin/professionals': typeof AuthenticatedAdminProfessionalsRoute
   '/_authenticated/admin/professor-wallet': typeof AuthenticatedAdminProfessorWalletRoute
   '/_authenticated/admin/push-notifications': typeof AuthenticatedAdminPushNotificationsRoute
@@ -1050,6 +1060,7 @@ export interface FileRouteTypes {
     | '/admin/product-orders'
     | '/admin/products'
     | '/admin/professional-products'
+    | '/admin/professional-wallet'
     | '/admin/professionals'
     | '/admin/professor-wallet'
     | '/admin/push-notifications'
@@ -1150,6 +1161,7 @@ export interface FileRouteTypes {
     | '/admin/product-orders'
     | '/admin/products'
     | '/admin/professional-products'
+    | '/admin/professional-wallet'
     | '/admin/professionals'
     | '/admin/professor-wallet'
     | '/admin/push-notifications'
@@ -1253,6 +1265,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/product-orders'
     | '/_authenticated/admin/products'
     | '/_authenticated/admin/professional-products'
+    | '/_authenticated/admin/professional-wallet'
     | '/_authenticated/admin/professionals'
     | '/_authenticated/admin/professor-wallet'
     | '/_authenticated/admin/push-notifications'
@@ -1750,6 +1763,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminProfessionalsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/professional-wallet': {
+      id: '/_authenticated/admin/professional-wallet'
+      path: '/professional-wallet'
+      fullPath: '/admin/professional-wallet'
+      preLoaderRoute: typeof AuthenticatedAdminProfessionalWalletRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/professional-products': {
       id: '/_authenticated/admin/professional-products'
       path: '/professional-products'
@@ -2087,6 +2107,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminProductOrdersRoute: typeof AuthenticatedAdminProductOrdersRoute
   AuthenticatedAdminProductsRoute: typeof AuthenticatedAdminProductsRoute
   AuthenticatedAdminProfessionalProductsRoute: typeof AuthenticatedAdminProfessionalProductsRoute
+  AuthenticatedAdminProfessionalWalletRoute: typeof AuthenticatedAdminProfessionalWalletRoute
   AuthenticatedAdminProfessionalsRoute: typeof AuthenticatedAdminProfessionalsRoute
   AuthenticatedAdminProfessorWalletRoute: typeof AuthenticatedAdminProfessorWalletRoute
   AuthenticatedAdminPushNotificationsRoute: typeof AuthenticatedAdminPushNotificationsRoute
@@ -2142,6 +2163,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminProductsRoute: AuthenticatedAdminProductsRoute,
   AuthenticatedAdminProfessionalProductsRoute:
     AuthenticatedAdminProfessionalProductsRoute,
+  AuthenticatedAdminProfessionalWalletRoute:
+    AuthenticatedAdminProfessionalWalletRoute,
   AuthenticatedAdminProfessionalsRoute: AuthenticatedAdminProfessionalsRoute,
   AuthenticatedAdminProfessorWalletRoute:
     AuthenticatedAdminProfessorWalletRoute,
