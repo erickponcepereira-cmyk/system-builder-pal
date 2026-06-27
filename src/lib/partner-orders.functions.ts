@@ -31,20 +31,34 @@ export const listPartnerProductOrders = createServerFn({ method: "POST" })
     let q = supabase
       .from("partner_product_orders" as never)
       .select(
-        "id,order_number,status,payment_method,gross_amount,system_fee,coach_commission_amount,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,paid_at,created_at,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name)),product:professional_products!partner_product_orders_professional_product_id_fkey(name),professional:coaches!partner_product_orders_professional_coach_id_fkey(specialty_key,profile:profiles!coaches_profile_id_fkey(name)),selling:coaches!partner_product_orders_selling_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never,
+        "id,order_number,status,payment_method,gross_amount,system_fee,coach_commission_amount,coach_net_amount,partner_net_amount,network_l1_amount,network_l2_amount,network_l3_amount,paid_at,created_at,partner_product_id,professional_product_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name)),professional:coaches!partner_product_orders_professional_coach_id_fkey(specialty_key,profile:profiles!coaches_profile_id_fkey(name)),selling:coaches!partner_product_orders_selling_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))" as never,
       )
       .order("created_at" as never, { ascending: false })
       .limit(500);
     if (data.status && data.status !== "all") q = q.eq("status" as never, data.status as never);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return ((rows as unknown as any[]) || []).map<PartnerOrderRow>((r) => ({
+    const rawRows = ((rows as unknown as any[]) || []);
+    const partnerProductIds = Array.from(new Set(rawRows.map((r) => r.partner_product_id).filter(Boolean))) as string[];
+    const professionalProductIds = Array.from(new Set(rawRows.map((r) => r.professional_product_id).filter(Boolean))) as string[];
+    const [partnerProductsRes, professionalProductsRes] = await Promise.all([
+      partnerProductIds.length
+        ? supabase.from("partner_products" as never).select("id,name" as never).in("id" as never, partnerProductIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+      professionalProductIds.length
+        ? supabase.from("professional_products" as never).select("id,name" as never).in("id" as never, professionalProductIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+    ]);
+    const productNameById = new Map<string, string>();
+    for (const p of (((partnerProductsRes as any).data || []) as Array<{ id: string; name: string }>)) productNameById.set(p.id, p.name);
+    for (const p of (((professionalProductsRes as any).data || []) as Array<{ id: string; name: string }>)) productNameById.set(p.id, p.name);
+    return rawRows.map<PartnerOrderRow>((r) => ({
       id: r.id,
       orderNumber: r.order_number,
       status: r.status,
       paymentMethod: r.payment_method,
       studentName: r.student?.profile?.name || null,
-      productName: r.product?.name || null,
+      productName: productNameById.get(r.partner_product_id || r.professional_product_id || "") || null,
       professionalName: r.professional?.profile?.name || null,
       sellingCoachName: r.selling?.profile?.name || null,
       specialty: r.professional?.specialty_key || null,
