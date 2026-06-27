@@ -6,13 +6,14 @@ export type StudentGroup = "aluno" | "aluno_coach" | "aluno_profissional" | "alu
 
 export type SaleRow = {
   id: string;
-  source: "transaction" | "store";
+  source: "transaction" | "store" | "partner" | "professional";
   student_id: string;
   student_name: string;
   student_email: string;
   student_group: StudentGroup;
   product_id: string | null;
   product_name: string;
+  product_kind?: "fitmind" | "partner" | "professional";
   quantity: number;
   amount: number;
   paid_at: string;
@@ -171,6 +172,42 @@ async function buildSalesReportForRange(
     });
   }
 
+  // Partner/professional orders (paid) — vendas normais feitas pelos seletores da loja.
+  const { data: partnerOrderData } = await supabaseAdmin
+    .from("partner_product_orders" as never)
+    .select("id,student_id,gross_amount,paid_at,partner_product_id,professional_product_id" as never)
+    .in("student_id" as never, studentIds as never)
+    .eq("status" as never, "paid" as never)
+    .not("paid_at" as never, "is" as never, null as never)
+    .gte("paid_at" as never, fromIso as never)
+    .lte("paid_at" as never, toIso as never);
+  type PPO = {
+    id: string;
+    student_id: string;
+    gross_amount: number;
+    paid_at: string;
+    partner_product_id: string | null;
+    professional_product_id: string | null;
+  };
+  const partnerOrders = (partnerOrderData as unknown as PPO[] | null) || [];
+  const partnerOrderIds = partnerOrders.map((o) => o.id);
+  const partnerProductIds = Array.from(new Set(partnerOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
+  const professionalProductIds = Array.from(new Set(partnerOrders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
+  const partnerProductMap = new Map<string, string>();
+  const professionalProductMap = new Map<string, string>();
+  if (partnerProductIds.length || professionalProductIds.length) {
+    const [partnerProductsRes, professionalProductsRes] = await Promise.all([
+      partnerProductIds.length
+        ? supabaseAdmin.from("partner_products" as never).select("id,name" as never).in("id" as never, partnerProductIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+      professionalProductIds.length
+        ? supabaseAdmin.from("professional_products" as never).select("id,name" as never).in("id" as never, professionalProductIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+    ]);
+    ((partnerProductsRes.data as unknown as Array<{ id: string; name: string }> | null) || []).forEach((p) => partnerProductMap.set(p.id, p.name));
+    ((professionalProductsRes.data as unknown as Array<{ id: string; name: string }> | null) || []).forEach((p) => professionalProductMap.set(p.id, p.name));
+  }
+
   // Commissions for this coach on these sales
   // For transactions: commission.transaction_id == tx.id
   // For store orders: there's a "mirror" tx with metadata.store_order_id; lookup its id.
@@ -205,6 +242,21 @@ async function buildSalesReportForRange(
     });
   }
 
+  const commByPartnerOrder = new Map<string, { amount: number; levels: number[] }>();
+  if (partnerOrderIds.length) {
+    const { data: comms } = await supabaseAdmin
+      .from("commissions")
+      .select("amount, level, partner_order_id")
+      .eq("beneficiary_coach_id", coachId)
+      .in("partner_order_id", partnerOrderIds);
+    ((comms as Array<{ amount: number; level: number; partner_order_id: string }> | null) || []).forEach((c) => {
+      const cur = commByPartnerOrder.get(c.partner_order_id) || { amount: 0, levels: [] };
+      cur.amount += Number(c.amount) || 0;
+      if (!cur.levels.includes(c.level)) cur.levels.push(c.level);
+      commByPartnerOrder.set(c.partner_order_id, cur);
+    });
+  }
+
   // Build unified rows
   const rows: SaleRow[] = [];
   for (const t of txs) {
@@ -219,6 +271,7 @@ async function buildSalesReportForRange(
       student_group: studentGroup.get(t.student_id) || "aluno",
       product_id: t.product_id,
       product_name: t.product_id ? (productMap.get(t.product_id) || "Produto") : "Produto",
+      product_kind: "fitmind",
       quantity: 1,
       amount: Number(t.gross_amount) || 0,
       paid_at: t.paid_at,
@@ -243,6 +296,7 @@ async function buildSalesReportForRange(
       student_group: studentGroup.get(o.student_id) || "aluno",
       product_id: its[0]?.product_id || null,
       product_name: label,
+      product_kind: "fitmind",
       quantity: totalQty,
       amount: Number(o.total_amount) || 0,
       paid_at: o.updated_at,
@@ -250,6 +304,34 @@ async function buildSalesReportForRange(
       commission_levels: comm.levels.sort((a, b) => a - b),
     });
 
+  }
+
+  for (const o of partnerOrders) {
+    const sp = studentMap.get(o.student_id);
+    const isPartnerProduct = !!o.partner_product_id;
+    const productId = o.partner_product_id || o.professional_product_id || null;
+    const productName = o.partner_product_id
+      ? (partnerProductMap.get(o.partner_product_id) || "Produto de parceiro")
+      : o.professional_product_id
+        ? (professionalProductMap.get(o.professional_product_id) || "Produto profissional")
+        : "Produto de parceiro/profissional";
+    const comm = commByPartnerOrder.get(o.id) || { amount: 0, levels: [] };
+    rows.push({
+      id: o.id,
+      source: isPartnerProduct ? "partner" : "professional",
+      student_id: o.student_id,
+      student_name: sp?.name || "—",
+      student_email: sp?.email || "",
+      student_group: studentGroup.get(o.student_id) || "aluno",
+      product_id: productId,
+      product_name: productName,
+      product_kind: isPartnerProduct ? "partner" : "professional",
+      quantity: 1,
+      amount: Number(o.gross_amount) || 0,
+      paid_at: o.paid_at,
+      my_commission: comm.amount,
+      commission_levels: comm.levels.sort((a, b) => a - b),
+    });
   }
 
   rows.sort((a, b) => b.paid_at.localeCompare(a.paid_at));
