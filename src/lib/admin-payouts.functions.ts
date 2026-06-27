@@ -641,19 +641,6 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       return byStudent || (po.buyer_name || po.buyer_email ? { name: po.buyer_name ?? null, email: po.buyer_email ?? null } : null);
     };
 
-    const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
-      id: o.id,
-      date: o.paid_at || o.created_at,
-      amount: n(o.gross_amount),
-      status: o.status,
-      product: partnerOrderProductName(o),
-      student: partnerOrderStudent(o)?.name ?? null,
-      tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
-      creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
-    }));
-    sales = [...sales, ...ppoSales]
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-      .slice(0, 200);
 
     // Fallback absoluto: se o join por IDs falhar, usa os campos desnormalizados do próprio pedido.
     const partnerOrdersNeedingFallback = Array.from(partnerOrdersById.values()).filter((po) =>
@@ -670,6 +657,20 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         if (prev) partnerOrdersById.set(row.id, { ...prev, buyer_name: row.buyer_name, buyer_email: row.buyer_email, product_name: row.product_name });
       }
     }
+
+    const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
+      id: o.id,
+      date: o.paid_at || o.created_at,
+      amount: n(o.gross_amount),
+      status: o.status,
+      product: partnerOrderProductName(o),
+      student: partnerOrderStudent(o)?.name ?? null,
+      tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
+      creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
+    }));
+    sales = [...sales, ...ppoSales]
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+      .slice(0, 200);
 
     const commissions = commsBase.map((c) => {
       const t = c.transaction_id ? txMap.get(c.transaction_id) : null;
