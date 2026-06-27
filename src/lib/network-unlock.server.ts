@@ -194,9 +194,8 @@ export async function computeMonthlySnapshot(profileId: string, year: number, mo
         .select("id" as never)
         .in(column as never, values as never)
         .eq("status" as never, "paid" as never)
-        .not("paid_at" as never, "is" as never, null as never)
-        .gte("paid_at" as never, startIso as never)
-        .lt("paid_at" as never, endIso as never);
+        .gte("created_at" as never, startIso as never)
+        .lt("created_at" as never, endIso as never);
       ((rows as unknown as Array<{ id: string }>) || []).forEach((o) => partnerOrderIds.add(o.id));
     };
     await Promise.all([
