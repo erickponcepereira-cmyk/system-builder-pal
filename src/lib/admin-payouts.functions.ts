@@ -492,7 +492,6 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
-      buyer_name?: string | null; buyer_email?: string | null; product_name?: string | null;
     }> = [];
     const addPartnerOrders = async (column: "partner_id" | "professional_coach_id" | "selling_coach_id", value: string | null) => {
       if (!value) return;
@@ -585,11 +584,12 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       const txStudentId = t.student_id || storeOrder?.student_id || null;
       if (txStudentId) studentIdsSet.add(txStudentId);
       const pid = t.product_id;
-      const ptype = (t.purchase_type || "").toLowerCase();
       if (pid) {
-        if (ptype.includes("store")) storeProductIdsSet.add(pid);
-        else if (ptype.includes("digital")) digitalProductIdsSet.add(pid);
-        else productIdsSet.add(pid);
+        // O mesmo product_id pode chegar de checkout da loja como products, store_products ou digital_products.
+        // Busca nas três tabelas para nunca deixar Produto como "—".
+        productIdsSet.add(pid);
+        storeProductIdsSet.add(pid);
+        digitalProductIdsSet.add(pid);
       }
       for (const extra of (t.product_ids || [])) {
         if (extra) productIdsSet.add(extra);
@@ -634,29 +634,9 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
 
     const partnerOrderProductName = (po: typeof partnerOrderRows[number]) => {
       const id = po.partner_product_id || po.professional_product_id || "";
-      return po.product_name || prodNameById.get(id) || null;
+      return prodNameById.get(id) || null;
     };
-    const partnerOrderStudent = (po: typeof partnerOrderRows[number]) => {
-      const byStudent = po.student_id ? stuNameById.get(po.student_id) || null : null;
-      return byStudent || (po.buyer_name || po.buyer_email ? { name: po.buyer_name ?? null, email: po.buyer_email ?? null } : null);
-    };
-
-
-    // Fallback absoluto: se o join por IDs falhar, usa os campos desnormalizados do próprio pedido.
-    const partnerOrdersNeedingFallback = Array.from(partnerOrdersById.values()).filter((po) =>
-      (!partnerOrderProductName(po) || !partnerOrderStudent(po)) && po.id
-    );
-    if (partnerOrdersNeedingFallback.length) {
-      const ids = partnerOrdersNeedingFallback.map((po) => po.id);
-      const { data: fallbackRows } = await supabaseAdmin
-        .from("partner_product_orders" as never)
-        .select("id,buyer_name,buyer_email,product_name" as never)
-        .in("id" as never, ids as never);
-      for (const row of (((fallbackRows as unknown as Array<{ id: string; buyer_name: string | null; buyer_email: string | null; product_name: string | null }>) || []))) {
-        const prev = partnerOrdersById.get(row.id);
-        if (prev) partnerOrdersById.set(row.id, { ...prev, buyer_name: row.buyer_name, buyer_email: row.buyer_email, product_name: row.product_name });
-      }
-    }
+    const partnerOrderStudent = (po: typeof partnerOrderRows[number]) => po.student_id ? stuNameById.get(po.student_id) || null : null;
 
     const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
       id: o.id,
