@@ -251,6 +251,8 @@ function AdminFinanceiro() {
           <div className="space-y-2 text-sm">
             <ShortcutLink to="/admin/payments" label="Solicitações de saque (coaches + alunos)" />
             <ShortcutLink to="/admin/nutritionist-wallet" label="Carteira do nutricionista" />
+            <ShortcutLink to="/admin/partner-wallet" label="Carteira do parceiro" />
+            <ShortcutLink to="/admin/professional-wallet" label="Carteira do profissional" />
             <ShortcutLink to="/admin/professor-wallet" label="Carteira do professor" />
             <ShortcutLink to="/admin/product-orders" label="Painel de pedidos / custos" />
           </div>
