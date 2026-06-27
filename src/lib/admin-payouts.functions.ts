@@ -539,14 +539,33 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       const { data: rows } = await q;
       ((rows as unknown as typeof partnerOrderRows) || []).forEach((r) => partnerOrdersById.set(r.id, r));
     }
-    const txMap = new Map<string, { student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; product_ids: string[] | null }>();
+    const txMap = new Map<string, { student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; product_ids: string[] | null; store_order_id: string | null }>();
     if (txIds.length) {
       const { data: txs } = await supabaseAdmin
         .from("transactions")
-        .select("id,student_id,product_id,purchase_type,paid_at,created_at")
+        .select("id,student_id,product_id,purchase_type,paid_at,created_at,metadata")
         .in("id", txIds);
-      for (const t of ((txs as Array<{ id: string; student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null }>) || [])) {
-        txMap.set(t.id, { ...t, product_ids: null });
+      for (const t of ((txs as Array<{ id: string; student_id: string | null; product_id: string | null; purchase_type: string | null; paid_at: string | null; created_at: string | null; metadata?: any }>) || [])) {
+        const meta = (t.metadata || {}) as Record<string, unknown>;
+        const storeOrderId = typeof meta.store_order_id === "string" ? meta.store_order_id : null;
+        txMap.set(t.id, { ...t, product_ids: null, store_order_id: storeOrderId });
+      }
+    }
+
+    const storeOrderIds = Array.from(new Set(Array.from(txMap.values()).map((t) => t.store_order_id).filter(Boolean) as string[]));
+    const storeOrderMap = new Map<string, { student_id: string | null; productNames: string[] }>();
+    if (storeOrderIds.length) {
+      const [ordersRes, itemsRes] = await Promise.all([
+        supabaseAdmin.from("store_orders" as never).select("id,student_id" as never).in("id" as never, storeOrderIds as never),
+        supabaseAdmin.from("store_order_items" as never).select("order_id,title" as never).in("order_id" as never, storeOrderIds as never),
+      ]);
+      for (const o of (((ordersRes as any).data || []) as Array<{ id: string; student_id: string | null }>)) {
+        storeOrderMap.set(o.id, { student_id: o.student_id, productNames: [] });
+      }
+      for (const item of (((itemsRes as any).data || []) as Array<{ order_id: string; title: string | null }>)) {
+        const curr = storeOrderMap.get(item.order_id) || { student_id: null, productNames: [] };
+        if (item.title) curr.productNames.push(item.title);
+        storeOrderMap.set(item.order_id, curr);
       }
     }
 
@@ -557,7 +576,9 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const partnerProductIdsSet = new Set<string>();
     const professionalProductIdsSet = new Set<string>();
     for (const t of txMap.values()) {
-      if (t.student_id) studentIdsSet.add(t.student_id);
+      const storeOrder = t.store_order_id ? storeOrderMap.get(t.store_order_id) : null;
+      const txStudentId = t.student_id || storeOrder?.student_id || null;
+      if (txStudentId) studentIdsSet.add(txStudentId);
       const pid = t.product_id;
       const ptype = (t.purchase_type || "").toLowerCase();
       if (pid) {
@@ -629,12 +650,15 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     const commissions = commsBase.map((c) => {
       const t = c.transaction_id ? txMap.get(c.transaction_id) : null;
       const po = c.partner_order_id ? partnerOrdersById.get(c.partner_order_id) : null;
-      const stu = t?.student_id ? stuNameById.get(t.student_id) : null;
+      const storeOrder = t?.store_order_id ? storeOrderMap.get(t.store_order_id) : null;
+      const txStudentId = t?.student_id || storeOrder?.student_id || null;
+      const stu = txStudentId ? stuNameById.get(txStudentId) : null;
       let productName: string | null = null;
       if (t?.product_id) productName = prodNameById.get(t.product_id) || null;
       if (!productName && t?.product_ids?.length) {
         productName = t.product_ids.map((id) => prodNameById.get(id)).filter(Boolean).join(", ") || null;
       }
+      if (!productName && storeOrder?.productNames?.length) productName = storeOrder.productNames.join(", ");
       const poStudent = po ? partnerOrderStudent(po) : null;
       if (!productName && po) productName = partnerOrderProductName(po);
       return {
