@@ -105,7 +105,11 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
 
 
     return rows.map((r: any) => {
-      const coachId = r.student_id ? sCoachMap.get(r.student_id) ?? null : null;
+      // Prefer the actual seller-coach from partner_product_orders (matches "vendido por"),
+      // fall back to the student's titular coach.
+      const coachId =
+        (r.transaction_id ? txCoachMap.get(r.transaction_id) : null) ??
+        (r.student_id ? sCoachMap.get(r.student_id) ?? null : null);
       return {
         id: r.id,
         transaction_id: r.transaction_id,
