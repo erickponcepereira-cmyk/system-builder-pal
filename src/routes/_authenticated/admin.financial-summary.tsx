@@ -91,6 +91,14 @@ function FinancialSummaryPage() {
             extra={`Bloqueado: ${brl(data.nutritionistTotal.blocked)}`}
             href="/admin/nutritionist-wallet"
           />
+          <Card
+            icon={GraduationCap}
+            title={`Professores (${data.professorTotal.count})`}
+            available={data.professorTotal.available}
+            earned={data.professorTotal.totalEarned}
+            extra={`Bloqueado: ${brl(data.professorTotal.blocked)}`}
+            href="/admin/professor-wallet"
+          />
         </div>
       </section>
 
