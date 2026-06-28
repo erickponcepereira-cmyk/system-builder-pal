@@ -1,0 +1,1 @@
+ALTER TYPE public.value_destination_type ADD VALUE IF NOT EXISTS 'professor_blocked';
