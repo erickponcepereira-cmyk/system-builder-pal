@@ -486,7 +486,10 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                   } else if (c.status === "cancelled") { label = "Cancelada"; }
                   return [
                     c.date ? new Date(c.date).toLocaleString("pt-BR") : "—",
-                    c.studentName || "—",
+                    <span key="st" className="inline-flex items-center gap-2 flex-wrap">
+                      <span>{c.studentName || "—"}</span>
+                      {c.isMasterCoachSale && <MasterCoachBadge masterCoachName={c.masterCoachName} compact />}
+                    </span>,
                     c.productName || (c.purchaseType || "—"),
                     c.isReferral ? "Indicação" : (c.level !== null ? `L${c.level}` : "—"),
                     <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${color}`}>{label}</span>,
