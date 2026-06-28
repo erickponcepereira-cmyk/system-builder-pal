@@ -130,13 +130,19 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     let adminDebits = 0;
     let nutriAdminCredits = 0;
     let nutriAdminDebits = 0;
+    let profAdminCredits = 0;
+    let profAdminDebits = 0;
     ((adminEntries.data as any[]) || []).forEach((entry) => {
       const slot = String(entry?.slot_label || "").toLowerCase();
       const amount = Number(entry?.amount || 0);
       const isNutritionist = slot.includes("nutricion");
+      const isProfessor = slot.includes("professor");
       if (isNutritionist) {
         if (entry?.kind === "debit") nutriAdminDebits += amount;
         else nutriAdminCredits += amount;
+      } else if (isProfessor) {
+        if (entry?.kind === "debit") profAdminDebits += amount;
+        else profAdminCredits += amount;
       } else if (!slot.includes("taxa de pagamento") && !slot.includes("imposto")) {
         if (entry?.kind === "debit") adminDebits += amount;
         else adminCredits += amount;
@@ -144,8 +150,10 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     });
     const adminAvailable = Math.max(0, adminCredits - adminDebits);
     const nutriAdminAvailable = Math.max(0, nutriAdminCredits - nutriAdminDebits);
+    const profAdminAvailable = Math.max(0, profAdminCredits - profAdminDebits);
     const nutritionistRows = (nw.data as any[]) || [];
     const hasUnassignedNutritionist = nutriAdminCredits > 0 || nutriAdminDebits > 0;
+    const hasUnassignedProfessor = profAdminCredits > 0 || profAdminDebits > 0;
     return {
       adminWallet: {
         available: adminAvailable,
