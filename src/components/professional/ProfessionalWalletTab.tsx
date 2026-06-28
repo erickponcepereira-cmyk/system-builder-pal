@@ -4,6 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getClientCutoffIso } from "@/lib/test-mode";
+import { SaleChannelBadge, type SaleChannel } from "@/components/ui/SaleChannelBadge";
+
+function statusStyle(status: string) {
+  const s = (status || "").toLowerCase();
+  if (s === "paid" || s === "approved" || s === "completed")
+    return { value: "text-emerald-400", label: "text-emerald-400" };
+  if (s === "pending" || s === "requested" || s === "in_process" || s === "processing")
+    return { value: "text-amber-400", label: "text-amber-400" };
+  if (s === "rejected" || s === "refused" || s === "failed" || s === "cancelled" || s === "canceled" || s === "refunded" || s === "charged_back")
+    return { value: "text-red-400", label: "text-red-400" };
+  return { value: "text-white/70", label: "text-white/60" };
+}
 
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -26,6 +38,12 @@ type OrderRow = {
   payment_method: string;
   paid_at: string | null;
   created_at: string;
+  student_id: string | null;
+  partner_product_id: string | null;
+  professional_product_id: string | null;
+  sale_channel: SaleChannel;
+  student_name?: string | null;
+  product_name?: string | null;
 };
 
 type WithdrawRow = {
@@ -68,7 +86,7 @@ export function ProfessionalWalletTab() {
 
     let ordersQ = supabase
       .from("partner_product_orders")
-      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at")
+      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id,sale_channel")
       .eq("professional_coach_id", coach.id)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -92,27 +110,25 @@ export function ProfessionalWalletTab() {
       withdrawsQ,
     ]);
 
-    const orders = (ordersRes.data as OrderRow[]) || [];
-    const withdraws = (withdrawsRes.data as WithdrawRow[]) || [];
+    const baseOrders = (ordersRes.data as OrderRow[]) || [];
+    const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
 
     let walletRow = (walletRes.data as unknown as WalletRow | null) || {
       available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
     };
 
-    // Test Mode ativo: recomputa totais a partir das vendas/saques após o marco
     if (cutoff) {
       let avail = 0, pending = 0, earned = 0;
-      for (const o of orders) {
+      for (const o of baseOrders) {
         const net = Number(o.partner_net_amount || 0);
         if (o.status === "paid") {
           earned += net;
-          // libera após 7 dias do paid_at
           const paid = o.paid_at ? new Date(o.paid_at).getTime() : 0;
           if (paid && Date.now() - paid >= 7 * 24 * 3600 * 1000) avail += net;
           else pending += net;
         }
       }
-      const withdrawn = withdraws
+      const withdrawn = withdrawsList
         .filter((w) => w.status === "paid")
         .reduce((s, w) => s + Number(w.amount || 0), 0);
       walletRow = {
@@ -122,10 +138,38 @@ export function ProfessionalWalletTab() {
         total_withdrawn: withdrawn,
       };
     }
-
     setWallet(walletRow);
-    setOrders(orders);
-    setWithdraws(withdraws);
+
+    // Resolve student names + product names
+    const studentIds = Array.from(new Set(baseOrders.map((o) => o.student_id).filter(Boolean))) as string[];
+    const partnerProductIds = Array.from(new Set(baseOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
+    const professionalProductIds = Array.from(new Set(baseOrders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
+    const [studentsRes, ppRes, profProdRes] = await Promise.all([
+      studentIds.length
+        ? supabase.from("students").select("id, profiles(name)").in("id", studentIds)
+        : Promise.resolve({ data: [] as any[] }),
+      partnerProductIds.length
+        ? supabase.from("partner_products" as never).select("id, name" as never).in("id" as never, partnerProductIds as never)
+        : Promise.resolve({ data: [] as any[] }),
+      professionalProductIds.length
+        ? supabase.from("professional_products" as never).select("id, name" as never).in("id" as never, professionalProductIds as never)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const sMap = new Map<string, string>();
+    ((studentsRes.data as any[]) || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
+    const pMap = new Map<string, string>();
+    ((ppRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+    ((profProdRes.data as any[]) || []).forEach((p: any) => pMap.set(p.id, p.name));
+    const enriched = baseOrders.map((o) => ({
+      ...o,
+      student_name: o.student_id ? sMap.get(o.student_id) || null : null,
+      product_name:
+        (o.professional_product_id ? pMap.get(o.professional_product_id) : null) ||
+        (o.partner_product_id ? pMap.get(o.partner_product_id) : null) ||
+        null,
+    }));
+    setOrders(enriched);
+    setWithdraws(withdrawsList);
     setLoading(false);
   }
 
@@ -202,20 +246,31 @@ export function ProfessionalWalletTab() {
           <p className="text-sm text-white/40">Nenhuma venda registrada.</p>
         ) : (
           <div className="space-y-2">
-            {orders.map((o) => (
-              <div key={o.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-                <div>
-                  <p className="text-sm font-semibold text-white">{o.order_number}</p>
-                  <p className="text-[11px] text-white/40">
-                    {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · {o.status}
-                  </p>
+            {orders.map((o) => {
+              const st = statusStyle(o.status);
+              return (
+                <div key={o.id} className="flex items-start justify-between rounded-lg bg-white/5 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {o.product_name || o.order_number}
+                      </p>
+                      <SaleChannelBadge channel={o.sale_channel} compact />
+                    </div>
+                    <p className="text-[11px] text-white/60 truncate">
+                      Cliente: {o.student_name || "—"}
+                    </p>
+                    <p className="text-[11px] text-white/40">
+                      {o.order_number} · {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · <span className={`font-semibold ${st.label}`}>{o.status}</span>
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 ml-3">
+                    <p className={`text-sm font-bold ${st.value}`}>{brl(o.partner_net_amount)}</p>
+                    <p className="text-[11px] text-white/40">bruto {brl(o.gross_amount)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-success">{brl(o.partner_net_amount)}</p>
-                  <p className="text-[11px] text-white/40">bruto {brl(o.gross_amount)}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -226,16 +281,19 @@ export function ProfessionalWalletTab() {
           <p className="text-sm text-white/40">Nenhum saque solicitado ainda.</p>
         ) : (
           <div className="space-y-2">
-            {withdraws.map((wr) => (
-              <div key={wr.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-                <div>
-                  <p className="text-sm text-white">{brl(wr.amount)}</p>
-                  <p className="text-[11px] text-white/40">
-                    {new Date(wr.requested_at).toLocaleDateString("pt-BR")} · {wr.status}
-                  </p>
+            {withdraws.map((wr) => {
+              const st = statusStyle(wr.status);
+              return (
+                <div key={wr.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
+                  <div>
+                    <p className="text-sm text-white">{brl(wr.amount)}</p>
+                    <p className="text-[11px] text-white/40">
+                      {new Date(wr.requested_at).toLocaleDateString("pt-BR")} · <span className={`font-semibold ${st.label}`}>{wr.status}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
