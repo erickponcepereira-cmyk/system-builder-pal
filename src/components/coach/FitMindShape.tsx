@@ -285,6 +285,9 @@ export interface FitMindShapeProps {
     client: FitMindClient,
   ) => Promise<FitMindClient | void>;
   onSearchClients?: (query: string) => Promise<FitMindClient[]>;
+  // Lazy-load heavy assessment fields (photos / segments / notes) for a single client.
+  // List view receives lightweight summaries; full payload is only fetched on open.
+  onLoadFullAssessments?: (clientId: string) => Promise<FitMindAssessment[]>;
   onCreateGoogleCalendarEvent?: (
     date: string,
     time: string,
