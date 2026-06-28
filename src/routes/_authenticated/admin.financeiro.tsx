@@ -68,6 +68,30 @@ function AdminFinanceiro() {
     title: string;
     link: string;
   }>(null);
+  const fetchPartnerE = useServerFn(listPartnerCreatorEntries);
+  const fetchProfessionalE = useServerFn(listProfessionalCreatorEntries);
+  const fetchProfessorE = useServerFn(listProfessorBlockedEntries);
+  const [creatorEntries, setCreatorEntries] = useState<CreatorEntryLike[] | null>(null);
+
+  useEffect(() => {
+    if (!creatorOpen) { setCreatorEntries(null); return; }
+    setCreatorEntries(null);
+    const load = async () => {
+      try {
+        if (creatorOpen.kind === "partner") {
+          const rows = await fetchPartnerE();
+          setCreatorEntries(rows.map(mapCreatorEntry));
+        } else if (creatorOpen.kind === "professional") {
+          const rows = await fetchProfessionalE();
+          setCreatorEntries(rows.map(mapCreatorEntry));
+        } else {
+          const rows = await fetchProfessorE({ data: { status: "all" } });
+          setCreatorEntries(rows.map(mapProfessorEntry));
+        }
+      } catch { setCreatorEntries([]); }
+    };
+    load();
+  }, [creatorOpen]);
 
   const reload = () => {
     Promise.all([fetchOverview(), fetchHistory(), fetchFees()])
