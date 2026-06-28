@@ -370,6 +370,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onCreateClient,
   onUpdateClient,
   onSearchClients,
+  onLoadFullAssessments,
   onCreateGoogleCalendarEvent,
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
