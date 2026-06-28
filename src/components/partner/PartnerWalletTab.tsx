@@ -108,10 +108,35 @@ export function PartnerWalletTab() {
       withdrawsQ,
     ]);
 
-    setWallet(((walletRes.data as unknown as WalletRow | null)) || {
+    let walletRow = ((walletRes.data as unknown as WalletRow | null)) || {
       available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
-    });
+    };
     const baseOrders = (ordersRes.data as OrderRow[]) || [];
+    const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
+
+    if (cutoff) {
+      let avail = 0, pending = 0, earned = 0;
+      for (const o of baseOrders) {
+        const net = Number(o.partner_net_amount || 0);
+        if (o.status === "paid") {
+          earned += net;
+          const paid = o.paid_at ? new Date(o.paid_at).getTime() : 0;
+          if (paid && Date.now() - paid >= 7 * 24 * 3600 * 1000) avail += net;
+          else pending += net;
+        }
+      }
+      const withdrawn = withdrawsList
+        .filter((w) => w.status === "paid")
+        .reduce((s, w) => s + Number(w.amount || 0), 0);
+      walletRow = {
+        available_balance: Math.max(0, avail - withdrawn),
+        pending_balance: pending,
+        total_earned: earned,
+        total_withdrawn: withdrawn,
+      };
+    }
+    setWallet(walletRow);
+
     // Resolve student names + product names
     const studentIds = Array.from(new Set(baseOrders.map((o) => o.student_id).filter(Boolean))) as string[];
     const partnerProductIds = Array.from(new Set(baseOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
@@ -141,7 +166,7 @@ export function PartnerWalletTab() {
         null,
     }));
     setOrders(enriched);
-    setWithdraws((withdrawsRes.data as WithdrawRow[]) || []);
+    setWithdraws(withdrawsList);
     setLoading(false);
   }
 
