@@ -715,16 +715,43 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       return byId || po.student?.profile || null;
     };
 
-    const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
-      id: o.id,
-      date: o.paid_at || o.created_at,
-      amount: n(o.gross_amount),
-      status: o.status,
-      product: partnerOrderProductName(o),
-      student: partnerOrderStudent(o)?.name ?? null,
-      tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
-      creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
-    }));
+    // Resolver nomes de Master Coach beneficiários (vendas cross-network)
+    const masterCoachIds = Array.from(new Set(
+      Array.from(partnerOrdersById.values())
+        .map((o) => o.master_coach_cross_beneficiary_coach_id)
+        .filter(Boolean) as string[]
+    ));
+    const masterCoachNameById = new Map<string, string>();
+    if (masterCoachIds.length) {
+      const { data: mcRows } = await supabaseAdmin
+        .from("coaches")
+        .select("id, profiles!coaches_profile_id_fkey(name)")
+        .in("id", masterCoachIds);
+      for (const c of ((mcRows as any[]) || [])) {
+        masterCoachNameById.set(c.id, c.profiles?.name || "—");
+      }
+    }
+    const mcInfoForOrder = (o: typeof partnerOrderRows[number]) => {
+      const mcId = o.master_coach_cross_beneficiary_coach_id || null;
+      if (!mcId) return { isMasterCoachSale: false, masterCoachName: null as string | null };
+      return { isMasterCoachSale: true, masterCoachName: masterCoachNameById.get(mcId) || null };
+    };
+
+    const ppoSales = Array.from(partnerOrdersById.values()).map((o) => {
+      const mc = mcInfoForOrder(o);
+      return {
+        id: o.id,
+        date: o.paid_at || o.created_at,
+        amount: n(o.gross_amount),
+        status: o.status,
+        product: partnerOrderProductName(o),
+        student: partnerOrderStudent(o)?.name ?? null,
+        tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
+        creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
+        isMasterCoachSale: mc.isMasterCoachSale,
+        masterCoachName: mc.masterCoachName,
+      };
+    });
     sales = [...sales, ...ppoSales]
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .slice(0, 200);
@@ -743,6 +770,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (!productName && storeOrder?.productNames?.length) productName = storeOrder.productNames.join(", ");
       const poStudent = po ? partnerOrderStudent(po) : null;
       if (!productName && po) productName = partnerOrderProductName(po);
+      const mc = po ? mcInfoForOrder(po) : { isMasterCoachSale: false, masterCoachName: null as string | null };
       return {
         id: c.id,
         date: c.created_at,
@@ -759,6 +787,8 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         transactionDate: t?.paid_at ?? t?.created_at ?? po?.paid_at ?? po?.created_at ?? null,
         availableAt: c.available_at,
         slotLabel: c.slot_label,
+        isMasterCoachSale: mc.isMasterCoachSale,
+        masterCoachName: mc.masterCoachName,
       };
     });
 
@@ -769,6 +799,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
         const released = availableAt <= nowMs;
         const poStudent = partnerOrderStudent(o);
+        const mc = mcInfoForOrder(o);
         return {
           id: o.id,
           date: o.paid_at || o.created_at,
@@ -779,6 +810,8 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
           studentEmail: poStudent?.email ?? null,
           productName: partnerOrderProductName(o),
           sourceLabel: "Produto criado",
+          isMasterCoachSale: mc.isMasterCoachSale,
+          masterCoachName: mc.masterCoachName,
         };
       });
 
