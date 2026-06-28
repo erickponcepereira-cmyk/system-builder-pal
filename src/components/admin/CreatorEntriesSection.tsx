@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import type { CreatorEntryRow } from "@/lib/creator-wallets.functions";
+import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
 
 const money = (v: number) =>
   `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -30,6 +31,7 @@ export function CreatorEntriesSection({
                 <th className="p-3 text-left">{ownerLabel}</th>
                 <th className="p-3 text-left">Aluno</th>
                 <th className="p-3 text-left">Produto</th>
+                <th className="p-3 text-left">Canal</th>
                 <th className="p-3 text-right">Bruto</th>
                 <th className="p-3 text-right">Líquido</th>
                 <th className="p-3 text-left">Pago em</th>
@@ -42,6 +44,7 @@ export function CreatorEntriesSection({
                   <td className="p-3 text-white">{e.owner_name}</td>
                   <td className="p-3 text-white/80">{e.student_name || "—"}</td>
                   <td className="p-3 text-white/80">{e.product_name || "—"}</td>
+                  <td className="p-3"><SaleChannelBadge channel={e.sale_channel} compact /></td>
                   <td className="p-3 text-right text-white/60">{money(e.gross_amount)}</td>
                   <td className="p-3 text-right text-emerald-300">{money(e.net_amount)}</td>
                   <td className="p-3 text-xs text-white/50">

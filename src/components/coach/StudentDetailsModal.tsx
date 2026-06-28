@@ -10,6 +10,7 @@ import { WindowMethod } from "@/components/student/WindowMethod";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 import StudentWorkoutsPanel from "@/components/coach/StudentWorkoutsPanel";
 import { ProtectedImage } from "@/components/security/ProtectedImage";
+import { StudentPurchaseHistory } from "@/components/student/StudentPurchaseHistory";
 
 type Tab = "resumo" | "frequencia" | "avaliacoes" | "anamnese" | "evolucao" | "compras" | "janelas" | "treinos";
 
@@ -557,7 +558,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               <WaterHistoryPanel history={waterHistory} goalMl={waterGoalMl} />
             </div>
           ) : (
-            <PurchasesTab txs={txs} />
+            <StudentPurchaseHistory studentId={studentId} />
           )}
         </div>
       </div>

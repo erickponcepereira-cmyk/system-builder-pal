@@ -37,6 +37,7 @@ export type CreatorEntryRow = {
   payment_method: string | null;
   created_at: string;
   paid_at: string | null;
+  sale_channel: "store" | "coach" | null;
 };
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -168,7 +169,7 @@ async function listEntriesByOwner(opts: {
   const cutoff = await getServerCutoffIso();
   let q = (supabaseAdmin as any)
     .from("partner_product_orders")
-    .select(`id, order_number, status, gross_amount, partner_net_amount, payment_method, paid_at, created_at, student_id, partner_product_id, professional_product_id, ${opts.ownerCol}`)
+    .select(`id, order_number, status, gross_amount, partner_net_amount, payment_method, paid_at, created_at, student_id, partner_product_id, professional_product_id, sale_channel, ${opts.ownerCol}`)
     .eq("status", "paid")
     .not(opts.ownerCol, "is", null)
     .order("created_at", { ascending: false })
@@ -231,6 +232,7 @@ async function listEntriesByOwner(opts: {
     payment_method: r.payment_method || null,
     created_at: r.created_at,
     paid_at: r.paid_at,
+    sale_channel: (r.sale_channel === "coach" || r.sale_channel === "store") ? r.sale_channel : null,
   }));
 }
 

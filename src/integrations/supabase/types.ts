@@ -4936,6 +4936,7 @@ export type Database = {
           payment_method: string
           professional_coach_id: string | null
           professional_product_id: string | null
+          sale_channel: string
           selling_coach_id: string | null
           status: string
           student_id: string
@@ -4971,6 +4972,7 @@ export type Database = {
           payment_method?: string
           professional_coach_id?: string | null
           professional_product_id?: string | null
+          sale_channel?: string
           selling_coach_id?: string | null
           status?: string
           student_id: string
@@ -5006,6 +5008,7 @@ export type Database = {
           payment_method?: string
           professional_coach_id?: string | null
           professional_product_id?: string | null
+          sale_channel?: string
           selling_coach_id?: string | null
           status?: string
           student_id?: string
@@ -7319,6 +7322,7 @@ export type Database = {
           payment_fee: number
           payment_method: Database["public"]["Enums"]["payment_method"]
           referrer_student_id: string | null
+          sale_channel: string
           shipping_address: string | null
           shipping_city: string | null
           shipping_name: string | null
@@ -7343,6 +7347,7 @@ export type Database = {
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
           referrer_student_id?: string | null
+          sale_channel?: string
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_name?: string | null
@@ -7367,6 +7372,7 @@ export type Database = {
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
           referrer_student_id?: string | null
+          sale_channel?: string
           shipping_address?: string | null
           shipping_city?: string | null
           shipping_name?: string | null

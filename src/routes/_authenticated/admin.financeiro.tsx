@@ -32,6 +32,7 @@ import {
   type CreatorEntryRow,
 } from "@/lib/creator-wallets.functions";
 import { listProfessorWallets, listProfessorBlockedEntries, type ProfessorWalletRow, type ProfessorBlockedEntry } from "@/lib/professor.functions";
+import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
 
 export const Route = createFileRoute("/_authenticated/admin/financeiro")({ component: AdminFinanceiro });
 
@@ -406,6 +407,7 @@ function AdminFinanceiro() {
                       <th className="px-2 py-1 text-left">Data</th>
                       <th className="px-2 py-1 text-left">Cliente</th>
                       <th className="px-2 py-1 text-left">Produto</th>
+                      <th className="px-2 py-1 text-left">Canal</th>
                       <th className="px-2 py-1 text-left">{bucketOpen.kind === "referrals" ? "Indicador" : "Coach beneficiário"}</th>
                       {bucketOpen.kind === "referrals" && <th className="px-2 py-1 text-left">Título</th>}
                       <th className="px-2 py-1 text-left">Slot</th>
@@ -420,6 +422,7 @@ function AdminFinanceiro() {
                         <td className="px-2 py-1.5 text-white/70">{r.createdAt ? new Date(r.createdAt).toLocaleString("pt-BR") : "—"}</td>
                         <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
                         <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
+                        <td className="px-2 py-1.5"><SaleChannelBadge channel={r.saleChannel} compact /></td>
                         <td className="px-2 py-1.5 text-white">{r.beneficiaryName}<span className="ml-1 text-white/30">{r.beneficiaryEmail}</span></td>
                         {bucketOpen.kind === "referrals" && (
                           <td className="px-2 py-1.5">
@@ -665,6 +668,7 @@ export type CreatorEntryLike = {
   net: number;
   status: string;
   created_at: string;
+  sale_channel: "store" | "coach" | null;
 };
 
 function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
@@ -677,6 +681,7 @@ function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
     net: e.net_amount,
     status: e.status,
     created_at: e.paid_at || e.created_at,
+    sale_channel: e.sale_channel,
   };
 }
 
@@ -690,6 +695,7 @@ function mapProfessorEntry(e: ProfessorBlockedEntry): CreatorEntryLike {
     net: e.amount,
     status: e.status,
     created_at: e.released_at || e.created_at,
+    sale_channel: null,
   };
 }
 
@@ -765,6 +771,7 @@ function CreatorWalletModal({
                     <th className="px-2 py-1 text-left">Beneficiário</th>
                     <th className="px-2 py-1 text-left">Cliente</th>
                     <th className="px-2 py-1 text-left">Produto</th>
+                    <th className="px-2 py-1 text-left">Canal</th>
                     <th className="px-2 py-1 text-right">Bruto</th>
                     <th className="px-2 py-1 text-right">Líquido</th>
                     <th className="px-2 py-1 text-left">Status</th>
@@ -780,6 +787,7 @@ function CreatorWalletModal({
                         <td className="px-2 py-1.5 text-white">{e.owner_name}</td>
                         <td className="px-2 py-1.5 text-white/80">{e.student_name || "—"}</td>
                         <td className="px-2 py-1.5 text-white/80">{e.product_name || "—"}</td>
+                        <td className="px-2 py-1.5"><SaleChannelBadge channel={e.sale_channel} compact /></td>
                         <td className="px-2 py-1.5 text-right text-white/60">{money(e.gross)}</td>
                         <td className="px-2 py-1.5 text-right text-emerald-300">{money(e.net)}</td>
                         <td className="px-2 py-1.5 text-[10px] uppercase text-white/40">{e.status}</td>
