@@ -198,7 +198,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           _professional_product_id: selected.id,
           _starts_at: slot,
           _payment_method: method,
-          ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
+          ...(mode === "reseller" ? { _student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;

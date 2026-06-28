@@ -44,8 +44,11 @@ export const getPartnerReports = createServerFn({ method: "POST" })
     if (!partner) throw new Error("Empresa parceira não encontrada");
 
     const partnerId = partner.id as string;
-    const fromTs = `${data.from}T00:00:00`;
-    const toTs = `${data.to}T23:59:59`;
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
+    const fromTsRaw = new Date(`${data.from}T00:00:00`).toISOString();
+    const toTs = new Date(`${data.to}T23:59:59`).toISOString();
+    const fromTs = cutoff && cutoff > fromTsRaw ? cutoff : fromTsRaw;
 
     // Visits
     const { data: visits } = await supabaseAdmin
