@@ -43,7 +43,12 @@ export function CreatorEntriesSection({
               {entries.map((e) => (
                 <tr key={e.id} className="border-t border-white/5">
                   <td className="p-3 text-white">{e.owner_name}</td>
-                  <td className="p-3 text-white/80">{e.student_name || "—"}</td>
+                  <td className="p-3 text-white/80">
+                    <span className="inline-flex items-center gap-2 flex-wrap">
+                      <span>{e.student_name || "—"}</span>
+                      {e.is_master_coach_sale && <MasterCoachBadge masterCoachName={e.master_coach_name} compact />}
+                    </span>
+                  </td>
                   <td className="p-3 text-white/80">{e.product_name || "—"}</td>
                   <td className="p-3"><SaleChannelBadge channel={e.sale_channel} compact /></td>
                   <td className="p-3 text-right text-white/60">{money(e.gross_amount)}</td>
