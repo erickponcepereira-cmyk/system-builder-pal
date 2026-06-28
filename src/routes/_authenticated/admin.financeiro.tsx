@@ -790,7 +790,12 @@ function CreatorWalletModal({
                         <td className="px-2 py-1.5 text-white/70">{date}</td>
                         <td className="px-2 py-1.5 text-white/50">{time}</td>
                         <td className="px-2 py-1.5 text-white">{e.owner_name}</td>
-                        <td className="px-2 py-1.5 text-white/80">{e.student_name || "—"}</td>
+                        <td className="px-2 py-1.5 text-white/80">
+                          <span className="inline-flex items-center gap-2 flex-wrap">
+                            <span>{e.student_name || "—"}</span>
+                            {e.is_master_coach_sale && <MasterCoachBadge masterCoachName={e.master_coach_name} compact />}
+                          </span>
+                        </td>
                         <td className="px-2 py-1.5 text-white/80">{e.product_name || "—"}</td>
                         <td className="px-2 py-1.5"><SaleChannelBadge channel={e.sale_channel} compact /></td>
                         <td className="px-2 py-1.5 text-right text-white/60">{money(e.gross)}</td>
