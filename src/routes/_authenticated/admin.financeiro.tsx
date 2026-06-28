@@ -32,6 +32,7 @@ import {
   type CreatorEntryRow,
 } from "@/lib/creator-wallets.functions";
 import { listProfessorWallets, listProfessorBlockedEntries, type ProfessorWalletRow, type ProfessorBlockedEntry } from "@/lib/professor.functions";
+import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
 
 export const Route = createFileRoute("/_authenticated/admin/financeiro")({ component: AdminFinanceiro });
 
