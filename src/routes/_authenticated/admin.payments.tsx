@@ -458,7 +458,10 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                     const color = e.status === "available" ? statusColor("available") : "bg-amber-500/20 text-amber-400";
                     return [
                       e.date ? new Date(e.date).toLocaleString("pt-BR") : "—",
-                      e.studentName || "—",
+                      <span key="st" className="inline-flex items-center gap-2 flex-wrap">
+                        <span>{e.studentName || "—"}</span>
+                        {e.isMasterCoachSale && <MasterCoachBadge masterCoachName={e.masterCoachName} compact />}
+                      </span>,
                       <span key="p" className="inline-flex items-center gap-2">
                         <span>{e.productName || "—"}</span>
                         <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">Produto criado</span>
