@@ -656,16 +656,60 @@ function CreatorBucketCard({
 
 type CreatorWalletModalRow = { id: string | null; name: string; email: string | null; available: number; pending: number; earned: number };
 
+export type CreatorEntryLike = {
+  id: string;
+  owner_name: string;
+  student_name: string | null;
+  product_name: string | null;
+  gross: number;
+  net: number;
+  status: string;
+  created_at: string;
+};
+
+function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
+  return {
+    id: e.id,
+    owner_name: e.owner_name,
+    student_name: e.student_name,
+    product_name: e.product_name,
+    gross: e.gross_amount,
+    net: e.net_amount,
+    status: e.status,
+    created_at: e.paid_at || e.created_at,
+  };
+}
+
+function mapProfessorEntry(e: ProfessorBlockedEntry): CreatorEntryLike {
+  return {
+    id: e.id,
+    owner_name: e.profile_name,
+    student_name: e.student_name,
+    product_name: e.product_name,
+    gross: e.amount,
+    net: e.amount,
+    status: e.status,
+    created_at: e.released_at || e.created_at,
+  };
+}
+
 function CreatorWalletModal({
-  title, link, rows, onClose,
-}: { title: string; link: string; rows: CreatorWalletModalRow[]; onClose: () => void }) {
+  title, link, rows, entries, onClose,
+}: { title: string; link: string; rows: CreatorWalletModalRow[]; entries: CreatorEntryLike[] | null; onClose: () => void }) {
+  const fmtDate = (iso: string) => {
+    const d = new Date(iso);
+    return {
+      date: d.toLocaleDateString("pt-BR"),
+      time: d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    };
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-3xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-4xl rounded-xl border border-white/10 bg-[#0F0F0F] p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-white">{title}</h2>
-            <p className="text-xs text-white/50">Saldos por beneficiário. Use "Abrir carteira" para o relatório completo.</p>
+            <p className="text-xs text-white/50">Saldos por beneficiário e lançamentos recentes. Use "Abrir carteira" para o relatório completo.</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -704,6 +748,49 @@ function CreatorWalletModal({
             </table>
           </div>
         )}
+
+        <div className="mt-6">
+          <h3 className="mb-2 text-sm font-bold text-white">Lançamentos</h3>
+          {entries === null ? (
+            <div className="flex justify-center p-4"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
+          ) : entries.length === 0 ? (
+            <p className="text-xs text-white/40">Nenhum lançamento encontrado.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-white/5">
+              <table className="w-full text-xs">
+                <thead className="bg-white/5 text-[10px] uppercase text-white/40">
+                  <tr>
+                    <th className="px-2 py-1 text-left">Data</th>
+                    <th className="px-2 py-1 text-left">Hora</th>
+                    <th className="px-2 py-1 text-left">Beneficiário</th>
+                    <th className="px-2 py-1 text-left">Cliente</th>
+                    <th className="px-2 py-1 text-left">Produto</th>
+                    <th className="px-2 py-1 text-right">Bruto</th>
+                    <th className="px-2 py-1 text-right">Líquido</th>
+                    <th className="px-2 py-1 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.slice(0, 50).map((e) => {
+                    const { date, time } = fmtDate(e.created_at);
+                    return (
+                      <tr key={e.id} className="border-t border-white/5">
+                        <td className="px-2 py-1.5 text-white/70">{date}</td>
+                        <td className="px-2 py-1.5 text-white/50">{time}</td>
+                        <td className="px-2 py-1.5 text-white">{e.owner_name}</td>
+                        <td className="px-2 py-1.5 text-white/80">{e.student_name || "—"}</td>
+                        <td className="px-2 py-1.5 text-white/80">{e.product_name || "—"}</td>
+                        <td className="px-2 py-1.5 text-right text-white/60">{money(e.gross)}</td>
+                        <td className="px-2 py-1.5 text-right text-emerald-300">{money(e.net)}</td>
+                        <td className="px-2 py-1.5 text-[10px] uppercase text-white/40">{e.status}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
