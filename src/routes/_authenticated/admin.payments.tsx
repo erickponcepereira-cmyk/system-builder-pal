@@ -427,7 +427,10 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                 <div className="px-4 py-2 bg-white/5 text-xs text-white/60">{details.totals.salesCount} venda(s) · {fmt(details.totals.salesAmount)}</div>
                 <DataTable rows={details.sales.map((s) => [
                   s.date ? new Date(s.date).toLocaleDateString("pt-BR") : "—",
-                  s.student || "—",
+                  <span key="st" className="inline-flex items-center gap-2 flex-wrap">
+                    <span>{s.student || "—"}</span>
+                    {s.isMasterCoachSale && <MasterCoachBadge masterCoachName={s.masterCoachName} compact />}
+                  </span>,
                   <span key="p" className="inline-flex items-center gap-2">
                     <span>{s.product || "—"}</span>
                     {s.tag && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{s.tag}</span>}
