@@ -86,7 +86,7 @@ export function PartnerWalletTab() {
 
     let ordersQ = supabase
       .from("partner_product_orders")
-      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
+      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id,sale_channel")
       .eq("partner_id", partner.id)
       .order("created_at", { ascending: false })
       .limit(50);
