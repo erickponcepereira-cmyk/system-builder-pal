@@ -85,6 +85,8 @@ export function EvaluateTab() {
   });
 
   const loadClients = async () => {
+    // Invalidate full-assessment cache so reloads after save/edit/delete see fresh data.
+    fullAssessmentsCacheRef.current?.clear();
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
     const { data: profile } = await supabase.from("profiles").select("id,name,email,phone,instagram").eq("user_id", userData.user.id).maybeSingle();
