@@ -3,6 +3,18 @@ import { Wallet, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getClientCutoffIso } from "@/lib/test-mode";
+
+function statusStyle(status: string) {
+  const s = (status || "").toLowerCase();
+  if (s === "paid" || s === "approved" || s === "completed")
+    return { value: "text-emerald-400", label: "text-emerald-400" };
+  if (s === "pending" || s === "requested" || s === "in_process" || s === "processing")
+    return { value: "text-amber-400", label: "text-amber-400" };
+  if (s === "rejected" || s === "refused" || s === "failed" || s === "cancelled" || s === "canceled" || s === "refunded" || s === "charged_back")
+    return { value: "text-red-400", label: "text-red-400" };
+  return { value: "text-white/70", label: "text-white/60" };
+}
 
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
