@@ -531,6 +531,7 @@ function AdminFinanceiro() {
               ? professionalWallets.map(w => ({ id: w.id, name: w.name, email: w.email, available: w.available_balance, pending: w.pending_balance, earned: w.total_earned }))
               : professorWallets.map(w => ({ id: w.profile_id, name: w.name, email: w.email, available: w.available_balance, pending: w.blocked_balance, earned: w.total_earned }))
           }
+          entries={creatorEntries}
           onClose={() => setCreatorOpen(null)}
         />
       )}
