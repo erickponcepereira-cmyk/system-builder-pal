@@ -26,9 +26,12 @@ import { TestModeCard, TestModeBanner } from "@/components/admin/TestModeBanner"
 import {
   listPartnerCreatorWallets,
   listProfessionalCreatorWallets,
+  listPartnerCreatorEntries,
+  listProfessionalCreatorEntries,
   type CreatorWalletRow,
+  type CreatorEntryRow,
 } from "@/lib/creator-wallets.functions";
-import { listProfessorWallets, type ProfessorWalletRow } from "@/lib/professor.functions";
+import { listProfessorWallets, listProfessorBlockedEntries, type ProfessorWalletRow, type ProfessorBlockedEntry } from "@/lib/professor.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/financeiro")({ component: AdminFinanceiro });
 
