@@ -94,6 +94,7 @@ export interface FinancialSummary {
   coachWalletsTotal: { available: number; totalEarned: number; totalWithdrawn: number; count: number };
   studentWalletsTotal: { available: number; totalEarned: number; totalWithdrawn: number; count: number };
   nutritionistTotal: { available: number; blocked: number; totalEarned: number; count: number };
+  professorTotal: { available: number; blocked: number; totalEarned: number; count: number };
   partnerOrders: { paidCount: number; paidGross: number; partnerNet: number; coachNet: number; systemFee: number };
   professionalOrders: { paidCount: number; paidGross: number; professionalNet: number; coachNet: number; systemFee: number };
   pendingWithdrawals: { coachAmount: number; coachCount: number; studentAmount: number; studentCount: number };
