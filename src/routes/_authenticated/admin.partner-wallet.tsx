@@ -5,8 +5,11 @@ import { toast } from "sonner";
 import { Loader2, Wallet } from "lucide-react";
 import {
   listPartnerCreatorWallets,
+  listPartnerCreatorEntries,
   type CreatorWalletRow,
+  type CreatorEntryRow,
 } from "@/lib/creator-wallets.functions";
+import { CreatorEntriesSection } from "@/components/admin/CreatorEntriesSection";
 
 export const Route = createFileRoute("/_authenticated/admin/partner-wallet")({
   head: () => ({ meta: [{ title: "Carteira do Parceiro — Admin" }] }),
@@ -18,12 +21,13 @@ const money = (v: number) =>
 
 function PartnerWalletPage() {
   const fetchWallets = useServerFn(listPartnerCreatorWallets);
+  const fetchEntries = useServerFn(listPartnerCreatorEntries);
   const [wallets, setWallets] = useState<CreatorWalletRow[] | null>(null);
+  const [entries, setEntries] = useState<CreatorEntryRow[] | null>(null);
 
   useEffect(() => {
-    fetchWallets()
-      .then(setWallets)
-      .catch(() => toast.error("Erro ao carregar carteiras"));
+    fetchWallets().then(setWallets).catch(() => toast.error("Erro ao carregar carteiras"));
+    fetchEntries().then(setEntries).catch(() => toast.error("Erro ao carregar lançamentos"));
   }, []);
 
   const totals = (wallets || []).reduce(
@@ -42,7 +46,8 @@ function PartnerWalletPage() {
         <h1 className="text-xl font-bold text-white">Carteira do Parceiro</h1>
         <p className="text-xs text-white/50">
           Saldos dos parceiros como <strong>criadores de produto</strong>. Valor sai do{" "}
-          <em>partner_net_amount</em> de cada venda paga, com carência de 7 dias.
+          <em>partner_net_amount</em> de cada venda paga, com carência de 7 dias. Em Modo de Testes, somente
+          vendas posteriores ao marco aparecem.
         </p>
       </div>
 
@@ -89,6 +94,8 @@ function PartnerWalletPage() {
           </div>
         )}
       </section>
+
+      <CreatorEntriesSection entries={entries} ownerLabel="Parceiro" />
     </div>
   );
 }
