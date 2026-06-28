@@ -571,7 +571,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (!value) return;
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .eq(column as never, value as never)
         .order("created_at" as never, { ascending: false })
         .limit(200);
@@ -610,7 +610,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (commissionPartnerOrderIds.length) {
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .in("id" as never, commissionPartnerOrderIds as never);
       if (fromDate) q = (q as any).gte("created_at", fromDate);
       if (data.toDate) q = (q as any).lte("created_at", data.toDate);
