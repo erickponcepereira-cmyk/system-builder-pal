@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getClientCutoffIso } from "@/lib/test-mode";
+import { SaleChannelBadge, type SaleChannel } from "@/components/ui/SaleChannelBadge";
 
 function statusStyle(status: string) {
   const s = (status || "").toLowerCase();
