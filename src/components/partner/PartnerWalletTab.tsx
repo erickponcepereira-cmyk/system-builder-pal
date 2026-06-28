@@ -3,6 +3,18 @@ import { Wallet, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getClientCutoffIso } from "@/lib/test-mode";
+
+function statusStyle(status: string) {
+  const s = (status || "").toLowerCase();
+  if (s === "paid" || s === "approved" || s === "completed")
+    return { value: "text-emerald-400", label: "text-emerald-400" };
+  if (s === "pending" || s === "requested" || s === "in_process" || s === "processing")
+    return { value: "text-amber-400", label: "text-amber-400" };
+  if (s === "rejected" || s === "refused" || s === "failed" || s === "cancelled" || s === "canceled" || s === "refunded" || s === "charged_back")
+    return { value: "text-red-400", label: "text-red-400" };
+  return { value: "text-white/70", label: "text-white/60" };
+}
 
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -68,30 +80,63 @@ export function PartnerWalletTab() {
     if (!partner) { setLoading(false); return; }
     setPartnerId(partner.id);
 
+    const cutoff = await getClientCutoffIso();
+
+    let ordersQ = supabase
+      .from("partner_product_orders")
+      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
+      .eq("partner_id", partner.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (cutoff) ordersQ = ordersQ.gte("created_at", cutoff);
+
+    let withdrawsQ = supabase
+      .from("withdrawal_requests")
+      .select("id,amount,status,requested_at,paid_at")
+      .eq("partner_id" as never, partner.id as never)
+      .order("requested_at", { ascending: false })
+      .limit(20);
+    if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
+
     const [walletRes, ordersRes, withdrawsRes] = await Promise.all([
       supabase
         .from("partner_wallets" as never)
         .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
         .eq("partner_id" as never, partner.id as never)
         .maybeSingle(),
-      supabase
-        .from("partner_product_orders")
-        .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("withdrawal_requests")
-        .select("id,amount,status,requested_at,paid_at")
-        .eq("partner_id" as never, partner.id as never)
-        .order("requested_at", { ascending: false })
-        .limit(20),
+      ordersQ,
+      withdrawsQ,
     ]);
 
-    setWallet(((walletRes.data as unknown as WalletRow | null)) || {
+    let walletRow = ((walletRes.data as unknown as WalletRow | null)) || {
       available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
-    });
+    };
     const baseOrders = (ordersRes.data as OrderRow[]) || [];
+    const withdrawsList = (withdrawsRes.data as WithdrawRow[]) || [];
+
+    if (cutoff) {
+      let avail = 0, pending = 0, earned = 0;
+      for (const o of baseOrders) {
+        const net = Number(o.partner_net_amount || 0);
+        if (o.status === "paid") {
+          earned += net;
+          const paid = o.paid_at ? new Date(o.paid_at).getTime() : 0;
+          if (paid && Date.now() - paid >= 7 * 24 * 3600 * 1000) avail += net;
+          else pending += net;
+        }
+      }
+      const withdrawn = withdrawsList
+        .filter((w) => w.status === "paid")
+        .reduce((s, w) => s + Number(w.amount || 0), 0);
+      walletRow = {
+        available_balance: Math.max(0, avail - withdrawn),
+        pending_balance: pending,
+        total_earned: earned,
+        total_withdrawn: withdrawn,
+      };
+    }
+    setWallet(walletRow);
+
     // Resolve student names + product names
     const studentIds = Array.from(new Set(baseOrders.map((o) => o.student_id).filter(Boolean))) as string[];
     const partnerProductIds = Array.from(new Set(baseOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
@@ -121,7 +166,7 @@ export function PartnerWalletTab() {
         null,
     }));
     setOrders(enriched);
-    setWithdraws((withdrawsRes.data as WithdrawRow[]) || []);
+    setWithdraws(withdrawsList);
     setLoading(false);
   }
 
@@ -198,7 +243,9 @@ export function PartnerWalletTab() {
           <p className="text-sm text-white/40">Nenhuma venda registrada.</p>
         ) : (
           <div className="space-y-2">
-            {orders.map((o) => (
+            {orders.map((o) => {
+              const st = statusStyle(o.status);
+              return (
               <div key={o.id} className="flex items-start justify-between rounded-lg bg-white/5 px-3 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-white truncate">
@@ -208,15 +255,16 @@ export function PartnerWalletTab() {
                     Cliente: {o.student_name || "—"}
                   </p>
                   <p className="text-[11px] text-white/40">
-                    {o.order_number} · {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · {o.status}
+                    {o.order_number} · {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · <span className={`font-semibold ${st.label}`}>{o.status}</span>
                   </p>
                 </div>
                 <div className="text-right shrink-0 ml-3">
-                  <p className="text-sm font-bold text-success">{brl(o.partner_net_amount)}</p>
+                  <p className={`text-sm font-bold ${st.value}`}>{brl(o.partner_net_amount)}</p>
                   <p className="text-[11px] text-white/40">bruto {brl(o.gross_amount)}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
