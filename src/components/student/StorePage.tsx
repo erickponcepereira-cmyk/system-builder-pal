@@ -615,7 +615,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
             _professional_product_id: pp.sourceId,
             _starts_at: pp.scheduledSlot,
             _payment_method: partnerRpcPaymentMethod(),
-            _buyer_student_id: selectedClient.id,
+            _student_id: selectedClient.id,
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
