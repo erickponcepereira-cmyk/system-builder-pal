@@ -1257,7 +1257,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         <ClientPickerModal
           clients={clients}
           isMaster={isMasterCoach}
-          onPick={(c) => { setSelectedClient(c); setClientPickerOpen(false); }}
+          onPick={(c) => { setSelectedClient(c); setClientPickerOpen(false); setCartOpen(true); }}
           onClose={() => setClientPickerOpen(false)}
         />
       )}
