@@ -169,7 +169,7 @@ async function listEntriesByOwner(opts: {
   const cutoff = await getServerCutoffIso();
   let q = (supabaseAdmin as any)
     .from("partner_product_orders")
-    .select(`id, order_number, status, gross_amount, partner_net_amount, payment_method, paid_at, created_at, student_id, partner_product_id, professional_product_id, ${opts.ownerCol}`)
+    .select(`id, order_number, status, gross_amount, partner_net_amount, payment_method, paid_at, created_at, student_id, partner_product_id, professional_product_id, sale_channel, ${opts.ownerCol}`)
     .eq("status", "paid")
     .not(opts.ownerCol, "is", null)
     .order("created_at", { ascending: false })
