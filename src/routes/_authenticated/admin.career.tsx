@@ -855,16 +855,26 @@ function MedalsTab() {
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(BADGE_META) as BadgeKey[]).map((b) => {
                   const has = c.badges.some((x) => x.badge_key === b);
+                  // Profissionais aprovados recebem Master Coach automaticamente via RPC
+                  // `is_master_coach` (c.is_professional AND approved_at IS NOT NULL). O toggle
+                  // manual fica desativado para evitar a confusão "tem acesso sem badge".
+                  const autoMaster = b === "master_coach" && !!c.isProfessional;
+                  const effectiveHas = has || autoMaster;
                   return (
                     <button
                       key={b}
-                      onClick={() => toggle(c.id, b, has)}
+                      onClick={() => !autoMaster && toggle(c.id, b, has)}
+                      disabled={autoMaster}
+                      title={autoMaster ? "Acesso automático: este coach é Profissional aprovado" : undefined}
                       className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition ${
-                        has ? BADGE_META[b].color : "bg-white/5 text-white/40 border-white/10 hover:border-white/30"
-                      }`}
+                        effectiveHas ? BADGE_META[b].color : "bg-white/5 text-white/40 border-white/10 hover:border-white/30"
+                      } ${autoMaster ? "cursor-not-allowed opacity-90" : ""}`}
                     >
-                      {has && <Check className="h-3 w-3" />}
+                      {effectiveHas && <Check className="h-3 w-3" />}
                       {BADGE_META[b].icon} {BADGE_META[b].label}
+                      {autoMaster && (
+                        <span className="ml-1 px-1 rounded bg-black/40 text-[9px] uppercase tracking-wider">Auto</span>
+                      )}
                     </button>
                   );
                 })}
