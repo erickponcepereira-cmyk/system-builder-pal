@@ -768,6 +768,7 @@ function CreatorWalletModal({
                     <th className="px-2 py-1 text-left">Beneficiário</th>
                     <th className="px-2 py-1 text-left">Cliente</th>
                     <th className="px-2 py-1 text-left">Produto</th>
+                    <th className="px-2 py-1 text-left">Canal</th>
                     <th className="px-2 py-1 text-right">Bruto</th>
                     <th className="px-2 py-1 text-right">Líquido</th>
                     <th className="px-2 py-1 text-left">Status</th>
@@ -783,6 +784,7 @@ function CreatorWalletModal({
                         <td className="px-2 py-1.5 text-white">{e.owner_name}</td>
                         <td className="px-2 py-1.5 text-white/80">{e.student_name || "—"}</td>
                         <td className="px-2 py-1.5 text-white/80">{e.product_name || "—"}</td>
+                        <td className="px-2 py-1.5"><SaleChannelBadge channel={e.sale_channel} compact /></td>
                         <td className="px-2 py-1.5 text-right text-white/60">{money(e.gross)}</td>
                         <td className="px-2 py-1.5 text-right text-emerald-300">{money(e.net)}</td>
                         <td className="px-2 py-1.5 text-[10px] uppercase text-white/40">{e.status}</td>
