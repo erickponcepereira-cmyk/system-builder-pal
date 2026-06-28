@@ -95,12 +95,29 @@ function FinancialSummaryPage() {
 
       {/* Pedidos de parceiros */}
       <section>
-        <h2 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-3">Pedidos de Parceiros (produtos profissionais)</h2>
+        <h2 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-3">Pedidos de Parceiros (empresas)</h2>
         <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           <Stat icon={BadgeDollarSign} label="Pedidos pagos" value={String(data.partnerOrders.paidCount)} />
           <Stat icon={TrendingUp} label="Bruto faturado" value={brl(data.partnerOrders.paidGross)} />
           <Stat icon={Stethoscope} label="Parceiros receberam" value={brl(data.partnerOrders.partnerNet)} highlight />
           <Stat icon={Wallet} label="Sistema arrecadou" value={brl(data.partnerOrders.systemFee)} />
+        </div>
+        <Link
+          to="/admin/partner-orders"
+          className="inline-flex mt-3 items-center gap-1 text-xs text-primary hover:underline"
+        >
+          Gerenciar pedidos →
+        </Link>
+      </section>
+
+      {/* Pedidos de profissional */}
+      <section>
+        <h2 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-3">Pedidos Profissionais</h2>
+        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+          <Stat icon={BadgeDollarSign} label="Pedidos pagos" value={String(data.professionalOrders.paidCount)} />
+          <Stat icon={TrendingUp} label="Bruto faturado" value={brl(data.professionalOrders.paidGross)} />
+          <Stat icon={Stethoscope} label="Profissionais receberam" value={brl(data.professionalOrders.professionalNet)} highlight />
+          <Stat icon={Wallet} label="Sistema arrecadou" value={brl(data.professionalOrders.systemFee)} />
         </div>
         <Link
           to="/admin/partner-orders"
