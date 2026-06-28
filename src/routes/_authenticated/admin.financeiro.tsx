@@ -665,6 +665,7 @@ export type CreatorEntryLike = {
   net: number;
   status: string;
   created_at: string;
+  sale_channel: "store" | "coach" | null;
 };
 
 function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
@@ -677,6 +678,7 @@ function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
     net: e.net_amount,
     status: e.status,
     created_at: e.paid_at || e.created_at,
+    sale_channel: e.sale_channel,
   };
 }
 
@@ -690,6 +692,7 @@ function mapProfessorEntry(e: ProfessorBlockedEntry): CreatorEntryLike {
     net: e.amount,
     status: e.status,
     created_at: e.released_at || e.created_at,
+    sale_channel: null,
   };
 }
 
