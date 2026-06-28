@@ -94,6 +94,7 @@ export interface FinancialSummary {
   coachWalletsTotal: { available: number; totalEarned: number; totalWithdrawn: number; count: number };
   studentWalletsTotal: { available: number; totalEarned: number; totalWithdrawn: number; count: number };
   nutritionistTotal: { available: number; blocked: number; totalEarned: number; count: number };
+  professorTotal: { available: number; blocked: number; totalEarned: number; count: number };
   partnerOrders: { paidCount: number; paidGross: number; partnerNet: number; coachNet: number; systemFee: number };
   professionalOrders: { paidCount: number; paidGross: number; professionalNet: number; coachNet: number; systemFee: number };
   pendingWithdrawals: { coachAmount: number; coachCount: number; studentAmount: number; studentCount: number };
@@ -109,13 +110,14 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       (cutoff ? q.gte(col as any, cutoff as any) : q);
     const applyPaidCutoff = <T extends { gte: (col: any, v: any) => T; not: (col: any, op: any, v: any) => T }>(q: T): T =>
       (cutoff ? q.not("paid_at" as any, "is" as any, null as any).gte("paid_at" as any, cutoff as any) : q);
-    const [adminEntries, cw, sw, nw, pw, profw, ppo, wr, swr, commAll] = await Promise.all([
+    const [adminEntries, cw, sw, nw, pw, profw, profsw, ppo, wr, swr, commAll] = await Promise.all([
       applyCutoff(supabase.from("admin_system_wallet_entries" as never).select("slot_label,kind,amount,created_at" as never), "created_at"),
       supabase.from("wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("student_wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
       supabase.from("partner_wallets" as never).select("partner_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_earned,total_withdrawn" as never),
+      supabase.from("professor_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
       applyPaidCutoff(supabase.from("partner_product_orders" as never).select("status,gross_amount,partner_net_amount,coach_net_amount,system_fee,payment_fee,tax_amount,network_l1_amount,network_l2_amount,network_l3_amount,master_coach_cross_bonus_amount,paid_at,created_at,partner_product_id,professional_product_id" as never).eq("status" as never, "paid" as never)),
       applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
@@ -129,13 +131,19 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     let adminDebits = 0;
     let nutriAdminCredits = 0;
     let nutriAdminDebits = 0;
+    let profAdminCredits = 0;
+    let profAdminDebits = 0;
     ((adminEntries.data as any[]) || []).forEach((entry) => {
       const slot = String(entry?.slot_label || "").toLowerCase();
       const amount = Number(entry?.amount || 0);
       const isNutritionist = slot.includes("nutricion");
+      const isProfessor = slot.includes("professor");
       if (isNutritionist) {
         if (entry?.kind === "debit") nutriAdminDebits += amount;
         else nutriAdminCredits += amount;
+      } else if (isProfessor) {
+        if (entry?.kind === "debit") profAdminDebits += amount;
+        else profAdminCredits += amount;
       } else if (!slot.includes("taxa de pagamento") && !slot.includes("imposto")) {
         if (entry?.kind === "debit") adminDebits += amount;
         else adminCredits += amount;
@@ -143,8 +151,10 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     });
     const adminAvailable = Math.max(0, adminCredits - adminDebits);
     const nutriAdminAvailable = Math.max(0, nutriAdminCredits - nutriAdminDebits);
+    const profAdminAvailable = Math.max(0, profAdminCredits - profAdminDebits);
     const nutritionistRows = (nw.data as any[]) || [];
     const hasUnassignedNutritionist = nutriAdminCredits > 0 || nutriAdminDebits > 0;
+    const hasUnassignedProfessor = profAdminCredits > 0 || profAdminDebits > 0;
     return {
       adminWallet: {
         available: adminAvailable,
@@ -197,6 +207,23 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         totalEarned: sum(nutritionistRows, "total_earned") + nutriAdminCredits,
         count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
       },
+      professorTotal: (() => {
+        const profRows = (profsw.data as any[]) || [];
+        if (cutoff) {
+          return {
+            available: profAdminAvailable,
+            blocked: 0,
+            totalEarned: profAdminCredits,
+            count: profRows.length + (hasUnassignedProfessor ? 1 : 0),
+          };
+        }
+        return {
+          available: sum(profRows, "available_balance") + profAdminAvailable,
+          blocked: sum(profRows, "blocked_balance"),
+          totalEarned: sum(profRows, "total_earned") + profAdminCredits,
+          count: profRows.length + (hasUnassignedProfessor ? 1 : 0),
+        };
+      })(),
       partnerOrders: (() => {
         const rows = ((ppo.data as any[] | null) || []).filter((r: any) => r.partner_product_id);
         const realSystemFee = rows.reduce((acc, r: any) => {

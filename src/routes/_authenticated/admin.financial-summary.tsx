@@ -32,7 +32,8 @@ function FinancialSummaryPage() {
     data.adminWallet.available +
     data.coachWalletsTotal.available +
     data.studentWalletsTotal.available +
-    data.nutritionistTotal.available;
+    data.nutritionistTotal.available +
+    data.professorTotal.available;
 
   return (
     <div className="space-y-6">
@@ -89,6 +90,14 @@ function FinancialSummaryPage() {
             earned={data.nutritionistTotal.totalEarned}
             extra={`Bloqueado: ${brl(data.nutritionistTotal.blocked)}`}
             href="/admin/nutritionist-wallet"
+          />
+          <Card
+            icon={GraduationCap}
+            title={`Professores (${data.professorTotal.count})`}
+            available={data.professorTotal.available}
+            earned={data.professorTotal.totalEarned}
+            extra={`Bloqueado: ${brl(data.professorTotal.blocked)}`}
+            href="/admin/professor-wallet"
           />
         </div>
       </section>

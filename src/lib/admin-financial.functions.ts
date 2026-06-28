@@ -22,7 +22,7 @@ async function assertAdmin(userId: string) {
 
 function isAdminSystemSlot(slotLabel: unknown) {
   const slot = String(slotLabel || "").toLowerCase();
-  return !slot.includes("nutricion") && !slot.includes("taxa de pagamento") && !slot.includes("imposto");
+  return !slot.includes("nutricion") && !slot.includes("professor") && !slot.includes("taxa de pagamento") && !slot.includes("imposto");
 }
 
 async function resolvePartnerOrderContext(orderIds: string[]) {
@@ -388,6 +388,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         .from("admin_system_wallet_entries")
         .select("id, transaction_id, partner_order_id, subscription_invoice_id, slot_label, amount, kind, created_at")
         .not("slot_label", "ilike", "%nutricion%")
+        .not("slot_label", "ilike", "%professor%")
         .not("slot_label", "ilike", "%taxa de pagamento%")
         .not("slot_label", "ilike", "%imposto%")
         .order("created_at", { ascending: false })
@@ -1035,6 +1036,7 @@ export const getAdminWallet = createServerFn({ method: "GET" })
       .from("admin_system_wallet_entries")
       .select("kind, amount, slot_label, created_at")
       .not("slot_label", "ilike", "%nutricion%")
+      .not("slot_label", "ilike", "%professor%")
       .not("slot_label", "ilike", "%imposto%")
       .not("slot_label", "ilike", "%taxa de pagamento%"), "created_at", cutoff);
 
@@ -1075,6 +1077,7 @@ export const listAdminWalletEntries = createServerFn({ method: "POST" })
       .from("admin_system_wallet_entries")
       .select("id, transaction_id, subscription_invoice_id, slot_label, amount, kind, created_at")
       .not("slot_label", "ilike", "%nutricion%")
+      .not("slot_label", "ilike", "%professor%")
       .not("slot_label", "ilike", "%imposto%")
       .not("slot_label", "ilike", "%taxa de pagamento%")
       .order("created_at", { ascending: false })
