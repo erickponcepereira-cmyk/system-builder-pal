@@ -374,6 +374,7 @@ export interface BucketCommissionRow {
   status: string;
   createdAt: string | null;
   referrerTitle?: "subcoach" | "influencer" | null;
+  saleChannel?: "store" | "coach" | null;
 }
 
 export const listBucketCommissions = createServerFn({ method: "POST" })
