@@ -1420,22 +1420,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   ? "2px solid var(--fm-primary)"
                   : "2px solid transparent",
             }}
-            onClick={() => {
-              setSelectedClient(c);
+            onClick={async () => {
               if (entryIntent === "new") {
+                setSelectedClient(c);
                 setAssessment({ height: c.height || undefined });
                 setStep(0);
                 setScreen("assessment");
                 return;
               }
-              const sorted = (c.assessments ?? [])
+              const hydrated = await hydrateClientAssessments(c);
+              setSelectedClient(hydrated);
+              const sorted = (hydrated.assessments ?? [])
                 .filter((it) => it?.date)
                 .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
               if (sorted.length > 0) {
                 setAssessment(sorted[sorted.length - 1]);
                 setScreen("result");
               } else {
-                setAssessment({ height: c.height || undefined });
+                setAssessment({ height: hydrated.height || undefined });
                 setStep(0);
                 setScreen("assessment");
               }
