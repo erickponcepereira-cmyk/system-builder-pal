@@ -562,6 +562,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
+      master_coach_cross_beneficiary_coach_id?: string | null;
       student?: { profile?: { name: string | null; email: string | null } | null } | null;
       partner_product?: { name: string | null } | null;
       professional_product?: { name: string | null } | null;
