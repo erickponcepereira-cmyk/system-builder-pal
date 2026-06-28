@@ -1202,16 +1202,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             key={c.id}
             className="fm-card"
             style={{ marginBottom: 8, padding: "12px 16px", cursor: "pointer" }}
-            onClick={() => {
-              setSelectedClient(c);
-              const sorted = (c.assessments ?? [])
+            onClick={async () => {
+              const hydrated = await hydrateClientAssessments(c);
+              setSelectedClient(hydrated);
+              const sorted = (hydrated.assessments ?? [])
                 .filter((it) => it?.date)
                 .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
               if (sorted.length > 0) {
                 setAssessment(sorted[sorted.length - 1]);
                 setScreen("result");
               } else {
-                setAssessment({ height: c.height || undefined });
+                setAssessment({ height: hydrated.height || undefined });
                 setStep(0);
                 setScreen("assessment");
               }
