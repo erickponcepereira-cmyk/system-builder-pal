@@ -605,6 +605,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         amount: Number(c.amount || 0),
         status: c.status,
         createdAt: c.created_at,
+        saleChannel: po?.saleChannel ?? (tx ? "store" : null),
       };
     });
   });
