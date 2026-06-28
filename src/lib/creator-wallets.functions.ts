@@ -38,6 +38,9 @@ export type CreatorEntryRow = {
   created_at: string;
   paid_at: string | null;
   sale_channel: "store" | "coach" | null;
+  /** Master Coach traceability — set when the sale was made via a master coach (cross-network). */
+  is_master_coach_sale?: boolean;
+  master_coach_name?: string | null;
 };
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
