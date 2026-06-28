@@ -272,7 +272,17 @@ function SalesDashboard({ mode }: { mode: "sales" | "customers" }) {
                         return (
                           <tr key={r.id + r.source} className="border-t border-white/5">
                             <td className="py-2 pr-3 text-white/60">{new Date(r.paid_at).toLocaleDateString("pt-BR")}</td>
-                            <td className="pr-3 text-white">{r.student_name}</td>
+                            <td className="pr-3 text-white">
+                              {r.student_name}
+                              {r.is_master_coach_sale && (
+                                <span
+                                  className="ml-2 inline-block rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40"
+                                  title={r.master_coach_name ? `Venda realizada pelo Master Coach: ${r.master_coach_name}` : "Venda realizada por um Master Coach"}
+                                >
+                                  Master Coach{r.master_coach_name ? ` · ${r.master_coach_name}` : ""}
+                                </span>
+                              )}
+                            </td>
                             <td className="pr-3 text-white/80 truncate max-w-xs">{r.product_name}</td>
                             <td className="pr-3 text-right text-white/70">{r.quantity}</td>
                             <td className="pr-3 text-right text-primary font-bold">{brl(r.amount)}</td>
