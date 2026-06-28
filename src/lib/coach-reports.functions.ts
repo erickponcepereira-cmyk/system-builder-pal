@@ -19,6 +19,11 @@ export type SaleRow = {
   paid_at: string;
   my_commission: number;
   commission_levels: number[];
+  // Set when this sale was performed by a Master Coach (cross-sale bonus row exists,
+  // or my own commission on this sale was tagged `is_master_coach_commission`).
+  is_master_coach_sale?: boolean;
+  master_coach_id?: string | null;
+  master_coach_name?: string | null;
 };
 
 export type SalesReport = {
@@ -243,19 +248,42 @@ async function buildSalesReportForRange(
   }
 
   const commByPartnerOrder = new Map<string, { amount: number; levels: number[] }>();
+  // Per-order Master Coach metadata: tagged when ANY commission on this order
+  // is flagged `is_master_coach_commission` (cross-sale bonus). Captures the
+  // beneficiary coach (the Master Coach) so we can show "venda feita por <Master>".
+  const masterByPartnerOrder = new Map<string, { coach_id: string | null }>();
   if (partnerOrderIds.length) {
     const { data: comms } = await supabaseAdmin
       .from("commissions")
-      .select("amount, level, partner_order_id")
-      .eq("beneficiary_coach_id", coachId)
+      .select("amount, level, partner_order_id, is_master_coach_commission, beneficiary_coach_id")
       .in("partner_order_id", partnerOrderIds);
-    ((comms as Array<{ amount: number; level: number; partner_order_id: string }> | null) || []).forEach((c) => {
+    ((comms as Array<{ amount: number; level: number; partner_order_id: string; is_master_coach_commission: boolean | null; beneficiary_coach_id: string | null }> | null) || []).forEach((c) => {
+      if (c.is_master_coach_commission) {
+        masterByPartnerOrder.set(c.partner_order_id, { coach_id: c.beneficiary_coach_id });
+      }
+      if (c.beneficiary_coach_id !== coachId) return;
       const cur = commByPartnerOrder.get(c.partner_order_id) || { amount: 0, levels: [] };
       cur.amount += Number(c.amount) || 0;
       if (!cur.levels.includes(c.level)) cur.levels.push(c.level);
       commByPartnerOrder.set(c.partner_order_id, cur);
     });
   }
+
+  // Resolve Master Coach names
+  const masterCoachIds = Array.from(new Set(
+    Array.from(masterByPartnerOrder.values()).map((m) => m.coach_id).filter(Boolean) as string[],
+  ));
+  const masterCoachNameById = new Map<string, string>();
+  if (masterCoachIds.length) {
+    const { data: mcs } = await supabaseAdmin
+      .from("coaches")
+      .select("id, fantasy_name, profiles!coaches_profile_id_fkey(name)")
+      .in("id", masterCoachIds);
+    ((mcs as Array<{ id: string; fantasy_name: string | null; profiles: { name: string } | null }> | null) || []).forEach((c) => {
+      masterCoachNameById.set(c.id, c.fantasy_name || c.profiles?.name || "Master Coach");
+    });
+  }
+
 
   // Build unified rows
   const rows: SaleRow[] = [];
@@ -316,6 +344,7 @@ async function buildSalesReportForRange(
         ? (professionalProductMap.get(o.professional_product_id) || "Produto profissional")
         : "Produto de parceiro/profissional";
     const comm = commByPartnerOrder.get(o.id) || { amount: 0, levels: [] };
+    const master = masterByPartnerOrder.get(o.id);
     rows.push({
       id: o.id,
       source: isPartnerProduct ? "partner" : "professional",
@@ -331,6 +360,9 @@ async function buildSalesReportForRange(
       paid_at: o.paid_at,
       my_commission: comm.amount,
       commission_levels: comm.levels.sort((a, b) => a - b),
+      is_master_coach_sale: !!master,
+      master_coach_id: master?.coach_id ?? null,
+      master_coach_name: master?.coach_id ? (masterCoachNameById.get(master.coach_id) || null) : null,
     });
   }
 

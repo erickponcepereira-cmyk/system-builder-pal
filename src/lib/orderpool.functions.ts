@@ -53,8 +53,9 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
 
     const studentIds = Array.from(new Set(rows.map((r: any) => r.student_id).filter(Boolean)));
     const productIds = Array.from(new Set(rows.map((r: any) => r.product_id).filter(Boolean)));
+    const transactionIds = Array.from(new Set(rows.map((r: any) => r.transaction_id).filter(Boolean))) as string[];
 
-    const [{ data: students }, { data: products }] = await Promise.all([
+    const [{ data: students }, { data: products }, { data: partnerOrders }] = await Promise.all([
       studentIds.length
         ? supabaseAdmin
             .from("students")
@@ -63,6 +64,12 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
         : Promise.resolve({ data: [] as any[] }),
       productIds.length
         ? supabaseAdmin.from("products").select("id, name").in("id", productIds)
+        : Promise.resolve({ data: [] as any[] }),
+      transactionIds.length
+        ? supabaseAdmin
+            .from("partner_product_orders" as never)
+            .select("id, selling_coach_id" as never)
+            .in("id" as never, transactionIds as never)
         : Promise.resolve({ data: [] as any[] }),
     ]);
     const sNameMap = new Map<string, string>();
@@ -74,8 +81,17 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
     const pMap = new Map<string, string>();
     (products || []).forEach((p: any) => pMap.set(p.id, p.name));
 
-    // Resolve coach names from coach_id → profile.name
-    const coachIds = Array.from(new Set(Array.from(sCoachMap.values()).filter(Boolean) as string[]));
+    // Authoritative seller-coach per transaction (preferred over student.coach_id when present)
+    const txCoachMap = new Map<string, string>();
+    ((partnerOrders as any[]) || []).forEach((o: any) => {
+      if (o.id && o.selling_coach_id) txCoachMap.set(o.id, o.selling_coach_id);
+    });
+
+    // Resolve coach names — union of student.coach_id and partner_product_orders.selling_coach_id
+    const coachIds = Array.from(new Set([
+      ...Array.from(sCoachMap.values()).filter(Boolean),
+      ...Array.from(txCoachMap.values()),
+    ] as string[]));
     const cNameMap = new Map<string, { id: string; name: string }>();
     if (coachIds.length) {
       const { data: coaches } = await supabaseAdmin
@@ -87,8 +103,13 @@ export const listOrderPoolEntries = createServerFn({ method: "GET" })
       );
     }
 
+
     return rows.map((r: any) => {
-      const coachId = r.student_id ? sCoachMap.get(r.student_id) ?? null : null;
+      // Prefer the actual seller-coach from partner_product_orders (matches "vendido por"),
+      // fall back to the student's titular coach.
+      const coachId =
+        (r.transaction_id ? txCoachMap.get(r.transaction_id) : null) ??
+        (r.student_id ? sCoachMap.get(r.student_id) ?? null : null);
       return {
         id: r.id,
         transaction_id: r.transaction_id,

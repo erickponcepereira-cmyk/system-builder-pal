@@ -7,10 +7,12 @@ import { createCoachCalendarEvent } from "@/lib/google-calendar.functions";
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
 
-// Light assessment columns — enough for list counts, history charts & last-assessment summary.
-// Heavy jsonb (segment_analysis, photos) and free-text notes are lazy-loaded on selection.
-const ASSESSMENT_LIGHT_COLS =
-  "id,client_id,assessment_date,method,age,height,weight,bmi,body_fat,skeletal_muscle,muscle_mass,visceral_fat,basal_metabolism,body_age,body_water,bone_mass,systolic_bp,diastolic_bp,heart_rate,blood_glucose,next_assessment_date,next_assessment_time,group_id";
+// PERF: initial render only needs the COUNT of assessments per client (shown in cards) —
+// no chart/result data is needed until the user opens a specific aluno. We fetch a single
+// scalar column to keep payload tiny (1 col × N rows instead of 22 cols × N rows).
+// Heavy jsonb (segment_analysis, photos), notes, and detailed metrics are lazy-loaded by
+// loadFullAssessmentsForClient() when an aluno is selected.
+const ASSESSMENT_LIGHT_COLS = "client_id,assessment_date";
 
 type ChallengeLink = {
   enrollmentId: string;
@@ -120,31 +122,32 @@ export function EvaluateTab() {
     // Paginate to bypass Supabase's default 1000-row limit.
     // PERF: do NOT join coach_body_assessments here — that pulled ~13k rows with heavy jsonb
     // (photos / segment_analysis) and caused ~30s loads on master coach view. We fetch only
-    // client metadata here, then a separate lightweight assessment summary, then lazy-load
-    // the full per-assessment payload (photos/segments/notes) only when a client is opened.
+    // client metadata here, then a separate lightweight count-only assessment fetch, then
+    // lazy-load the full per-assessment payload only when a client is opened.
     const PAGE = 1000;
-    let from = 0;
-    const all: any[] = [];
-    while (true) {
-      let q = supabase
-        .from("coach_evaluation_clients" as never)
-        .select("id,coach_id,name,gender,ethnicity,height,height_unit,birth_date,language,whatsapp,email,notes,groups,avatar_url,created_at" as never)
-        .order("created_at" as never, { ascending: false })
-        .range(from, from + PAGE - 1);
-      if (!masterFlag) {
-        q = q.eq("coach_id" as never, coach.id as never);
-      }
-      const { data, error } = await q;
-      if (error) return toast.error("Erro ao carregar alunos da avaliação");
-      const rows = (data as any[]) || [];
-      all.push(...rows);
-      if (rows.length < PAGE) break;
-      from += PAGE;
-    }
 
-    // Lightweight assessments (no jsonb / notes). Page through to bypass 1000-row limit.
-    const assessmentsByClient = new Map<string, any[]>();
-    {
+    const fetchAllClients = async () => {
+      let from = 0;
+      const out: any[] = [];
+      while (true) {
+        let q = supabase
+          .from("coach_evaluation_clients" as never)
+          .select("id,coach_id,name,gender,ethnicity,height,height_unit,birth_date,language,whatsapp,email,notes,groups,avatar_url,created_at" as never)
+          .order("created_at" as never, { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (!masterFlag) q = q.eq("coach_id" as never, coach.id as never);
+        const { data, error } = await q;
+        if (error) throw error;
+        const rows = (data as any[]) || [];
+        out.push(...rows);
+        if (rows.length < PAGE) break;
+        from += PAGE;
+      }
+      return out;
+    };
+
+    const fetchAllAssessments = async () => {
+      const map = new Map<string, any[]>();
       let aFrom = 0;
       while (true) {
         let aq = supabase
@@ -152,21 +155,31 @@ export function EvaluateTab() {
           .select(ASSESSMENT_LIGHT_COLS as never)
           .order("assessment_date" as never, { ascending: false })
           .range(aFrom, aFrom + PAGE - 1);
-        if (!masterFlag) {
-          aq = aq.eq("coach_id" as never, coach.id as never);
-        }
+        if (!masterFlag) aq = aq.eq("coach_id" as never, coach.id as never);
         const { data: aData, error: aErr } = await aq;
         if (aErr) break;
         const aRows = (aData as any[]) || [];
         aRows.forEach((r) => {
-          const arr = assessmentsByClient.get(r.client_id) || [];
+          const arr = map.get(r.client_id) || [];
           arr.push(r);
-          assessmentsByClient.set(r.client_id, arr);
+          map.set(r.client_id, arr);
         });
         if (aRows.length < PAGE) break;
         aFrom += PAGE;
       }
+      return map;
+    };
+
+    let all: any[] = [];
+    let assessmentsByClient = new Map<string, any[]>();
+    try {
+      const [c1, c2] = await Promise.all([fetchAllClients(), fetchAllAssessments()]);
+      all = c1;
+      assessmentsByClient = c2;
+    } catch {
+      return toast.error("Erro ao carregar alunos da avaliação");
     }
+
 
     // Build coachId -> coachName map (only needed for master view)
     const coachNameById = new Map<string, string>();
