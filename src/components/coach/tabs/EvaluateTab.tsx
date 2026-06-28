@@ -112,14 +112,18 @@ export function EvaluateTab() {
     const masterFlag = !!masterResult;
     setIsMaster(masterFlag);
 
-    // Paginate to bypass Supabase's default 1000-row limit
+    // Paginate to bypass Supabase's default 1000-row limit.
+    // PERF: do NOT join coach_body_assessments here — that pulled ~13k rows with heavy jsonb
+    // (photos / segment_analysis) and caused ~30s loads on master coach view. We fetch only
+    // client metadata here, then a separate lightweight assessment summary, then lazy-load
+    // the full per-assessment payload (photos/segments/notes) only when a client is opened.
     const PAGE = 1000;
     let from = 0;
     const all: any[] = [];
     while (true) {
       let q = supabase
         .from("coach_evaluation_clients" as never)
-        .select("*, coach_body_assessments(*)" as never)
+        .select("id,coach_id,name,gender,ethnicity,height,height_unit,birth_date,language,whatsapp,email,notes,groups,avatar_url,created_at" as never)
         .order("created_at" as never, { ascending: false })
         .range(from, from + PAGE - 1);
       if (!masterFlag) {
@@ -131,6 +135,32 @@ export function EvaluateTab() {
       all.push(...rows);
       if (rows.length < PAGE) break;
       from += PAGE;
+    }
+
+    // Lightweight assessments (no jsonb / notes). Page through to bypass 1000-row limit.
+    const assessmentsByClient = new Map<string, any[]>();
+    {
+      let aFrom = 0;
+      while (true) {
+        let aq = supabase
+          .from("coach_body_assessments" as never)
+          .select(ASSESSMENT_LIGHT_COLS as never)
+          .order("assessment_date" as never, { ascending: false })
+          .range(aFrom, aFrom + PAGE - 1);
+        if (!masterFlag) {
+          aq = aq.eq("coach_id" as never, coach.id as never);
+        }
+        const { data: aData, error: aErr } = await aq;
+        if (aErr) break;
+        const aRows = (aData as any[]) || [];
+        aRows.forEach((r) => {
+          const arr = assessmentsByClient.get(r.client_id) || [];
+          arr.push(r);
+          assessmentsByClient.set(r.client_id, arr);
+        });
+        if (aRows.length < PAGE) break;
+        aFrom += PAGE;
+      }
     }
 
     // Build coachId -> coachName map (only needed for master view)
@@ -163,9 +193,30 @@ export function EvaluateTab() {
       notes: row.notes || "",
       groups: row.groups || [],
       avatar: row.avatar_url || undefined,
-      assessments: (row.coach_body_assessments || []).map(mapAssessment),
+      assessments: (assessmentsByClient.get(row.id) || []).map(mapAssessment),
       coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
     })));
+  };
+
+  // Per-client cache of full assessment rows (photos + segments + notes).
+  // Persists across re-renders; cleared after a save/edit/delete via loadClients().
+  const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
+
+  const loadFullAssessmentsForClient = async (clientId: string): Promise<FitMindAssessment[]> => {
+    const cached = fullAssessmentsCacheRef.current.get(clientId);
+    if (cached) return cached;
+    const { data, error } = await supabase
+      .from("coach_body_assessments" as never)
+      .select("*" as never)
+      .eq("client_id" as never, clientId as never)
+      .order("assessment_date" as never, { ascending: false });
+    if (error) {
+      toast.error("Erro ao carregar avaliações do aluno");
+      return [];
+    }
+    const mapped = ((data as any[]) || []).map(mapAssessment);
+    fullAssessmentsCacheRef.current.set(clientId, mapped);
+    return mapped;
   };
 
   useEffect(() => { loadClients(); }, []);
