@@ -81,3 +81,22 @@ export const finalizePartnerRegistrationFn = createServerFn({ method: "POST" })
     const { finalizePartnerRegistration } = await import("./registration.server");
     return finalizePartnerRegistration(data);
   });
+
+const upgradeProfessionalSchema = z.object({
+  userId: z.string().uuid(),
+  uplineCoachId: z.string().uuid(),
+  specialtyKey: z.string().min(1),
+  specialtyCustomDescription: z.string().max(500).optional().nullable(),
+  professionalCouncil: z.string().optional().nullable(),
+  councilNumber: z.string().optional().nullable(),
+  specialtyPendingSetup: z.boolean().optional(),
+  alreadyProfessional: z.boolean().optional(),
+  activationNote: z.string().max(500).optional().nullable(),
+});
+
+export const upgradeExistingToProfessionalFn = createServerFn({ method: "POST" })
+  .inputValidator((data) => upgradeProfessionalSchema.parse(data))
+  .handler(async ({ data }) => {
+    const { upgradeExistingToProfessional } = await import("./registration.server");
+    return upgradeExistingToProfessional(data);
+  });
