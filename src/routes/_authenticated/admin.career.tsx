@@ -759,7 +759,7 @@ const BADGE_META: Record<BadgeKey, { label: string; color: string; description: 
 };
 
 function MedalsTab() {
-  const [rows, setRows]   = useState<{ id: string; name: string; email: string; badges: { badge_key: string }[] }[] | null>(null);
+  const [rows, setRows]   = useState<{ id: string; name: string; email: string; isProfessional?: boolean; badges: { badge_key: string }[] }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const fetchAll = useServerFn(listCoachesWithBadges);
