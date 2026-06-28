@@ -47,6 +47,9 @@ export const listProfessorWallets = createServerFn({ method: "GET" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<ProfessorWalletRow[]> => {
     await ensureAdmin(context.userId);
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoff = await getServerCutoffIso();
+
     const { data: wallets } = await (supabaseAdmin as any)
       .from("professor_wallets")
       .select("*");
@@ -58,11 +61,34 @@ export const listProfessorWallets = createServerFn({ method: "GET" })
     const pMap = new Map<string, any>();
     (profiles || []).forEach((p: any) => pMap.set(p.id, p));
 
+    // Recompute professor wallets dynamically from blocked_entries respecting cutoff
+    let entriesQ = (supabaseAdmin as any)
+      .from("professor_blocked_entries")
+      .select("profile_id,amount,status,created_at");
+    if (cutoff) entriesQ = entriesQ.gte("created_at", cutoff);
+    const { data: entries } = await entriesQ;
+    type Agg = { earned: number; released: number; blocked: number };
+    const aggByProfile = new Map<string, Agg>();
+    ((entries as any[]) || []).forEach((e) => {
+      const a = aggByProfile.get(e.profile_id) || { earned: 0, released: 0, blocked: 0 };
+      const amt = Number(e.amount || 0);
+      if (e.status === "released") { a.earned += amt; a.released += amt; }
+      else if (e.status === "blocked") { a.earned += amt; a.blocked += amt; }
+      // cancelled: ignore
+      aggByProfile.set(e.profile_id, a);
+    });
+
+    // Withdrawals come from professor_wallets totals (no created_at on aggregate),
+    // so under test mode we hide withdrawn too (consistent with available recompute).
+    const includeWithdrawn = !cutoff;
+
     // Carteira virtual: valores marcados como professor ainda não atribuídos
-    const { data: adminEntries } = await supabaseAdmin
+    let adminEntriesQ = supabaseAdmin
       .from("admin_system_wallet_entries")
-      .select("slot_label, kind, amount")
+      .select("slot_label, kind, amount, created_at")
       .ilike("slot_label", "%professor%");
+    if (cutoff) adminEntriesQ = adminEntriesQ.gte("created_at", cutoff);
+    const { data: adminEntries } = await adminEntriesQ;
     let nCredits = 0;
     let nDebits = 0;
     (adminEntries || []).forEach((e: any) => {
@@ -70,28 +96,46 @@ export const listProfessorWallets = createServerFn({ method: "GET" })
       if (e.kind === "debit") nDebits += amt;
       else nCredits += amt;
     });
+    const unassignedAvail = Math.max(0, nCredits - nDebits);
     const unassigned: ProfessorWalletRow = {
       profile_id: "admin-professor",
       name: "Admin Professor (não atribuído)",
       email: null,
-      available_balance: Math.max(0, nCredits - nDebits),
+      available_balance: unassignedAvail,
       blocked_balance: 0,
       total_earned: nCredits,
       total_released: nCredits,
       total_withdrawn: nDebits,
     };
 
-    const rows = rowsRaw.map((w) => ({
-      profile_id: w.profile_id,
-      name: pMap.get(w.profile_id)?.name || "—",
-      email: pMap.get(w.profile_id)?.email || null,
-      available_balance: Number(w.available_balance || 0),
-      blocked_balance: Number(w.blocked_balance || 0),
-      total_earned: Number(w.total_earned || 0),
-      total_released: Number(w.total_released || 0),
-      total_withdrawn: Number(w.total_withdrawn || 0),
-    }));
-    return [unassigned, ...rows];
+    const rows = rowsRaw.map((w) => {
+      const agg = aggByProfile.get(w.profile_id) || { earned: 0, released: 0, blocked: 0 };
+      const withdrawn = includeWithdrawn ? Number(w.total_withdrawn || 0) : 0;
+      const available = Math.max(0, agg.released - withdrawn);
+      return {
+        profile_id: w.profile_id,
+        name: pMap.get(w.profile_id)?.name || "—",
+        email: pMap.get(w.profile_id)?.email || null,
+        available_balance: available,
+        blocked_balance: agg.blocked,
+        total_earned: agg.earned,
+        total_released: agg.released,
+        total_withdrawn: withdrawn,
+      };
+    });
+
+    // Under test mode hide professor wallets with zero activity post-cutoff
+    const filteredRows = cutoff
+      ? rows.filter((r) => r.total_earned > 0 || r.total_withdrawn > 0)
+      : rows;
+
+    // Hide unassigned card when empty under test mode
+    const result: ProfessorWalletRow[] = [];
+    if (!cutoff || unassigned.total_earned > 0 || unassigned.total_withdrawn > 0) {
+      result.push(unassigned);
+    }
+    result.push(...filteredRows);
+    return result;
   });
 
 export const listProfessorBlockedEntries = createServerFn({ method: "GET" })
