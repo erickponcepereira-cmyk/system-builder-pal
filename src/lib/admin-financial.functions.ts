@@ -532,6 +532,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
           status: c.status,
           createdAt: c.created_at,
           referrerTitle: c.referred_by_student_id ? (referrerTitleMap.get(c.referred_by_student_id) || "subcoach") : null,
+          saleChannel: tx ? "store" : null,
         };
       });
     }
