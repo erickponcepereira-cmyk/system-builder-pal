@@ -10159,6 +10159,7 @@ export type Database = {
         | "government_tax"
         | "custom"
         | "nutritionist_blocked"
+        | "professor_blocked"
       withdrawal_status:
         | "requested"
         | "approved"
@@ -10413,6 +10414,7 @@ export const Constants = {
         "government_tax",
         "custom",
         "nutritionist_blocked",
+        "professor_blocked",
       ],
       withdrawal_status: [
         "requested",

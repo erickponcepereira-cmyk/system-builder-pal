@@ -3,6 +3,7 @@ import { Wallet, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getClientCutoffIso } from "@/lib/test-mode";
 
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -63,31 +64,68 @@ export function ProfessionalWalletTab() {
     if (!coach) { setLoading(false); return; }
     setCoachId(coach.id);
 
+    const cutoff = await getClientCutoffIso();
+
+    let ordersQ = supabase
+      .from("partner_product_orders")
+      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at")
+      .eq("professional_coach_id", coach.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (cutoff) ordersQ = ordersQ.gte("created_at", cutoff);
+
+    let withdrawsQ = supabase
+      .from("withdrawal_requests")
+      .select("id,amount,status,requested_at,paid_at")
+      .eq("professional_coach_id" as never, coach.id as never)
+      .order("requested_at", { ascending: false })
+      .limit(20);
+    if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
+
     const [walletRes, ordersRes, withdrawsRes] = await Promise.all([
       supabase
         .from("professional_wallets" as never)
         .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
         .eq("professional_coach_id" as never, coach.id as never)
         .maybeSingle(),
-      supabase
-        .from("partner_product_orders")
-        .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at")
-        .eq("professional_coach_id", coach.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("withdrawal_requests")
-        .select("id,amount,status,requested_at,paid_at")
-        .eq("professional_coach_id" as never, coach.id as never)
-        .order("requested_at", { ascending: false })
-        .limit(20),
+      ordersQ,
+      withdrawsQ,
     ]);
 
-    setWallet(((walletRes.data as unknown as WalletRow | null)) || {
+    const orders = (ordersRes.data as OrderRow[]) || [];
+    const withdraws = (withdrawsRes.data as WithdrawRow[]) || [];
+
+    let walletRow = (walletRes.data as unknown as WalletRow | null) || {
       available_balance: 0, pending_balance: 0, total_earned: 0, total_withdrawn: 0,
-    });
-    setOrders((ordersRes.data as OrderRow[]) || []);
-    setWithdraws((withdrawsRes.data as WithdrawRow[]) || []);
+    };
+
+    // Test Mode ativo: recomputa totais a partir das vendas/saques após o marco
+    if (cutoff) {
+      let avail = 0, pending = 0, earned = 0;
+      for (const o of orders) {
+        const net = Number(o.partner_net_amount || 0);
+        if (o.status === "paid") {
+          earned += net;
+          // libera após 7 dias do paid_at
+          const paid = o.paid_at ? new Date(o.paid_at).getTime() : 0;
+          if (paid && Date.now() - paid >= 7 * 24 * 3600 * 1000) avail += net;
+          else pending += net;
+        }
+      }
+      const withdrawn = withdraws
+        .filter((w) => w.status === "paid")
+        .reduce((s, w) => s + Number(w.amount || 0), 0);
+      walletRow = {
+        available_balance: Math.max(0, avail - withdrawn),
+        pending_balance: pending,
+        total_earned: earned,
+        total_withdrawn: withdrawn,
+      };
+    }
+
+    setWallet(walletRow);
+    setOrders(orders);
+    setWithdraws(withdraws);
     setLoading(false);
   }
 
