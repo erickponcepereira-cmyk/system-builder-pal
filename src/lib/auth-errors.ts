@@ -1,6 +1,7 @@
 // Traduz erros comuns do Supabase Auth e do servidor para PT-BR amigável.
 export function translateAuthError(raw: unknown): string {
-  const msg = (raw instanceof Error ? raw.message : String(raw || "")).toLowerCase();
+  const extracted = extractMessage(raw);
+  const msg = extracted.toLowerCase();
 
   if (!msg) return "Não foi possível concluir a operação. Tente novamente.";
 
