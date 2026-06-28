@@ -80,24 +80,32 @@ export function PartnerWalletTab() {
     if (!partner) { setLoading(false); return; }
     setPartnerId(partner.id);
 
+    const cutoff = await getClientCutoffIso();
+
+    let ordersQ = supabase
+      .from("partner_product_orders")
+      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
+      .eq("partner_id", partner.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (cutoff) ordersQ = ordersQ.gte("created_at", cutoff);
+
+    let withdrawsQ = supabase
+      .from("withdrawal_requests")
+      .select("id,amount,status,requested_at,paid_at")
+      .eq("partner_id" as never, partner.id as never)
+      .order("requested_at", { ascending: false })
+      .limit(20);
+    if (cutoff) withdrawsQ = withdrawsQ.gte("requested_at" as never, cutoff as never);
+
     const [walletRes, ordersRes, withdrawsRes] = await Promise.all([
       supabase
         .from("partner_wallets" as never)
         .select("available_balance,pending_balance,total_earned,total_withdrawn" as never)
         .eq("partner_id" as never, partner.id as never)
         .maybeSingle(),
-      supabase
-        .from("partner_product_orders")
-        .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
-        .eq("partner_id", partner.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("withdrawal_requests")
-        .select("id,amount,status,requested_at,paid_at")
-        .eq("partner_id" as never, partner.id as never)
-        .order("requested_at", { ascending: false })
-        .limit(20),
+      ordersQ,
+      withdrawsQ,
     ]);
 
     setWallet(((walletRes.data as unknown as WalletRow | null)) || {
