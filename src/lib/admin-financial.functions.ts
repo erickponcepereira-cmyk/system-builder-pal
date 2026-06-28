@@ -464,6 +464,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
           amount: Number(e.amount || 0) * (e.kind === "debit" ? -1 : 1),
           status: e.kind === "debit" ? "paid" : "available",
           createdAt: e.created_at,
+          saleChannel: po?.saleChannel ?? (tx ? "store" : null),
         };
       });
     }
