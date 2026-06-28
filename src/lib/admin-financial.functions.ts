@@ -1036,6 +1036,7 @@ export const getAdminWallet = createServerFn({ method: "GET" })
       .from("admin_system_wallet_entries")
       .select("kind, amount, slot_label, created_at")
       .not("slot_label", "ilike", "%nutricion%")
+      .not("slot_label", "ilike", "%professor%")
       .not("slot_label", "ilike", "%imposto%")
       .not("slot_label", "ilike", "%taxa de pagamento%"), "created_at", cutoff);
 
