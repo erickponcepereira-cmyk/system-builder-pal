@@ -29,5 +29,21 @@ export function translateAuthError(raw: unknown): string {
     return "Cadastros estão temporariamente desabilitados. Tente mais tarde.";
 
   // Caso já seja uma mensagem em PT vinda do servidor, devolve original.
-  return raw instanceof Error ? raw.message : String(raw);
+  return extractMessage(raw) || "Não foi possível concluir a operação. Tente novamente.";
+}
+
+function extractMessage(raw: unknown): string {
+  if (!raw) return "";
+  if (typeof raw === "string") return raw;
+  if (raw instanceof Error) return raw.message;
+  if (typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    const candidates = [obj.message, obj.error, obj.statusText, (obj.body as Record<string, unknown>)?.message];
+    for (const c of candidates) {
+      if (typeof c === "string" && c.trim()) return c;
+      if (c instanceof Error) return c.message;
+    }
+    try { return JSON.stringify(raw); } catch { return ""; }
+  }
+  return String(raw);
 }
