@@ -453,6 +453,23 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setScreen("assessment");
   }, [initialClientId, clients]);
 
+  // Lazy-load full assessment payload (photos / segments / notes) on demand.
+  // List view receives lightweight summaries — the parent fetches the rest only when a
+  // client is opened, and caches the result. Falls back to the client's existing data.
+  const hydrateClientAssessments = useCallback(
+    async (c: FitMindClient): Promise<FitMindClient> => {
+      if (!onLoadFullAssessments) return c;
+      try {
+        const full = await onLoadFullAssessments(c.id);
+        return { ...c, assessments: full.length ? full : c.assessments };
+      } catch {
+        return c;
+      }
+    },
+    [onLoadFullAssessments],
+  );
+
+
 
   // ── Cálculo automático do IMC ────────────────────────────
   const computedBMI = useMemo(() => {
