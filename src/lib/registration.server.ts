@@ -375,3 +375,84 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
     throw err;
   }
 }
+
+export type UpgradeExistingToProfessionalInput = {
+  userId: string;
+  uplineCoachId: string;
+  specialtyKey: string;
+  specialtyCustomDescription?: string | null;
+  professionalCouncil?: string | null;
+  councilNumber?: string | null;
+  specialtyPendingSetup?: boolean;
+  alreadyProfessional?: boolean;
+  activationNote?: string | null;
+};
+
+export async function upgradeExistingToProfessional(input: UpgradeExistingToProfessionalInput) {
+  // Localiza o profile do usuário autenticado pelo userId enviado.
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("profiles")
+    .select("id, role")
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (profileErr) throw new Error(profileErr.message);
+  if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
+  if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
+
+  const nowIso = new Date().toISOString();
+  const activationPatch = input.alreadyProfessional
+    ? {
+        already_coach: true,
+        activation_paid_at: nowIso,
+        activation_source: "already_professional" as const,
+        activation_note: clean(input.activationNote),
+      }
+    : {};
+
+  const professionalPatch = {
+    is_professional: true,
+    specialty_key: input.specialtyKey,
+    specialty_custom_description: clean(input.specialtyCustomDescription),
+    professional_council: clean(input.professionalCouncil),
+    council_number: clean(input.councilNumber),
+    specialty_pending_setup: !!input.specialtyPendingSetup,
+    approved_at: nowIso,
+    onboarding_stage: "released" as const,
+    upline_coach_id: input.uplineCoachId,
+  };
+
+  const { data: existingCoach } = await supabaseAdmin
+    .from("coaches")
+    .select("id")
+    .eq("profile_id", profile.id)
+    .maybeSingle();
+
+  if (existingCoach?.id) {
+    const { error: updErr } = await supabaseAdmin
+      .from("coaches")
+      .update({ ...professionalPatch, ...activationPatch })
+      .eq("id", existingCoach.id);
+    if (updErr) throw new Error(updErr.message);
+  } else {
+    let referralCode = makeReferralCode();
+    let lastErr: { code?: string; message: string } | null = null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const { error: insErr } = await supabaseAdmin.from("coaches").insert({
+        profile_id: profile.id,
+        referral_code: referralCode,
+        referral_link: `/r/${referralCode}`,
+        completed_coach_course: false,
+        ...professionalPatch,
+        ...activationPatch,
+      });
+      if (!insErr) { lastErr = null; break; }
+      lastErr = insErr;
+      if (insErr.code !== "23505") break;
+      referralCode = makeReferralCode();
+    }
+    if (lastErr) throw new Error(lastErr.message);
+  }
+
+  await supabaseAdmin.from("profiles").update({ status: "active", role: "coach" }).eq("id", profile.id);
+  return { ok: true, profileId: profile.id };
+}
