@@ -19,6 +19,11 @@ export type SaleRow = {
   paid_at: string;
   my_commission: number;
   commission_levels: number[];
+  // Set when this sale was performed by a Master Coach (cross-sale bonus row exists,
+  // or my own commission on this sale was tagged `is_master_coach_commission`).
+  is_master_coach_sale?: boolean;
+  master_coach_id?: string | null;
+  master_coach_name?: string | null;
 };
 
 export type SalesReport = {
