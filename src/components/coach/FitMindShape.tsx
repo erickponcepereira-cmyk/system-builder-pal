@@ -285,6 +285,9 @@ export interface FitMindShapeProps {
     client: FitMindClient,
   ) => Promise<FitMindClient | void>;
   onSearchClients?: (query: string) => Promise<FitMindClient[]>;
+  // Lazy-load heavy assessment fields (photos / segments / notes) for a single client.
+  // List view receives lightweight summaries; full payload is only fetched on open.
+  onLoadFullAssessments?: (clientId: string) => Promise<FitMindAssessment[]>;
   onCreateGoogleCalendarEvent?: (
     date: string,
     time: string,
@@ -367,6 +370,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onCreateClient,
   onUpdateClient,
   onSearchClients,
+  onLoadFullAssessments,
   onCreateGoogleCalendarEvent,
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
@@ -448,6 +452,23 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setStep(0);
     setScreen("assessment");
   }, [initialClientId, clients]);
+
+  // Lazy-load full assessment payload (photos / segments / notes) on demand.
+  // List view receives lightweight summaries — the parent fetches the rest only when a
+  // client is opened, and caches the result. Falls back to the client's existing data.
+  const hydrateClientAssessments = useCallback(
+    async (c: FitMindClient): Promise<FitMindClient> => {
+      if (!onLoadFullAssessments) return c;
+      try {
+        const full = await onLoadFullAssessments(c.id);
+        return { ...c, assessments: full.length ? full : c.assessments };
+      } catch {
+        return c;
+      }
+    },
+    [onLoadFullAssessments],
+  );
+
 
 
   // ── Cálculo automático do IMC ────────────────────────────
@@ -1181,16 +1202,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             key={c.id}
             className="fm-card"
             style={{ marginBottom: 8, padding: "12px 16px", cursor: "pointer" }}
-            onClick={() => {
-              setSelectedClient(c);
-              const sorted = (c.assessments ?? [])
+            onClick={async () => {
+              const hydrated = await hydrateClientAssessments(c);
+              setSelectedClient(hydrated);
+              const sorted = (hydrated.assessments ?? [])
                 .filter((it) => it?.date)
                 .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
               if (sorted.length > 0) {
                 setAssessment(sorted[sorted.length - 1]);
                 setScreen("result");
               } else {
-                setAssessment({ height: c.height || undefined });
+                setAssessment({ height: hydrated.height || undefined });
                 setStep(0);
                 setScreen("assessment");
               }
@@ -1398,22 +1420,24 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   ? "2px solid var(--fm-primary)"
                   : "2px solid transparent",
             }}
-            onClick={() => {
-              setSelectedClient(c);
+            onClick={async () => {
               if (entryIntent === "new") {
+                setSelectedClient(c);
                 setAssessment({ height: c.height || undefined });
                 setStep(0);
                 setScreen("assessment");
                 return;
               }
-              const sorted = (c.assessments ?? [])
+              const hydrated = await hydrateClientAssessments(c);
+              setSelectedClient(hydrated);
+              const sorted = (hydrated.assessments ?? [])
                 .filter((it) => it?.date)
                 .sort((x, y) => new Date(x.date).getTime() - new Date(y.date).getTime());
               if (sorted.length > 0) {
                 setAssessment(sorted[sorted.length - 1]);
                 setScreen("result");
               } else {
-                setAssessment({ height: c.height || undefined });
+                setAssessment({ height: hydrated.height || undefined });
                 setStep(0);
                 setScreen("assessment");
               }

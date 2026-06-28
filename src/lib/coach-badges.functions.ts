@@ -30,7 +30,7 @@ export const listCoachesWithBadges = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data: coaches } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, profiles!coaches_profile_id_fkey(name, email)")
+      .select("id, profile_id, is_professional, approved_at, profiles!coaches_profile_id_fkey(name, email)")
       .order("created_at", { ascending: false })
       .limit(500);
     const { data: badges } = await supabaseAdmin
@@ -44,6 +44,9 @@ export const listCoachesWithBadges = createServerFn({ method: "GET" })
       id: c.id,
       name: c.profiles?.name ?? "—",
       email: c.profiles?.email ?? "",
+      // Auto-grant: profissionais aprovados ganham acesso de Master Coach pela RPC is_master_coach.
+      // Expomos para a UI deixar isso claro (toggle desabilitado + chip "Auto").
+      isProfessional: !!c.is_professional && !!c.approved_at,
       badges: byCoach[c.id] ?? [],
     }));
   });
