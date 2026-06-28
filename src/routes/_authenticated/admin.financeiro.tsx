@@ -669,6 +669,8 @@ export type CreatorEntryLike = {
   status: string;
   created_at: string;
   sale_channel: "store" | "coach" | null;
+  is_master_coach_sale?: boolean;
+  master_coach_name?: string | null;
 };
 
 function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
@@ -682,6 +684,8 @@ function mapCreatorEntry(e: CreatorEntryRow): CreatorEntryLike {
     status: e.status,
     created_at: e.paid_at || e.created_at,
     sale_channel: e.sale_channel,
+    is_master_coach_sale: e.is_master_coach_sale,
+    master_coach_name: e.master_coach_name,
   };
 }
 
