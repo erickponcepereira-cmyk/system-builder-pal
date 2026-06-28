@@ -232,6 +232,7 @@ async function listEntriesByOwner(opts: {
     payment_method: r.payment_method || null,
     created_at: r.created_at,
     paid_at: r.paid_at,
+    sale_channel: (r.sale_channel === "coach" || r.sale_channel === "store") ? r.sale_channel : null,
   }));
 }
 
