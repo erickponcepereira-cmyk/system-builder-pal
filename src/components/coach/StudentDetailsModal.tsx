@@ -557,7 +557,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
               <WaterHistoryPanel history={waterHistory} goalMl={waterGoalMl} />
             </div>
           ) : (
-            <PurchasesTab txs={txs} />
+            <StudentPurchaseHistory studentId={studentId} />
           )}
         </div>
       </div>
