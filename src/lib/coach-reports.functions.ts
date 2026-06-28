@@ -344,6 +344,7 @@ async function buildSalesReportForRange(
         ? (professionalProductMap.get(o.professional_product_id) || "Produto profissional")
         : "Produto de parceiro/profissional";
     const comm = commByPartnerOrder.get(o.id) || { amount: 0, levels: [] };
+    const master = masterByPartnerOrder.get(o.id);
     rows.push({
       id: o.id,
       source: isPartnerProduct ? "partner" : "professional",
@@ -359,6 +360,9 @@ async function buildSalesReportForRange(
       paid_at: o.paid_at,
       my_commission: comm.amount,
       commission_levels: comm.levels.sort((a, b) => a - b),
+      is_master_coach_sale: !!master,
+      master_coach_id: master?.coach_id ?? null,
+      master_coach_name: master?.coach_id ? (masterCoachNameById.get(master.coach_id) || null) : null,
     });
   }
 
