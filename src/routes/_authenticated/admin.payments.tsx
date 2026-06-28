@@ -21,6 +21,7 @@ import {
 import { listNutritionistWallets, type NutritionistWalletRow } from "@/lib/nutritionist.functions";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
+import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 
 export const Route = createFileRoute("/_authenticated/admin/payments")({
   component: AdminPayments,
@@ -426,7 +427,10 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                 <div className="px-4 py-2 bg-white/5 text-xs text-white/60">{details.totals.salesCount} venda(s) · {fmt(details.totals.salesAmount)}</div>
                 <DataTable rows={details.sales.map((s) => [
                   s.date ? new Date(s.date).toLocaleDateString("pt-BR") : "—",
-                  s.student || "—",
+                  <span key="st" className="inline-flex items-center gap-2 flex-wrap">
+                    <span>{s.student || "—"}</span>
+                    {s.isMasterCoachSale && <MasterCoachBadge masterCoachName={s.masterCoachName} compact />}
+                  </span>,
                   <span key="p" className="inline-flex items-center gap-2">
                     <span>{s.product || "—"}</span>
                     {s.tag && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{s.tag}</span>}
@@ -454,7 +458,10 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                     const color = e.status === "available" ? statusColor("available") : "bg-amber-500/20 text-amber-400";
                     return [
                       e.date ? new Date(e.date).toLocaleString("pt-BR") : "—",
-                      e.studentName || "—",
+                      <span key="st" className="inline-flex items-center gap-2 flex-wrap">
+                        <span>{e.studentName || "—"}</span>
+                        {e.isMasterCoachSale && <MasterCoachBadge masterCoachName={e.masterCoachName} compact />}
+                      </span>,
                       <span key="p" className="inline-flex items-center gap-2">
                         <span>{e.productName || "—"}</span>
                         <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">Produto criado</span>
@@ -479,7 +486,10 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
                   } else if (c.status === "cancelled") { label = "Cancelada"; }
                   return [
                     c.date ? new Date(c.date).toLocaleString("pt-BR") : "—",
-                    c.studentName || "—",
+                    <span key="st" className="inline-flex items-center gap-2 flex-wrap">
+                      <span>{c.studentName || "—"}</span>
+                      {c.isMasterCoachSale && <MasterCoachBadge masterCoachName={c.masterCoachName} compact />}
+                    </span>,
                     c.productName || (c.purchaseType || "—"),
                     c.isReferral ? "Indicação" : (c.level !== null ? `L${c.level}` : "—"),
                     <span key="s" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${color}`}>{label}</span>,

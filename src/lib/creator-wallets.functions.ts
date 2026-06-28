@@ -38,6 +38,9 @@ export type CreatorEntryRow = {
   created_at: string;
   paid_at: string | null;
   sale_channel: "store" | "coach" | null;
+  /** Master Coach traceability — set when the sale was made via a master coach (cross-network). */
+  is_master_coach_sale?: boolean;
+  master_coach_name?: string | null;
 };
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -169,7 +172,7 @@ async function listEntriesByOwner(opts: {
   const cutoff = await getServerCutoffIso();
   let q = (supabaseAdmin as any)
     .from("partner_product_orders")
-    .select(`id, order_number, status, gross_amount, partner_net_amount, payment_method, paid_at, created_at, student_id, partner_product_id, professional_product_id, sale_channel, ${opts.ownerCol}`)
+    .select(`id, order_number, status, gross_amount, partner_net_amount, payment_method, paid_at, created_at, student_id, partner_product_id, professional_product_id, sale_channel, master_coach_cross_beneficiary_coach_id, ${opts.ownerCol}`)
     .eq("status", "paid")
     .not(opts.ownerCol, "is", null)
     .order("created_at", { ascending: false })
@@ -183,6 +186,7 @@ async function listEntriesByOwner(opts: {
   const studentIds = Array.from(new Set(rows.map((r) => r.student_id).filter(Boolean))) as string[];
   const partnerProductIds = Array.from(new Set(rows.map((r) => r.partner_product_id).filter(Boolean))) as string[];
   const professionalProductIds = Array.from(new Set(rows.map((r) => r.professional_product_id).filter(Boolean))) as string[];
+  const masterCoachIds = Array.from(new Set(rows.map((r) => r.master_coach_cross_beneficiary_coach_id).filter(Boolean))) as string[];
 
   let ownerNameMap = new Map<string, string>();
   if (opts.ownerCol === "partner_id" && ownerIds.length) {
@@ -199,7 +203,7 @@ async function listEntriesByOwner(opts: {
     ((cs as any[]) || []).forEach((c: any) => ownerNameMap.set(c.id, c.profiles?.name || "—"));
   }
 
-  const [studentsRes, ppRes, profProdRes] = await Promise.all([
+  const [studentsRes, ppRes, profProdRes, mcRes] = await Promise.all([
     studentIds.length
       ? supabaseAdmin.from("students").select("id, profiles!inner(name)").in("id", studentIds)
       : Promise.resolve({ data: [] as any[] }),
@@ -209,31 +213,41 @@ async function listEntriesByOwner(opts: {
     professionalProductIds.length
       ? (supabaseAdmin as any).from("professional_products").select("id, name").in("id", professionalProductIds)
       : Promise.resolve({ data: [] as any[] }),
+    masterCoachIds.length
+      ? supabaseAdmin.from("coaches").select("id, profiles!coaches_profile_id_fkey(name)").in("id", masterCoachIds)
+      : Promise.resolve({ data: [] as any[] }),
   ]);
   const sMap = new Map<string, string>();
   ((studentsRes.data as any[]) || []).forEach((s: any) => sMap.set(s.id, s.profiles?.name || ""));
   const prodMap = new Map<string, string>();
   ((ppRes.data as any[]) || []).forEach((p: any) => prodMap.set(p.id, p.name));
   ((profProdRes.data as any[]) || []).forEach((p: any) => prodMap.set(p.id, p.name));
+  const mcMap = new Map<string, string>();
+  (((mcRes as any).data as any[]) || []).forEach((c: any) => mcMap.set(c.id, c.profiles?.name || "—"));
 
-  return rows.map((r) => ({
-    id: r.id,
-    order_number: r.order_number,
-    owner_id: r[opts.ownerCol],
-    owner_name: ownerNameMap.get(r[opts.ownerCol]) || "—",
-    student_name: r.student_id ? sMap.get(r.student_id) || null : null,
-    product_name:
-      (r.partner_product_id ? prodMap.get(r.partner_product_id) : null) ||
-      (r.professional_product_id ? prodMap.get(r.professional_product_id) : null) ||
-      null,
-    gross_amount: Number(r.gross_amount || 0),
-    net_amount: Number(r.partner_net_amount || 0),
-    status: r.status,
-    payment_method: r.payment_method || null,
-    created_at: r.created_at,
-    paid_at: r.paid_at,
-    sale_channel: (r.sale_channel === "coach" || r.sale_channel === "store") ? r.sale_channel : null,
-  }));
+  return rows.map((r) => {
+    const mcId = r.master_coach_cross_beneficiary_coach_id as string | null;
+    return {
+      id: r.id,
+      order_number: r.order_number,
+      owner_id: r[opts.ownerCol],
+      owner_name: ownerNameMap.get(r[opts.ownerCol]) || "—",
+      student_name: r.student_id ? sMap.get(r.student_id) || null : null,
+      product_name:
+        (r.partner_product_id ? prodMap.get(r.partner_product_id) : null) ||
+        (r.professional_product_id ? prodMap.get(r.professional_product_id) : null) ||
+        null,
+      gross_amount: Number(r.gross_amount || 0),
+      net_amount: Number(r.partner_net_amount || 0),
+      status: r.status,
+      payment_method: r.payment_method || null,
+      created_at: r.created_at,
+      paid_at: r.paid_at,
+      sale_channel: (r.sale_channel === "coach" || r.sale_channel === "store") ? r.sale_channel : null,
+      is_master_coach_sale: !!mcId,
+      master_coach_name: mcId ? mcMap.get(mcId) || null : null,
+    };
+  });
 }
 
 export const listPartnerCreatorEntries = createServerFn({ method: "GET" })

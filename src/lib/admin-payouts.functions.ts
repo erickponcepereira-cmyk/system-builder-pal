@@ -495,9 +495,9 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
 export interface PayoutDetails {
   profile: { id: string; name: string; email: string | null };
   wallet: { available: number; blocked: number; totalEarned: number; totalWithdrawn: number };
-  sales: Array<{ id: string; date: string | null; amount: number; status: string | null; product: string | null; student: string | null; tag?: string | null; creatorAmount?: number | null }>;
-  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; partnerOrderId: string | null; isReferral: boolean; studentName: string | null; studentEmail: string | null; productName: string | null; purchaseType: string | null; transactionDate: string | null; availableAt: string | null; slotLabel: string | null }>;
-  productEarnings: Array<{ id: string; date: string | null; amount: number; status: string | null; availableAt: string | null; studentName: string | null; studentEmail: string | null; productName: string | null; sourceLabel: string }>;
+  sales: Array<{ id: string; date: string | null; amount: number; status: string | null; product: string | null; student: string | null; tag?: string | null; creatorAmount?: number | null; isMasterCoachSale?: boolean; masterCoachName?: string | null }>;
+  commissions: Array<{ id: string; date: string | null; amount: number; status: string | null; level: number | null; transactionId: string | null; partnerOrderId: string | null; isReferral: boolean; studentName: string | null; studentEmail: string | null; productName: string | null; purchaseType: string | null; transactionDate: string | null; availableAt: string | null; slotLabel: string | null; isMasterCoachSale?: boolean; masterCoachName?: string | null }>;
+  productEarnings: Array<{ id: string; date: string | null; amount: number; status: string | null; availableAt: string | null; studentName: string | null; studentEmail: string | null; productName: string | null; sourceLabel: string; isMasterCoachSale?: boolean; masterCoachName?: string | null }>;
   withdrawals: Array<{ id: string; amount: number; status: string | null; requested_at: string | null; paid_at: string | null; notes: string | null; pix_key: string | null }>;
   totals: { salesCount: number; salesAmount: number; commissionsAvailable: number; commissionsPending: number; commissionsPaid: number; productEarningsAvailable: number; productEarningsPending: number; productEarningsTotal: number };
 }
@@ -562,6 +562,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       id: string; gross_amount: number; status: string | null; created_at: string | null; paid_at: string | null; student_id: string | null;
       partner_product_id: string | null; professional_product_id: string | null; partner_net_amount: number | null;
       partner_id: string | null; professional_coach_id: string | null; selling_coach_id: string | null;
+      master_coach_cross_beneficiary_coach_id?: string | null;
       student?: { profile?: { name: string | null; email: string | null } | null } | null;
       partner_product?: { name: string | null } | null;
       professional_product?: { name: string | null } | null;
@@ -570,7 +571,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (!value) return;
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .eq(column as never, value as never)
         .order("created_at" as never, { ascending: false })
         .limit(200);
@@ -609,7 +610,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     if (commissionPartnerOrderIds.length) {
       let q = supabaseAdmin
         .from("partner_product_orders" as never)
-        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
+        .select("id,gross_amount,status,created_at,paid_at,student_id,partner_product_id,professional_product_id,partner_net_amount,partner_id,professional_coach_id,selling_coach_id,master_coach_cross_beneficiary_coach_id,student:students!partner_product_orders_student_id_fkey(profile:profiles!students_profile_id_fkey(name,email)),partner_product:partner_product_id(name),professional_product:professional_product_id(name)" as never)
         .in("id" as never, commissionPartnerOrderIds as never);
       if (fromDate) q = (q as any).gte("created_at", fromDate);
       if (data.toDate) q = (q as any).lte("created_at", data.toDate);
@@ -714,16 +715,43 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       return byId || po.student?.profile || null;
     };
 
-    const ppoSales = Array.from(partnerOrdersById.values()).map((o) => ({
-      id: o.id,
-      date: o.paid_at || o.created_at,
-      amount: n(o.gross_amount),
-      status: o.status,
-      product: partnerOrderProductName(o),
-      student: partnerOrderStudent(o)?.name ?? null,
-      tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
-      creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
-    }));
+    // Resolver nomes de Master Coach beneficiários (vendas cross-network)
+    const masterCoachIds = Array.from(new Set(
+      Array.from(partnerOrdersById.values())
+        .map((o) => o.master_coach_cross_beneficiary_coach_id)
+        .filter(Boolean) as string[]
+    ));
+    const masterCoachNameById = new Map<string, string>();
+    if (masterCoachIds.length) {
+      const { data: mcRows } = await supabaseAdmin
+        .from("coaches")
+        .select("id, profiles!coaches_profile_id_fkey(name)")
+        .in("id", masterCoachIds);
+      for (const c of ((mcRows as any[]) || [])) {
+        masterCoachNameById.set(c.id, c.profiles?.name || "—");
+      }
+    }
+    const mcInfoForOrder = (o: typeof partnerOrderRows[number]) => {
+      const mcId = o.master_coach_cross_beneficiary_coach_id || null;
+      if (!mcId) return { isMasterCoachSale: false, masterCoachName: null as string | null };
+      return { isMasterCoachSale: true, masterCoachName: masterCoachNameById.get(mcId) || null };
+    };
+
+    const ppoSales = Array.from(partnerOrdersById.values()).map((o) => {
+      const mc = mcInfoForOrder(o);
+      return {
+        id: o.id,
+        date: o.paid_at || o.created_at,
+        amount: n(o.gross_amount),
+        status: o.status,
+        product: partnerOrderProductName(o),
+        student: partnerOrderStudent(o)?.name ?? null,
+        tag: o.partner_id === partnerId || o.professional_coach_id === coachId ? "Produto criado" : "Venda parceiro/profissional",
+        creatorAmount: o.partner_id === partnerId || o.professional_coach_id === coachId ? n(o.partner_net_amount) : null,
+        isMasterCoachSale: mc.isMasterCoachSale,
+        masterCoachName: mc.masterCoachName,
+      };
+    });
     sales = [...sales, ...ppoSales]
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .slice(0, 200);
@@ -742,6 +770,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       if (!productName && storeOrder?.productNames?.length) productName = storeOrder.productNames.join(", ");
       const poStudent = po ? partnerOrderStudent(po) : null;
       if (!productName && po) productName = partnerOrderProductName(po);
+      const mc = po ? mcInfoForOrder(po) : { isMasterCoachSale: false, masterCoachName: null as string | null };
       return {
         id: c.id,
         date: c.created_at,
@@ -758,6 +787,8 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         transactionDate: t?.paid_at ?? t?.created_at ?? po?.paid_at ?? po?.created_at ?? null,
         availableAt: c.available_at,
         slotLabel: c.slot_label,
+        isMasterCoachSale: mc.isMasterCoachSale,
+        masterCoachName: mc.masterCoachName,
       };
     });
 
@@ -768,6 +799,7 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
         const availableAt = new Date(o.paid_at || o.created_at || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000;
         const released = availableAt <= nowMs;
         const poStudent = partnerOrderStudent(o);
+        const mc = mcInfoForOrder(o);
         return {
           id: o.id,
           date: o.paid_at || o.created_at,
@@ -778,6 +810,8 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
           studentEmail: poStudent?.email ?? null,
           productName: partnerOrderProductName(o),
           sourceLabel: "Produto criado",
+          isMasterCoachSale: mc.isMasterCoachSale,
+          masterCoachName: mc.masterCoachName,
         };
       });
 
