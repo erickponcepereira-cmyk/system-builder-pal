@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -6,6 +6,11 @@ import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/comp
 import { createCoachCalendarEvent } from "@/lib/google-calendar.functions";
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
+
+// Light assessment columns — enough for list counts, history charts & last-assessment summary.
+// Heavy jsonb (segment_analysis, photos) and free-text notes are lazy-loaded on selection.
+const ASSESSMENT_LIGHT_COLS =
+  "id,client_id,assessment_date,method,age,height,weight,bmi,body_fat,skeletal_muscle,muscle_mass,visceral_fat,basal_metabolism,body_age,body_water,bone_mass,systolic_bp,diastolic_bp,heart_rate,blood_glucose,next_assessment_date,next_assessment_time,group_id";
 
 type ChallengeLink = {
   enrollmentId: string;
