@@ -41,6 +41,7 @@ type OrderRow = {
   student_id: string | null;
   partner_product_id: string | null;
   professional_product_id: string | null;
+  sale_channel: SaleChannel;
   student_name?: string | null;
   product_name?: string | null;
 };
