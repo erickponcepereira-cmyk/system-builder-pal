@@ -9,7 +9,7 @@ import {
   type CreatorWalletRow,
   type CreatorEntryRow,
 } from "@/lib/creator-wallets.functions";
-import { EntriesSection } from "./admin.partner-wallet";
+import { CreatorEntriesSection } from "@/components/admin/CreatorEntriesSection";
 
 export const Route = createFileRoute("/_authenticated/admin/professional-wallet")({
   head: () => ({ meta: [{ title: "Carteira do Profissional — Admin" }] }),
