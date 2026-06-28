@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import type { CreatorEntryRow } from "@/lib/creator-wallets.functions";
 import { SaleChannelBadge } from "@/components/ui/SaleChannelBadge";
+import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 
 const money = (v: number) =>
   `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
