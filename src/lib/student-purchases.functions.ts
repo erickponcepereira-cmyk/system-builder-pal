@@ -31,7 +31,7 @@ export type StudentPurchaseRow = {
   challenge_tokens_granted: number;
   card_days_granted: number;
   duration_days: number | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: Record<string, any> | null;
 };
 
 async function assertCanViewStudent(viewerUserId: string, studentId: string): Promise<{ ok: true } | never> {
