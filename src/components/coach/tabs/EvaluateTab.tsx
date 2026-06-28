@@ -27,6 +27,9 @@ export function EvaluateTab() {
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
   const [isMaster, setIsMaster] = useState(false);
+  // Per-client cache of full assessment rows (photos + segments + notes).
+  // Persists across re-renders; cleared by loadClients() after save/edit/delete.
+  const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
 
 
   // Listen for popup connect completion
