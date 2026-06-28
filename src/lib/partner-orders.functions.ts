@@ -207,6 +207,23 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         totalEarned: sum(nutritionistRows, "total_earned") + nutriAdminCredits,
         count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
       },
+      professorTotal: (() => {
+        const profRows = (profsw.data as any[]) || [];
+        if (cutoff) {
+          return {
+            available: profAdminAvailable,
+            blocked: 0,
+            totalEarned: profAdminCredits,
+            count: profRows.length + (hasUnassignedProfessor ? 1 : 0),
+          };
+        }
+        return {
+          available: sum(profRows, "available_balance") + profAdminAvailable,
+          blocked: sum(profRows, "blocked_balance"),
+          totalEarned: sum(profRows, "total_earned") + profAdminCredits,
+          count: profRows.length + (hasUnassignedProfessor ? 1 : 0),
+        };
+      })(),
       partnerOrders: (() => {
         const rows = ((ppo.data as any[] | null) || []).filter((r: any) => r.partner_product_id);
         const realSystemFee = rows.reduce((acc, r: any) => {
