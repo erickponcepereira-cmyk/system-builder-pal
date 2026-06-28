@@ -407,6 +407,7 @@ function AdminFinanceiro() {
                       <th className="px-2 py-1 text-left">Data</th>
                       <th className="px-2 py-1 text-left">Cliente</th>
                       <th className="px-2 py-1 text-left">Produto</th>
+                      <th className="px-2 py-1 text-left">Canal</th>
                       <th className="px-2 py-1 text-left">{bucketOpen.kind === "referrals" ? "Indicador" : "Coach beneficiário"}</th>
                       {bucketOpen.kind === "referrals" && <th className="px-2 py-1 text-left">Título</th>}
                       <th className="px-2 py-1 text-left">Slot</th>
@@ -421,6 +422,7 @@ function AdminFinanceiro() {
                         <td className="px-2 py-1.5 text-white/70">{r.createdAt ? new Date(r.createdAt).toLocaleString("pt-BR") : "—"}</td>
                         <td className="px-2 py-1.5 text-white">{r.clientName || "—"}</td>
                         <td className="px-2 py-1.5 text-white/80">{r.productName || "—"}</td>
+                        <td className="px-2 py-1.5"><SaleChannelBadge channel={r.saleChannel} compact /></td>
                         <td className="px-2 py-1.5 text-white">{r.beneficiaryName}<span className="ml-1 text-white/30">{r.beneficiaryEmail}</span></td>
                         {bucketOpen.kind === "referrals" && (
                           <td className="px-2 py-1.5">
