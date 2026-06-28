@@ -32,7 +32,8 @@ function FinancialSummaryPage() {
     data.adminWallet.available +
     data.coachWalletsTotal.available +
     data.studentWalletsTotal.available +
-    data.nutritionistTotal.available;
+    data.nutritionistTotal.available +
+    data.professorTotal.available;
 
   return (
     <div className="space-y-6">
