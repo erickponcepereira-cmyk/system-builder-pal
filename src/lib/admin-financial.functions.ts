@@ -27,13 +27,13 @@ function isAdminSystemSlot(slotLabel: unknown) {
 
 async function resolvePartnerOrderContext(orderIds: string[]) {
   const ids = Array.from(new Set(orderIds.filter(Boolean)));
-  const map = new Map<string, { studentName: string | null; productName: string | null }>();
+  const map = new Map<string, { studentName: string | null; productName: string | null; saleChannel: "store" | "coach" | null }>();
   if (!ids.length) return map;
   const { data: orders } = await supabaseAdmin
     .from("partner_product_orders" as never)
-    .select("id, order_number, student_id, partner_product_id, professional_product_id" as never)
+    .select("id, order_number, student_id, partner_product_id, professional_product_id, sale_channel" as never)
     .in("id" as never, ids as never);
-  const rows = (orders as unknown as Array<{ id: string; order_number: string; student_id: string | null; partner_product_id: string | null; professional_product_id: string | null }>) || [];
+  const rows = (orders as unknown as Array<{ id: string; order_number: string; student_id: string | null; partner_product_id: string | null; professional_product_id: string | null; sale_channel: string | null }>) || [];
   const studentIds = Array.from(new Set(rows.map((o) => o.student_id).filter(Boolean))) as string[];
   const partnerProductIds = Array.from(new Set(rows.map((o) => o.partner_product_id).filter(Boolean))) as string[];
   const professionalProductIds = Array.from(new Set(rows.map((o) => o.professional_product_id).filter(Boolean))) as string[];
@@ -50,6 +50,7 @@ async function resolvePartnerOrderContext(orderIds: string[]) {
   rows.forEach((o) => map.set(o.id, {
     studentName: o.student_id ? sMap.get(o.student_id) || null : null,
     productName: (o.partner_product_id ? pMap.get(o.partner_product_id) : null) || (o.professional_product_id ? pMap.get(o.professional_product_id) : null) || o.order_number,
+    saleChannel: (o.sale_channel === "coach" || o.sale_channel === "store") ? o.sale_channel : null,
   }));
   return map;
 }
