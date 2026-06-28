@@ -9362,6 +9362,10 @@ export type Database = {
         Returns: undefined
       }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
+      admin_reprocess_partner_order: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       admin_reveal_cpf: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
