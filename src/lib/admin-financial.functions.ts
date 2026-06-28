@@ -22,7 +22,7 @@ async function assertAdmin(userId: string) {
 
 function isAdminSystemSlot(slotLabel: unknown) {
   const slot = String(slotLabel || "").toLowerCase();
-  return !slot.includes("nutricion") && !slot.includes("taxa de pagamento") && !slot.includes("imposto");
+  return !slot.includes("nutricion") && !slot.includes("professor") && !slot.includes("taxa de pagamento") && !slot.includes("imposto");
 }
 
 async function resolvePartnerOrderContext(orderIds: string[]) {
