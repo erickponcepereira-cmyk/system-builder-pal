@@ -37,6 +37,7 @@ export type CreatorEntryRow = {
   payment_method: string | null;
   created_at: string;
   paid_at: string | null;
+  sale_channel: "store" | "coach" | null;
 };
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
