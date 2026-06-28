@@ -198,9 +198,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         count: nutritionistRows.length + (hasUnassignedNutritionist ? 1 : 0),
       },
       partnerOrders: (() => {
-        const rows = (ppo.data as any[] | null) || [];
-        // Sistema arrecadou = somente taxa real do sistema.
-        // Recalcula pelo líquido do pedido para não puxar gateway/imposto/comissões gravadas em system_fee legado.
+        const rows = ((ppo.data as any[] | null) || []).filter((r: any) => r.partner_product_id);
         const realSystemFee = rows.reduce((acc, r: any) => {
           const gross = Number(r.gross_amount || 0);
           const paidOut = Number(r.partner_net_amount || 0)
@@ -218,6 +216,29 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
           paidCount: rows.length,
           paidGross: sum(rows, "gross_amount"),
           partnerNet: sum(rows, "partner_net_amount"),
+          coachNet: sum(rows, "coach_net_amount"),
+          systemFee: Math.round(realSystemFee * 100) / 100,
+        };
+      })(),
+      professionalOrders: (() => {
+        const rows = ((ppo.data as any[] | null) || []).filter((r: any) => r.professional_product_id);
+        const realSystemFee = rows.reduce((acc, r: any) => {
+          const gross = Number(r.gross_amount || 0);
+          const paidOut = Number(r.partner_net_amount || 0)
+            + Number(r.coach_net_amount || 0)
+            + Number(r.network_l1_amount || 0)
+            + Number(r.network_l2_amount || 0)
+            + Number(r.network_l3_amount || 0)
+            + Number(r.master_coach_cross_bonus_amount || 0)
+            + Number(r.payment_fee || 0)
+            + Number(r.tax_amount || 0);
+          const computed = gross - paidOut;
+          return acc + (Number.isFinite(computed) ? Math.max(0, computed) : Number(r.system_fee || 0));
+        }, 0);
+        return {
+          paidCount: rows.length,
+          paidGross: sum(rows, "gross_amount"),
+          professionalNet: sum(rows, "partner_net_amount"),
           coachNet: sum(rows, "coach_net_amount"),
           systemFee: Math.round(realSystemFee * 100) / 100,
         };
