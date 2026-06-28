@@ -243,7 +243,9 @@ export function PartnerWalletTab() {
           <p className="text-sm text-white/40">Nenhuma venda registrada.</p>
         ) : (
           <div className="space-y-2">
-            {orders.map((o) => (
+            {orders.map((o) => {
+              const st = statusStyle(o.status);
+              return (
               <div key={o.id} className="flex items-start justify-between rounded-lg bg-white/5 px-3 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-white truncate">
@@ -253,15 +255,16 @@ export function PartnerWalletTab() {
                     Cliente: {o.student_name || "—"}
                   </p>
                   <p className="text-[11px] text-white/40">
-                    {o.order_number} · {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · {o.status}
+                    {o.order_number} · {new Date(o.paid_at || o.created_at).toLocaleString("pt-BR")} · {o.payment_method?.toUpperCase()} · <span className={`font-semibold ${st.label}`}>{o.status}</span>
                   </p>
                 </div>
                 <div className="text-right shrink-0 ml-3">
-                  <p className="text-sm font-bold text-success">{brl(o.partner_net_amount)}</p>
+                  <p className={`text-sm font-bold ${st.value}`}>{brl(o.partner_net_amount)}</p>
                   <p className="text-[11px] text-white/40">bruto {brl(o.gross_amount)}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
