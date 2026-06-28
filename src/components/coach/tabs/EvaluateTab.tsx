@@ -203,9 +203,6 @@ export function EvaluateTab() {
     })));
   };
 
-  // Per-client cache of full assessment rows (photos + segments + notes).
-  // Persists across re-renders; cleared after a save/edit/delete via loadClients().
-  const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
 
   const loadFullAssessmentsForClient = async (clientId: string): Promise<FitMindAssessment[]> => {
     const cached = fullAssessmentsCacheRef.current.get(clientId);
