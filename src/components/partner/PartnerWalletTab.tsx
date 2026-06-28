@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getClientCutoffIso } from "@/lib/test-mode";
+import { SaleChannelBadge, type SaleChannel } from "@/components/ui/SaleChannelBadge";
 
 function statusStyle(status: string) {
   const s = (status || "").toLowerCase();
@@ -40,6 +41,7 @@ type OrderRow = {
   student_id: string | null;
   partner_product_id: string | null;
   professional_product_id: string | null;
+  sale_channel: SaleChannel;
   student_name?: string | null;
   product_name?: string | null;
 };
@@ -84,7 +86,7 @@ export function PartnerWalletTab() {
 
     let ordersQ = supabase
       .from("partner_product_orders")
-      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id")
+      .select("id,order_number,status,gross_amount,partner_net_amount,payment_method,paid_at,created_at,student_id,partner_product_id,professional_product_id,sale_channel")
       .eq("partner_id", partner.id)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -248,9 +250,12 @@ export function PartnerWalletTab() {
               return (
               <div key={o.id} className="flex items-start justify-between rounded-lg bg-white/5 px-3 py-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {o.product_name || o.order_number}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {o.product_name || o.order_number}
+                    </p>
+                    <SaleChannelBadge channel={o.sale_channel} compact />
+                  </div>
                   <p className="text-[11px] text-white/60 truncate">
                     Cliente: {o.student_name || "—"}
                   </p>
