@@ -86,7 +86,7 @@ async function getFallbackCoachId() {
   throw new Error("Não há coach ativo para vincular o perfil de aluno automaticamente.");
 }
 
-async function ensureStudentForProfile(profileId: string, preferredCoachId?: string | null, partnerId?: string | null) {
+export async function ensureStudentForProfile(profileId: string, preferredCoachId?: string | null, partnerId?: string | null) {
   const { data: existing } = await supabaseAdmin
     .from("students")
     .select("id")
