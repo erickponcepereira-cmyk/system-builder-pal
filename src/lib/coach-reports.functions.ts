@@ -399,9 +399,7 @@ async function buildSalesReportForRange(
       .from("commissions")
       .select("id, amount, level, transaction_id, partner_order_id, created_at")
       .eq("beneficiary_coach_id", coachId)
-      .eq("is_master_coach_commission", true)
-      .gte("created_at", fromIso)
-      .lte("created_at", toIso);
+      .eq("is_master_coach_commission", true);
     type MC = { id: string; amount: number; level: number; transaction_id: string | null; partner_order_id: string | null; created_at: string };
     const mcRows = (mcComms as MC[] | null) || [];
     const existingTxIds = new Set(rows.filter((r) => r.source === "transaction" || r.source === "store").map((r) => r.id));
@@ -421,8 +419,8 @@ async function buildSalesReportForRange(
       ]);
       type XT = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string | null; status: string; purchase_type: string | null; metadata: any };
       type XO = { id: string; student_id: string; partner_product_id: string | null; professional_product_id: string | null; gross_amount: number; paid_at: string | null; status: string };
-      const xTxs = ((txRes.data as XT[] | null) || []).filter((t) => t.status === "paid" && t.paid_at);
-      const xPos = ((poRes.data as XO[] | null) || []).filter((o) => o.status === "paid" && o.paid_at);
+      const xTxs = ((txRes.data as XT[] | null) || []).filter((t) => t.status === "paid" && t.paid_at && t.paid_at >= fromIso && t.paid_at <= toIso);
+      const xPos = ((poRes.data as XO[] | null) || []).filter((o) => o.status === "paid" && o.paid_at && o.paid_at >= fromIso && o.paid_at <= toIso);
 
       // Resolve missing students + products
       const needStudentIds = Array.from(new Set([...xTxs.map((t) => t.student_id), ...xPos.map((o) => o.student_id)].filter(Boolean)));
