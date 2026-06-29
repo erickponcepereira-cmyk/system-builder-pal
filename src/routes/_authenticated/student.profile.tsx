@@ -596,7 +596,7 @@ function ProfilePage() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold text-white">{c.buyer_name || "Cliente"}</p>
                           <p className="truncate text-[11px] text-white/50">{c.product_label || "Produto"}</p>
-                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleDateString("pt-BR")}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
+                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</p>
