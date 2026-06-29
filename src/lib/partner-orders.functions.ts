@@ -124,7 +124,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       cutoff
-        ? supabase.from("commissions" as never).select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at" as never).gte("created_at" as never, cutoff as never)
+        ? supabase.from("commissions" as never).select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,referred_by_student_id,amount,level,status,slot_label,is_referral,created_at,available_at" as never).gte("created_at" as never, cutoff as never)
         : Promise.resolve({ data: null as any }),
     ]);
     const sum = (arr: any[] | null | undefined, k: string) =>
