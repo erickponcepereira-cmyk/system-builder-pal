@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
+import { getMyReferralCommissions } from "@/lib/student-referrals.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
