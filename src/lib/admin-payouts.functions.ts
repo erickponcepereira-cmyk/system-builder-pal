@@ -75,7 +75,7 @@ async function classifyProfiles(): Promise<ClassifiedProfiles> {
 
 // Retorna totais de comissões agregados por beneficiary_profile_id.
 interface CommissionAgg { earned: number; blocked: number; available: number; paid: number; }
-async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | null): Promise<Map<string, CommissionAgg>> {
+async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | null, mode: "seller" | "referral" = "seller"): Promise<Map<string, CommissionAgg>> {
   const map = new Map<string, CommissionAgg>();
   if (!profileIds.length) return map;
   let q = supabaseAdmin
@@ -83,6 +83,10 @@ async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | nu
     .select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at")
     .in("beneficiary_profile_id", profileIds);
   if (cutoff) q = q.gte("created_at", cutoff);
+  // Separa estritamente: carteira de aluno indicador = is_referral=true;
+  // carteiras de coach/parceiro/profissional não somam comissões de indicação.
+  if (mode === "seller") q = q.or("is_referral.is.null,is_referral.eq.false");
+  else q = q.eq("is_referral", true);
   const { data } = await q;
   for (const r of dedupeCommissions((data as any[]) || [])) {
     const cur = map.get(r.beneficiary_profile_id) || { earned: 0, blocked: 0, available: 0, paid: 0 };
@@ -133,8 +137,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
-    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds, cutoff);
-    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds, cutoff);
+    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds, cutoff, "seller");
+    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds, cutoff, "referral");
 
     // Solicitações pendentes (saques) — sellers usam withdrawal_requests; alunos usam student_withdrawal_requests
     let wReqsQ = supabaseAdmin
@@ -373,7 +377,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       stuReqsQ,
     ]);
 
-    const commAgg = await aggregateCommissionsBy(profileIds, cutoff);
+    const commAgg = await aggregateCommissionsBy(profileIds, cutoff, data.group === "seller" ? "seller" : "referral");
 
     const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));

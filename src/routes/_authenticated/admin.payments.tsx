@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Clock, RefreshCw, X, DollarSign, UserRound, Wallet, TrendingDown, ChevronRight, Search, Loader2, Salad } from "lucide-react";
@@ -375,12 +375,24 @@ function PersonModal({ person, group, onClose, onChanged }: { person: PayoutPers
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto" onClick={onClose}>
       <div className="w-full max-w-4xl rounded-2xl my-8" style={{ backgroundColor: "#0F0F0F" }} onClick={(e) => e.stopPropagation()}>
-        <div className="p-5 border-b border-white/10 flex items-start justify-between">
+        <div className="p-5 border-b border-white/10 flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-bold text-white">{person.name}</h3>
             <p className="text-xs text-white/50">{person.email}</p>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white"><X className="h-5 w-5" /></button>
+          <div className="flex items-center gap-2">
+            {group === "student_referrer" && (
+              <Link
+                to="/admin/fitcoin-wallet"
+                search={{ focus: person.profileId } as never}
+                onClick={onClose}
+                className="rounded-lg bg-primary/15 hover:bg-primary/25 text-primary px-3 py-1.5 text-xs font-bold"
+              >
+                Abrir carteira Fitcoin
+              </Link>
+            )}
+            <button onClick={onClose} className="text-white/40 hover:text-white"><X className="h-5 w-5" /></button>
+          </div>
         </div>
 
         {loading || !details ? (

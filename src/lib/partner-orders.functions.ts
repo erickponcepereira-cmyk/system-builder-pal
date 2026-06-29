@@ -165,9 +165,11 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       coachWalletsTotal: (() => {
         if (cutoff) {
           const byProfile = new Map<string, number>();
-          dedupeCommissions((commAll.data as any[] | null) || []).forEach((c: any) => {
-            byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
-          });
+          dedupeCommissions((commAll.data as any[] | null) || [])
+            .filter((c: any) => !c.is_referral)
+            .forEach((c: any) => {
+              byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
+            });
           const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
           const total = sumIn(cw.data as any[]) + sumIn(pw.data as any[]) + sumIn(profw.data as any[]);
           return { available: total, totalEarned: total, totalWithdrawn: 0,
@@ -183,9 +185,11 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       studentWalletsTotal: (() => {
         if (cutoff) {
           const byProfile = new Map<string, number>();
-          dedupeCommissions((commAll.data as any[] | null) || []).forEach((c: any) => {
-            byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
-          });
+          dedupeCommissions((commAll.data as any[] | null) || [])
+            .filter((c: any) => c.is_referral)
+            .forEach((c: any) => {
+              byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
+            });
           const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
           const total = sumIn(sw.data as any[]);
           return { available: total, totalEarned: total, totalWithdrawn: 0, count: (sw.data as any[] | null)?.length || 0 };
