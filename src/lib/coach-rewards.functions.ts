@@ -82,7 +82,7 @@ export const getCoachRewards = createServerFn({ method: "GET" })
       if (coachId) {
         const { data: pts } = await supabaseAdmin
           .from("coach_points_log")
-          .select("points")
+          .select("id,coach_id,transaction_id,product_id,points,reason")
           .eq("coach_id", coachId)
           .gte("created_at", effectiveStartIso)
           .lt("created_at", end.toISOString());
