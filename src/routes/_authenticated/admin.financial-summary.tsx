@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Wallet, Users, GraduationCap, Stethoscope, BadgeDollarSign, Clock, TrendingUp } from "lucide-react";
+import { Loader2, Wallet, Users, GraduationCap, Stethoscope, BadgeDollarSign, Clock, TrendingUp, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { getFinancialSummary, type FinancialSummary } from "@/lib/partner-orders.functions";
 
@@ -31,7 +31,7 @@ function FinancialSummaryPage() {
   const totalAvailable =
     data.adminWallet.available +
     data.coachWalletsTotal.available +
-    data.studentWalletsTotal.available +
+    data.referralWalletsTotal.available +
     data.nutritionistTotal.available +
     data.professorTotal.available;
 
@@ -51,7 +51,7 @@ function FinancialSummaryPage() {
         <p className="text-xs text-white/50 uppercase tracking-wider">Saldo total disponível no sistema</p>
         <p className="text-4xl font-bold text-primary font-mono mt-1">{brl(totalAvailable)}</p>
         <p className="text-xs text-white/40 mt-2">
-          Somatório das carteiras de admin, coaches, alunos e nutricionistas.
+          Somatório das carteiras de admin, coaches, alunos indicadores, nutricionistas e professores.
         </p>
       </div>
 
@@ -76,12 +76,13 @@ function FinancialSummaryPage() {
             href="/admin/financeiro"
           />
           <Card
-            icon={GraduationCap}
-            title={`Alunos (${data.studentWalletsTotal.count})`}
-            available={data.studentWalletsTotal.available}
-            earned={data.studentWalletsTotal.totalEarned}
-            withdrawn={data.studentWalletsTotal.totalWithdrawn}
-            href="/admin/financeiro"
+            icon={Coins}
+            title={`Alunos Indicadores (${data.referralWalletsTotal.count})`}
+            available={data.referralWalletsTotal.available}
+            earned={data.referralWalletsTotal.totalEarned}
+            withdrawn={data.referralWalletsTotal.totalWithdrawn}
+            extra={`Pendente 7 dias: ${brl(data.referralWalletsTotal.pending)}`}
+            href="/admin/fitcoin-wallet"
           />
           <Card
             icon={Stethoscope}
@@ -165,6 +166,7 @@ function FinancialSummaryPage() {
         <div className="grid gap-2 grid-cols-2 md:grid-cols-4">
           {[
             { to: "/admin/financeiro", label: "Financeiro coaches/alunos" },
+            { to: "/admin/fitcoin-wallet", label: "Carteira Fitcoin" },
             { to: "/admin/admin-wallet", label: "Carteira do Admin" },
             { to: "/admin/nutritionist-wallet", label: "Carteira Nutricionista" },
             { to: "/admin/partner-orders", label: "Pedidos de Parceiros" },
