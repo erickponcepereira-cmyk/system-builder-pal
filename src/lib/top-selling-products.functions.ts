@@ -134,7 +134,7 @@ export const getTopSellingProducts = createServerFn({ method: "GET" })
       map.set(productId, existing);
     };
 
-    const visibleTxIds = Array.from(txIds).filter((id) => !masterByOtherTxIds.has(id));
+    const visibleTxIds = Array.from(txIds).filter((id) => myMasterTxIds.has(id) || !masterByOtherTxIds.has(id));
     if (visibleTxIds.length) {
       const { data: txs } = await supabaseAdmin
         .from("transactions")
@@ -148,7 +148,7 @@ export const getTopSellingProducts = createServerFn({ method: "GET" })
       });
     }
 
-    const visiblePartnerOrderIds = Array.from(partnerOrderIds).filter((id) => !masterByOtherPartnerOrderIds.has(id));
+    const visiblePartnerOrderIds = Array.from(partnerOrderIds).filter((id) => myMasterPartnerOrderIds.has(id) || !masterByOtherPartnerOrderIds.has(id));
     if (visiblePartnerOrderIds.length) {
       const { data: ordersData } = await supabaseAdmin
         .from("partner_product_orders")
