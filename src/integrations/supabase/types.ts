@@ -9496,6 +9496,14 @@ export type Database = {
         Args: { _gender?: string; _student_id: string }
         Returns: string
       }
+      ensure_student_for_profile: {
+        Args: {
+          _partner_id?: string
+          _preferred_coach_id?: string
+          _profile_id: string
+        }
+        Returns: string
+      }
       ensure_user_subscription: {
         Args: { _billing_day?: number; _user_id: string }
         Returns: string
@@ -9595,6 +9603,7 @@ export type Database = {
         Args: { _student_id?: string }
         Returns: Json
       }
+      get_system_fallback_coach_id: { Args: never; Returns: string }
       get_viewer_upline_coach_ids: {
         Args: { _user_id: string }
         Returns: {
