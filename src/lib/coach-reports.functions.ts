@@ -233,13 +233,20 @@ async function buildSalesReportForRange(
     ...Array.from(mirrorTxByOrder.values()),
   ];
   const commByTx = new Map<string, { amount: number; levels: number[] }>();
+  // Master Coach metadata per transaction: set when ANY commission on this tx
+  // is `is_master_coach_commission` (cross-sale bonus). Captures the beneficiary
+  // (the Master Coach) so we can show "venda feita por <Master>" on the row.
+  const masterByTx = new Map<string, { coach_id: string | null }>();
   if (allTxIds.length) {
     const { data: comms } = await supabaseAdmin
       .from("commissions")
-      .select("amount, level, transaction_id")
-      .eq("beneficiary_coach_id", coachId)
+      .select("amount, level, transaction_id, is_master_coach_commission, beneficiary_coach_id")
       .in("transaction_id", allTxIds);
-    ((comms as Array<{ amount: number; level: number; transaction_id: string }> | null) || []).forEach((c) => {
+    ((comms as Array<{ amount: number; level: number; transaction_id: string; is_master_coach_commission: boolean | null; beneficiary_coach_id: string | null }> | null) || []).forEach((c) => {
+      if (c.is_master_coach_commission) {
+        masterByTx.set(c.transaction_id, { coach_id: c.beneficiary_coach_id });
+      }
+      if (c.beneficiary_coach_id !== coachId) return;
       const cur = commByTx.get(c.transaction_id) || { amount: 0, levels: [] };
       cur.amount += Number(c.amount) || 0;
       if (!cur.levels.includes(c.level)) cur.levels.push(c.level);
@@ -248,9 +255,6 @@ async function buildSalesReportForRange(
   }
 
   const commByPartnerOrder = new Map<string, { amount: number; levels: number[] }>();
-  // Per-order Master Coach metadata: tagged when ANY commission on this order
-  // is flagged `is_master_coach_commission` (cross-sale bonus). Captures the
-  // beneficiary coach (the Master Coach) so we can show "venda feita por <Master>".
   const masterByPartnerOrder = new Map<string, { coach_id: string | null }>();
   if (partnerOrderIds.length) {
     const { data: comms } = await supabaseAdmin
@@ -269,10 +273,11 @@ async function buildSalesReportForRange(
     });
   }
 
-  // Resolve Master Coach names
-  const masterCoachIds = Array.from(new Set(
-    Array.from(masterByPartnerOrder.values()).map((m) => m.coach_id).filter(Boolean) as string[],
-  ));
+  // Resolve Master Coach names (covers both tx + partner-order sources)
+  const masterCoachIds = Array.from(new Set([
+    ...Array.from(masterByPartnerOrder.values()).map((m) => m.coach_id).filter(Boolean) as string[],
+    ...Array.from(masterByTx.values()).map((m) => m.coach_id).filter(Boolean) as string[],
+  ]));
   const masterCoachNameById = new Map<string, string>();
   if (masterCoachIds.length) {
     const { data: mcs } = await supabaseAdmin
