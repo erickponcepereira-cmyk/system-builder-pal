@@ -295,10 +295,10 @@ async function buildSalesReportForRange(
   if (masterCoachIds.length) {
     const { data: mcs } = await supabaseAdmin
       .from("coaches")
-      .select("id, fantasy_name, profiles!coaches_profile_id_fkey(name)")
+      .select("id, profiles!coaches_profile_id_fkey(name)")
       .in("id", masterCoachIds);
-    ((mcs as Array<{ id: string; fantasy_name: string | null; profiles: { name: string } | null }> | null) || []).forEach((c) => {
-      masterCoachNameById.set(c.id, c.fantasy_name || c.profiles?.name || "Master Coach");
+    ((mcs as Array<{ id: string; profiles: { name: string } | null }> | null) || []).forEach((c) => {
+      masterCoachNameById.set(c.id, c.profiles?.name || "Master Coach");
     });
   }
 
@@ -482,8 +482,8 @@ async function buildSalesReportForRange(
         }
       });
 
-      const myName = (await supabaseAdmin.from("coaches").select("id, fantasy_name, profiles!coaches_profile_id_fkey(name)").eq("id", coachId).maybeSingle()).data as any;
-      const myDisplay = myName?.fantasy_name || myName?.profiles?.name || "Master Coach";
+      const myName = (await supabaseAdmin.from("coaches").select("id, profiles!coaches_profile_id_fkey(name)").eq("id", coachId).maybeSingle()).data as any;
+      const myDisplay = myName?.profiles?.name || "Master Coach";
 
       for (const t of xTxs) {
         const sp = xStuMap.get(t.student_id);
