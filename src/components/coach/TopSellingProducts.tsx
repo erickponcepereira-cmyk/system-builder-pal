@@ -91,15 +91,46 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
       let commQ = supabase
         .from("commissions")
-        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission")
+        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission,beneficiary_profile_id")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
       if (cutoff) commQ = commQ.gte("created_at", cutoff);
       const { data: comms } = await commQ;
-      const txIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
-      const partnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
-      const masterTxIds = new Set((comms || []).filter((c: any) => c.is_master_coach_commission && c.transaction_id).map((c: any) => c.transaction_id as string));
-      const masterPartnerOrderIds = new Set((comms || []).filter((c: any) => c.is_master_coach_commission && c.partner_order_id).map((c: any) => c.partner_order_id as string));
+      const allTxIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
+      const allPartnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
+
+      // Detect master-coach cross-sales: if a transaction/order has a master_coach commission to ANOTHER coach,
+      // the current coach is NOT the seller — exclude it from "produtos mais vendidos".
+      const masterByOthersTx = new Set<string>();
+      const masterByOthersPo = new Set<string>();
+      const myMasterTxIds = new Set<string>();
+      const myMasterPartnerOrderIds = new Set<string>();
+      if (allTxIds.length || allPartnerOrderIds.length) {
+        const filters: string[] = [];
+        if (allTxIds.length) filters.push(`transaction_id.in.(${allTxIds.join(",")})`);
+        if (allPartnerOrderIds.length) filters.push(`partner_order_id.in.(${allPartnerOrderIds.join(",")})`);
+        const { data: mcRows } = await supabase
+          .from("commissions")
+          .select("transaction_id,partner_order_id,beneficiary_profile_id,is_master_coach_commission")
+          .eq("is_master_coach_commission", true)
+          .or(filters.join(","));
+        (mcRows || []).forEach((r: any) => {
+          const mine = r.beneficiary_profile_id === coachProfileId;
+          if (r.transaction_id) {
+            if (mine) myMasterTxIds.add(r.transaction_id);
+            else masterByOthersTx.add(r.transaction_id);
+          }
+          if (r.partner_order_id) {
+            if (mine) myMasterPartnerOrderIds.add(r.partner_order_id);
+            else masterByOthersPo.add(r.partner_order_id);
+          }
+        });
+      }
+
+      const txIds = allTxIds.filter((id) => !masterByOthersTx.has(id));
+      const partnerOrderIds = allPartnerOrderIds.filter((id) => !masterByOthersPo.has(id));
+      const masterTxIds = myMasterTxIds;
+      const masterPartnerOrderIds = myMasterPartnerOrderIds;
 
       const map = new Map<string, SaleRow>();
       const extraProducts: ProductMeta[] = [];
