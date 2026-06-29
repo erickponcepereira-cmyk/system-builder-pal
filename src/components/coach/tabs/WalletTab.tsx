@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Wallet, X, Crown, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info, Trophy, Medal } from "lucide-react";
+import { Wallet, X, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info, Trophy, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions";
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { getMyWalletHistory } from "@/lib/coach-wallet-history.functions";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 import { PendingInfo } from "@/components/PendingInfo";
 
 const MIN_WITHDRAWAL = 100;
@@ -22,11 +22,10 @@ const TIER_COLOR_WALLET: Record<string, string> = {
   bronze: "#CD7F32", silver: "#C0C0C0", gold: "#FFD700", platinum: "#E5E4E2", crown: "#FFB300", club: "#FF6B35",
 };
 
-type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean; customer?: string; product?: string };
+type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean; customer?: string; product?: string; isMasterCoachSale?: boolean; masterCoachName?: string | null };
 
 
 export function WalletTab() {
-  const fetchCrossSales = useServerFn(getMyMasterCoachCrossSales);
   const fetchSplit = useServerFn(getWalletSplit);
   const fetchCareer = useServerFn(getCareerProgress);
   const fetchMedals = useServerFn(getIndividualCareer);
@@ -45,7 +44,6 @@ export function WalletTab() {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
-  const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [walletVisible, setWalletVisible] = useState(false);
   const [split, setSplit] = useState<WalletSplit | null>(null);
@@ -102,6 +100,8 @@ export function WalletTab() {
           isNetwork: cm.level > 0,
           customer: cm.customer || undefined,
           product: cm.product || undefined,
+          isMasterCoachSale: cm.is_master_coach_sale,
+          masterCoachName: cm.master_coach_name,
         });
       });
       ((recentWithdrawsRes.data as Array<{ id: string; amount: number; status: string; requested_at: string; paid_at: string | null }>) || []).forEach((wr) => {
@@ -117,7 +117,7 @@ export function WalletTab() {
       items.sort((a, b) => b.created_at.localeCompare(a.created_at));
       setHistory(items.slice(0, 20));
     })();
-    fetchCrossSales().then((r) => setCross(r)).catch(() => {});
+    
     fetchSplit().then((r) => setSplit(r)).catch((e) => console.error("getWalletSplit failed:", e));
     fetchCareer().then(setCareer).catch(() => {});
     fetchMedals().then(setMedals).catch(() => {});
@@ -450,7 +450,10 @@ export function WalletTab() {
             {history.filter((h) => tab === "direct" ? !h.isNetwork || h.value < 0 : h.isNetwork || h.value < 0).map((t) => (
               <div key={t.id} className="flex items-start justify-between gap-3 rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-white">{t.who}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-medium text-white">{t.who}</p>
+                    {t.isMasterCoachSale && <MasterCoachBadge masterCoachName={t.masterCoachName} compact />}
+                  </div>
                   <p className="text-[10px] text-white/40">{t.type}</p>
                   {(t.customer || t.product) && (
                     <p className="text-[10px] text-white/60 mt-0.5 truncate">
@@ -470,24 +473,6 @@ export function WalletTab() {
         )}
       </div>
 
-      {cross && cross.rows.length > 0 && (
-        <div className="rounded-2xl p-5 mt-6" style={{ backgroundColor: "#1A1A1A" }}>
-          <div className="mb-3 flex items-center gap-2">
-            <Crown className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-bold text-white">Vendas cruzadas (Master Coach)</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
-              <p className="text-[10px] uppercase tracking-wide text-white/40">Total recebido</p>
-              <p className="text-lg font-bold text-white mt-1">R$ {cross.total.toFixed(2).replace(".", ",")}</p>
-            </div>
-            <div className="rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
-              <p className="text-[10px] uppercase tracking-wide text-white/40">De vendas cruzadas</p>
-              <p className="text-lg font-bold text-white mt-1">R$ {cross.crossTotal.toFixed(2).replace(".", ",")}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !saving && setOpen(false)}>
