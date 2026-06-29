@@ -9928,6 +9928,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      revert_transaction_points: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
       review_coach_application: {
         Args: {
           _admin_notes?: string
