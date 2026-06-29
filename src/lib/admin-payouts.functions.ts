@@ -377,7 +377,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       stuReqsQ,
     ]);
 
-    const commAgg = await aggregateCommissionsBy(profileIds, cutoff);
+    const commAgg = await aggregateCommissionsBy(profileIds, cutoff, data.group === "seller" ? "seller" : "referral");
 
     const wMap = new Map(((wallets as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
     const nMap = new Map(((nutriW as unknown as Array<Record<string, number | string>>) || []).map((w) => [w.profile_id as string, w]));
