@@ -100,6 +100,8 @@ export function WalletTab() {
           isNetwork: cm.level > 0,
           customer: cm.customer || undefined,
           product: cm.product || undefined,
+          isMasterCoachSale: cm.is_master_coach_sale,
+          masterCoachName: cm.master_coach_name,
         });
       });
       ((recentWithdrawsRes.data as Array<{ id: string; amount: number; status: string; requested_at: string; paid_at: string | null }>) || []).forEach((wr) => {
