@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, UserCheck, Package, CreditCard,
   Settings, BarChart3, LogOut, Menu, X, Award, AlertTriangle,
-  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell,
+  Library, ShoppingCart, GraduationCap, ShieldCheck, Loader2, Repeat, Dumbbell, Calendar, CalendarDays, Store, Gift, TrendingUp, DollarSign, Truck, Lock, Trophy, Stethoscope, Wallet, Bell, Coins,
 
 } from "lucide-react";
 import { useEffect, useState } from "react";
