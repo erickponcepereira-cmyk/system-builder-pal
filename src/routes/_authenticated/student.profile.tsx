@@ -96,6 +96,7 @@ function ProfilePage() {
     gross_amount: number | null;
   }>>([]);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
+  const fetchReferralCommissions = useServerFn(getMyReferralCommissions);
 
   useEffect(() => {
     (async () => {
