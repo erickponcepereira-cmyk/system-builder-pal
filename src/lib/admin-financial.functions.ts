@@ -105,6 +105,9 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
       const slotLabel = String((c as any).slot_label || "").toLowerCase();
       const benefCoachId = (c as any).beneficiary_coach_id as string | null;
 
+      // Cashback/Fitcoin do aluno indicador é bucket próprio; não entra como comissão de coach.
+      if ((c as any).is_referral && slotLabel.startsWith("aluno indicador")) continue;
+
       // Network (level 1/2/3)
       if (level > 0) {
         if (status === "pending") networkPending += amt;
