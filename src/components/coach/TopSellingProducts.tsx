@@ -203,7 +203,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
           const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(o.gross_amount) || 0;
-          if (masterPartnerOrderIds.has(o.id) || (masterCoachId && masterCoachId === currentCoachId)) {
+          if (masterPartnerOrderIds.has(o.id) || (masterCoachProfileId && masterCoachProfileId === coachProfileId)) {
             existing.master_qty = (existing.master_qty || 0) + 1;
             existing.master_revenue = (existing.master_revenue || 0) + (Number(o.gross_amount) || 0);
           }
