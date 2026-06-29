@@ -450,7 +450,10 @@ export function WalletTab() {
             {history.filter((h) => tab === "direct" ? !h.isNetwork || h.value < 0 : h.isNetwork || h.value < 0).map((t) => (
               <div key={t.id} className="flex items-start justify-between gap-3 rounded-lg p-3" style={{ backgroundColor: "#0F0F0F" }}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-white">{t.who}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-medium text-white">{t.who}</p>
+                    {t.isMasterCoachSale && <MasterCoachBadge masterCoachName={t.masterCoachName} compact />}
+                  </div>
                   <p className="text-[10px] text-white/40">{t.type}</p>
                   {(t.customer || t.product) && (
                     <p className="text-[10px] text-white/60 mt-0.5 truncate">
