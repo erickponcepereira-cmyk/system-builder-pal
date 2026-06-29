@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokenHistory, type ChallengeTokenHistoryEntry } from "@/lib/challenge-tokens.functions";
+import { getMyReferralCommissions } from "@/lib/student-referrals.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
@@ -95,6 +96,7 @@ function ProfilePage() {
     gross_amount: number | null;
   }>>([]);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
+  const fetchReferralCommissions = useServerFn(getMyReferralCommissions);
 
   useEffect(() => {
     (async () => {
@@ -154,27 +156,10 @@ function ProfilePage() {
         setTokenHistory(hist);
       } catch (e) { console.warn("token history fetch failed", e); }
       try {
-        const { data: comms } = await supabase
-          .from("commissions")
-          .select("id,amount,status,available_at,created_at,transaction:transactions!commissions_transaction_id_fkey(gross_amount,purchase_type,product:products(name),student:students!transactions_student_id_fkey(profile:profiles!students_profile_id_fkey(name)))" as never)
-          .eq("is_referral", true as never)
-          .eq("referred_by_student_id", student.id as never)
-          .eq("beneficiary_profile_id", profileData.id as never)
-          .order("created_at", { ascending: false })
-          .limit(100);
-        const mapped = ((comms as unknown as any[]) || []).map((c) => ({
-          id: c.id,
-          amount: Number(c.amount || 0),
-          status: c.status,
-          available_at: c.available_at,
-          created_at: c.created_at,
-          buyer_name: c.transaction?.student?.profile?.name || null,
-          product_label: c.transaction?.product?.name || (c.transaction?.purchase_type ? String(c.transaction.purchase_type).replace(/_/g, " ") : null),
-          purchase_type: c.transaction?.purchase_type || null,
-          gross_amount: c.transaction?.gross_amount != null ? Number(c.transaction.gross_amount) : null,
-        }));
+        const mapped = await fetchReferralCommissions();
         setReferralCommissions(mapped);
       } catch (e) { console.warn("referral commissions fetch failed", e); }
+
 
       // Tornar subcoach quando há ao menos 1 comissão paga/disponível
       try {
@@ -611,7 +596,7 @@ function ProfilePage() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold text-white">{c.buyer_name || "Cliente"}</p>
                           <p className="truncate text-[11px] text-white/50">{c.product_label || "Produto"}</p>
-                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleDateString("pt-BR")}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
+                          <p className="mt-0.5 text-[10px] text-white/35">{new Date(c.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}{c.gross_amount != null && <> · venda R$ {c.gross_amount.toFixed(2).replace(".", ",")}</>}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-bold text-primary">+R$ {c.amount.toFixed(2).replace(".", ",")}</p>
