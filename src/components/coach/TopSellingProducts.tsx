@@ -404,6 +404,14 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                                     <RankBadge rank={p.rank} />
                                     <Package className="h-3 w-3 text-white/40" />
                                     <span className="text-xs text-white/80">{p.name}</span>
+                                    {p.master_qty > 0 && (
+                                      <span
+                                        title={`${p.master_qty}× como Master Coach · ${money(p.master_revenue)}`}
+                                        className="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-300"
+                                      >
+                                        Master Coach · {p.master_qty}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400/90">{money(p.revenue)}</span>
