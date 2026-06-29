@@ -85,7 +85,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     const _cutoffComm = await getServerCutoffIso();
     let _commQ = supabaseAdmin
       .from("commissions")
-      .select("amount, status, slot_label, level, beneficiary_profile_id, beneficiary_coach_id, created_at, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
+      .select("amount, status, slot_label, level, beneficiary_profile_id, beneficiary_coach_id, is_referral, created_at, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email,role)");
     if (_cutoffComm) _commQ = _commQ.gte("created_at", _cutoffComm);
     const { data: commissions, error: cErr } = await _commQ;
     if (cErr) throw new Error(cErr.message);
