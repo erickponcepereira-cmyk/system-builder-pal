@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, ChevronRight, Trophy, Package, Layers, Loader2, Medal, Calendar } from "lucide-react";
+import { getTopSellingProducts } from "@/lib/top-selling-products.functions";
 
 type SaleRow = {
   product_id: string;
@@ -64,6 +66,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [limitMode, setLimitMode] = useState<10 | 20 | "all">(10);
+  const fetchTopSelling = useServerFn(getTopSellingProducts);
 
   // Load taxonomy once
   useEffect(() => {
@@ -85,131 +88,15 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { from, to } = getRange(period, customFrom, customTo);
-      const { getClientCutoffIso } = await import("@/lib/test-mode");
-      const cutoff = await getClientCutoffIso();
-
-      let commQ = supabase
-        .from("commissions")
-        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission,beneficiary_profile_id,beneficiary_coach_id")
-        .eq("beneficiary_profile_id", coachProfileId)
-        .eq("level", 0);
-      if (cutoff) commQ = commQ.gte("created_at", cutoff);
-      const { data: comms } = await commQ;
-      const currentCoachId = ((comms || []).find((c: any) => c.beneficiary_coach_id)?.beneficiary_coach_id as string | undefined) || null;
-      const allTxIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
-      const allPartnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
-
-      // Detect master-coach cross-sales: if a transaction/order has a master_coach commission to ANOTHER coach,
-      // the current coach is NOT the seller — exclude it from "produtos mais vendidos".
-      const masterByOthersTx = new Set<string>();
-      const masterByOthersPo = new Set<string>();
-      const myMasterTxIds = new Set<string>();
-      const myMasterPartnerOrderIds = new Set<string>();
-      if (allTxIds.length || allPartnerOrderIds.length) {
-        const filters: string[] = [];
-        if (allTxIds.length) filters.push(`transaction_id.in.(${allTxIds.join(",")})`);
-        if (allPartnerOrderIds.length) filters.push(`partner_order_id.in.(${allPartnerOrderIds.join(",")})`);
-        const { data: mcRows } = await supabase
-          .from("commissions")
-          .select("transaction_id,partner_order_id,beneficiary_profile_id,is_master_coach_commission")
-          .eq("is_master_coach_commission", true)
-          .or(filters.join(","));
-        (mcRows || []).forEach((r: any) => {
-          const mine = r.beneficiary_profile_id === coachProfileId;
-          if (r.transaction_id) {
-            if (mine) myMasterTxIds.add(r.transaction_id);
-            else masterByOthersTx.add(r.transaction_id);
-          }
-          if (r.partner_order_id) {
-            if (mine) myMasterPartnerOrderIds.add(r.partner_order_id);
-            else masterByOthersPo.add(r.partner_order_id);
-          }
-        });
-      }
-
-      const txIds = allTxIds.filter((id) => !masterByOthersTx.has(id));
-      const partnerOrderIds = allPartnerOrderIds.filter((id) => !masterByOthersPo.has(id));
-      const masterTxIds = myMasterTxIds;
-      const masterPartnerOrderIds = myMasterPartnerOrderIds;
-
-      const map = new Map<string, SaleRow>();
-      const extraProducts: ProductMeta[] = [];
-
-      if (txIds.length > 0) {
-        let q = supabase
-          .from("transactions")
-          .select("id,product_id,status,gross_amount,paid_at,created_at")
-          .in("id", txIds as string[])
-          .eq("status", "paid");
-        if (from) q = q.gte("paid_at", from.toISOString());
-        if (to) q = q.lte("paid_at", to.toISOString());
-        if (cutoff) q = q.gte("paid_at", cutoff);
-        const { data: txs } = await q;
-
-        (txs || []).forEach((t: any) => {
-          if (!t.product_id) return;
-          const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
-          existing.qty += 1;
-          existing.revenue += Number(t.gross_amount) || 0;
-          if (masterTxIds.has(t.id)) {
-            existing.master_qty = (existing.master_qty || 0) + 1;
-            existing.master_revenue = (existing.master_revenue || 0) + (Number(t.gross_amount) || 0);
-          }
-          map.set(t.product_id, existing);
-        });
-      }
-
-      if (partnerOrderIds.length > 0) {
-        let poQ = (supabase as any)
-          .from("partner_product_orders" as any)
-          .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status,master_coach_cross_beneficiary_coach_id" as any)
-          .in("id" as any, partnerOrderIds as any)
-          .eq("status" as any, "paid" as any);
-        if (from) poQ = poQ.gte("paid_at" as any, from.toISOString() as any);
-        if (to) poQ = poQ.lte("paid_at" as any, to.toISOString() as any);
-        if (cutoff) poQ = poQ.gte("paid_at" as any, cutoff as any);
-        const { data: ordersData } = await poQ;
-        const orders = (ordersData as any[]) || [];
-        const partnerIds = Array.from(new Set(orders.map((o) => o.partner_product_id).filter(Boolean)));
-        const professionalIds = Array.from(new Set(orders.map((o) => o.professional_product_id).filter(Boolean)));
-        const [partnerProductsRes, professionalProductsRes] = await Promise.all([
-          partnerIds.length
-            ? (supabase as any).from("partner_products").select("id,name").in("id", partnerIds)
-            : Promise.resolve({ data: [] as any[] }),
-          professionalIds.length
-            ? (supabase as any).from("professional_products").select("id,name").in("id", professionalIds)
-            : Promise.resolve({ data: [] as any[] }),
-        ]);
-        const partnerNames = new Map(((partnerProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
-        const professionalNames = new Map(((professionalProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
-
-        orders.forEach((o: any) => {
-          const masterCoachId = o.master_coach_cross_beneficiary_coach_id as string | null;
-          // Em vendas cross-network de parceiro/profissional, esta área deve
-          // contar a venda para o Master Coach que fechou a venda, não para o
-          // coach titular do aluno. Usamos a coluna do pedido como fonte de
-          // verdade para não depender de visibilidade/RLS de comissões de outro coach.
-          if (masterCoachId && currentCoachId && masterCoachId !== currentCoachId) return;
-          const isPartner = !!o.partner_product_id;
-          const rawId = o.partner_product_id || o.professional_product_id;
-          if (!rawId) return;
-          const productId = `${isPartner ? "partner" : "professional"}:${rawId}`;
-          const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
-          existing.qty += 1;
-          existing.revenue += Number(o.gross_amount) || 0;
-          if (masterPartnerOrderIds.has(o.id) || (masterCoachId && currentCoachId && masterCoachId === currentCoachId)) {
-            existing.master_qty = (existing.master_qty || 0) + 1;
-            existing.master_revenue = (existing.master_revenue || 0) + (Number(o.gross_amount) || 0);
-          }
-          map.set(productId, existing);
-          extraProducts.push({
-            id: productId,
-            name: isPartner ? (partnerNames.get(rawId) || "Produto de parceiro") : (professionalNames.get(rawId) || "Produto profissional"),
-            category_id: isPartner ? "__partner_products" : "__professional_products",
-            section_id: isPartner ? "__partner_store" : "__professional_store",
-          });
-        });
+      let map = new Map<string, SaleRow>();
+      let extraProducts: ProductMeta[] = [];
+      try {
+        const { from, to } = getRange(period, customFrom, customTo);
+        const payload = await fetchTopSelling({ data: { from: from?.toISOString() ?? null, to: to?.toISOString() ?? null } });
+        map = new Map<string, SaleRow>((payload.sales || []).map((row) => [row.product_id, row]));
+        extraProducts = payload.extraProducts || [];
+      } catch (error) {
+        console.error("[TopSellingProducts] erro ao carregar produtos mais vendidos", error);
       }
 
       if (!cancelled) {
@@ -239,7 +126,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       }
     })();
     return () => { cancelled = true; };
-  }, [coachProfileId, period, customFrom, customTo]);
+  }, [coachProfileId, period, customFrom, customTo, fetchTopSelling]);
 
   const tree: SectionNode[] = useMemo(() => {
     const limit = limitMode === "all" ? Infinity : limitMode;
