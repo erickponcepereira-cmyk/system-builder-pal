@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { getServerCutoffIso } from "@/lib/test-mode.functions";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 /** Aplica filtro do Modo de Testes quando ativo: only registros após o marco. */
 function applyCutoff<T>(q: T, col: string, cutoff: string | null): T {
@@ -94,7 +95,7 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     let networkPending = 0, networkAvailable = 0, networkPaid = 0;
 
 
-    for (const c of commissions || []) {
+    for (const c of dedupeCommissions((commissions as any[]) || [])) {
       const pid = (c as any).beneficiary_profile_id as string | null;
       if (!pid) continue;
       const prof = (c as any).profiles as { name?: string; email?: string; role?: string } | null;
@@ -267,14 +268,16 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     // Referrals (aluno → aluno) — apenas a comissão do próprio aluno indicador
     // (slot "aluno indicador"). Linhas/Vendedor da mesma venda vão para os buckets
     // de coaches/rede.
-    const { data: refRows } = await supabaseAdmin
+    let refRowsQ = supabaseAdmin
       .from("commissions")
       .select("amount, status, referred_by_student_id, beneficiary_profile_id, slot_label, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
       .eq("is_referral", true)
       .ilike("slot_label", "aluno indicador%");
+    if (cutoff) refRowsQ = refRowsQ.gte("created_at", cutoff);
+    const { data: refRows } = await refRowsQ;
     const refMap = new Map<string, RecipientTotal>();
     let refPending = 0, refAvailable = 0, refPaid = 0;
-    for (const r of refRows || []) {
+    for (const r of dedupeCommissions((refRows as any[]) || [])) {
       const pid = (r as any).beneficiary_profile_id as string | null;
       if (!pid) continue;
       const amt = Number((r as any).amount || 0);
@@ -484,8 +487,9 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(500), "created_at", cutoffIso);
       if (error) throw new Error(error.message);
-      const txIds = Array.from(new Set((rows || []).map((c: any) => c.transaction_id).filter(Boolean)));
-      const referrerIds = Array.from(new Set((rows || []).map((c: any) => c.referred_by_student_id).filter(Boolean)));
+      const referralRows = dedupeCommissions((rows as any[]) || []);
+      const txIds = Array.from(new Set((referralRows || []).map((c: any) => c.transaction_id).filter(Boolean)));
+      const referrerIds = Array.from(new Set((referralRows || []).map((c: any) => c.referred_by_student_id).filter(Boolean)));
       let txMap = new Map<string, { studentName: string | null; productName: string | null }>();
       const referrerTitleMap = new Map<string, "subcoach" | "influencer">();
       if (referrerIds.length) {
@@ -517,7 +521,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
           productName: t.product_id ? pMap.get(t.product_id) || null : null,
         }));
       }
-      return (rows || []).map((c: any) => {
+      return referralRows.map((c: any) => {
         const tx = c.transaction_id ? txMap.get(c.transaction_id) : null;
         return {
           commissionId: c.id,
@@ -547,7 +551,7 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
       .limit(500), "created_at", cutoffIso);
     if (error) throw new Error(error.message);
 
-    const filtered = (rows || []).filter((c: any) => {
+    const filtered = dedupeCommissions((rows as any[]) || []).filter((c: any) => {
       const slot = String(c.slot_label || "").toLowerCase();
       // Apenas a comissão do aluno indicador vai para o bucket "referrals".
       if (slot.startsWith("aluno indicador")) return false;

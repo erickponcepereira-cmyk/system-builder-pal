@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computeMonthlySnapshot, upsertMonthlySnapshot } from "@/lib/network-unlock.server";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 export type UnlockGoal = {
   id: string;
@@ -61,14 +62,14 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
     const cutoff = await getServerCutoffIso();
     let commQ = supabaseAdmin
-      .from("commissions").select("amount, level, status, available_at, created_at")
+      .from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,available_at,created_at,slot_label,is_referral")
       .eq("beneficiary_profile_id", profile.id);
     if (cutoff) commQ = commQ.gte("created_at", cutoff);
     const { data: comms } = await commQ;
     const direct = { available: 0, pending: 0, total: 0 };
     const network = { available: 0, pending: 0, total: 0, locked: !snap.anyCompleted };
     const nowMs = Date.now();
-    ((comms as Array<{ amount: number; level: number; status: string; available_at: string | null }> | null) || []).forEach((c) => {
+    dedupeCommissions((comms as Array<any> | null) || []).forEach((c) => {
       const amt = Number(c.amount) || 0;
       const bucket = c.level === 0 ? direct : network;
       bucket.total += amt;

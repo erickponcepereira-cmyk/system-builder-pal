@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
@@ -83,7 +84,7 @@ async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | nu
     .in("beneficiary_profile_id", profileIds);
   if (cutoff) q = q.gte("created_at", cutoff);
   const { data } = await q;
-  for (const r of ((data as Array<{ beneficiary_profile_id: string; amount: number; status: string }>) || [])) {
+  for (const r of dedupeCommissions((data as any[]) || [])) {
     const cur = map.get(r.beneficiary_profile_id) || { earned: 0, blocked: 0, available: 0, paid: 0 };
     cur.earned += n(r.amount);
     if (r.status === "pending") cur.blocked += n(r.amount);

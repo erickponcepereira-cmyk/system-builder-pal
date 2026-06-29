@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 export interface PartnerOrderRow {
   id: string;
@@ -164,7 +165,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       coachWalletsTotal: (() => {
         if (cutoff) {
           const byProfile = new Map<string, number>();
-          ((commAll.data as any[] | null) || []).forEach((c: any) => {
+          dedupeCommissions((commAll.data as any[] | null) || []).forEach((c: any) => {
             byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
           });
           const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
@@ -182,7 +183,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       studentWalletsTotal: (() => {
         if (cutoff) {
           const byProfile = new Map<string, number>();
-          ((commAll.data as any[] | null) || []).forEach((c: any) => {
+          dedupeCommissions((commAll.data as any[] | null) || []).forEach((c: any) => {
             byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
           });
           const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
