@@ -380,7 +380,146 @@ async function buildSalesReportForRange(
     });
   }
 
+  // ===== Cross-network Master Coach sales =====
+  // When this coach acts as Master Coach for a sale on someone else's network,
+  // the buyer is NOT in our studentIds, so the sale wouldn't show above.
+  // Pull commissions where I'm the beneficiary AND it's a master-coach commission,
+  // then materialize rows for the underlying transactions / partner orders.
+  {
+    const { data: mcComms } = await supabaseAdmin
+      .from("commissions")
+      .select("id, amount, level, transaction_id, partner_order_id, created_at")
+      .eq("beneficiary_coach_id", coachId)
+      .eq("is_master_coach_commission", true)
+      .gte("created_at", fromIso)
+      .lte("created_at", toIso);
+    type MC = { id: string; amount: number; level: number; transaction_id: string | null; partner_order_id: string | null; created_at: string };
+    const mcRows = (mcComms as MC[] | null) || [];
+    const existingTxIds = new Set(rows.filter((r) => r.source === "transaction" || r.source === "store").map((r) => r.id));
+    const existingPoIds = new Set(rows.filter((r) => r.source === "partner" || r.source === "professional").map((r) => r.id));
+
+    const extraTxIds = Array.from(new Set(mcRows.map((c) => c.transaction_id).filter((id): id is string => !!id && !existingTxIds.has(id))));
+    const extraPoIds = Array.from(new Set(mcRows.map((c) => c.partner_order_id).filter((id): id is string => !!id && !existingPoIds.has(id))));
+
+    if (extraTxIds.length || extraPoIds.length) {
+      const [txRes, poRes] = await Promise.all([
+        extraTxIds.length
+          ? supabaseAdmin.from("transactions").select("id, student_id, product_id, gross_amount, paid_at, status, purchase_type, metadata").in("id", extraTxIds)
+          : Promise.resolve({ data: [] as any[] }),
+        extraPoIds.length
+          ? supabaseAdmin.from("partner_product_orders").select("id, student_id, partner_product_id, professional_product_id, gross_amount, paid_at, status").in("id", extraPoIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      type XT = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string | null; status: string; purchase_type: string | null; metadata: any };
+      type XO = { id: string; student_id: string; partner_product_id: string | null; professional_product_id: string | null; gross_amount: number; paid_at: string | null; status: string };
+      const xTxs = ((txRes.data as XT[] | null) || []).filter((t) => t.status === "paid" && t.paid_at);
+      const xPos = ((poRes.data as XO[] | null) || []).filter((o) => o.status === "paid" && o.paid_at);
+
+      // Resolve missing students + products
+      const needStudentIds = Array.from(new Set([...xTxs.map((t) => t.student_id), ...xPos.map((o) => o.student_id)].filter(Boolean)));
+      const needProductIds = Array.from(new Set(xTxs.map((t) => t.product_id).filter(Boolean) as string[]));
+      const needPartnerIds = Array.from(new Set(xPos.map((o) => o.partner_product_id).filter(Boolean) as string[]));
+      const needProfIds = Array.from(new Set(xPos.map((o) => o.professional_product_id).filter(Boolean) as string[]));
+
+      const [stuRes, prodRes, partnerProdRes, profProdRes] = await Promise.all([
+        needStudentIds.length
+          ? supabaseAdmin.from("students").select("id, profiles!students_profile_id_fkey(name,email)").in("id", needStudentIds)
+          : Promise.resolve({ data: [] as any[] }),
+        needProductIds.length
+          ? supabaseAdmin.from("products").select("id,name").in("id", needProductIds)
+          : Promise.resolve({ data: [] as any[] }),
+        needPartnerIds.length
+          ? supabaseAdmin.from("partner_products").select("id,name").in("id", needPartnerIds)
+          : Promise.resolve({ data: [] as any[] }),
+        needProfIds.length
+          ? supabaseAdmin.from("professional_products").select("id,name").in("id", needProfIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const xStuMap = new Map<string, { name: string; email: string }>(
+        ((stuRes.data as Array<{ id: string; profiles: { name: string; email: string } | null }>) || [])
+          .map((s) => [s.id, { name: s.profiles?.name || "—", email: s.profiles?.email || "" }])
+      );
+      const xProdMap = new Map<string, string>(((prodRes.data as Array<{ id: string; name: string }>) || []).map((p) => [p.id, p.name]));
+      const xPartnerMap = new Map<string, string>(((partnerProdRes.data as Array<{ id: string; name: string }>) || []).map((p) => [p.id, p.name]));
+      const xProfMap = new Map<string, string>(((profProdRes.data as Array<{ id: string; name: string }>) || []).map((p) => [p.id, p.name]));
+
+      const mcCommByTx = new Map<string, { amount: number; levels: number[] }>();
+      const mcCommByPo = new Map<string, { amount: number; levels: number[] }>();
+      mcRows.forEach((c) => {
+        if (c.transaction_id) {
+          const cur = mcCommByTx.get(c.transaction_id) || { amount: 0, levels: [] };
+          cur.amount += Number(c.amount) || 0;
+          if (!cur.levels.includes(c.level)) cur.levels.push(c.level);
+          mcCommByTx.set(c.transaction_id, cur);
+        } else if (c.partner_order_id) {
+          const cur = mcCommByPo.get(c.partner_order_id) || { amount: 0, levels: [] };
+          cur.amount += Number(c.amount) || 0;
+          if (!cur.levels.includes(c.level)) cur.levels.push(c.level);
+          mcCommByPo.set(c.partner_order_id, cur);
+        }
+      });
+
+      const myName = (await supabaseAdmin.from("coaches").select("id, fantasy_name, profiles!coaches_profile_id_fkey(name)").eq("id", coachId).maybeSingle()).data as any;
+      const myDisplay = myName?.fantasy_name || myName?.profiles?.name || "Master Coach";
+
+      for (const t of xTxs) {
+        const sp = xStuMap.get(t.student_id);
+        const comm = mcCommByTx.get(t.id) || { amount: 0, levels: [] };
+        rows.push({
+          id: t.id,
+          source: "transaction",
+          student_id: t.student_id,
+          student_name: sp?.name || "—",
+          student_email: sp?.email || "",
+          student_group: "aluno",
+          product_id: t.product_id,
+          product_name: t.product_id ? (xProdMap.get(t.product_id) || "Produto") : "Produto",
+          product_kind: "fitmind",
+          quantity: 1,
+          amount: Number(t.gross_amount) || 0,
+          paid_at: t.paid_at as string,
+          my_commission: comm.amount,
+          commission_levels: comm.levels.sort((a, b) => a - b),
+          is_master_coach_sale: true,
+          master_coach_id: coachId,
+          master_coach_name: myDisplay,
+        });
+      }
+      for (const o of xPos) {
+        const sp = xStuMap.get(o.student_id);
+        const isPartnerProduct = !!o.partner_product_id;
+        const productId = o.partner_product_id || o.professional_product_id || null;
+        const productName = o.partner_product_id
+          ? (xPartnerMap.get(o.partner_product_id) || "Produto de parceiro")
+          : o.professional_product_id
+            ? (xProfMap.get(o.professional_product_id) || "Produto profissional")
+            : "Produto de parceiro/profissional";
+        const comm = mcCommByPo.get(o.id) || { amount: 0, levels: [] };
+        rows.push({
+          id: o.id,
+          source: isPartnerProduct ? "partner" : "professional",
+          student_id: o.student_id,
+          student_name: sp?.name || "—",
+          student_email: sp?.email || "",
+          student_group: "aluno",
+          product_id: productId,
+          product_name: productName,
+          product_kind: isPartnerProduct ? "partner" : "professional",
+          quantity: 1,
+          amount: Number(o.gross_amount) || 0,
+          paid_at: o.paid_at as string,
+          my_commission: comm.amount,
+          commission_levels: comm.levels.sort((a, b) => a - b),
+          is_master_coach_sale: true,
+          master_coach_id: coachId,
+          master_coach_name: myDisplay,
+        });
+      }
+    }
+  }
+
   rows.sort((a, b) => b.paid_at.localeCompare(a.paid_at));
+
 
   // Aggregations
   const monthMap = new Map<string, { revenue: number; orders: number }>();
