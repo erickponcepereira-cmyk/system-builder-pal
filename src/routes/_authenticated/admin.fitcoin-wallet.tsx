@@ -19,9 +19,10 @@ const fmtDate = (iso: string | null) => {
 
 function AdminFitcoinWallet() {
   const fetchList = useServerFn(listAdminFitcoinWallets);
+  const { focus } = Route.useSearch();
   const [rows, setRows] = useState<AdminFitcoinRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FitcoinFilter>("with_balance");
+  const [filter, setFilter] = useState<FitcoinFilter>(focus ? "all" : "with_balance");
   const [sort, setSort] = useState<"available_desc" | "earned_desc" | "used_desc" | "recent">("available_desc");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<AdminFitcoinRow | null>(null);
@@ -31,6 +32,10 @@ function AdminFitcoinWallet() {
     try {
       const data = await fetchList({ data: { filter, sort, search } });
       setRows(data);
+      if (focus) {
+        const target = data.find((r) => r.profileId === focus);
+        if (target) setSelected(target);
+      }
     } finally { setLoading(false); }
   };
 
