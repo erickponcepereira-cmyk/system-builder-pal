@@ -91,13 +91,15 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
       let commQ = supabase
         .from("commissions")
-        .select("transaction_id,partner_order_id,created_at")
+        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
       if (cutoff) commQ = commQ.gte("created_at", cutoff);
       const { data: comms } = await commQ;
       const txIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
       const partnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
+      const masterTxIds = new Set((comms || []).filter((c: any) => c.is_master_coach_commission && c.transaction_id).map((c: any) => c.transaction_id as string));
+      const masterPartnerOrderIds = new Set((comms || []).filter((c: any) => c.is_master_coach_commission && c.partner_order_id).map((c: any) => c.partner_order_id as string));
 
       const map = new Map<string, SaleRow>();
       const extraProducts: ProductMeta[] = [];
