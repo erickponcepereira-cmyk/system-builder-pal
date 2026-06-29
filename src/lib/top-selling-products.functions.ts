@@ -85,10 +85,10 @@ export const getTopSellingProducts = createServerFn({ method: "GET" })
     // o perfil do Master Coach passa a mostrar a venda mesmo que a comissão antiga
     // ainda não tenha sido recriada/backfilled corretamente.
     const { data: directMasterOrders } = await supabaseAdmin
-      .from("partner_product_orders" as never)
-      .select("id" as never)
-      .eq("master_coach_cross_beneficiary_coach_id" as never, coachId as never)
-      .eq("status" as never, "paid" as never);
+      .from("partner_product_orders")
+      .select("id")
+      .eq("master_coach_cross_beneficiary_coach_id", coachId)
+      .eq("status", "paid");
     ((directMasterOrders || []) as unknown as Array<{ id: string }>).forEach((row) => {
       if (row.id) {
         partnerOrderIds.add(row.id);
@@ -151,10 +151,10 @@ export const getTopSellingProducts = createServerFn({ method: "GET" })
     const visiblePartnerOrderIds = Array.from(partnerOrderIds).filter((id) => !masterByOtherPartnerOrderIds.has(id));
     if (visiblePartnerOrderIds.length) {
       const { data: ordersData } = await supabaseAdmin
-        .from("partner_product_orders" as never)
-        .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,created_at,status,master_coach_cross_beneficiary_coach_id" as never)
-        .in("id" as never, visiblePartnerOrderIds as never)
-        .eq("status" as never, "paid" as never);
+        .from("partner_product_orders")
+        .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,created_at,status,master_coach_cross_beneficiary_coach_id")
+        .in("id", visiblePartnerOrderIds)
+        .eq("status", "paid");
       const orders = (ordersData || []) as unknown as Array<{
         id: string;
         partner_product_id: string | null;
@@ -167,8 +167,8 @@ export const getTopSellingProducts = createServerFn({ method: "GET" })
       const partnerIds = Array.from(new Set(orders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
       const professionalIds = Array.from(new Set(orders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
       const [partnerProductsRes, professionalProductsRes] = await Promise.all([
-        partnerIds.length ? supabaseAdmin.from("partner_products" as never).select("id,name" as never).in("id" as never, partnerIds as never) : Promise.resolve({ data: [] }),
-        professionalIds.length ? supabaseAdmin.from("professional_products" as never).select("id,name" as never).in("id" as never, professionalIds as never) : Promise.resolve({ data: [] }),
+        partnerIds.length ? supabaseAdmin.from("partner_products").select("id,name").in("id", partnerIds) : Promise.resolve({ data: [] }),
+        professionalIds.length ? supabaseAdmin.from("professional_products").select("id,name").in("id", professionalIds) : Promise.resolve({ data: [] }),
       ]);
       const partnerNames = new Map(((partnerProductsRes.data || []) as Array<any>).map((p) => [p.id, p.name]));
       const professionalNames = new Map(((professionalProductsRes.data || []) as Array<any>).map((p) => [p.id, p.name]));
