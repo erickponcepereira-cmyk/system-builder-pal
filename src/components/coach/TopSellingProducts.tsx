@@ -239,7 +239,10 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     allProducts.forEach((p) => {
       const sale = sales.get(p.id);
       const node: ProductNode = {
-        id: p.id, name: p.name, qty: sale?.qty || 0, revenue: sale?.revenue || 0, rank: 0,
+        id: p.id, name: p.name,
+        qty: sale?.qty || 0, revenue: sale?.revenue || 0,
+        master_qty: sale?.master_qty || 0, master_revenue: sale?.master_revenue || 0,
+        rank: 0,
       };
       // Resolve section: prefer product.section_id; fallback to its category's section
       const catMeta = p.category_id ? catMap.get(p.category_id) : undefined;
