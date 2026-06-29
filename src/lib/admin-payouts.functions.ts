@@ -340,7 +340,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const { data: refRecvRaw } = await refQ;
       profileIds = Array.from(new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
-        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id))));
+        // Só lista alunos indicadores que também são sellers (coach/parceiro/profissional)
+        .filter((id) => sellerSet.has(id) && cls.studentByProfile.has(id))));
       roleOf = () => "student_referrer";
     }
 
