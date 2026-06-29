@@ -128,7 +128,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const studentReferrerIds = Array.from(
       new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
-        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id)))
+        // Fitcoin só conta como saque quando o aluno também é seller (coach/parceiro/profissional)
+        .filter((id) => sellerSet.has(id) && cls.studentByProfile.has(id)))
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
