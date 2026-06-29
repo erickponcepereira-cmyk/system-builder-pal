@@ -80,7 +80,7 @@ async function aggregateCommissionsBy(profileIds: string[], cutoff?: string | nu
   if (!profileIds.length) return map;
   let q = supabaseAdmin
     .from("commissions")
-    .select("beneficiary_profile_id,amount,status,created_at")
+    .select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at")
     .in("beneficiary_profile_id", profileIds);
   if (cutoff) q = q.gte("created_at", cutoff);
   const { data } = await q;

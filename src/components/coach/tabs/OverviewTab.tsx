@@ -9,6 +9,7 @@ import { RewardsPanel } from "@/components/coach/RewardsPanel";
 import { CoachAlertsCard } from "@/components/coach/CoachAlertsCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { InstallAppButton } from "@/components/InstallAppButton";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -45,17 +46,17 @@ export function OverviewTab({
 
       // Em Modo de Testes ignoramos o saldo cumulativo da carteira; usamos soma das comissões pós-corte
       const commAllQ = cutoff
-        ? supabase.from("commissions").select("amount,created_at").eq("beneficiary_profile_id", profile.id).gte("created_at", cutoff)
+        ? supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at").eq("beneficiary_profile_id", profile.id).gte("created_at", cutoff)
         : null;
 
       const [studentsRes, commMonthRes, walletRes, commAllRes] = await Promise.all([
         studentsQ,
-        supabase.from("commissions").select("amount").eq("beneficiary_profile_id", profile.id).gte("created_at", effectiveStart),
+        supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at").eq("beneficiary_profile_id", profile.id).gte("created_at", effectiveStart),
         cutoff ? Promise.resolve({ data: null }) : supabase.from("wallets").select("available_balance").eq("profile_id", profile.id).maybeSingle(),
         commAllQ ?? Promise.resolve({ data: null as unknown }),
       ]);
 
-      const commMonth = ((commMonthRes.data as Array<{ amount: number }>) || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+      const commMonth = dedupeCommissions((commMonthRes.data as any[]) || []).reduce((s, r) => s + Number(r.amount || 0), 0);
 
       // Sales of the month: transactions paid this month tied to students of this coach
       let salesMonth = 0;
@@ -74,7 +75,7 @@ export function OverviewTab({
       }
 
       const balance = cutoff
-        ? ((commAllRes.data as Array<{ amount: number }> | null) || []).reduce((s, r) => s + Number(r.amount || 0), 0)
+        ? dedupeCommissions((commAllRes.data as any[]) || []).reduce((s, r) => s + Number(r.amount || 0), 0)
         : Number((walletRes.data as { available_balance?: number } | null)?.available_balance ?? 0);
 
       setData({
