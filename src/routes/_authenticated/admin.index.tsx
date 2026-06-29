@@ -6,6 +6,7 @@ import { BirthdaysCard } from "@/components/BirthdaysCard";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboard,
@@ -60,8 +61,8 @@ function AdminDashboard() {
         supabase.from("subscriptions").select("id", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("transactions").select("gross_amount").eq("status", "paid").gte("paid_at", effFirst),
         supabase.from("transactions").select("gross_amount, paid_at, student_id, product_id").eq("status", "paid").gte("paid_at", effSix),
-        (cutoff ? supabase.from("commissions").select("amount").eq("status", "pending").gte("created_at", cutoff) : supabase.from("commissions").select("amount").eq("status", "pending")),
-        (cutoff ? supabase.from("commissions").select("amount").eq("status", "available").gte("created_at", cutoff) : supabase.from("commissions").select("amount").eq("status", "available")),
+        (cutoff ? supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral").eq("status", "pending").gte("created_at", cutoff) : supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral").eq("status", "pending")),
+        (cutoff ? supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral").eq("status", "available").gte("created_at", cutoff) : supabase.from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral").eq("status", "available")),
         (cutoff ? supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"]).gte("requested_at", cutoff) : supabase.from("withdrawal_requests").select("amount").in("status", ["requested", "approved", "processing"])),
         recentQFinal,
         supabase.from("partner_product_orders" as never).select("gross_amount" as never).eq("status" as never, "paid" as never).gte("paid_at" as never, effFirst as never),
@@ -166,7 +167,7 @@ function AdminDashboard() {
       })));
 
       const sumAmt = (arr: Array<{ amount: number | null }> | null) =>
-        (arr || []).reduce((s, x) => s + Number(x.amount || 0), 0);
+        dedupeCommissions((arr as any[]) || []).reduce((s, x) => s + Number(x.amount || 0), 0);
 
       const txsMonthTotal = (txsMonth.data || []).reduce((s, t) => s + Number(t.gross_amount || 0), 0);
       const ppoMonthTotal = (((ppoMonth as any).data || []) as any[]).reduce((s, t) => s + Number(t.gross_amount || 0), 0);

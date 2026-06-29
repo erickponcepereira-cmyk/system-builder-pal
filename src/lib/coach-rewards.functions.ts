@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { dedupePointLogs } from "@/lib/financial-dedupe";
 
 export type RewardPlan = {
   id: string;
@@ -81,11 +82,11 @@ export const getCoachRewards = createServerFn({ method: "GET" })
       if (coachId) {
         const { data: pts } = await supabaseAdmin
           .from("coach_points_log")
-          .select("points")
+          .select("id,coach_id,transaction_id,product_id,points,reason")
           .eq("coach_id", coachId)
           .gte("created_at", effectiveStartIso)
           .lt("created_at", end.toISOString());
-        current = ((pts as { points: number }[] | null) || []).reduce((s, r) => s + (Number(r.points) || 0), 0);
+        current = dedupePointLogs((pts as any[]) || []).reduce((s, r) => s + (Number(r.points) || 0), 0);
       }
       results.push({
         id: p.id,
@@ -139,13 +140,13 @@ export const getRewardContributions = createServerFn({ method: "GET" })
     if (coachId) {
       const { data: logs } = await supabaseAdmin
         .from("coach_points_log")
-        .select("id,created_at,points,reason,product_id,transaction_id")
+          .select("id,coach_id,created_at,points,reason,product_id,transaction_id")
         .eq("coach_id", coachId)
         .gte("created_at", effectiveStartIso)
         .lt("created_at", end.toISOString())
         .order("created_at", { ascending: false })
         .limit(200);
-      const rows = (logs as Array<{ id: string; created_at: string; points: number; reason: string | null; product_id: string | null; transaction_id: string | null }> | null) || [];
+      const rows = dedupePointLogs((logs as any[]) || []) as Array<{ id: string; created_at: string; points: number; reason: string | null; product_id: string | null; transaction_id: string | null }>;
       current = rows.reduce((s, r) => s + (Number(r.points) || 0), 0);
       const productIds = Array.from(new Set(rows.map((r) => r.product_id).filter(Boolean) as string[]));
       const txIds = Array.from(new Set(rows.map((r) => r.transaction_id).filter(Boolean) as string[]));

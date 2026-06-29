@@ -9,6 +9,7 @@ import { getMyReferralCommissions } from "@/lib/student-referrals.functions";
 import { StudentReferralModal } from "@/components/student/StudentReferralModal";
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
+import { getClientCutoffIso } from "@/lib/test-mode";
 
 export const Route = createFileRoute("/_authenticated/student/profile")({
   component: ProfilePage,
@@ -158,6 +159,10 @@ function ProfilePage() {
       try {
         const mapped = await fetchReferralCommissions();
         setReferralCommissions(mapped);
+        if (await getClientCutoffIso()) {
+          const fitcoinPostCutoff = mapped.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+          setWallet((prev) => ({ ...prev, fitcoin_balance: fitcoinPostCutoff }));
+        }
       } catch (e) { console.warn("referral commissions fetch failed", e); }
 
 

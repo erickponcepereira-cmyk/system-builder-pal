@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 export type WalletHistoryItem = {
   id: string;
@@ -29,11 +30,11 @@ export const getMyWalletHistory = createServerFn({ method: "GET" })
     const cutoff = await getServerCutoffIso();
     let commQ = supabaseAdmin
       .from("commissions")
-      .select("id,amount,level,created_at,transaction_id,partner_order_id,slot_label,is_master_coach_commission")
+      .select("id,amount,level,created_at,transaction_id,partner_order_id,slot_label,is_master_coach_commission,beneficiary_profile_id,beneficiary_coach_id,status,is_referral")
       .eq("beneficiary_profile_id", profileId);
     if (cutoff) commQ = commQ.gte("created_at", cutoff);
     const { data: comm } = await commQ.order("created_at", { ascending: false }).limit(50);
-    const rows = (comm || []) as Array<{
+    const rows = dedupeCommissions(comm as any[]) as Array<{
       id: string; amount: number; level: number; created_at: string;
       transaction_id: string | null; partner_order_id: string | null;
       slot_label: string | null; is_master_coach_commission: boolean | null;

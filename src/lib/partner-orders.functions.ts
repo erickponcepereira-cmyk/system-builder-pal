@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dedupeCommissions } from "@/lib/financial-dedupe";
 
 export interface PartnerOrderRow {
   id: string;
@@ -122,7 +123,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       cutoff
-        ? supabase.from("commissions" as never).select("amount,beneficiary_profile_id,created_at" as never).gte("created_at" as never, cutoff as never)
+        ? supabase.from("commissions" as never).select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at" as never).gte("created_at" as never, cutoff as never)
         : Promise.resolve({ data: null as any }),
     ]);
     const sum = (arr: any[] | null | undefined, k: string) =>
@@ -164,7 +165,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       coachWalletsTotal: (() => {
         if (cutoff) {
           const byProfile = new Map<string, number>();
-          ((commAll.data as any[] | null) || []).forEach((c: any) => {
+          dedupeCommissions((commAll.data as any[] | null) || []).forEach((c: any) => {
             byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
           });
           const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
@@ -182,7 +183,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       studentWalletsTotal: (() => {
         if (cutoff) {
           const byProfile = new Map<string, number>();
-          ((commAll.data as any[] | null) || []).forEach((c: any) => {
+          dedupeCommissions((commAll.data as any[] | null) || []).forEach((c: any) => {
             byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
           });
           const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
