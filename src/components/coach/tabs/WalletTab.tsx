@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
-import { Wallet, X, Crown, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info, Trophy, Medal } from "lucide-react";
+import { Wallet, X, Eye, EyeOff, Lock, Unlock, CheckCircle2, Info, Trophy, Medal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getMyMasterCoachCrossSales, type CrossSaleRow } from "@/lib/cross-sales.functions";
 import { getWalletSplit, type WalletSplit } from "@/lib/network-unlock.functions";
 import { getCareerProgress, type CareerProgress } from "@/lib/coach-career.functions";
 import { getMyWalletHistory } from "@/lib/coach-wallet-history.functions";
 import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/lib/coach-medals.functions";
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
+import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 import { PendingInfo } from "@/components/PendingInfo";
 
 const MIN_WITHDRAWAL = 100;
