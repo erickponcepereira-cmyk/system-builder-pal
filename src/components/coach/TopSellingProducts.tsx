@@ -88,12 +88,6 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       const { from, to } = getRange(period, customFrom, customTo);
       const { getClientCutoffIso } = await import("@/lib/test-mode");
       const cutoff = await getClientCutoffIso();
-      const { data: currentCoach } = await supabase
-        .from("coaches")
-        .select("id")
-        .eq("profile_id", coachProfileId)
-        .maybeSingle();
-      const currentCoachId = (currentCoach as { id?: string } | null)?.id || null;
 
       let commQ = supabase
         .from("commissions")
@@ -178,24 +172,30 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
         const orders = (ordersData as any[]) || [];
         const partnerIds = Array.from(new Set(orders.map((o) => o.partner_product_id).filter(Boolean)));
         const professionalIds = Array.from(new Set(orders.map((o) => o.professional_product_id).filter(Boolean)));
-        const [partnerProductsRes, professionalProductsRes] = await Promise.all([
+        const masterCoachIds = Array.from(new Set(orders.map((o) => o.master_coach_cross_beneficiary_coach_id).filter(Boolean)));
+        const [partnerProductsRes, professionalProductsRes, masterCoachesRes] = await Promise.all([
           partnerIds.length
             ? (supabase as any).from("partner_products").select("id,name").in("id", partnerIds)
             : Promise.resolve({ data: [] as any[] }),
           professionalIds.length
             ? (supabase as any).from("professional_products").select("id,name").in("id", professionalIds)
             : Promise.resolve({ data: [] as any[] }),
+          masterCoachIds.length
+            ? (supabase as any).from("coaches").select("id,profile_id").in("id", masterCoachIds)
+            : Promise.resolve({ data: [] as any[] }),
         ]);
         const partnerNames = new Map(((partnerProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
         const professionalNames = new Map(((professionalProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
+        const masterCoachProfileById = new Map(((masterCoachesRes.data as any[]) || []).map((c) => [c.id, c.profile_id]));
 
         orders.forEach((o: any) => {
           const masterCoachId = o.master_coach_cross_beneficiary_coach_id as string | null;
+          const masterCoachProfileId = masterCoachId ? masterCoachProfileById.get(masterCoachId) : null;
           // Em vendas cross-network de parceiro/profissional, esta área deve
           // contar a venda para o Master Coach que fechou a venda, não para o
           // coach titular do aluno. Usamos a coluna do pedido como fonte de
           // verdade para não depender de visibilidade/RLS de comissões de outro coach.
-          if (masterCoachId && currentCoachId && masterCoachId !== currentCoachId) return;
+          if (masterCoachProfileId && masterCoachProfileId !== coachProfileId) return;
           const isPartner = !!o.partner_product_id;
           const rawId = o.partner_product_id || o.professional_product_id;
           if (!rawId) return;
