@@ -351,6 +351,10 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
   if (input.documentType === "cpf" && !isValidCPF(docDigits)) {
     throw new Error("CPF inválido. Verifique os dados informados.");
   }
+  if (!clean(input.uplineCoachId)) {
+    throw new Error("Selecione um coach indicador para concluir o cadastro de parceiro.");
+  }
+
 
   try {
     // 1) Garante profile (trigger handle_new_user já criou; upsert é idempotente)
