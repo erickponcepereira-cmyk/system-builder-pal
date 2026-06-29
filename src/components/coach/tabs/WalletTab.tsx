@@ -115,7 +115,7 @@ export function WalletTab() {
       items.sort((a, b) => b.created_at.localeCompare(a.created_at));
       setHistory(items.slice(0, 20));
     })();
-    fetchCrossSales().then((r) => setCross(r)).catch(() => {});
+    
     fetchSplit().then((r) => setSplit(r)).catch((e) => console.error("getWalletSplit failed:", e));
     fetchCareer().then(setCareer).catch(() => {});
     fetchMedals().then(setMedals).catch(() => {});
