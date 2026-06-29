@@ -1,5 +1,6 @@
 export type CommissionLike = {
   id?: string | null;
+  created_at?: string | null;
   transaction_id?: string | null;
   partner_order_id?: string | null;
   beneficiary_profile_id?: string | null;
@@ -16,7 +17,8 @@ const cents = (v: unknown) => Math.round(Number(v || 0) * 100);
 export function dedupeCommissions<T extends CommissionLike>(rows: T[] | null | undefined): T[] {
   const seen = new Set<string>();
   const out: T[] = [];
-  for (const r of rows || []) {
+  const ordered = [...(rows || [])].sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  for (const r of ordered) {
     const source = r.transaction_id ? `tx:${r.transaction_id}` : r.partner_order_id ? `po:${r.partner_order_id}` : `row:${r.id || Math.random()}`;
     const key = [
       source,
@@ -24,7 +26,6 @@ export function dedupeCommissions<T extends CommissionLike>(rows: T[] | null | u
       r.beneficiary_coach_id || "",
       Number(r.level || 0),
       String(r.slot_label || "").trim().toLowerCase(),
-      cents(r.amount),
       String(r.status || ""),
       r.is_referral ? "ref" : "sale",
     ].join("|");
