@@ -156,27 +156,10 @@ function ProfilePage() {
         setTokenHistory(hist);
       } catch (e) { console.warn("token history fetch failed", e); }
       try {
-        const { data: comms } = await supabase
-          .from("commissions")
-          .select("id,amount,status,available_at,created_at,transaction:transactions!commissions_transaction_id_fkey(gross_amount,purchase_type,product:products(name),student:students!transactions_student_id_fkey(profile:profiles!students_profile_id_fkey(name)))" as never)
-          .eq("is_referral", true as never)
-          .eq("referred_by_student_id", student.id as never)
-          .eq("beneficiary_profile_id", profileData.id as never)
-          .order("created_at", { ascending: false })
-          .limit(100);
-        const mapped = ((comms as unknown as any[]) || []).map((c) => ({
-          id: c.id,
-          amount: Number(c.amount || 0),
-          status: c.status,
-          available_at: c.available_at,
-          created_at: c.created_at,
-          buyer_name: c.transaction?.student?.profile?.name || null,
-          product_label: c.transaction?.product?.name || (c.transaction?.purchase_type ? String(c.transaction.purchase_type).replace(/_/g, " ") : null),
-          purchase_type: c.transaction?.purchase_type || null,
-          gross_amount: c.transaction?.gross_amount != null ? Number(c.transaction.gross_amount) : null,
-        }));
+        const mapped = await fetchReferralCommissions();
         setReferralCommissions(mapped);
       } catch (e) { console.warn("referral commissions fetch failed", e); }
+
 
       // Tornar subcoach quando há ao menos 1 comissão paga/disponível
       try {
