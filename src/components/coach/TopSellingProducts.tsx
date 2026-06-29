@@ -157,9 +157,13 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
           const rawId = o.partner_product_id || o.professional_product_id;
           if (!rawId) return;
           const productId = `${isPartner ? "partner" : "professional"}:${rawId}`;
-          const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0 };
+          const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(o.gross_amount) || 0;
+          if (masterPartnerOrderIds.has(o.id)) {
+            existing.master_qty = (existing.master_qty || 0) + 1;
+            existing.master_revenue = (existing.master_revenue || 0) + (Number(o.gross_amount) || 0);
+          }
           map.set(productId, existing);
           extraProducts.push({
             id: productId,
