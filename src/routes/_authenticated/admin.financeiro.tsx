@@ -448,7 +448,16 @@ function AdminFinanceiro() {
                     ))}
                   </tbody>
                 </table>
-                <div className="mt-3 flex justify-end gap-4 text-xs text-white/60">
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-4 text-xs text-white/60">
+                  {bucketOpen.kind === "referrals" && (
+                    <Link
+                      to="/admin/fitcoin-wallet"
+                      onClick={() => setBucketOpen(null)}
+                      className="rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 font-bold text-primary hover:bg-primary/20"
+                    >
+                      Abrir Carteira Fitcoin →
+                    </Link>
+                  )}
                   <span>Total: <strong className="text-primary">{money(bucketRows.reduce((s, r) => s + r.amount, 0))}</strong></span>
                 </div>
               </div>
