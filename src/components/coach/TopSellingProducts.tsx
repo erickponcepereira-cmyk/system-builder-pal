@@ -6,11 +6,13 @@ type SaleRow = {
   product_id: string;
   qty: number;
   revenue: number;
+  master_qty?: number;       // qty originated from Master Coach cross-sale commissions
+  master_revenue?: number;
 };
 
 type ProductMeta = { id: string; name: string; category_id: string | null; section_id: string | null };
 
-type ProductNode = { id: string; name: string; qty: number; revenue: number; rank: number };
+type ProductNode = { id: string; name: string; qty: number; revenue: number; rank: number; master_qty: number; master_revenue: number };
 type CategoryNode = { id: string; name: string; qty: number; revenue: number; rank: number; products: ProductNode[] };
 type SectionNode = { id: string; name: string; qty: number; revenue: number; rank: number; categories: CategoryNode[] };
 
