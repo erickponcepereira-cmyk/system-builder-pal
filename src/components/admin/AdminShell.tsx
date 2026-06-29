@@ -31,6 +31,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/financial-summary", label: "Resumo Financeiro", icon: TrendingUp, perm: "financial_summary" },
   { to: "/admin/test-sales", label: "Testes de Vendas", icon: DollarSign, perm: "settings" },
   { to: "/admin/admin-wallet", label: "Carteira do Admin", icon: Wallet, perm: "admin_wallet" },
+  { to: "/admin/fitcoin-wallet", label: "Carteira de Fitcoin", icon: Coins, perm: "admin_wallet" },
   { to: "/admin/subscriptions", label: "Mensalidades", icon: Repeat, perm: "payments" },
 
   { to: "/admin/reports", label: "Relatórios", icon: BarChart3, perm: "reports" },
