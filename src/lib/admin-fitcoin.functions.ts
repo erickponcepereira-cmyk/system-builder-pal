@@ -115,7 +115,9 @@ export const listAdminFitcoinWallets = createServerFn({ method: "POST" })
     const filter = data.filter || "all";
     let filtered = rows.filter((r) => {
       if (search && !(r.name.toLowerCase().includes(search) || (r.email || "").toLowerCase().includes(search))) return false;
-      if (filter === "with_balance" && r.available <= 0) return false;
+      // "Com saldo" deve listar também Fitcoin pendente: indicação segue carência de 7 dias,
+      // então durante esse período o disponível fica 0, mas a movimentação já pertence à carteira.
+      if (filter === "with_balance" && (r.available + r.pending) <= 0) return false;
       if (filter === "used" && r.used <= 0) return false;
       if (filter === "auto_credited" && r.creditedCount <= 0) return false;
       if (filter === "with_other_role" && !r.hasOtherRole) return false;
@@ -128,7 +130,7 @@ export const listAdminFitcoinWallets = createServerFn({ method: "POST" })
       if (sort === "earned_desc") return b.totalEarned - a.totalEarned;
       if (sort === "used_desc") return b.used - a.used;
       if (sort === "recent") return (b.lastCreditAt || "").localeCompare(a.lastCreditAt || "");
-      return b.available - a.available;
+      return (b.available + b.pending) - (a.available + a.pending);
     });
 
     return filtered;
