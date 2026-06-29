@@ -137,8 +137,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
-    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds, cutoff);
-    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds, cutoff);
+    const sellerAgg = await aggregateCommissionsBy(cls.sellerProfileIds, cutoff, "seller");
+    const studentRefAgg = await aggregateCommissionsBy(studentReferrerIds, cutoff, "referral");
 
     // Solicitações pendentes (saques) — sellers usam withdrawal_requests; alunos usam student_withdrawal_requests
     let wReqsQ = supabaseAdmin
