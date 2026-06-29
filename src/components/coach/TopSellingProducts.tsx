@@ -91,11 +91,12 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
       let commQ = supabase
         .from("commissions")
-        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission,beneficiary_profile_id")
+        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission,beneficiary_profile_id,beneficiary_coach_id")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
       if (cutoff) commQ = commQ.gte("created_at", cutoff);
       const { data: comms } = await commQ;
+      const currentCoachId = ((comms || []).find((c: any) => c.beneficiary_coach_id)?.beneficiary_coach_id as string | undefined) || null;
       const allTxIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
       const allPartnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
 
@@ -162,7 +163,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       if (partnerOrderIds.length > 0) {
         let poQ = (supabase as any)
           .from("partner_product_orders" as any)
-          .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status" as any)
+          .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status,master_coach_cross_beneficiary_coach_id" as any)
           .in("id" as any, partnerOrderIds as any)
           .eq("status" as any, "paid" as any);
         if (from) poQ = poQ.gte("paid_at" as any, from.toISOString() as any);
@@ -184,6 +185,12 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
         const professionalNames = new Map(((professionalProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
 
         orders.forEach((o: any) => {
+          const masterCoachId = o.master_coach_cross_beneficiary_coach_id as string | null;
+          // Em vendas cross-network de parceiro/profissional, esta área deve
+          // contar a venda para o Master Coach que fechou a venda, não para o
+          // coach titular do aluno. Usamos a coluna do pedido como fonte de
+          // verdade para não depender de visibilidade/RLS de comissões de outro coach.
+          if (masterCoachId && currentCoachId && masterCoachId !== currentCoachId) return;
           const isPartner = !!o.partner_product_id;
           const rawId = o.partner_product_id || o.professional_product_id;
           if (!rawId) return;
@@ -191,7 +198,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
           const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(o.gross_amount) || 0;
-          if (masterPartnerOrderIds.has(o.id)) {
+          if (masterPartnerOrderIds.has(o.id) || (masterCoachId && currentCoachId && masterCoachId === currentCoachId)) {
             existing.master_qty = (existing.master_qty || 0) + 1;
             existing.master_revenue = (existing.master_revenue || 0) + (Number(o.gross_amount) || 0);
           }

@@ -97,9 +97,9 @@ async function buildSalesReportForRange(
   const students = (studentRows as unknown as SR[]) || [];
   const studentIds = students.map((s) => s.id);
   const studentMap = new Map(students.map((s) => [s.id, s.profiles]));
-  if (studentIds.length === 0) {
-    return emptyReport(from, to);
-  }
+  // Não retorne aqui quando o coach não tem alunos próprios: um Master Coach pode
+  // ter vendas cross-network para alunos de outros coaches, que são carregadas no
+  // bloco "Cross-network Master Coach sales" mais abaixo.
 
   // Classify each student by profile (coach / professional / partner / pure aluno)
   const profileIds = students.map((s) => s.profile_id).filter(Boolean) as string[];
@@ -132,16 +132,19 @@ async function buildSalesReportForRange(
   // Transactions (paid) — exclui as que são "espelho" de um store_order
   // (cada store_order pago gera uma transação com metadata.store_order_id;
   // contar ambos duplicaria a venda em receita, pedidos e itens vendidos).
-  const { data: txData } = await supabaseAdmin
-    .from("transactions")
-    .select("id, student_id, product_id, gross_amount, paid_at, status, metadata")
-    .in("student_id", studentIds)
-    .eq("status", "paid")
-    .not("paid_at", "is", null)
-    .gte("paid_at", fromIso)
-    .lte("paid_at", toIso);
   type Tx = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string; metadata: { store_order_id?: string } | null };
-  const txs = ((txData as Tx[] | null) || []).filter((t) => !t.metadata?.store_order_id);
+  let txs: Tx[] = [];
+  if (studentIds.length) {
+    const { data: txData } = await supabaseAdmin
+      .from("transactions")
+      .select("id, student_id, product_id, gross_amount, paid_at, status, metadata")
+      .in("student_id", studentIds)
+      .eq("status", "paid")
+      .not("paid_at", "is", null)
+      .gte("paid_at", fromIso)
+      .lte("paid_at", toIso);
+    txs = ((txData as Tx[] | null) || []).filter((t) => !t.metadata?.store_order_id);
+  }
 
   // Product names for transactions
   const productIds = Array.from(new Set(txs.map((t) => t.product_id).filter(Boolean))) as string[];
@@ -153,15 +156,18 @@ async function buildSalesReportForRange(
   }
 
   // Store orders (paid)
-  const { data: orderData } = await supabaseAdmin
-    .from("store_orders")
-    .select("id, student_id, total_amount, updated_at, status")
-    .in("student_id", studentIds)
-    .eq("status", "paid")
-    .gte("updated_at", fromIso)
-    .lte("updated_at", toIso);
   type SO = { id: string; student_id: string; total_amount: number; updated_at: string };
-  const orders = (orderData as SO[] | null) || [];
+  let orders: SO[] = [];
+  if (studentIds.length) {
+    const { data: orderData } = await supabaseAdmin
+      .from("store_orders")
+      .select("id, student_id, total_amount, updated_at, status")
+      .in("student_id", studentIds)
+      .eq("status", "paid")
+      .gte("updated_at", fromIso)
+      .lte("updated_at", toIso);
+    orders = (orderData as SO[] | null) || [];
+  }
   const orderIds = orders.map((o) => o.id);
   let orderItemsMap = new Map<string, { name: string; qty: number; product_id: string | null }[]>();
   if (orderIds.length) {
@@ -178,14 +184,6 @@ async function buildSalesReportForRange(
   }
 
   // Partner/professional orders (paid) — vendas normais feitas pelos seletores da loja.
-  const { data: partnerOrderData } = await supabaseAdmin
-    .from("partner_product_orders" as never)
-    .select("id,student_id,gross_amount,paid_at,partner_product_id,professional_product_id" as never)
-    .in("student_id" as never, studentIds as never)
-    .eq("status" as never, "paid" as never)
-    .not("paid_at" as never, "is" as never, null as never)
-    .gte("paid_at" as never, fromIso as never)
-    .lte("paid_at" as never, toIso as never);
   type PPO = {
     id: string;
     student_id: string;
@@ -193,8 +191,22 @@ async function buildSalesReportForRange(
     paid_at: string;
     partner_product_id: string | null;
     professional_product_id: string | null;
+    selling_coach_id: string | null;
+    master_coach_cross_bonus_amount: number | null;
+    master_coach_cross_beneficiary_coach_id: string | null;
   };
-  const partnerOrders = (partnerOrderData as unknown as PPO[] | null) || [];
+  let partnerOrders: PPO[] = [];
+  if (studentIds.length) {
+    const { data: partnerOrderData } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+        .select("id,student_id,gross_amount,paid_at,partner_product_id,professional_product_id,selling_coach_id,master_coach_cross_bonus_amount,master_coach_cross_beneficiary_coach_id" as never)
+      .in("student_id" as never, studentIds as never)
+      .eq("status" as never, "paid" as never)
+      .not("paid_at" as never, "is" as never, null as never)
+      .gte("paid_at" as never, fromIso as never)
+      .lte("paid_at" as never, toIso as never);
+    partnerOrders = (partnerOrderData as unknown as PPO[] | null) || [];
+  }
   const partnerOrderIds = partnerOrders.map((o) => o.id);
   const partnerProductIds = Array.from(new Set(partnerOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
   const professionalProductIds = Array.from(new Set(partnerOrders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
@@ -277,15 +289,16 @@ async function buildSalesReportForRange(
   const masterCoachIds = Array.from(new Set([
     ...Array.from(masterByPartnerOrder.values()).map((m) => m.coach_id).filter(Boolean) as string[],
     ...Array.from(masterByTx.values()).map((m) => m.coach_id).filter(Boolean) as string[],
+    ...partnerOrders.map((o) => o.master_coach_cross_beneficiary_coach_id).filter(Boolean) as string[],
   ]));
   const masterCoachNameById = new Map<string, string>();
   if (masterCoachIds.length) {
     const { data: mcs } = await supabaseAdmin
       .from("coaches")
-      .select("id, fantasy_name, profiles!coaches_profile_id_fkey(name)")
+      .select("id, profiles!coaches_profile_id_fkey(name)")
       .in("id", masterCoachIds);
-    ((mcs as Array<{ id: string; fantasy_name: string | null; profiles: { name: string } | null }> | null) || []).forEach((c) => {
-      masterCoachNameById.set(c.id, c.fantasy_name || c.profiles?.name || "Master Coach");
+    ((mcs as Array<{ id: string; profiles: { name: string } | null }> | null) || []).forEach((c) => {
+      masterCoachNameById.set(c.id, c.profiles?.name || "Master Coach");
     });
   }
 
@@ -358,7 +371,7 @@ async function buildSalesReportForRange(
         ? (professionalProductMap.get(o.professional_product_id) || "Produto profissional")
         : "Produto de parceiro/profissional";
     const comm = commByPartnerOrder.get(o.id) || { amount: 0, levels: [] };
-    const master = masterByPartnerOrder.get(o.id);
+    const master = masterByPartnerOrder.get(o.id) || (o.master_coach_cross_beneficiary_coach_id ? { coach_id: o.master_coach_cross_beneficiary_coach_id } : undefined);
     rows.push({
       id: o.id,
       source: isPartnerProduct ? "partner" : "professional",
@@ -374,7 +387,7 @@ async function buildSalesReportForRange(
       paid_at: o.paid_at,
       my_commission: comm.amount,
       commission_levels: comm.levels.sort((a, b) => a - b),
-      is_master_coach_sale: !!master,
+      is_master_coach_sale: !!master && master.coach_id !== coachId,
       master_coach_id: master?.coach_id ?? null,
       master_coach_name: master?.coach_id ? (masterCoachNameById.get(master.coach_id) || null) : null,
     });
@@ -390,16 +403,26 @@ async function buildSalesReportForRange(
       .from("commissions")
       .select("id, amount, level, transaction_id, partner_order_id, created_at")
       .eq("beneficiary_coach_id", coachId)
-      .eq("is_master_coach_commission", true)
-      .gte("created_at", fromIso)
-      .lte("created_at", toIso);
+      .eq("is_master_coach_commission", true);
     type MC = { id: string; amount: number; level: number; transaction_id: string | null; partner_order_id: string | null; created_at: string };
     const mcRows = (mcComms as MC[] | null) || [];
     const existingTxIds = new Set(rows.filter((r) => r.source === "transaction" || r.source === "store").map((r) => r.id));
     const existingPoIds = new Set(rows.filter((r) => r.source === "partner" || r.source === "professional").map((r) => r.id));
 
     const extraTxIds = Array.from(new Set(mcRows.map((c) => c.transaction_id).filter((id): id is string => !!id && !existingTxIds.has(id))));
-    const extraPoIds = Array.from(new Set(mcRows.map((c) => c.partner_order_id).filter((id): id is string => !!id && !existingPoIds.has(id))));
+    const { data: directMasterOrders } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id" as never)
+      .eq("master_coach_cross_beneficiary_coach_id" as never, coachId as never)
+      .eq("status" as never, "paid" as never)
+      .not("paid_at" as never, "is" as never, null as never)
+      .gte("paid_at" as never, fromIso as never)
+      .lte("paid_at" as never, toIso as never);
+    const directPoIds = ((directMasterOrders as unknown as Array<{ id: string }> | null) || []).map((o) => o.id);
+    const extraPoIds = Array.from(new Set([
+      ...mcRows.map((c) => c.partner_order_id).filter((id): id is string => !!id),
+      ...directPoIds,
+    ].filter((id) => !existingPoIds.has(id))));
 
     if (extraTxIds.length || extraPoIds.length) {
       const [txRes, poRes] = await Promise.all([
@@ -407,13 +430,13 @@ async function buildSalesReportForRange(
           ? supabaseAdmin.from("transactions").select("id, student_id, product_id, gross_amount, paid_at, status, purchase_type, metadata").in("id", extraTxIds)
           : Promise.resolve({ data: [] as any[] }),
         extraPoIds.length
-          ? supabaseAdmin.from("partner_product_orders").select("id, student_id, partner_product_id, professional_product_id, gross_amount, paid_at, status").in("id", extraPoIds)
+          ? supabaseAdmin.from("partner_product_orders").select("id, student_id, partner_product_id, professional_product_id, gross_amount, paid_at, status, master_coach_cross_bonus_amount, master_coach_cross_beneficiary_coach_id").in("id", extraPoIds)
           : Promise.resolve({ data: [] as any[] }),
       ]);
       type XT = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string | null; status: string; purchase_type: string | null; metadata: any };
-      type XO = { id: string; student_id: string; partner_product_id: string | null; professional_product_id: string | null; gross_amount: number; paid_at: string | null; status: string };
-      const xTxs = ((txRes.data as XT[] | null) || []).filter((t) => t.status === "paid" && t.paid_at);
-      const xPos = ((poRes.data as XO[] | null) || []).filter((o) => o.status === "paid" && o.paid_at);
+      type XO = { id: string; student_id: string; partner_product_id: string | null; professional_product_id: string | null; gross_amount: number; paid_at: string | null; status: string; master_coach_cross_bonus_amount: number | null; master_coach_cross_beneficiary_coach_id: string | null };
+      const xTxs = ((txRes.data as XT[] | null) || []).filter((t) => t.status === "paid" && t.paid_at && t.paid_at >= fromIso && t.paid_at <= toIso);
+      const xPos = ((poRes.data as XO[] | null) || []).filter((o) => o.status === "paid" && o.paid_at && o.paid_at >= fromIso && o.paid_at <= toIso);
 
       // Resolve missing students + products
       const needStudentIds = Array.from(new Set([...xTxs.map((t) => t.student_id), ...xPos.map((o) => o.student_id)].filter(Boolean)));
@@ -459,8 +482,8 @@ async function buildSalesReportForRange(
         }
       });
 
-      const myName = (await supabaseAdmin.from("coaches").select("id, fantasy_name, profiles!coaches_profile_id_fkey(name)").eq("id", coachId).maybeSingle()).data as any;
-      const myDisplay = myName?.fantasy_name || myName?.profiles?.name || "Master Coach";
+      const myName = (await supabaseAdmin.from("coaches").select("id, profiles!coaches_profile_id_fkey(name)").eq("id", coachId).maybeSingle()).data as any;
+      const myDisplay = myName?.profiles?.name || "Master Coach";
 
       for (const t of xTxs) {
         const sp = xStuMap.get(t.student_id);
@@ -494,7 +517,10 @@ async function buildSalesReportForRange(
           : o.professional_product_id
             ? (xProfMap.get(o.professional_product_id) || "Produto profissional")
             : "Produto de parceiro/profissional";
-        const comm = mcCommByPo.get(o.id) || { amount: 0, levels: [] };
+        const comm = mcCommByPo.get(o.id) || {
+          amount: o.master_coach_cross_beneficiary_coach_id === coachId ? (Number(o.master_coach_cross_bonus_amount) || 0) : 0,
+          levels: [0],
+        };
         rows.push({
           id: o.id,
           source: isPartnerProduct ? "partner" : "professional",

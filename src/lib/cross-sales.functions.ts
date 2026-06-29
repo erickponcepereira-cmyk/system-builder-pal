@@ -51,13 +51,13 @@ export const getMyMasterCoachCrossSales = createServerFn({ method: "GET" })
 
       const [{ data: sellers }, { data: orders }] = await Promise.all([
         sellerIds.length
-          ? supabaseAdmin.from("coaches").select("id, profiles:profile_id(name, full_name)").in("id", sellerIds)
+          ? supabaseAdmin.from("coaches").select("id, profiles:profile_id(name)").in("id", sellerIds)
           : Promise.resolve({ data: [] as any[] }),
         orderIds.length
           ? supabaseAdmin.from("store_orders").select("id, order_number").in("id", orderIds)
           : Promise.resolve({ data: [] as any[] }),
       ]);
-      const sellerMap = new Map((sellers || []).map((s: any) => [s.id, s.profiles?.name || s.profiles?.full_name || null]));
+      const sellerMap = new Map((sellers || []).map((s: any) => [s.id, s.profiles?.name || null]));
       const orderMap = new Map((orders || []).map((o: any) => [o.id, o.order_number]));
 
       for (const c of comms as any[]) {
@@ -74,7 +74,53 @@ export const getMyMasterCoachCrossSales = createServerFn({ method: "GET" })
         });
       }
     }
-    return { total, crossTotal, rows };
+
+    // Parceiros/Profissionais: esses pedidos não passam pela tabela antiga
+    // master_coach_commissions; a origem confiável é a comissão marcada como
+    // is_master_coach_commission em commissions, vinculada ao partner_order_id.
+    const { data: partnerComms } = await supabaseAdmin
+      .from("commissions" as never)
+      .select("id, amount, created_at, partner_order_id" as never)
+      .eq("beneficiary_coach_id" as never, coachId as never)
+      .eq("is_master_coach_commission" as never, true as never)
+      .not("partner_order_id" as never, "is" as never, null as never)
+      .order("created_at" as never, { ascending: false } as never)
+      .limit(200);
+
+    const partnerRows = (partnerComms as unknown as Array<{ id: string; amount: number; created_at: string; partner_order_id: string | null }> | null) || [];
+    if (partnerRows.length) {
+      const orderIds = Array.from(new Set(partnerRows.map((c) => c.partner_order_id).filter(Boolean))) as string[];
+      const { data: orders } = orderIds.length
+        ? await supabaseAdmin
+          .from("partner_product_orders" as never)
+          .select("id, order_number, selling_coach_id" as never)
+          .in("id" as never, orderIds as never)
+        : { data: [] as any[] };
+      const orderMap = new Map(((orders as unknown as Array<{ id: string; order_number: string | null; selling_coach_id: string | null }> | null) || []).map((o) => [o.id, o]));
+      const sellerIds = Array.from(new Set(Array.from(orderMap.values()).map((o) => o.selling_coach_id).filter(Boolean))) as string[];
+      const { data: sellers } = sellerIds.length
+        ? await supabaseAdmin.from("coaches").select("id, profiles:profile_id(name)").in("id", sellerIds)
+        : { data: [] as any[] };
+      const sellerMap = new Map((sellers || []).map((s: any) => [s.id, s.profiles?.name || null]));
+
+      for (const c of partnerRows) {
+        const amt = Number(c.amount || 0);
+        const order = c.partner_order_id ? orderMap.get(c.partner_order_id) : null;
+        total += amt;
+        crossTotal += amt;
+        rows.push({
+          id: `partner-${c.id}`,
+          amount: amt,
+          isCrossSale: true,
+          createdAt: c.created_at,
+          sellerCoachName: order?.selling_coach_id ? (sellerMap.get(order.selling_coach_id) ?? null) : null,
+          orderNumber: order?.order_number || null,
+        });
+      }
+    }
+
+    rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return { total, crossTotal, rows: rows.slice(0, 200) };
   });
 
 /** Admin: assigned nutritionist for an order. */
@@ -90,14 +136,14 @@ export const getOrderNutritionist = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!row || !row.nutritionist_coach_id) return null;
     const { data: coach } = await supabaseAdmin
-      .from("coaches").select("id, profiles:profile_id(name, full_name, email)")
+      .from("coaches").select("id, profiles:profile_id(name, email)")
       .eq("id", row.nutritionist_coach_id).maybeSingle();
     return {
       id: row.id,
       nutritionistCoachId: row.nutritionist_coach_id,
       assignedAt: row.created_at,
       isManualOverride: row.assignment_method === "manual_override",
-      name: (coach as any)?.profiles?.name || (coach as any)?.profiles?.full_name || "—",
+      name: (coach as any)?.profiles?.name || "—",
       email: (coach as any)?.profiles?.email || null,
     };
   });
@@ -112,10 +158,10 @@ export const listNutritionistPartners = createServerFn({ method: "GET" })
     const ids = (badges || []).map((b: any) => b.coach_id);
     if (!ids.length) return [];
     const { data: coaches } = await supabaseAdmin
-      .from("coaches").select("id, profiles:profile_id(name, full_name, email)").in("id", ids);
+      .from("coaches").select("id, profiles:profile_id(name, email)").in("id", ids);
     return (coaches || []).map((c: any) => ({
       id: c.id,
-      name: c.profiles?.name || c.profiles?.full_name || "—",
+      name: c.profiles?.name || "—",
       email: c.profiles?.email || null,
     }));
   });
