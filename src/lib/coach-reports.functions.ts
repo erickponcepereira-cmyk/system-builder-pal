@@ -97,9 +97,9 @@ async function buildSalesReportForRange(
   const students = (studentRows as unknown as SR[]) || [];
   const studentIds = students.map((s) => s.id);
   const studentMap = new Map(students.map((s) => [s.id, s.profiles]));
-  if (studentIds.length === 0) {
-    return emptyReport(from, to);
-  }
+  // Não retorne aqui quando o coach não tem alunos próprios: um Master Coach pode
+  // ter vendas cross-network para alunos de outros coaches, que são carregadas no
+  // bloco "Cross-network Master Coach sales" mais abaixo.
 
   // Classify each student by profile (coach / professional / partner / pure aluno)
   const profileIds = students.map((s) => s.profile_id).filter(Boolean) as string[];
@@ -132,16 +132,19 @@ async function buildSalesReportForRange(
   // Transactions (paid) — exclui as que são "espelho" de um store_order
   // (cada store_order pago gera uma transação com metadata.store_order_id;
   // contar ambos duplicaria a venda em receita, pedidos e itens vendidos).
-  const { data: txData } = await supabaseAdmin
-    .from("transactions")
-    .select("id, student_id, product_id, gross_amount, paid_at, status, metadata")
-    .in("student_id", studentIds)
-    .eq("status", "paid")
-    .not("paid_at", "is", null)
-    .gte("paid_at", fromIso)
-    .lte("paid_at", toIso);
   type Tx = { id: string; student_id: string; product_id: string | null; gross_amount: number; paid_at: string; metadata: { store_order_id?: string } | null };
-  const txs = ((txData as Tx[] | null) || []).filter((t) => !t.metadata?.store_order_id);
+  let txs: Tx[] = [];
+  if (studentIds.length) {
+    const { data: txData } = await supabaseAdmin
+      .from("transactions")
+      .select("id, student_id, product_id, gross_amount, paid_at, status, metadata")
+      .in("student_id", studentIds)
+      .eq("status", "paid")
+      .not("paid_at", "is", null)
+      .gte("paid_at", fromIso)
+      .lte("paid_at", toIso);
+    txs = ((txData as Tx[] | null) || []).filter((t) => !t.metadata?.store_order_id);
+  }
 
   // Product names for transactions
   const productIds = Array.from(new Set(txs.map((t) => t.product_id).filter(Boolean))) as string[];
@@ -153,15 +156,18 @@ async function buildSalesReportForRange(
   }
 
   // Store orders (paid)
-  const { data: orderData } = await supabaseAdmin
-    .from("store_orders")
-    .select("id, student_id, total_amount, updated_at, status")
-    .in("student_id", studentIds)
-    .eq("status", "paid")
-    .gte("updated_at", fromIso)
-    .lte("updated_at", toIso);
   type SO = { id: string; student_id: string; total_amount: number; updated_at: string };
-  const orders = (orderData as SO[] | null) || [];
+  let orders: SO[] = [];
+  if (studentIds.length) {
+    const { data: orderData } = await supabaseAdmin
+      .from("store_orders")
+      .select("id, student_id, total_amount, updated_at, status")
+      .in("student_id", studentIds)
+      .eq("status", "paid")
+      .gte("updated_at", fromIso)
+      .lte("updated_at", toIso);
+    orders = (orderData as SO[] | null) || [];
+  }
   const orderIds = orders.map((o) => o.id);
   let orderItemsMap = new Map<string, { name: string; qty: number; product_id: string | null }[]>();
   if (orderIds.length) {
@@ -178,14 +184,6 @@ async function buildSalesReportForRange(
   }
 
   // Partner/professional orders (paid) — vendas normais feitas pelos seletores da loja.
-  const { data: partnerOrderData } = await supabaseAdmin
-    .from("partner_product_orders" as never)
-    .select("id,student_id,gross_amount,paid_at,partner_product_id,professional_product_id" as never)
-    .in("student_id" as never, studentIds as never)
-    .eq("status" as never, "paid" as never)
-    .not("paid_at" as never, "is" as never, null as never)
-    .gte("paid_at" as never, fromIso as never)
-    .lte("paid_at" as never, toIso as never);
   type PPO = {
     id: string;
     student_id: string;
@@ -194,7 +192,18 @@ async function buildSalesReportForRange(
     partner_product_id: string | null;
     professional_product_id: string | null;
   };
-  const partnerOrders = (partnerOrderData as unknown as PPO[] | null) || [];
+  let partnerOrders: PPO[] = [];
+  if (studentIds.length) {
+    const { data: partnerOrderData } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id,student_id,gross_amount,paid_at,partner_product_id,professional_product_id" as never)
+      .in("student_id" as never, studentIds as never)
+      .eq("status" as never, "paid" as never)
+      .not("paid_at" as never, "is" as never, null as never)
+      .gte("paid_at" as never, fromIso as never)
+      .lte("paid_at" as never, toIso as never);
+    partnerOrders = (partnerOrderData as unknown as PPO[] | null) || [];
+  }
   const partnerOrderIds = partnerOrders.map((o) => o.id);
   const partnerProductIds = Array.from(new Set(partnerOrders.map((o) => o.partner_product_id).filter(Boolean))) as string[];
   const professionalProductIds = Array.from(new Set(partnerOrders.map((o) => o.professional_product_id).filter(Boolean))) as string[];
