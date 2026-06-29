@@ -65,7 +65,10 @@ export const getMyWalletHistory = createServerFn({ method: "GET" })
       });
     }
 
-    const regularIds = Array.from(new Set(Array.from(txMap.values()).filter((t) => t.purchase_type !== "store_order" && t.purchase_type !== "digital").map((t) => t.product_id).filter(Boolean) as string[]));
+    // Collect product ids by table. For store_order/digital, also collect the
+    // fallback `product_id` because mirrored transactions often only have
+    // `product_id` set (store_product_id/digital_product_id stay null).
+    const regularIds = Array.from(new Set(Array.from(txMap.values()).map((t) => t.product_id).filter(Boolean) as string[]));
     const storeIds = Array.from(new Set(Array.from(txMap.values()).filter((t) => t.purchase_type === "store_order").map((t) => t.store_product_id).filter(Boolean) as string[]));
     const digitalIds = Array.from(new Set(Array.from(txMap.values()).filter((t) => t.purchase_type === "digital").map((t) => t.digital_product_id).filter(Boolean) as string[]));
     const productNameMap = new Map<string, string>();
@@ -90,7 +93,8 @@ export const getMyWalletHistory = createServerFn({ method: "GET" })
       if (info) {
         if (ptype === "store_order" && info.store_product_id) product = productNameMap.get(`s:${info.store_product_id}`) || null;
         else if (ptype === "digital" && info.digital_product_id) product = productNameMap.get(`d:${info.digital_product_id}`) || null;
-        else if (info.product_id) product = productNameMap.get(`p:${info.product_id}`) || null;
+        // Fallback: many store_order/digital transactions only carry product_id
+        if (!product && info.product_id) product = productNameMap.get(`p:${info.product_id}`) || null;
       }
       return {
         id: r.id,
