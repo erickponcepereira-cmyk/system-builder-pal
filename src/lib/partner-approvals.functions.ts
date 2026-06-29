@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { z } from "zod";
+import { ensureStudentForProfile } from "@/lib/registration.server";
 
 async function assertAuthorized(userId: string) {
   const { data: profile } = await supabaseAdmin
@@ -168,13 +169,14 @@ export const reviewPartnerStatus = createServerFn({ method: "POST" })
       .from("partners")
       .update(patch)
       .eq("id", data.partnerId)
-      .select("profile_id")
+      .select("id, profile_id, upline_coach_id")
       .maybeSingle();
     if (error) throw new Error(error.message);
 
     // Se aprovou parceiro, considera a ativação do coach já paga (caso ele também seja coach),
     // mas NÃO libera o painel — ele continua precisando enviar o quiz e digitar o ID.
     if (data.status === "approved" && partnerRow?.profile_id) {
+      await ensureStudentForProfile((partnerRow as any).profile_id, (partnerRow as any).upline_coach_id, (partnerRow as any).id);
       await supabaseAdmin
         .from("coaches")
         .update({
@@ -422,9 +424,9 @@ export const adminApprovePartnerFinal = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actorId = await assertAdmin(context.userId);
     const { data: partner } = await supabaseAdmin
-      .from("partners").select("id, profile_id, status").eq("id", data.partnerId).maybeSingle();
+      .from("partners").select("id, profile_id, status, upline_coach_id").eq("id", data.partnerId).maybeSingle();
     if (!partner) throw new Error("Parceiro não encontrado");
-    const p = partner as { id: string; profile_id: string; status: string };
+    const p = partner as { id: string; profile_id: string; status: string; upline_coach_id: string | null };
     const nowIso = new Date().toISOString();
     await supabaseAdmin.from("partners").update({
       status: "approved",
@@ -432,6 +434,7 @@ export const adminApprovePartnerFinal = createServerFn({ method: "POST" })
       blocked_at: null,
       blocked_reason: null,
     }).eq("id", p.id);
+    await ensureStudentForProfile(p.profile_id, p.upline_coach_id, p.id);
     // Garante anuidade marcada se ainda não estava
     await supabaseAdmin.from("partners").update({
       activation_paid_at: nowIso,

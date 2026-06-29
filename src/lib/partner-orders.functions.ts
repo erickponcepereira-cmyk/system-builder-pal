@@ -94,6 +94,7 @@ export interface FinancialSummary {
   adminWallet: { available: number; totalEarned: number; totalWithdrawn: number };
   coachWalletsTotal: { available: number; totalEarned: number; totalWithdrawn: number; count: number };
   studentWalletsTotal: { available: number; totalEarned: number; totalWithdrawn: number; count: number };
+  referralWalletsTotal: { available: number; pending: number; totalEarned: number; totalWithdrawn: number; count: number };
   nutritionistTotal: { available: number; blocked: number; totalEarned: number; count: number };
   professorTotal: { available: number; blocked: number; totalEarned: number; count: number };
   partnerOrders: { paidCount: number; paidGross: number; partnerNet: number; coachNet: number; systemFee: number };
@@ -114,7 +115,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     const [adminEntries, cw, sw, nw, pw, profw, profsw, ppo, wr, swr, commAll] = await Promise.all([
       applyCutoff(supabase.from("admin_system_wallet_entries" as never).select("slot_label,kind,amount,created_at" as never), "created_at"),
       supabase.from("wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
-      supabase.from("student_wallets" as never).select("profile_id,available_balance,total_earned,total_withdrawn" as never),
+      supabase.from("student_wallets" as never).select("student_id,available_balance,pending_balance,total_earned,total_withdrawn" as never),
       supabase.from("nutritionist_wallets" as never).select("available_balance,blocked_balance,total_earned" as never),
       supabase.from("partner_wallets" as never).select("partner_id,available_balance,total_earned,total_withdrawn" as never),
       supabase.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_earned,total_withdrawn" as never),
@@ -123,7 +124,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
       applyCutoff(supabase.from("withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       applyCutoff(supabase.from("student_withdrawal_requests" as never).select("amount,status,requested_at" as never).in("status" as never, ["pending", "approved", "processing"] as never), "requested_at"),
       cutoff
-        ? supabase.from("commissions" as never).select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,slot_label,is_referral,created_at" as never).gte("created_at" as never, cutoff as never)
+        ? supabase.from("commissions" as never).select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,referred_by_student_id,amount,level,status,slot_label,is_referral,created_at,available_at" as never).gte("created_at" as never, cutoff as never)
         : Promise.resolve({ data: null as any }),
     ]);
     const sum = (arr: any[] | null | undefined, k: string) =>
@@ -156,6 +157,41 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
     const nutritionistRows = (nw.data as any[]) || [];
     const hasUnassignedNutritionist = nutriAdminCredits > 0 || nutriAdminDebits > 0;
     const hasUnassignedProfessor = profAdminCredits > 0 || profAdminDebits > 0;
+    const referralWalletsTotal = (() => {
+      const walletRows = (sw.data as any[]) || [];
+      if (cutoff) {
+        const byStudent = new Map<string, { available: number; pending: number; total: number }>();
+        const now = Date.now();
+        dedupeCommissions((commAll.data as any[] | null) || [])
+          .filter((c: any) => c.is_referral)
+          .forEach((c: any) => {
+            const studentId = c.referred_by_student_id || c.beneficiary_profile_id;
+            if (!studentId) return;
+            const amount = Number(c.amount || 0);
+            const availableAt = c.available_at ? new Date(c.available_at).getTime() : 0;
+            const isAvailable = String(c.status) === "available" || String(c.status) === "paid" || (availableAt > 0 && availableAt <= now);
+            const current = byStudent.get(studentId) || { available: 0, pending: 0, total: 0 };
+            current.total += amount;
+            if (isAvailable) current.available += amount;
+            else current.pending += amount;
+            byStudent.set(studentId, current);
+          });
+        const totals = Array.from(byStudent.values()).reduce((acc, row) => {
+          acc.available += row.available;
+          acc.pending += row.pending;
+          acc.totalEarned += row.total;
+          return acc;
+        }, { available: 0, pending: 0, totalEarned: 0 });
+        return { ...totals, totalWithdrawn: 0, count: byStudent.size };
+      }
+      return {
+        available: sum(walletRows, "available_balance"),
+        pending: sum(walletRows, "pending_balance"),
+        totalEarned: sum(walletRows, "total_earned"),
+        totalWithdrawn: sum(walletRows, "total_withdrawn"),
+        count: walletRows.filter((w) => Number(w.available_balance || 0) + Number(w.pending_balance || 0) + Number(w.total_earned || 0) + Number(w.total_withdrawn || 0) > 0).length,
+      };
+    })();
     return {
       adminWallet: {
         available: adminAvailable,
@@ -183,24 +219,16 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
         };
       })(),
       studentWalletsTotal: (() => {
-        if (cutoff) {
-          const byProfile = new Map<string, number>();
-          dedupeCommissions((commAll.data as any[] | null) || [])
-            .filter((c: any) => c.is_referral)
-            .forEach((c: any) => {
-              byProfile.set(c.beneficiary_profile_id, (byProfile.get(c.beneficiary_profile_id) || 0) + Number(c.amount || 0));
-            });
-          const sumIn = (rows: any[] | null) => (rows || []).reduce((a: number, r: any) => a + (byProfile.get(r.profile_id) || 0), 0);
-          const total = sumIn(sw.data as any[]);
-          return { available: total, totalEarned: total, totalWithdrawn: 0, count: (sw.data as any[] | null)?.length || 0 };
-        }
+        // Mantido por compatibilidade visual: hoje a carteira de aluno indicador é o
+        // único saldo financeiro de student_wallets e o cartão específico abaixo é a fonte correta.
         return {
-          available: sum(sw.data as any[], "available_balance"),
-          totalEarned: sum(sw.data as any[], "total_earned"),
-          totalWithdrawn: sum(sw.data as any[], "total_withdrawn"),
-          count: (sw.data as any[] | null)?.length || 0,
+          available: 0,
+          totalEarned: 0,
+          totalWithdrawn: 0,
+          count: 0,
         };
       })(),
+      referralWalletsTotal,
       nutritionistTotal: cutoff ? {
         available: nutriAdminAvailable,
         blocked: 0,

@@ -54,6 +54,69 @@ const digits = (value?: string | null) => clean(value)?.replace(/\D/g, "") || nu
 const makeReferralCode = () =>
   `FC${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
+const SYSTEM_FALLBACK_COACH_ID = "f9a44c8a-31ea-4ca1-8cef-b9049733c5e1";
+
+async function getFallbackCoachId() {
+  const { data: configured } = await supabaseAdmin
+    .from("coaches")
+    .select("id")
+    .eq("id", SYSTEM_FALLBACK_COACH_ID)
+    .maybeSingle();
+  if (configured?.id) return configured.id;
+
+  const { data: adminCoach } = await supabaseAdmin
+    .from("coaches")
+    .select("id, profiles!coaches_profile_id_fkey(role)")
+    .not("approved_at", "is", null)
+    .is("blocked_at", null)
+    .eq("profiles.role", "admin")
+    .limit(1)
+    .maybeSingle();
+  if ((adminCoach as any)?.id) return (adminCoach as any).id as string;
+
+  const { data: anyCoach } = await supabaseAdmin
+    .from("coaches")
+    .select("id")
+    .not("approved_at", "is", null)
+    .is("blocked_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (anyCoach?.id) return anyCoach.id;
+
+  throw new Error("Não há coach ativo para vincular o perfil de aluno automaticamente.");
+}
+
+export async function ensureStudentForProfile(profileId: string, preferredCoachId?: string | null, partnerId?: string | null) {
+  const { data: existing } = await supabaseAdmin
+    .from("students")
+    .select("id")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (existing?.id) return existing.id;
+
+  const coachId = clean(preferredCoachId) || await getFallbackCoachId();
+  let referralCode = makeReferralCode();
+  let lastError: { code?: string; message: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { data, error } = await supabaseAdmin
+      .from("students")
+      .insert({
+        profile_id: profileId,
+        coach_id: coachId,
+        referral_code: referralCode,
+        referral_link: `/i/${referralCode}`,
+        partner_id: clean(partnerId),
+      })
+      .select("id")
+      .single();
+    if (!error && data?.id) return data.id;
+    lastError = error;
+    if (error?.code !== "23505") break;
+    referralCode = makeReferralCode();
+  }
+  throw new Error(lastError?.message || "Não foi possível criar o perfil de aluno.");
+}
+
 export async function finalizeRegistration(input: FinalizeRegistrationInput) {
   try {
     return await finalizeRegistrationInner(input);
@@ -222,15 +285,8 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
           .update({ status: isProfessional ? "active" : "pending" })
           .eq("id", profile.id);
 
-        // Cria registro de aluno para o coach (acesso ao app do aluno mesmo pendente)
-        const { error: selfStudentError } = await supabaseAdmin.from("students").upsert(
-          {
-            profile_id: profile.id,
-            coach_id: input.coach.uplineCoachId,
-          },
-          { onConflict: "profile_id" }
-        );
-        if (selfStudentError) throw new Error(selfStudentError.message);
+        // Cria registro de aluno para o coach (acesso ao app do aluno mesmo pendente).
+        await ensureStudentForProfile(profile.id, input.coach.uplineCoachId);
         return { ok: true, profileId: profile.id, role: input.role };
       }
       if (coachError.code !== "23505") throw new Error(coachError.message);
@@ -328,7 +384,7 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
         }
       : { already_partner: false };
 
-    const { error: partnerError } = await supabaseAdmin
+    const { data: partner, error: partnerError } = await supabaseAdmin
       .from("partners")
       .upsert(
         {
@@ -342,12 +398,18 @@ export async function finalizePartnerRegistration(input: FinalizePartnerInput) {
           business_area: clean(input.businessArea),
           specialty: clean(input.specialty),
           status: "pending",
-          upline_coach_id: input.uplineCoachId,
+          upline_coach_id: clean(input.uplineCoachId),
           ...activationPatch,
         },
         { onConflict: "profile_id" }
-      );
+      )
+      .select("id")
+      .single();
     if (partnerError) throw new Error(partnerError.message);
+
+    // Todo parceiro também precisa existir como aluno para acessar a loja/perfil do aluno.
+    // Se o cadastro veio sem upline (caso de liberação/admin), usa o coach sistema como fallback.
+    await ensureStudentForProfile(profile.id, input.uplineCoachId, partner?.id || null);
 
     return { ok: true, profileId: profile.id };
   } catch (err) {
@@ -454,5 +516,6 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   }
 
   await supabaseAdmin.from("profiles").update({ status: "active", role: "coach" }).eq("id", profile.id);
+  await ensureStudentForProfile(profile.id, input.uplineCoachId);
   return { ok: true, profileId: profile.id };
 }
