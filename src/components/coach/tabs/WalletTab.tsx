@@ -44,7 +44,6 @@ export function WalletTab() {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
-  const [cross, setCross] = useState<{ total: number; crossTotal: number; rows: CrossSaleRow[] } | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [walletVisible, setWalletVisible] = useState(false);
   const [split, setSplit] = useState<WalletSplit | null>(null);
