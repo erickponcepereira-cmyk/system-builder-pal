@@ -6,11 +6,13 @@ type SaleRow = {
   product_id: string;
   qty: number;
   revenue: number;
+  master_qty?: number;       // qty originated from Master Coach cross-sale commissions
+  master_revenue?: number;
 };
 
 type ProductMeta = { id: string; name: string; category_id: string | null; section_id: string | null };
 
-type ProductNode = { id: string; name: string; qty: number; revenue: number; rank: number };
+type ProductNode = { id: string; name: string; qty: number; revenue: number; rank: number; master_qty: number; master_revenue: number };
 type CategoryNode = { id: string; name: string; qty: number; revenue: number; rank: number; products: ProductNode[] };
 type SectionNode = { id: string; name: string; qty: number; revenue: number; rank: number; categories: CategoryNode[] };
 
@@ -89,13 +91,15 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
       let commQ = supabase
         .from("commissions")
-        .select("transaction_id,partner_order_id,created_at")
+        .select("transaction_id,partner_order_id,created_at,is_master_coach_commission")
         .eq("beneficiary_profile_id", coachProfileId)
         .eq("level", 0);
       if (cutoff) commQ = commQ.gte("created_at", cutoff);
       const { data: comms } = await commQ;
       const txIds = Array.from(new Set((comms || []).map((c: any) => c.transaction_id))).filter(Boolean);
       const partnerOrderIds = Array.from(new Set((comms || []).map((c: any) => c.partner_order_id))).filter(Boolean);
+      const masterTxIds = new Set((comms || []).filter((c: any) => c.is_master_coach_commission && c.transaction_id).map((c: any) => c.transaction_id as string));
+      const masterPartnerOrderIds = new Set((comms || []).filter((c: any) => c.is_master_coach_commission && c.partner_order_id).map((c: any) => c.partner_order_id as string));
 
       const map = new Map<string, SaleRow>();
       const extraProducts: ProductMeta[] = [];
@@ -113,9 +117,13 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
         (txs || []).forEach((t: any) => {
           if (!t.product_id) return;
-          const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0 };
+          const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(t.gross_amount) || 0;
+          if (masterTxIds.has(t.id)) {
+            existing.master_qty = (existing.master_qty || 0) + 1;
+            existing.master_revenue = (existing.master_revenue || 0) + (Number(t.gross_amount) || 0);
+          }
           map.set(t.product_id, existing);
         });
       }
@@ -149,9 +157,13 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
           const rawId = o.partner_product_id || o.professional_product_id;
           if (!rawId) return;
           const productId = `${isPartner ? "partner" : "professional"}:${rawId}`;
-          const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0 };
+          const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(o.gross_amount) || 0;
+          if (masterPartnerOrderIds.has(o.id)) {
+            existing.master_qty = (existing.master_qty || 0) + 1;
+            existing.master_revenue = (existing.master_revenue || 0) + (Number(o.gross_amount) || 0);
+          }
           map.set(productId, existing);
           extraProducts.push({
             id: productId,
@@ -227,7 +239,10 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     allProducts.forEach((p) => {
       const sale = sales.get(p.id);
       const node: ProductNode = {
-        id: p.id, name: p.name, qty: sale?.qty || 0, revenue: sale?.revenue || 0, rank: 0,
+        id: p.id, name: p.name,
+        qty: sale?.qty || 0, revenue: sale?.revenue || 0,
+        master_qty: sale?.master_qty || 0, master_revenue: sale?.master_revenue || 0,
+        rank: 0,
       };
       // Resolve section: prefer product.section_id; fallback to its category's section
       const catMeta = p.category_id ? catMap.get(p.category_id) : undefined;
@@ -389,6 +404,14 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
                                     <RankBadge rank={p.rank} />
                                     <Package className="h-3 w-3 text-white/40" />
                                     <span className="text-xs text-white/80">{p.name}</span>
+                                    {p.master_qty > 0 && (
+                                      <span
+                                        title={`${p.master_qty}× como Master Coach · ${money(p.master_revenue)}`}
+                                        className="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-300"
+                                      >
+                                        Master Coach · {p.master_qty}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400/90">{money(p.revenue)}</span>
