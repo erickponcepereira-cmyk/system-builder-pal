@@ -556,8 +556,8 @@ export const listBucketCommissions = createServerFn({ method: "POST" })
 
     const filtered = dedupeCommissions((rows as any[]) || []).filter((c: any) => {
       const slot = String(c.slot_label || "").toLowerCase();
-      // Apenas a comissão do aluno indicador vai para o bucket "referrals".
-      if (slot.startsWith("aluno indicador")) return false;
+      // Comissão de aluno indicador nunca aparece em coaches/rede.
+      if (c.is_referral || slot.startsWith("aluno indicador")) return false;
       const isSystem = slot.includes("sistema") || slot.includes("admin") || (!c.beneficiary_coach_id && !slot);
       const isNetwork = Number(c.level || 0) > 0;
       if (data.bucket === "network") return isNetwork && !isSystem;
