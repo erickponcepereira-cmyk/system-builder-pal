@@ -88,10 +88,16 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { from, to } = getRange(period, customFrom, customTo);
-      const payload = await fetchTopSelling({ data: { from: from?.toISOString() ?? null, to: to?.toISOString() ?? null } });
-      const map = new Map<string, SaleRow>((payload.sales || []).map((row) => [row.product_id, row]));
-      const extraProducts: ProductMeta[] = payload.extraProducts || [];
+      let map = new Map<string, SaleRow>();
+      let extraProducts: ProductMeta[] = [];
+      try {
+        const { from, to } = getRange(period, customFrom, customTo);
+        const payload = await fetchTopSelling({ data: { from: from?.toISOString() ?? null, to: to?.toISOString() ?? null } });
+        map = new Map<string, SaleRow>((payload.sales || []).map((row) => [row.product_id, row]));
+        extraProducts = payload.extraProducts || [];
+      } catch (error) {
+        console.error("[TopSellingProducts] erro ao carregar produtos mais vendidos", error);
+      }
 
       if (!cancelled) {
         setSales(map);
