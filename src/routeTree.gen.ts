@@ -89,6 +89,7 @@ import { Route as AuthenticatedAdminLibraryRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminFreebiesRouteImport } from './routes/_authenticated/admin.freebies'
 import { Route as AuthenticatedAdminFitmindEventsReportsRouteImport } from './routes/_authenticated/admin.fitmind-events-reports'
 import { Route as AuthenticatedAdminFitmindEventsRouteImport } from './routes/_authenticated/admin.fitmind-events'
+import { Route as AuthenticatedAdminFitcoinWalletRouteImport } from './routes/_authenticated/admin.fitcoin-wallet'
 import { Route as AuthenticatedAdminFinancialSummaryRouteImport } from './routes/_authenticated/admin.financial-summary'
 import { Route as AuthenticatedAdminFinanceiroRouteImport } from './routes/_authenticated/admin.financeiro'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
@@ -565,6 +566,12 @@ const AuthenticatedAdminFitmindEventsRoute =
     path: '/fitmind-events',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminFitcoinWalletRoute =
+  AuthenticatedAdminFitcoinWalletRouteImport.update({
+    id: '/fitcoin-wallet',
+    path: '/fitcoin-wallet',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminFinancialSummaryRoute =
   AuthenticatedAdminFinancialSummaryRouteImport.update({
     id: '/financial-summary',
@@ -738,6 +745,7 @@ export interface FileRoutesByFullPath {
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
+  '/admin/fitcoin-wallet': typeof AuthenticatedAdminFitcoinWalletRoute
   '/admin/fitmind-events': typeof AuthenticatedAdminFitmindEventsRoute
   '/admin/fitmind-events-reports': typeof AuthenticatedAdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
@@ -840,6 +848,7 @@ export interface FileRoutesByTo {
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
+  '/admin/fitcoin-wallet': typeof AuthenticatedAdminFitcoinWalletRoute
   '/admin/fitmind-events': typeof AuthenticatedAdminFitmindEventsRoute
   '/admin/fitmind-events-reports': typeof AuthenticatedAdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
@@ -946,6 +955,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
   '/_authenticated/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/_authenticated/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
+  '/_authenticated/admin/fitcoin-wallet': typeof AuthenticatedAdminFitcoinWalletRoute
   '/_authenticated/admin/fitmind-events': typeof AuthenticatedAdminFitmindEventsRoute
   '/_authenticated/admin/fitmind-events-reports': typeof AuthenticatedAdminFitmindEventsReportsRoute
   '/_authenticated/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
@@ -1052,6 +1062,7 @@ export interface FileRouteTypes {
     | '/admin/digital-products'
     | '/admin/financeiro'
     | '/admin/financial-summary'
+    | '/admin/fitcoin-wallet'
     | '/admin/fitmind-events'
     | '/admin/fitmind-events-reports'
     | '/admin/freebies'
@@ -1154,6 +1165,7 @@ export interface FileRouteTypes {
     | '/admin/digital-products'
     | '/admin/financeiro'
     | '/admin/financial-summary'
+    | '/admin/fitcoin-wallet'
     | '/admin/fitmind-events'
     | '/admin/fitmind-events-reports'
     | '/admin/freebies'
@@ -1259,6 +1271,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/digital-products'
     | '/_authenticated/admin/financeiro'
     | '/_authenticated/admin/financial-summary'
+    | '/_authenticated/admin/fitcoin-wallet'
     | '/_authenticated/admin/fitmind-events'
     | '/_authenticated/admin/fitmind-events-reports'
     | '/_authenticated/admin/freebies'
@@ -1916,6 +1929,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminFitmindEventsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/fitcoin-wallet': {
+      id: '/_authenticated/admin/fitcoin-wallet'
+      path: '/fitcoin-wallet'
+      fullPath: '/admin/fitcoin-wallet'
+      preLoaderRoute: typeof AuthenticatedAdminFitcoinWalletRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/financial-summary': {
       id: '/_authenticated/admin/financial-summary'
       path: '/financial-summary'
@@ -2109,6 +2129,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
   AuthenticatedAdminFinanceiroRoute: typeof AuthenticatedAdminFinanceiroRoute
   AuthenticatedAdminFinancialSummaryRoute: typeof AuthenticatedAdminFinancialSummaryRoute
+  AuthenticatedAdminFitcoinWalletRoute: typeof AuthenticatedAdminFitcoinWalletRoute
   AuthenticatedAdminFitmindEventsRoute: typeof AuthenticatedAdminFitmindEventsRoute
   AuthenticatedAdminFitmindEventsReportsRoute: typeof AuthenticatedAdminFitmindEventsReportsRoute
   AuthenticatedAdminFreebiesRoute: typeof AuthenticatedAdminFreebiesRoute
@@ -2160,6 +2181,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminFinanceiroRoute: AuthenticatedAdminFinanceiroRoute,
   AuthenticatedAdminFinancialSummaryRoute:
     AuthenticatedAdminFinancialSummaryRoute,
+  AuthenticatedAdminFitcoinWalletRoute: AuthenticatedAdminFitcoinWalletRoute,
   AuthenticatedAdminFitmindEventsRoute: AuthenticatedAdminFitmindEventsRoute,
   AuthenticatedAdminFitmindEventsReportsRoute:
     AuthenticatedAdminFitmindEventsReportsRoute,
