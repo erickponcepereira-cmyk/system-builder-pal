@@ -80,6 +80,22 @@ export const getTopSellingProducts = createServerFn({ method: "GET" })
       }
     });
 
+    // Fallback/fonte de verdade para pedidos de parceiro/profissional: em vendas
+    // cross-network o próprio pedido guarda quem foi o Master Coach vendedor. Assim
+    // o perfil do Master Coach passa a mostrar a venda mesmo que a comissão antiga
+    // ainda não tenha sido recriada/backfilled corretamente.
+    const { data: directMasterOrders } = await supabaseAdmin
+      .from("partner_product_orders" as never)
+      .select("id" as never)
+      .eq("master_coach_cross_beneficiary_coach_id" as never, coachId as never)
+      .eq("status" as never, "paid" as never);
+    ((directMasterOrders || []) as unknown as Array<{ id: string }>).forEach((row) => {
+      if (row.id) {
+        partnerOrderIds.add(row.id);
+        myMasterPartnerOrderIds.add(row.id);
+      }
+    });
+
     const masterByOtherTxIds = new Set<string>();
     const masterByOtherPartnerOrderIds = new Set<string>();
 
