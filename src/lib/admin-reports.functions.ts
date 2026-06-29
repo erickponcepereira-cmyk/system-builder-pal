@@ -135,7 +135,7 @@ export const listDetailedSales = createServerFn({ method: "POST" })
       coachIds.size
         ? supabaseAdmin
             .from("coaches")
-            .select("id,profile_id,fantasy_name,upline_id,master_coach_id")
+            .select("id,profile_id,upline_coach_id")
             .in("id", Array.from(coachIds))
         : Promise.resolve({ data: [] as any[] }),
     ]);
@@ -150,7 +150,6 @@ export const listDetailedSales = createServerFn({ method: "POST" })
       if (!coachId) return null;
       const coach = coachMap.get(coachId);
       if (!coach) return null;
-      if (coach.fantasy_name) return coach.fantasy_name;
       const prof = profileMap.get(coach.profile_id);
       return prof?.name || null;
     };
@@ -171,28 +170,28 @@ export const listDetailedSales = createServerFn({ method: "POST" })
 
     // Need upline names → fetch upline coaches in second pass
     const uplineIds = new Set<string>();
-    Array.from(coachMap.values()).forEach((c) => c.upline_id && uplineIds.add(c.upline_id));
+    Array.from(coachMap.values()).forEach((c) => c.upline_coach_id && uplineIds.add(c.upline_coach_id));
     if (uplineIds.size) {
       const { data: uplines } = await supabaseAdmin
         .from("coaches")
-        .select("id,profile_id,fantasy_name,upline_id")
+        .select("id,profile_id,upline_coach_id")
         .in("id", Array.from(uplineIds));
       (uplines as any[] | null || []).forEach((u) => coachMap.set(u.id, u));
       // and their uplines (level 2)
       const lvl2 = new Set<string>();
-      (uplines as any[] | null || []).forEach((u) => u.upline_id && lvl2.add(u.upline_id));
+      (uplines as any[] | null || []).forEach((u) => u.upline_coach_id && lvl2.add(u.upline_coach_id));
       if (lvl2.size) {
         const { data: ul2 } = await supabaseAdmin
           .from("coaches")
-          .select("id,profile_id,fantasy_name,upline_id")
+          .select("id,profile_id,upline_coach_id")
           .in("id", Array.from(lvl2));
         (ul2 as any[] | null || []).forEach((u) => coachMap.set(u.id, u));
         const lvl3 = new Set<string>();
-        (ul2 as any[] | null || []).forEach((u) => u.upline_id && lvl3.add(u.upline_id));
+        (ul2 as any[] | null || []).forEach((u) => u.upline_coach_id && lvl3.add(u.upline_coach_id));
         if (lvl3.size) {
           const { data: ul3 } = await supabaseAdmin
             .from("coaches")
-            .select("id,profile_id,fantasy_name,upline_id")
+            .select("id,profile_id,upline_coach_id")
             .in("id", Array.from(lvl3));
           (ul3 as any[] | null || []).forEach((u) => coachMap.set(u.id, u));
         }
@@ -215,9 +214,9 @@ export const listDetailedSales = createServerFn({ method: "POST" })
       const stu = studentMap.get(t.student_id);
       const stuProfile = stu?.profile_id ? profileMap.get(stu.profile_id) : null;
       const sellerCoach = stu?.coach_id ? coachMap.get(stu.coach_id) : null;
-      const up1 = sellerCoach?.upline_id ? coachMap.get(sellerCoach.upline_id) : null;
-      const up2 = up1?.upline_id ? coachMap.get(up1.upline_id) : null;
-      const up3 = up2?.upline_id ? coachMap.get(up2.upline_id) : null;
+      const up1 = sellerCoach?.upline_coach_id ? coachMap.get(sellerCoach.upline_coach_id) : null;
+      const up2 = up1?.upline_coach_id ? coachMap.get(up1.upline_coach_id) : null;
+      const up3 = up2?.upline_coach_id ? coachMap.get(up2.upline_coach_id) : null;
 
       const txCommissions = commissionsByTx.get(t.id) || [];
       const distributedTotal = txCommissions.reduce((s, c) => s + Number(c.amount || 0), 0);
