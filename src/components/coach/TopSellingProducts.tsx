@@ -88,6 +88,12 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       const { from, to } = getRange(period, customFrom, customTo);
       const { getClientCutoffIso } = await import("@/lib/test-mode");
       const cutoff = await getClientCutoffIso();
+      const { data: currentCoach } = await supabase
+        .from("coaches")
+        .select("id")
+        .eq("profile_id", coachProfileId)
+        .maybeSingle();
+      const currentCoachId = (currentCoach as { id?: string } | null)?.id || null;
 
       let commQ = supabase
         .from("commissions")
@@ -162,7 +168,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
       if (partnerOrderIds.length > 0) {
         let poQ = (supabase as any)
           .from("partner_product_orders" as any)
-          .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status" as any)
+          .select("id,partner_product_id,professional_product_id,gross_amount,paid_at,status,master_coach_cross_beneficiary_coach_id" as any)
           .in("id" as any, partnerOrderIds as any)
           .eq("status" as any, "paid" as any);
         if (from) poQ = poQ.gte("paid_at" as any, from.toISOString() as any);
@@ -184,6 +190,12 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
         const professionalNames = new Map(((professionalProductsRes.data as any[]) || []).map((p) => [p.id, p.name]));
 
         orders.forEach((o: any) => {
+          const masterCoachId = o.master_coach_cross_beneficiary_coach_id as string | null;
+          // Em vendas cross-network de parceiro/profissional, esta área deve
+          // contar a venda para o Master Coach que fechou a venda, não para o
+          // coach titular do aluno. Usamos a coluna do pedido como fonte de
+          // verdade para não depender de visibilidade/RLS de comissões de outro coach.
+          if (masterCoachId && currentCoachId && masterCoachId !== currentCoachId) return;
           const isPartner = !!o.partner_product_id;
           const rawId = o.partner_product_id || o.professional_product_id;
           if (!rawId) return;
@@ -191,7 +203,7 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
           const existing = map.get(productId) || { product_id: productId, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(o.gross_amount) || 0;
-          if (masterPartnerOrderIds.has(o.id)) {
+          if (masterPartnerOrderIds.has(o.id) || (masterCoachId && masterCoachId === currentCoachId)) {
             existing.master_qty = (existing.master_qty || 0) + 1;
             existing.master_revenue = (existing.master_revenue || 0) + (Number(o.gross_amount) || 0);
           }
