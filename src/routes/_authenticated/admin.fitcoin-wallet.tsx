@@ -6,6 +6,7 @@ import { listAdminFitcoinWallets, getStudentFitcoinDetail, type AdminFitcoinRow,
 import { TestModeBanner } from "@/components/admin/TestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/admin/fitcoin-wallet")({
+  validateSearch: (s: Record<string, unknown>) => ({ focus: typeof s.focus === "string" ? s.focus : undefined }),
   component: AdminFitcoinWallet,
 });
 
