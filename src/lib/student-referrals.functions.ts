@@ -18,6 +18,9 @@ export const getMyReferralCommissions = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }): Promise<ReferralCommissionRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
+    const cutoffIso = await getServerCutoffIso();
+    const cutoffTime = cutoffIso ? new Date(cutoffIso).getTime() : null;
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id")
@@ -74,7 +77,12 @@ export const getMyReferralCommissions = createServerFn({ method: "POST" })
       ((studs as any[]) || []).forEach((s) => buyerMap.set(s.id, s.profile?.name || ""));
     }
 
-    return rows.map((c) => {
+    return rows.filter((c) => {
+      if (!cutoffTime) return true;
+      const tx = txMap.get(c.transaction_id);
+      const txTime = new Date(tx?.paid_at || tx?.created_at || c.created_at).getTime();
+      return Number.isFinite(txTime) && txTime >= cutoffTime;
+    }).map((c) => {
       const tx = txMap.get(c.transaction_id);
       const productLabel = tx
         ? productMap.get(tx.product_id) || productMap.get(`sp:${tx.store_product_id}`) ||
