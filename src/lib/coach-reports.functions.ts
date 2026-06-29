@@ -295,6 +295,7 @@ async function buildSalesReportForRange(
   for (const t of txs) {
     const sp = studentMap.get(t.student_id);
     const comm = commByTx.get(t.id) || { amount: 0, levels: [] };
+    const master = masterByTx.get(t.id);
     rows.push({
       id: t.id,
       source: "transaction",
@@ -310,6 +311,9 @@ async function buildSalesReportForRange(
       paid_at: t.paid_at,
       my_commission: comm.amount,
       commission_levels: comm.levels.sort((a, b) => a - b),
+      is_master_coach_sale: !!master && master.coach_id !== coachId,
+      master_coach_id: master?.coach_id ?? null,
+      master_coach_name: master?.coach_id ? (masterCoachNameById.get(master.coach_id) || null) : null,
     });
 
   }
@@ -320,6 +324,7 @@ async function buildSalesReportForRange(
     const label = its.length === 0 ? "Pedido da loja" : its.map((x) => `${x.qty}× ${x.name}`).join(", ");
     const mirrorTxId = mirrorTxByOrder.get(o.id);
     const comm = mirrorTxId ? (commByTx.get(mirrorTxId) || { amount: 0, levels: [] }) : { amount: 0, levels: [] };
+    const master = mirrorTxId ? masterByTx.get(mirrorTxId) : undefined;
     rows.push({
       id: o.id,
       source: "store",
@@ -335,9 +340,13 @@ async function buildSalesReportForRange(
       paid_at: o.updated_at,
       my_commission: comm.amount,
       commission_levels: comm.levels.sort((a, b) => a - b),
+      is_master_coach_sale: !!master && master.coach_id !== coachId,
+      master_coach_id: master?.coach_id ?? null,
+      master_coach_name: master?.coach_id ? (masterCoachNameById.get(master.coach_id) || null) : null,
     });
 
   }
+
 
   for (const o of partnerOrders) {
     const sp = studentMap.get(o.student_id);
