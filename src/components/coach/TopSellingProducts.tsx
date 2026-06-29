@@ -117,9 +117,13 @@ export function TopSellingProducts({ coachProfileId }: { coachProfileId: string 
 
         (txs || []).forEach((t: any) => {
           if (!t.product_id) return;
-          const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0 };
+          const existing = map.get(t.product_id) || { product_id: t.product_id, qty: 0, revenue: 0, master_qty: 0, master_revenue: 0 };
           existing.qty += 1;
           existing.revenue += Number(t.gross_amount) || 0;
+          if (masterTxIds.has(t.id)) {
+            existing.master_qty = (existing.master_qty || 0) + 1;
+            existing.master_revenue = (existing.master_revenue || 0) + (Number(t.gross_amount) || 0);
+          }
           map.set(t.product_id, existing);
         });
       }
