@@ -57,31 +57,38 @@ export function StudentReferralModal({
         .eq("is_referral_product" as any, true);
       const enabledIds = new Set<string>(((rules as any[]) || []).map((r) => r.product_id));
       const ids = Array.from(enabledIds);
-      if (ids.length === 0) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-      const [{ data: challenges }, { data: slots }] = await Promise.all([
+      const out: RefProduct[] = [];
+      const [challengesRes, slotsRes, partnerRes, profRes] = await Promise.all([
+        ids.length
+          ? supabase.from("products").select("id,name,price,image_url").eq("status", "active").in("id", ids)
+          : Promise.resolve({ data: [] as any }),
+        ids.length
+          ? supabase
+              .from("product_value_slots")
+              .select("id,product_id,slot_order,label,value_type,value_amount,destination,destination_label,is_blocked_until_delivery,is_system_fee,applies_to_referral_sales,applies_to_student_referral,slot_group,is_active" as any)
+              .in("product_id", ids)
+          : Promise.resolve({ data: [] as any }),
         supabase
-          .from("products")
-          .select("id,name,price,image_url")
-          .eq("status", "active")
-          .in("id", ids),
+          .from("partner_products" as never)
+          .select("id,name,price,image_url,coach_commission_percentage,status,is_active_by_partner,kind,deleted_at" as never)
+          .eq("status" as never, "approved" as never)
+          .eq("kind" as never, "paid" as never)
+          .eq("is_active_by_partner" as never, true as never)
+          .is("deleted_at" as never, null as never),
         supabase
-          .from("product_value_slots")
-          .select("id,product_id,slot_order,label,value_type,value_amount,destination,destination_label,is_blocked_until_delivery,is_system_fee,applies_to_referral_sales,applies_to_student_referral,slot_group,is_active" as any)
-          .in("product_id", ids),
+          .from("professional_products" as never)
+          .select("id,name,price,image_url,coach_commission_percentage,status,is_active_by_professional" as never)
+          .eq("status" as never, "approved" as never)
+          .eq("is_active_by_professional" as never, true as never),
       ]);
       const slotsByProduct = new Map<string, any[]>();
-      ((slots as any[]) || []).forEach((s) => {
+      (((slotsRes as any).data as any[]) || []).forEach((s) => {
         if (s.is_active === false) return;
         const arr = slotsByProduct.get(s.product_id) || [];
         arr.push(s);
         slotsByProduct.set(s.product_id, arr);
       });
-      const out: RefProduct[] = [];
-      (challenges || []).forEach((p: any) => {
+      (((challengesRes as any).data as any[]) || []).forEach((p: any) => {
         const price = Number(p.price || 0);
         const productSlots = (slotsByProduct.get(p.id) || [])
           .filter((s) => s.applies_to_student_referral !== false)
@@ -107,6 +114,24 @@ export function StudentReferralModal({
         });
         out.push({ id: p.id, kind: "challenge", title: p.name, price, imageUrl: p.image_url, commission });
       });
+      // Parceiros e profissionais: indicação automática. Fitcoin = 50% da comissão bruta do coach (default 10%).
+      const addPartnerLike = (rows: any[], kind: "partner" | "professional") => {
+        rows.forEach((p) => {
+          const price = Number(p.price || 0);
+          const coachPct = Number(p.coach_commission_percentage ?? 10);
+          const commission = Math.round(price * (coachPct / 100) * 0.5 * 100) / 100;
+          out.push({
+            id: p.id,
+            kind,
+            title: p.name,
+            price,
+            imageUrl: p.image_url,
+            commission,
+          });
+        });
+      };
+      addPartnerLike(((partnerRes as any).data as any[]) || [], "partner");
+      addPartnerLike(((profRes as any).data as any[]) || [], "professional");
       setProducts(out);
       setLoading(false);
     })();
