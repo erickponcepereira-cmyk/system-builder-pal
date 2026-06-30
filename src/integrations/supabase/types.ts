@@ -4936,6 +4936,8 @@ export type Database = {
           payment_method: string
           professional_coach_id: string | null
           professional_product_id: string | null
+          referral_fitcoin_amount: number
+          referred_by_student_id: string | null
           sale_channel: string
           selling_coach_id: string | null
           status: string
@@ -4972,6 +4974,8 @@ export type Database = {
           payment_method?: string
           professional_coach_id?: string | null
           professional_product_id?: string | null
+          referral_fitcoin_amount?: number
+          referred_by_student_id?: string | null
           sale_channel?: string
           selling_coach_id?: string | null
           status?: string
@@ -5008,6 +5012,8 @@ export type Database = {
           payment_method?: string
           professional_coach_id?: string | null
           professional_product_id?: string | null
+          referral_fitcoin_amount?: number
+          referred_by_student_id?: string | null
           sale_channel?: string
           selling_coach_id?: string | null
           status?: string
@@ -5053,6 +5059,13 @@ export type Database = {
             columns: ["professional_product_id"]
             isOneToOne: false
             referencedRelation: "professional_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_product_orders_referred_by_student_id_fkey"
+            columns: ["referred_by_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
           {
@@ -9551,31 +9564,62 @@ export type Database = {
           total: number
         }[]
       }
-      create_partner_company_order: {
-        Args: {
-          _partner_product_id: string
-          _payment_method?: string
-          _student_id?: string
-        }
-        Returns: string
-      }
-      create_partner_product_order: {
-        Args: {
-          _buyer_student_id?: string
-          _payment_method?: string
-          _professional_product_id: string
-        }
-        Returns: string
-      }
-      create_scheduled_professional_order: {
-        Args: {
-          _payment_method?: string
-          _professional_product_id: string
-          _starts_at: string
-          _student_id?: string
-        }
-        Returns: string
-      }
+      create_partner_company_order:
+        | {
+            Args: {
+              _partner_product_id: string
+              _payment_method?: string
+              _student_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _partner_product_id: string
+              _payment_method?: string
+              _referred_by_student_id?: string
+              _student_id?: string
+            }
+            Returns: string
+          }
+      create_partner_product_order:
+        | {
+            Args: {
+              _buyer_student_id?: string
+              _payment_method?: string
+              _professional_product_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _buyer_student_id?: string
+              _payment_method?: string
+              _professional_product_id: string
+              _referred_by_student_id?: string
+            }
+            Returns: string
+          }
+      create_scheduled_professional_order:
+        | {
+            Args: {
+              _payment_method?: string
+              _professional_product_id: string
+              _starts_at: string
+              _student_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _payment_method?: string
+              _professional_product_id: string
+              _referred_by_student_id?: string
+              _starts_at: string
+              _student_id?: string
+            }
+            Returns: string
+          }
       create_store_order: {
         Args: {
           _items: Json
