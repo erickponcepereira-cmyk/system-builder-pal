@@ -36,7 +36,24 @@ interface ProProduct {
   is_schedulable?: boolean;
   default_duration_minutes?: number;
   cancellation_window_hours?: number;
+  // Freebie / coupon (optional)
+  kind?: "paid" | "free";
+  redemption_mode?: "free" | "discount";
+  discount_percent?: number | null;
+  estimated_value?: number | null;
+  benefit_start_time?: string | null;
+  benefit_end_time?: string | null;
+  monthly_redeem_limit?: number | null;
+  // Advanced availability
+  availability_weekdays?: number[];
+  availability_recurrence?: "single" | "weekly";
+  availability_validity_days?: number | null;
 }
+
+const WEEKDAYS = [
+  { v: 0, l: "Dom" }, { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" },
+  { v: 4, l: "Qui" }, { v: 5, l: "Sex" }, { v: 6, l: "Sáb" },
+];
 
 export default function ProfessionalProductsPanel({ coachId }: { coachId: string }) {
   const [products, setProducts] = useState<ProProduct[]>([]);
