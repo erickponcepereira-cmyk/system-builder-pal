@@ -317,8 +317,8 @@ function StudentFreebies() {
 
             {/* Page mode selector: Gratuitos | Clube de Descontos */}
             {(() => {
-              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + items.length;
-              const discountCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
+              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + professionalFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + items.length;
+              const discountCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length + professionalFreebies.filter((p) => p.redemption_mode === "discount").length;
               return (
                 <div className="mb-5 grid grid-cols-2 gap-2 p-1.5 rounded-full bg-[#141414] border border-white/10">
                   <button
