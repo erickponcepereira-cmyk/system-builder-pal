@@ -1,12 +1,30 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2 } from "lucide-react";
+import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2, IdCard, Ticket } from "lucide-react";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
+import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
+
+function BenefitsBadges({ price, compact = false }: { price: number; compact?: boolean }) {
+  const { cardDays, challengeTickets } = computePartnerProductBenefits(price);
+  const size = compact ? "text-[10px] px-1.5 py-0.5" : "text-[11px] px-2 py-1";
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      <span className={`inline-flex items-center gap-1 rounded-md bg-primary/15 ${size} font-bold text-primary`}>
+        <IdCard className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} /> +{cardDays}d carteirinha
+      </span>
+      {challengeTickets > 0 && (
+        <span className={`inline-flex items-center gap-1 rounded-md bg-amber-500/15 ${size} font-bold text-amber-400`}>
+          <Ticket className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} /> {challengeTickets} ticket{challengeTickets > 1 ? "s" : ""}
+        </span>
+      )}
+    </div>
+  );
+}
 
 type Kind = "partner" | "professional";
 
@@ -400,8 +418,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   </div>
                   <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
                   <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
-                  <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
-                </button>
+                   <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
+                   <BenefitsBadges price={p.price} compact />
+                 </button>
                 <div className="absolute right-2 top-2 flex flex-col gap-1.5">
                   {mode === "reseller" && (
                     <button
@@ -468,6 +487,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{selected.seller}</p>
                 <h2 className="mt-1 text-xl font-bold text-foreground">{selected.name}</h2>
                 <p className="mt-2 text-2xl font-bold text-primary">{money(selected.price)}</p>
+                <BenefitsBadges price={selected.price} />
               </div>
               {selected.description && (
                 <div>

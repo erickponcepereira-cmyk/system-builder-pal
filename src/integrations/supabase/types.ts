@@ -9550,6 +9550,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      compute_partner_product_benefits: {
+        Args: { _price: number }
+        Returns: {
+          card_days: number
+          challenge_tickets: number
+        }[]
+      }
+      compute_system_fee_points: {
+        Args: { _system_fee: number }
+        Returns: number
+      }
       count_active_admins: { Args: never; Returns: number }
       create_coach_sale: {
         Args: {
@@ -9756,6 +9767,10 @@ export type Database = {
         Returns: {
           coach_id: string
         }[]
+      }
+      grant_partner_product_perks: {
+        Args: { _order_id: string }
+        Returns: undefined
       }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_coach_badge: {
