@@ -333,7 +333,15 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">E-mail {isExisting ? "(da sua conta)" : "(login)"}</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required disabled={isExisting} />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required disabled={!!authProfile || mode === "existing"} />
+              {existingEmailMode && !authProfile && (
+                <p className="text-[11px] text-primary/90">
+                  Este e-mail já tem conta no FitMind. Informe sua senha atual abaixo para vincular o cadastro de parceiro à conta existente.
+                </p>
+              )}
+              {emailStatus === "checking" && !authProfile && (
+                <p className="text-[11px] text-white/40">Verificando e-mail...</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">WhatsApp</Label>
