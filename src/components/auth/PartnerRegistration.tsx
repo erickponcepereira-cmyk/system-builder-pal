@@ -393,11 +393,20 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
               <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
             )}
 
-            {!isExisting && (
+            {(!isExisting || (existingEmailMode && !authProfile)) && (
               <div className="space-y-1.5">
-                <Label className="text-white/70 text-xs">Senha</Label>
+                <Label className="text-white/70 text-xs">
+                  {existingEmailMode && !authProfile ? "Sua senha atual" : "Senha"}
+                </Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="bg-white/5 border-white/10 text-white pr-10" required />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={existingEmailMode && !authProfile ? "Senha que você usa para entrar no FitMind" : "Mínimo 8 caracteres"}
+                    className="bg-white/5 border-white/10 text-white pr-10"
+                    required
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
