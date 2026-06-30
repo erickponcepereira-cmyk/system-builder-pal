@@ -77,9 +77,10 @@ export function StudentReferralModal({
           .is("deleted_at" as never, null as never),
         supabase
           .from("professional_products" as never)
-          .select("id,name,price,image_url,coach_commission_percentage,status,is_active_by_professional" as never)
+          .select("id,name,price,image_url,coach_commission_percentage,status,is_active_by_professional,deleted_at" as never)
           .eq("status" as never, "approved" as never)
-          .eq("is_active_by_professional" as never, true as never),
+          .eq("is_active_by_professional" as never, true as never)
+          .is("deleted_at" as never, null as never),
       ]);
       const slotsByProduct = new Map<string, any[]>();
       (((slotsRes as any).data as any[]) || []).forEach((s) => {
@@ -114,19 +115,37 @@ export function StudentReferralModal({
         });
         out.push({ id: p.id, kind: "challenge", title: p.name, price, imageUrl: p.image_url, commission });
       });
-      // Parceiros e profissionais: indicação automática. Fitcoin = 50% da comissão bruta do coach (default 10%).
+      // Parceiros e profissionais: indicação automática.
+      // Espelha exatamente o cálculo do RPC create_*_order (PIX como base do preview):
+      //   coach_amt = (((price - feePix) - tax6) - sys5%) * coach_pct%
+      //   rede = round(coach_amt*0.03) + round(coach_amt*0.02) + round(coach_amt*0.01)
+      //   coach_after = coach_amt - rede
+      //   fitcoin = CEIL(coach_after * 50) / 100  (prioridade do aluno)
+      const round2 = (n: number) => Math.round(n * 100) / 100;
       const addPartnerLike = (rows: any[], kind: "partner" | "professional") => {
         rows.forEach((p) => {
           const price = Number(p.price || 0);
           const coachPct = Number(p.coach_commission_percentage ?? 10);
-          const commission = Math.round(price * (coachPct / 100) * 0.5 * 100) / 100;
+          const fee = round2(price * 0.0099);
+          let rem = round2(price - fee);
+          const tax = round2(rem * 0.06);
+          rem = round2(rem - tax);
+          const sys = round2(rem * 0.05);
+          rem = round2(rem - sys);
+          const coachAmt = round2(rem * (coachPct / 100));
+          const l1 = round2(coachAmt * 0.03);
+          const l2 = round2(coachAmt * 0.02);
+          const l3 = round2(coachAmt * 0.01);
+          const coachAfter = Math.max(0, round2(coachAmt - l1 - l2 - l3));
+          let fitcoin = Math.ceil(coachAfter * 50) / 100;
+          if (fitcoin > coachAfter) fitcoin = coachAfter;
           out.push({
             id: p.id,
             kind,
             title: p.name,
             price,
             imageUrl: p.image_url,
-            commission,
+            commission: round2(fitcoin),
           });
         });
       };
