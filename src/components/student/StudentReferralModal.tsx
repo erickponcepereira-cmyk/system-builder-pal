@@ -3,6 +3,7 @@ import { X, Search, Copy, Share2, Gift, Loader2, Eye, EyeOff } from "lucide-reac
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
+import { computeSlotAmounts, type ValueSlot } from "@/lib/financialEngine";
 
 const FitcoinIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
   <img src={fitcoinAsset.url} alt="" aria-hidden className={`inline-block object-contain align-[-2px] ${className}`} />
