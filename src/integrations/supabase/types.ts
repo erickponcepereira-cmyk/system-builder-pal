@@ -6578,6 +6578,7 @@ export type Database = {
       professional_products: {
         Row: {
           admin_notes: string | null
+          availability_hours: Json
           availability_recurrence: string
           availability_validity_days: number | null
           availability_weekdays: number[]
@@ -6616,6 +6617,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          availability_hours?: Json
           availability_recurrence?: string
           availability_validity_days?: number | null
           availability_weekdays?: number[]
@@ -6654,6 +6656,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          availability_hours?: Json
           availability_recurrence?: string
           availability_validity_days?: number | null
           availability_weekdays?: number[]
