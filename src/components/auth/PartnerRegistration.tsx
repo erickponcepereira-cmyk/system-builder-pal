@@ -12,6 +12,7 @@ import { maskCNPJ, maskCPF, maskPhone, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
+import { checkEmailAvailable } from "@/lib/email-check.functions";
 
 type ReferralContext = {
   code: string;
@@ -45,6 +46,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [alreadyPartner, setAlreadyPartner] = useState<"yes" | "no" | "">("");
   const [alreadyPartnerNote, setAlreadyPartnerNote] = useState("");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [existingEmailMode, setExistingEmailMode] = useState(false); // e-mail já existe; pedimos a senha p/ vincular
 
   // Detect logged-in user — if signed in, switch to "existing account" flow
   useEffect(() => {
@@ -100,7 +103,27 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     } catch { /* ignore */ }
   }, []);
 
-  const isExisting = mode === "existing" || (mode === "auto" && !!authProfile);
+  // Detecta e-mail já cadastrado quando o usuário NÃO está logado.
+  // Se já existir conta, pedimos a senha atual para vincular o cadastro de parceiro
+  // à conta existente (mesmo padrão do fluxo profissional).
+  useEffect(() => {
+    if (authProfile) { setEmailStatus("idle"); setExistingEmailMode(false); return; }
+    if (mode === "existing") return;
+    if (!email) { setEmailStatus("idle"); setExistingEmailMode(false); return; }
+    if (!email.includes("@") || !email.includes(".")) { setEmailStatus("invalid"); setExistingEmailMode(false); return; }
+    setEmailStatus("checking");
+    const handle = window.setTimeout(async () => {
+      try {
+        const res = await checkEmailAvailable({ data: { email } });
+        const taken = !res.available;
+        setEmailStatus(taken ? "taken" : "available");
+        setExistingEmailMode(taken);
+      } catch { setEmailStatus("idle"); }
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [email, authProfile, mode]);
+
+  const isExisting = mode === "existing" || (mode === "auto" && !!authProfile) || existingEmailMode;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +135,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido.");
     if (whatsapp.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto.");
     if (!isExisting && password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    if (existingEmailMode && !authProfile && password.length < 1) return setErr("Informe a senha da sua conta existente para vincular o cadastro de parceiro.");
 
     const uplineCoachId = referral?.coachId || selectedCoach?.id || null;
     if (!uplineCoachId) return setErr("Selecione um coach indicador para continuar.");
@@ -134,8 +158,29 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     try {
       let profileId: string | null = null;
 
-      if (isExisting && authProfile) {
-        profileId = authProfile.id;
+      if (isExisting) {
+        if (authProfile) {
+          profileId = authProfile.id;
+        } else {
+          // Conta já existe e o usuário NÃO está logado: autenticar com a senha
+          // informada e localizar o profile para vincular o cadastro de parceiro.
+          const { data: signIn, error: signErr } = await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
+          if (signErr || !signIn.user) {
+            throw new Error("Senha incorreta para esta conta. Use a senha que você já usa no FitMind ou recupere o acesso em 'Esqueci minha senha'.");
+          }
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", signIn.user.id)
+            .maybeSingle();
+          if (!prof?.id) {
+            throw new Error("Não foi possível localizar o perfil desta conta. Faça login normalmente uma vez e tente novamente.");
+          }
+          profileId = prof.id;
+        }
 
         const { data: existingPartner } = await supabase
           .from("partners" as never)
@@ -170,6 +215,9 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
           .update({ phone: whatsapp })
           .eq("id", profileId);
 
+        if (existingEmailMode && !authProfile) {
+          await supabase.auth.signOut().catch(() => {});
+        }
         setCreatedForExisting(true);
         toast.success("Cadastro de parceiro enviado para aprovação!");
         return;
@@ -285,7 +333,15 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">E-mail {isExisting ? "(da sua conta)" : "(login)"}</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required disabled={isExisting} />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@empresa.com" className="bg-white/5 border-white/10 text-white" required disabled={!!authProfile || mode === "existing"} />
+              {existingEmailMode && !authProfile && (
+                <p className="text-[11px] text-primary/90">
+                  Este e-mail já tem conta no FitMind. Informe sua senha atual abaixo para vincular o cadastro de parceiro à conta existente.
+                </p>
+              )}
+              {emailStatus === "checking" && !authProfile && (
+                <p className="text-[11px] text-white/40">Verificando e-mail...</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">WhatsApp</Label>
@@ -337,11 +393,20 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
               <CoachSelector value={selectedCoach} onChange={setSelectedCoach} />
             )}
 
-            {!isExisting && (
+            {(!isExisting || (existingEmailMode && !authProfile)) && (
               <div className="space-y-1.5">
-                <Label className="text-white/70 text-xs">Senha</Label>
+                <Label className="text-white/70 text-xs">
+                  {existingEmailMode && !authProfile ? "Sua senha atual" : "Senha"}
+                </Label>
                 <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="bg-white/5 border-white/10 text-white pr-10" required />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={existingEmailMode && !authProfile ? "Senha que você usa para entrar no FitMind" : "Mínimo 8 caracteres"}
+                    className="bg-white/5 border-white/10 text-white pr-10"
+                    required
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
