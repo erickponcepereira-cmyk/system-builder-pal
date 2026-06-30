@@ -4833,6 +4833,96 @@ export type Database = {
           },
         ]
       }
+      partner_freebie_reservations: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          id: string
+          iso_week: string
+          partner_id: string
+          partner_product_id: string
+          profile_id: string
+          qr_token: string
+          scanned_by_profile_id: string | null
+          slot_end: string
+          slot_start: string
+          status: Database["public"]["Enums"]["partner_freebie_reservation_status"]
+          student_id: string
+          used_at: string | null
+          weekday: number
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          iso_week: string
+          partner_id: string
+          partner_product_id: string
+          profile_id: string
+          qr_token?: string
+          scanned_by_profile_id?: string | null
+          slot_end: string
+          slot_start: string
+          status?: Database["public"]["Enums"]["partner_freebie_reservation_status"]
+          student_id: string
+          used_at?: string | null
+          weekday: number
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          iso_week?: string
+          partner_id?: string
+          partner_product_id?: string
+          profile_id?: string
+          qr_token?: string
+          scanned_by_profile_id?: string | null
+          slot_end?: string
+          slot_start?: string
+          status?: Database["public"]["Enums"]["partner_freebie_reservation_status"]
+          student_id?: string
+          used_at?: string | null
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_freebie_reservations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_freebie_reservations_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_freebie_reservations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_freebie_reservations_scanned_by_profile_id_fkey"
+            columns: ["scanned_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_freebie_reservations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_posts: {
         Row: {
           caption: string | null
@@ -5105,6 +5195,50 @@ export type Database = {
           },
         ]
       }
+      partner_product_schedules: {
+        Row: {
+          active: boolean
+          capacity: number
+          created_at: string
+          end_time: string
+          id: string
+          partner_product_id: string
+          start_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          capacity?: number
+          created_at?: string
+          end_time: string
+          id?: string
+          partner_product_id: string
+          start_time: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          capacity?: number
+          created_at?: string
+          end_time?: string
+          id?: string
+          partner_product_id?: string
+          start_time?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_product_schedules_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_products: {
         Row: {
           admin_notes: string | null
@@ -5143,6 +5277,8 @@ export type Database = {
           system_fee_fixed: number
           tax_percentage: number
           updated_at: string
+          uses_scheduling: boolean
+          weekly_limit_per_student: number
         }
         Insert: {
           admin_notes?: string | null
@@ -5181,6 +5317,8 @@ export type Database = {
           system_fee_fixed?: number
           tax_percentage?: number
           updated_at?: string
+          uses_scheduling?: boolean
+          weekly_limit_per_student?: number
         }
         Update: {
           admin_notes?: string | null
@@ -5219,6 +5357,8 @@ export type Database = {
           system_fee_fixed?: number
           tax_percentage?: number
           updated_at?: string
+          uses_scheduling?: boolean
+          weekly_limit_per_student?: number
         }
         Relationships: [
           {
@@ -9521,6 +9661,10 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      cancel_partner_freebie: {
+        Args: { _reservation_id: string }
+        Returns: undefined
+      }
       cancel_professor_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
@@ -9835,6 +9979,16 @@ export type Database = {
           phone: string
         }[]
       }
+      list_partner_freebie_slots: {
+        Args: { _from: string; _product_id: string; _to: string }
+        Returns: {
+          capacity: number
+          remaining: number
+          slot_end: string
+          slot_start: string
+          taken: number
+        }[]
+      }
       list_professional_available_slots: {
         Args: {
           _coach_id: string
@@ -10032,6 +10186,16 @@ export type Database = {
         Returns: string
       }
       redeem_freebie: { Args: { _freebie_id: string }; Returns: string }
+      redeem_partner_freebie: {
+        Args: { _qr_token: string }
+        Returns: {
+          product_name: string
+          reservation_id: string
+          slot_end: string
+          slot_start: string
+          student_name: string
+        }[]
+      }
       refresh_coach_inactivity: { Args: never; Returns: number }
       refresh_coach_patents: { Args: never; Returns: number }
       refresh_monthly_rankings: {
@@ -10056,6 +10220,14 @@ export type Database = {
       release_professor_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
+      }
+      reserve_partner_freebie: {
+        Args: { _product_id: string; _slot_start: string }
+        Returns: {
+          qr_token: string
+          reservation_id: string
+          slot_end: string
+        }[]
       }
       reset_expired_career_period_plans: { Args: never; Returns: undefined }
       reset_subscription_invoice_due_date: {
@@ -10139,6 +10311,10 @@ export type Database = {
           profile_id: string
           state: string
         }[]
+      }
+      set_partner_product_schedules: {
+        Args: { _product_id: string; _schedules: Json }
+        Returns: undefined
       }
       slot_target_profile_id: {
         Args: {
@@ -10307,6 +10483,11 @@ export type Database = {
         | "shipped"
         | "delivered"
         | "cancelled"
+      partner_freebie_reservation_status:
+        | "reserved"
+        | "used"
+        | "cancelled"
+        | "expired"
       patent_level:
         | "coach"
         | "senior_coach"
@@ -10556,6 +10737,12 @@ export const Constants = {
         "shipped",
         "delivered",
         "cancelled",
+      ],
+      partner_freebie_reservation_status: [
+        "reserved",
+        "used",
+        "cancelled",
+        "expired",
       ],
       patent_level: [
         "coach",

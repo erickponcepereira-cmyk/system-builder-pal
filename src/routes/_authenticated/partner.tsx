@@ -23,6 +23,8 @@ import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
+import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanner";
+import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 
 
 
@@ -32,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports" | "scanner";
 
 
 interface Partner {
@@ -66,6 +68,8 @@ interface Product {
   benefit_start_time?: string | null;
   benefit_end_time?: string | null;
   monthly_redeem_limit?: number | null;
+  weekly_limit_per_student?: number | null;
+  uses_scheduling?: boolean | null;
 }
 
 
@@ -156,6 +160,7 @@ function PartnerPanel() {
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
+    { key: "scanner", label: "Scanner", icon: QrCode },
     { key: "timeline", label: "Timeline", icon: ImageIcon },
     { key: "qrcode", label: "QR", icon: QrCode },
   ];
@@ -213,6 +218,7 @@ function PartnerPanel() {
         {tab === "wallet" && <PartnerWalletTab />}
         {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
         {tab === "reports" && <PartnerReports />}
+        {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
 
       </main>
 
@@ -440,6 +446,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       monthly_redeem_limit: editing.kind === "free"
         ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
         : null,
+      weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
     };
     try {
       if (editing.id) {
@@ -712,6 +719,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   </div>
                 </div>
               )}
+
+              {editing.kind === "free" && editing.redemption_mode === "free" && editing.id && (
+                <PartnerFreebieScheduleEditor
+                  productId={editing.id}
+                  weeklyLimit={editing.weekly_limit_per_student ?? 1}
+                  onChangeWeeklyLimit={(n) => setEditing({ ...editing, weekly_limit_per_student: n })}
+                />
+              )}
+              {editing.kind === "free" && editing.redemption_mode === "free" && !editing.id && (
+                <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">
+                  Salve o produto primeiro para configurar dias e horários disponíveis (agenda com vagas e reserva).
+                </p>
+              )}
+
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>

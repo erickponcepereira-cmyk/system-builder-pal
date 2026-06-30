@@ -8,6 +8,8 @@ import { FreebieDetailModal, type FreebieDetail } from "@/components/student/Fre
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
+import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
+import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
@@ -58,6 +60,8 @@ type PartnerFreeProduct = {
   estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
+  uses_scheduling: boolean | null;
+  weekly_limit_per_student: number | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
 
@@ -103,6 +107,8 @@ function StudentFreebies() {
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
   const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
+  const [reservationsRefresh, setReservationsRefresh] = useState(0);
 
   const generateCoupon = async (p: PartnerFreeProduct) => {
     setGenerating(p.id);
@@ -155,7 +161,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,partners(fantasy_name,photo_url,status,business_area)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,partners(fantasy_name,photo_url,status,business_area)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -280,6 +286,10 @@ function StudentFreebies() {
                 <p className="text-[11px] text-white/55">Aponte para o QR da empresa</p>
               </button>
             </div>
+
+            <StudentFreebieReservations refreshKey={reservationsRefresh} />
+
+
 
             {/* Indicadores de economia (topo) */}
             {(() => {
@@ -433,15 +443,25 @@ function StudentFreebies() {
                                   >
                                     Ver empresa
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => generateCoupon(p)}
-                                    disabled={generating === p.id}
-                                    className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
-                                  >
-                                    {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                                    {isDiscount ? "Gerar cupom" : "Resgatar"}
-                                  </button>
+                                  {p.uses_scheduling && !isDiscount ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setBookingProduct(p)}
+                                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground"
+                                    >
+                                      <Clock className="h-3.5 w-3.5" /> Reservar horário
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => generateCoupon(p)}
+                                      disabled={generating === p.id}
+                                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                                    >
+                                      {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                                      {isDiscount ? "Gerar cupom" : "Resgatar"}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -653,6 +673,13 @@ function StudentFreebies() {
       )}
 
       {coupon && <CouponModal coupon={coupon} onClose={() => setCoupon(null)} />}
+      {bookingProduct && (
+        <PartnerFreebieBookingModal
+          product={{ id: bookingProduct.id, name: bookingProduct.name, weekly_limit_per_student: bookingProduct.weekly_limit_per_student }}
+          onClose={() => setBookingProduct(null)}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
+        />
+      )}
     </div>
   );
 }
