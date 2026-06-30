@@ -11,11 +11,18 @@ const FitcoinIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
 
 type RefProduct = {
   id: string;
-  kind: "challenge" | "digital";
+  kind: "challenge" | "digital" | "partner" | "professional";
   title: string;
   price: number;
   imageUrl: string | null;
   commission: number;
+};
+
+const KIND_LABEL: Record<RefProduct["kind"], string> = {
+  challenge: "Desafio/Plano",
+  digital: "Digital",
+  partner: "Parceiro",
+  professional: "Profissional",
 };
 
 const money = (v: number) =>
