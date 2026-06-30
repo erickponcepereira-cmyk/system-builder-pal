@@ -100,6 +100,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     availability_weekdays: [],
     availability_recurrence: "weekly",
     availability_validity_days: null,
+    availability_hours: {},
   });
 
   const upload = async (file: File) => {
