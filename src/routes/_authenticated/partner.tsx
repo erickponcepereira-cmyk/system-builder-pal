@@ -720,6 +720,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </div>
               )}
 
+              {editing.kind === "free" && editing.redemption_mode === "free" && editing.id && (
+                <PartnerFreebieScheduleEditor
+                  productId={editing.id}
+                  weeklyLimit={editing.weekly_limit_per_student ?? 1}
+                  onChangeWeeklyLimit={(n) => setEditing({ ...editing, weekly_limit_per_student: n })}
+                />
+              )}
+              {editing.kind === "free" && editing.redemption_mode === "free" && !editing.id && (
+                <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">
+                  Salve o produto primeiro para configurar dias e horários disponíveis (agenda com vagas e reserva).
+                </p>
+              )}
+
+
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
               <Field label="Imagem">
