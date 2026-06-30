@@ -51,6 +51,7 @@ interface ProProduct {
   availability_weekdays?: number[];
   availability_recurrence?: "single" | "weekly";
   availability_validity_days?: number | null;
+  availability_hours?: AvailabilityHours;
 }
 
 const WEEKDAYS = [
