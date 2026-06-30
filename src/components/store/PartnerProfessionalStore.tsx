@@ -418,8 +418,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   </div>
                   <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
                   <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
-                  <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
-                </button>
+                   <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
+                   <BenefitsBadges price={p.price} compact />
+                 </button>
                 <div className="absolute right-2 top-2 flex flex-col gap-1.5">
                   {mode === "reseller" && (
                     <button
