@@ -353,18 +353,30 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
   useEffect(() => { if (coachMode) loadCoachData(); }, [coachMode]);
 
   // Abre automaticamente o produto vindo do link de indicação (/r/{code}?p=…)
+  // Para produtos de parceiro/profissional, troca a aba para que o componente filho abra o detalhe.
   useEffect(() => {
     if (coachMode) return;
-    if (!items.length) return;
     let pendingId: string | null = null;
-    try { pendingId = sessionStorage.getItem("fitmind_pending_product"); } catch { /* ignore */ }
+    let pendingKind: string | null = null;
+    try {
+      pendingId = sessionStorage.getItem("fitmind_pending_product");
+      pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
+    } catch { /* ignore */ }
     if (!pendingId) return;
-    const match = items.find((it) => it.sourceId === pendingId);
-    if (match) {
-      setDetailProduct(match);
-      try { sessionStorage.removeItem("fitmind_pending_product"); } catch { /* ignore */ }
+    if (pendingKind === "partner" && storeTab !== "partner") { setStoreTab("partner"); return; }
+    if (pendingKind === "professional" && storeTab !== "professional") { setStoreTab("professional"); return; }
+    if ((!pendingKind || pendingKind === "challenge") && storeTab !== "fitmind") { setStoreTab("fitmind"); return; }
+    if (storeTab === "fitmind" && items.length) {
+      const match = items.find((it) => it.sourceId === pendingId);
+      if (match) {
+        setDetailProduct(match);
+        try {
+          sessionStorage.removeItem("fitmind_pending_product");
+          sessionStorage.removeItem("fitmind_pending_product_kind");
+        } catch { /* ignore */ }
+      }
     }
-  }, [items, coachMode]);
+  }, [items, coachMode, storeTab]);
 
 
   useEffect(() => {
