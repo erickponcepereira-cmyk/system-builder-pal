@@ -446,6 +446,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       monthly_redeem_limit: editing.kind === "free"
         ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
         : null,
+      weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
     };
     try {
       if (editing.id) {
