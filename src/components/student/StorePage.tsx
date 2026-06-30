@@ -511,12 +511,14 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       if (partnerItems.length > 0) {
         const pp = partnerItems[0];
         let ppId: string | null = null;
+        const refStudent = pendingReferrerStudentId && pendingReferrerStudentId !== ownStudentId ? pendingReferrerStudentId : null;
         if (pp.kind === "partner_company") {
           if (!ownStudentId) throw new Error("Conta de aluno não encontrada.");
           const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
             _partner_product_id: pp.sourceId,
             _student_id: ownStudentId,
             _payment_method: partnerRpcPaymentMethod(),
+            _referred_by_student_id: refStudent,
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
@@ -525,6 +527,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
             _professional_product_id: pp.sourceId,
             _starts_at: pp.scheduledSlot,
             _payment_method: partnerRpcPaymentMethod(),
+            _referred_by_student_id: refStudent,
           } as never);
           if (error) throw new Error(error.message);
           ppId = data as unknown as string;
@@ -534,6 +537,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
           const { data, error: ppErr } = await supabase.rpc("create_partner_product_order" as never, {
             _professional_product_id: pp.sourceId,
             _payment_method: partnerRpcPaymentMethod(),
+            _referred_by_student_id: refStudent,
           } as never);
           if (ppErr) throw new Error(ppErr.message);
           ppId = data as unknown as string;
