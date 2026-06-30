@@ -267,6 +267,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
             + Number(r.network_l2_amount || 0)
             + Number(r.network_l3_amount || 0)
             + Number(r.master_coach_cross_bonus_amount || 0)
+            + Number(r.referral_fitcoin_amount || 0)
             + Number(r.payment_fee || 0)
             + Number(r.tax_amount || 0);
           const computed = gross - paidOut;
@@ -290,6 +291,7 @@ export const getFinancialSummary = createServerFn({ method: "POST" })
             + Number(r.network_l2_amount || 0)
             + Number(r.network_l3_amount || 0)
             + Number(r.master_coach_cross_bonus_amount || 0)
+            + Number(r.referral_fitcoin_amount || 0)
             + Number(r.payment_fee || 0)
             + Number(r.tax_amount || 0);
           const computed = gross - paidOut;
