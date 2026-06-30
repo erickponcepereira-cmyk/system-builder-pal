@@ -58,6 +58,8 @@ type PartnerFreeProduct = {
   estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
+  uses_scheduling: boolean | null;
+  weekly_limit_per_student: number | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
 
