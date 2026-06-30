@@ -158,8 +158,29 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     try {
       let profileId: string | null = null;
 
-      if (isExisting && authProfile) {
-        profileId = authProfile.id;
+      if (isExisting) {
+        if (authProfile) {
+          profileId = authProfile.id;
+        } else {
+          // Conta já existe e o usuário NÃO está logado: autenticar com a senha
+          // informada e localizar o profile para vincular o cadastro de parceiro.
+          const { data: signIn, error: signErr } = await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
+          if (signErr || !signIn.user) {
+            throw new Error("Senha incorreta para esta conta. Use a senha que você já usa no FitMind ou recupere o acesso em 'Esqueci minha senha'.");
+          }
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", signIn.user.id)
+            .maybeSingle();
+          if (!prof?.id) {
+            throw new Error("Não foi possível localizar o perfil desta conta. Faça login normalmente uma vez e tente novamente.");
+          }
+          profileId = prof.id;
+        }
 
         const { data: existingPartner } = await supabase
           .from("partners" as never)
