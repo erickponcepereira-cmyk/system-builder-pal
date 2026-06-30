@@ -238,7 +238,7 @@ export function StudentReferralModal({
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-white">{p.title}</p>
                           <p className="text-[11px] text-white/40">
-                            {p.kind === "challenge" ? "Desafio/Plano" : "Digital"} · {money(p.price)}
+                            {KIND_LABEL[p.kind]} · {money(p.price)}
                           </p>
                           <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-primary">
                             <FitcoinIcon />
