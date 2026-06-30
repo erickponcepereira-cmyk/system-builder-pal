@@ -454,6 +454,70 @@ function StudentFreebies() {
               );
             })()}
 
+            {(() => {
+              const filteredPro = professionalFreebies.filter((p) =>
+                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+              );
+              if (filteredPro.length === 0) return null;
+              return (
+                <div className="mb-6 space-y-3">
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Gift className="h-4 w-4 text-primary" />
+                    {pageMode === "discount" ? "Descontos de profissionais" : "Benefícios de profissionais"}
+                  </h2>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {filteredPro.map((p) => {
+                      const isDiscount = p.redemption_mode === "discount";
+                      const proName = p.coaches?.profiles?.name || "Profissional";
+                      return (
+                        <div key={p.id} className="text-left rounded-2xl overflow-hidden border border-white/5 block relative" style={{ backgroundColor: "#1A1A1A" }}>
+                          {isDiscount && p.discount_percent ? (
+                            <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-lg">
+                              {p.discount_percent}% OFF
+                            </div>
+                          ) : null}
+                          {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                          <div className="p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-bold text-white">{p.name}</h3>
+                              {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>}
+                            </div>
+                            <p className="mt-1 text-[11px] text-white/40">por {proName}</p>
+                            {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                            {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                              <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
+                                {isDiscount ? (
+                                  <p className="text-[11px] font-bold text-emerald-300">Você economiza R$ {(p.estimated_value * (Number(p.discount_percent || 0) / 100)).toFixed(2)}</p>
+                                ) : (
+                                  <p className="text-[11px] font-bold text-emerald-300">Você economiza R$ {Number(p.estimated_value).toFixed(2)}</p>
+                                )}
+                              </div>
+                            )}
+                            {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                              <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                                <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                              </p>
+                            )}
+                            {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                            <button
+                              type="button"
+                              onClick={() => generateProCoupon(p)}
+                              disabled={generating === p.id}
+                              className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                            >
+                              {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                              {isDiscount ? "Gerar cupom" : "Resgatar"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+
             {pageMode === "free" && items.length > 0 && (() => {
               const byCat = new Map<string, Freebie[]>();
               items.forEach((it) => {
