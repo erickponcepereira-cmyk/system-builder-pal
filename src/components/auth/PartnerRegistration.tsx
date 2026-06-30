@@ -135,6 +135,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido.");
     if (whatsapp.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto.");
     if (!isExisting && password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
+    if (existingEmailMode && !authProfile && password.length < 1) return setErr("Informe a senha da sua conta existente para vincular o cadastro de parceiro.");
 
     const uplineCoachId = referral?.coachId || selectedCoach?.id || null;
     if (!uplineCoachId) return setErr("Selecione um coach indicador para continuar.");
