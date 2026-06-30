@@ -64,7 +64,7 @@ export const updateSubscriptionAdmin = createServerFn({ method: "POST" })
   .inputValidator((d: any) => z.object({
     id: z.string().uuid(),
     custom_amount: z.number().nullable().optional(),
-    billing_day: z.number().int().min(1).max(28).optional(),
+    billing_day: z.number().int().min(1).max(31).optional(),
     status: z.enum(["active","exempt_monthly","exempt_annual","exempt_permanent","cancelled"]).optional(),
     exempt_until: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
