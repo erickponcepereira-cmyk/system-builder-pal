@@ -271,11 +271,12 @@ export const getAdminFinancialOverview = createServerFn({ method: "POST" })
     // Referrals (aluno → aluno) — apenas a comissão do próprio aluno indicador
     // (slot "aluno indicador"). Linhas/Vendedor da mesma venda vão para os buckets
     // de coaches/rede.
+    // Inclui TODAS as comissões marcadas como referral (slot "aluno indicador" do
+    // pool antigo + Fitcoin de Indicação dos pedidos de parceiro/profissional).
     let refRowsQ = supabaseAdmin
       .from("commissions")
       .select("id, transaction_id, partner_order_id, amount, status, referred_by_student_id, beneficiary_profile_id, beneficiary_coach_id, level, slot_label, is_referral, created_at, profiles:profiles!commissions_beneficiary_profile_id_fkey(name,email)")
-      .eq("is_referral", true)
-      .ilike("slot_label", "aluno indicador%");
+      .eq("is_referral", true);
     if (cutoff) refRowsQ = refRowsQ.gte("created_at", cutoff);
     const { data: refRows } = await refRowsQ;
     const refMap = new Map<string, RecipientTotal>();
