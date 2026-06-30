@@ -68,6 +68,8 @@ interface Product {
   benefit_start_time?: string | null;
   benefit_end_time?: string | null;
   monthly_redeem_limit?: number | null;
+  weekly_limit_per_student?: number | null;
+  uses_scheduling?: boolean | null;
 }
 
 
