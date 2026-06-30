@@ -46,6 +46,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [alreadyPartner, setAlreadyPartner] = useState<"yes" | "no" | "">("");
   const [alreadyPartnerNote, setAlreadyPartnerNote] = useState("");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [existingEmailMode, setExistingEmailMode] = useState(false); // e-mail já existe; pedimos a senha p/ vincular
 
   // Detect logged-in user — if signed in, switch to "existing account" flow
   useEffect(() => {
