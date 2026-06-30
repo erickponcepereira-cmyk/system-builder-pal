@@ -12,6 +12,7 @@ import { maskCNPJ, maskCPF, maskPhone, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
+import { checkEmailAvailable } from "@/lib/email-check.functions";
 
 type ReferralContext = {
   code: string;
