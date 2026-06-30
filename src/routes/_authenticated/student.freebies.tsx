@@ -8,6 +8,8 @@ import { FreebieDetailModal, type FreebieDetail } from "@/components/student/Fre
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
+import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
+import { StudentFreebieReservations } from "@/components/student/StudentFreebieReservations";
 
 export const Route = createFileRoute("/_authenticated/student/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — FitMind Club" }] }),
