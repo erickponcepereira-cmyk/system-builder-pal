@@ -153,6 +153,29 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     })();
   }, [kind, mode]);
 
+  // Auto-abre o produto vindo do link de indicação (/r/{code}?p=…) quando a aba bate com o kind.
+  useEffect(() => {
+    if (mode !== "student") return;
+    if (!cards.length) return;
+    let pendingId: string | null = null;
+    let pendingKind: string | null = null;
+    try {
+      pendingId = sessionStorage.getItem("fitmind_pending_product");
+      pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
+    } catch { /* ignore */ }
+    if (!pendingId || pendingKind !== kind) return;
+    const match = cards.find((c) => c.id === pendingId);
+    if (match) {
+      setActiveSection(match.section_id);
+      setActiveCategory(match.category_id);
+      setSelected(match);
+      try {
+        sessionStorage.removeItem("fitmind_pending_product");
+        sessionStorage.removeItem("fitmind_pending_product_kind");
+      } catch { /* ignore */ }
+    }
+  }, [cards, kind, mode]);
+
   const handleAddToCart = () => {
     if (!selected) return;
     if (selected.isSchedulable && !slot) {

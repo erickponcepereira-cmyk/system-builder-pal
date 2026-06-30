@@ -54,8 +54,20 @@ function ReferralLandingPage() {
           productId: productId || null,
         })
       );
+      let productKind: "challenge" | "partner" | "professional" | null = null;
       if (productId) {
         sessionStorage.setItem("fitmind_pending_product", productId);
+        const [{ data: ch }, { data: pp }, { data: pr }] = await Promise.all([
+          supabase.from("products").select("id").eq("id", productId).maybeSingle(),
+          supabase.from("partner_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
+          supabase.from("professional_products" as never).select("id").eq("id" as never, productId as never).maybeSingle(),
+        ]);
+        if (ch?.id) productKind = "challenge";
+        else if ((pp as any)?.id) productKind = "partner";
+        else if ((pr as any)?.id) productKind = "professional";
+        if (productKind) {
+          sessionStorage.setItem("fitmind_pending_product_kind", productKind);
+        }
       }
       setSponsorName(row.sponsor_name || "");
       setStatus("valid");
