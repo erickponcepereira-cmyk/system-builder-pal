@@ -23,6 +23,8 @@ import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
+import { PartnerFreebieScanner } from "@/components/partner/PartnerFreebieScanner";
+import { PartnerFreebieScheduleEditor } from "@/components/partner/PartnerFreebieScheduleEditor";
 
 
 
