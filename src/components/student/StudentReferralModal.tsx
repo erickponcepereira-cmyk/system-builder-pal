@@ -63,27 +63,41 @@ export function StudentReferralModal({
           .in("id", ids),
         supabase
           .from("product_value_slots")
-          .select("product_id,value_type,value_amount,destination,applies_to_student_referral,is_active" as any)
-          .in("product_id", ids)
-          .eq("destination" as any, "referral_student"),
+          .select("id,product_id,slot_order,label,value_type,value_amount,destination,destination_label,is_blocked_until_delivery,is_system_fee,applies_to_referral_sales,applies_to_student_referral,slot_group,is_active" as any)
+          .in("product_id", ids),
       ]);
-      const slotByProduct = new Map<string, { type: string; amount: number }>();
+      const slotsByProduct = new Map<string, any[]>();
       ((slots as any[]) || []).forEach((s) => {
         if (s.is_active === false) return;
-        if (s.applies_to_student_referral === false) return;
-        slotByProduct.set(s.product_id, {
-          type: String(s.value_type),
-          amount: Number(s.value_amount || 0),
-        });
+        const arr = slotsByProduct.get(s.product_id) || [];
+        arr.push(s);
+        slotsByProduct.set(s.product_id, arr);
       });
       const out: RefProduct[] = [];
       (challenges || []).forEach((p: any) => {
-        const slot = slotByProduct.get(p.id);
         const price = Number(p.price || 0);
+        const productSlots = (slotsByProduct.get(p.id) || [])
+          .filter((s) => s.applies_to_student_referral !== false)
+          .sort((a, b) => Number(a.slot_order) - Number(b.slot_order));
+        const vs: ValueSlot[] = productSlots.map((s) => ({
+          id: s.id,
+          slot_order: Number(s.slot_order || 0),
+          label: s.label || "",
+          value_type: s.value_type,
+          value_amount: Number(s.value_amount || 0),
+          destination: s.destination,
+          destination_label: s.destination_label || "",
+          is_blocked_until_delivery: !!s.is_blocked_until_delivery,
+          is_system_fee: !!s.is_system_fee,
+          applies_to_referral_sales: !!s.applies_to_referral_sales,
+          applies_to_student_referral: !!s.applies_to_student_referral,
+          slot_group: s.slot_group ?? null,
+        }));
+        const amounts = computeSlotAmounts(vs, price);
         let commission = 0;
-        if (slot) {
-          commission = slot.type === "fixed" ? slot.amount : Math.max(0, price * (slot.amount / 100));
-        }
+        vs.forEach((s, i) => {
+          if (s.destination === "referral_student") commission += amounts[i];
+        });
         out.push({ id: p.id, kind: "challenge", title: p.name, price, imageUrl: p.image_url, commission });
       });
       setProducts(out);
