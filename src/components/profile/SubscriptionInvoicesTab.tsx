@@ -128,7 +128,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm">
             <span className="flex items-center gap-1 text-white/60"><Calendar className="h-3 w-3" /> Dia do vencimento</span>
-            <input type="number" min={1} max={28} defaultValue={sub.billing_day}
+            <input type="number" min={1} max={31} defaultValue={sub.billing_day}
               onBlur={(e) => { const v = Number(e.target.value); if (v !== sub.billing_day) updatePrefs({ billing_day: v }); }}
               className="mt-1 w-full rounded bg-white/10 px-3 py-2" />
           </label>

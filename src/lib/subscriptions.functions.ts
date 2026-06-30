@@ -51,7 +51,7 @@ export const updateMySubscriptionPrefs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { billing_day?: number; preferred_payment_method?: string }) =>
     z.object({
-      billing_day: z.number().int().min(1).max(28).optional(),
+      billing_day: z.number().int().min(1).max(31).optional(),
       preferred_payment_method: z.enum(["pix","card","auto_debit","wallet"]).optional(),
     }).parse(d))
   .handler(async ({ data, context }) => {
@@ -92,7 +92,7 @@ export const payInvoiceWithWallet = createServerFn({ method: "POST" })
 export const ensureMySubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { billing_day?: number }) =>
-    z.object({ billing_day: z.number().int().min(1).max(28).optional() }).parse(d ?? {}))
+    z.object({ billing_day: z.number().int().min(1).max(31).optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { data: id, error } = await context.supabase.rpc("ensure_user_subscription", {
       _user_id: context.userId,
