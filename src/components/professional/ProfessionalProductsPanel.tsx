@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Loader2, Image as ImageIcon, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays } from "lucide-react";
+import { Plus, Loader2, Image as ImageIcon, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock } from "lucide-react";
+
+type TimeRange = { start: string; end: string };
+type AvailabilityHours = Record<string, TimeRange[]>;
 import {
   computeFromCharge,
   computeFromReceive,
@@ -48,6 +51,7 @@ interface ProProduct {
   availability_weekdays?: number[];
   availability_recurrence?: "single" | "weekly";
   availability_validity_days?: number | null;
+  availability_hours?: AvailabilityHours;
 }
 
 const WEEKDAYS = [
@@ -96,6 +100,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     availability_weekdays: [],
     availability_recurrence: "weekly",
     availability_validity_days: null,
+    availability_hours: {},
   });
 
   const upload = async (file: File) => {
@@ -127,6 +132,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       benefit_start_time: emptyToNull(editing.benefit_start_time) as string | null,
       benefit_end_time: emptyToNull(editing.benefit_end_time) as string | null,
       availability_weekdays: editing.availability_weekdays || [],
+      availability_hours: editing.availability_hours || {},
     };
 
     if (isFree) {
@@ -392,6 +398,67 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   </div>
                   <p className="mt-1 text-[10px] text-white/40">Vazio = todos os dias.</p>
                 </Field>
+
+                {(editing.availability_weekdays && editing.availability_weekdays.length > 0) && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/80">
+                      <Clock className="h-3 w-3 text-primary" /> Horários por dia
+                    </div>
+                    {(editing.availability_weekdays || []).map(wd => {
+                      const label = WEEKDAYS.find(w => w.v === wd)?.l || "";
+                      const key = String(wd);
+                      const ranges = (editing.availability_hours || {})[key] || [];
+                      const updateRanges = (next: TimeRange[]) => {
+                        const all = { ...(editing.availability_hours || {}) };
+                        if (next.length === 0) delete all[key]; else all[key] = next;
+                        setEditing({ ...editing, availability_hours: all });
+                      };
+                      return (
+                        <div key={wd} className="rounded-lg bg-black/40 border border-white/5 p-2">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-bold text-white">{label}</span>
+                            <button type="button"
+                              onClick={() => updateRanges([...ranges, { start: "08:00", end: "18:00" }])}
+                              className="flex items-center gap-1 rounded bg-primary/15 text-primary px-2 py-0.5 text-[10px] font-bold">
+                              <Plus className="h-3 w-3" /> Faixa
+                            </button>
+                          </div>
+                          {ranges.length === 0 ? (
+                            <p className="text-[10px] text-white/40">Sem horário definido (dia inteiro).</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {ranges.map((r, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <input type="time" value={r.start}
+                                    onChange={e => {
+                                      const next = [...ranges];
+                                      next[i] = { ...next[i], start: e.target.value };
+                                      updateRanges(next);
+                                    }}
+                                    className="field-input flex-1 !py-1 !text-xs" />
+                                  <span className="text-white/40 text-[10px]">até</span>
+                                  <input type="time" value={r.end}
+                                    onChange={e => {
+                                      const next = [...ranges];
+                                      next[i] = { ...next[i], end: e.target.value };
+                                      updateRanges(next);
+                                    }}
+                                    className="field-input flex-1 !py-1 !text-xs" />
+                                  <button type="button"
+                                    onClick={() => updateRanges(ranges.filter((_, j) => j !== i))}
+                                    className="text-red-400 p-1">
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <p className="text-[10px] text-white/40">Você pode adicionar várias faixas por dia (ex: 08:00–12:00 e 14:00–18:00).</p>
+                  </div>
+                )}
 
                 <Field label="Recorrência">
                   <div className="flex rounded-lg bg-black/40 p-0.5">
