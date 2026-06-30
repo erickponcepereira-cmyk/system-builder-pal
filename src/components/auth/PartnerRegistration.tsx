@@ -103,7 +103,27 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     } catch { /* ignore */ }
   }, []);
 
-  const isExisting = mode === "existing" || (mode === "auto" && !!authProfile);
+  // Detecta e-mail já cadastrado quando o usuário NÃO está logado.
+  // Se já existir conta, pedimos a senha atual para vincular o cadastro de parceiro
+  // à conta existente (mesmo padrão do fluxo profissional).
+  useEffect(() => {
+    if (authProfile) { setEmailStatus("idle"); setExistingEmailMode(false); return; }
+    if (mode === "existing") return;
+    if (!email) { setEmailStatus("idle"); setExistingEmailMode(false); return; }
+    if (!email.includes("@") || !email.includes(".")) { setEmailStatus("invalid"); setExistingEmailMode(false); return; }
+    setEmailStatus("checking");
+    const handle = window.setTimeout(async () => {
+      try {
+        const res = await checkEmailAvailable({ data: { email } });
+        const taken = !res.available;
+        setEmailStatus(taken ? "taken" : "available");
+        setExistingEmailMode(taken);
+      } catch { setEmailStatus("idle"); }
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [email, authProfile, mode]);
+
+  const isExisting = mode === "existing" || (mode === "auto" && !!authProfile) || existingEmailMode;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
