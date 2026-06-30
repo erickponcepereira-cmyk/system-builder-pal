@@ -92,6 +92,7 @@ function StudentFreebies() {
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [professionalFreebies, setProfessionalFreebies] = useState<ProfessionalFreeProduct[]>([]);
   const [savedTotal, setSavedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
@@ -106,6 +107,16 @@ function StudentFreebies() {
   const generateCoupon = async (p: PartnerFreeProduct) => {
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
+  };
+
+  const generateProCoupon = async (p: ProfessionalFreeProduct) => {
+    setGenerating(p.id);
+    const { data, error } = await supabase.rpc("student_generate_professional_coupon" as never, { p_professional_product_id: p.id } as never);
     setGenerating(null);
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
