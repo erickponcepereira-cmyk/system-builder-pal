@@ -487,6 +487,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{selected.seller}</p>
                 <h2 className="mt-1 text-xl font-bold text-foreground">{selected.name}</h2>
                 <p className="mt-2 text-2xl font-bold text-primary">{money(selected.price)}</p>
+                <BenefitsBadges price={selected.price} />
               </div>
               {selected.description && (
                 <div>
