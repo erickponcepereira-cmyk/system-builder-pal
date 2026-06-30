@@ -215,6 +215,9 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
           .update({ phone: whatsapp })
           .eq("id", profileId);
 
+        if (existingEmailMode && !authProfile) {
+          await supabase.auth.signOut().catch(() => {});
+        }
         setCreatedForExisting(true);
         toast.success("Cadastro de parceiro enviado para aprovação!");
         return;
