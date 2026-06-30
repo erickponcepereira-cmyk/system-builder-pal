@@ -287,6 +287,10 @@ function StudentFreebies() {
               </button>
             </div>
 
+            <StudentFreebieReservations refreshKey={reservationsRefresh} />
+
+
+
             {/* Indicadores de economia (topo) */}
             {(() => {
               const filteredPartner = partnerFreebies.filter((p) =>
