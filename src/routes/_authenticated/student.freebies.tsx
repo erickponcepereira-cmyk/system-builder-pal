@@ -439,15 +439,25 @@ function StudentFreebies() {
                                   >
                                     Ver empresa
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => generateCoupon(p)}
-                                    disabled={generating === p.id}
-                                    className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
-                                  >
-                                    {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                                    {isDiscount ? "Gerar cupom" : "Resgatar"}
-                                  </button>
+                                  {p.uses_scheduling && !isDiscount ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setBookingProduct(p)}
+                                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground"
+                                    >
+                                      <Clock className="h-3.5 w-3.5" /> Reservar horário
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => generateCoupon(p)}
+                                      disabled={generating === p.id}
+                                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                                    >
+                                      {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                                      {isDiscount ? "Gerar cupom" : "Resgatar"}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
