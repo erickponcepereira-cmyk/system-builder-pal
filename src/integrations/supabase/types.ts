@@ -9587,9 +9587,9 @@ export type Database = {
         | {
             Args: {
               _partner_product_id: string
-              _payment_method?: string
+              _payment_method: string
               _referred_by_student_id?: string
-              _student_id?: string
+              _student_id: string
             }
             Returns: string
           }
@@ -9611,6 +9611,15 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              _partner_product_id: string
+              _payment_method: string
+              _referred_by_student_id?: string
+              _student_id: string
+            }
+            Returns: string
+          }
       create_scheduled_professional_order:
         | {
             Args: {
@@ -9628,6 +9637,16 @@ export type Database = {
               _referred_by_student_id?: string
               _starts_at: string
               _student_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _payment_method: string
+              _professional_product_id: string
+              _referred_by_student_id?: string
+              _scheduled_for: string
+              _student_id: string
             }
             Returns: string
           }
