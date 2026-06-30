@@ -287,10 +287,70 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 )}
               </Field>
 
-              <PaidPricingEditor
-                product={editing}
-                onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
-              />
+              {/* Tipo: pago x benefício gratuito (cupom) */}
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
+                  <Gift className="h-3.5 w-3.5" /> Tipo de produto
+                </div>
+                <div className="flex rounded-lg bg-black/40 p-0.5">
+                  <button type="button" onClick={() => setEditing({ ...editing, kind: "paid" })}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${(editing.kind ?? "paid") === "paid" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                    Pago
+                  </button>
+                  <button type="button" onClick={() => setEditing({ ...editing, kind: "free" })}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${editing.kind === "free" ? "bg-emerald-500 text-black" : "text-white/60"}`}>
+                    Benefício gratuito (cupom)
+                  </button>
+                </div>
+                <p className="text-[10px] text-white/50">
+                  Benefícios gratuitos aparecem na aba <strong>Gratuitos</strong> do aluno com QR code para resgate.
+                </p>
+              </div>
+
+              {editing.kind === "free" ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3 space-y-3">
+                  <Field label="Tipo de resgate">
+                    <div className="flex rounded-lg bg-black/40 p-0.5">
+                      <button type="button" onClick={() => setEditing({ ...editing, redemption_mode: "free" })}
+                        className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${(editing.redemption_mode ?? "free") === "free" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                        100% Gratuito
+                      </button>
+                      <button type="button" onClick={() => setEditing({ ...editing, redemption_mode: "discount" })}
+                        className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${editing.redemption_mode === "discount" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                        Cupom de desconto
+                      </button>
+                    </div>
+                  </Field>
+
+                  {editing.redemption_mode === "discount" && (
+                    <Field label="Desconto (%)">
+                      <input type="number" min={1} max={100} value={editing.discount_percent ?? ""} onChange={e => setEditing({ ...editing, discount_percent: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" />
+                    </Field>
+                  )}
+
+                  <Field label="Valor estimado do benefício (R$)">
+                    <input type="number" step="0.01" min={0} value={editing.estimated_value ?? ""} onChange={e => setEditing({ ...editing, estimated_value: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Aparece como 'economia' para o aluno" />
+                  </Field>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Disponível a partir das (opcional)">
+                      <input type="time" value={editing.benefit_start_time ?? ""} onChange={e => setEditing({ ...editing, benefit_start_time: e.target.value || null })} className="field-input" />
+                    </Field>
+                    <Field label="Disponível até (opcional)">
+                      <input type="time" value={editing.benefit_end_time ?? ""} onChange={e => setEditing({ ...editing, benefit_end_time: e.target.value || null })} className="field-input" />
+                    </Field>
+                  </div>
+
+                  <Field label="Limite de uso por mês (opcional)">
+                    <input type="number" min={1} value={editing.monthly_redeem_limit ?? ""} onChange={e => setEditing({ ...editing, monthly_redeem_limit: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Deixe vazio para ilimitado" />
+                  </Field>
+                </div>
+              ) : (
+                <PaidPricingEditor
+                  product={editing}
+                  onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
+                />
+              )}
 
               <Field label="Estoque (opcional)">
                 <input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" />
@@ -304,53 +364,99 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               />
 
               <Field label="Instruções de resgate">
-                <textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Como o aluno usa o produto após pagar" />
+                <textarea value={editing.redemption_instructions || ""} onChange={e => setEditing({ ...editing, redemption_instructions: e.target.value })} rows={2} className="field-input" placeholder="Ex: Como o aluno usa o produto após pagar / resgatar" />
               </Field>
 
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
-                <label className="flex items-center gap-2 text-xs font-bold text-primary cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!editing.is_schedulable}
-                    onChange={(e) => setEditing({ ...editing, is_schedulable: e.target.checked })}
-                  />
-                  Produto agendável (consulta / atendimento)
-                </label>
-                {editing.is_schedulable && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Field label="Duração (min)">
-                      <input
-                        type="number"
-                        min={5}
-                        max={240}
-                        step={5}
-                        value={editing.default_duration_minutes ?? 30}
-                        onChange={(e) =>
-                          setEditing({ ...editing, default_duration_minutes: Number(e.target.value) || 30 })
-                        }
-                        className="field-input"
-                      />
-                    </Field>
-                    <Field label="Janela cancelar (h)">
-                      <input
-                        type="number"
-                        min={0}
-                        max={168}
-                        value={editing.cancellation_window_hours ?? 24}
-                        onChange={(e) =>
-                          setEditing({ ...editing, cancellation_window_hours: Number(e.target.value) || 24 })
-                        }
-                        className="field-input"
-                      />
-                    </Field>
+              {/* Disponibilidade (dias / recorrência / validade) — para qualquer produto */}
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                  <CalendarDays className="h-3.5 w-3.5 text-primary" /> Disponibilidade do produto
+                </div>
+
+                <Field label="Dias da semana liberados">
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAYS.map(d => {
+                      const selected = (editing.availability_weekdays || []).includes(d.v);
+                      return (
+                        <button key={d.v} type="button"
+                          onClick={() => {
+                            const cur = editing.availability_weekdays || [];
+                            const next = selected ? cur.filter(x => x !== d.v) : [...cur, d.v].sort((a, b) => a - b);
+                            setEditing({ ...editing, availability_weekdays: next });
+                          }}
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${selected ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/60 hover:text-white"}`}>
+                          {d.l}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-                {editing.is_schedulable && (
-                  <p className="text-[10px] text-white/50">
-                    Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
-                  </p>
-                )}
+                  <p className="mt-1 text-[10px] text-white/40">Vazio = todos os dias.</p>
+                </Field>
+
+                <Field label="Recorrência">
+                  <div className="flex rounded-lg bg-black/40 p-0.5">
+                    <button type="button" onClick={() => setEditing({ ...editing, availability_recurrence: "single" })}
+                      className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${editing.availability_recurrence === "single" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                      Uso único
+                    </button>
+                    <button type="button" onClick={() => setEditing({ ...editing, availability_recurrence: "weekly" })}
+                      className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${(editing.availability_recurrence ?? "weekly") === "weekly" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                      Toda semana
+                    </button>
+                  </div>
+                </Field>
+
+                <Field label="Validade após compra (dias)">
+                  <input type="number" min={1} value={editing.availability_validity_days ?? ""} onChange={e => setEditing({ ...editing, availability_validity_days: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 30 (quantos dias o produto fica disponível após a compra)" />
+                </Field>
               </div>
+
+              {editing.kind !== "free" && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-primary cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!editing.is_schedulable}
+                      onChange={(e) => setEditing({ ...editing, is_schedulable: e.target.checked })}
+                    />
+                    Produto agendável (consulta / atendimento)
+                  </label>
+                  {editing.is_schedulable && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Duração (min)">
+                        <input
+                          type="number"
+                          min={5}
+                          max={240}
+                          step={5}
+                          value={editing.default_duration_minutes ?? 30}
+                          onChange={(e) =>
+                            setEditing({ ...editing, default_duration_minutes: Number(e.target.value) || 30 })
+                          }
+                          className="field-input"
+                        />
+                      </Field>
+                      <Field label="Janela cancelar (h)">
+                        <input
+                          type="number"
+                          min={0}
+                          max={168}
+                          value={editing.cancellation_window_hours ?? 24}
+                          onChange={(e) =>
+                            setEditing({ ...editing, cancellation_window_hours: Number(e.target.value) || 24 })
+                          }
+                          className="field-input"
+                        />
+                      </Field>
+                    </div>
+                  )}
+                  {editing.is_schedulable && (
+                    <p className="text-[10px] text-white/50">
+                      Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
