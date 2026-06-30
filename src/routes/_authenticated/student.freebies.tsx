@@ -669,6 +669,13 @@ function StudentFreebies() {
       )}
 
       {coupon && <CouponModal coupon={coupon} onClose={() => setCoupon(null)} />}
+      {bookingProduct && (
+        <PartnerFreebieBookingModal
+          product={{ id: bookingProduct.id, name: bookingProduct.name, weekly_limit_per_student: bookingProduct.weekly_limit_per_student }}
+          onClose={() => setBookingProduct(null)}
+          onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
+        />
+      )}
     </div>
   );
 }
