@@ -86,6 +86,16 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     is_schedulable: false,
     default_duration_minutes: 30,
     cancellation_window_hours: 24,
+    kind: "paid",
+    redemption_mode: "free",
+    discount_percent: null,
+    estimated_value: null,
+    benefit_start_time: null,
+    benefit_end_time: null,
+    monthly_redeem_limit: null,
+    availability_weekdays: [],
+    availability_recurrence: "weekly",
+    availability_validity_days: null,
   });
 
   const upload = async (file: File) => {
@@ -101,24 +111,12 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
 
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
-    const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
-    const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
-    const b = mode === "receive"
-      ? computeFromReceive(editing.professional_net_amount || 0, pct)
-      : computeFromCharge(editing.price || 0, pct);
-    if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
-    if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
+    const isFree = editing.kind === "free";
 
     const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
-    const payload = {
+    let payload: Record<string, unknown> = {
       ...editing,
       coach_id: coachId,
-      price: b.gross,
-      professional_net_amount: b.partnerNet,
-      coach_commission_amount: b.coachCommission,
-      network_l1_amount: b.networkL1,
-      network_l2_amount: b.networkL2,
-      network_l3_amount: b.networkL3,
       status: "pending" as const,
       admin_notes: null,
       image_url: emptyToNull(editing.image_url) as string | null,
@@ -126,12 +124,45 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       redemption_instructions: emptyToNull(editing.redemption_instructions) as string | null,
       section_id: emptyToNull(editing.section_id) as string | null,
       category_id: emptyToNull(editing.category_id) as string | null,
+      benefit_start_time: emptyToNull(editing.benefit_start_time) as string | null,
+      benefit_end_time: emptyToNull(editing.benefit_end_time) as string | null,
+      availability_weekdays: editing.availability_weekdays || [],
     };
+
+    if (isFree) {
+      payload = {
+        ...payload,
+        price: 0,
+        professional_net_amount: 0,
+        coach_commission_amount: 0,
+        network_l1_amount: 0,
+        network_l2_amount: 0,
+        network_l3_amount: 0,
+        is_schedulable: false,
+      };
+    } else {
+      const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
+      const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
+      const b = mode === "receive"
+        ? computeFromReceive(editing.professional_net_amount || 0, pct)
+        : computeFromCharge(editing.price || 0, pct);
+      if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
+      if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
+      payload = {
+        ...payload,
+        price: b.gross,
+        professional_net_amount: b.partnerNet,
+        coach_commission_amount: b.coachCommission,
+        network_l1_amount: b.networkL1,
+        network_l2_amount: b.networkL2,
+        network_l3_amount: b.networkL3,
+      };
+    }
 
     try {
       if (editing.id) {
-        const { id, ...up } = payload;
-        const { error } = await supabase.from("professional_products" as never).update(up as never).eq("id" as never, id!);
+        const { id, ...up } = payload as { id?: string };
+        const { error } = await supabase.from("professional_products" as never).update(up as never).eq("id" as never, editing.id);
         if (error) return toast.error(error.message);
       } else {
         const { error } = await supabase.from("professional_products" as never).insert(payload as never);
@@ -144,6 +175,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     toast.success("Salvo. Aguardando aprovação do admin.");
     setEditing(null); load();
   };
+
 
   const remove = async (id: string) => {
     if (!confirm("Excluir produto?")) return;
