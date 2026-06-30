@@ -184,12 +184,23 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       const { data: userData } = await supabase.auth.getUser();
       let ppId: string | null = null;
       const buyerStudentId = mode === "reseller" ? resellerStudent!.id : ownStudentId;
+      let refStudent: string | null = null;
+      if (mode === "student") {
+        try {
+          const raw = sessionStorage.getItem("fitmind_referral");
+          const parsed = raw ? (JSON.parse(raw) as { referredByStudentId?: string | null }) : null;
+          if (parsed?.referredByStudentId && parsed.referredByStudentId !== buyerStudentId) {
+            refStudent = parsed.referredByStudentId;
+          }
+        } catch { /* ignore */ }
+      }
       if (selected.kind === "partner") {
         if (!buyerStudentId) throw new Error("Aluno não encontrado.");
         const { data, error } = await supabase.rpc("create_partner_company_order" as never, {
           _partner_product_id: selected.id,
           _student_id: buyerStudentId,
           _payment_method: method,
+          _referred_by_student_id: refStudent,
         } as never);
         if (error) throw new Error(error.message);
         ppId = data as unknown as string;
@@ -198,6 +209,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           _professional_product_id: selected.id,
           _starts_at: slot,
           _payment_method: method,
+          _referred_by_student_id: refStudent,
           ...(mode === "reseller" ? { _student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
@@ -206,6 +218,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         const { data, error } = await supabase.rpc("create_partner_product_order" as never, {
           _professional_product_id: selected.id,
           _payment_method: method,
+          _referred_by_student_id: refStudent,
           ...(mode === "reseller" ? { _buyer_student_id: buyerStudentId } : {}),
         } as never);
         if (error) throw new Error(error.message);
