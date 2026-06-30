@@ -132,6 +132,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       benefit_start_time: emptyToNull(editing.benefit_start_time) as string | null,
       benefit_end_time: emptyToNull(editing.benefit_end_time) as string | null,
       availability_weekdays: editing.availability_weekdays || [],
+      availability_hours: editing.availability_hours || {},
     };
 
     if (isFree) {
