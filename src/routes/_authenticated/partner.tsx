@@ -160,6 +160,7 @@ function PartnerPanel() {
   const baseTabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: "overview", label: "Início", icon: Building2 },
     { key: "products", label: "Produtos", icon: Package },
+    { key: "scanner", label: "Scanner", icon: QrCode },
     { key: "timeline", label: "Timeline", icon: ImageIcon },
     { key: "qrcode", label: "QR", icon: QrCode },
   ];
