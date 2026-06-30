@@ -118,9 +118,8 @@ export function StudentReferralModal({
       // Parceiros e profissionais: indicação automática.
       // Espelha exatamente o cálculo do RPC create_*_order (PIX como base do preview):
       //   coach_amt = (((price - feePix) - tax6) - sys5%) * coach_pct%
-      //   rede = round(coach_amt*0.03) + round(coach_amt*0.02) + round(coach_amt*0.01)
-      //   coach_after = coach_amt - rede
-      //   fitcoin = CEIL(coach_after * 50) / 100  (prioridade do aluno)
+      //   rede     = round(coach_amt*0.03) + round(coach_amt*0.02) + round(coach_amt*0.01)
+      //   fitcoin  = CEIL(coach_amt * 50) / 100  (prioridade do aluno na fração)
       const round2 = (n: number) => Math.round(n * 100) / 100;
       const addPartnerLike = (rows: any[], kind: "partner" | "professional") => {
         rows.forEach((p) => {
@@ -133,12 +132,9 @@ export function StudentReferralModal({
           const sys = round2(rem * 0.05);
           rem = round2(rem - sys);
           const coachAmt = round2(rem * (coachPct / 100));
-          const l1 = round2(coachAmt * 0.03);
-          const l2 = round2(coachAmt * 0.02);
-          const l3 = round2(coachAmt * 0.01);
-          const coachAfter = Math.max(0, round2(coachAmt - l1 - l2 - l3));
-          let fitcoin = Math.ceil(coachAfter * 50) / 100;
-          if (fitcoin > coachAfter) fitcoin = coachAfter;
+          let fitcoin = Math.ceil(coachAmt * 50) / 100;
+          if (fitcoin > coachAmt) fitcoin = coachAmt;
+
           out.push({
             id: p.id,
             kind,
