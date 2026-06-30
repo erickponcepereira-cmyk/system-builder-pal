@@ -61,6 +61,22 @@ type PartnerFreeProduct = {
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
 
+type ProfessionalFreeProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  redemption_instructions: string | null;
+  stock: number | null;
+  coach_id: string;
+  redemption_mode: "free" | "discount" | null;
+  discount_percent: number | null;
+  estimated_value: number | null;
+  benefit_start_time: string | null;
+  benefit_end_time: string | null;
+  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null } | null } | null;
+};
+
 function formatBenefitWindow(start?: string | null, end?: string | null) {
   const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
   const s = fmt(start);
