@@ -6508,9 +6508,81 @@ export type Database = {
           },
         ]
       }
+      professional_coupons: {
+        Row: {
+          created_at: string
+          discount_label: string | null
+          id: string
+          notes: string | null
+          product_name: string | null
+          professional_coach_id: string
+          professional_product_id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+          status: string
+          student_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          discount_label?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          professional_coach_id: string
+          professional_product_id: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          status?: string
+          student_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          discount_label?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          professional_coach_id?: string
+          professional_product_id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          status?: string
+          student_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_coupons_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_coupons_professional_product_id_fkey"
+            columns: ["professional_product_id"]
+            isOneToOne: false
+            referencedRelation: "professional_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_coupons_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_products: {
         Row: {
           admin_notes: string | null
+          availability_recurrence: string
+          availability_validity_days: number | null
+          availability_weekdays: number[]
+          benefit_end_time: string | null
+          benefit_start_time: string | null
           cancellation_window_hours: number
           category_id: string | null
           coach_commission_amount: number | null
@@ -6518,11 +6590,16 @@ export type Database = {
           coach_id: string
           created_at: string
           default_duration_minutes: number
+          deleted_at: string | null
           description: string | null
+          discount_percent: number | null
+          estimated_value: number | null
           id: string
           image_url: string | null
           is_active_by_professional: boolean
           is_schedulable: boolean
+          kind: string
+          monthly_redeem_limit: number | null
           name: string
           network_l1_amount: number | null
           network_l2_amount: number | null
@@ -6531,6 +6608,7 @@ export type Database = {
           price_input_mode: string
           professional_net_amount: number | null
           redemption_instructions: string | null
+          redemption_mode: string
           section_id: string | null
           status: string
           stock: number | null
@@ -6538,6 +6616,11 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          availability_recurrence?: string
+          availability_validity_days?: number | null
+          availability_weekdays?: number[]
+          benefit_end_time?: string | null
+          benefit_start_time?: string | null
           cancellation_window_hours?: number
           category_id?: string | null
           coach_commission_amount?: number | null
@@ -6545,11 +6628,16 @@ export type Database = {
           coach_id: string
           created_at?: string
           default_duration_minutes?: number
+          deleted_at?: string | null
           description?: string | null
+          discount_percent?: number | null
+          estimated_value?: number | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
           is_schedulable?: boolean
+          kind?: string
+          monthly_redeem_limit?: number | null
           name: string
           network_l1_amount?: number | null
           network_l2_amount?: number | null
@@ -6558,6 +6646,7 @@ export type Database = {
           price_input_mode?: string
           professional_net_amount?: number | null
           redemption_instructions?: string | null
+          redemption_mode?: string
           section_id?: string | null
           status?: string
           stock?: number | null
@@ -6565,6 +6654,11 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          availability_recurrence?: string
+          availability_validity_days?: number | null
+          availability_weekdays?: number[]
+          benefit_end_time?: string | null
+          benefit_start_time?: string | null
           cancellation_window_hours?: number
           category_id?: string | null
           coach_commission_amount?: number | null
@@ -6572,11 +6666,16 @@ export type Database = {
           coach_id?: string
           created_at?: string
           default_duration_minutes?: number
+          deleted_at?: string | null
           description?: string | null
+          discount_percent?: number | null
+          estimated_value?: number | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
           is_schedulable?: boolean
+          kind?: string
+          monthly_redeem_limit?: number | null
           name?: string
           network_l1_amount?: number | null
           network_l2_amount?: number | null
@@ -6585,6 +6684,7 @@ export type Database = {
           price_input_mode?: string
           professional_net_amount?: number | null
           redemption_instructions?: string | null
+          redemption_mode?: string
           section_id?: string | null
           status?: string
           stock?: number | null
@@ -9979,6 +10079,13 @@ export type Database = {
       }
       student_generate_partner_coupon: {
         Args: { p_partner_product_id: string }
+        Returns: {
+          coupon_id: string
+          token: string
+        }[]
+      }
+      student_generate_professional_coupon: {
+        Args: { p_professional_product_id: string }
         Returns: {
           coupon_id: string
           token: string

@@ -61,6 +61,22 @@ type PartnerFreeProduct = {
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
 };
 
+type ProfessionalFreeProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  redemption_instructions: string | null;
+  stock: number | null;
+  coach_id: string;
+  redemption_mode: "free" | "discount" | null;
+  discount_percent: number | null;
+  estimated_value: number | null;
+  benefit_start_time: string | null;
+  benefit_end_time: string | null;
+  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null } | null } | null;
+};
+
 function formatBenefitWindow(start?: string | null, end?: string | null) {
   const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
   const s = fmt(start);
@@ -76,6 +92,7 @@ function StudentFreebies() {
   const [items, setItems] = useState<Freebie[]>([]);
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [professionalFreebies, setProfessionalFreebies] = useState<ProfessionalFreeProduct[]>([]);
   const [savedTotal, setSavedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
@@ -90,6 +107,16 @@ function StudentFreebies() {
   const generateCoupon = async (p: PartnerFreeProduct) => {
     setGenerating(p.id);
     const { data, error } = await supabase.rpc("student_generate_partner_coupon" as never, { p_partner_product_id: p.id } as never);
+    setGenerating(null);
+    if (error) { toast.error(error.message); return; }
+    const rows = data as unknown as { coupon_id: string; token: string }[];
+    if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
+  };
+
+  const generateProCoupon = async (p: ProfessionalFreeProduct) => {
+    setGenerating(p.id);
+    const { data, error } = await supabase.rpc("student_generate_professional_coupon" as never, { p_professional_product_id: p.id } as never);
     setGenerating(null);
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
@@ -123,7 +150,7 @@ function StudentFreebies() {
       }
     }
 
-    const [a, b, c] = await Promise.all([
+    const [a, b, c, d] = await Promise.all([
       supabase.from("freebies" as never).select("*").eq("is_active" as never, true).order("sort_order"),
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
@@ -134,11 +161,19 @@ function StudentFreebies() {
         .eq("is_active_by_partner" as never, true as never)
         .is("deleted_at" as never, null as never)
         .order("created_at" as never, { ascending: false }),
+      supabase
+        .from("professional_products" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,coach_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,coaches!professional_products_coach_id_fkey(specialty_key,profiles!coaches_profile_id_fkey(name,avatar_url))" as never)
+        .eq("kind" as never, "free" as never)
+        .eq("status" as never, "approved" as never)
+        .eq("is_active_by_professional" as never, true as never)
+        .order("created_at" as never, { ascending: false }),
     ]);
     setItems((a.data as unknown as Freebie[]) || []);
     setMine((b.data as unknown as Redemption[]) || []);
     const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
     setPartnerFreebies(pf);
+    setProfessionalFreebies((d.data as unknown as ProfessionalFreeProduct[]) || []);
 
     // Total economizado: cupons já resgatados (status='redeemed') deste aluno
     const sIdLocal = (await supabase.auth.getUser()).data.user
@@ -282,8 +317,8 @@ function StudentFreebies() {
 
             {/* Page mode selector: Gratuitos | Clube de Descontos */}
             {(() => {
-              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + items.length;
-              const discountCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length;
+              const freeCount = partnerFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + professionalFreebies.filter((p) => (p.redemption_mode ?? "free") === "free").length + items.length;
+              const discountCount = partnerFreebies.filter((p) => p.redemption_mode === "discount").length + professionalFreebies.filter((p) => p.redemption_mode === "discount").length;
               return (
                 <div className="mb-5 grid grid-cols-2 gap-2 p-1.5 rounded-full bg-[#141414] border border-white/10">
                   <button
@@ -418,6 +453,70 @@ function StudentFreebies() {
                 </div>
               );
             })()}
+
+            {(() => {
+              const filteredPro = professionalFreebies.filter((p) =>
+                pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
+              );
+              if (filteredPro.length === 0) return null;
+              return (
+                <div className="mb-6 space-y-3">
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Gift className="h-4 w-4 text-primary" />
+                    {pageMode === "discount" ? "Descontos de profissionais" : "Benefícios de profissionais"}
+                  </h2>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {filteredPro.map((p) => {
+                      const isDiscount = p.redemption_mode === "discount";
+                      const proName = p.coaches?.profiles?.name || "Profissional";
+                      return (
+                        <div key={p.id} className="text-left rounded-2xl overflow-hidden border border-white/5 block relative" style={{ backgroundColor: "#1A1A1A" }}>
+                          {isDiscount && p.discount_percent ? (
+                            <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground text-sm font-extrabold px-3 py-1.5 rounded-lg shadow-lg">
+                              {p.discount_percent}% OFF
+                            </div>
+                          ) : null}
+                          {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                          <div className="p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-bold text-white">{p.name}</h3>
+                              {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>}
+                            </div>
+                            <p className="mt-1 text-[11px] text-white/40">por {proName}</p>
+                            {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
+                            {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
+                              <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
+                                {isDiscount ? (
+                                  <p className="text-[11px] font-bold text-emerald-300">Você economiza R$ {(p.estimated_value * (Number(p.discount_percent || 0) / 100)).toFixed(2)}</p>
+                                ) : (
+                                  <p className="text-[11px] font-bold text-emerald-300">Você economiza R$ {Number(p.estimated_value).toFixed(2)}</p>
+                                )}
+                              </div>
+                            )}
+                            {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                              <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                                <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
+                              </p>
+                            )}
+                            {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
+                            <button
+                              type="button"
+                              onClick={() => generateProCoupon(p)}
+                              disabled={generating === p.id}
+                              className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                            >
+                              {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                              {isDiscount ? "Gerar cupom" : "Resgatar"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
 
             {pageMode === "free" && items.length > 0 && (() => {
               const byCat = new Map<string, Freebie[]>();
