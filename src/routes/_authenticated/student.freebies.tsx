@@ -107,6 +107,8 @@ function StudentFreebies() {
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
   const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
+  const [reservationsRefresh, setReservationsRefresh] = useState(0);
 
   const generateCoupon = async (p: PartnerFreeProduct) => {
     setGenerating(p.id);
