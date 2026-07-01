@@ -239,7 +239,9 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
 
     const isProfessional = input.coach.isProfessional ?? false;
     const isAlreadyCoach = input.coach.alreadyCoach ?? false;
-    const coachApprovedAt = isProfessional ? new Date().toISOString() : null;
+    // Profissional novo NÃO é auto-aprovado: passa pelo mesmo fluxo (pagamento da anuidade + liberação do admin).
+    // Só ganha aprovação imediata quem marcou "já sou coach/profissional" (upgrade de conta existente com ativação prévia).
+    const coachApprovedAt = isAlreadyCoach && isProfessional ? new Date().toISOString() : null;
     const nowIso = new Date().toISOString();
     const activationPatch = isAlreadyCoach
       ? {
