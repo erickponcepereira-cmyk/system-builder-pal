@@ -284,7 +284,7 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
         // Profissional já nasce com coach liberado; coach comum segue pendente até concluir o fluxo.
         await supabaseAdmin
           .from("profiles")
-          .update({ status: isProfessional ? "active" : "pending" })
+          .update({ status: coachApprovedAt ? "active" : "pending" })
           .eq("id", profile.id);
 
         // Cria registro de aluno para o coach (acesso ao app do aluno mesmo pendente).
