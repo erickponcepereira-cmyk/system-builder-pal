@@ -173,10 +173,10 @@ export const listProductDownloadsForAdmin = createServerFn({ method: "POST" })
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("role").eq("user_id", context.userId).maybeSingle();
     if ((profile as any)?.role !== "admin") throw new Error("Somente admin");
-    const { data } = await (supabaseAdmin as any)
+    const { data: rows } = await (supabaseAdmin as any)
       .from("product_downloads")
       .select("id, product_id, name, mime_type, size_bytes, sort_order")
       .eq("product_id", data.productId)
       .order("sort_order");
-    return ((data as any[]) || []).map((r) => ({ ...r, product_name: null }));
+    return ((rows as any[]) || []).map((r) => ({ ...r, product_name: null }));
   });
