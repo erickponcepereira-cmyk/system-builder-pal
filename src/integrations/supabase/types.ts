@@ -6220,6 +6220,7 @@ export type Database = {
           tax_percentage: number | null
           type: Database["public"]["Enums"]["product_type"] | null
           updated_at: string | null
+          visibility_audiences: string[] | null
         }
         Insert: {
           allow_master_coach_sale?: boolean
@@ -6304,6 +6305,7 @@ export type Database = {
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
           updated_at?: string | null
+          visibility_audiences?: string[] | null
         }
         Update: {
           allow_master_coach_sale?: boolean
@@ -6388,6 +6390,7 @@ export type Database = {
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
           updated_at?: string | null
+          visibility_audiences?: string[] | null
         }
         Relationships: [
           {

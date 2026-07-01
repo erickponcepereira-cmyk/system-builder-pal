@@ -142,7 +142,7 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height,target_audience" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
     const { data: catRows } = await supabase.from("store_categories" as never).select("id,section_id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never);
@@ -250,7 +250,11 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
         kind: "store" as const, tag: p.is_herbalife ? "Herbalife" : undefined, stock: p.stock,
         imageUrl: p.image_url,
       }))),
-      ...(((itemsRes.data as unknown as any[]) || []).map((it) => ({
+      ...(((itemsRes.data as unknown as any[]) || []).filter((it) => {
+        const aud: string[] | null = it.visibility_audiences ?? null;
+        if (!aud || aud.length === 0) return true;
+        return aud.includes(coachMode ? "coach" : "student");
+      }).map((it) => ({
         id: `item-${it.id}`, sourceId: it.id, title: it.name, subtitle: it.short_description, description: it.description,
         price: Number(it.price || 0), originalPrice: it.original_price ? Number(it.original_price) : null,
         category: sectionName(it.section_id), kind: "item" as const,

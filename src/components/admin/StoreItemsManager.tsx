@@ -5,6 +5,14 @@ import { ProductFinancialEditor } from "./ProductFinancialEditor";
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
+type Audience = "student" | "coach" | "partner" | "professional";
+const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
+  { value: "student", label: "Alunos" },
+  { value: "coach", label: "Coaches" },
+  { value: "partner", label: "Parceiros" },
+  { value: "professional", label: "Profissionais" },
+];
+
 interface Item {
   id: string;
   section_id: string | null;
@@ -23,6 +31,7 @@ interface Item {
   has_challenge_access?: boolean;
   challenge_tokens_amount?: number;
   sort_order: number;
+  visibility_audiences?: Audience[] | null;
 }
 
 function emptyItem(): Partial<Item> {
@@ -30,6 +39,7 @@ function emptyItem(): Partial<Item> {
     kind: "physical", name: "", description: "", short_description: "",
     price: 0, original_price: null, stock: null, sku: "",
     is_featured: false, is_active: true, sort_order: 0,
+    visibility_audiences: null,
   };
 }
 
@@ -53,7 +63,7 @@ export function StoreItemsManager() {
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order")
+        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
@@ -113,6 +123,7 @@ export function StoreItemsManager() {
         challenge_tokens_amount: editing.has_challenge_access ? Math.max(0, Number(editing.challenge_tokens_amount ?? 1)) : 0,
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
+        visibility_audiences: (editing.visibility_audiences && editing.visibility_audiences.length > 0) ? editing.visibility_audiences : null,
       };
       if (editing.id) {
         const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
@@ -376,7 +387,38 @@ export function StoreItemsManager() {
                   <span className="text-[11px] text-white/50">Quantos tickets o aluno recebe ao comprar este produto.</span>
                 </div>
               )}
+
+              <div className="md:col-span-2 rounded-lg border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-white/80">Quem pode ver este produto</span>
+                  <span className="text-[10px] text-white/40">Nada marcado = visível para todos</span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {AUDIENCE_OPTIONS.map((opt) => {
+                    const current = editing.visibility_audiences || [];
+                    const checked = current.includes(opt.value);
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2 text-sm text-white/80">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const set = new Set(current);
+                            if (e.target.checked) set.add(opt.value); else set.delete(opt.value);
+                            setEditing({ ...editing, visibility_audiences: Array.from(set) as Audience[] });
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[10px] text-white/40">
+                  Ex.: marque apenas <strong>Coaches</strong> para produtos que o coach vende diretamente ao aluno via link — o produto não aparecerá na loja do aluno, mas as comissões continuam sendo distribuídas normalmente.
+                </p>
+              </div>
             </div>
+
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
