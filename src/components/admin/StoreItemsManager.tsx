@@ -417,8 +417,12 @@ export function StoreItemsManager() {
                 <p className="mt-2 text-[10px] text-white/40">
                   Ex.: marque apenas <strong>Coaches</strong> para produtos que o coach vende diretamente ao aluno via link — o produto não aparecerá na loja do aluno, mas as comissões continuam sendo distribuídas normalmente.
                 </p>
-              </div>
             </div>
+
+            {editing.id && (
+              <ProductDownloadsManager productId={editing.id} />
+            )}
+
 
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
