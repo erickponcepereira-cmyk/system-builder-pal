@@ -333,7 +333,7 @@ export function WalletTab() {
         <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-sm font-bold text-white">Missão do mês</h3>
+              <h3 className="text-sm font-bold text-white">Meta de pontos do mês</h3>
               <p className="text-[11px] text-white/50">
                 {new Date(split.unlock.monthStart).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" })} · {split.unlock.multiplierTier}
               </p>
@@ -345,21 +345,19 @@ export function WalletTab() {
 
           {showRules && (
             <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-[11px] text-white/70 space-y-1">
-              <p className="font-bold text-white">Por que essa missão existe?</p>
-              <p>O FitChain não é uma pirâmide: é uma empresa que <strong>comissiona e gratifica produção</strong>. Para receber as comissões da sua rede, você precisa também produzir um mínimo no mês.</p>
+              <p className="font-bold text-white">Como funciona a liberação da rede</p>
+              <p>Cada venda gera pontos automaticamente (mesmo sistema que conta para viagem, jantar e prêmios). Para liberar as comissões da sua rede no mês, você precisa atingir a meta de pontos correspondente à sua patente na <strong>Ordem dos Construtores</strong>:</p>
               <ul className="list-disc pl-4 space-y-0.5">
-                <li>Período: do dia 01 até o último dia do mês.</li>
-                <li>Basta atingir <strong>uma das metas</strong> abaixo para liberar TODA a comissão da rede do mês.</li>
-                <li>Patente 1-3: meta base · Patente 4-7: meta dobrada · Patente 8-12: meta quadruplicada.</li>
-                <li>Sem atingir, a comissão da rede fica bloqueada até o próximo mês.</li>
+                <li>Nível 1 a 9 → <strong>50 pontos</strong></li>
+                <li>Nível 10 a 14 → <strong>100 pontos</strong></li>
+                <li>Nível 15 a 18 → <strong>150 pontos</strong></li>
+                <li>Nível 19 a 21 → <strong>100 pontos</strong></li>
               </ul>
+              <p>Os pontos são zerados todo dia 1º às 3h. Sem atingir a meta, as comissões da rede ficam bloqueadas até o próximo mês.</p>
             </div>
           )}
 
           <div className="space-y-2">
-            {split.unlock.goals.length === 0 && (
-              <p className="text-xs text-white/40">Nenhuma meta configurada pelo admin.</p>
-            )}
             {split.unlock.goals.map((g) => {
               const pct = Math.min(100, Math.round((g.current / Math.max(1, g.required_scaled)) * 100));
               const done = g.completed || split.unlock.anyCompleted;
@@ -371,7 +369,7 @@ export function WalletTab() {
                       <span className="text-xs font-medium text-white">{g.label}</span>
                     </div>
                     <span className={`text-[11px] font-bold ${done ? "text-success" : "text-white/60"}`}>
-                      {done ? "✓ Concluído" : `${g.current}/${g.required_scaled}`}
+                      {done ? "✓ Concluído" : `${g.current}/${g.required_scaled} pts`}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-white/10 overflow-hidden">
@@ -383,6 +381,9 @@ export function WalletTab() {
                       }}
                     />
                   </div>
+                  {!done && (
+                    <p className="mt-1.5 text-[10px] text-white/40">Faltam <strong className="text-white/70">{g.missing} pts</strong> para liberar a rede este mês.</p>
+                  )}
                 </div>
               );
             })}
@@ -390,7 +391,7 @@ export function WalletTab() {
 
           {split.unlock.anyCompleted && (
             <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-white">
-              🎉 <strong>Parabéns!</strong> Você liberou a comissão da rede deste mês.
+              🎉 <strong>Parabéns!</strong> Você bateu a meta de pontos e liberou a comissão da rede deste mês.
             </div>
           )}
         </div>
