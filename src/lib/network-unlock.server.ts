@@ -164,111 +164,49 @@ export async function computeMonthlySnapshot(profileId: string, year: number, mo
   if (coachId) {
     try { patentLevel = await computePatentLevelForCoach(coachId); } catch { /* default 1 */ }
   }
-  const { mult, tier } = multiplierForLevel(patentLevel);
 
-  const salesByType = new Map<string, number>();
-  const salesByProduct = new Map<string, number>();
-  let totalSales = 0;
+  // Soma de pontos do mês (mesmo motor usado para prêmios/viagem).
+  let totalPoints = 0;
   if (coachId) {
-    const { data: studs } = await supabaseAdmin
-      .from("students").select("id").eq("coach_id", coachId);
-    const studentIds = ((studs as { id: string }[] | null) || []).map((s) => s.id);
-    if (studentIds.length > 0) {
-      const { data: txs } = await supabaseAdmin
-        .from("transactions").select("id, product_id, paid_at, status")
-        .in("student_id", studentIds).eq("status", "paid")
-        .not("paid_at", "is", null).gte("paid_at", startIso).lt("paid_at", endIso);
-      const txRows = (txs as { id: string; product_id: string }[] | null) || [];
-      const productIds = Array.from(new Set(txRows.map((t) => t.product_id).filter(Boolean)));
-      const typeByProduct = new Map<string, string>();
-      if (productIds.length > 0) {
-        const { data: prods } = await supabaseAdmin
-          .from("products").select("id,type").in("id", productIds);
-        ((prods as { id: string; type: string }[] | null) || []).forEach((p) => {
-          typeByProduct.set(p.id, p.type);
-        });
-      }
-      txRows.forEach((t) => {
-        const tp = typeByProduct.get(t.product_id);
-        if (tp) salesByType.set(tp, (salesByType.get(tp) || 0) + 1);
-        if (t.product_id) salesByProduct.set(t.product_id, (salesByProduct.get(t.product_id) || 0) + 1);
-        totalSales += 1;
-      });
-    }
-
-    const { data: coachProfile } = await supabaseAdmin
-      .from("coaches")
-      .select("profile_id")
-      .eq("id", coachId)
-      .maybeSingle();
-    const profileId = (coachProfile as { profile_id?: string } | null)?.profile_id;
-    const { data: partnerRows } = profileId
-      ? await supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, profileId as never)
-      : { data: [] as unknown };
-    const partnerIds = (((partnerRows as unknown as Array<{ id: string }>) || []).map((p) => p.id));
-    const partnerOrderIds = new Set<string>();
-    const loadPartnerOrders = async (column: "selling_coach_id" | "professional_coach_id" | "partner_id", values: string[]) => {
-      if (!values.length) return;
-      const { data: rows } = await supabaseAdmin
-        .from("partner_product_orders" as never)
-        .select("id" as never)
-        .in(column as never, values as never)
-        .eq("status" as never, "paid" as never)
-        .gte("created_at" as never, startIso as never)
-        .lt("created_at" as never, endIso as never);
-      ((rows as unknown as Array<{ id: string }>) || []).forEach((o) => partnerOrderIds.add(o.id));
-    };
-    await Promise.all([
-      loadPartnerOrders("selling_coach_id", [coachId]),
-      loadPartnerOrders("professional_coach_id", [coachId]),
-      loadPartnerOrders("partner_id", partnerIds),
-    ]);
-    totalSales += partnerOrderIds.size;
+    const { data: pts } = await supabaseAdmin
+      .from("coach_points_log")
+      .select("points,created_at")
+      .eq("coach_id", coachId)
+      .gte("created_at", startIso)
+      .lt("created_at", endIso);
+    ((pts as Array<{ points: number }> | null) || []).forEach((r) => {
+      totalPoints += Number(r.points) || 0;
+    });
   }
 
-  const { data: rules } = await supabaseAdmin
-    .from("network_unlock_rules")
-    .select("id,label,product_type,required_sales,sort_order,product_ids,patent_levels")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-  type RuleRow = { id: string; label: string; product_type: string | null; required_sales: number; sort_order: number; product_ids: string[] | null; patent_levels: number[] | null };
-  const allRules = (rules as RuleRow[] | null) || [];
-  const applicableRules = allRules.filter((r) => {
-    const lvls = r.patent_levels || [];
-    return lvls.length === 0 || lvls.includes(patentLevel);
-  });
-  const goals: SnapshotGoal[] = applicableRules.map((r) => {
-    const required_scaled = Number(r.required_sales) * mult;
-    const pids = r.product_ids || [];
-    let current: number;
-    if (pids.length > 0) {
-      current = pids.reduce((acc, id) => acc + (salesByProduct.get(id) || 0), 0);
-    } else {
-      current = r.product_type === null ? totalSales : (salesByType.get(r.product_type) || 0);
-    }
-    const completed = current >= required_scaled;
-    return {
-      id: r.id,
-      label: r.label,
-      product_type: r.product_type,
-      product_ids: pids,
-      patent_levels: r.patent_levels || [],
-      required_base: Number(r.required_sales),
-      required_scaled,
-      current,
-      completed,
-      missing: Math.max(0, required_scaled - current),
-      sort_order: r.sort_order,
-    };
-  });
-  const anyCompleted = goals.length === 0 ? true : goals.some((g) => g.completed);
+  const { required, tier } = pointsRequiredForLevel(patentLevel);
+  const missing = Math.max(0, required - totalPoints);
+  const completed = totalPoints >= required;
+
+  const goals: SnapshotGoal[] = [{
+    id: `points-${patentLevel}`,
+    label: `Meta de pontos — ${required} pts`,
+    product_type: null,
+    product_ids: [],
+    patent_levels: [patentLevel],
+    required_base: required,
+    required_scaled: required,
+    current: totalPoints,
+    completed,
+    missing,
+    sort_order: 0,
+  }];
 
   return {
     profileId,
     coachId,
     year, month,
-    patentLevel, multiplier: mult, multiplierTier: tier,
-    totalSales, goals, anyCompleted,
+    patentLevel,
+    multiplier: 1,
+    multiplierTier: tier,
+    totalSales: totalPoints, // guardamos pontos em total_sales para reaproveitar histórico
+    goals,
+    anyCompleted: completed,
     monthStart: startIso, monthEnd: endIso,
   };
 }
