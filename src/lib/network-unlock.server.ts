@@ -30,9 +30,29 @@ export type MonthlySnapshot = {
 };
 
 export function multiplierForLevel(level: number): { mult: number; tier: string } {
+  // Mantida por compatibilidade — não é mais usada no cálculo da liberação.
   if (level >= 8) return { mult: 4, tier: "Patente 8-12 (4x)" };
   if (level >= 4) return { mult: 2, tier: "Patente 4-7 (2x)" };
   return { mult: 1, tier: "Patente 1-3 (base)" };
+}
+
+/**
+ * Pontos mensais exigidos para liberar as comissões da rede,
+ * de acordo com a patente atual do coach (Ordem dos Construtores).
+ *   Nível 1–9   → 50 pts
+ *   Nível 10–14 → 100 pts
+ *   Nível 15–18 → 150 pts
+ *   Nível 19–21 → 100 pts
+ * Cada venda já credita pontos em `coach_points_log` (mesmo motor
+ * usado para viagem/jantar). Os pontos "reiniciam" naturalmente pois
+ * são contados por janela mensal (mês do calendário UTC).
+ */
+export function pointsRequiredForLevel(level: number): { required: number; tier: string } {
+  const lvl = Math.max(1, Number(level) || 1);
+  if (lvl >= 19) return { required: 100, tier: "Nível 19-21 · 100 pts/mês" };
+  if (lvl >= 15) return { required: 150, tier: "Nível 15-18 · 150 pts/mês" };
+  if (lvl >= 10) return { required: 100, tier: "Nível 10-14 · 100 pts/mês" };
+  return { required: 50, tier: "Nível 1-9 · 50 pts/mês" };
 }
 
 export function monthBounds(year: number, month: number): { start: Date; end: Date } {
