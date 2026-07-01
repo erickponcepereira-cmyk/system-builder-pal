@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
+import { ProductDownloadsManager } from "./ProductDownloadsManager";
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
