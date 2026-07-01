@@ -387,7 +387,38 @@ export function StoreItemsManager() {
                   <span className="text-[11px] text-white/50">Quantos tickets o aluno recebe ao comprar este produto.</span>
                 </div>
               )}
+
+              <div className="md:col-span-2 rounded-lg border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-white/80">Quem pode ver este produto</span>
+                  <span className="text-[10px] text-white/40">Nada marcado = visível para todos</span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {AUDIENCE_OPTIONS.map((opt) => {
+                    const current = editing.visibility_audiences || [];
+                    const checked = current.includes(opt.value);
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2 text-sm text-white/80">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const set = new Set(current);
+                            if (e.target.checked) set.add(opt.value); else set.delete(opt.value);
+                            setEditing({ ...editing, visibility_audiences: Array.from(set) as Audience[] });
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[10px] text-white/40">
+                  Ex.: marque apenas <strong>Coaches</strong> para produtos que o coach vende diretamente ao aluno via link — o produto não aparecerá na loja do aluno, mas as comissões continuam sendo distribuídas normalmente.
+                </p>
+              </div>
             </div>
+
 
             <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
               <button onClick={() => setEditing(null)} className="px-4 py-2 text-sm text-white/60 hover:text-white">Cancelar</button>
