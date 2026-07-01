@@ -418,10 +418,12 @@ export function StoreItemsManager() {
                   Ex.: marque apenas <strong>Coaches</strong> para produtos que o coach vende diretamente ao aluno via link — o produto não aparecerá na loja do aluno, mas as comissões continuam sendo distribuídas normalmente.
                 </p>
             </div>
+            </div>
 
             {editing.id && (
               <ProductDownloadsManager productId={editing.id} />
             )}
+
 
 
 
