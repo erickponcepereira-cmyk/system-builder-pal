@@ -31,14 +31,18 @@ function StudentComprasPage() {
           <Link to="/student" className="rounded-lg bg-white/5 p-2 text-white/70 hover:bg-white/10">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="flex items-center gap-2 text-base font-bold text-white">
               <ShoppingBag className="h-4 w-4" /> Minhas compras
             </h1>
             <p className="text-[11px] text-white/50">Histórico unificado: loja FitMind, parceiros e profissionais.</p>
           </div>
+          <Link to="/student/downloads" className="rounded-lg bg-primary/20 border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/30">
+            Meus downloads
+          </Link>
         </div>
       </header>
+
 
       <main className="mx-auto max-w-3xl px-4 py-5">
         {loading ? (
