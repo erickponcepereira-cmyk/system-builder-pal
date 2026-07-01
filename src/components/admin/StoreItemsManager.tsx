@@ -5,6 +5,14 @@ import { ProductFinancialEditor } from "./ProductFinancialEditor";
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
+type Audience = "student" | "coach" | "partner" | "professional";
+const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
+  { value: "student", label: "Alunos" },
+  { value: "coach", label: "Coaches" },
+  { value: "partner", label: "Parceiros" },
+  { value: "professional", label: "Profissionais" },
+];
+
 interface Item {
   id: string;
   section_id: string | null;
@@ -23,6 +31,7 @@ interface Item {
   has_challenge_access?: boolean;
   challenge_tokens_amount?: number;
   sort_order: number;
+  visibility_audiences?: Audience[] | null;
 }
 
 function emptyItem(): Partial<Item> {
@@ -30,6 +39,7 @@ function emptyItem(): Partial<Item> {
     kind: "physical", name: "", description: "", short_description: "",
     price: 0, original_price: null, stock: null, sku: "",
     is_featured: false, is_active: true, sort_order: 0,
+    visibility_audiences: null,
   };
 }
 
