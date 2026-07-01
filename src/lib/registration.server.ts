@@ -274,7 +274,7 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
           council_number: clean(input.coach.councilNumber),
           specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
           approved_at: coachApprovedAt,
-          onboarding_stage: isProfessional ? "released" : "awaiting_payment",
+          onboarding_stage: coachApprovedAt ? "released" : "awaiting_payment",
           ...activationPatch,
         },
         { onConflict: "profile_id" }
