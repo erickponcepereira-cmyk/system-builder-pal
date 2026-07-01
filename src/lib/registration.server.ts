@@ -239,7 +239,9 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
 
     const isProfessional = input.coach.isProfessional ?? false;
     const isAlreadyCoach = input.coach.alreadyCoach ?? false;
-    const coachApprovedAt = isProfessional ? new Date().toISOString() : null;
+    // Profissional novo NÃO é auto-aprovado: passa pelo mesmo fluxo (pagamento da anuidade + liberação do admin).
+    // Só ganha aprovação imediata quem marcou "já sou coach/profissional" (upgrade de conta existente com ativação prévia).
+    const coachApprovedAt = isAlreadyCoach && isProfessional ? new Date().toISOString() : null;
     const nowIso = new Date().toISOString();
     const activationPatch = isAlreadyCoach
       ? {
@@ -272,7 +274,7 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
           council_number: clean(input.coach.councilNumber),
           specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
           approved_at: coachApprovedAt,
-          onboarding_stage: isProfessional ? "released" : "awaiting_payment",
+          onboarding_stage: coachApprovedAt ? "released" : "awaiting_payment",
           ...activationPatch,
         },
         { onConflict: "profile_id" }
@@ -282,7 +284,7 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
         // Profissional já nasce com coach liberado; coach comum segue pendente até concluir o fluxo.
         await supabaseAdmin
           .from("profiles")
-          .update({ status: isProfessional ? "active" : "pending" })
+          .update({ status: coachApprovedAt ? "active" : "pending" })
           .eq("id", profile.id);
 
         // Cria registro de aluno para o coach (acesso ao app do aluno mesmo pendente).
