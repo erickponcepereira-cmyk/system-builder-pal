@@ -123,6 +123,7 @@ export function StoreItemsManager() {
         challenge_tokens_amount: editing.has_challenge_access ? Math.max(0, Number(editing.challenge_tokens_amount ?? 1)) : 0,
         sort_order: Number(editing.sort_order) || 0,
         status: editing.is_active === false ? "inactive" : "active",
+        visibility_audiences: (editing.visibility_audiences && editing.visibility_audiences.length > 0) ? editing.visibility_audiences : null,
       };
       if (editing.id) {
         const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
