@@ -160,6 +160,60 @@ export function StoreItemsManager() {
     load();
   };
 
+  const duplicate = async (it: Item) => {
+    if (!confirm(`Duplicar "${it.name}"? Uma cópia inativa será criada na mesma seção e categoria, com os mesmos dados básicos e financeiros. Pagamentos, vendas e pontos NÃO serão duplicados.`)) return;
+    try {
+      // 1) Buscar produto completo
+      const { data: full, error: fErr } = await supabase.from("products").select("*").eq("id", it.id).maybeSingle();
+      if (fErr) throw fErr;
+      if (!full) throw new Error("Produto original não encontrado");
+      const src = full as any;
+      const { id: _oldId, created_at: _c, updated_at: _u, ...rest } = src;
+      const insertPayload = {
+        ...rest,
+        name: `${src.name} (cópia)`,
+        sku: src.sku ? `${src.sku}-COPIA` : null,
+        is_active: false,
+        is_featured: false,
+        status: "inactive",
+      };
+      const { data: created, error: iErr } = await supabase
+        .from("products")
+        .insert(insertPayload as any)
+        .select("id")
+        .single();
+      if (iErr) throw iErr;
+      const newId = (created as any).id as string;
+
+      // 2) Duplicar slots financeiros
+      const { data: slots } = await supabase.from("product_value_slots").select("*").eq("product_id", it.id);
+      if (slots && slots.length > 0) {
+        const rows = (slots as any[]).map(({ id, created_at, updated_at, ...r }) => ({ ...r, product_id: newId }));
+        const { error: sErr } = await supabase.from("product_value_slots").insert(rows as any);
+        if (sErr) throw sErr;
+      }
+
+      // 3) Regras de indicação
+      const { data: refRules } = await supabase.from("product_referral_rules").select("*").eq("product_id", it.id);
+      if (refRules && refRules.length > 0) {
+        const rows = (refRules as any[]).map(({ id, created_at, updated_at, ...r }) => ({ ...r, product_id: newId }));
+        await supabase.from("product_referral_rules").insert(rows as any);
+      }
+
+      // 4) Requisitos de profissional
+      const { data: profReq } = await supabase.from("product_professional_requirements").select("*").eq("product_id", it.id);
+      if (profReq && profReq.length > 0) {
+        const rows = (profReq as any[]).map(({ id, created_at, ...r }) => ({ ...r, product_id: newId }));
+        await supabase.from("product_professional_requirements").insert(rows as any);
+      }
+
+      await load();
+      alert("Produto duplicado! A cópia foi criada como inativa para você revisar antes de publicar.");
+    } catch (e: any) {
+      alert("Erro ao duplicar: " + (e?.message || e));
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
