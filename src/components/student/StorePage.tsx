@@ -64,9 +64,12 @@ interface StorePageProps {
   coachMode?: boolean;
   /** Indica se o coach tem upline (para cálculo de comissão estimada). */
   hasUpline?: boolean;
+  /** Audiência do visualizador para filtro de visibility_audiences. */
+  audience?: "student" | "coach" | "partner" | "professional";
 }
 
-export function StorePage({ coachMode = false, hasUpline = false }: StorePageProps = {}) {
+export function StorePage({ coachMode = false, hasUpline = false, audience }: StorePageProps = {}) {
+
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
