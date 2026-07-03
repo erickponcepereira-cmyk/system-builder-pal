@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star } from "lucide-react";
+import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star, Copy } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
 import { ProductDownloadsManager } from "./ProductDownloadsManager";
 
@@ -160,6 +160,60 @@ export function StoreItemsManager() {
     load();
   };
 
+  const duplicate = async (it: Item) => {
+    if (!confirm(`Duplicar "${it.name}"? Uma cópia inativa será criada na mesma seção e categoria, com os mesmos dados básicos e financeiros. Pagamentos, vendas e pontos NÃO serão duplicados.`)) return;
+    try {
+      // 1) Buscar produto completo
+      const { data: full, error: fErr } = await supabase.from("products").select("*").eq("id", it.id).maybeSingle();
+      if (fErr) throw fErr;
+      if (!full) throw new Error("Produto original não encontrado");
+      const src = full as any;
+      const { id: _oldId, created_at: _c, updated_at: _u, ...rest } = src;
+      const insertPayload = {
+        ...rest,
+        name: `${src.name} (cópia)`,
+        sku: src.sku ? `${src.sku}-COPIA` : null,
+        is_active: false,
+        is_featured: false,
+        status: "inactive",
+      };
+      const { data: created, error: iErr } = await supabase
+        .from("products")
+        .insert(insertPayload as any)
+        .select("id")
+        .single();
+      if (iErr) throw iErr;
+      const newId = (created as any).id as string;
+
+      // 2) Duplicar slots financeiros
+      const { data: slots } = await supabase.from("product_value_slots").select("*").eq("product_id", it.id);
+      if (slots && slots.length > 0) {
+        const rows = (slots as any[]).map(({ id, created_at, updated_at, ...r }) => ({ ...r, product_id: newId }));
+        const { error: sErr } = await supabase.from("product_value_slots").insert(rows as any);
+        if (sErr) throw sErr;
+      }
+
+      // 3) Regras de indicação
+      const { data: refRules } = await supabase.from("product_referral_rules").select("*").eq("product_id", it.id);
+      if (refRules && refRules.length > 0) {
+        const rows = (refRules as any[]).map(({ id, created_at, updated_at, ...r }) => ({ ...r, product_id: newId }));
+        await supabase.from("product_referral_rules").insert(rows as any);
+      }
+
+      // 4) Requisitos de profissional
+      const { data: profReq } = await supabase.from("product_professional_requirements").select("*").eq("product_id", it.id);
+      if (profReq && profReq.length > 0) {
+        const rows = (profReq as any[]).map(({ id, created_at, ...r }) => ({ ...r, product_id: newId }));
+        await supabase.from("product_professional_requirements").insert(rows as any);
+      }
+
+      await load();
+      alert("Produto duplicado! A cópia foi criada como inativa para você revisar antes de publicar.");
+    } catch (e: any) {
+      alert("Erro ao duplicar: " + (e?.message || e));
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -242,6 +296,7 @@ export function StoreItemsManager() {
                 )}
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => { setEditTab("general"); setEditing(it); }} className="flex-1 rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 flex items-center justify-center gap-1"><Pencil className="h-3 w-3" />Editar</button>
+                  <button onClick={() => duplicate(it)} title="Duplicar produto" className="rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1"><Copy className="h-3 w-3" />Duplicar</button>
                   <button onClick={() => toggleActive(it)} className="rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/70 hover:bg-white/10">{it.is_active ? "Desativar" : "Ativar"}</button>
                   <button onClick={() => remove(it.id)} className="rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/20"><Trash2 className="h-3 w-3" /></button>
                 </div>
