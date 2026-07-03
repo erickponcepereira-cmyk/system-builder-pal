@@ -296,6 +296,7 @@ export function StoreItemsManager() {
                 )}
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => { setEditTab("general"); setEditing(it); }} className="flex-1 rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 flex items-center justify-center gap-1"><Pencil className="h-3 w-3" />Editar</button>
+                  <button onClick={() => duplicate(it)} title="Duplicar produto" className="rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/70 hover:bg-white/10 flex items-center justify-center gap-1"><Copy className="h-3 w-3" />Duplicar</button>
                   <button onClick={() => toggleActive(it)} className="rounded-md bg-white/5 px-2 py-1.5 text-xs text-white/70 hover:bg-white/10">{it.is_active ? "Desativar" : "Ativar"}</button>
                   <button onClick={() => remove(it.id)} className="rounded-md bg-red-500/10 px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/20"><Trash2 className="h-3 w-3" /></button>
                 </div>
