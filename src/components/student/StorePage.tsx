@@ -64,9 +64,12 @@ interface StorePageProps {
   coachMode?: boolean;
   /** Indica se o coach tem upline (para cálculo de comissão estimada). */
   hasUpline?: boolean;
+  /** Audiência do visualizador para filtro de visibility_audiences. */
+  audience?: "student" | "coach" | "partner" | "professional";
 }
 
-export function StorePage({ coachMode = false, hasUpline = false }: StorePageProps = {}) {
+export function StorePage({ coachMode = false, hasUpline = false, audience }: StorePageProps = {}) {
+
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
@@ -253,8 +256,10 @@ export function StorePage({ coachMode = false, hasUpline = false }: StorePagePro
       ...(((itemsRes.data as unknown as any[]) || []).filter((it) => {
         const aud: string[] | null = it.visibility_audiences ?? null;
         if (!aud || aud.length === 0) return true;
-        return aud.includes(coachMode ? "coach" : "student");
+        const viewer = audience ?? (coachMode ? "coach" : "student");
+        return aud.includes(viewer);
       }).map((it) => ({
+
         id: `item-${it.id}`, sourceId: it.id, title: it.name, subtitle: it.short_description, description: it.description,
         price: Number(it.price || 0), originalPrice: it.original_price ? Number(it.original_price) : null,
         category: sectionName(it.section_id), kind: "item" as const,

@@ -236,7 +236,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "products") return <ProfessionalProductsPanel coachId={info.coachId} />;
   if (tab === "wallet") return <ProfessionalWalletTab />;
   if (tab === "subscription") return <SubscriptionInvoicesTab walletSource="professional" />;
-  if (tab === "store") return <StorePage coachMode />;
+  if (tab === "store") return <StorePage coachMode audience="professional" />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
 
