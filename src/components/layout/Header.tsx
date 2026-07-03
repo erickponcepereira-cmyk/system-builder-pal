@@ -36,11 +36,14 @@ export function Header() {
         </nav>
 
         <button
-          className="md:hidden text-foreground"
+          type="button"
+          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+          className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-md text-foreground hover:bg-accent active:bg-accent/70"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
+
       </div>
 
       {mobileOpen && (
