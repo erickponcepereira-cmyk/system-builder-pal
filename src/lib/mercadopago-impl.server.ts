@@ -171,14 +171,56 @@ export type PixInput = {
   payer: { email: string; name?: string; doc?: string };
 };
 
+/**
+ * Busca pagamento MP existente para o par (source_kind, source_id).
+ * Retorna o mais recente. Usado para dedupe antes de criar novo pagamento.
+ */
+async function findExistingPaymentForSource(kind: SourceKind, id: string) {
+  const { data } = await supabaseAdmin
+    .from("mercadopago_payments")
+    .select("id, mp_payment_id, status, payment_method, amount, pix_qr_code, pix_qr_code_base64, pix_ticket_url, pix_expires_at")
+    .eq("source_kind", kind)
+    .eq("source_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as any | null;
+}
+
+const REUSABLE_STATUSES = new Set(["pending", "in_process"]);
+const BLOCKING_STATUSES = new Set(["approved"]);
+// "rejected" | "cancelled" | "refunded" → permite criar novo
 
 export async function handleCreatePix(data: PixInput) {
   const src = await loadSource(data.source.kind, data.source.id);
   if (src.alreadyPaid) throw new Error("Pedido já está pago");
 
+  // ── Dedupe: reutiliza pagamento existente se aplicável ──
+  const existing = await findExistingPaymentForSource(data.source.kind, data.source.id);
+  if (existing && existing.payment_method === "pix") {
+    if (BLOCKING_STATUSES.has(existing.status)) {
+      throw new Error("Pedido já está pago");
+    }
+    if (REUSABLE_STATUSES.has(existing.status)) {
+      return {
+        paymentRowId: existing.id,
+        mpPaymentId: String(existing.mp_payment_id || ""),
+        status: existing.status,
+        qrCode: (existing.pix_qr_code as string | null) ?? null,
+        qrCodeBase64: (existing.pix_qr_code_base64 as string | null) ?? null,
+        ticketUrl: (existing.pix_ticket_url as string | null) ?? null,
+        amount: Number(existing.amount),
+      };
+    }
+  } else if (existing && BLOCKING_STATUSES.has(existing.status)) {
+    throw new Error("Pedido já está pago");
+  }
+
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
-  const idempotencyKey = `pix-${data.source.id}-${Date.now()}`;
+  // Idempotency key ESTÁVEL por (kind,id). Mercado Pago retorna o mesmo
+  // pagamento em retries acidentais, evitando cobrança duplicada.
+  const idempotencyKey = `pix-${data.source.kind}-${data.source.id}`;
 
   let mpResp: any;
   try {
@@ -247,9 +289,30 @@ export async function handleCreateCard(data: CardInput) {
   const src = await loadSource(data.source.kind, data.source.id);
   if (src.alreadyPaid) throw new Error("Pedido já está pago");
 
+  // ── Dedupe: bloqueia se já existe pagamento aprovado para o mesmo pedido ──
+  const existing = await findExistingPaymentForSource(data.source.kind, data.source.id);
+  if (existing && BLOCKING_STATUSES.has(existing.status)) {
+    throw new Error("Pedido já está pago");
+  }
+  // Cartão pendente é raro (autorização é síncrona), mas se existir "in_process"
+  // não criamos duplicata — devolvemos o existente para o frontend fazer polling.
+  if (existing && existing.payment_method === "credit_card" && REUSABLE_STATUSES.has(existing.status)) {
+    return {
+      paymentRowId: existing.id,
+      mpPaymentId: String(existing.mp_payment_id || ""),
+      status: existing.status,
+      statusDetail: null,
+    };
+  }
+
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
-  const idempotencyKey = `card-${data.source.id}-${Date.now()}`;
+  // Base estável por (kind,id) + sufixo derivado do token do cartão. Isso
+  // preserva idempotência real (retry acidental com MESMO token cai no mesmo
+  // pagamento no MP) mas permite nova tentativa quando o usuário submete um
+  // novo token após rejeição.
+  const tokenSuffix = data.card.token.slice(-10);
+  const idempotencyKey = `card-${data.source.kind}-${data.source.id}-${tokenSuffix}`;
 
   const mpResp = await createCardPayment(
     {
