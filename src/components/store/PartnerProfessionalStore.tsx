@@ -666,7 +666,7 @@ function CommissionBreakdown({ price, pct }: { price: number; pct?: number | nul
               <span className="font-bold text-primary">{fmt(card.coachNet)}</span>
             </div>
             <p className="mt-2 text-[10px] text-muted-foreground">
-              Cálculo sobre o valor líquido (preço − taxa de cartão/pix, imposto e taxa do sistema). PIX não tem taxa de cartão, por isso a comissão é maior.
+              Cálculo sobre o valor líquido (preço − taxa de cartão/pix, reserva fiscal e taxa do sistema). PIX não tem taxa de cartão, por isso a comissão é maior.
             </p>
           </div>
         </>

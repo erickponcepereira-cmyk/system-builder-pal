@@ -292,7 +292,7 @@ function AdminFinanceiro() {
         <section className="rounded-2xl border border-white/5 p-5 mb-6" style={{ backgroundColor: "#1A1A1A" }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-white">Impostos & Taxas</h2>
+              <h2 className="font-bold text-white">Reserva fiscal & Taxas</h2>
               <p className="text-xs text-white/50">
                 Cartão é abatido automaticamente na liquidação. PIX/Boleto entram em "Pendente manual" — clique para dar baixa por transação.
               </p>
@@ -301,7 +301,7 @@ function AdminFinanceiro() {
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <FeeBlock
-              title="Imposto (Simples Nacional)"
+              title="Reserva fiscal estimada (Simples Nacional)"
               icon={Receipt}
               total={fees.tax.total}
               autoCard={fees.tax.autoPaidCard}
@@ -477,7 +477,7 @@ function AdminFinanceiro() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-white">
-                  Pendências de {feesOpen === "tax" ? "imposto" : "taxa de pagamento"}
+                  Pendências de {feesOpen === "tax" ? "reserva fiscal" : "taxa de pagamento"}
                 </h2>
                 <p className="text-xs text-white/50">PIX e Boleto exigem baixa manual. Clique em "Pagar" para registrar a quitação.</p>
               </div>

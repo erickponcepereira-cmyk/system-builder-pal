@@ -725,7 +725,7 @@ function SummaryGrid({ dist, slots, simMode }: { dist: NonNullable<ReturnType<ty
     ["Rede L1+L2+L3", money(netT)],
     ["Nutricionista", money(nutriT)],
     ["Custo produto", money(prodT)],
-    ["Taxas + imposto", money(dist.payment_fee_amount + dist.tax_amount), "text-white/60"],
+    ["Taxas + reserva fiscal", money(dist.payment_fee_amount + dist.tax_amount), "text-white/60"],
   ];
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">

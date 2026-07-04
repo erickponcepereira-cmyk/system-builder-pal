@@ -58,7 +58,7 @@ function AdminReports() {
   };
 
   const exportSalesCsv = () => {
-    const header = ["Data", "Canal", "Cliente", "Vendedor", "Upline 1", "Upline 2", "Upline 3", "Produto", "Bruto", "Taxa MP", "Imposto", "App fee", "Líquido", "Status", "Pontos"];
+    const header = ["Data", "Canal", "Cliente", "Vendedor", "Upline 1", "Upline 2", "Upline 3", "Produto", "Bruto", "Taxa MP", "Reserva fiscal", "App fee", "Líquido", "Status", "Pontos"];
     const lines = [
       header,
       ...sales.map((s) => [
@@ -176,7 +176,7 @@ function AdminReports() {
                       <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
                         <Metric label="Bruto" value={fmt(s.grossAmount)} />
                         <Metric label="Taxa MP" value={fmt(s.paymentFee)} />
-                        <Metric label="Imposto" value={fmt(s.taxAmount)} />
+                        <Metric label="Reserva fiscal" value={fmt(s.taxAmount)} />
                         <Metric label="Líquido" value={fmt(s.netAmount)} />
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-3">
