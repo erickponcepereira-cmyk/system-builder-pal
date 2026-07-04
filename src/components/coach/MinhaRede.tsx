@@ -351,7 +351,7 @@ function AbaProduto({
           {[
             { label: "Valor do produto", val: fmt(preco), neg: false },
             { label: `(-) Taxa ${payMethod === "pix" ? "PIX" : "Cartão"} ${fmtp(bd.feePct)}`, val: `- ${fmt(bd.feeAmt)}`, neg: true },
-            { label: `(-) Imposto empresa ${fmtp(bd.taxPct)}`, val: `- ${fmt(bd.taxAmt)}`, neg: true },
+            { label: `(-) Reserva fiscal estimada ${fmtp(bd.taxPct)}`, val: `- ${fmt(bd.taxAmt)}`, neg: true },
             ...(bd.cost > 0 ? [{ label: "(-) Custo do produto", val: `- ${fmt(bd.cost)}`, neg: true }] : []),
             ...(bd.platform > 0 ? [{ label: "(-) Taxa da plataforma / sistema", val: `- ${fmt(bd.platform)}`, neg: true }] : []),
             ...(bd.nutri > 0 ? [{ label: "(-) Nutricionista", val: `- ${fmt(bd.nutri)}`, neg: true }] : []),

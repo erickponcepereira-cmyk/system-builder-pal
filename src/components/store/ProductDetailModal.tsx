@@ -316,7 +316,7 @@ export function ProductDetailModal({
                   </>
                 )}
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, impostos e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
+                  Cálculo sobre o valor líquido (preço − taxas do app, cartão/pix, reserva fiscal e custos). PIX não tem taxa de cartão, por isso a comissão é maior.
                 </p>
               </div>
               </>

@@ -642,7 +642,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
       <div className="rounded-lg bg-black/40 p-2.5 text-[11px] space-y-1">
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
         <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
-        <BreakdownLine label="− Imposto (6%)" value={-breakdown.tax} muted />
+        <BreakdownLine label="− Reserva fiscal estimada (6%)" value={-breakdown.tax} muted />
         <BreakdownLine label="− Taxa do sistema (5%)" value={-breakdown.systemFee} muted />
         <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
         <div className="my-1 border-t border-white/10" />
