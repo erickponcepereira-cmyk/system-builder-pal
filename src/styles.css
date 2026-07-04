@@ -226,7 +226,6 @@
 
   .android-safe-store,
   .android-safe-store * {
-    backface-visibility: hidden;
     transform: none !important;
     transition: none !important;
     animation: none !important;
