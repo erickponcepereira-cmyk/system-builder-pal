@@ -103,6 +103,16 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     else toast.error("Não foi possível compartilhar o link.");
   };
 
+  const openSection = (sectionId: string) => {
+    setActiveCategory(null);
+    setActiveSection(sectionId);
+  };
+
+  const backToSections = () => {
+    setActiveCategory(null);
+    setActiveSection(null);
+  };
+
 
   useEffect(() => {
     (async () => {
@@ -338,15 +348,15 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           )}
 
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
           {visibleSections.map((s) => {
             const sectionHidden = vis.isHiddenByMe("section", null, s.id);
             return (
               <div key={s.id} className="relative">
-                <button onClick={() => setActiveSection(s.id)} className={`group w-full overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent ${sectionHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
-                  <div className="aspect-square w-full overflow-hidden bg-white/5">
+                <button onClick={() => openSection(s.id)} className={`w-full rounded-2xl border border-white/5 text-left ${sectionHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
+                  <div className="aspect-square w-full bg-white/5">
                     {s.image_url ? (
-                      <img src={s.image_url} alt={s.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      <img src={s.image_url} alt={s.name} loading="lazy" decoding="async" className="h-full w-full rounded-t-2xl object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-8 w-8 text-white/30" /></div>
                     )}
@@ -378,14 +388,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     if (!activeCategory) {
       body = (
         <div className="space-y-3">
-          <button onClick={() => setActiveSection(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
+          <button onClick={backToSections} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
           <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
             {visibleCats.map((c) => (
-              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="group overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent" style={{ backgroundColor: "#1A1A1A" }}>
-                <div className="aspect-square w-full overflow-hidden bg-white/5">
+              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="rounded-2xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A" }}>
+                <div className="aspect-square w-full bg-white/5">
                   {c.image_url ? (
-                    <img src={c.image_url} alt={c.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    <img src={c.image_url} alt={c.name} loading="lazy" decoding="async" className="h-full w-full rounded-t-2xl object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-7 w-7 text-white/30" /></div>
                   )}
@@ -403,15 +413,15 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
             {items.map((p) => {
               const productHidden = vis.isHiddenByMe("product", productKind, p.id);
               return (
               <div key={p.id} className="relative">
-                <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left transition hover:ring-1 hover:ring-primary/40 ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
-                  <div className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-white/5">
+                <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
+                  <div className="mb-2 flex aspect-square w-full items-center justify-center rounded-xl bg-white/5">
                     {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      <img src={p.image_url} alt={p.name} loading="lazy" decoding="async" className="h-full w-full rounded-xl object-cover" />
                     ) : (
                       <ShoppingBag className="h-8 w-8 text-white/30" />
                     )}
@@ -456,7 +466,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
 
   return (
     <>
-      {body}
+      <div key={`${activeSection ?? "sections"}:${activeCategory ?? "categories"}`} className="relative isolate overflow-x-hidden">
+        {body}
+      </div>
 
       {selected && (
         <div
