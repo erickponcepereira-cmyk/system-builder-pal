@@ -385,7 +385,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
               <button key={c.id} onClick={() => setActiveCategory(c.id)} className="group overflow-hidden rounded-2xl border border-white/5 text-left transition-colors hover:bg-accent" style={{ backgroundColor: "#1A1A1A" }}>
                 <div className="aspect-square w-full overflow-hidden bg-white/5">
                   {c.image_url ? (
-                    <img src={c.image_url} alt={c.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                    <img src={c.image_url} alt={c.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center"><ShoppingBag className="h-7 w-7 text-white/30" /></div>
                   )}
