@@ -7226,6 +7226,8 @@ export type Database = {
           theme_preference: string | null
           updated_at: string | null
           user_id: string
+          withdrawal_block_reason: string | null
+          withdrawal_blocked: boolean
           zip_code: string | null
         }
         Insert: {
@@ -7259,6 +7261,8 @@ export type Database = {
           theme_preference?: string | null
           updated_at?: string | null
           user_id: string
+          withdrawal_block_reason?: string | null
+          withdrawal_blocked?: boolean
           zip_code?: string | null
         }
         Update: {
@@ -7292,6 +7296,8 @@ export type Database = {
           theme_preference?: string | null
           updated_at?: string | null
           user_id?: string
+          withdrawal_block_reason?: string | null
+          withdrawal_blocked?: boolean
           zip_code?: string | null
         }
         Relationships: []
@@ -9845,6 +9851,13 @@ export type Database = {
       can_manage_event: {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
+      }
+      can_withdraw: {
+        Args: { _profile_id: string }
+        Returns: {
+          allowed: boolean
+          reason: string
+        }[]
       }
       cancel_nutritionist_blocked_entry: {
         Args: { _entry_id: string; _notes?: string }
