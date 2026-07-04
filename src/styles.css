@@ -239,7 +239,6 @@
   .android-safe-store img {
     display: block;
     image-rendering: auto;
-    transform: translateZ(0);
   }
 }
 
