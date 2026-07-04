@@ -7340,6 +7340,78 @@ export type Database = {
           },
         ]
       }
+      return_requests: {
+        Row: {
+          admin_notes: string | null
+          blocks_settlement: boolean
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json
+          order_id: string
+          order_type: string
+          reason: string
+          refund_amount: number | null
+          requested_at: string
+          requested_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["return_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          blocks_settlement?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          order_id: string
+          order_type: string
+          reason: string
+          refund_amount?: number | null
+          requested_at?: string
+          requested_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["return_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          blocks_settlement?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          order_id?: string
+          order_type?: string
+          reason?: string
+          refund_amount?: number | null
+          requested_at?: string
+          requested_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["return_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_rentals: {
         Row: {
           created_at: string | null
@@ -10060,6 +10132,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_open_return_request: {
+        Args: { _order_id: string; _order_type: string }
+        Returns: boolean
+      }
       increment_share_view: { Args: { p_token: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_coach: { Args: { _user_id: string }; Returns: boolean }
@@ -10657,6 +10733,13 @@ export type Database = {
         | "room_rental"
         | "live_class"
       release_status_type: "pending" | "released" | "blocked"
+      return_request_status:
+        | "requested"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "refunded"
+        | "cancelled"
       subscription_status:
         | "active"
         | "expired"
@@ -10916,6 +10999,14 @@ export const Constants = {
         "live_class",
       ],
       release_status_type: ["pending", "released", "blocked"],
+      return_request_status: [
+        "requested",
+        "under_review",
+        "approved",
+        "rejected",
+        "refunded",
+        "cancelled",
+      ],
       subscription_status: [
         "active",
         "expired",
