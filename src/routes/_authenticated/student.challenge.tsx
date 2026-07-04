@@ -721,6 +721,15 @@ function StudentChallengePage() {
           </div>
         </div>
       )}
+
+      <ChallengeTicketAcceptModal
+        open={acceptTicketOpen && !!confirmTurma}
+        onCancel={() => { if (!joining) setAcceptTicketOpen(false); }}
+        onConfirm={handleJoinAfterAccept}
+        loading={joining}
+        competitionLabel={confirmTurma?.competitionLabel}
+        turmaNumber={confirmTurma?.groupNumber}
+      />
     </div>
   )
 }
