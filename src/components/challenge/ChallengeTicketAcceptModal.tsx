@@ -34,6 +34,13 @@ export function ChallengeTicketAcceptModal({
   const toggle = (idx: number) =>
     setChecks((prev) => prev.map((v, i) => (i === idx ? !v : v)));
 
+  const toggleAll = () =>
+    setChecks((prev) => {
+      const next = !prev.every(Boolean);
+      return prev.map(() => next);
+    });
+
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
