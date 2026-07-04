@@ -468,7 +468,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     <>
       <div
         key={`${activeSection ?? "sections"}:${activeCategory ?? "categories"}`}
-        className="relative overflow-x-hidden bg-background"
+        className="android-safe-store relative overflow-x-hidden bg-background"
         style={{ backgroundColor: "#0B0707", contain: "layout paint style" }}
       >
         {body}
