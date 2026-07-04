@@ -448,7 +448,8 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
                   {acceptTerms && <Check className="h-3 w-3 text-white" />}
                 </div>
                 <span className="text-xs text-white/50">
-                  Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Termos de Uso</a>,{" "}
+                  Li e aceito o <a href="/termos-coach" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium" onClick={(e) => e.stopPropagation()}>Termo de Adesão FitMind — Coach</a>,{" "}
+                  os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Termos de Uso</a>,{" "}
                   os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Termos de Compra</a> e a{" "}
                   <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Política de Privacidade</a> da FitMind Club.
                 </span>
