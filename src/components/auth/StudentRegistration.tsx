@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
+import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskPhone } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
@@ -114,6 +116,20 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
           },
         },
       });
+
+      // Registra aceite dos termos (auditoria LGPD) — best-effort, não bloqueia se falhar
+      try {
+        await recordTermsAcceptanceAtSignup({
+          data: {
+            userId: user.id,
+            termType: "aluno",
+            termVersion: TERMS_VERSION.aluno,
+            context: { origin: "student_registration", referralCode: referral?.code || null },
+          },
+        });
+      } catch (err) {
+        console.warn("[terms] falha ao registrar aceite pós-cadastro:", err);
+      }
 
       sessionStorage.removeItem("fitmind_referral");
       sessionStorage.removeItem("fitmind_selected_area");
