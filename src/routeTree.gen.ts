@@ -9,7 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosProfissionalRouteImport } from './routes/termos-profissional'
+import { Route as TermosParceiroRouteImport } from './routes/termos-parceiro'
 import { Route as TermosCompraRouteImport } from './routes/termos-compra'
+import { Route as TermosCoachRouteImport } from './routes/termos-coach'
+import { Route as TermosAlunoRouteImport } from './routes/termos-aluno'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -115,9 +119,29 @@ import { Route as AuthenticatedStudentProfileEditRouteImport } from './routes/_a
 import { Route as AuthenticatedStudentPartnersPartnerIdRouteImport } from './routes/_authenticated/student.partners.$partnerId'
 import { Route as AuthenticatedAdminCoachesInactivityRouteImport } from './routes/_authenticated/admin.coaches.inactivity'
 
+const TermosProfissionalRoute = TermosProfissionalRouteImport.update({
+  id: '/termos-profissional',
+  path: '/termos-profissional',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosParceiroRoute = TermosParceiroRouteImport.update({
+  id: '/termos-parceiro',
+  path: '/termos-parceiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermosCompraRoute = TermosCompraRouteImport.update({
   id: '/termos-compra',
   path: '/termos-compra',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosCoachRoute = TermosCoachRouteImport.update({
+  id: '/termos-coach',
+  path: '/termos-coach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosAlunoRoute = TermosAlunoRouteImport.update({
+  id: '/termos-aluno',
+  path: '/termos-aluno',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermosRoute = TermosRouteImport.update({
@@ -724,7 +748,11 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/termos': typeof TermosRoute
+  '/termos-aluno': typeof TermosAlunoRoute
+  '/termos-coach': typeof TermosCoachRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/termos-parceiro': typeof TermosParceiroRoute
+  '/termos-profissional': typeof TermosProfissionalRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
@@ -830,7 +858,11 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/termos': typeof TermosRoute
+  '/termos-aluno': typeof TermosAlunoRoute
+  '/termos-coach': typeof TermosCoachRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/termos-parceiro': typeof TermosParceiroRoute
+  '/termos-profissional': typeof TermosProfissionalRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRoute
@@ -936,7 +968,11 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/termos': typeof TermosRoute
+  '/termos-aluno': typeof TermosAlunoRoute
+  '/termos-coach': typeof TermosCoachRoute
   '/termos-compra': typeof TermosCompraRoute
+  '/termos-parceiro': typeof TermosParceiroRoute
+  '/termos-profissional': typeof TermosProfissionalRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
@@ -1044,7 +1080,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/security'
     | '/termos'
+    | '/termos-aluno'
+    | '/termos-coach'
     | '/termos-compra'
+    | '/termos-parceiro'
+    | '/termos-profissional'
     | '/admin'
     | '/assinatura'
     | '/coach'
@@ -1150,7 +1190,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/security'
     | '/termos'
+    | '/termos-aluno'
+    | '/termos-coach'
     | '/termos-compra'
+    | '/termos-parceiro'
+    | '/termos-profissional'
     | '/assinatura'
     | '/coach'
     | '/partner'
@@ -1255,7 +1299,11 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/security'
     | '/termos'
+    | '/termos-aluno'
+    | '/termos-coach'
     | '/termos-compra'
+    | '/termos-parceiro'
+    | '/termos-profissional'
     | '/_authenticated/admin'
     | '/_authenticated/assinatura'
     | '/_authenticated/coach'
@@ -1363,7 +1411,11 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SecurityRoute: typeof SecurityRoute
   TermosRoute: typeof TermosRoute
+  TermosAlunoRoute: typeof TermosAlunoRoute
+  TermosCoachRoute: typeof TermosCoachRoute
   TermosCompraRoute: typeof TermosCompraRoute
+  TermosParceiroRoute: typeof TermosParceiroRoute
+  TermosProfissionalRoute: typeof TermosProfissionalRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1382,11 +1434,39 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos-profissional': {
+      id: '/termos-profissional'
+      path: '/termos-profissional'
+      fullPath: '/termos-profissional'
+      preLoaderRoute: typeof TermosProfissionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos-parceiro': {
+      id: '/termos-parceiro'
+      path: '/termos-parceiro'
+      fullPath: '/termos-parceiro'
+      preLoaderRoute: typeof TermosParceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/termos-compra': {
       id: '/termos-compra'
       path: '/termos-compra'
       fullPath: '/termos-compra'
       preLoaderRoute: typeof TermosCompraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos-coach': {
+      id: '/termos-coach'
+      path: '/termos-coach'
+      fullPath: '/termos-coach'
+      preLoaderRoute: typeof TermosCoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos-aluno': {
+      id: '/termos-aluno'
+      path: '/termos-aluno'
+      fullPath: '/termos-aluno'
+      preLoaderRoute: typeof TermosAlunoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/termos': {
@@ -2372,7 +2452,11 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SecurityRoute: SecurityRoute,
   TermosRoute: TermosRoute,
+  TermosAlunoRoute: TermosAlunoRoute,
+  TermosCoachRoute: TermosCoachRoute,
   TermosCompraRoute: TermosCompraRoute,
+  TermosParceiroRoute: TermosParceiroRoute,
+  TermosProfissionalRoute: TermosProfissionalRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,
