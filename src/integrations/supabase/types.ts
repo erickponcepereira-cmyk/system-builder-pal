@@ -5002,6 +5002,7 @@ export type Database = {
       }
       partner_product_orders: {
         Row: {
+          available_at: string | null
           cancelled_at: string | null
           coach_commission_amount: number
           coach_commission_pct: number
@@ -5028,6 +5029,10 @@ export type Database = {
           professional_product_id: string | null
           referral_fitcoin_amount: number
           referred_by_student_id: string | null
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           sale_channel: string
           selling_coach_id: string | null
           status: string
@@ -5040,6 +5045,7 @@ export type Database = {
           upline_l3_coach_id: string | null
         }
         Insert: {
+          available_at?: string | null
           cancelled_at?: string | null
           coach_commission_amount?: number
           coach_commission_pct?: number
@@ -5066,6 +5072,10 @@ export type Database = {
           professional_product_id?: string | null
           referral_fitcoin_amount?: number
           referred_by_student_id?: string | null
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           sale_channel?: string
           selling_coach_id?: string | null
           status?: string
@@ -5078,6 +5088,7 @@ export type Database = {
           upline_l3_coach_id?: string | null
         }
         Update: {
+          available_at?: string | null
           cancelled_at?: string | null
           coach_commission_amount?: number
           coach_commission_pct?: number
@@ -5104,6 +5115,10 @@ export type Database = {
           professional_product_id?: string | null
           referral_fitcoin_amount?: number
           referred_by_student_id?: string | null
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           sale_channel?: string
           selling_coach_id?: string | null
           status?: string
@@ -7622,6 +7637,7 @@ export type Database = {
       }
       store_orders: {
         Row: {
+          available_at: string | null
           created_at: string
           fitcoin_used: number
           id: string
@@ -7629,9 +7645,14 @@ export type Database = {
           mp_payment_id: string | null
           notes: string | null
           order_number: string
+          paid_at: string | null
           payment_fee: number
           payment_method: Database["public"]["Enums"]["payment_method"]
           referrer_student_id: string | null
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           sale_channel: string
           shipping_address: string | null
           shipping_city: string | null
@@ -7647,6 +7668,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          available_at?: string | null
           created_at?: string
           fitcoin_used?: number
           id?: string
@@ -7654,9 +7676,14 @@ export type Database = {
           mp_payment_id?: string | null
           notes?: string | null
           order_number?: string
+          paid_at?: string | null
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
           referrer_student_id?: string | null
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           sale_channel?: string
           shipping_address?: string | null
           shipping_city?: string | null
@@ -7672,6 +7699,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          available_at?: string | null
           created_at?: string
           fitcoin_used?: number
           id?: string
@@ -7679,9 +7707,14 @@ export type Database = {
           mp_payment_id?: string | null
           notes?: string | null
           order_number?: string
+          paid_at?: string | null
           payment_fee?: number
           payment_method?: Database["public"]["Enums"]["payment_method"]
           referrer_student_id?: string | null
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           sale_channel?: string
           shipping_address?: string | null
           shipping_city?: string | null
@@ -8385,6 +8418,7 @@ export type Database = {
       subscription_invoices: {
         Row: {
           amount: number
+          available_at: string | null
           created_at: string
           due_date: string
           fee_amount: number
@@ -8397,6 +8431,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month: string
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           status: Database["public"]["Enums"]["invoice_status"]
           tax_amount: number
           updated_at: string
@@ -8406,6 +8444,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          available_at?: string | null
           created_at?: string
           due_date: string
           fee_amount?: number
@@ -8418,6 +8457,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month: string
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           status?: Database["public"]["Enums"]["invoice_status"]
           tax_amount?: number
           updated_at?: string
@@ -8427,6 +8470,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          available_at?: string | null
           created_at?: string
           due_date?: string
           fee_amount?: number
@@ -8439,6 +8483,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month?: string
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           status?: Database["public"]["Enums"]["invoice_status"]
           tax_amount?: number
           updated_at?: string
@@ -8782,6 +8830,7 @@ export type Database = {
       transactions: {
         Row: {
           app_fee: number | null
+          available_at: string | null
           created_at: string | null
           digital_product_id: string | null
           gateway_transaction_id: string | null
@@ -8797,6 +8846,10 @@ export type Database = {
           product_id: string
           purchase_type: string | null
           referrer_student_id: string | null
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           status: Database["public"]["Enums"]["transaction_status"] | null
           store_product_id: string | null
           student_id: string
@@ -8805,6 +8858,7 @@ export type Database = {
         }
         Insert: {
           app_fee?: number | null
+          available_at?: string | null
           created_at?: string | null
           digital_product_id?: string | null
           gateway_transaction_id?: string | null
@@ -8820,6 +8874,10 @@ export type Database = {
           product_id: string
           purchase_type?: string | null
           referrer_student_id?: string | null
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           status?: Database["public"]["Enums"]["transaction_status"] | null
           store_product_id?: string | null
           student_id: string
@@ -8828,6 +8886,7 @@ export type Database = {
         }
         Update: {
           app_fee?: number | null
+          available_at?: string | null
           created_at?: string | null
           digital_product_id?: string | null
           gateway_transaction_id?: string | null
@@ -8843,6 +8902,10 @@ export type Database = {
           product_id?: string
           purchase_type?: string | null
           referrer_student_id?: string | null
+          release_base_at?: string | null
+          release_base_event?: string | null
+          release_days?: number
+          release_status?: Database["public"]["Enums"]["release_status_type"]
           status?: Database["public"]["Enums"]["transaction_status"] | null
           store_product_id?: string | null
           student_id?: string
@@ -10074,6 +10137,16 @@ export type Database = {
         Returns: undefined
       }
       mark_overdue_invoices: { Args: never; Returns: number }
+      mark_release_event: {
+        Args: {
+          _event: string
+          _event_at?: string
+          _release_days?: number
+          _source_id: string
+          _source_kind: string
+        }
+        Returns: undefined
+      }
       mark_store_order_paid_and_process: {
         Args: { _order_id: string }
         Returns: undefined
@@ -10127,6 +10200,7 @@ export type Database = {
         }
         Returns: {
           amount: number
+          available_at: string | null
           created_at: string
           due_date: string
           fee_amount: number
@@ -10139,6 +10213,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month: string
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           status: Database["public"]["Enums"]["invoice_status"]
           tax_amount: number
           updated_at: string
@@ -10172,6 +10250,7 @@ export type Database = {
         }
         Returns: {
           amount: number
+          available_at: string | null
           created_at: string
           due_date: string
           fee_amount: number
@@ -10184,6 +10263,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month: string
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           status: Database["public"]["Enums"]["invoice_status"]
           tax_amount: number
           updated_at: string
@@ -10288,6 +10371,7 @@ export type Database = {
         Args: { _invoice_id: string; _performed_by: string }
         Returns: {
           amount: number
+          available_at: string | null
           created_at: string
           due_date: string
           fee_amount: number
@@ -10300,6 +10384,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month: string
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           status: Database["public"]["Enums"]["invoice_status"]
           tax_amount: number
           updated_at: string
@@ -10318,6 +10406,7 @@ export type Database = {
         Args: { _invoice_id: string; _performed_by: string }
         Returns: {
           amount: number
+          available_at: string | null
           created_at: string
           due_date: string
           fee_amount: number
@@ -10330,6 +10419,10 @@ export type Database = {
             | Database["public"]["Enums"]["invoice_payment_method"]
             | null
           reference_month: string
+          release_base_at: string | null
+          release_base_event: string | null
+          release_days: number
+          release_status: Database["public"]["Enums"]["release_status_type"]
           status: Database["public"]["Enums"]["invoice_status"]
           tax_amount: number
           updated_at: string
@@ -10563,6 +10656,7 @@ export type Database = {
         | "health_pro_course"
         | "room_rental"
         | "live_class"
+      release_status_type: "pending" | "released" | "blocked"
       subscription_status:
         | "active"
         | "expired"
@@ -10821,6 +10915,7 @@ export const Constants = {
         "room_rental",
         "live_class",
       ],
+      release_status_type: ["pending", "released", "blocked"],
       subscription_status: [
         "active",
         "expired",
