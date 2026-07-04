@@ -12,6 +12,9 @@ import {
 import { HallOfFame } from "@/components/HallOfFame";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummary, type CurrentTurma } from "@/lib/challenge-tokens.functions";
+import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
+import { TERMS_VERSION } from "@/lib/terms";
+import { ChallengeTicketAcceptModal } from "@/components/challenge/ChallengeTicketAcceptModal";
 
 
 export const Route = createFileRoute("/_authenticated/student/challenge")({
@@ -90,6 +93,8 @@ function StudentChallengePage() {
   const [joining, setJoining] = useState(false);
   const fetchTokens = useServerFn(getMyChallengeTokens);
   const doJoin = useServerFn(joinChallengeWithToken);
+  const doRecordAcceptance = useServerFn(recordTermsAcceptance);
+  const [acceptTicketOpen, setAcceptTicketOpen] = useState(false);
 
 
 
