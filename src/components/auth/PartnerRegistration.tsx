@@ -13,6 +13,8 @@ import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
+import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { TERMS_VERSION } from "@/lib/terms";
 
 type ReferralContext = {
   code: string;
@@ -251,6 +253,19 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
           activationNote: alreadyPartnerNote.trim() || null,
         },
       });
+
+      try {
+        await recordTermsAcceptanceAtSignup({
+          data: {
+            userId: user.id,
+            termType: "parceiro",
+            termVersion: TERMS_VERSION.parceiro,
+            context: { origin: "partner_registration", uplineCoachId },
+          },
+        });
+      } catch (err) {
+        console.warn("[terms] falha ao registrar aceite pós-cadastro:", err);
+      }
 
       sessionStorage.removeItem("fitmind_referral");
       await supabase.auth.signOut().catch(() => {});
