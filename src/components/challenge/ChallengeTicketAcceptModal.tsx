@@ -75,7 +75,19 @@ export function ChallengeTicketAcceptModal({
             </p>
           )}
 
+          <label className="mb-3 flex cursor-pointer items-center gap-2 rounded-lg border-2 border-primary/60 bg-primary/10 p-3 text-sm font-bold text-foreground hover:bg-primary/20">
+            <input
+              type="checkbox"
+              className="h-4 w-4 flex-shrink-0 accent-primary"
+              checked={allChecked}
+              onChange={toggleAll}
+              disabled={loading}
+            />
+            <span>Li e aceito todas as declarações abaixo</span>
+          </label>
+
           <ul className="space-y-2.5">
+
             {CHALLENGE_ACCEPTANCE_DECLARATIONS.map((text, idx) => (
               <li key={idx}>
                 <label className="flex cursor-pointer gap-2 rounded-lg border border-border/60 bg-background/40 p-2.5 text-[13px] leading-relaxed text-foreground/90 hover:bg-muted/40">
