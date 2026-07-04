@@ -223,6 +223,24 @@
   .glow-primary {
     box-shadow: 0 0 20px oklch(0.63 0.25 29 / 0.3), 0 0 60px oklch(0.63 0.25 29 / 0.12);
   }
+
+  .android-safe-store,
+  .android-safe-store * {
+    backface-visibility: hidden;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    mix-blend-mode: normal !important;
+    will-change: auto !important;
+  }
+
+  .android-safe-store img {
+    display: block;
+    image-rendering: auto;
+    transform: translateZ(0);
+  }
 }
 
 @layer components {
