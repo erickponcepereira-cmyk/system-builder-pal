@@ -225,6 +225,22 @@
   }
 }
 
+.android-safe-store,
+.android-safe-store * {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+  will-change: auto !important;
+}
+
+.android-safe-store img {
+  display: block;
+  image-rendering: auto;
+}
+
 @layer components {
   .field-control {
     width: 100%;

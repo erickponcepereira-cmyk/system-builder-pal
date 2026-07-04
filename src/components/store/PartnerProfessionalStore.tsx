@@ -348,12 +348,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           )}
 
         </div>
-        <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {visibleSections.map((s) => {
             const sectionHidden = vis.isHiddenByMe("section", null, s.id);
             return (
               <div key={s.id} className="relative">
-                <button onClick={() => openSection(s.id)} className={`w-full rounded-2xl border border-white/5 text-left ${sectionHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
+                <button onClick={() => openSection(s.id)} className={`w-full rounded-2xl border border-white/5 text-left ${sectionHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                   <div className="aspect-square w-full bg-white/5">
                     {s.image_url ? (
                       <img src={s.image_url} alt={s.name} loading="lazy" decoding="async" className="h-full w-full rounded-t-2xl object-cover" />
@@ -390,9 +390,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={backToSections} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
           <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
-          <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {visibleCats.map((c) => (
-              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="rounded-2xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A" }}>
+              <button key={c.id} onClick={() => setActiveCategory(c.id)} className="rounded-2xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                 <div className="aspect-square w-full bg-white/5">
                   {c.image_url ? (
                     <img src={c.image_url} alt={c.name} loading="lazy" decoding="async" className="h-full w-full rounded-t-2xl object-cover" />
@@ -413,12 +413,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
-          <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((p) => {
               const productHidden = vis.isHiddenByMe("product", productKind, p.id);
               return (
               <div key={p.id} className="relative">
-                <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A" }}>
+                <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                   <div className="mb-2 flex aspect-square w-full items-center justify-center rounded-xl bg-white/5">
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.name} loading="lazy" decoding="async" className="h-full w-full rounded-xl object-cover" />
@@ -466,7 +466,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
 
   return (
     <>
-      <div key={`${activeSection ?? "sections"}:${activeCategory ?? "categories"}`} className="relative isolate overflow-x-hidden">
+      <div
+        key={`${activeSection ?? "sections"}:${activeCategory ?? "categories"}`}
+        className="android-safe-store relative overflow-x-hidden bg-background"
+        style={{ backgroundColor: "var(--color-background)", contain: "layout paint style" }}
+      >
         {body}
       </div>
 
