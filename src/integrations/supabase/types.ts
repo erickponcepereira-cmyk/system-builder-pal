@@ -8781,6 +8781,45 @@ export type Database = {
           },
         ]
       }
+      terms_acceptances: {
+        Row: {
+          accepted_at: string
+          content_hash: string | null
+          context: Json
+          created_at: string
+          id: string
+          ip_address: string | null
+          term_type: string
+          term_version: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          content_hash?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          term_type: string
+          term_version: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          content_hash?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          term_type?: string
+          term_version?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       test_simulated_sales: {
         Row: {
           buyer_student_id: string | null

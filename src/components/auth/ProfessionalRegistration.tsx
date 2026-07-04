@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn, upgradeExistingToProfessionalFn } from "@/lib/registration.functions";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
+import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskCPF, maskPhone, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
@@ -217,6 +219,17 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           },
         });
 
+        try {
+          await recordTermsAcceptanceAtSignup({
+            data: {
+              userId: signIn.user.id,
+              termType: "profissional",
+              termVersion: TERMS_VERSION.profissional,
+              context: { origin: "professional_upgrade", specialtyKey },
+            },
+          });
+        } catch (err) { console.warn("[terms] falha ao registrar aceite:", err); }
+
         await supabase.auth.signOut().catch(() => {});
         setRegisteredEmail(email.trim().toLowerCase());
         toast.success("Conta vinculada como profissional! Acesso de coach liberado.");
@@ -247,6 +260,18 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
           },
         },
       });
+
+      try {
+        await recordTermsAcceptanceAtSignup({
+          data: {
+            userId: user.id,
+            termType: "profissional",
+            termVersion: TERMS_VERSION.profissional,
+            context: { origin: "professional_registration", specialtyKey },
+          },
+        });
+      } catch (err) { console.warn("[terms] falha ao registrar aceite:", err); }
+
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
       toast.success("Cadastro profissional criado com acesso de coach liberado.");
@@ -444,7 +469,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
               <label className="flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
                 <span className="text-xs text-white/60">
-                  Aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
+                  Aceito o <a href="/termos-profissional" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Termo de Adesão FitMind — Profissional</a>,{" "}
+                  os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
                   os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a> e a{" "}
                   <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Política de Privacidade</a>.
                 </span>

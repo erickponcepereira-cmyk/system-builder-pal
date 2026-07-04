@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { finalizeRegistrationFn } from "@/lib/registration.functions";
+import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { TERMS_VERSION } from "@/lib/terms";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskCPF, maskPhone, maskCEP, generateReferralCode, isValidCPF } from "@/lib/masks";
@@ -192,6 +194,19 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
           },
         },
       });
+
+      try {
+        await recordTermsAcceptanceAtSignup({
+          data: {
+            userId: user.id,
+            termType: "coach",
+            termVersion: TERMS_VERSION.coach,
+            context: { origin: "coach_registration", uplineCoachId: selectedCoach.id },
+          },
+        });
+      } catch (err) {
+        console.warn("[terms] falha ao registrar aceite pós-cadastro:", err);
+      }
 
       await supabase.auth.signOut().catch(() => {});
       sessionStorage.removeItem("fitmind_selected_area");
@@ -448,7 +463,8 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
                   {acceptTerms && <Check className="h-3 w-3 text-white" />}
                 </div>
                 <span className="text-xs text-white/50">
-                  Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Termos de Uso</a>,{" "}
+                  Li e aceito o <a href="/termos-coach" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium" onClick={(e) => e.stopPropagation()}>Termo de Adesão FitMind — Coach</a>,{" "}
+                  os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Termos de Uso</a>,{" "}
                   os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Termos de Compra</a> e a{" "}
                   <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Política de Privacidade</a> da FitMind Club.
                 </span>

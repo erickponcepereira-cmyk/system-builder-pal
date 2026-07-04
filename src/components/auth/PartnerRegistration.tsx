@@ -13,6 +13,8 @@ import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
+import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
+import { TERMS_VERSION } from "@/lib/terms";
 
 type ReferralContext = {
   code: string;
@@ -252,6 +254,19 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
         },
       });
 
+      try {
+        await recordTermsAcceptanceAtSignup({
+          data: {
+            userId: user.id,
+            termType: "parceiro",
+            termVersion: TERMS_VERSION.parceiro,
+            context: { origin: "partner_registration", uplineCoachId },
+          },
+        });
+      } catch (err) {
+        console.warn("[terms] falha ao registrar aceite pós-cadastro:", err);
+      }
+
       sessionStorage.removeItem("fitmind_referral");
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
@@ -447,7 +462,8 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
             <label className="flex items-start gap-2 cursor-pointer pt-1">
               <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
               <span className="text-xs text-white/60">
-                Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
+                Li e aceito o <a href="/termos-parceiro" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Termo de Adesão FitMind — Empresa Parceira</a>,{" "}
+                os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
                 os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a> e a{" "}
                 <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Política de Privacidade</a>.
               </span>
