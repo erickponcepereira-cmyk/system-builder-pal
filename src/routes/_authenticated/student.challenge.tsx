@@ -196,13 +196,40 @@ function StudentChallengePage() {
 
   useEffect(() => { load(); loadTokens(); }, []);
 
+  // Passo 1: usuário clica "Quero entrar" → abre modal com 14 declarações obrigatórias.
   const handleJoin = async () => {
+    if (!confirmTurma) return;
+    setAcceptTicketOpen(true);
+  };
+
+  // Passo 2: aceite completo → registra em `terms_acceptances` e chama joinChallenge.
+  const handleJoinAfterAccept = async () => {
     if (!confirmTurma) return;
     setJoining(true);
     try {
+      // Registro imutável de aceite (auditoria LGPD) — feito ANTES da inscrição.
+      try {
+        await doRecordAcceptance({
+          data: {
+            termType: "desafio",
+            termVersion: TERMS_VERSION.desafio,
+            context: {
+              competitionId: confirmTurma.competitionId,
+              competitionLabel: confirmTurma.competitionLabel,
+              groupNumber: confirmTurma.groupNumber,
+            },
+          },
+        });
+      } catch (err: any) {
+        toast.error("Não foi possível registrar seu aceite. Tente novamente.");
+        console.error("[terms] falha ao registrar aceite de desafio:", err);
+        return;
+      }
+
       const res = await doJoin({ data: { competitionId: confirmTurma.competitionId } });
       if (!res.ok) { toast.error(res.error); return; }
       toast.success(`Inscrição confirmada em ${res.turma.competitionLabel} — Turma ${res.turma.groupNumber}!`);
+      setAcceptTicketOpen(false);
       setConfirmTurma(null);
       await Promise.all([load(), loadTokens()]);
     } catch (e: any) {
