@@ -15,6 +15,9 @@ import { translateAuthError } from "@/lib/auth-errors";
 import { maskPhone } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { useBranding } from "@/components/theme-provider";
+import { CAROL_COACH_ID } from "@/lib/branding";
+
 
 // ============================================================
 // STUDENT REGISTRATION (simpler)
