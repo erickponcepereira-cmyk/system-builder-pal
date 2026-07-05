@@ -83,7 +83,8 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
     );
 
     return {
-      specialties: (specs || []) as Array<{ key: string; label: string; requires_admin_setup: boolean; default_tabs: unknown }>,
+      specialties: ((specs || []) as Array<{ key: string; label: string; requires_admin_setup: boolean; default_tabs: unknown }>)
+        .map((s) => ({ key: s.key, label: s.label, requires_admin_setup: !!s.requires_admin_setup })),
       professionals: rows.map((r) => ({
         ...r,
         email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
