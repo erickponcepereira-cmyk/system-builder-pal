@@ -32,6 +32,7 @@ type ReferralContext = {
 };
 
 export function StudentRegistration({ onBack }: { onBack: () => void }) {
+  const { setOverride, clearOverride } = useBranding();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -46,6 +47,14 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Aplica white label da Carol quando indicação/coach selecionado é dela.
+  useEffect(() => {
+    const coachId = referral?.coachId || selectedCoach?.id || null;
+    if (coachId === CAROL_COACH_ID) setOverride("carol");
+    else clearOverride();
+  }, [referral?.coachId, selectedCoach?.id, setOverride, clearOverride]);
+
 
   useEffect(() => {
     try {
