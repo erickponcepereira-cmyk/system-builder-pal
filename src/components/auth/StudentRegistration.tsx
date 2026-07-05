@@ -15,6 +15,9 @@ import { translateAuthError } from "@/lib/auth-errors";
 import { maskPhone } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
+import { useBranding } from "@/components/theme-provider";
+import { CAROL_COACH_ID } from "@/lib/branding";
+
 
 // ============================================================
 // STUDENT REGISTRATION (simpler)
@@ -29,6 +32,7 @@ type ReferralContext = {
 };
 
 export function StudentRegistration({ onBack }: { onBack: () => void }) {
+  const { setOverride, clearOverride } = useBranding();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -43,6 +47,14 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Aplica white label da Carol quando indicação/coach selecionado é dela.
+  useEffect(() => {
+    const coachId = referral?.coachId || selectedCoach?.id || null;
+    if (coachId === CAROL_COACH_ID) setOverride("carol");
+    else clearOverride();
+  }, [referral?.coachId, selectedCoach?.id, setOverride, clearOverride]);
+
 
   useEffect(() => {
     try {
@@ -154,27 +166,27 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12" style={{ backgroundColor: "#0A0A0A" }}>
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-background">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
             <Logo className="h-10 w-10 object-contain" />
-            <span className="text-lg font-bold text-white">FitMind Club</span>
+            <span className="text-lg font-bold text-foreground">FitMind Club</span>
           </div>
-          <h1 className="text-xl font-bold text-white">Cadastro de Aluno</h1>
+          <h1 className="text-xl font-bold text-foreground">Cadastro de Aluno</h1>
         </div>
 
-        <div className="rounded-2xl p-6 sm:p-8" style={{ backgroundColor: "#1A1A1A" }}>
+        <div className="rounded-2xl p-6 sm:p-8 bg-card border border-border">
           {referral && (
-            <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-white/80">
+            <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3 text-xs text-card-foreground">
               <p className="font-semibold text-primary">
                 {referral.kind === "partner" ? "Convite de colaborador" : "Convite válido"}
               </p>
               <p className="mt-1">
                 {referral.kind === "partner" ? (
-                  <>Você foi convidado(a) como colaborador(a) de <span className="font-semibold text-white">{referral.sponsorName}</span>. Você terá acesso ao painel de aluno com todos os benefícios.</>
+                  <>Você foi convidado(a) como colaborador(a) de <span className="font-semibold">{referral.sponsorName}</span>. Você terá acesso ao painel de aluno com todos os benefícios.</>
                 ) : (
-                  <>Você foi indicado(a) por <span className="font-semibold text-white">{referral.sponsorName}</span>{referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.</>
+                  <>Você foi indicado(a) por <span className="font-semibold">{referral.sponsorName}</span>{referral.kind === "student" ? " (padrinho)" : " (coach)"}. Seu coach já está vinculado automaticamente.</>
                 )}
               </p>
             </div>
@@ -186,26 +198,26 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-white/70">Nome completo</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
+              <Label className="text-muted-foreground">Nome completo</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="bg-input border-border text-foreground placeholder:text-muted-foreground/60" required />
             </div>
             <div className="space-y-2">
-              <Label className="text-white/70">E-mail</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
+              <Label className="text-muted-foreground">E-mail</Label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="bg-input border-border text-foreground placeholder:text-muted-foreground/60" required />
             </div>
             <div className="space-y-2">
-              <Label className="text-white/70">WhatsApp</Label>
-              <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-white/5 border-white/10 text-white placeholder:text-white/30" required />
+              <Label className="text-muted-foreground">WhatsApp</Label>
+              <Input value={phone} onChange={(e) => setPhone(maskPhone(e.target.value))} placeholder="(11) 99999-9999" className="bg-input border-border text-foreground placeholder:text-muted-foreground/60" required />
             </div>
             <div className="space-y-2">
-              <Label className="text-white/70">Gênero</Label>
+              <Label className="text-muted-foreground">Gênero</Label>
               <div className="grid grid-cols-3 gap-2">
                 {([["M","Masculino"],["F","Feminino"],["O","Outro"]] as const).map(([v,label]) => (
                   <button
                     key={v}
                     type="button"
                     onClick={() => setGender(v)}
-                    className={`rounded-xl py-2 text-sm font-semibold transition-colors ${gender === v ? "bg-primary text-primary-foreground" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+                    className={`rounded-xl py-2 text-sm font-semibold transition-colors ${gender === v ? "bg-primary text-primary-foreground" : "bg-input text-foreground hover:bg-muted"}`}
                   >
                     {label}
                   </button>
@@ -213,22 +225,22 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-white/70">Instagram <span className="text-white/30 text-xs">(opcional)</span></Label>
-              <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@seuusuario" maxLength={100} className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
+              <Label className="text-muted-foreground">Instagram <span className="text-muted-foreground/60 text-xs">(opcional)</span></Label>
+              <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@seuusuario" maxLength={100} className="bg-input border-border text-foreground placeholder:text-muted-foreground/60" />
             </div>
             {referral ? (
               <div className="space-y-2">
-                <Label className="text-white/70">Coach indicador</Label>
+                <Label className="text-muted-foreground">Coach indicador</Label>
                 <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5">
                   <div className="flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-white">
+                    <span className="text-sm font-semibold text-foreground">
                       {referralCoachName || "Carregando coach..."}
                     </span>
                   </div>
                   <span className="text-[10px] uppercase tracking-wider text-primary/80 font-bold">Vinculado</span>
                 </div>
-                <p className="text-[11px] text-white/40">
+                <p className="text-[11px] text-muted-foreground">
                   Coach definido automaticamente pela sua indicação e não pode ser alterado.
                 </p>
               </div>
@@ -237,17 +249,17 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
             )}
 
             <div className="space-y-2">
-              <Label className="text-white/70">Senha</Label>
+              <Label className="text-muted-foreground">Senha</Label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Crie uma senha forte"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 pr-10"
+                  className="bg-input border-border text-foreground placeholder:text-muted-foreground/60 pr-10"
                   required
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70">
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -259,8 +271,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                   ["1 número (0-9)", /[0-9]/.test(password)],
                   ["1 caractere especial (!@#$...)", /[^A-Za-z0-9]/.test(password)],
                 ] as const).map(([label, ok]) => (
-                  <li key={label} className={`flex items-center gap-1.5 ${ok ? "text-emerald-400" : "text-white/40"}`}>
-                    <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ok ? "currentColor" : "rgba(255,255,255,0.3)" }} />
+                  <li key={label} className={`flex items-center gap-1.5 ${ok ? "text-emerald-500" : "text-muted-foreground"}`}>
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                     {label}
                   </li>
                 ))}
@@ -268,7 +280,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
             </div>
             <label className="flex items-start gap-2 cursor-pointer pt-1">
               <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />
-              <span className="text-xs text-white/60">
+              <span className="text-xs text-muted-foreground">
                 Li e aceito o <a href="/termos-aluno" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Termo de Adesão FitMind — Aluno</a>,{" "}
                 os <a href="/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>,{" "}
                 os <a href="/termos-compra" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Compra</a> e a{" "}
@@ -276,7 +288,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
               </span>
             </label>
             <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" onClick={onBack} className="flex-1 border-white/10 text-white/70 hover:bg-white/5">
+              <Button type="button" variant="outline" onClick={onBack} className="flex-1 border-border text-foreground hover:bg-muted">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
               <Button type="submit" className="flex-1" disabled={loading}>
@@ -286,7 +298,7 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
           </form>
         </div>
 
-        <div className="mt-4 text-center text-sm text-white/40">
+        <div className="mt-4 text-center text-sm text-muted-foreground">
           Já tem conta?{" "}
           <Link to="/login" className="font-medium text-primary hover:underline">
             Entrar
@@ -296,3 +308,4 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
+
