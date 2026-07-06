@@ -5,9 +5,11 @@ import {
   listAllProfessionalReleases,
   adminConfirmProfessionalEmail,
   adminSetProfessionalSpecialty,
+  adminGrantProfessionalActivation,
   adminApproveProfessionalFinal,
   getProfessionalReleaseAudit,
 } from "@/lib/professional-approvals.functions";
+
 import { toast } from "sonner";
 import {
   Loader2, CheckCircle2, Circle, Mail, Stethoscope, Settings2,
