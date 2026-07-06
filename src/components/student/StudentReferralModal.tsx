@@ -60,7 +60,7 @@ export function StudentReferralModal({
       const out: RefProduct[] = [];
       const [challengesRes, slotsRes, partnerRes, profRes] = await Promise.all([
         ids.length
-          ? supabase.from("products").select("id,name,price,image_url").eq("status", "active").in("id", ids)
+          ? supabase.from("products").select("id,name,price,image_url,visibility_audiences" as any).eq("status", "active").in("id", ids)
           : Promise.resolve({ data: [] as any }),
         ids.length
           ? supabase
