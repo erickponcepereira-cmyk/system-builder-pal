@@ -607,54 +607,90 @@ export function EvaluateTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkSearch, linkingClient]);
 
-  const linkClientToStudent = async (client: FitMindClient, studentId: string) => {
+  // Passo 1: usuário escolheu um aluno na lista → checa duplicidade e abre confirmação
+  const requestLinkClientToStudent = async (client: FitMindClient, student: { id: string; name: string; email?: string }) => {
     if (!coachInfo.id) return;
     try {
-      // Já existe um evaluation-client para este student neste coach? Se sim, mesclar.
       const targetCoachId = (client as any).coachId || coachInfo.id;
-      const { data: existing } = await supabase
+      // Verifica se este aluno já está vinculado a algum outro cadastro deste coach
+      const { data: existing, error: exErr } = await supabase
         .from("coach_evaluation_clients" as never)
-        .select("id" as never)
+        .select("id,name" as never)
         .eq("coach_id" as never, targetCoachId as never)
-        .eq("student_id" as never, studentId as never)
+        .eq("student_id" as never, student.id as never)
+        .neq("id" as never, client.id as never)
         .maybeSingle();
+      if (exErr) throw exErr;
+      const existingClientName = existing ? (existing as any).name : undefined;
+      setConfirmText("");
+      setConfirmLink({ client, student, existingClientName });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erro ao verificar vinculação");
+    }
+  };
 
-      let keepClientId = client.id;
-      if (existing && (existing as any).id && (existing as any).id !== client.id) {
-        // Mesclar: mover todas as avaliações do cliente importado para o existente
-        keepClientId = (existing as any).id;
-        const { error: mvErr } = await supabase
-          .from("coach_body_assessments" as never)
-          .update({ client_id: keepClientId, student_id: studentId } as never)
-          .eq("client_id" as never, client.id as never);
-        if (mvErr) throw mvErr;
-        // Remove o cliente importado (agora sem avaliações)
-        await supabase
-          .from("coach_evaluation_clients" as never)
-          .delete()
-          .eq("id" as never, client.id as never);
-      } else {
-        // Vincular o cliente importado ao aluno do sistema
-        const { error: upErr } = await supabase
-          .from("coach_evaluation_clients" as never)
-          .update({ student_id: studentId } as never)
-          .eq("id" as never, client.id as never);
-        if (upErr) throw upErr;
-        // Atualizar assessments existentes com student_id para o aluno enxergar
-        const { error: aErr } = await supabase
-          .from("coach_body_assessments" as never)
-          .update({ student_id: studentId } as never)
-          .eq("client_id" as never, client.id as never);
-        if (aErr) throw aErr;
-      }
+  // Passo 2: usuário confirmou digitando CONFIRMAR → executa a vinculação e registra auditoria
+  const executeConfirmedLink = async () => {
+    if (!confirmLink) return;
+    if (confirmText.trim().toUpperCase() !== "CONFIRMAR") {
+      toast.error("Digite CONFIRMAR para prosseguir.");
+      return;
+    }
+    // Bloqueia se aluno já está vinculado a outro cadastro
+    if (confirmLink.existingClientName) {
+      toast.error(
+        `Este aluno já está vinculado ao cadastro "${confirmLink.existingClientName}". Peça ao admin para desfazer a vinculação anterior antes de refazer.`
+      );
+      return;
+    }
+    setConfirmBusy(true);
+    const { client, student } = confirmLink;
+    try {
+      const targetCoachId = (client as any).coachId || coachInfo.id;
+      // Captura estado anterior para auditoria
+      const { data: before } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("student_id" as never)
+        .eq("id" as never, client.id as never)
+        .maybeSingle();
+      const previousStudentId = (before as any)?.student_id ?? null;
+
+      // Vincula o cliente ao aluno
+      const { error: upErr } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .update({ student_id: student.id } as never)
+        .eq("id" as never, client.id as never);
+      if (upErr) throw upErr;
+      const { error: aErr } = await supabase
+        .from("coach_body_assessments" as never)
+        .update({ student_id: student.id } as never)
+        .eq("client_id" as never, client.id as never);
+      if (aErr) throw aErr;
+
+      // Registra auditoria
+      const { data: sess } = await supabase.auth.getUser();
+      await supabase.from("evaluation_link_audit" as never).insert({
+        coach_id: targetCoachId,
+        client_id: client.id,
+        previous_student_id: previousStudentId,
+        new_student_id: student.id,
+        action: previousStudentId ? "transfer" : "link",
+        performed_by: sess.user?.id ?? null,
+        performed_by_role: "coach",
+        metadata: { client_name: client.name, student_name: student.name },
+      } as never);
 
       toast.success("Avaliações integradas ao cadastro do aluno");
+      setConfirmLink(null);
       setLinkingClient(null);
       clientSummaryCache.delete(coachInfo.id);
       await loadClients();
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erro ao integrar cadastro");
+    } finally {
+      setConfirmBusy(false);
     }
   };
 
