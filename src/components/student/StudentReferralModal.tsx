@@ -90,6 +90,10 @@ export function StudentReferralModal({
         slotsByProduct.set(s.product_id, arr);
       });
       (((challengesRes as any).data as any[]) || []).forEach((p: any) => {
+        const aud = p.visibility_audiences as string[] | null;
+        if (Array.isArray(aud) && aud.length > 0 && !aud.includes("student") && !aud.includes("aluno") && !aud.includes("all")) {
+          return; // produto restrito a coaches/parceiros — não exibir no Indique e Ganhe do aluno
+        }
         const price = Number(p.price || 0);
         const productSlots = (slotsByProduct.get(p.id) || [])
           .filter((s) => s.applies_to_student_referral !== false)
