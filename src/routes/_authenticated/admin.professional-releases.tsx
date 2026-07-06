@@ -89,7 +89,9 @@ function ProfessionalReleasesPage() {
   const [auditByPro, setAuditByPro] = useState<Record<string, AuditEntry[] | "loading">>({});
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [monthlyFilter, setMonthlyFilter] = useState<MonthlyFilter>("all");
   const [includeApproved, setIncludeApproved] = useState(false);
+
 
   const reload = async () => {
     setLoading(true);
