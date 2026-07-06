@@ -185,6 +185,7 @@ export interface FitMindAssessment {
   height: number;
   weight: number;
   bmi: number;
+  scaleNumber?: string;
   // Fórmula de bioimpedância usada
   bioFormula?: "harris_benedict" | "cunningham" | "tem_haaf" | "mifflin_st_jeor";
   // Bioimpedância
@@ -606,6 +607,12 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   // ── Salvar avaliação ─────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!selectedClient || !onSaveAssessment) return;
+    if (!String(assessment.scaleNumber || "").trim()) {
+      const { toast } = await import("sonner");
+      toast.error("Informe o número da balança nos Dados Básicos.");
+      setStep(0);
+      return;
+    }
     setIsSaving(true);
     try {
       const assessmentDate = (() => {
@@ -625,6 +632,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         clientId: selectedClient.id,
         date: assessmentDate,
         bmi: computedBMI,
+        scaleNumber: String(assessment.scaleNumber || "").trim(),
       };
       const savedId = await onSaveAssessment(full, selectedClient);
       const finalAssessment = savedId ? { ...full, id: savedId } : full;
@@ -2060,6 +2068,17 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <option value="mifflin_st_jeor">Mifflin St Jeor</option>
           </select>
         </div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="fm-label">Número da balança *</label>
+          <input
+            type="text"
+            className="fm-input"
+            placeholder="Ex: Balança 01"
+            value={assessment.scaleNumber || ""}
+            onChange={(e) => upd("scaleNumber", e.target.value.slice(0, 50))}
+            required
+          />
+        </div>
         <div className="fm-grid-3" style={{ marginBottom: 12 }}>
           <div>
             <label className="fm-label">
@@ -2833,7 +2852,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             <button
               className="fm-btn-primary"
               style={{ flex: 1 }}
-              onClick={() => setStep((s) => s + 1)}
+              onClick={async () => {
+                if (step === 0 && !String(assessment.scaleNumber || "").trim()) {
+                  const { toast } = await import("sonner");
+                  toast.error("Informe o número da balança para continuar.");
+                  return;
+                }
+                setStep((s) => s + 1);
+              }}
             >
               Próximo <ChevronRight size={16} style={{ display: "inline" }} />
             </button>
