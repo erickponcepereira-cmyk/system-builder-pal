@@ -62,6 +62,7 @@ export interface ProfessionalCard {
   instagram?: string | null;
   website?: string | null;
   services?: string | null;
+  publicWhatsapp?: string | null;
   socialLinks?: Array<{ label?: string; url: string }> | null;
 }
 
