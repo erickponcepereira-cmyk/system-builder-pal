@@ -81,28 +81,31 @@ export function SettingsTab({ coachId, profileId }: Props) {
     })();
   }, [coachId, profileId]);
 
-  const uploadAvatar = async (file: File) => {
+  const uploadAvatar = async (blob: Blob) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
-    const path = `${user.id}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (upErr) return toast.error(upErr.message);
+    if (!user) { toast.error("Sessão expirada. Faça login novamente."); return; }
+    const path = `${user.id}/${Date.now()}-avatar.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { toast.error(upErr.message); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     setAvatarUrl(pub.publicUrl);
     await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("id", profileId);
+    setPendingAvatar(null);
     toast.success("Foto atualizada");
   };
 
-  const uploadCover = async (file: File) => {
+  const uploadCover = async (blob: Blob) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
-    const path = `${user.id}/cover-${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (upErr) return toast.error(upErr.message);
+    if (!user) { toast.error("Sessão expirada. Faça login novamente."); return; }
+    const path = `${user.id}/cover-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { toast.error(upErr.message); return; }
     const { data: pubUrl } = supabase.storage.from("avatars").getPublicUrl(path);
     setPub((prev) => ({ ...prev, cover_url: pubUrl.publicUrl }));
+    setPendingCover(null);
     toast.success("Capa atualizada (clique em Salvar perfil)");
   };
+
 
   const saveProfile = async () => {
     setSaving(true);
