@@ -259,8 +259,40 @@ function ProfessionalReleasesPage() {
                         Aprovado{r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
                       </span>
                     )}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {r.already_coach && (
+                        <span className="inline-flex rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold text-blue-300">já era coach</span>
+                      )}
+                      {(() => {
+                        const src = r.activation_source ?? (r.already_coach ? "already_coach" : null);
+                        const b = src ? ACTIVATION_SOURCE_BADGE[src] : null;
+                        if (r.activation_paid_at) {
+                          return (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${b?.cls || "bg-emerald-500/15 text-emerald-300"}`}>
+                              <CreditCard className="h-3 w-3" />
+                              Ativação {b?.label ? `· ${b.label}` : "concedida"} · {new Date(r.activation_paid_at).toLocaleDateString("pt-BR")}
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold text-white/50">
+                            <CreditCard className="h-3 w-3" /> Sem ativação
+                          </span>
+                        );
+                      })()}
+                      {(() => {
+                        const m = MONTHLY_BADGE[r.monthly?.status ?? "none"];
+                        return (
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${m.cls}`}
+                            title={r.monthly?.last_invoice_month ? `Últ. fatura: ${new Date(r.monthly.last_invoice_month).toLocaleDateString("pt-BR")} (${r.monthly.last_invoice_status || "—"})` : undefined}>
+                            {m.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
+
 
                 {/* Trilha */}
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
