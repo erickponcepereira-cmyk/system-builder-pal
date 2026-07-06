@@ -318,27 +318,37 @@ function CoachDashboard() {
 
       {/* Mobile header */}
       <div
-        className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between border-b border-white/5 px-4 backdrop-blur-xl lg:hidden"
-        style={{ backgroundColor: "rgba(10,10,10,0.9)" }}
+        className="fixed left-0 right-0 top-0 z-[70] grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-white/5 px-4 py-2 backdrop-blur-xl lg:hidden"
+        style={{
+          backgroundColor: "rgba(10,10,10,0.94)",
+          paddingTop: "max(2rem, env(safe-area-inset-top))",
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
       >
-        <div className="flex items-center gap-2">
-<Logo className="h-9 w-auto object-contain" />
-          <span className="font-bold text-white">FitMind Club</span>
+        <div className="flex min-w-0 items-center gap-2">
+<Logo className="h-9 w-auto shrink-0 object-contain" />
+          <span className="truncate font-bold text-white">FitMind Club</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <RoleSwitcher current="coach" />
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <button
+            type="button"
+            aria-label={sidebarOpen ? "Fechar menu" : "Abrir menu"}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-lg bg-white/10 text-white active:bg-white/20"
+          >
+            {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto overscroll-contain transform border-r border-white/5 p-4 transition-transform lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-[60] flex w-64 flex-col overflow-y-auto overscroll-contain transform border-r border-white/5 p-4 transition-transform lg:relative lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
-        style={{ backgroundColor: "#0F0F0F" }}
+        style={{ backgroundColor: "#0F0F0F", paddingTop: "max(1rem, env(safe-area-inset-top))" }}
       >
         <div className="mb-8 flex items-center gap-2 px-2 pt-14 lg:pt-0">
 <Logo className="h-9 w-auto object-contain" />
@@ -453,14 +463,14 @@ function CoachDashboard() {
       {/* Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 lg:hidden"
+          className="fixed inset-0 z-50 lg:hidden"
           style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
+      <main className="flex-1 overflow-y-auto pt-[calc(5.75rem+env(safe-area-inset-top))] lg:pt-0">
         <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
           {isPending && (
             <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5">
