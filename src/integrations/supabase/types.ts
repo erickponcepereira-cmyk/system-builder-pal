@@ -5273,6 +5273,8 @@ export type Database = {
           description: string | null
           discount_percent: number | null
           estimated_value: number | null
+          event_capacity: number | null
+          event_date: string | null
           id: string
           image_url: string | null
           is_active_by_partner: boolean
@@ -5314,6 +5316,8 @@ export type Database = {
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
+          event_capacity?: number | null
+          event_date?: string | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
@@ -5355,6 +5359,8 @@ export type Database = {
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
+          event_capacity?: number | null
+          event_date?: string | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
@@ -6826,6 +6832,8 @@ export type Database = {
           description: string | null
           discount_percent: number | null
           estimated_value: number | null
+          event_capacity: number | null
+          event_date: string | null
           id: string
           image_url: string | null
           is_active_by_professional: boolean
@@ -6837,6 +6845,7 @@ export type Database = {
           network_l2_amount: number | null
           network_l3_amount: number | null
           original_price: number | null
+          payment_timing: string
           price: number
           price_input_mode: string
           professional_net_amount: number | null
@@ -6866,6 +6875,8 @@ export type Database = {
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
+          event_capacity?: number | null
+          event_date?: string | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
@@ -6877,6 +6888,7 @@ export type Database = {
           network_l2_amount?: number | null
           network_l3_amount?: number | null
           original_price?: number | null
+          payment_timing?: string
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
@@ -6906,6 +6918,8 @@ export type Database = {
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
+          event_capacity?: number | null
+          event_date?: string | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
@@ -6917,6 +6931,7 @@ export type Database = {
           network_l2_amount?: number | null
           network_l3_amount?: number | null
           original_price?: number | null
+          payment_timing?: string
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
