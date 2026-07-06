@@ -321,7 +321,7 @@ function CoachDashboard() {
         className="fixed left-0 right-0 top-0 z-[70] grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-white/5 px-4 py-2 backdrop-blur-xl lg:hidden"
         style={{
           backgroundColor: "rgba(10,10,10,0.94)",
-          paddingTop: "max(0.5rem, env(safe-area-inset-top))",
+          paddingTop: "max(2rem, env(safe-area-inset-top))",
           paddingLeft: "max(1rem, env(safe-area-inset-left))",
           paddingRight: "max(1rem, env(safe-area-inset-right))",
         }}
@@ -470,7 +470,7 @@ function CoachDashboard() {
       )}
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto pt-[calc(3.5rem+env(safe-area-inset-top))] lg:pt-0">
+      <main className="flex-1 overflow-y-auto pt-[calc(5.75rem+env(safe-area-inset-top))] lg:pt-0">
         <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
           {isPending && (
             <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5">
