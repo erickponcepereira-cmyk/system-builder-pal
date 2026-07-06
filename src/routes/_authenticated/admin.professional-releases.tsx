@@ -154,11 +154,13 @@ function ProfessionalReleasesPage() {
     if (stageFilter !== "all") {
       const emailDone = r.email_confirmed;
       const specDone = !!r.specialty_key;
+      const actDone = !!r.activation_paid_at;
       const approved = !!r.approved_at;
       if (stageFilter === "approved" && !approved) return false;
       if (stageFilter === "email" && emailDone) return false;
       if (stageFilter === "specialty" && (!emailDone || specDone)) return false;
-      if (stageFilter === "approval" && (!specDone || approved)) return false;
+      if (stageFilter === "activation" && (!specDone || actDone)) return false;
+      if (stageFilter === "approval" && (!actDone || approved)) return false;
     }
     if (monthlyFilter !== "all" && (r.monthly?.status ?? "none") !== monthlyFilter) return false;
     if (q) {
@@ -167,6 +169,7 @@ function ProfessionalReleasesPage() {
     }
     return true;
   });
+
 
   const MONTHLY_BADGE: Record<MonthlyStatus, { label: string; cls: string }> = {
     paid:      { label: "Mensalidade paga",     cls: "bg-emerald-500/15 text-emerald-300" },
