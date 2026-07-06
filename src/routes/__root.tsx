@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
+import { registerAppServiceWorker } from "@/pwa-register";
 
 function NotFoundComponent() {
   return (
