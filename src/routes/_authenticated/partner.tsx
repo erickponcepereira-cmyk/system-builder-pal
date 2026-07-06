@@ -769,7 +769,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 <ProductImageGallery
                   folder={`partners/${partner.id}`}
                   images={editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : [])}
-                  onChange={(next) => setEditing({ ...editing, image_urls: next, image_url: next[0] || null })}
+                  onChange={(next: string[]) => setEditing({ ...editing, image_urls: next, image_url: next[0] || null })}
                 />
               </Field>
 
