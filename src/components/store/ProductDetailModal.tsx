@@ -146,12 +146,43 @@ export function ProductDetailModal({
         className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
       >
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-muted">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" />
+          {currentImage ? (
+            <img src={currentImage} alt={product.title} className="h-full w-full object-cover transition-opacity" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <ShoppingBag className="h-16 w-16 text-muted-foreground" />
             </div>
+          )}
+          {gallery.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={prevImage}
+                aria-label="Imagem anterior"
+                className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={nextImage}
+                aria-label="Próxima imagem"
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 rounded-full bg-background/70 px-2 py-1 backdrop-blur-sm">
+                {gallery.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setImgIdx(i)}
+                    aria-label={`Ir para imagem ${i + 1}`}
+                    className={`h-1.5 rounded-full transition-all ${i === imgIdx ? "w-4 bg-primary" : "w-1.5 bg-foreground/40"}`}
+                  />
+                ))}
+              </div>
+            </>
           )}
           <button
             onClick={onClose}
@@ -165,6 +196,7 @@ export function ProductDetailModal({
             </span>
           )}
         </div>
+
 
         <div className="space-y-4 p-5">
           <div>
