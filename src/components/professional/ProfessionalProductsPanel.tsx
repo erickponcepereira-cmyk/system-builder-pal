@@ -88,7 +88,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
 
   const blank = (): Partial<ProProduct> => ({
     coach_id: coachId,
-    name: "", description: "", image_url: "", price: 0, stock: null,
+    name: "", description: "", image_url: "", image_urls: [], price: 0, stock: null,
     original_price: null,
     redemption_instructions: "", is_active_by_professional: true,
     price_input_mode: "charge",
