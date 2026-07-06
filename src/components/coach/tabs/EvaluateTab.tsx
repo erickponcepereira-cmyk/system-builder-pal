@@ -492,6 +492,99 @@ export function EvaluateTab() {
   };
 
 
+  // ─── Integrar cliente importado (Fineshape) a um aluno cadastrado ──────────
+  const openLinkClientModal = async (client: FitMindClient) => {
+    if (!coachInfo.id) return;
+    setLinkingClient(client);
+    setLinkSearch("");
+    setLinkStudents([]);
+    setLinkLoading(true);
+    try {
+      // Master vê todos; coach comum vê apenas seus alunos
+      let q = supabase
+        .from("students")
+        .select("id,coach_id,profile_id,profiles!students_profile_id_fkey(name,email)")
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (!isMaster) q = q.eq("coach_id", coachInfo.id);
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = (data as any[]) || [];
+      // Nomes dos coaches (para master; próprio coach sempre = coachInfo.name)
+      const coachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter(Boolean)));
+      const coachMap = new Map<string, string>();
+      if (coachIds.length) {
+        const { data: cs } = await supabase
+          .from("coaches")
+          .select("id, profiles!coaches_profile_id_fkey(name)")
+          .in("id", coachIds);
+        ((cs as any[]) || []).forEach((c) => coachMap.set(c.id, c.profiles?.name || "Coach"));
+      }
+      const list = rows.map((r) => ({
+        id: r.id as string,
+        name: (r.profiles?.name as string) || "Aluno",
+        email: (r.profiles?.email as string) || undefined,
+        coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
+      }));
+      list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+      setLinkStudents(list);
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Erro ao carregar alunos do sistema");
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const linkClientToStudent = async (client: FitMindClient, studentId: string) => {
+    if (!coachInfo.id) return;
+    try {
+      // Já existe um evaluation-client para este student neste coach? Se sim, mesclar.
+      const targetCoachId = (client as any).coachId || coachInfo.id;
+      const { data: existing } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id" as never)
+        .eq("coach_id" as never, targetCoachId as never)
+        .eq("student_id" as never, studentId as never)
+        .maybeSingle();
+
+      let keepClientId = client.id;
+      if (existing && (existing as any).id && (existing as any).id !== client.id) {
+        // Mesclar: mover todas as avaliações do cliente importado para o existente
+        keepClientId = (existing as any).id;
+        const { error: mvErr } = await supabase
+          .from("coach_body_assessments" as never)
+          .update({ client_id: keepClientId, student_id: studentId } as never)
+          .eq("client_id" as never, client.id as never);
+        if (mvErr) throw mvErr;
+        // Remove o cliente importado (agora sem avaliações)
+        await supabase
+          .from("coach_evaluation_clients" as never)
+          .delete()
+          .eq("id" as never, client.id as never);
+      } else {
+        // Vincular o cliente importado ao aluno do sistema
+        const { error: upErr } = await supabase
+          .from("coach_evaluation_clients" as never)
+          .update({ student_id: studentId } as never)
+          .eq("id" as never, client.id as never);
+        if (upErr) throw upErr;
+        // Atualizar assessments existentes com student_id para o aluno enxergar
+        const { error: aErr } = await supabase
+          .from("coach_body_assessments" as never)
+          .update({ student_id: studentId } as never)
+          .eq("client_id" as never, client.id as never);
+        if (aErr) throw aErr;
+      }
+
+      toast.success("Avaliações integradas ao cadastro do aluno");
+      setLinkingClient(null);
+      await loadClients();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erro ao integrar cadastro");
+    }
+  };
 
   return (
     <>
