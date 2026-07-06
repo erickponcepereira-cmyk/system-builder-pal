@@ -37,6 +37,7 @@ export type PartnerStoreCard = {
   description: string | null;
   image_url: string | null;
   price: number;
+  originalPrice?: number | null;
   section_id: string | null;
   category_id: string | null;
   seller: string;
@@ -50,6 +51,25 @@ export type PartnerStoreCard = {
 
 const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function PricePair({ price, originalPrice, compact = false }: { price: number; originalPrice?: number | null; compact?: boolean }) {
+  const hasDiscount = !!originalPrice && originalPrice > price;
+  return (
+    <div className={compact ? "mt-1 flex flex-wrap items-baseline gap-1.5" : "mt-2 flex flex-wrap items-baseline gap-2"}>
+      {hasDiscount && (
+        <span className={compact ? "text-[10px] text-muted-foreground line-through" : "text-sm text-muted-foreground line-through"}>
+          {money(originalPrice)}
+        </span>
+      )}
+      <span className={compact ? "text-sm font-bold text-primary" : "text-2xl font-bold text-primary"}>{money(price)}</span>
+      {hasDiscount && (
+        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+          por este valor
+        </span>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   kind: Kind;
@@ -140,15 +160,15 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       if (kind === "partner") {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
+          .select("id,name,description,image_url,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
           .is("deleted_at" as never, null as never);
         if (error) console.error("[partner store]", error);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price),
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
+            id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
             section_id: r.section_id, category_id: r.category_id,
             seller: r.partners?.fantasy_name || "Parceiro",
             kind: "partner",
@@ -159,14 +179,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         const { data, error } = await supabase
           .from("professional_products" as never)
           .select(
-            "id,name,description,image_url,price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+            "id,name,description,image_url,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
           )
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true);
         if (error) console.error("[pp store]", error);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price),
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
+            id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
             section_id: r.section_id, category_id: r.category_id,
             seller: r.coaches?.profile?.name || "Profissional",
             kind: "professional",
@@ -428,7 +448,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   </div>
                   <p className="text-[10px] uppercase font-bold text-white/40">{p.seller}</p>
                   <p className="min-h-[32px] text-xs font-medium text-white line-clamp-2">{p.name}</p>
-                   <p className="mt-1 text-sm font-bold text-primary">{money(p.price)}</p>
+                   <PricePair price={p.price} originalPrice={p.originalPrice} compact />
                    <BenefitsBadges price={p.price} compact />
                  </button>
                 <div className="absolute right-2 top-2 flex flex-col gap-1.5">
@@ -502,7 +522,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{selected.seller}</p>
                 <h2 className="mt-1 text-xl font-bold text-foreground">{selected.name}</h2>
-                <p className="mt-2 text-2xl font-bold text-primary">{money(selected.price)}</p>
+                <PricePair price={selected.price} originalPrice={selected.originalPrice} />
                 <BenefitsBadges price={selected.price} />
               </div>
               {selected.description && (
