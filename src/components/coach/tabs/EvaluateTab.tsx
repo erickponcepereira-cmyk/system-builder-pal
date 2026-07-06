@@ -31,6 +31,9 @@ type ChallengeCandidate = {
   coachName?: string;
 };
 
+const CLIENT_SUMMARY_CACHE_TTL_MS = 60_000;
+const clientSummaryCache = new Map<string, { expiresAt: number; clients: FitMindClient[] }>();
+
 export function EvaluateTab() {
   const navigate = useNavigate();
   const [clients, setClients] = useState<FitMindClient[]>([]);
@@ -99,6 +102,7 @@ export function EvaluateTab() {
     clientNotes: row.client_notes || undefined,
     professionalNotes: row.professional_notes || undefined,
     photos: row.photos || undefined,
+    scaleNumber: row.scale_number || undefined,
     nextAssessmentDate: row.next_assessment_date || undefined,
     nextAssessmentTime: row.next_assessment_time || undefined,
     groupId: row.group_id || undefined,
@@ -136,85 +140,37 @@ export function EvaluateTab() {
     const masterFlag = !!masterResult;
     setIsMaster(masterFlag);
 
-    // Paginate to bypass Supabase's default 1000-row limit.
-    // PERF: do NOT join coach_body_assessments here — that pulled ~13k rows with heavy jsonb
-    // (photos / segment_analysis) and caused ~30s loads on master coach view. We fetch only
-    // client metadata here, then a separate lightweight count-only assessment fetch, then
-    // lazy-load the full per-assessment payload only when a client is opened.
-    const PAGE = 1000;
-
-    const fetchAllClients = async () => {
-      let from = 0;
-      const out: any[] = [];
-      while (true) {
-        let q = supabase
-          .from("coach_evaluation_clients" as never)
-          .select("id,coach_id,student_id,name,gender,ethnicity,height,height_unit,birth_date,language,whatsapp,email,notes,groups,avatar_url,created_at" as never)
-          .order("created_at" as never, { ascending: false })
-          .range(from, from + PAGE - 1);
-        if (!masterFlag) q = q.eq("coach_id" as never, coach.id as never);
-        const { data, error } = await q;
-        if (error) throw error;
-        const rows = (data as any[]) || [];
-        out.push(...rows);
-        if (rows.length < PAGE) break;
-        from += PAGE;
-      }
-      return out;
-    };
-
-    // PERF: usa RPC agregada em vez de baixar milhares de linhas leves.
-    const fetchAssessmentSummary = async () => {
-      const map = new Map<string, { total: number; last_at: string | null }>();
-      const { data, error } = await supabase.rpc(
-        "coach_assessment_counts" as never,
-        { _coach_id: coach.id, _master: masterFlag } as never,
-      );
-      if (error) {
-        console.warn("coach_assessment_counts:", error);
-        return map;
-      }
-      ((data as any[]) || []).forEach((r) => {
-        map.set(r.client_id, { total: Number(r.total || 0), last_at: r.last_at || null });
-      });
-      return map;
-    };
+    const cacheKey = coach.id;
+    const cached = clientSummaryCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      setClients(cached.clients);
+      await loadChallengeCandidates(coach.id, masterFlag);
+      return;
+    }
 
     let all: any[] = [];
-    let summaryByClient = new Map<string, { total: number; last_at: string | null }>();
     try {
-      const [c1, c2] = await Promise.all([fetchAllClients(), fetchAssessmentSummary()]);
-      all = c1;
-      summaryByClient = c2;
-    } catch {
+      const { data, error } = await supabase.rpc(
+        "coach_evaluation_client_summaries" as never,
+        { _coach_id: coach.id } as never,
+      );
+      if (error) throw error;
+      all = (data as any[]) || [];
+    } catch (error) {
+      console.error("coach_evaluation_client_summaries:", error);
       return toast.error("Erro ao carregar alunos da avaliação");
     }
 
-
-    // Build coachId -> coachName map (only needed for master view)
-    const coachNameById = new Map<string, string>();
-    if (masterFlag) {
-      const otherCoachIds = Array.from(new Set(all.map((r) => r.coach_id).filter((id) => id && id !== coach.id)));
-      if (otherCoachIds.length) {
-        const { data: coachesData } = await supabase
-          .from("coaches")
-          .select("id, profiles!coaches_profile_id_fkey(name)")
-          .in("id", otherCoachIds);
-        ((coachesData as any[]) || []).forEach((cc) => {
-          coachNameById.set(cc.id, cc.profiles?.name || "Coach");
-        });
-      }
-    }
-
-    setClients(all.map((row) => {
-      const s = summaryByClient.get(row.id) || { total: 0, last_at: null };
+    const mappedClients = all.map((row) => {
+      const total = Number(row.assessment_count || 0);
+      const lastAt = row.last_assessment_at || null;
       // Stub avaliações apenas com id/date para a lista mostrar contagem e "última" —
       // dados completos (fotos, notas, segmentos) são carregados sob demanda ao abrir o aluno.
-      const stubs: FitMindAssessment[] = s.total > 0
-        ? Array.from({ length: s.total }, (_, i) => ({
+      const stubs: FitMindAssessment[] = total > 0
+        ? Array.from({ length: total }, (_, i) => ({
             id: `__stub_${row.id}_${i}`,
             clientId: row.id,
-            date: (i === s.total - 1 && s.last_at) ? s.last_at : "",
+            date: (i === total - 1 && lastAt) ? lastAt : "",
             method: "bioimpedance",
             age: 0, height: 0, weight: 0, bmi: 0, bodyFat: 0,
             skeletalMuscle: 0, muscleMass: 0, visceralFat: 0, basalMetabolism: 0,
@@ -232,15 +188,17 @@ export function EvaluateTab() {
         heightUnit: row.height_unit,
         birthDate: row.birth_date || "",
         language: row.language,
-        whatsapp: row.whatsapp || "",
-        email: row.email || "",
-        notes: row.notes || "",
+        whatsapp: "",
+        email: "",
+        notes: "",
         groups: row.groups || [],
         avatar: row.avatar_url || undefined,
         assessments: stubs,
-        coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
+        coachName: masterFlag && row.coach_id !== coach.id ? (row.coach_name || "Outro coach") : undefined,
       };
-    }));
+    });
+    clientSummaryCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_SUMMARY_CACHE_TTL_MS, clients: mappedClients });
+    setClients(mappedClients);
 
     // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
     await loadChallengeCandidates(coach.id, masterFlag);
