@@ -851,7 +851,81 @@ export function EvaluateTab() {
         themeColor="#dc2626"
         themeFontFamily="inherit"
       />
+
+      {linkingClient && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setLinkingClient(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-base font-bold text-white">Integrar ao cadastro do sistema</h3>
+                <p className="text-xs text-white/50 mt-0.5">
+                  Vincular as avaliações de <b className="text-white/80">{linkingClient.name}</b> ao cadastro de um aluno.
+                </p>
+              </div>
+              <button
+                onClick={() => setLinkingClient(null)}
+                className="text-white/60 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={linkSearch}
+              onChange={(e) => setLinkSearch(e.target.value)}
+              placeholder="Buscar aluno pelo nome ou e-mail..."
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40 mb-3 focus:outline-none focus:border-primary/60"
+            />
+
+            <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5">
+              {linkLoading ? (
+                <div className="p-6 text-center text-sm text-white/60">Carregando alunos...</div>
+              ) : linkStudents.length === 0 ? (
+                <div className="p-6 text-center text-sm text-white/60">Nenhum aluno encontrado</div>
+              ) : (
+                linkStudents
+                  .filter((s) => {
+                    const q = linkSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return `${s.name} ${s.email || ""}`.toLowerCase().includes(q);
+                  })
+                  .slice(0, 200)
+                  .map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => linkClientToStudent(linkingClient, s.id)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{s.name}</p>
+                        <p className="text-[11px] text-white/50 truncate">
+                          Coach: {s.coachName || "—"}
+                          {s.email ? ` · ${s.email}` : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-md bg-primary/20 text-primary border border-primary/40">
+                        Vincular
+                      </span>
+                    </button>
+                  ))
+              )}
+            </div>
+
+            <p className="text-[11px] text-white/40 mt-3">
+              Após integrar, todas as avaliações passam a aparecer para o aluno no perfil dele e nos históricos do coach.
+            </p>
+          </div>
+        </div>
+      )}
     </>
+
   );
 }
 
