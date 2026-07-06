@@ -153,14 +153,13 @@ function GateShell({
 function Stepper({ stage, alreadyCoach }: { stage: Stage; alreadyCoach?: boolean }) {
   const steps: { id: Stage; label: string }[] = alreadyCoach
     ? [
-        { id: "awaiting_quiz_result", label: "Quiz comportamental" },
         { id: "awaiting_upline_release", label: "Aguardando admin" },
       ]
     : [
         { id: "awaiting_payment", label: "Pagar curso" },
-        { id: "awaiting_quiz_result", label: "Concluir & enviar resultado" },
         { id: "awaiting_upline_release", label: "Liberar ID" },
       ];
+
   const currentIdx = steps.findIndex((s) => s.id === stage);
   return (
     <div className="flex items-center gap-2">
