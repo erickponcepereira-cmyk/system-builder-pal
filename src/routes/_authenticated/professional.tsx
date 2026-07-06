@@ -173,7 +173,15 @@ function ProfessionalPanel() {
   return (
     <SubscriptionGuard walletSource="professional">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
-      <header className="border-b border-white/5" style={{ backgroundColor: "#0F0F0F" }}>
+      <header
+        className="border-b border-white/5"
+        style={{
+          backgroundColor: "#0F0F0F",
+          paddingTop: "max(0.75rem, env(safe-area-inset-top))",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <Logo className="h-8 w-8 object-contain" />
@@ -184,7 +192,7 @@ function ProfessionalPanel() {
           </Link>
           <div className="flex items-center gap-3">
             <RoleSwitcher current="professional" />
-            <button onClick={handleLogout} className="rounded-lg border border-white/10 p-2 text-white/50 hover:bg-white/5">
+            <button onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-white/50 hover:bg-white/5 touch-manipulation">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
