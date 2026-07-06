@@ -219,7 +219,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         category: productCategory(String(p.product_type || p.type)), kind: "challenge" as const,
         tag: p.badge_label || "FitMind", isPriceRange: p.is_price_range,
         minPrice: p.min_price ? Number(p.min_price) : null, maxPrice: p.max_price ? Number(p.max_price) : null,
-        imageUrl: p.image_url,
+        imageUrl: p.image_url, imageUrls: (p.image_urls && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : [])),
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
         commissionCoachAbsolute: e?.coachCommission ?? null,
