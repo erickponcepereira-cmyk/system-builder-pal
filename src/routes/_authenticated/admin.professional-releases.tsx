@@ -190,7 +190,7 @@ function ProfessionalReleasesPage() {
         </p>
       </div>
 
-      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto]">
+      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -205,11 +205,23 @@ function ProfessionalReleasesPage() {
           <option value="approval">Aguardando aprovação</option>
           <option value="approved">Já aprovados</option>
         </select>
+        <select value={monthlyFilter} onChange={(e) => setMonthlyFilter(e.target.value as MonthlyFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+          <option value="all">Mensalidade: todas</option>
+          <option value="paid">Paga</option>
+          <option value="exempt">Isenta</option>
+          <option value="pending">Pendente</option>
+          <option value="overdue">Atrasada</option>
+          <option value="blocked">Bloqueada</option>
+          <option value="cancelled">Cancelada</option>
+          <option value="none">Sem mensalidade</option>
+        </select>
         <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
           <input type="checkbox" checked={includeApproved} onChange={(e) => setIncludeApproved(e.target.checked)} />
           Incluir aprovados
         </label>
       </div>
+
 
       {loading ? (
         <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
