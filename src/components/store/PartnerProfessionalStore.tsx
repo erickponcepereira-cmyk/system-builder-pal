@@ -36,6 +36,7 @@ export type PartnerStoreCard = {
   name: string;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   price: number;
   originalPrice?: number | null;
   section_id: string | null;
