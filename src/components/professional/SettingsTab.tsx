@@ -27,10 +27,11 @@ type PublicProfile = {
   services: string;
   specializations: string[];
   cover_url: string | null;
+  public_whatsapp: string;
 };
 
 const EMPTY_PROFILE: PublicProfile = {
-  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [], cover_url: null,
+  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [], cover_url: null, public_whatsapp: "",
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
