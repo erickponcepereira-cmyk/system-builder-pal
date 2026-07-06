@@ -48,6 +48,14 @@ export function EvaluateTab() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
   const [challengeBannerOpen, setChallengeBannerOpen] = useState(false);
+  // Confirmação irreversível de vinculação
+  const [confirmLink, setConfirmLink] = useState<{
+    client: FitMindClient;
+    student: { id: string; name: string; email?: string };
+    existingClientName?: string; // se aluno já vinculado a outro cliente
+  } | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [confirmBusy, setConfirmBusy] = useState(false);
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
