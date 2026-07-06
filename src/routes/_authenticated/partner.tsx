@@ -1285,17 +1285,20 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
   const [form, setForm] = useState(partner);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [pendingCover, setPendingCover] = useState<File | null>(null);
 
-  const upload = async (file: File, field: "photo_url" | "cover_url") => {
+  const upload = async (blob: Blob, field: "photo_url" | "cover_url") => {
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `partners/${partner.id}/${field}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    const path = `partners/${partner.id}/${field}-${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("store-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
-    setForm({ ...form, [field]: data.publicUrl });
+    setForm((f) => ({ ...f, [field]: data.publicUrl }));
     setUploading(false);
+    if (field === "photo_url") setPendingPhoto(null); else setPendingCover(null);
   };
+
 
   const save = async () => {
     setSaving(true);
