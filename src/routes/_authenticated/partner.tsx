@@ -51,6 +51,7 @@ interface Partner {
 interface Product {
   id: string; partner_id: string; kind: "free" | "paid"; name: string;
   description: string | null; image_url: string | null; price: number; stock: number | null;
+  original_price?: number | null;
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
   redemption_mode?: "free" | "discount";
@@ -371,6 +372,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     kind: "free",
     redemption_mode: "free",
     name: "", description: "", image_url: "", price: 0, stock: null,
+    original_price: null,
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
     benefit_end_time: null,
@@ -420,6 +422,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
       extra = {
         price: b.gross,
+        original_price: editing.original_price && editing.original_price > b.gross ? Number(editing.original_price) : null,
         partner_net_amount: b.partnerNet,
         coach_commission_amount: b.coachCommission,
         network_l1_amount: b.networkL1,
@@ -441,6 +444,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       section_id: emptyToNull(editing.section_id) as string | null,
       category_id: emptyToNull(editing.category_id) as string | null,
       estimated_value: editing.kind === "free" ? Number(editing.estimated_value || 0) : null,
+      original_price: editing.kind === "paid" ? (editing.original_price && Number(editing.original_price) > 0 ? Number(editing.original_price) : null) : null,
       benefit_start_time: editing.kind === "free" ? editing.benefit_start_time || null : null,
       benefit_end_time: editing.kind === "free" ? editing.benefit_end_time || null : null,
       monthly_redeem_limit: editing.kind === "free"
@@ -449,12 +453,19 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
     };
     try {
+      const finalPaidPrice = Number((extra.price ?? editing.price) || 0);
       if (editing.id) {
-        const { id, ...up } = payload;
+        const { id, ...up } = {
+          ...payload,
+          original_price: editing.kind === "paid" && editing.original_price && Number(editing.original_price) > finalPaidPrice ? Number(editing.original_price) : null,
+        };
         const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
         if (error) return toast.error(error.message);
       } else {
-        const { error } = await supabase.from("partner_products" as never).insert(payload as never);
+        const { error } = await supabase.from("partner_products" as never).insert({
+          ...payload,
+          original_price: editing.kind === "paid" && editing.original_price && Number(editing.original_price) > finalPaidPrice ? Number(editing.original_price) : null,
+        } as never);
         if (error) return toast.error(error.message);
       }
     } catch (e: any) {
@@ -555,6 +566,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
               {p.kind === "paid" && (
                 <div className="mt-0.5 text-[11px] text-white/60">
+                  {p.original_price && p.original_price > p.price && (
+                    <span className="mr-2 text-white/40 line-through">R$ {Number(p.original_price).toFixed(2)}</span>
+                  )}
                   <span className="text-primary font-semibold">R$ {Number(p.price).toFixed(2)}</span>
                   {typeof p.partner_net_amount === "number" && p.partner_net_amount > 0 && (
                     <span className="ml-2">• Líquido: <span className="text-green-400">R$ {p.partner_net_amount.toFixed(2)}</span></span>
@@ -843,7 +857,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
       </div>
 
       {mode === "charge" ? (
-        <Field label="Preço cobrado do cliente">
+        <Field label="Valor de venda cobrado do cliente">
           <CurrencyInputBRL value={charge} onChange={updateCharge} />
         </Field>
       ) : (
@@ -852,6 +866,11 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<Product>; o
           <p className="mt-1 text-[10px] text-white/40">O preço cobrado é aumentado automaticamente para cobrir as taxas (igual simulação de cartão em apps bancários).</p>
         </Field>
       )}
+
+      <Field label="Valor original do produto (opcional)">
+        <CurrencyInputBRL value={Number(product.original_price || 0)} onChange={(n) => onChange({ original_price: n > 0 ? n : null })} />
+        <p className="mt-1 text-[10px] text-white/40">Use quando houver desconto. O cliente verá o valor original riscado e o valor de venda em destaque.</p>
+      </Field>
 
       <div>
         <label className="text-xs text-white/60">Forma de pagamento simulada</label>

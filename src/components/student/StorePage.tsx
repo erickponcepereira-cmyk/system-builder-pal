@@ -155,7 +155,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     const { data: partnerRows } = await supabase
       .from("professional_products" as never)
       .select(
-        "id,name,description,image_url,price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+        "id,name,description,image_url,price,original_price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
       )
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
@@ -295,7 +295,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
           title: pp.name,
           description: pp.description,
           price: Number(pp.price || 0),
-          originalPrice: null,
+          originalPrice: pp.original_price ? Number(pp.original_price) : null,
           category: `Parceiros · ${specLabel}`,
           kind: "partner" as const,
           tag: specLabel,
@@ -733,7 +733,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   );
 
   if (storeTab !== "fitmind") {
-    const addPartnerProductToCart = async (item: { id: string; name: string; description: string | null; image_url: string | null; price: number; section_id: string | null; category_id: string | null; seller: string; kind: "partner" | "professional"; isSchedulable?: boolean; professionalCoachId?: string | null; durationMinutes?: number; scheduledSlot?: string | null }) => {
+    const addPartnerProductToCart = async (item: { id: string; name: string; description: string | null; image_url: string | null; price: number; originalPrice?: number | null; section_id: string | null; category_id: string | null; seller: string; kind: "partner" | "professional"; isSchedulable?: boolean; professionalCoachId?: string | null; durationMinutes?: number; scheduledSlot?: string | null }) => {
       const cartKind: ProductKind = item.kind === "partner" ? "partner_company" : "partner";
       const baseCartId = `${cartKind}-${item.id}`;
       const cartId = item.isSchedulable && item.scheduledSlot ? `${baseCartId}-${item.scheduledSlot}` : baseCartId;
@@ -743,6 +743,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         title: item.name,
         description: item.description,
         price: item.price,
+        originalPrice: item.originalPrice ?? null,
         category: item.seller,
         kind: cartKind,
         tag: item.seller,
@@ -879,7 +880,10 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
                     <div key={item.id} className="flex items-center gap-2 rounded-xl bg-muted p-3">
                       <div className="flex-1">
                         <p className="text-xs font-bold text-foreground">{item.title}</p>
-                        <p className="text-[10px] text-muted-foreground">{fmt(item.price)}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {item.originalPrice && item.originalPrice > item.price && <span className="mr-1 line-through">{fmt(item.originalPrice)}</span>}
+                          <span>{fmt(item.price)}</span>
+                        </p>
                         {item.scheduledSlot && <p className="text-[10px] text-primary">📅 {new Date(item.scheduledSlot).toLocaleString("pt-BR")}</p>}
                       </div>
                       <button onClick={() => setCart((c) => c.filter((x) => x.id !== item.id))}><Trash2 className="h-4 w-4 text-muted-foreground" /></button>
