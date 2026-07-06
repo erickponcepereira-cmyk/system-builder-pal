@@ -594,6 +594,17 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 </div>
               )}
             </div>
+            {editing.id && editing.kind === "paid" && (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <CoproductionEditor
+                  productType="professional"
+                  productId={editing.id}
+                  creatorType="professional"
+                  creatorId={coachId}
+                  productNetValueBrl={Number(editing.professional_net_amount || editing.price || 0)}
+                />
+              </div>
+            )}
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
               <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">
