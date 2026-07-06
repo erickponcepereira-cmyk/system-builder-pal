@@ -5350,6 +5350,7 @@ export type Database = {
           event_start_time: string | null
           id: string
           image_url: string | null
+          image_urls: string[]
           is_active_by_partner: boolean
           kind: string
           monthly_redeem_limit: number | null
@@ -5395,6 +5396,7 @@ export type Database = {
           event_start_time?: string | null
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           is_active_by_partner?: boolean
           kind: string
           monthly_redeem_limit?: number | null
@@ -5440,6 +5442,7 @@ export type Database = {
           event_start_time?: string | null
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           is_active_by_partner?: boolean
           kind?: string
           monthly_redeem_limit?: number | null
@@ -6915,6 +6918,7 @@ export type Database = {
           event_start_time: string | null
           id: string
           image_url: string | null
+          image_urls: string[]
           is_active_by_professional: boolean
           is_schedulable: boolean
           kind: string
@@ -6960,6 +6964,7 @@ export type Database = {
           event_start_time?: string | null
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           is_active_by_professional?: boolean
           is_schedulable?: boolean
           kind?: string
@@ -7005,6 +7010,7 @@ export type Database = {
           event_start_time?: string | null
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           is_active_by_professional?: boolean
           is_schedulable?: boolean
           kind?: string
