@@ -1037,7 +1037,7 @@ export function EvaluateTab() {
                   .map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => linkClientToStudent(linkingClient, s.id)}
+                      onClick={() => requestLinkClientToStudent(linkingClient, s)}
                       className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0">
