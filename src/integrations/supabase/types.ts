@@ -571,6 +571,42 @@ export type Database = {
           },
         ]
       }
+      calendar_shares: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          owner_type: string
+          requested_by: string
+          responded_at: string | null
+          status: string
+          viewer_id: string
+          viewer_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          owner_type: string
+          requested_by?: string
+          responded_at?: string | null
+          status?: string
+          viewer_id: string
+          viewer_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          owner_type?: string
+          requested_by?: string
+          responded_at?: string | null
+          status?: string
+          viewer_id?: string
+          viewer_type?: string
+        }
+        Relationships: []
+      }
       career_challenge_progress: {
         Row: {
           achieved_at: string | null
@@ -3064,6 +3100,30 @@ export type Database = {
           },
         ]
       }
+      entity_share_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          owner_id: string
+          owner_type: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          owner_id: string
+          owner_type: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          owner_type?: string
+        }
+        Relationships: []
+      }
       evaluation_link_audit: {
         Row: {
           action: string
@@ -3431,6 +3491,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      external_appointments: {
+        Row: {
+          client_name: string
+          client_whatsapp: string | null
+          created_at: string
+          ends_at: string
+          id: string
+          notes: string | null
+          owner_id: string
+          owner_type: string
+          product_name: string
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          client_whatsapp?: string | null
+          created_at?: string
+          ends_at: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          owner_type: string
+          product_name: string
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          client_whatsapp?: string | null
+          created_at?: string
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          owner_type?: string
+          product_name?: string
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       fitcoin_ledger: {
         Row: {
@@ -5352,6 +5454,7 @@ export type Database = {
           image_url: string | null
           image_urls: string[]
           is_active_by_partner: boolean
+          is_ready_for_sale: boolean
           kind: string
           monthly_redeem_limit: number | null
           name: string
@@ -5398,6 +5501,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_partner?: boolean
+          is_ready_for_sale?: boolean
           kind: string
           monthly_redeem_limit?: number | null
           name: string
@@ -5444,6 +5548,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_partner?: boolean
+          is_ready_for_sale?: boolean
           kind?: string
           monthly_redeem_limit?: number | null
           name?: string
@@ -5985,6 +6090,48 @@ export type Database = {
           sort_order?: number
           stock?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      product_coproductions: {
+        Row: {
+          collaborator_id: string
+          collaborator_type: string
+          created_at: string
+          creator_id: string
+          creator_type: string
+          fixed_amount_brl: number
+          id: string
+          product_id: string
+          product_type: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          collaborator_id: string
+          collaborator_type: string
+          created_at?: string
+          creator_id: string
+          creator_type: string
+          fixed_amount_brl: number
+          id?: string
+          product_id: string
+          product_type: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          collaborator_id?: string
+          collaborator_type?: string
+          created_at?: string
+          creator_id?: string
+          creator_type?: string
+          fixed_amount_brl?: number
+          id?: string
+          product_id?: string
+          product_type?: string
+          responded_at?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -6920,6 +7067,7 @@ export type Database = {
           image_url: string | null
           image_urls: string[]
           is_active_by_professional: boolean
+          is_ready_for_sale: boolean
           is_schedulable: boolean
           kind: string
           monthly_redeem_limit: number | null
@@ -6966,6 +7114,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_professional?: boolean
+          is_ready_for_sale?: boolean
           is_schedulable?: boolean
           kind?: string
           monthly_redeem_limit?: number | null
@@ -7012,6 +7161,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_professional?: boolean
+          is_ready_for_sale?: boolean
           is_schedulable?: boolean
           kind?: string
           monthly_redeem_limit?: number | null
@@ -10259,6 +10409,7 @@ export type Database = {
         Returns: undefined
       }
       generate_competition_reminders: { Args: never; Returns: number }
+      generate_entity_share_code: { Args: never; Returns: string }
       generate_monthly_invoices: { Args: never; Returns: number }
       get_assessment_share_by_token: {
         Args: { _token: string }
