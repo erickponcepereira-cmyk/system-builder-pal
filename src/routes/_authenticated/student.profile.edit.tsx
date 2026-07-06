@@ -167,11 +167,21 @@ function EditProfilePage() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingPhoto(f); e.target.value = ""; }}
           />
         </div>
-        <p className="text-[11px] text-white/40">Toque na câmera para trocar a foto · Recomendado: 512×512px (1:1)</p>
+        <p className="text-[11px] text-white/40">Toque na câmera para trocar a foto · você poderá ajustar zoom e posição</p>
       </div>
+
+      <ImageCropperDialog
+        file={pendingPhoto}
+        aspect={1}
+        shape="circle"
+        title="Ajustar foto de perfil"
+        onCancel={() => setPendingPhoto(null)}
+        onConfirm={handlePhoto}
+      />
+
 
       {/* Form */}
       <section className="space-y-3 rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>
