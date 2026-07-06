@@ -73,6 +73,8 @@ interface Product {
   uses_scheduling?: boolean | null;
   event_date?: string | null;
   event_capacity?: number | null;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
 }
 
 
