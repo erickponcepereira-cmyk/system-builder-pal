@@ -623,36 +623,44 @@ export function EvaluateTab() {
       </div>
 
       {challengeCandidates.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="mb-5 rounded-2xl border border-primary/30 bg-primary/5">
+          <button
+            type="button"
+            onClick={() => setChallengeBannerOpen((v) => !v)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left"
+          >
             <Trophy className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-bold text-white">Alunos com Desafio ativo aguardando avaliação</h2>
+            <h2 className="text-sm font-bold text-white flex-1">Alunos com Desafio ativo aguardando avaliação</h2>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">{challengeCandidates.length}</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {challengeCandidates.map((c) => (
-              <div key={`${c.enrollmentId}-${c.type}`} className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{c.studentName}</p>
-                  <p className="text-[11px] text-white/50 truncate">
-                    {c.compLabel} · Turma {c.groupNumber} · Pesagem {c.type === "initial" ? "Inicial" : "Final"}
-                    {c.coachName ? ` · Coach: ${c.coachName}` : ""}
-                  </p>
+            <span className={`text-primary text-xs transition-transform ${challengeBannerOpen ? "rotate-180" : ""}`}>▼</span>
+          </button>
+          {challengeBannerOpen && (
+            <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {challengeCandidates.map((c) => (
+                <div key={`${c.enrollmentId}-${c.type}`} className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{c.studentName}</p>
+                    <p className="text-[11px] text-white/50 truncate">
+                      {c.compLabel} · Turma {c.groupNumber} · Pesagem {c.type === "initial" ? "Inicial" : "Final"}
+                      {c.coachName ? ` · Coach: ${c.coachName}` : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => linkChallengeCandidate({
+                      enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
+                      studentName: c.studentName, compLabel: c.compLabel,
+                    })}
+                    className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                  >
+                    Avaliar
+                  </button>
                 </div>
-                <button
-                  onClick={() => linkChallengeCandidate({
-                    enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
-                    studentName: c.studentName, compLabel: c.compLabel,
-                  })}
-                  className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-                >
-                  Avaliar
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
 
       <FitMindShape
         coach={coachInfo}
