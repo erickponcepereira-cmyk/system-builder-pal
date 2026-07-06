@@ -5,7 +5,7 @@
 // e do que precisa melhorar. Não substitui o fluxo atual.
 // ============================================================
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
