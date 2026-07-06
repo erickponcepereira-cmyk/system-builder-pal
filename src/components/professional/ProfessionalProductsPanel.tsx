@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock } from "lucide-react";
+import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy } from "lucide-react";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 
 type TimeRange = { start: string; end: string };
