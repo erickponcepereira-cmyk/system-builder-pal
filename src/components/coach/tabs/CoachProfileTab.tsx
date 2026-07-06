@@ -78,26 +78,27 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     onSaved();
   };
 
-  const uploadAvatar = async (file: File) => {
+  const uploadAvatar = async (blob: Blob) => {
     if (!coach) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error("Imagem deve ter até 5MB");
+    if (blob.size > 5 * 1024 * 1024) { toast.error("Imagem deve ter até 5MB"); return; }
     setUploading(true);
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
-    if (!userId) { setUploading(false); return toast.error("Sessão inválida"); }
-    const ext = file.name.split(".").pop() || "png";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { setUploading(false); return toast.error("Erro ao enviar foto"); }
+    if (!userId) { setUploading(false); toast.error("Sessão inválida"); return; }
+    const path = `${userId}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { setUploading(false); toast.error("Erro ao enviar foto"); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = pub.publicUrl;
     const { error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", coach.profileId);
     setUploading(false);
-    if (updErr) return toast.error("Erro ao salvar foto no perfil");
+    setPendingAvatar(null);
+    if (updErr) { toast.error("Erro ao salvar foto no perfil"); return; }
     onLocalChange({ ...coach, avatarUrl: url });
     toast.success("Foto atualizada");
     onSaved();
   };
+
 
   const activeStudents = summary.totalActiveStudents || coach?.totalActiveStudents || 0;
   const totalSales = summary.totalSales || coach?.totalSales || 0;
