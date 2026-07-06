@@ -23,12 +23,24 @@ type ChallengeLink = {
   preferredClientId?: string;
 };
 
+type ChallengeCandidate = {
+  enrollmentId: string;
+  type: "initial" | "final";
+  studentId: string;
+  studentName: string;
+  compLabel: string;
+  groupNumber: number;
+  coachId: string;
+  coachName?: string;
+};
+
 export function EvaluateTab() {
   const navigate = useNavigate();
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
   const [isMaster, setIsMaster] = useState(false);
+  const [challengeCandidates, setChallengeCandidates] = useState<ChallengeCandidate[]>([]);
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
@@ -87,6 +99,8 @@ export function EvaluateTab() {
     nextAssessmentDate: row.next_assessment_date || undefined,
     nextAssessmentTime: row.next_assessment_time || undefined,
     groupId: row.group_id || undefined,
+    challengeEnrollmentId: row.challenge_enrollment_id || undefined,
+    challengeType: (row.challenge_type as "initial" | "final" | undefined) || undefined,
   });
 
   const loadClients = async () => {
@@ -132,7 +146,7 @@ export function EvaluateTab() {
       while (true) {
         let q = supabase
           .from("coach_evaluation_clients" as never)
-          .select("id,coach_id,name,gender,ethnicity,height,height_unit,birth_date,language,whatsapp,email,notes,groups,avatar_url,created_at" as never)
+          .select("id,coach_id,student_id,name,gender,ethnicity,height,height_unit,birth_date,language,whatsapp,email,notes,groups,avatar_url,created_at" as never)
           .order("created_at" as never, { ascending: false })
           .range(from, from + PAGE - 1);
         if (!masterFlag) q = q.eq("coach_id" as never, coach.id as never);
@@ -199,6 +213,7 @@ export function EvaluateTab() {
     setClients(all.map((row) => ({
       id: row.id,
       coachId: row.coach_id,
+      studentId: row.student_id || undefined,
       name: row.name,
       gender: row.gender,
       ethnicity: row.ethnicity,
@@ -214,6 +229,69 @@ export function EvaluateTab() {
       assessments: (assessmentsByClient.get(row.id) || []).map(mapAssessment),
       coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
     })));
+
+    // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
+    await loadChallengeCandidates(coach.id, masterFlag);
+  };
+
+  const loadChallengeCandidates = async (coachId: string, master: boolean) => {
+    let q = supabase
+      .from("competition_enrollments" as never)
+      .select(`
+        id, status, coach_id, initial_weight, final_weight,
+        student:student_id ( id, profile:profile_id ( name ) ),
+        competition:competition_id ( month, year ),
+        group:group_id ( group_number, initial_start_date, initial_end_date, final_weigh_in_date )
+      `)
+      .not("status" as never, "in" as never, "(weighed_final,cancelled)" as never)
+      .limit(500);
+    if (!master) q = q.eq("coach_id" as never, coachId as never);
+    const { data, error } = await q;
+    if (error) { console.warn("challenge candidates:", error); return; }
+    const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const today = new Date(); today.setHours(0,0,0,0);
+    const out: ChallengeCandidate[] = [];
+    for (const r of (data as any[]) || []) {
+      const g = r.group || {};
+      const startD = g.initial_start_date ? new Date(g.initial_start_date + "T00:00:00") : null;
+      const finalD = g.final_weigh_in_date ? new Date(g.final_weigh_in_date + "T23:59:59") : null;
+      // Janela: do início da pesagem inicial até 7 dias após pesagem final
+      const grace = finalD ? new Date(finalD.getTime() + 7*86400000) : null;
+      if (startD && today < startD) continue;
+      if (grace && today > grace) continue;
+      const compLabel = `${months[r.competition?.month || 1]}/${r.competition?.year || ""}`;
+      const base = {
+        enrollmentId: r.id,
+        studentId: r.student?.id,
+        studentName: r.student?.profile?.name || "Aluno",
+        compLabel,
+        groupNumber: g.group_number || 0,
+        coachId: r.coach_id,
+      };
+      if (!base.studentId) continue;
+      // Pesagem inicial pendente
+      if (!r.initial_weight && ["enrolled","scheduled_initial"].includes(r.status)) {
+        out.push({ ...base, type: "initial" });
+      }
+      // Pesagem final pendente (requer inicial feita)
+      if (r.initial_weight && !r.final_weight && ["weighed_initial","scheduled_final"].includes(r.status)) {
+        out.push({ ...base, type: "final" });
+      }
+    }
+    // Coach names (para master)
+    if (master && out.length) {
+      const ids = Array.from(new Set(out.map(o => o.coachId).filter(id => id && id !== coachId)));
+      if (ids.length) {
+        const { data: cs } = await supabase
+          .from("coaches")
+          .select("id, profiles!coaches_profile_id_fkey(name)")
+          .in("id", ids);
+        const map = new Map<string,string>();
+        ((cs as any[]) || []).forEach(c => map.set(c.id, c.profiles?.name || "Coach"));
+        out.forEach(o => { if (o.coachId !== coachId) o.coachName = map.get(o.coachId); });
+      }
+    }
+    setChallengeCandidates(out);
   };
 
 
@@ -236,66 +314,80 @@ export function EvaluateTab() {
 
   useEffect(() => { loadClients(); }, []);
 
-  // Read challenge link from URL (?challenge=<enrollmentId>&type=initial|final&studentId=<id>)
-  useEffect(() => {
+  // Vincula uma vaga do desafio (garante evaluation-client, seta challengeLink)
+  const linkChallengeCandidate = async (args: {
+    enrollmentId: string; type: "initial" | "final"; studentId: string; studentName?: string; compLabel?: string;
+  }) => {
     if (!coachInfo.id) return;
-    (async () => {
-      const sp = new URLSearchParams(window.location.search);
-      const enrollmentId = sp.get("challenge");
-      const type = sp.get("type") as "initial" | "final" | null;
-      const studentId = sp.get("studentId");
-      if (!enrollmentId || !type || !studentId) return;
+    const { enrollmentId, type, studentId } = args;
+    let studentName = args.studentName;
+    let compLabel = args.compLabel;
+    if (!studentName || !compLabel) {
       const { data: enroll } = await supabase
         .from("competition_enrollments" as never)
         .select("id, student:student_id ( id, profile:profile_id ( name ) ), competition:competition_id ( month, year )")
         .eq("id" as never, enrollmentId)
         .maybeSingle();
       const e = enroll as any;
-      if (!e) return;
-      const studentName = e.student?.profile?.name || "Aluno";
+      if (!e) { toast.error("Inscrição não encontrada"); return; }
+      studentName = studentName || e.student?.profile?.name || "Aluno";
       const months = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-      const compLabel = `${months[e.competition?.month || 1]}/${e.competition?.year || ""}`;
-
-      // Find or create a coach_evaluation_clients row linked to this student
-      let preferredClientId: string | undefined;
-      const { data: existing } = await supabase
-        .from("coach_evaluation_clients" as never)
-        .select("id")
-        .eq("coach_id" as never, coachInfo.id as never)
-        .eq("student_id" as never, studentId as never)
+      compLabel = compLabel || `${months[e.competition?.month || 1]}/${e.competition?.year || ""}`;
+    }
+    // Find or create a coach_evaluation_clients row linked to this student (para ESTE coach)
+    let preferredClientId: string | undefined;
+    const { data: existing } = await supabase
+      .from("coach_evaluation_clients" as never)
+      .select("id")
+      .eq("coach_id" as never, coachInfo.id as never)
+      .eq("student_id" as never, studentId as never)
+      .maybeSingle();
+    if (existing) {
+      preferredClientId = (existing as any).id;
+    } else {
+      const { data: st } = await supabase
+        .from("students" as never)
+        .select("gender, height, current_weight, profile:profile_id ( name, email, phone, avatar_url )")
+        .eq("id" as never, studentId as never)
         .maybeSingle();
-      if (existing) {
-        preferredClientId = (existing as any).id;
-      } else {
-        const { data: st } = await supabase
-          .from("students" as never)
-          .select("gender, height, current_weight, profile:profile_id ( name, email, phone, avatar_url )")
-          .eq("id" as never, studentId as never)
-          .maybeSingle();
-        const s = st as any;
-        const { data: created } = await supabase
-          .from("coach_evaluation_clients" as never)
-          .insert({
-            coach_id: coachInfo.id,
-            student_id: studentId,
-            name: s?.profile?.name || studentName,
-            gender: s?.gender === "F" ? "female" : s?.gender === "M" ? "male" : "other",
-            height: s?.height || null,
-            height_unit: "cm",
-            language: "pt",
-            whatsapp: s?.profile?.phone || null,
-            email: s?.profile?.email || null,
-            avatar_url: s?.profile?.avatar_url || null,
-            groups: ["challenge"],
-          } as never)
-          .select("id")
-          .single();
-        preferredClientId = (created as any)?.id;
-        await loadClients();
-      }
-      setChallengeLink({ enrollmentId, type, studentId, studentName, compLabel, preferredClientId });
-    })();
+      const s = st as any;
+      const { data: created } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .insert({
+          coach_id: coachInfo.id,
+          student_id: studentId,
+          name: s?.profile?.name || studentName,
+          gender: s?.gender === "F" ? "female" : s?.gender === "M" ? "male" : "other",
+          height: s?.height || null,
+          height_unit: "cm",
+          language: "pt",
+          whatsapp: s?.profile?.phone || null,
+          email: s?.profile?.email || null,
+          avatar_url: s?.profile?.avatar_url || null,
+          groups: ["challenge"],
+        } as never)
+        .select("id")
+        .single();
+      preferredClientId = (created as any)?.id;
+      await loadClients();
+    }
+    setChallengeLink({ enrollmentId, type, studentId, studentName: studentName!, compLabel: compLabel!, preferredClientId });
+    // Scroll para o topo pra o FitMindShape auto-selecionar
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
+  };
+
+  // Read challenge link from URL (?challenge=<enrollmentId>&type=initial|final&studentId=<id>)
+  useEffect(() => {
+    if (!coachInfo.id) return;
+    const sp = new URLSearchParams(window.location.search);
+    const enrollmentId = sp.get("challenge");
+    const type = sp.get("type") as "initial" | "final" | null;
+    const studentId = sp.get("studentId");
+    if (!enrollmentId || !type || !studentId) return;
+    linkChallengeCandidate({ enrollmentId, type, studentId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coachInfo.id]);
+
 
 
 
@@ -430,10 +522,55 @@ export function EvaluateTab() {
         </div>
         {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}
       </div>
+
+      {challengeCandidates.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-bold text-white">Alunos com Desafio ativo aguardando avaliação</h2>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary">{challengeCandidates.length}</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {challengeCandidates.map((c) => (
+              <div key={`${c.enrollmentId}-${c.type}`} className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{c.studentName}</p>
+                  <p className="text-[11px] text-white/50 truncate">
+                    {c.compLabel} · Turma {c.groupNumber} · Pesagem {c.type === "initial" ? "Inicial" : "Final"}
+                    {c.coachName ? ` · Coach: ${c.coachName}` : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={() => linkChallengeCandidate({
+                    enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
+                    studentName: c.studentName, compLabel: c.compLabel,
+                  })}
+                  className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  Avaliar
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <FitMindShape
         coach={coachInfo}
         clients={clients}
         initialClientId={challengeLink?.preferredClientId}
+        getChallengeCandidatesForClient={(client) =>
+          challengeCandidates
+            .filter((c) => client.studentId && c.studentId === client.studentId)
+            .map((c) => ({
+              enrollmentId: c.enrollmentId,
+              type: c.type,
+              studentId: c.studentId,
+              studentName: c.studentName,
+              compLabel: c.compLabel,
+              groupNumber: c.groupNumber,
+            }))
+        }
         onLoadFullAssessments={loadFullAssessmentsForClient}
         onCreateClient={createClient}
         onUpdateClient={async (client) => {
@@ -555,13 +692,27 @@ export function EvaluateTab() {
             professional_notes: nz(updated.professionalNotes),
             photos: updated.photos || {},
           };
+          // Vínculo com Desafio (opcional). O trigger sincroniza os pesos no enrollment.
+          if (updated.challengeEnrollmentId && updated.challengeType) {
+            payload.challenge_enrollment_id = updated.challengeEnrollmentId;
+            payload.challenge_type = updated.challengeType;
+            if ((client as any).studentId) payload.student_id = (client as any).studentId;
+          } else if (updated.challengeEnrollmentId === undefined && updated.challengeType === undefined) {
+            // Explicitamente desvinculado ("Não vincular")
+            payload.challenge_enrollment_id = null;
+            payload.challenge_type = null;
+          }
           const { error } = await supabase
             .from("coach_body_assessments" as never)
             .update(payload as never)
             .eq("id" as never, updated.id as never)
             .eq("coach_id" as never, targetCoachId as never);
           if (error) { toast.error(error.message || "Erro ao atualizar avaliação"); throw error; }
-          toast.success("Avaliação atualizada");
+          toast.success(
+            updated.challengeEnrollmentId
+              ? `Avaliação atualizada e vinculada ao Desafio (${updated.challengeType === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`
+              : "Avaliação atualizada"
+          );
           await loadClients();
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
