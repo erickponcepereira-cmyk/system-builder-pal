@@ -321,8 +321,10 @@ export const getProfessionalReleaseAudit = createServerFn({ method: "GET" })
       .in("action", [
         "professional_email_confirmed",
         "professional_specialty_set",
+        "professional_activation_paid",
         "professional_approved_final",
       ])
+
       .order("created_at", { ascending: false });
 
     const actorIds = [
