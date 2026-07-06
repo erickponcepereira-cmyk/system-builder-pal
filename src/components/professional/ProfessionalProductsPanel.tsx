@@ -55,6 +55,8 @@ interface ProProduct {
   availability_hours?: AvailabilityHours;
   event_date?: string | null;
   event_capacity?: number | null;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   payment_timing?: "at_booking" | "later";
 }
 
