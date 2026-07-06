@@ -90,6 +90,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
   const closeEdit = () => { setEditing(null); setEditForm({}); };
   const saveEdit = async () => {
     if (!editing || !onEdit) return;
+    if (!String(editForm.scaleNumber || "").trim()) return;
     setSavingEdit(true);
     try {
       await onEdit({ ...editing, ...editForm } as FitMindAssessment);
@@ -189,6 +190,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
     t === "good" ? "#16a34a" : t === "bad" ? "#dc2626" : "#64748b";
   const TrendIcon = ({ t }: { t: "good" | "bad" | "flat" }) =>
     t === "good" ? <TrendingDown size={12} /> : t === "bad" ? <TrendingUp size={12} /> : <Minus size={12} />;
+  const editMissingScale = !!editing && !String(editForm.scaleNumber || "").trim();
 
   return (
     <div style={{ padding: 20, minHeight: "100vh", background: "#0A0A0A", color: "#ffffff", fontFamily: "inherit" }}>
@@ -456,6 +458,17 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               />
             </label>
 
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginBottom: 10 }}>
+              <span>Número da balança *</span>
+              <input
+                type="text"
+                value={(editForm.scaleNumber as string | undefined) ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, scaleNumber: e.target.value.slice(0, 50) }))}
+                style={{ background: "#0A0A0A", border: `1px solid ${editMissingScale ? "#dc2626" : "rgba(255,255,255,0.14)"}`, borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
+              />
+              {editMissingScale && <span style={{ color: "#f87171", fontSize: 10 }}>Obrigatório</span>}
+            </label>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {numField("weight", "Peso", "kg")}
               {numField("height", "Altura", "cm")}
@@ -590,8 +603,8 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               <button onClick={closeEdit} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "10px 12px", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
               <button
                 onClick={saveEdit}
-                disabled={savingEdit}
-                style={{ flex: 1, background: themeColor, color: "#fff", border: "none", borderRadius: 8, padding: "10px 12px", cursor: savingEdit ? "wait" : "pointer", fontSize: 13, fontWeight: 700, opacity: savingEdit ? 0.6 : 1 }}
+                disabled={savingEdit || editMissingScale}
+                style={{ flex: 1, background: themeColor, color: "#fff", border: "none", borderRadius: 8, padding: "10px 12px", cursor: savingEdit ? "wait" : editMissingScale ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700, opacity: savingEdit || editMissingScale ? 0.6 : 1 }}
               >
                 {savingEdit ? "Salvando…" : "Salvar alterações"}
               </button>

@@ -1407,6 +1407,7 @@ export type Database = {
           next_assessment_time: string | null
           photos: Json
           professional_notes: string | null
+          scale_number: string | null
           segment_analysis: Json
           skeletal_muscle: number | null
           student_id: string | null
@@ -1442,6 +1443,7 @@ export type Database = {
           next_assessment_time?: string | null
           photos?: Json
           professional_notes?: string | null
+          scale_number?: string | null
           segment_analysis?: Json
           skeletal_muscle?: number | null
           student_id?: string | null
@@ -1477,6 +1479,7 @@ export type Database = {
           next_assessment_time?: string | null
           photos?: Json
           professional_notes?: string | null
+          scale_number?: string | null
           segment_analysis?: Json
           skeletal_muscle?: number | null
           student_id?: string | null
@@ -9911,11 +9914,32 @@ export type Database = {
         Returns: undefined
       }
       coach_assessment_counts: {
-        Args: { _coach_id: string; _master: boolean }
+        Args: { _coach_id: string; _master?: boolean }
         Returns: {
           client_id: string
           last_at: string
           total: number
+        }[]
+      }
+      coach_evaluation_client_summaries: {
+        Args: { _coach_id: string }
+        Returns: {
+          assessment_count: number
+          avatar_url: string
+          birth_date: string
+          coach_id: string
+          coach_name: string
+          created_at: string
+          ethnicity: string
+          gender: string
+          groups: string[]
+          height: number
+          height_unit: string
+          id: string
+          language: string
+          last_assessment_at: string
+          name: string
+          student_id: string
         }[]
       }
       coach_gets_product_free: {
