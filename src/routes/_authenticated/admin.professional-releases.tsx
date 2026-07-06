@@ -53,18 +53,20 @@ type Row = {
   };
 };
 
-type StageFilter = "all" | "email" | "specialty" | "approval" | "approved";
+type StageFilter = "all" | "email" | "specialty" | "activation" | "approval" | "approved";
 type MonthlyFilter = "all" | MonthlyStatus;
 
-type StepKey = "email" | "specialty" | "approve";
+type StepKey = "email" | "specialty" | "activation" | "approve";
 
 type AuditEntry = { id: string; action: string; notes: string | null; created_at: string; actor_name: string };
 
 const ACTION_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   professional_email_confirmed: { label: "E-mail confirmado", icon: Mail },
   professional_specialty_set:   { label: "Especialidade definida", icon: ClipboardList },
+  professional_activation_paid: { label: "Ativação concedida pelo admin", icon: CreditCard },
   professional_approved_final:  { label: "Profissional aprovado e painel liberado", icon: Stethoscope },
 };
+
 
 function Step({ done, active, icon: Icon, label }: { done: boolean; active: boolean; icon: React.ComponentType<{ className?: string }>; label: string }) {
   return (
