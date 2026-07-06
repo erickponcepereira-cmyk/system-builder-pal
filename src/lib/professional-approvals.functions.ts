@@ -37,7 +37,7 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
     let query = supabaseAdmin
       .from("coaches")
       .select(
-        "id, profile_id, specialty_key, specialty_custom_description, specialty_pending_setup, professional_council, council_number, serves_whole_network, approved_at, onboarding_stage, created_at, profile:profiles!coaches_profile_id_fkey(id, name, email, phone, user_id)"
+        "id, profile_id, specialty_key, specialty_custom_description, specialty_pending_setup, professional_council, council_number, serves_whole_network, approved_at, onboarding_stage, created_at, activation_paid_at, activation_source, activation_note, already_coach, profile:profiles!coaches_profile_id_fkey(id, name, email, phone, user_id)"
       )
       .eq("is_professional", true)
       .order("created_at", { ascending: false });
@@ -66,6 +66,10 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
       approved_at: string | null;
       onboarding_stage: string | null;
       created_at: string;
+      activation_paid_at: string | null;
+      activation_source: string | null;
+      activation_note: string | null;
+      already_coach: boolean | null;
       profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
     }>;
 
@@ -82,15 +86,62 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
       })
     );
 
+    // Mensalidade (assinatura + última fatura) por user_id
+    const { data: subs } = userIds.length
+      ? await supabaseAdmin
+          .from("user_subscriptions")
+          .select("user_id, status, paid_until, exempt_until")
+          .in("user_id", userIds)
+      : { data: [] };
+    const subMap = new Map(
+      ((subs || []) as Array<{ user_id: string; status: string; paid_until: string | null; exempt_until: string | null }>)
+        .map((s) => [s.user_id, s])
+    );
+    const { data: invs } = userIds.length
+      ? await supabaseAdmin
+          .from("subscription_invoices")
+          .select("user_id, status, reference_month, due_date")
+          .in("user_id", userIds)
+          .order("reference_month", { ascending: false })
+      : { data: [] };
+    const invMap = new Map<string, { status: string; reference_month: string; due_date: string }>();
+    for (const i of (invs || []) as Array<{ user_id: string; status: string; reference_month: string; due_date: string }>) {
+      if (!invMap.has(i.user_id)) invMap.set(i.user_id, i);
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const computeMonthly = (uid?: string) => {
+      if (!uid) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+      const sub = subMap.get(uid);
+      const inv = invMap.get(uid) || null;
+      if (!sub && !inv) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+      let status: "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none" = "none";
+      if (sub && (sub.status === "exempt_monthly" || sub.status === "exempt_annual" || sub.status === "exempt_permanent")) status = "exempt";
+      else if (inv?.status === "blocked") status = "blocked";
+      else if (inv?.status === "overdue") status = "overdue";
+      else if (inv?.status === "pending") status = "pending";
+      else if (sub?.paid_until && sub.paid_until >= today) status = "paid";
+      else if (inv?.status === "paid") status = "paid";
+      else if (inv?.status === "exempted") status = "exempt";
+      else if (inv?.status === "cancelled") status = "cancelled";
+      return {
+        status,
+        paid_until: sub?.paid_until ?? null,
+        last_invoice_status: inv?.status ?? null,
+        last_invoice_month: inv?.reference_month ?? null,
+      };
+    };
+
     return {
       specialties: ((specs || []) as Array<{ key: string; label: string; requires_admin_setup: boolean; default_tabs: unknown }>)
         .map((s) => ({ key: s.key, label: s.label, requires_admin_setup: !!s.requires_admin_setup })),
       professionals: rows.map((r) => ({
         ...r,
         email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
+        monthly: computeMonthly(r.profile?.user_id),
       })),
     };
   });
+
 
 export const adminConfirmProfessionalEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
