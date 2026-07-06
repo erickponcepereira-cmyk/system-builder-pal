@@ -505,7 +505,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             onClick={(e) => e.stopPropagation()}
             className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
           >
-            <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
+            <div className="relative mx-auto mt-4 h-[300px] w-[300px] max-w-full overflow-hidden rounded-2xl bg-muted">
               {(selected.image_urls && selected.image_urls.length > 0) || selected.image_url ? (
                 <ProductImageCarousel
                   images={selected.image_urls && selected.image_urls.length ? selected.image_urls : (selected.image_url ? [selected.image_url] : [])}
