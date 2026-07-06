@@ -6253,6 +6253,7 @@ export type Database = {
           highlights: Json | null
           id: string
           image_url: string | null
+          image_urls: string[]
           is_active: boolean
           is_featured: boolean | null
           is_price_range: boolean | null
@@ -6338,6 +6339,7 @@ export type Database = {
           highlights?: Json | null
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           is_active?: boolean
           is_featured?: boolean | null
           is_price_range?: boolean | null
@@ -6423,6 +6425,7 @@ export type Database = {
           highlights?: Json | null
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           is_active?: boolean
           is_featured?: boolean | null
           is_price_range?: boolean | null
