@@ -184,6 +184,7 @@ function PartnerPanel() {
     { key: "reports" as Tab, label: "Relatórios", icon: BarChart3 },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
+    { key: "collab" as Tab, label: "Colaboração", icon: Share2 },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
