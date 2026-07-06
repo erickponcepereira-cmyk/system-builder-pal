@@ -5275,6 +5275,8 @@ export type Database = {
           estimated_value: number | null
           event_capacity: number | null
           event_date: string | null
+          event_end_time: string | null
+          event_start_time: string | null
           id: string
           image_url: string | null
           is_active_by_partner: boolean
@@ -5318,6 +5320,8 @@ export type Database = {
           estimated_value?: number | null
           event_capacity?: number | null
           event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
@@ -5361,6 +5365,8 @@ export type Database = {
           estimated_value?: number | null
           event_capacity?: number | null
           event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
           id?: string
           image_url?: string | null
           is_active_by_partner?: boolean
@@ -6834,6 +6840,8 @@ export type Database = {
           estimated_value: number | null
           event_capacity: number | null
           event_date: string | null
+          event_end_time: string | null
+          event_start_time: string | null
           id: string
           image_url: string | null
           is_active_by_professional: boolean
@@ -6877,6 +6885,8 @@ export type Database = {
           estimated_value?: number | null
           event_capacity?: number | null
           event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
@@ -6920,6 +6930,8 @@ export type Database = {
           estimated_value?: number | null
           event_capacity?: number | null
           event_date?: string | null
+          event_end_time?: string | null
+          event_start_time?: string | null
           id?: string
           image_url?: string | null
           is_active_by_professional?: boolean
