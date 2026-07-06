@@ -142,14 +142,22 @@ export function AdminShell() {
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       {/* Mobile top bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b border-white/5 bg-[#0F0F0F] px-4 lg:hidden">
+      <header
+        className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-white/5 bg-[#0F0F0F] px-4 lg:hidden"
+        style={{
+          paddingTop: "max(0.5rem, env(safe-area-inset-top))",
+          paddingBottom: "0.5rem",
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
         <div className="flex items-center gap-2">
 <Logo className="h-8 w-auto object-contain" />
           <span className="font-bold text-white">FitMind Club Admin</span>
         </div>
         <div className="flex items-center gap-2">
           <RoleSwitcher current="admin" />
-          <button onClick={() => setOpen(!open)} className="text-white">
+          <button onClick={() => setOpen(!open)} className="flex h-11 w-11 items-center justify-center text-white touch-manipulation">
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
