@@ -1516,6 +1516,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <Phone size={14} />
                 </a>
               )}
+              {onLinkClientToStudent && !c.studentId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLinkClientToStudent(c);
+                  }}
+                  title="Integrar avaliações a um aluno cadastrado no sistema"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 28,
+                    padding: "0 8px",
+                    borderRadius: 8,
+                    background: "rgba(220,38,38,0.18)",
+                    color: "#fca5a5",
+                    border: "1px solid rgba(220,38,38,0.45)",
+                    cursor: "pointer",
+                    marginRight: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Integrar
+                </button>
+              )}
               {onUpdateClient && (
                 <button
                   onClick={(e) => {
