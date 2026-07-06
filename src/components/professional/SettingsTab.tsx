@@ -124,6 +124,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
         services: pub.services.slice(0, 2000) || null,
         specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
         cover_url: pub.cover_url,
+        public_whatsapp: pub.public_whatsapp.slice(0, 30) || null,
       } as never, { onConflict: "profile_id" } as never);
     setSaving(false);
     if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
