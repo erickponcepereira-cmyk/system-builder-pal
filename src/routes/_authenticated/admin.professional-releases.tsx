@@ -22,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/admin/professional-release
 
 type Specialty = { key: string; label: string; requires_admin_setup: boolean };
 
+type MonthlyStatus = "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none";
+
 type Row = {
   id: string;
   profile_id: string;
@@ -34,11 +36,23 @@ type Row = {
   approved_at: string | null;
   onboarding_stage: string | null;
   created_at: string;
+  activation_paid_at: string | null;
+  activation_source: string | null;
+  activation_note: string | null;
+  already_coach: boolean | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
+  monthly: {
+    status: MonthlyStatus;
+    paid_until: string | null;
+    last_invoice_status: string | null;
+    last_invoice_month: string | null;
+  };
 };
 
 type StageFilter = "all" | "email" | "specialty" | "approval" | "approved";
+type MonthlyFilter = "all" | MonthlyStatus;
+
 type StepKey = "email" | "specialty" | "approve";
 
 type AuditEntry = { id: string; action: string; notes: string | null; created_at: string; actor_name: string };
