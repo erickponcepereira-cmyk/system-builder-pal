@@ -611,6 +611,16 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
               ) : null}
               <div className="mt-1.5 flex gap-2">
                 <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
+                <button
+                  onClick={() => {
+                    const { id: _id, ...rest } = p;
+                    void _id;
+                    setEditing({ ...rest, name: `${p.name} (cópia)`, status: "pending", admin_notes: null, is_active_by_partner: true });
+                  }}
+                  className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
+                >
+                  <Copy className="h-3 w-3" /> Duplicar
+                </button>
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
                 <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>
               </div>
