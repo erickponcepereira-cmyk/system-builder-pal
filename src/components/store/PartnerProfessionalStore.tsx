@@ -505,8 +505,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
           >
             <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
-              {selected.image_url ? (
-                <img src={selected.image_url} alt={selected.name} className="h-full w-full object-cover" />
+              {(selected.image_urls && selected.image_urls.length > 0) || selected.image_url ? (
+                <ProductImageCarousel
+                  images={selected.image_urls && selected.image_urls.length ? selected.image_urls : (selected.image_url ? [selected.image_url] : [])}
+                  alt={selected.name}
+                  className="h-full w-full"
+                  rounded=""
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <ShoppingBag className="h-16 w-16 text-muted-foreground" />
