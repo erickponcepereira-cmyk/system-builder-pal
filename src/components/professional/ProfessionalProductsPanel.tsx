@@ -55,6 +55,8 @@ interface ProProduct {
   availability_hours?: AvailabilityHours;
   event_date?: string | null;
   event_capacity?: number | null;
+  event_start_time?: string | null;
+  event_end_time?: string | null;
   payment_timing?: "at_booking" | "later";
 }
 
@@ -108,6 +110,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     availability_hours: {},
     event_date: null,
     event_capacity: null,
+    event_start_time: null,
+    event_end_time: null,
     payment_timing: "at_booking",
   });
 
@@ -494,7 +498,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                     <Field label="Vagas disponíveis">
                       <input type="number" min={1} value={editing.event_capacity ?? ""} onChange={e => setEditing({ ...editing, event_capacity: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 20" />
                     </Field>
-                    <p className="col-span-2 text-[10px] text-white/50">Para eventos e workshops: defina a data específica e o número máximo de pessoas.</p>
+                    <Field label="Horário de abertura">
+                      <input type="time" value={editing.event_start_time ?? ""} onChange={e => setEditing({ ...editing, event_start_time: e.target.value || null })} className="field-input" />
+                    </Field>
+                    <Field label="Horário de encerramento">
+                      <input type="time" value={editing.event_end_time ?? ""} onChange={e => setEditing({ ...editing, event_end_time: e.target.value || null })} className="field-input" />
+                    </Field>
+                    <p className="col-span-2 text-[10px] text-white/50">Para eventos e workshops: defina a data específica, os horários e o número máximo de pessoas.</p>
                   </div>
                 )}
 

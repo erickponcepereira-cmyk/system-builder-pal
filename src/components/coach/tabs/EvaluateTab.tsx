@@ -155,24 +155,45 @@ export function EvaluateTab() {
       let from = 0;
       // Paginate via PostgREST Range header to bypass the default 1000-row cap.
       // Loops until a partial page is returned, so master coaches see every client.
-      // Runs in-place; each page is a small payload (no images/measurements).
+      // Each page has a small retry to survive transient "Failed to fetch" from the
+      // preview fetch proxy; a total failure falls back to a single un-paginated call.
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { data, error } = await supabase
-          .rpc(
-            "coach_evaluation_client_summaries" as never,
-            { _coach_id: coach.id } as never,
-          )
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        const chunk = (data as any[]) || [];
+        let chunk: any[] | null = null;
+        let lastErr: unknown = null;
+        for (let attempt = 0; attempt < 3 && chunk === null; attempt++) {
+          try {
+            const { data, error } = await supabase
+              .rpc(
+                "coach_evaluation_client_summaries" as never,
+                { _coach_id: coach.id } as never,
+              )
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            chunk = (data as any[]) || [];
+          } catch (e) {
+            lastErr = e;
+            await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+          }
+        }
+        if (chunk === null) throw lastErr;
         all = all.concat(chunk);
         if (chunk.length < PAGE) break;
         from += PAGE;
       }
     } catch (error) {
-      console.error("coach_evaluation_client_summaries:", error);
-      return toast.error("Erro ao carregar alunos da avaliação");
+      console.error("coach_evaluation_client_summaries paginated failed, retrying single call:", error);
+      try {
+        const { data, error: err2 } = await supabase.rpc(
+          "coach_evaluation_client_summaries" as never,
+          { _coach_id: coach.id } as never,
+        );
+        if (err2) throw err2;
+        all = (data as any[]) || [];
+      } catch (fallbackErr) {
+        console.error("coach_evaluation_client_summaries fallback:", fallbackErr);
+        return toast.error("Erro ao carregar alunos da avaliação");
+      }
     }
 
     const mappedClients = all.map((row) => {
