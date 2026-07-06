@@ -29,6 +29,7 @@ type ChallengeCandidate = {
   groupNumber: number;
   coachId: string;
   coachName?: string;
+  finalWeighInDate?: string | null;
 };
 
 const CLIENT_SUMMARY_CACHE_TTL_MS = 60_000;
