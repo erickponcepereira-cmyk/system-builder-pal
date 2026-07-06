@@ -53,6 +53,9 @@ interface ProProduct {
   availability_recurrence?: "single" | "weekly";
   availability_validity_days?: number | null;
   availability_hours?: AvailabilityHours;
+  event_date?: string | null;
+  event_capacity?: number | null;
+  payment_timing?: "at_booking" | "later";
 }
 
 const WEEKDAYS = [
@@ -103,6 +106,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     availability_recurrence: "weekly",
     availability_validity_days: null,
     availability_hours: {},
+    event_date: null,
+    event_capacity: null,
+    payment_timing: "at_booking",
   });
 
   const upload = async (file: File) => {
@@ -480,6 +486,18 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   </div>
                 </Field>
 
+                {editing.availability_recurrence === "single" && (
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
+                    <Field label="Data do evento">
+                      <input type="date" value={editing.event_date ?? ""} onChange={e => setEditing({ ...editing, event_date: e.target.value || null })} className="field-input" />
+                    </Field>
+                    <Field label="Vagas disponíveis">
+                      <input type="number" min={1} value={editing.event_capacity ?? ""} onChange={e => setEditing({ ...editing, event_capacity: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 20" />
+                    </Field>
+                    <p className="col-span-2 text-[10px] text-white/50">Para eventos e workshops: defina a data específica e o número máximo de pessoas.</p>
+                  </div>
+                )}
+
                 <Field label="Validade após compra (dias)">
                   <input type="number" min={1} value={editing.availability_validity_days ?? ""} onChange={e => setEditing({ ...editing, availability_validity_days: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 30 (quantos dias o produto fica disponível após a compra)" />
                 </Field>
@@ -525,9 +543,28 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                     </div>
                   )}
                   {editing.is_schedulable && (
-                    <p className="text-[10px] text-white/50">
-                      Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
-                    </p>
+                    <>
+                      <Field label="Momento do pagamento">
+                        <div className="flex rounded-lg bg-black/40 p-0.5">
+                          <button type="button" onClick={() => setEditing({ ...editing, payment_timing: "at_booking" })}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${(editing.payment_timing ?? "at_booking") === "at_booking" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                            Pagar ao agendar
+                          </button>
+                          <button type="button" onClick={() => setEditing({ ...editing, payment_timing: "later" })}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${editing.payment_timing === "later" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                            Agendar e pagar depois
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[10px] text-white/50">
+                          {editing.payment_timing === "later"
+                            ? "O aluno reserva o horário e pode pagar depois (ex.: no atendimento presencial)."
+                            : "O aluno precisa pagar no ato do agendamento para confirmar a reserva."}
+                        </p>
+                      </Field>
+                      <p className="text-[10px] text-white/50">
+                        Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
+                      </p>
+                    </>
                   )}
                 </div>
               )}

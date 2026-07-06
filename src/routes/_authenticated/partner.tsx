@@ -71,6 +71,8 @@ interface Product {
   monthly_redeem_limit?: number | null;
   weekly_limit_per_student?: number | null;
   uses_scheduling?: boolean | null;
+  event_date?: string | null;
+  event_capacity?: number | null;
 }
 
 
@@ -779,6 +781,20 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 categoryId={editing.category_id}
                 onChange={(patch) => setEditing(prev => prev ? { ...prev, ...patch } : prev)}
               />
+
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                <div className="text-xs font-bold text-primary">Evento com data específica (opcional)</div>
+                <p className="text-[10px] text-white/60">Para workshops ou eventos de uso único: defina a data e o número máximo de vagas. Deixe em branco se o produto for de uso contínuo.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Data do evento">
+                    <input type="date" value={editing.event_date ?? ""} onChange={e => setEditing({ ...editing, event_date: e.target.value || null })} className="field-input" />
+                  </Field>
+                  <Field label="Vagas disponíveis">
+                    <input type="number" min={1} value={editing.event_capacity ?? ""} onChange={e => setEditing({ ...editing, event_capacity: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 20" />
+                  </Field>
+                </div>
+              </div>
+
 
               
             </div>
