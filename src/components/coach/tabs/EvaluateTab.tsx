@@ -422,6 +422,7 @@ export function EvaluateTab() {
       diastolic_bp: int(assessment.diastolicBP),
       heart_rate: int(assessment.heartRate),
       blood_glucose: num(assessment.bloodGlucose),
+      scale_number: nz(assessment.scaleNumber)?.slice(0, 50),
       client_notes: nz(assessment.clientNotes),
       professional_notes: nz(assessment.professionalNotes),
       photos: assessment.photos || {},
@@ -472,6 +473,7 @@ export function EvaluateTab() {
             ));
         return { ...c, assessments: nextAssessments };
       }));
+      clientSummaryCache.delete(coachInfo.id);
     }
     return newId;
   };
@@ -799,6 +801,7 @@ export function EvaluateTab() {
             body_age: int(updated.bodyAge),
             body_water: num(updated.bodyWater),
             bone_mass: num(updated.boneMass),
+            scale_number: nz(updated.scaleNumber)?.slice(0, 50),
             client_notes: nz(updated.clientNotes),
             professional_notes: nz(updated.professionalNotes),
             photos: updated.photos || {},
