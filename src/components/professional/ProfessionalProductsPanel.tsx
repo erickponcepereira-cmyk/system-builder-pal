@@ -296,21 +296,12 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               <Field label="Descrição">
                 <textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" />
               </Field>
-              <Field label="Imagem">
-                {editing.image_url ? (
-                  <div className="relative">
-                    <img src={editing.image_url} className="h-32 w-full rounded object-cover" />
-                    <button onClick={() => setEditing({ ...editing, image_url: "" })} className="absolute top-1 right-1 bg-black/70 rounded p-1">
-                      <X className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
-                    {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
-                    <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
-                  </label>
-                )}
+              <Field label="Imagens">
+                <ProductImageGallery
+                  folder={`professionals/${coachId}`}
+                  images={editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : [])}
+                  onChange={(next) => setEditing({ ...editing, image_urls: next, image_url: next[0] || null })}
+                />
               </Field>
 
               {/* Tipo: pago x benefício gratuito (cupom) */}
