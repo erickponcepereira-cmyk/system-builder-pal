@@ -692,13 +692,27 @@ export function EvaluateTab() {
             professional_notes: nz(updated.professionalNotes),
             photos: updated.photos || {},
           };
+          // Vínculo com Desafio (opcional). O trigger sincroniza os pesos no enrollment.
+          if (updated.challengeEnrollmentId && updated.challengeType) {
+            payload.challenge_enrollment_id = updated.challengeEnrollmentId;
+            payload.challenge_type = updated.challengeType;
+            if ((client as any).studentId) payload.student_id = (client as any).studentId;
+          } else if (updated.challengeEnrollmentId === undefined && updated.challengeType === undefined) {
+            // Explicitamente desvinculado ("Não vincular")
+            payload.challenge_enrollment_id = null;
+            payload.challenge_type = null;
+          }
           const { error } = await supabase
             .from("coach_body_assessments" as never)
             .update(payload as never)
             .eq("id" as never, updated.id as never)
             .eq("coach_id" as never, targetCoachId as never);
           if (error) { toast.error(error.message || "Erro ao atualizar avaliação"); throw error; }
-          toast.success("Avaliação atualizada");
+          toast.success(
+            updated.challengeEnrollmentId
+              ? `Avaliação atualizada e vinculada ao Desafio (${updated.challengeType === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`
+              : "Avaliação atualizada"
+          );
           await loadClients();
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
