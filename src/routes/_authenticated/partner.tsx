@@ -51,7 +51,7 @@ interface Partner {
 
 interface Product {
   id: string; partner_id: string; kind: "free" | "paid"; name: string;
-  description: string | null; image_url: string | null; price: number; stock: number | null;
+  description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; stock: number | null;
   original_price?: number | null;
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
