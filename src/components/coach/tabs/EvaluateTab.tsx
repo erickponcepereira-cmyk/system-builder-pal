@@ -29,6 +29,7 @@ type ChallengeCandidate = {
   groupNumber: number;
   coachId: string;
   coachName?: string;
+  finalWeighInDate?: string | null;
 };
 
 const CLIENT_SUMMARY_CACHE_TTL_MS = 60_000;
@@ -237,6 +238,7 @@ export function EvaluateTab() {
         compLabel,
         groupNumber: g.group_number || 0,
         coachId: r.coach_id,
+        finalWeighInDate: g.final_weigh_in_date || null,
       };
       if (!base.studentId) continue;
       // Pesagem inicial pendente
@@ -663,26 +665,40 @@ export function EvaluateTab() {
           </button>
           {challengeBannerOpen && (
             <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {challengeCandidates.map((c) => (
-                <div key={`${c.enrollmentId}-${c.type}`} className="flex items-center justify-between gap-3 rounded-xl bg-black/30 border border-white/10 p-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{c.studentName}</p>
-                    <p className="text-[11px] text-white/50 truncate">
-                      {c.compLabel} · Turma {c.groupNumber} · Pesagem {c.type === "initial" ? "Inicial" : "Final"}
-                      {c.coachName ? ` · Coach: ${c.coachName}` : ""}
-                    </p>
+              {challengeCandidates.map((c) => {
+                const isFinal = c.type === "final";
+                const tone = isFinal
+                  ? "bg-yellow-500/10 border-yellow-400/40"
+                  : "bg-red-500/10 border-red-400/40";
+                const btnTone = isFinal
+                  ? "bg-yellow-400 text-black hover:bg-yellow-300"
+                  : "bg-red-500 text-white hover:bg-red-400";
+                const labelTone = isFinal ? "text-yellow-200" : "text-red-200";
+                const finalDate = c.finalWeighInDate
+                  ? new Date(c.finalWeighInDate + "T00:00:00").toLocaleDateString("pt-BR")
+                  : null;
+                return (
+                  <div key={`${c.enrollmentId}-${c.type}`} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${tone}`}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{c.studentName}</p>
+                      <p className={`text-[11px] truncate ${labelTone}`}>
+                        {c.compLabel} · Turma {c.groupNumber} · Pesagem {isFinal ? "Final" : "Inicial"}
+                        {isFinal && finalDate ? ` em ${finalDate}` : ""}
+                        {c.coachName ? ` · Coach: ${c.coachName}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => linkChallengeCandidate({
+                        enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
+                        studentName: c.studentName, compLabel: c.compLabel,
+                      })}
+                      className={`shrink-0 text-xs font-bold px-3 py-2 rounded-lg ${btnTone}`}
+                    >
+                      Avaliar {isFinal ? "Final" : "Inicial"}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => linkChallengeCandidate({
-                      enrollmentId: c.enrollmentId, type: c.type, studentId: c.studentId,
-                      studentName: c.studentName, compLabel: c.compLabel,
-                    })}
-                    className="shrink-0 text-xs font-bold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
-                  >
-                    Avaliar
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
