@@ -6,8 +6,9 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Clock, ExternalLink,
-  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check, QrCode,
+  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check, QrCode, Share2,
 } from "lucide-react";
+
 import { QRCodeSVG } from "qrcode.react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -382,6 +383,23 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       setLoading(false);
     });
   }, [currentYM, reloadKey]);
+
+  // Auto-abrir modal quando link compartilhado tiver ?event=<id>
+  useEffect(() => {
+    if (typeof window === "undefined" || events.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("event");
+    if (!target) return;
+    const ev = events.find((e) => e.id === target);
+    if (ev) {
+      setDetail(ev);
+      // Limpa o parâmetro para não reabrir depois de fechar
+      const url = new URL(window.location.href);
+      url.searchParams.delete("event");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [events]);
+
 
 
   // ── Calendar grid ────────────────────────────────────────────────────────
@@ -991,11 +1009,41 @@ function EventDetailModal({ event: ev, onClose, onChanged }: { event: FitmindEve
             <ExternalLink className="h-3.5 w-3.5 opacity-60" />
           </a>
 
+          {/* CTA: Compartilhar link direto do evento */}
+          {!ev.id.startsWith("appt-") && !ev.id.startsWith("challenge-") && (
+            <button
+              type="button"
+              onClick={async () => {
+                const url = `${window.location.origin}/coach?event=${ev.id}`;
+                const shareData = { title: ev.title, text: ev.subtitle || ev.title, url };
+                try {
+                  if (navigator.share && typeof navigator.canShare === "function" && navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    return;
+                  }
+                } catch {
+                  /* fallback abaixo */
+                }
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success("Link do evento copiado! Envie para os coachs marcarem presença.");
+                } catch {
+                  window.prompt("Copie o link do evento:", url);
+                }
+              }}
+              className="flex items-center justify-center gap-2 w-full rounded-xl border border-white/15 bg-white/5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+            >
+              <Share2 className="h-4 w-4" />
+              Compartilhar evento
+            </button>
+          )}
+
         </div>
       </div>
     </div>
   );
 }
+
 
 // ─── Attendance ─────────────────────────────────────────────────────────────
 
