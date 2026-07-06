@@ -176,7 +176,8 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
             <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50" title="Trocar foto">
               <Camera className="h-3.5 w-3.5" />
             </button>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); }} />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingAvatar(f); e.target.value = ""; }} />
+            <ImageCropperDialog file={pendingAvatar} aspect={1} shape="circle" title="Ajustar foto de perfil" onCancel={() => setPendingAvatar(null)} onConfirm={uploadAvatar} />
           </div>
           <h2 className="text-lg font-bold text-white">{coach?.name || "Coach"}</h2>
           <p className="text-[10px] text-white/40">Foto recomendada: 512×512px (1:1)</p>
