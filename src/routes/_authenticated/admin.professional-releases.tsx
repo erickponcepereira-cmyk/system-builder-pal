@@ -11,8 +11,9 @@ import {
 import { toast } from "sonner";
 import {
   Loader2, CheckCircle2, Circle, Mail, Stethoscope, Settings2,
-  History, ChevronDown, ChevronUp, ClipboardList,
+  History, ChevronDown, ChevronUp, ClipboardList, CreditCard,
 } from "lucide-react";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/admin/professional-releases")({
@@ -21,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/admin/professional-release
 });
 
 type Specialty = { key: string; label: string; requires_admin_setup: boolean };
+
+type MonthlyStatus = "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none";
 
 type Row = {
   id: string;
@@ -34,11 +37,23 @@ type Row = {
   approved_at: string | null;
   onboarding_stage: string | null;
   created_at: string;
+  activation_paid_at: string | null;
+  activation_source: string | null;
+  activation_note: string | null;
+  already_coach: boolean | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string; user_id?: string } | null;
+  monthly: {
+    status: MonthlyStatus;
+    paid_until: string | null;
+    last_invoice_status: string | null;
+    last_invoice_month: string | null;
+  };
 };
 
 type StageFilter = "all" | "email" | "specialty" | "approval" | "approved";
+type MonthlyFilter = "all" | MonthlyStatus;
+
 type StepKey = "email" | "specialty" | "approve";
 
 type AuditEntry = { id: string; action: string; notes: string | null; created_at: string; actor_name: string };
@@ -74,7 +89,9 @@ function ProfessionalReleasesPage() {
   const [auditByPro, setAuditByPro] = useState<Record<string, AuditEntry[] | "loading">>({});
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [monthlyFilter, setMonthlyFilter] = useState<MonthlyFilter>("all");
   const [includeApproved, setIncludeApproved] = useState(false);
+
 
   const reload = async () => {
     setLoading(true);
@@ -137,12 +154,32 @@ function ProfessionalReleasesPage() {
       if (stageFilter === "specialty" && (!emailDone || specDone)) return false;
       if (stageFilter === "approval" && (!specDone || approved)) return false;
     }
+    if (monthlyFilter !== "all" && (r.monthly?.status ?? "none") !== monthlyFilter) return false;
     if (q) {
       const hay = [r.profile?.name, r.profile?.email, r.profile?.phone, r.professional_council, r.council_number, r.specialty_custom_description].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
+
+  const MONTHLY_BADGE: Record<MonthlyStatus, { label: string; cls: string }> = {
+    paid:      { label: "Mensalidade paga",     cls: "bg-emerald-500/15 text-emerald-300" },
+    exempt:    { label: "Mensalidade isenta",   cls: "bg-blue-500/15 text-blue-300" },
+    pending:   { label: "Mensalidade pendente", cls: "bg-amber-500/15 text-amber-300" },
+    overdue:   { label: "Mensalidade atrasada", cls: "bg-orange-500/15 text-orange-300" },
+    blocked:   { label: "Mensalidade bloqueada",cls: "bg-red-500/15 text-red-300" },
+    cancelled: { label: "Mensalidade cancelada",cls: "bg-white/10 text-white/60" },
+    none:      { label: "Sem mensalidade",      cls: "bg-white/5 text-white/50" },
+  };
+
+  const ACTIVATION_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
+    already_coach:    { label: "Já sou coach",         cls: "bg-blue-500/15 text-blue-300" },
+    purchased:        { label: "Comprou na loja",      cls: "bg-emerald-500/15 text-emerald-300" },
+    mercadopago:      { label: "Pago no Mercado Pago", cls: "bg-emerald-500/15 text-emerald-300" },
+    partner_approved: { label: "Parceiro aprovado",    cls: "bg-cyan-500/15 text-cyan-300" },
+    admin_grant:      { label: "Concedida pelo admin", cls: "bg-amber-500/15 text-amber-300" },
+  };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
@@ -153,7 +190,7 @@ function ProfessionalReleasesPage() {
         </p>
       </div>
 
-      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto]">
+      <div className="mb-4 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 md:grid-cols-[1fr_auto_auto_auto]">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -168,11 +205,23 @@ function ProfessionalReleasesPage() {
           <option value="approval">Aguardando aprovação</option>
           <option value="approved">Já aprovados</option>
         </select>
+        <select value={monthlyFilter} onChange={(e) => setMonthlyFilter(e.target.value as MonthlyFilter)}
+          className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+          <option value="all">Mensalidade: todas</option>
+          <option value="paid">Paga</option>
+          <option value="exempt">Isenta</option>
+          <option value="pending">Pendente</option>
+          <option value="overdue">Atrasada</option>
+          <option value="blocked">Bloqueada</option>
+          <option value="cancelled">Cancelada</option>
+          <option value="none">Sem mensalidade</option>
+        </select>
         <label className="flex items-center gap-2 rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
           <input type="checkbox" checked={includeApproved} onChange={(e) => setIncludeApproved(e.target.checked)} />
           Incluir aprovados
         </label>
       </div>
+
 
       {loading ? (
         <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
@@ -210,8 +259,40 @@ function ProfessionalReleasesPage() {
                         Aprovado{r.approved_at ? ` · ${new Date(r.approved_at).toLocaleDateString("pt-BR")}` : ""}
                       </span>
                     )}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {r.already_coach && (
+                        <span className="inline-flex rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-bold text-blue-300">já era coach</span>
+                      )}
+                      {(() => {
+                        const src = r.activation_source ?? (r.already_coach ? "already_coach" : null);
+                        const b = src ? ACTIVATION_SOURCE_BADGE[src] : null;
+                        if (r.activation_paid_at) {
+                          return (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${b?.cls || "bg-emerald-500/15 text-emerald-300"}`}>
+                              <CreditCard className="h-3 w-3" />
+                              Ativação {b?.label ? `· ${b.label}` : "concedida"} · {new Date(r.activation_paid_at).toLocaleDateString("pt-BR")}
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold text-white/50">
+                            <CreditCard className="h-3 w-3" /> Sem ativação
+                          </span>
+                        );
+                      })()}
+                      {(() => {
+                        const m = MONTHLY_BADGE[r.monthly?.status ?? "none"];
+                        return (
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${m.cls}`}
+                            title={r.monthly?.last_invoice_month ? `Últ. fatura: ${new Date(r.monthly.last_invoice_month).toLocaleDateString("pt-BR")} (${r.monthly.last_invoice_status || "—"})` : undefined}>
+                            {m.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
+
 
                 {/* Trilha */}
                 <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
