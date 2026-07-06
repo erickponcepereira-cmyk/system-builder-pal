@@ -12,6 +12,8 @@ import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
+import { ProfessionalOnboardingGate } from "@/components/professional/ProfessionalOnboardingGate";
+
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
