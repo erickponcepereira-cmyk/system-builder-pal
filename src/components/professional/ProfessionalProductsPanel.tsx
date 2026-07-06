@@ -543,9 +543,28 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                     </div>
                   )}
                   {editing.is_schedulable && (
-                    <p className="text-[10px] text-white/50">
-                      Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
-                    </p>
+                    <>
+                      <Field label="Momento do pagamento">
+                        <div className="flex rounded-lg bg-black/40 p-0.5">
+                          <button type="button" onClick={() => setEditing({ ...editing, payment_timing: "at_booking" })}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${(editing.payment_timing ?? "at_booking") === "at_booking" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                            Pagar ao agendar
+                          </button>
+                          <button type="button" onClick={() => setEditing({ ...editing, payment_timing: "later" })}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-bold transition ${editing.payment_timing === "later" ? "bg-primary text-primary-foreground" : "text-white/60"}`}>
+                            Agendar e pagar depois
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[10px] text-white/50">
+                          {editing.payment_timing === "later"
+                            ? "O aluno reserva o horário e pode pagar depois (ex.: no atendimento presencial)."
+                            : "O aluno precisa pagar no ato do agendamento para confirmar a reserva."}
+                        </p>
+                      </Field>
+                      <p className="text-[10px] text-white/50">
+                        Defina seus dias e horários disponíveis na aba <strong>Configurações → Agenda</strong>.
+                      </p>
+                    </>
                   )}
                 </div>
               )}
