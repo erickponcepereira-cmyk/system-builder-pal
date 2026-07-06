@@ -526,10 +526,15 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                           min={5}
                           max={240}
                           step={5}
-                          value={editing.default_duration_minutes ?? 30}
-                          onChange={(e) =>
-                            setEditing({ ...editing, default_duration_minutes: Number(e.target.value) || 30 })
-                          }
+                          value={editing.default_duration_minutes ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setEditing({ ...editing, default_duration_minutes: v === "" ? undefined : Number(v) });
+                          }}
+                          onBlur={(e) => {
+                            const n = Number(e.target.value);
+                            if (!n || n < 5) setEditing({ ...editing, default_duration_minutes: 30 });
+                          }}
                           className="field-input"
                         />
                       </Field>
@@ -538,10 +543,14 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                           type="number"
                           min={0}
                           max={168}
-                          value={editing.cancellation_window_hours ?? 24}
-                          onChange={(e) =>
-                            setEditing({ ...editing, cancellation_window_hours: Number(e.target.value) || 24 })
-                          }
+                          value={editing.cancellation_window_hours ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setEditing({ ...editing, cancellation_window_hours: v === "" ? undefined : Number(v) });
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === "") setEditing({ ...editing, cancellation_window_hours: 24 });
+                          }}
                           className="field-input"
                         />
                       </Field>
