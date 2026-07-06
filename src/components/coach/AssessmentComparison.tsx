@@ -118,8 +118,15 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
     [client],
   );
 
-  // Pré-seleciona as duas últimas avaliações
+  // Pré-seleciona as duas últimas avaliações. Reativo a `all` para cobrir hidratação assíncrona.
   const [selected, setSelected] = useState<string[]>(() => all.slice(0, 2).map((a) => a.id));
+  useEffect(() => {
+    setSelected((prev) => {
+      const valid = prev.filter((id) => all.some((a) => a.id === id));
+      if (valid.length > 0) return valid;
+      return all.slice(0, 2).map((a) => a.id);
+    });
+  }, [all]);
 
   const toggle = (id: string) =>
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
