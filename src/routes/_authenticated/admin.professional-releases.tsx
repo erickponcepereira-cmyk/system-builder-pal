@@ -313,8 +313,11 @@ function ProfessionalReleasesPage() {
                   <span className="text-white/20">›</span>
                   <Step done={specDone} active={emailDone && !specDone} icon={ClipboardList} label="Especialidade" />
                   <span className="text-white/20">›</span>
-                  <Step done={approved} active={specDone && !approved} icon={Stethoscope} label="Aprovar" />
+                  <Step done={actDone} active={specDone && !actDone} icon={CreditCard} label="Ativação" />
+                  <span className="text-white/20">›</span>
+                  <Step done={approved} active={actDone && !approved} icon={Stethoscope} label="Aprovar" />
                 </div>
+
 
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   {/* 1. E-mail */}
