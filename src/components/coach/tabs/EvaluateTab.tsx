@@ -46,6 +46,7 @@ export function EvaluateTab() {
   const [linkStudents, setLinkStudents] = useState<{ id: string; name: string; email?: string; coachName?: string }[]>([]);
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
+  const [challengeBannerOpen, setChallengeBannerOpen] = useState(false);
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
