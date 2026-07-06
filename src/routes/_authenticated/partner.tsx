@@ -235,6 +235,8 @@ function PartnerPanel() {
         {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
         {tab === "reports" && <PartnerReports />}
         {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
+        {tab === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+
 
       </main>
 
