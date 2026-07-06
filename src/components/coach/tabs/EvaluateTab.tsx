@@ -238,6 +238,7 @@ export function EvaluateTab() {
         compLabel,
         groupNumber: g.group_number || 0,
         coachId: r.coach_id,
+        finalWeighInDate: g.final_weigh_in_date || null,
       };
       if (!base.studentId) continue;
       // Pesagem inicial pendente
