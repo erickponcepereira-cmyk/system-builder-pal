@@ -89,6 +89,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   useEffect(() => {
+    // Registra o service worker mínimo (produção fora de preview) para viabilizar
+    // instalação como app (WebAPK) no Chrome Android.
+    registerAppServiceWorker();
+
     // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
     import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
       initPushNotifications({ onToken: saveTokenToSupabase }).catch((err) => {
