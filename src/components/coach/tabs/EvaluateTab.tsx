@@ -209,25 +209,41 @@ export function EvaluateTab() {
       }
     }
 
-    setClients(all.map((row) => ({
-      id: row.id,
-      coachId: row.coach_id,
-      studentId: row.student_id || undefined,
-      name: row.name,
-      gender: row.gender,
-      ethnicity: row.ethnicity,
-      height: Number(row.height || 0),
-      heightUnit: row.height_unit,
-      birthDate: row.birth_date || "",
-      language: row.language,
-      whatsapp: row.whatsapp || "",
-      email: row.email || "",
-      notes: row.notes || "",
-      groups: row.groups || [],
-      avatar: row.avatar_url || undefined,
-      assessments: (assessmentsByClient.get(row.id) || []).map(mapAssessment),
-      coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
-    })));
+    setClients(all.map((row) => {
+      const s = summaryByClient.get(row.id) || { total: 0, last_at: null };
+      // Stub avaliações apenas com id/date para a lista mostrar contagem e "última" —
+      // dados completos (fotos, notas, segmentos) são carregados sob demanda ao abrir o aluno.
+      const stubs: FitMindAssessment[] = s.total > 0
+        ? Array.from({ length: s.total }, (_, i) => ({
+            id: `__stub_${row.id}_${i}`,
+            clientId: row.id,
+            date: (i === s.total - 1 && s.last_at) ? s.last_at : "",
+            method: "bioimpedance",
+            age: 0, height: 0, weight: 0, bmi: 0, bodyFat: 0,
+            skeletalMuscle: 0, muscleMass: 0, visceralFat: 0, basalMetabolism: 0,
+            bodyAge: 0, bodyWater: 0, boneMass: 0,
+          } as FitMindAssessment))
+        : [];
+      return {
+        id: row.id,
+        coachId: row.coach_id,
+        studentId: row.student_id || undefined,
+        name: row.name,
+        gender: row.gender,
+        ethnicity: row.ethnicity,
+        height: Number(row.height || 0),
+        heightUnit: row.height_unit,
+        birthDate: row.birth_date || "",
+        language: row.language,
+        whatsapp: row.whatsapp || "",
+        email: row.email || "",
+        notes: row.notes || "",
+        groups: row.groups || [],
+        avatar: row.avatar_url || undefined,
+        assessments: stubs,
+        coachName: masterFlag && row.coach_id !== coach.id ? (coachNameById.get(row.coach_id) || "Outro coach") : undefined,
+      };
+    }));
 
     // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
     await loadChallengeCandidates(coach.id, masterFlag);
