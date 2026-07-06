@@ -211,8 +211,10 @@ function ProfessionalReleasesPage() {
           <option value="all">Todas as etapas</option>
           <option value="email">Aguardando e-mail</option>
           <option value="specialty">Aguardando especialidade</option>
+          <option value="activation">Aguardando ativação</option>
           <option value="approval">Aguardando aprovação</option>
           <option value="approved">Já aprovados</option>
+
         </select>
         <select value={monthlyFilter} onChange={(e) => setMonthlyFilter(e.target.value as MonthlyFilter)}
           className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
