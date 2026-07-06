@@ -7,12 +7,9 @@ import { createCoachCalendarEvent } from "@/lib/google-calendar.functions";
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
 
-// PERF: initial render only needs the COUNT of assessments per client (shown in cards) —
-// no chart/result data is needed until the user opens a specific aluno. We fetch a single
-// scalar column to keep payload tiny (1 col × N rows instead of 22 cols × N rows).
-// Heavy jsonb (segment_analysis, photos), notes, and detailed metrics are lazy-loaded by
-// loadFullAssessmentsForClient() when an aluno is selected.
-const ASSESSMENT_LIGHT_COLS = "client_id,assessment_date";
+// PERF: no carregamento inicial usamos apenas contagem agregada por cliente (RPC).
+// Payload completo por avaliação (photos, segment_analysis, notas) é lazy-loaded em
+// loadFullAssessmentsForClient() só quando o aluno é aberto.
 
 type ChallengeLink = {
   enrollmentId: string;
