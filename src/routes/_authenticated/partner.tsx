@@ -1335,7 +1335,7 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
           <div className="flex items-center gap-2">
             <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (form.cover_url ? "Trocar capa" : "Adicionar capa")}
-              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "cover_url")} />
+              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setPendingCover(f); e.target.value = ""; }} />
             </label>
             {form.cover_url && (
               <button type="button" onClick={() => setForm({ ...form, cover_url: null })} className="text-[11px] text-red-300 hover:underline">Remover</button>
