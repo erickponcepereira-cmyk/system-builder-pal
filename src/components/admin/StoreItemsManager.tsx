@@ -65,7 +65,7 @@ export function StoreItemsManager() {
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
+        .select("id,section_id,category_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
