@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebo
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CouponModal } from "@/components/student/CouponModal";
+import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
 
 
 export const Route = createFileRoute("/_authenticated/student/partners/$partnerId")({
