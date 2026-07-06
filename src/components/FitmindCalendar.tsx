@@ -6,8 +6,9 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   ChevronLeft, ChevronRight, CalendarDays, MapPin, Clock, ExternalLink,
-  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check, QrCode,
+  Star, Zap, Sparkles, X, CalendarPlus, Tag, Users, Check, QrCode, Share2,
 } from "lucide-react";
+
 import { QRCodeSVG } from "qrcode.react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
