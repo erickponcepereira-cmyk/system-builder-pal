@@ -5,9 +5,11 @@ import {
   listAllProfessionalReleases,
   adminConfirmProfessionalEmail,
   adminSetProfessionalSpecialty,
+  adminGrantProfessionalActivation,
   adminApproveProfessionalFinal,
   getProfessionalReleaseAudit,
 } from "@/lib/professional-approvals.functions";
+
 import { toast } from "sonner";
 import {
   Loader2, CheckCircle2, Circle, Mail, Stethoscope, Settings2,
@@ -51,18 +53,20 @@ type Row = {
   };
 };
 
-type StageFilter = "all" | "email" | "specialty" | "approval" | "approved";
+type StageFilter = "all" | "email" | "specialty" | "activation" | "approval" | "approved";
 type MonthlyFilter = "all" | MonthlyStatus;
 
-type StepKey = "email" | "specialty" | "approve";
+type StepKey = "email" | "specialty" | "activation" | "approve";
 
 type AuditEntry = { id: string; action: string; notes: string | null; created_at: string; actor_name: string };
 
 const ACTION_LABELS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   professional_email_confirmed: { label: "E-mail confirmado", icon: Mail },
   professional_specialty_set:   { label: "Especialidade definida", icon: ClipboardList },
+  professional_activation_paid: { label: "Ativação concedida pelo admin", icon: CreditCard },
   professional_approved_final:  { label: "Profissional aprovado e painel liberado", icon: Stethoscope },
 };
+
 
 function Step({ done, active, icon: Icon, label }: { done: boolean; active: boolean; icon: React.ComponentType<{ className?: string }>; label: string }) {
   return (
@@ -78,8 +82,10 @@ function ProfessionalReleasesPage() {
   const fetchList = useServerFn(listAllProfessionalReleases);
   const confirmEmail = useServerFn(adminConfirmProfessionalEmail);
   const setSpecialty = useServerFn(adminSetProfessionalSpecialty);
+  const grantActivation = useServerFn(adminGrantProfessionalActivation);
   const approveFinal = useServerFn(adminApproveProfessionalFinal);
   const fetchAudit = useServerFn(getProfessionalReleaseAudit);
+
 
   const [rows, setRows] = useState<Row[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
@@ -148,11 +154,13 @@ function ProfessionalReleasesPage() {
     if (stageFilter !== "all") {
       const emailDone = r.email_confirmed;
       const specDone = !!r.specialty_key;
+      const actDone = !!r.activation_paid_at;
       const approved = !!r.approved_at;
       if (stageFilter === "approved" && !approved) return false;
       if (stageFilter === "email" && emailDone) return false;
       if (stageFilter === "specialty" && (!emailDone || specDone)) return false;
-      if (stageFilter === "approval" && (!specDone || approved)) return false;
+      if (stageFilter === "activation" && (!specDone || actDone)) return false;
+      if (stageFilter === "approval" && (!actDone || approved)) return false;
     }
     if (monthlyFilter !== "all" && (r.monthly?.status ?? "none") !== monthlyFilter) return false;
     if (q) {
@@ -161,6 +169,7 @@ function ProfessionalReleasesPage() {
     }
     return true;
   });
+
 
   const MONTHLY_BADGE: Record<MonthlyStatus, { label: string; cls: string }> = {
     paid:      { label: "Mensalidade paga",     cls: "bg-emerald-500/15 text-emerald-300" },
@@ -202,8 +211,10 @@ function ProfessionalReleasesPage() {
           <option value="all">Todas as etapas</option>
           <option value="email">Aguardando e-mail</option>
           <option value="specialty">Aguardando especialidade</option>
+          <option value="activation">Aguardando ativação</option>
           <option value="approval">Aguardando aprovação</option>
           <option value="approved">Já aprovados</option>
+
         </select>
         <select value={monthlyFilter} onChange={(e) => setMonthlyFilter(e.target.value as MonthlyFilter)}
           className="rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
@@ -234,8 +245,10 @@ function ProfessionalReleasesPage() {
           {filtered.map((r) => {
             const emailDone = r.email_confirmed;
             const specDone = !!r.specialty_key;
+            const actDone = !!r.activation_paid_at;
             const approved = !!r.approved_at;
             const spec = specialties.find((s) => s.key === r.specialty_key);
+
 
             return (
               <div key={r.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -300,8 +313,11 @@ function ProfessionalReleasesPage() {
                   <span className="text-white/20">›</span>
                   <Step done={specDone} active={emailDone && !specDone} icon={ClipboardList} label="Especialidade" />
                   <span className="text-white/20">›</span>
-                  <Step done={approved} active={specDone && !approved} icon={Stethoscope} label="Aprovar" />
+                  <Step done={actDone} active={specDone && !actDone} icon={CreditCard} label="Ativação" />
+                  <span className="text-white/20">›</span>
+                  <Step done={approved} active={actDone && !approved} icon={Stethoscope} label="Aprovar" />
                 </div>
+
 
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                   {/* 1. E-mail */}
@@ -334,15 +350,42 @@ function ProfessionalReleasesPage() {
                     )}
                   </div>
 
-                  {/* 3. Aprovar final */}
+                  {/* 3. Ativação */}
+                  <div className="md:col-span-2 flex flex-col gap-1">
+                    <button
+                      disabled={actDone || (busy?.id === r.id && busy?.step === "activation")}
+                      onClick={() => {
+                        const note = window.prompt(
+                          "Justifique a concessão da ativação de profissional R$179,90 (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 06/07'."
+                        );
+                        if (!note || note.trim().length < 5) { toast.error("Justificativa obrigatória."); return; }
+                        run(r.id, "activation", () => grantActivation({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
+                    >
+                      {busy?.id === r.id && busy?.step === "activation" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                      {actDone ? `Ativação paga em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Conceder ativação"}
+                    </button>
+                    {actDone && r.activation_source && (() => {
+                      const b = ACTIVATION_SOURCE_BADGE[r.activation_source];
+                      return (
+                        <span className={`self-start inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${b?.cls ?? "bg-white/10 text-white/60"}`}>
+                          Origem: {b?.label ?? r.activation_source}
+                          {r.activation_note ? ` · ${r.activation_note}` : ""}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 4. Aprovar final */}
                   <div className="md:col-span-2 flex flex-wrap items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2">
                     <Stethoscope className="h-3.5 w-3.5 text-emerald-300" />
                     <span className="text-xs text-white/70">
-                      {spec ? `Especialidade: ${spec.label}` : "Selecione uma especialidade para liberar"}
+                      {!specDone ? "Selecione uma especialidade" : !actDone ? "Confirme a ativação para liberar" : `Especialidade: ${spec?.label}`}
                     </span>
                     <div className="ml-auto">
                       <button
-                        disabled={approved || !specDone || (busy?.id === r.id && busy?.step === "approve")}
+                        disabled={approved || !specDone || !actDone || (busy?.id === r.id && busy?.step === "approve")}
                         onClick={() => {
                           if (!confirm(`Aprovar definitivamente ${r.profile?.name || "este profissional"}? Isso também confirma o e-mail e libera o painel.`)) return;
                           run(r.id, "approve", () => approveFinal({ data: { coachId: r.id } }), "Profissional aprovado!", r.profile?.id);
@@ -357,6 +400,7 @@ function ProfessionalReleasesPage() {
                 </div>
 
                 {/* Histórico */}
+
                 {r.profile?.id && (
                   <div className="mt-3">
                     <button

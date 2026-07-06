@@ -191,6 +191,40 @@ export const adminSetProfessionalSpecialty = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminGrantProfessionalActivation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      coachId: z.string().uuid(),
+      note: z.string().trim().min(5, "Justificativa obrigatória (mín. 5 caracteres)").max(500),
+    }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    const actorId = await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: pro } = await supabaseAdmin
+      .from("coaches").select("id, profile_id, activation_paid_at").eq("id", data.coachId).maybeSingle();
+    if (!pro) throw new Error("Profissional não encontrado");
+    const p = pro as { id: string; profile_id: string; activation_paid_at: string | null };
+    const nowIso = new Date().toISOString();
+    const { error } = await supabaseAdmin.from("coaches").update({
+      activation_paid_at: p.activation_paid_at || nowIso,
+      activation_source: "admin_grant",
+      activation_granted_by: context.userId,
+      activation_note: data.note,
+    } as never).eq("id", p.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: p.profile_id,
+      type: "professional_onboarding",
+      title: "Ativação liberada",
+      message: "Sua ativação de profissional foi liberada pelo admin.",
+      action_url: "/professional",
+    });
+    await logAudit(actorId, p.profile_id, "professional_activation_paid", `Ativação concedida pelo admin. Motivo: ${data.note}`);
+    return { ok: true };
+  });
+
 export const adminApproveProfessionalFinal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ coachId: z.string().uuid() }).parse(input))
@@ -199,12 +233,13 @@ export const adminApproveProfessionalFinal = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: pro } = await supabaseAdmin
       .from("coaches")
-      .select("id, profile_id, specialty_key, approved_at")
+      .select("id, profile_id, specialty_key, approved_at, activation_paid_at")
       .eq("id", data.coachId)
       .maybeSingle();
     if (!pro) throw new Error("Profissional não encontrado");
-    const p = pro as { id: string; profile_id: string; specialty_key: string | null; approved_at: string | null };
+    const p = pro as { id: string; profile_id: string; specialty_key: string | null; approved_at: string | null; activation_paid_at: string | null };
     if (!p.specialty_key) throw new Error("Defina a especialidade antes de aprovar.");
+    if (!p.activation_paid_at) throw new Error("Conceda / confirme a ativação antes de aprovar.");
 
     const nowIso = new Date().toISOString();
     const { confirmAuthEmailByProfileId, notifyProfile } = await import("./admin-network.server");
@@ -240,6 +275,39 @@ export const adminApproveProfessionalFinal = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const getMyProfessionalOnboarding = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("id, name, email").eq("user_id", context.userId).maybeSingle();
+    if (!profile) throw new Error("Perfil não encontrado");
+    const p = profile as { id: string; name?: string; email?: string };
+    const { data: coach } = await supabaseAdmin
+      .from("coaches")
+      .select("id, is_professional, specialty_key, activation_paid_at, activation_source, approved_at, already_coach")
+      .eq("profile_id", p.id).maybeSingle();
+    if (!coach) return null;
+    const c = coach as {
+      id: string; is_professional: boolean | null; specialty_key: string | null;
+      activation_paid_at: string | null; activation_source: string | null;
+      approved_at: string | null; already_coach: boolean | null;
+    };
+    return {
+      isProfessional: !!c.is_professional,
+      profileId: p.id,
+      coachId: c.id,
+      name: p.name || "",
+      email: p.email || "",
+      specialtyKey: c.specialty_key,
+      activationPaidAt: c.activation_paid_at,
+      activationSource: c.activation_source,
+      approvedAt: c.approved_at,
+      alreadyCoach: !!c.already_coach,
+    };
+  });
+
+
 export const getProfessionalReleaseAudit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ profileId: z.string().uuid() }).parse(input))
@@ -253,8 +321,10 @@ export const getProfessionalReleaseAudit = createServerFn({ method: "GET" })
       .in("action", [
         "professional_email_confirmed",
         "professional_specialty_set",
+        "professional_activation_paid",
         "professional_approved_final",
       ])
+
       .order("created_at", { ascending: false });
 
     const actorIds = [

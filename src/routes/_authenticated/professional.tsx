@@ -12,6 +12,8 @@ import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { ProfessionalWalletTab } from "@/components/professional/ProfessionalWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
+import { ProfessionalOnboardingGate } from "@/components/professional/ProfessionalOnboardingGate";
+
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
@@ -159,17 +161,9 @@ function ProfessionalPanel() {
   }
 
   if (!info.approved) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: "#0A0A0A" }}>
-        <div className="max-w-md text-center rounded-2xl p-8" style={{ backgroundColor: "#1A1A1A" }}>
-          <AlertCircle className="mx-auto h-10 w-10 text-amber-400 mb-3" />
-          <h2 className="text-lg font-bold text-white mb-2">Aguardando aprovação</h2>
-          <p className="text-sm text-white/60 mb-6">Seu cadastro como profissional está em análise. Você receberá uma notificação assim que o admin liberar seu acesso.</p>
-          <button onClick={handleLogout} className="text-sm text-primary hover:underline">Sair</button>
-        </div>
-      </div>
-    );
+    return <ProfessionalOnboardingGate>{null}</ProfessionalOnboardingGate>;
   }
+
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
   const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "settings", "fitmind_calendar"];
