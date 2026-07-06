@@ -56,10 +56,16 @@ export function ProfessionalOnboardingGate({ children }: Props) {
         { event: "UPDATE", schema: "public", table: "coaches", filter: `id=eq.${info.coachId}` },
         (payload) => {
           const n = payload.new as { approved_at?: string | null; activation_paid_at?: string | null };
-          if (n?.approved_at && !info.approvedAt) toast.success("🎉 Painel liberado!");
-          else if (n?.activation_paid_at && !info.activationPaidAt) toast.success("Ativação confirmada!");
+          if (n?.approved_at && !info.approvedAt) {
+            toast.success("🎉 Painel liberado!");
+            // recarrega tudo para que o painel real do profissional seja montado
+            setTimeout(() => { if (typeof window !== "undefined") window.location.reload(); }, 800);
+            return;
+          }
+          if (n?.activation_paid_at && !info.activationPaidAt) toast.success("Ativação confirmada!");
           reload();
         }
+
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
