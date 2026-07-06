@@ -23,11 +23,15 @@ export function MobileShell({ children }: MobileShellProps) {
   const location = useLocation();
 
   return (
-    <div className="h-screen w-full overflow-hidden flex justify-center bg-background">
-      <div className="relative flex w-full max-w-[430px] flex-col h-screen overflow-hidden shadow-2xl bg-background">
+    <div className="w-full flex justify-center bg-background" style={{ minHeight: "100dvh" }}>
+      <div
+        className="relative flex w-full max-w-[430px] flex-col shadow-2xl bg-background"
+        style={{ height: "100dvh" }}
+      >
         {/* Top header with role switcher */}
         <header
-          className="sticky top-0 z-40 flex items-center justify-between px-4 py-2.5 border-b border-border bg-sidebar/95 text-sidebar-foreground backdrop-blur-xl"
+          className="sticky top-0 z-40 flex items-center justify-between px-4 py-2.5 border-b border-border bg-sidebar/95 text-sidebar-foreground backdrop-blur-xl shrink-0"
+          style={{ paddingTop: "max(0.625rem, env(safe-area-inset-top))" }}
         >
           <div className="flex items-center gap-2">
             <Logo className="h-7 w-7 object-contain" />
@@ -36,10 +40,15 @@ export function MobileShell({ children }: MobileShellProps) {
           <RoleSwitcher current="student" />
         </header>
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{children}</main>
+        <main className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {children}
+        </main>
 
-        <nav className="absolute bottom-0 left-0 right-0 z-50 border-t border-border bg-sidebar/95 text-sidebar-foreground backdrop-blur-xl">
-          <div className="grid grid-cols-7 px-1 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <nav
+          className="shrink-0 z-50 border-t border-border bg-sidebar/95 text-sidebar-foreground backdrop-blur-xl"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="grid grid-cols-7 px-1 py-2">
             {navItems.map((item) => {
               const isActive =
                 item.to === "/student"
@@ -51,7 +60,7 @@ export function MobileShell({ children }: MobileShellProps) {
                   key={item.to}
                   to={item.to}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-2 min-w-0 transition-all",
+                    "flex flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-2 min-w-0 transition-all touch-manipulation",
                     isActive ? "text-primary" : "text-sidebar-foreground/50 hover:text-sidebar-foreground"
                   )}
                 >
