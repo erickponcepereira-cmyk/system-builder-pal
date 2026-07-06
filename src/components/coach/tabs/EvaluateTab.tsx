@@ -151,12 +151,25 @@ export function EvaluateTab() {
 
     let all: any[] = [];
     try {
-      const { data, error } = await supabase.rpc(
-        "coach_evaluation_client_summaries" as never,
-        { _coach_id: coach.id } as never,
-      );
-      if (error) throw error;
-      all = (data as any[]) || [];
+      const PAGE = 1000;
+      let from = 0;
+      // Paginate via PostgREST Range header to bypass the default 1000-row cap.
+      // Loops until a partial page is returned, so master coaches see every client.
+      // Runs in-place; each page is a small payload (no images/measurements).
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data, error } = await supabase
+          .rpc(
+            "coach_evaluation_client_summaries" as never,
+            { _coach_id: coach.id } as never,
+          )
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const chunk = (data as any[]) || [];
+        all = all.concat(chunk);
+        if (chunk.length < PAGE) break;
+        from += PAGE;
+      }
     } catch (error) {
       console.error("coach_evaluation_client_summaries:", error);
       return toast.error("Erro ao carregar alunos da avaliação");
