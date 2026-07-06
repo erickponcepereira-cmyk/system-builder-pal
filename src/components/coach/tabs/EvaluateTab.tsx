@@ -497,8 +497,28 @@ export function EvaluateTab() {
     } else {
       toast.success("Avaliação salva");
     }
-    await loadClients();
-    return (inserted as { id: string } | null)?.id;
+    // PERF: em vez de refazer loadClients() (~1min no master coach), atualiza só o cliente afetado.
+    const newId = (inserted as { id: string } | null)?.id;
+    if (newId) {
+      const newAssessment: FitMindAssessment = { ...assessment, id: newId, clientId: client.id };
+      // Invalida cache do full-load para forçar próxima abertura a puxar os dados reais.
+      fullAssessmentsCacheRef.current.delete(client.id);
+      setClients((current) => current.map((c) => {
+        if (c.id !== client.id) return c;
+        const existing = (c.assessments || []).filter((a) => !a.id.startsWith("__stub_"));
+        const stubCount = (c.assessments || []).length - existing.length;
+        // se ainda estava só com stubs, mantém a contagem certa (stubCount + 1)
+        const nextAssessments = existing.length > 0
+          ? [...existing, newAssessment]
+          : Array.from({ length: stubCount + 1 }, (_, i) => (
+              i < stubCount
+                ? { id: `__stub_${c.id}_${i}`, clientId: c.id, date: "", method: "bioimpedance", age: 0, height: 0, weight: 0, bmi: 0, bodyFat: 0, skeletalMuscle: 0, muscleMass: 0, visceralFat: 0, basalMetabolism: 0, bodyAge: 0, bodyWater: 0, boneMass: 0 } as FitMindAssessment
+                : newAssessment
+            ));
+        return { ...c, assessments: nextAssessments };
+      }));
+    }
+    return newId;
   };
 
 
