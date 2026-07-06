@@ -384,6 +384,23 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
     });
   }, [currentYM, reloadKey]);
 
+  // Auto-abrir modal quando link compartilhado tiver ?event=<id>
+  useEffect(() => {
+    if (typeof window === "undefined" || events.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("event");
+    if (!target) return;
+    const ev = events.find((e) => e.id === target);
+    if (ev) {
+      setDetail(ev);
+      // Limpa o parâmetro para não reabrir depois de fechar
+      const url = new URL(window.location.href);
+      url.searchParams.delete("event");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [events]);
+
+
 
   // ── Calendar grid ────────────────────────────────────────────────────────
 
