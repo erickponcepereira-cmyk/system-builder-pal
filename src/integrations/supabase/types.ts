@@ -5282,6 +5282,7 @@ export type Database = {
           network_l1_amount: number | null
           network_l2_amount: number | null
           network_l3_amount: number | null
+          original_price: number | null
           partner_id: string
           partner_net_amount: number | null
           pix_fee_percentage: number
@@ -5322,6 +5323,7 @@ export type Database = {
           network_l1_amount?: number | null
           network_l2_amount?: number | null
           network_l3_amount?: number | null
+          original_price?: number | null
           partner_id: string
           partner_net_amount?: number | null
           pix_fee_percentage?: number
@@ -5362,6 +5364,7 @@ export type Database = {
           network_l1_amount?: number | null
           network_l2_amount?: number | null
           network_l3_amount?: number | null
+          original_price?: number | null
           partner_id?: string
           partner_net_amount?: number | null
           pix_fee_percentage?: number
@@ -6833,6 +6836,7 @@ export type Database = {
           network_l1_amount: number | null
           network_l2_amount: number | null
           network_l3_amount: number | null
+          original_price: number | null
           price: number
           price_input_mode: string
           professional_net_amount: number | null
@@ -6872,6 +6876,7 @@ export type Database = {
           network_l1_amount?: number | null
           network_l2_amount?: number | null
           network_l3_amount?: number | null
+          original_price?: number | null
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
@@ -6911,6 +6916,7 @@ export type Database = {
           network_l1_amount?: number | null
           network_l2_amount?: number | null
           network_l3_amount?: number | null
+          original_price?: number | null
           price?: number
           price_input_mode?: string
           professional_net_amount?: number | null
