@@ -18,7 +18,7 @@ interface Partner {
   address: string | null; city: string | null; state: string | null;
   free_redeem_policy?: "all" | "one_per_month" | null;
 }
-interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; price: number; }
+interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
 
 function formatBenefitWindow(start?: string | null, end?: string | null) {
