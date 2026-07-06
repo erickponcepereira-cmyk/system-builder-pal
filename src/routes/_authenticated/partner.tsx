@@ -71,6 +71,8 @@ interface Product {
   monthly_redeem_limit?: number | null;
   weekly_limit_per_student?: number | null;
   uses_scheduling?: boolean | null;
+  event_date?: string | null;
+  event_capacity?: number | null;
 }
 
 
