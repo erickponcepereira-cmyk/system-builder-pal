@@ -316,6 +316,8 @@ export interface FitMindShapeProps {
   initialClientId?: string;
   // Retorna vagas pendentes no Desafio para um cliente (usado no editar avaliação)
   getChallengeCandidatesForClient?: (client: FitMindClient) => FitMindChallengeCandidate[];
+  // Abre modal de integrar um cliente importado (Fineshape) a um aluno já cadastrado no sistema
+  onLinkClientToStudent?: (client: FitMindClient) => void;
 }
 
 // ============================================================
