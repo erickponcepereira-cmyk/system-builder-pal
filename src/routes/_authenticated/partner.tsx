@@ -1376,7 +1376,7 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
         <Field label="Especialidade"><input className="field-input" placeholder="Ex: Açaí e smoothies" value={form.specialty || ""} onChange={e => setForm({ ...form, specialty: e.target.value })} /></Field>
       </div>
       <Field label="WhatsApp (privado — usado internamente)"><input className="field-input" value={form.whatsapp || ""} onChange={e => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} /></Field>
-      <Field label="WhatsApp empresarial público" hint="Aparece na loja para os alunos. Deixe em branco para usar o WhatsApp privado."><input className="field-input" value={form.public_whatsapp || ""} placeholder="(00) 00000-0000" onChange={e => setForm({ ...form, public_whatsapp: maskPhone(e.target.value) })} /></Field>
+      <Field label="WhatsApp empresarial público (loja)"><input className="field-input" value={form.public_whatsapp || ""} placeholder="(00) 00000-0000 — em branco usa o privado" onChange={e => setForm({ ...form, public_whatsapp: maskPhone(e.target.value) })} /></Field>
       <Field label="Instagram (@usuario ou URL)"><input className="field-input" value={form.instagram || ""} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
       <Field label="Facebook (URL)"><input className="field-input" value={form.facebook || ""} onChange={e => setForm({ ...form, facebook: e.target.value })} /></Field>
       <Field label="Website"><input className="field-input" value={form.website || ""} onChange={e => setForm({ ...form, website: e.target.value })} /></Field>
