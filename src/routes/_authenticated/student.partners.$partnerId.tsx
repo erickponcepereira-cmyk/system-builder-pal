@@ -4,6 +4,7 @@ import { ArrowLeft, Building2, Loader2, MapPin, MessageCircle, Instagram, Facebo
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CouponModal } from "@/components/student/CouponModal";
+import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
 
 
 export const Route = createFileRoute("/_authenticated/student/partners/$partnerId")({
@@ -17,7 +18,7 @@ interface Partner {
   address: string | null; city: string | null; state: string | null;
   free_redeem_policy?: "all" | "one_per_month" | null;
 }
-interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; price: number; }
+interface Product { id: string; kind: "free" | "paid"; redemption_mode: "free" | "discount" | null; discount_percent: number | null; benefit_start_time: string | null; benefit_end_time: string | null; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; }
 interface Post { id: string; image_url: string; caption: string | null; created_at: string; }
 
 function formatBenefitWindow(start?: string | null, end?: string | null) {
@@ -57,7 +58,7 @@ function PartnerProfilePage() {
     (async () => {
       const [p, pr, ps] = await Promise.all([
         supabase.from("partners" as never).select("*").eq("id" as never, partnerId).eq("status" as never, "approved" as never).maybeSingle(),
-        supabase.from("partner_products" as never).select("id,kind,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,name,description,image_url,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).is("deleted_at" as never, null as never).order("kind" as never),
+        supabase.from("partner_products" as never).select("id,kind,redemption_mode,discount_percent,benefit_start_time,benefit_end_time,name,description,image_url,image_urls,price").eq("partner_id" as never, partnerId).eq("status" as never, "approved" as never).eq("is_active_by_partner" as never, true as never).is("deleted_at" as never, null as never).order("kind" as never),
         supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, partnerId).order("created_at" as never, { ascending: false }).limit(30),
       ]);
       setPartner((p.data as unknown as Partner) || null);
@@ -154,7 +155,16 @@ function PartnerProfilePage() {
                             {p.discount_percent}% OFF
                           </div>
                         ) : null}
-                        {p.image_url ? <img src={p.image_url} className="h-28 w-full object-cover" alt={p.name} /> : <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>}
+                        {(p.image_urls && p.image_urls.length) || p.image_url ? (
+                          <ProductImageCarousel
+                            images={p.image_urls && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : [])}
+                            alt={p.name}
+                            className="h-28 w-full"
+                            rounded=""
+                          />
+                        ) : (
+                          <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>
+                        )}
                         <div className="p-2.5 flex-1 flex flex-col">
                           <div className="flex items-center gap-1 mb-1">
                             <span className={`text-[9px] px-1.5 py-0.5 rounded ${isDiscount ? "bg-amber-500/15 text-amber-400" : isFree ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>

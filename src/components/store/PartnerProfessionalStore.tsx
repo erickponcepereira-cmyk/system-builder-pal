@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2, IdCard, Ticket } from "lucide-react";
+import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
@@ -36,6 +37,7 @@ export type PartnerStoreCard = {
   name: string;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   price: number;
   originalPrice?: number | null;
   section_id: string | null;
@@ -160,15 +162,15 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       if (kind === "partner") {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
+          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
           .is("deleted_at" as never, null as never);
         if (error) console.error("[partner store]", error);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
+            id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
             section_id: r.section_id, category_id: r.category_id,
             seller: r.partners?.fantasy_name || "Parceiro",
             kind: "partner",
@@ -179,14 +181,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         const { data, error } = await supabase
           .from("professional_products" as never)
           .select(
-            "id,name,description,image_url,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+            "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
           )
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true);
         if (error) console.error("[pp store]", error);
         setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
+          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
+            id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
             section_id: r.section_id, category_id: r.category_id,
             seller: r.coaches?.profile?.name || "Profissional",
             kind: "professional",
@@ -504,8 +506,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
           >
             <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
-              {selected.image_url ? (
-                <img src={selected.image_url} alt={selected.name} className="h-full w-full object-cover" />
+              {(selected.image_urls && selected.image_urls.length > 0) || selected.image_url ? (
+                <ProductImageCarousel
+                  images={selected.image_urls && selected.image_urls.length ? selected.image_urls : (selected.image_url ? [selected.image_url] : [])}
+                  alt={selected.name}
+                  className="h-full w-full"
+                  rounded=""
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <ShoppingBag className="h-16 w-16 text-muted-foreground" />

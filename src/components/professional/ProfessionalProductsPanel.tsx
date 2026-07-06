@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Loader2, Image as ImageIcon, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock } from "lucide-react";
+import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock } from "lucide-react";
+import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 
 type TimeRange = { start: string; end: string };
 type AvailabilityHours = Record<string, TimeRange[]>;
@@ -21,6 +22,7 @@ interface ProProduct {
   name: string;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   price: number;
   original_price?: number | null;
   stock: number | null;
@@ -86,7 +88,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
 
   const blank = (): Partial<ProProduct> => ({
     coach_id: coachId,
-    name: "", description: "", image_url: "", price: 0, stock: null,
+    name: "", description: "", image_url: "", image_urls: [], price: 0, stock: null,
     original_price: null,
     redemption_instructions: "", is_active_by_professional: true,
     price_input_mode: "charge",
@@ -125,6 +127,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     setEditing(e => e ? { ...e, image_url: data.publicUrl } : e);
     setUploading(false);
   };
+  void upload; void uploading;
 
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
@@ -136,7 +139,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       coach_id: coachId,
       status: "pending" as const,
       admin_notes: null,
-      image_url: emptyToNull(editing.image_url) as string | null,
+      image_url: (editing.image_urls?.[0] ?? (emptyToNull(editing.image_url) as string | null)) || null,
+      image_urls: editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : []),
       description: emptyToNull(editing.description) as string | null,
       redemption_instructions: emptyToNull(editing.redemption_instructions) as string | null,
       section_id: emptyToNull(editing.section_id) as string | null,
@@ -293,21 +297,12 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               <Field label="Descrição">
                 <textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" />
               </Field>
-              <Field label="Imagem">
-                {editing.image_url ? (
-                  <div className="relative">
-                    <img src={editing.image_url} className="h-32 w-full rounded object-cover" />
-                    <button onClick={() => setEditing({ ...editing, image_url: "" })} className="absolute top-1 right-1 bg-black/70 rounded p-1">
-                      <X className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
-                    {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
-                    <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
-                  </label>
-                )}
+              <Field label="Imagens">
+                <ProductImageGallery
+                  folder={`professionals/${coachId}`}
+                  images={editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : [])}
+                  onChange={(next) => setEditing({ ...editing, image_urls: next, image_url: next[0] || null })}
+                />
               </Field>
 
               {/* Tipo: pago x benefício gratuito (cupom) */}
@@ -531,10 +526,15 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                           min={5}
                           max={240}
                           step={5}
-                          value={editing.default_duration_minutes ?? 30}
-                          onChange={(e) =>
-                            setEditing({ ...editing, default_duration_minutes: Number(e.target.value) || 30 })
-                          }
+                          value={editing.default_duration_minutes ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setEditing({ ...editing, default_duration_minutes: v === "" ? undefined : Number(v) });
+                          }}
+                          onBlur={(e) => {
+                            const n = Number(e.target.value);
+                            if (!n || n < 5) setEditing({ ...editing, default_duration_minutes: 30 });
+                          }}
                           className="field-input"
                         />
                       </Field>
@@ -543,10 +543,14 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                           type="number"
                           min={0}
                           max={168}
-                          value={editing.cancellation_window_hours ?? 24}
-                          onChange={(e) =>
-                            setEditing({ ...editing, cancellation_window_hours: Number(e.target.value) || 24 })
-                          }
+                          value={editing.cancellation_window_hours ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setEditing({ ...editing, cancellation_window_hours: v === "" ? undefined : Number(v) });
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === "") setEditing({ ...editing, cancellation_window_hours: 24 });
+                          }}
                           className="field-input"
                         />
                       </Field>

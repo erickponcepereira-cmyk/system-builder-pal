@@ -15,6 +15,7 @@ import { CoachBenefitsTab } from "@/components/coach/tabs/BenefitsTab";
 import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
+import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
@@ -51,7 +52,7 @@ interface Partner {
 
 interface Product {
   id: string; partner_id: string; kind: "free" | "paid"; name: string;
-  description: string | null; image_url: string | null; price: number; stock: number | null;
+  description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; stock: number | null;
   original_price?: number | null;
   redemption_instructions: string | null; status: string; admin_notes: string | null;
   is_active_by_partner: boolean;
@@ -384,7 +385,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     partner_id: partner.id,
     kind: "free",
     redemption_mode: "free",
-    name: "", description: "", image_url: "", price: 0, stock: null,
+    name: "", description: "", image_url: "", image_urls: [], price: 0, stock: null,
     original_price: null,
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
@@ -451,7 +452,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       partner_id: partner.id,
       status: "pending" as const,
       admin_notes: null,
-      image_url: emptyToNull(editing.image_url) as string | null,
+      image_url: (editing.image_urls?.[0] ?? (emptyToNull(editing.image_url) as string | null)) || null,
+      image_urls: editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : []),
       description: emptyToNull(editing.description) as string | null,
       redemption_instructions: emptyToNull(editing.redemption_instructions) as string | null,
       section_id: emptyToNull(editing.section_id) as string | null,
@@ -763,16 +765,12 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
-              <Field label="Imagem">
-                {editing.image_url ? (
-                  <div className="relative"><img src={editing.image_url} className="h-32 w-full rounded object-cover" /><button onClick={() => setEditing({ ...editing, image_url: "" })} className="absolute top-1 right-1 bg-black/70 rounded p-1"><X className="h-3 w-3 text-white" /></button></div>
-                ) : (
-                  <label className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded border border-dashed border-white/20">
-                    {uploading ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <ImageIcon className="h-5 w-5 text-white/40" />}
-                    <span className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
-                  </label>
-                )}
+              <Field label="Imagens">
+                <ProductImageGallery
+                  folder={`partners/${partner.id}`}
+                  images={editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : [])}
+                  onChange={(next: string[]) => setEditing({ ...editing, image_urls: next, image_url: next[0] || null })}
+                />
               </Field>
 
               {editing.kind === "paid" && (

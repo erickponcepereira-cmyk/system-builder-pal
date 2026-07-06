@@ -1,0 +1,2 @@
+ALTER TABLE public.partner_products ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.professional_products ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}';
