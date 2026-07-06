@@ -318,6 +318,9 @@ export function SettingsTab({ coachId, profileId }: Props) {
           </button>
         </div>
       )}
+
+      <ImageCropperDialog file={pendingAvatar} aspect={1} shape="circle" title="Ajustar foto de perfil" onCancel={() => setPendingAvatar(null)} onConfirm={uploadAvatar} />
+      <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={uploadCover} />
     </>
   );
 }
