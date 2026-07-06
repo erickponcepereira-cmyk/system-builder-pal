@@ -249,7 +249,10 @@ export function AdminShell() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
+      <main
+        className="flex-1 overflow-y-auto lg:pt-0"
+        style={{ paddingTop: "calc(3.5rem + env(safe-area-inset-top))" }}
+      >
         <div className="p-4 lg:p-8">
           <Outlet />
         </div>
