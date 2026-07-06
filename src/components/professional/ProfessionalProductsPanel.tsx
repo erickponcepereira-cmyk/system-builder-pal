@@ -110,6 +110,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     availability_hours: {},
     event_date: null,
     event_capacity: null,
+    event_start_time: null,
+    event_end_time: null,
     payment_timing: "at_booking",
   });
 
