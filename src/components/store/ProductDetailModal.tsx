@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
+import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 
 export interface ProductDetail {
