@@ -154,12 +154,32 @@ function ProfessionalReleasesPage() {
       if (stageFilter === "specialty" && (!emailDone || specDone)) return false;
       if (stageFilter === "approval" && (!specDone || approved)) return false;
     }
+    if (monthlyFilter !== "all" && (r.monthly?.status ?? "none") !== monthlyFilter) return false;
     if (q) {
       const hay = [r.profile?.name, r.profile?.email, r.profile?.phone, r.professional_council, r.council_number, r.specialty_custom_description].filter(Boolean).join(" ").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
+
+  const MONTHLY_BADGE: Record<MonthlyStatus, { label: string; cls: string }> = {
+    paid:      { label: "Mensalidade paga",     cls: "bg-emerald-500/15 text-emerald-300" },
+    exempt:    { label: "Mensalidade isenta",   cls: "bg-blue-500/15 text-blue-300" },
+    pending:   { label: "Mensalidade pendente", cls: "bg-amber-500/15 text-amber-300" },
+    overdue:   { label: "Mensalidade atrasada", cls: "bg-orange-500/15 text-orange-300" },
+    blocked:   { label: "Mensalidade bloqueada",cls: "bg-red-500/15 text-red-300" },
+    cancelled: { label: "Mensalidade cancelada",cls: "bg-white/10 text-white/60" },
+    none:      { label: "Sem mensalidade",      cls: "bg-white/5 text-white/50" },
+  };
+
+  const ACTIVATION_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
+    already_coach:    { label: "Já sou coach",         cls: "bg-blue-500/15 text-blue-300" },
+    purchased:        { label: "Comprou na loja",      cls: "bg-emerald-500/15 text-emerald-300" },
+    mercadopago:      { label: "Pago no Mercado Pago", cls: "bg-emerald-500/15 text-emerald-300" },
+    partner_approved: { label: "Parceiro aprovado",    cls: "bg-cyan-500/15 text-cyan-300" },
+    admin_grant:      { label: "Concedida pelo admin", cls: "bg-amber-500/15 text-amber-300" },
+  };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
