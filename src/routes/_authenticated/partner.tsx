@@ -1361,6 +1361,8 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
       </div>
       <button onClick={save} disabled={saving} className="w-full rounded bg-primary py-2 text-sm font-bold text-primary-foreground">{saving ? <Loader2 className="h-4 w-4 animate-spin inline" /> : <><Save className="inline h-4 w-4 mr-1" /> Salvar</>}</button>
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+      <ImageCropperDialog file={pendingPhoto} aspect={1} shape="circle" title="Ajustar logo / foto" onCancel={() => setPendingPhoto(null)} onConfirm={(b) => upload(b, "photo_url")} />
+      <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={(b) => upload(b, "cover_url")} />
     </div>
   );
 }
