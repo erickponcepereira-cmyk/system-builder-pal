@@ -316,6 +316,8 @@ export interface FitMindShapeProps {
   initialClientId?: string;
   // Retorna vagas pendentes no Desafio para um cliente (usado no editar avaliação)
   getChallengeCandidatesForClient?: (client: FitMindClient) => FitMindChallengeCandidate[];
+  // Abre modal de integrar um cliente importado (Fineshape) a um aluno já cadastrado no sistema
+  onLinkClientToStudent?: (client: FitMindClient) => void;
 }
 
 // ============================================================
@@ -393,6 +395,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
   initialClientId,
   getChallengeCandidatesForClient,
+  onLinkClientToStudent,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
@@ -1512,6 +1515,33 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                 >
                   <Phone size={14} />
                 </a>
+              )}
+              {onLinkClientToStudent && !c.studentId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLinkClientToStudent(c);
+                  }}
+                  title="Integrar avaliações a um aluno cadastrado no sistema"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 28,
+                    padding: "0 8px",
+                    borderRadius: 8,
+                    background: "rgba(220,38,38,0.18)",
+                    color: "#fca5a5",
+                    border: "1px solid rgba(220,38,38,0.45)",
+                    cursor: "pointer",
+                    marginRight: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Integrar
+                </button>
               )}
               {onUpdateClient && (
                 <button
