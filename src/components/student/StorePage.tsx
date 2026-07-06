@@ -141,11 +141,11 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount").eq("status", "active").order("sort_order"),
+      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,image_urls,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height,target_audience" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,category_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
     const { data: catRows } = await supabase.from("store_categories" as never).select("id,section_id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never);
@@ -219,7 +219,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         category: productCategory(String(p.product_type || p.type)), kind: "challenge" as const,
         tag: p.badge_label || "FitMind", isPriceRange: p.is_price_range,
         minPrice: p.min_price ? Number(p.min_price) : null, maxPrice: p.max_price ? Number(p.max_price) : null,
-        imageUrl: p.image_url,
+        imageUrl: p.image_url, imageUrls: (p.image_urls && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : [])),
         commissionCoach: p.commission_coach, commissionLevel1: p.commission_level1,
         commissionLevel2: p.commission_level2, commissionLevel3: p.commission_level3,
         commissionCoachAbsolute: e?.coachCommission ?? null,
@@ -266,6 +266,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         sectionId: it.section_id ?? null, categoryId: it.category_id ?? null,
         tag: it.kind === "digital" ? "Digital" : undefined,
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
+        imageUrls: (it.image_urls && it.image_urls.length ? it.image_urls : (it.image_url ? [it.image_url] : [])),
         commissionCoach: it.commission_coach, commissionLevel1: it.commission_level1,
         commissionLevel2: it.commission_level2, commissionLevel3: it.commission_level3,
         commissionCoachAbsolute: earningsById.get(it.id)?.coachCommission ?? null,

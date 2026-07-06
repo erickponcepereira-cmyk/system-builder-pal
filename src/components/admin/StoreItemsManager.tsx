@@ -23,6 +23,7 @@ interface Item {
   description: string | null;
   short_description: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   price: number;
   original_price: number | null;
   stock: number | null;
@@ -64,7 +65,7 @@ export function StoreItemsManager() {
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
+        .select("id,section_id,category_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
@@ -81,21 +82,51 @@ export function StoreItemsManager() {
     (!filterKind || it.kind === filterKind)
   );
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: FileList | File[]) => {
     if (!editing) return;
+    const list = Array.from(files);
+    if (!list.length) return;
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `items/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from("store-images").getPublicUrl(path);
-      setEditing({ ...editing, image_url: data.publicUrl });
+      const uploaded: string[] = [];
+      for (const file of list) {
+        const ext = file.name.split(".").pop();
+        const path = `items/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: false });
+        if (error) throw error;
+        const { data } = supabase.storage.from("store-images").getPublicUrl(path);
+        uploaded.push(data.publicUrl);
+      }
+      const current = (editing.image_urls && editing.image_urls.length)
+        ? editing.image_urls
+        : (editing.image_url ? [editing.image_url] : []);
+      const next = [...current, ...uploaded];
+      setEditing({ ...editing, image_urls: next, image_url: next[0] || null });
     } catch (e: any) {
       alert("Erro ao enviar imagem: " + e.message);
     } finally {
       setUploading(false);
     }
+  };
+
+  const removeImageAt = (idx: number) => {
+    if (!editing) return;
+    const current = (editing.image_urls && editing.image_urls.length)
+      ? [...editing.image_urls]
+      : (editing.image_url ? [editing.image_url] : []);
+    current.splice(idx, 1);
+    setEditing({ ...editing, image_urls: current, image_url: current[0] || null });
+  };
+
+  const moveImage = (idx: number, dir: -1 | 1) => {
+    if (!editing) return;
+    const current = (editing.image_urls && editing.image_urls.length)
+      ? [...editing.image_urls]
+      : (editing.image_url ? [editing.image_url] : []);
+    const j = idx + dir;
+    if (j < 0 || j >= current.length) return;
+    [current[idx], current[j]] = [current[j], current[idx]];
+    setEditing({ ...editing, image_urls: current, image_url: current[0] || null });
   };
 
   const save = async () => {
@@ -113,7 +144,8 @@ export function StoreItemsManager() {
         name: editing.name,
         description: editing.description || null,
         short_description: editing.short_description || null,
-        image_url: editing.image_url || null,
+        image_url: editing.image_url || (editing.image_urls?.[0] ?? null),
+        image_urls: editing.image_urls && editing.image_urls.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : []),
         price: Number(editing.price) || 0,
         original_price: editing.original_price ? Number(editing.original_price) : null,
         stock: editing.kind === "physical" && editing.stock !== null && editing.stock !== undefined ? Number(editing.stock) : null,
@@ -332,30 +364,47 @@ export function StoreItemsManager() {
             </div>
 
             {editTab === "general" && (<>
-            {/* Imagem */}
-            <div>
-              <label className="text-xs text-white/60 mb-1 block">Imagem</label>
-              <div className="flex items-center gap-3">
-                <div className="h-24 w-24 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden">
-                  {editing.image_url ? (
-                    <img src={editing.image_url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <ImageIcon className="h-6 w-6 text-white/20" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10 cursor-pointer w-fit">
-                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    {uploading ? "Enviando..." : "Enviar imagem"}
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+            {/* Imagens (galeria — carrossel na loja) */}
+            {(() => {
+              const gallery = (editing.image_urls && editing.image_urls.length)
+                ? editing.image_urls
+                : (editing.image_url ? [editing.image_url] : []);
+              return (
+                <div>
+                  <label className="text-xs text-white/60 mb-1 block">
+                    Imagens ({gallery.length}) — a primeira é a capa; as demais aparecem no carrossel
                   </label>
-                  <p className="text-[10px] text-white/40">Recomendado: 1080×1080px (1:1)</p>
-                  {editing.image_url && (
-                    <button onClick={() => setEditing({ ...editing, image_url: null })} className="text-xs text-red-400 hover:underline w-fit">Remover</button>
-                  )}
+                  <div className="flex flex-wrap items-start gap-2">
+                    {gallery.map((url, idx) => (
+                      <div key={`${url}-${idx}`} className="relative group">
+                        <div className="h-24 w-24 rounded-lg bg-black/40 border border-white/10 overflow-hidden">
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </div>
+                        {idx === 0 && (
+                          <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold text-primary-foreground">Capa</span>
+                        )}
+                        <div className="absolute inset-x-1 bottom-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => moveImage(idx, -1)} disabled={idx === 0}
+                            className="rounded bg-black/70 px-1.5 text-[10px] text-white disabled:opacity-30">◀</button>
+                          <button type="button" onClick={() => moveImage(idx, 1)} disabled={idx === gallery.length - 1}
+                            className="rounded bg-black/70 px-1.5 text-[10px] text-white disabled:opacity-30">▶</button>
+                        </div>
+                        <button type="button" onClick={() => removeImageAt(idx)}
+                          className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100">×</button>
+                      </div>
+                    ))}
+                    <label className="h-24 w-24 rounded-lg border border-dashed border-white/20 bg-black/20 hover:bg-white/5 flex flex-col items-center justify-center gap-1 cursor-pointer text-white/60">
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      <span className="text-[10px]">{uploading ? "Enviando..." : "Adicionar"}</span>
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => { if (e.target.files?.length) { handleUpload(e.target.files); e.target.value = ""; } }} />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-white/40 mt-1">Recomendado: 1080×1080px (1:1). Você pode enviar várias imagens de uma vez.</p>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
+
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="md:col-span-2">
