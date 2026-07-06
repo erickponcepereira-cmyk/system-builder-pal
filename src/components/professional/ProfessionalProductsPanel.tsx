@@ -486,6 +486,18 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   </div>
                 </Field>
 
+                {editing.availability_recurrence === "single" && (
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-primary/20 bg-primary/5 p-2">
+                    <Field label="Data do evento">
+                      <input type="date" value={editing.event_date ?? ""} onChange={e => setEditing({ ...editing, event_date: e.target.value || null })} className="field-input" />
+                    </Field>
+                    <Field label="Vagas disponíveis">
+                      <input type="number" min={1} value={editing.event_capacity ?? ""} onChange={e => setEditing({ ...editing, event_capacity: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 20" />
+                    </Field>
+                    <p className="col-span-2 text-[10px] text-white/50">Para eventos e workshops: defina a data específica e o número máximo de pessoas.</p>
+                  </div>
+                )}
+
                 <Field label="Validade após compra (dias)">
                   <input type="number" min={1} value={editing.availability_validity_days ?? ""} onChange={e => setEditing({ ...editing, availability_validity_days: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Ex: 30 (quantos dias o produto fica disponível após a compra)" />
                 </Field>
