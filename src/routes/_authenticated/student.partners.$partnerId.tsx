@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/student/partners/$partnerI
 
 interface Partner {
   id: string; fantasy_name: string; description: string | null; photo_url: string | null; cover_url: string | null;
-  whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
+  whatsapp: string | null; public_whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   free_redeem_policy?: "all" | "one_per_month" | null;
 }
