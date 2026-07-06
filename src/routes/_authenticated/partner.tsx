@@ -44,6 +44,7 @@ type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store
 interface Partner {
   id: string; profile_id: string; fantasy_name: string; description: string | null;
   photo_url: string | null; cover_url: string | null; whatsapp: string | null;
+  public_whatsapp: string | null;
   instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   status: string; document: string | null; document_type: string | null;
