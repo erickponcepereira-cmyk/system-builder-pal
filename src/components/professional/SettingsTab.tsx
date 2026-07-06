@@ -211,7 +211,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
               )}
               <div className="flex items-center gap-2">
                 <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingCover(f); e.target.value = ""; }} />
                   {pub.cover_url ? "Trocar capa" : "Adicionar capa"}
                 </label>
                 {pub.cover_url && (
