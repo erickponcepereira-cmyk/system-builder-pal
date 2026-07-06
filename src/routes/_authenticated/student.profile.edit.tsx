@@ -85,7 +85,7 @@ function EditProfilePage() {
 
   const handlePhoto = async (blob: Blob) => {
     if (!userId) return;
-    if (blob.size > 5 * 1024 * 1024) return toast.error("Foto deve ter no máximo 5MB");
+    if (blob.size > 5 * 1024 * 1024) { toast.error("Foto deve ter no máximo 5MB"); return; }
     setUploading(true);
     const path = `${userId}/avatar-${Date.now()}.jpg`;
     const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
