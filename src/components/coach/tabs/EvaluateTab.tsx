@@ -72,19 +72,8 @@ export function EvaluateTab() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const openGoogleConnectPopup = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) { toast.error("Faça login novamente."); return; }
-    const w = 520, h = 640;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-    const top = window.screenY + (window.outerHeight - h) / 2;
-    window.open(
-      `/api/oauth/google/start?popup=1&access_token=${encodeURIComponent(token)}`,
-      "google-oauth",
-      `width=${w},height=${h},left=${left},top=${top}`
-    );
-  };
+  // openGoogleConnectPopup removido — Google Calendar desativado temporariamente
+
 
   const mapAssessment = (row: any): FitMindAssessment => ({
     id: row.id,
