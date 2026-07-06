@@ -384,7 +384,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     partner_id: partner.id,
     kind: "free",
     redemption_mode: "free",
-    name: "", description: "", image_url: "", price: 0, stock: null,
+    name: "", description: "", image_url: "", image_urls: [], price: 0, stock: null,
     original_price: null,
     redemption_instructions: "", is_active_by_partner: true,
     benefit_start_time: null,
