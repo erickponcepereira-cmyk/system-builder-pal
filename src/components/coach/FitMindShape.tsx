@@ -1278,11 +1278,14 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   const SelectClientScreen = () => {
     const scopedClients =
       scopeFilter === "mine" ? myClients : clients;
+    const normalize = (s: string) =>
+      (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+    const q = normalize(searchQuery.trim());
     const filtered = scopedClients.filter(
       (c) => {
-        const matchesText =
-          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.email.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesText = !q
+          || normalize(c.name).includes(q)
+          || normalize(c.email || "").includes(q);
         if (!matchesText) return false;
         if (!groupFilter) return true;
         return (c.groups || []).includes(groupFilter);

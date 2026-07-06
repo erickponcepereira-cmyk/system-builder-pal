@@ -1,68 +1,82 @@
-## Objetivo
+## Diagnóstico
 
-Permitir que parceiros publiquem produtos **gratuitos** com agenda recorrente (dias da semana + janelas de horário), capacidade por slot e limite de uso por aluno (X vezes por semana de calendário). Aluno reserva, recebe QR único do slot e parceiro dá baixa lendo o QR.
+Rastreei o fluxo de "Avaliar Aluno" (`EvaluateTab.tsx` + `FitMindShape.tsx` + `AssessmentComparison.tsx`) e encontrei os culpados:
 
-## Modelo de dados (migrations)
+### 1) Lentidão ao abrir a tela (>1min no master coach)
+`loadClients()` faz, em toda entrada na aba:
+- Paginação de **todos** os `coach_evaluation_clients` (master vê a rede inteira).
+- Paginação de **todos** os `coach_body_assessments` (mesmo com colunas leves, master pode ter 10k+ linhas).
+- Consulta em `coaches` para mapear nomes.
+- `loadChallengeCandidates` com joins pesados em `competition_enrollments` + `students` + `profiles` + `groups`.
 
-1. `partner_products.is_free` já existe — adicionar:
-   - `weekly_limit_per_student int default 1` (quantas vezes/semana o mesmo aluno pode usar)
-   - `default_slot_capacity int default 1`
-2. Nova tabela `partner_product_schedules`
-   - `partner_product_id`, `weekday smallint (0=dom..6=sáb)`, `start_time time`, `end_time time`, `capacity int`, `active bool`
-3. Nova tabela `partner_freebie_reservations`
-   - `id`, `partner_product_id`, `partner_id`, `student_id`, `profile_id`, `slot_date date`, `slot_start timestamptz`, `slot_end timestamptz`, `weekday`, `iso_week text` (ex `2026-W27`), `status` enum(`reserved`,`used`,`cancelled`,`expired`), `qr_token text unique`, `used_at timestamptz`, `scanned_by_profile_id`
-   - Índices: (`partner_product_id`,`slot_start`), (`student_id`,`iso_week`)
-4. RPCs:
-   - `list_partner_freebie_slots(_product_id, _from, _to)` → calcula slots a partir das `schedules` + ocupação atual; devolve `{ slot_start, slot_end, capacity, taken, remaining }`
-   - `reserve_partner_freebie(_product_id, _slot_start)` → valida janela, capacidade, limite semanal do aluno (ISO week, segunda 00h tz BR); cria reserva + qr_token (uuid); retorna `{ reservation_id, qr_token, slot_end }`
-   - `redeem_partner_freebie(_qr_token)` (chamada pelo parceiro logado) → valida posse do partner, status `reserved`, `now() between slot_start-15min and slot_end`; marca `used`. Idempotente: se já `used`, retorna erro.
-   - `cancel_partner_freebie(_reservation_id)` → aluno cancela enquanto `reserved` e antes do `slot_start`.
-5. RLS:
-   - schedules: select público (autenticados); manage = dono partner / admin.
-   - reservations: select = aluno dono OU parceiro dono OU admin; insert via RPC; update somente via RPC.
+Tudo isso é **awaited em série antes da tela renderizar**, sem cache entre entradas.
 
-## Backend (server functions)
+### 2) Lentidão ao salvar (~1min)
+Em `saveAssessment` faz `insert` (rápido) e depois `await loadClients()` — refaz TODA a carga acima só para atualizar a linha do aluno editado.
 
-`src/lib/partner-freebies.functions.ts`
-- `listFreebieSlotsFn`, `reserveFreebieFn`, `cancelFreebieFn`, `redeemFreebieFn`, `getMyFreebieReservationsFn` (com status + qr_token)
-- `getPartnerFreebieUsageFn` (para painel parceiro: hoje/semana)
+### 3) Busca retorna tudo
+Na tela "Selecionar Aluno" o filtro está aplicado ao `scopedClients`, mas quando o master está com scope "Todos os Alunos" e a lista tem centenas de nomes, o `filter` demora e o React re-renderiza o `SelectClientScreen` inteiro a cada tecla (função recriada dentro do componente pai, sem memo). Além disso, o filtro atual usa `includes` sem normalizar acentos, então "andre" não bate com "André". O usuário percebe como "aparece todos abaixo do pesquisado" — na verdade é a lista inteira renderizando lentamente e a que casa aparecendo primeiro por ordenação.
 
-## UI Parceiro
+### 4) Comparar não abre com 1 avaliação
+`canCompare` já aceita `>= 1`. O problema é que `hydrateClientAssessments` só carrega o payload completo se `onLoadFullAssessments` estiver ligado — e na entrada via `SelectClientScreen` o `hydrated` é setado como novo objeto, mas o `ResultScreen` usa `selectedClient` diretamente. Quando o usuário clica em Comparar, a versão hidratada existe, mas o `AssessmentComparison` recebe `client={selectedClient}` — está OK. O real motivo do "não abre": em algumas máquinas o `hydrate` ainda está pendente e o click cai antes; e quando abre, com 1 única avaliação a UI mostra a tabela vazia porque `selected` começa com `all.slice(0,2)` mas o `useState` inicial só roda 1x — se `all` chega vazio na primeira render (antes da hidratação assíncrona propagar), `selected` fica `[]` para sempre. É bug de estado inicial derivado de prop.
 
-`src/components/partner/PartnerProductsPanel.tsx` (form de produto gratuito):
-- Toggle existente "Gratuito" já liga `is_free`.
-- Quando gratuito: novo bloco **"Disponibilidade"** parecido com o editor por dia já usado em `ProfessionalProductsPanel`:
-  - Para cada dia da semana: lista de janelas (start–end) + `capacity` (vagas) por janela
-  - Campo `weekly_limit_per_student` (default 2)
-- Persiste em `partner_product_schedules` (replace-all on save).
+---
 
-Novo painel `PartnerFreebieScanner.tsx` no portal parceiro:
-- Botão "Ler QR" → reaproveita `QRScannerModal`
-- Lê token → chama `redeemFreebieFn` → toast com nome do aluno + produto + slot; se inválido/expirado, mensagem clara
-- Lista "Próximas reservas hoje" com status e contador (remaining no slot).
+## Plano de correção
 
-## UI Aluno
+### A) Cache leve de clientes (sessão)
+- Manter um cache em memória (module-scope Map por `coachId`) da lista de clientes já mapeada, com TTL curto (60s) e sem dados sensíveis extras — nome, gênero, grupos, avatar, contagem de avaliações e data da última. **Sem CPF/telefone/e-mail no cache**; esses ficam apenas em memória quando o modal de edição pedir.
+- Ao entrar na aba, renderizar imediatamente a partir do cache e revalidar em background (stale-while-revalidate).
+- Invalidar o cache apenas quando cria/edita cliente ou avaliação (não em toda navegação).
 
-`src/routes/_authenticated/student.freebies.tsx`:
-- Card de freebie de parceiro com agenda passa a abrir modal **"Reservar horário"**:
-  - Calendário (mesmo padrão visual do `AvailabilityPicker`) com slots vindos de `list_partner_freebie_slots`
-  - Mostra "X vagas restantes" por slot
-  - Mostra "Você já usou Y/Z esta semana" e bloqueia quando ≥ limite
-  - Botão "Confirmar reserva" → `reserveFreebieFn`
-- Nova rota `student.freebies.reservation.$id.tsx` (ou modal dentro da lista):
-  - Mostra QR Code (gerado client-side com `qrcode` lib já no projeto) com o `qr_token`
-  - Janela do slot, endereço do parceiro, botão "Cancelar reserva"
-  - Estado em tempo real: ao ser `used`, troca para "Check-in realizado ✓" (polling 10s ou realtime)
-- Aba "Minhas reservas" listando próximas e histórico.
+### B) Só contar avaliações no carregamento inicial
+Trocar o "fetch all assessments light" por uma consulta agregada:
+```
+select client_id, count(*) as total, max(assessment_date) as last_at
+from coach_body_assessments
+group by client_id
+```
+via RPC ou `select` com `head:true`/agrupamento. Isso reduz de milhares de linhas para uma por aluno.
 
-## Regras finais
-- Limite semanal: ISO week em timezone `America/Sao_Paulo`, reset segunda 00h.
-- Reserva conta no limite no momento da criação; cancelar libera a vaga e o uso semanal.
-- Reservas `reserved` cujo `slot_end < now()` viram `expired` (job cron diário `expire_old_freebie_reservations`, devolve uso semanal só se não foi `used`).
-- QR token = UUID v4 único; URL não-adivinhável `/partner-checkin/freebie/<token>` (parceiro pode abrir direto pelo scanner).
+### C) Avaliações completas só ao abrir o aluno
+Já existe `loadFullAssessmentsForClient` e `fullAssessmentsCacheRef`. Vou:
+- Garantir que `SelectClientScreen` **não** dependa da lista completa de avaliações para renderizar (usar `assessmentCount`/`lastAssessmentDate`).
+- Fazer o `hydrateClientAssessments` popular a lista antes de mudar de tela (já faz), com skeleton curto.
+- Manter o cache por aluno até que uma avaliação daquele aluno seja salva/editada/excluída (invalidação pontual — hoje limpa o mapa inteiro).
 
-## Entrega faseada
-**Fase 1 (esta resposta):** migrations + RPCs + RLS + server functions + painel parceiro (schedules + scanner) + reserva e QR do aluno.
-**Fase 2 (próxima):** cron de expiração, aba "Minhas reservas" completa, realtime para baixa instantânea.
+### D) Save incremental (sem `loadClients` completo)
+- Após `insert` da avaliação, atualizar apenas o cliente afetado no state: incrementar `assessmentCount`, atualizar `lastAssessmentDate`, adicionar a nova avaliação no cache do aluno.
+- Reservar o `loadClients()` pesado só para casos onde muda vínculo (challenge, integrar cliente).
 
-Tudo respeita visual atual (#FF4A3D / fundo escuro) e padrões já usados em `AvailabilityPicker` e `QRScannerModal`.
+### E) Fix da busca
+- Normalizar acento e case: usar `.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()` nos dois lados.
+- Debounce de 150ms no input.
+- Extrair `SelectClientScreen` para um componente memoizado real (hoje é função definida dentro do pai — recria a cada render e força re-mount).
+- `filtered` via `useMemo` dependendo só de `[scopedClients, searchQuery, groupFilter]`.
+
+### F) Fix do Comparar
+- Trocar o estado inicial do `AssessmentComparison` por `useEffect` que recalcula `selected` quando `all` muda de vazio para populado.
+- Bloquear o botão Comparar até `hydrateClientAssessments` terminar (pequeno spinner), garantindo que ao entrar a lista já esteja populada.
+
+### G) Modal "Integrar" também mais leve
+- Buscar `students` só quando o usuário digitar (>=2 chars), com `ilike` server-side e `limit 30`; hoje traz 2000 linhas + join de coaches sempre.
+
+### H) Confirmação pós-mudanças
+Após implementar, vou:
+1. Rodar `tsgo` para checar tipos.
+2. Abrir o preview via Playwright autenticado como master coach, medir o tempo até "Selecionar Aluno" renderizar, testar busca com/sem acento e abrir Comparar com 1 avaliação, screenshot cada passo.
+
+---
+
+## Arquivos afetados
+- `src/components/coach/tabs/EvaluateTab.tsx` — cache, contagem agregada, save incremental, modal Integrar com busca server-side.
+- `src/components/coach/FitMindShape.tsx` — extrair `SelectClientScreen` memoizado, busca normalizada + debounce, gate do botão Comparar.
+- `src/components/coach/AssessmentComparison.tsx` — inicialização de `selected` reativa a `all`.
+- Possível nova migração: função RPC `coach_assessment_counts(coach_id uuid, master boolean)` para retornar contagem/última data por cliente em uma única chamada.
+
+## O que **não** vou mexer
+- Regras de RLS já corrigidas para master coach.
+- Layout visual do FitMindShape além do necessário para memoização.
+- Dados sensíveis (email/telefone/CPF) — continuam sendo buscados sob demanda no modal de edição, nunca cacheados.
+
+Posso seguir para a implementação?
