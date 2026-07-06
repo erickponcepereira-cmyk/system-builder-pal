@@ -1054,6 +1054,78 @@ export function EvaluateTab() {
           </div>
         </div>
       )}
+
+      {confirmLink && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => !confirmBusy && setConfirmLink(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-red-500/40 bg-zinc-950 p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-white mb-2">
+              Confirmar vinculação irreversível
+            </h3>
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100 mb-3">
+              <p className="font-semibold mb-1">⚠️ Esta ação é IRREVERSÍVEL pelo coach.</p>
+              <p>
+                As avaliações de <b>{confirmLink.client.name}</b> serão vinculadas
+                permanentemente ao aluno <b>{confirmLink.student.name}</b>
+                {confirmLink.student.email ? ` (${confirmLink.student.email})` : ""}.
+                Apenas o administrador poderá desfazer.
+              </p>
+            </div>
+
+            {confirmLink.existingClientName && (
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-100 mb-3">
+                <p className="font-semibold mb-1">🚫 Vinculação bloqueada</p>
+                <p>
+                  Este aluno já está vinculado ao cadastro
+                  {" "}<b>"{confirmLink.existingClientName}"</b>. Peça ao admin para
+                  desfazer a vinculação anterior antes de vincular novamente.
+                </p>
+              </div>
+            )}
+
+            {!confirmLink.existingClientName && (
+              <>
+                <label className="block text-xs text-white/70 mb-1.5">
+                  Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
+                </label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="CONFIRMAR"
+                  className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
+                  disabled={confirmBusy}
+                  autoFocus
+                />
+              </>
+            )}
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setConfirmLink(null)}
+                disabled={confirmBusy}
+                className="px-3 py-2 text-sm text-white/70 hover:text-white disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              {!confirmLink.existingClientName && (
+                <button
+                  onClick={executeConfirmedLink}
+                  disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
+                  className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {confirmBusy ? "Vinculando..." : "Vincular permanentemente"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
 
   );
