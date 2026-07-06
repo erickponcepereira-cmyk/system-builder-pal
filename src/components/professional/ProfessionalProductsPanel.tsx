@@ -53,6 +53,9 @@ interface ProProduct {
   availability_recurrence?: "single" | "weekly";
   availability_validity_days?: number | null;
   availability_hours?: AvailabilityHours;
+  event_date?: string | null;
+  event_capacity?: number | null;
+  payment_timing?: "at_booking" | "later";
 }
 
 const WEEKDAYS = [
@@ -103,6 +106,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     availability_recurrence: "weekly",
     availability_validity_days: null,
     availability_hours: {},
+    event_date: null,
+    event_capacity: null,
+    payment_timing: "at_booking",
   });
 
   const upload = async (file: File) => {
