@@ -21,6 +21,7 @@ interface ProProduct {
   name: string;
   description: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   price: number;
   original_price?: number | null;
   stock: number | null;
