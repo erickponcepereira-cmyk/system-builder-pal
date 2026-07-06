@@ -192,7 +192,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
             </div>
             <div>
               <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingAvatar(f); e.target.value = ""; }} />
                 Trocar foto
               </label>
               <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
