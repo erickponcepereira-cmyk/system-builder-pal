@@ -282,6 +282,25 @@ export function EvaluateTab() {
     return mapped;
   };
 
+  const loadFullClient = async (client: FitMindClient): Promise<FitMindClient> => {
+    const { data, error } = await supabase
+      .from("coach_evaluation_clients" as never)
+      .select("whatsapp,email,notes" as never)
+      .eq("id" as never, client.id as never)
+      .maybeSingle();
+    if (error) {
+      toast.error("Erro ao carregar dados do aluno");
+      return client;
+    }
+    const row = (data as any) || {};
+    return {
+      ...client,
+      whatsapp: row.whatsapp || "",
+      email: row.email || "",
+      notes: row.notes || "",
+    };
+  };
+
   useEffect(() => { loadClients(); }, []);
 
   // Vincula uma vaga do desafio (garante evaluation-client, seta challengeLink)
@@ -739,6 +758,7 @@ export function EvaluateTab() {
           return mapped;
         }}
         onSaveAssessment={saveAssessment}
+        onLoadFullClient={loadFullClient}
         onDeleteAssessment={async (assessmentId, reason, client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
           if (!reason?.trim()) throw new Error("Motivo obrigatório");
