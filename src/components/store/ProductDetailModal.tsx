@@ -10,6 +10,7 @@ export interface ProductDetail {
   price: number;
   originalPrice?: number | null;
   imageUrl?: string | null;
+  imageUrls?: string[] | null;
   category?: string;
   tag?: string;
   stock?: number | null;
