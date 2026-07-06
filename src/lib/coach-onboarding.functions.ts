@@ -95,6 +95,20 @@ export const getMyOnboardingStage = createServerFn({ method: "GET" })
       }
     }
 
+    // Quiz comportamental não é mais etapa obrigatória do onboarding.
+    // Qualquer coach preso em "awaiting_quiz_result" avança automaticamente
+    // para "awaiting_upline_release" (aguardando liberação do ID/admin).
+    if (stage === "awaiting_quiz_result") {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("coaches")
+        .update({ onboarding_stage: "awaiting_upline_release" })
+        .eq("id", coach.id);
+      stage = "awaiting_upline_release";
+    }
+
+
+
 
     return {
       isCoach: true as const,
