@@ -339,6 +339,7 @@ export function EvaluateTab() {
         .select("id")
         .single();
       preferredClientId = (created as any)?.id;
+      clientSummaryCache.delete(coachInfo.id);
       await loadClients();
     }
     setChallengeLink({ enrollmentId, type, studentId, studentName: studentName!, compLabel: compLabel!, preferredClientId });
@@ -381,6 +382,7 @@ export function EvaluateTab() {
     } as never).select("*" as never).single();
     if (error) { toast.error("Erro ao criar aluno"); throw error; }
     toast.success("Aluno criado");
+    clientSummaryCache.delete(coachInfo.id);
     const created = data as any;
     const mapped: FitMindClient = { id: created.id, name: created.name, gender: created.gender, ethnicity: created.ethnicity, height: Number(created.height || 0), heightUnit: created.height_unit, birthDate: created.birth_date || "", language: created.language, whatsapp: created.whatsapp || "", email: created.email || "", notes: created.notes || "", groups: created.groups || [], assessments: [] };
     setClients((current) => [mapped, ...current]);
@@ -585,6 +587,7 @@ export function EvaluateTab() {
 
       toast.success("Avaliações integradas ao cadastro do aluno");
       setLinkingClient(null);
+      clientSummaryCache.delete(coachInfo.id);
       await loadClients();
     } catch (e: any) {
       console.error(e);
@@ -624,7 +627,7 @@ export function EvaluateTab() {
               : "Registre bioimpedância, anamnese e evolução"}
           </p>
         </div>
-        {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={loadClients} />}
+        {coachInfo.id && <FineshapeImport coachId={coachInfo.id} onDone={() => { clientSummaryCache.delete(coachInfo.id); loadClients(); }} />}
       </div>
 
       {challengeCandidates.length > 0 && (
@@ -712,6 +715,7 @@ export function EvaluateTab() {
             .single();
           if (error) { toast.error("Erro ao atualizar aluno"); throw error; }
           toast.success("Aluno atualizado");
+          clientSummaryCache.delete(coachInfo.id);
           const updated = data as any;
           const mapped: FitMindClient = {
             id: updated.id,
@@ -772,6 +776,7 @@ export function EvaluateTab() {
             ),
           );
           toast.success("Avaliação excluída");
+          clientSummaryCache.delete(coachInfo.id);
           await loadClients();
         }}
         onEditAssessment={async (updated, client) => {
@@ -827,6 +832,7 @@ export function EvaluateTab() {
               ? `Avaliação atualizada e vinculada ao Desafio (${updated.challengeType === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`
               : "Avaliação atualizada"
           );
+          clientSummaryCache.delete(coachInfo.id);
           await loadClients();
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
