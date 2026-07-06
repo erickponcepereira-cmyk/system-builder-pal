@@ -453,12 +453,19 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
     };
     try {
+      const finalPaidPrice = Number((extra.price ?? editing.price) || 0);
       if (editing.id) {
-        const { id, ...up } = payload;
+        const { id, ...up } = {
+          ...payload,
+          original_price: editing.kind === "paid" && editing.original_price && Number(editing.original_price) > finalPaidPrice ? Number(editing.original_price) : null,
+        };
         const { error } = await supabase.from("partner_products" as never).update(up as never).eq("id" as never, id!);
         if (error) return toast.error(error.message);
       } else {
-        const { error } = await supabase.from("partner_products" as never).insert(payload as never);
+        const { error } = await supabase.from("partner_products" as never).insert({
+          ...payload,
+          original_price: editing.kind === "paid" && editing.original_price && Number(editing.original_price) > finalPaidPrice ? Number(editing.original_price) : null,
+        } as never);
         if (error) return toast.error(error.message);
       }
     } catch (e: any) {
