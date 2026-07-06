@@ -85,6 +85,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
   appointments: { label: "Atendimentos", icon: Calendar },
   subscription: { label: "Mensalidade", icon: Wallet },
+  collab: { label: "Colaboração", icon: Share2 },
 };
 
 function ProfessionalPanel() {
