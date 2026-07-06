@@ -276,7 +276,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   onClick={() => {
                     const { id: _id, ...rest } = p;
                     void _id;
-                    setEditing({ ...rest, name: `${p.name} (cópia)`, status: "pending", admin_notes: null, is_active_by_professional: true });
+                    setEditing({ ...rest, name: `${p.name} (cópia)`, status: p.status, admin_notes: p.admin_notes, is_active_by_professional: true });
                   }}
                   className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
                 >
