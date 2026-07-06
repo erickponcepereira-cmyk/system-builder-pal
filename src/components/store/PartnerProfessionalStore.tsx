@@ -370,7 +370,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           )}
 
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {visibleSections.map((s) => {
             const sectionHidden = vis.isHiddenByMe("section", null, s.id);
             return (
