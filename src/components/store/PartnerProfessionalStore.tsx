@@ -53,16 +53,16 @@ const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function PricePair({ price, originalPrice, compact = false }: { price: number; originalPrice?: number | null; compact?: boolean }) {
-  const hasDiscount = !!originalPrice && originalPrice > price;
+  const discountPrice = originalPrice && originalPrice > price ? originalPrice : null;
   return (
     <div className={compact ? "mt-1 flex flex-wrap items-baseline gap-1.5" : "mt-2 flex flex-wrap items-baseline gap-2"}>
-      {hasDiscount && (
+      {discountPrice && (
         <span className={compact ? "text-[10px] text-muted-foreground line-through" : "text-sm text-muted-foreground line-through"}>
-          {money(originalPrice)}
+          {money(discountPrice)}
         </span>
       )}
       <span className={compact ? "text-sm font-bold text-primary" : "text-2xl font-bold text-primary"}>{money(price)}</span>
-      {hasDiscount && (
+      {discountPrice && (
         <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
           por este valor
         </span>
