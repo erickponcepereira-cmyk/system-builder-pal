@@ -257,6 +257,16 @@ export function SettingsTab({ coachId, profileId }: Props) {
             </Field>
           </div>
 
+          <Field label="WhatsApp empresarial público (loja)">
+            <input
+              value={pub.public_whatsapp}
+              onChange={(e) => setPub({ ...pub, public_whatsapp: e.target.value })}
+              placeholder="(00) 00000-0000 — em branco usa o WhatsApp do seu perfil"
+              className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none"
+            />
+            <p className="mt-1 text-[10px] text-white/40">Este número aparece publicamente na loja para os alunos entrarem em contato.</p>
+          </Field>
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold uppercase text-white/50">Outras redes / links</p>
