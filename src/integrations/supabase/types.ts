@@ -9910,6 +9910,14 @@ export type Database = {
         Args: { _entry_id: string; _notes?: string }
         Returns: undefined
       }
+      coach_assessment_counts: {
+        Args: { _coach_id: string; _master: boolean }
+        Returns: {
+          client_id: string
+          last_at: string
+          total: number
+        }[]
+      }
       coach_gets_product_free: {
         Args: { _coach_id: string; _product_id: string }
         Returns: boolean
