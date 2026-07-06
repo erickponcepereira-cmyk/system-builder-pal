@@ -1,82 +1,116 @@
-## Diagnóstico
 
-Rastreei o fluxo de "Avaliar Aluno" (`EvaluateTab.tsx` + `FitMindShape.tsx` + `AssessmentComparison.tsx`) e encontrei os culpados:
+## Escopo
 
-### 1) Lentidão ao abrir a tela (>1min no master coach)
-`loadClients()` faz, em toda entrada na aba:
-- Paginação de **todos** os `coach_evaluation_clients` (master vê a rede inteira).
-- Paginação de **todos** os `coach_body_assessments` (mesmo com colunas leves, master pode ter 10k+ linhas).
-- Consulta em `coaches` para mapear nomes.
-- `loadChallengeCandidates` com joins pesados em `competition_enrollments` + `students` + `profiles` + `groups`.
-
-Tudo isso é **awaited em série antes da tela renderizar**, sem cache entre entradas.
-
-### 2) Lentidão ao salvar (~1min)
-Em `saveAssessment` faz `insert` (rápido) e depois `await loadClients()` — refaz TODA a carga acima só para atualizar a linha do aluno editado.
-
-### 3) Busca retorna tudo
-Na tela "Selecionar Aluno" o filtro está aplicado ao `scopedClients`, mas quando o master está com scope "Todos os Alunos" e a lista tem centenas de nomes, o `filter` demora e o React re-renderiza o `SelectClientScreen` inteiro a cada tecla (função recriada dentro do componente pai, sem memo). Além disso, o filtro atual usa `includes` sem normalizar acentos, então "andre" não bate com "André". O usuário percebe como "aparece todos abaixo do pesquisado" — na verdade é a lista inteira renderizando lentamente e a que casa aparecendo primeiro por ordenação.
-
-### 4) Comparar não abre com 1 avaliação
-`canCompare` já aceita `>= 1`. O problema é que `hydrateClientAssessments` só carrega o payload completo se `onLoadFullAssessments` estiver ligado — e na entrada via `SelectClientScreen` o `hydrated` é setado como novo objeto, mas o `ResultScreen` usa `selectedClient` diretamente. Quando o usuário clica em Comparar, a versão hidratada existe, mas o `AssessmentComparison` recebe `client={selectedClient}` — está OK. O real motivo do "não abre": em algumas máquinas o `hydrate` ainda está pendente e o click cai antes; e quando abre, com 1 única avaliação a UI mostra a tabela vazia porque `selected` começa com `all.slice(0,2)` mas o `useState` inicial só roda 1x — se `all` chega vazio na primeira render (antes da hidratação assíncrona propagar), `selected` fica `[]` para sempre. É bug de estado inicial derivado de prop.
+Três novas capacidades para parceiros e profissionais, todas dependentes de migrations novas mais UI nas rotas `professional.tsx` e `partner.tsx`.
 
 ---
 
-## Plano de correção
+### 1) Compromissos manuais na agenda (vendas fora da plataforma)
 
-### A) Cache leve de clientes (sessão)
-- Manter um cache em memória (module-scope Map por `coachId`) da lista de clientes já mapeada, com TTL curto (60s) e sem dados sensíveis extras — nome, gênero, grupos, avatar, contagem de avaliações e data da última. **Sem CPF/telefone/e-mail no cache**; esses ficam apenas em memória quando o modal de edição pedir.
-- Ao entrar na aba, renderizar imediatamente a partir do cache e revalidar em background (stale-while-revalidate).
-- Invalidar o cache apenas quando cria/edita cliente ou avaliação (não em toda navegação).
+**Migration** — nova tabela `external_appointments`:
+- `id`, `owner_type` ('partner'|'professional'), `owner_id` (partner.id ou coach.id), `product_name`, `client_name`, `client_whatsapp`, `starts_at`, `ends_at`, `notes`, `created_at`.
+- RLS: dono vê/edita só os seus. GRANT authenticated + service_role.
 
-### B) Só contar avaliações no carregamento inicial
-Trocar o "fetch all assessments light" por uma consulta agregada:
-```
-select client_id, count(*) as total, max(assessment_date) as last_at
-from coach_body_assessments
-group by client_id
-```
-via RPC ou `select` com `head:true`/agrupamento. Isso reduz de milhares de linhas para uma por aluno.
+**Lógica de bloqueio**:
+- Ao criar novo agendamento interno (`professional_appointments` / `partner_product_orders` com slot), a checagem de disponibilidade passa a considerar overlaps com `external_appointments` do mesmo owner.
+- Ao criar external, checa overlap contra internos + externos existentes → erro se conflito.
 
-### C) Avaliações completas só ao abrir o aluno
-Já existe `loadFullAssessmentsForClient` e `fullAssessmentsCacheRef`. Vou:
-- Garantir que `SelectClientScreen` **não** dependa da lista completa de avaliações para renderizar (usar `assessmentCount`/`lastAssessmentDate`).
-- Fazer o `hydrateClientAssessments` popular a lista antes de mudar de tela (já faz), com skeleton curto.
-- Manter o cache por aluno até que uma avaliação daquele aluno seja salva/editada/excluída (invalidação pontual — hoje limpa o mapa inteiro).
+**UI**:
+- Botão "Bloquear horário externo" na aba Agenda de parceiro e profissional.
+- Modal com nome do produto, nome do cliente, WhatsApp (máscara), data/hora início, data/hora fim.
+- Lista dos externos ao lado dos internos no calendário, com badge "Externo" e opção de excluir/editar.
 
-### D) Save incremental (sem `loadClients` completo)
-- Após `insert` da avaliação, atualizar apenas o cliente afetado no state: incrementar `assessmentCount`, atualizar `lastAssessmentDate`, adicionar a nova avaliação no cache do aluno.
-- Reservar o `loadClients()` pesado só para casos onde muda vínculo (challenge, integrar cliente).
+---
 
-### E) Fix da busca
-- Normalizar acento e case: usar `.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()` nos dois lados.
-- Debounce de 150ms no input.
-- Extrair `SelectClientScreen` para um componente memoizado real (hoje é função definida dentro do pai — recria a cada render e força re-mount).
-- `filtered` via `useMemo` dependendo só de `[scopedClients, searchQuery, groupFilter]`.
+### 2) Compartilhamento de agenda (somente leitura)
 
-### F) Fix do Comparar
-- Trocar o estado inicial do `AssessmentComparison` por `useEffect` que recalcula `selected` quando `all` muda de vazio para populado.
-- Bloquear o botão Comparar até `hydrateClientAssessments` terminar (pequeno spinner), garantindo que ao entrar a lista já esteja populada.
+**Migration** — nova tabela `calendar_shares`:
+- `id`, `owner_type`, `owner_id`, `share_code` (text unique, 8 chars alfanuméricos gerados no insert), `viewer_type`, `viewer_id` (nullable até aceite), `status` ('pending'|'accepted'|'revoked'), `created_at`, `accepted_at`.
+- RLS: owner vê/edita as próprias linhas; viewer vê onde `viewer_id = seu id AND status='accepted'`.
 
-### G) Modal "Integrar" também mais leve
-- Buscar `students` só quando o usuário digitar (>=2 chars), com `ilike` server-side e `limit 30`; hoje traz 2000 linhas + join de coaches sempre.
+**Fluxo**:
+- Owner gera um `share_code` na aba "Compartilhamento" (botão "Gerar código").
+- Outro parceiro/profissional cola o código em "Solicitações" → cria linha com `viewer_id` preenchido e `status='pending'`; owner aceita/rejeita na aba "Solicitações" dele.
+- Após aceite, viewer ganha nova aba "Agendas compartilhadas" com read-only dos compromissos (internos + externos) do owner.
 
-### H) Confirmação pós-mudanças
-Após implementar, vou:
-1. Rodar `tsgo` para checar tipos.
-2. Abrir o preview via Playwright autenticado como master coach, medir o tempo até "Selecionar Aluno" renderizar, testar busca com/sem acento e abrir Comparar com 1 avaliação, screenshot cada passo.
+**UI**:
+- Nova sub-aba "Compartilhar" dentro da agenda: mostra código atual + lista de quem já tem acesso (com botão revogar).
+- Nova aba "Solicitações" no menu principal do parceiro/profissional consolidando:
+  - Pedidos de compartilhamento de agenda pendentes.
+  - Convites de co-produção pendentes (ver item 3).
+
+---
+
+### 3) Co-produção de produtos com split em R$ fixo
+
+**Migration** — nova tabela `product_coproductions`:
+- `id`, `product_type` ('partner'|'professional'), `product_id`, `collaborator_type` ('partner'|'professional'), `collaborator_id`, `fixed_amount_brl` (numeric), `share_code` (código do colaborador usado no convite), `status` ('pending'|'accepted'|'rejected'), `created_at`, `responded_at`.
+- Também: `share_codes` por parceiro/profissional (nova tabela `entity_share_codes` com owner_type/id/code único) usada tanto para calendário quanto para co-produção — código permanente do entity, não gerado por convite.
+- Alteração em `partner_products` e `professional_products`: adicionar coluna `is_ready_for_sale` boolean default true. Migration marca `false` sempre que houver co-produção pendente (via trigger).
+
+**Regras**:
+- Ao criar/editar produto, criador digita o share_code do colaborador + valor R$. Valida que soma dos fixos ≤ preço líquido do criador (bloqueia salvar acima disso).
+- Produto fica com `status='pending_coproduction'` (ou `is_ready_for_sale=false`) enquanto qualquer coprodução estiver pending → não aparece na loja para alunos.
+- Se todos aceitam → produto libera. Se um rejeita → produto volta para o criador editar (remover ou substituir colaborador).
+
+**Calculadora** (`partnerFinance.ts`):
+- Nova função `computeWithCoProduction(base, coproductions[])` que subtrai o total fixo do `partnerNet` (ou `coachNet` se profissional) e retorna breakdown por colaborador.
+- UI da calculadora mostra linha "Co-produção" com cada colaborador e seu valor fixo.
+
+**Repasse financeiro** — no momento da venda:
+- Após computar cascata normal, para cada coprodução accepted:
+  - Debita `fixed_amount_brl` do líquido do criador.
+  - Credita na carteira do colaborador (`partner_wallets` ou `professional_wallets`).
+  - Registra em `transactions` com tipo `coproduction_split`.
+
+**UI**:
+- No editor de produto (parceiro e profissional): seção "Co-produção" com input de share_code + valor + botão adicionar; lista de coprodutores com status (pending/accepted/rejected) e botão remover.
+- Aba "Solicitações" mostra convites de co-produção com nome do produto, criador, valor oferecido, botões aceitar/rejeitar.
 
 ---
 
 ## Arquivos afetados
-- `src/components/coach/tabs/EvaluateTab.tsx` — cache, contagem agregada, save incremental, modal Integrar com busca server-side.
-- `src/components/coach/FitMindShape.tsx` — extrair `SelectClientScreen` memoizado, busca normalizada + debounce, gate do botão Comparar.
-- `src/components/coach/AssessmentComparison.tsx` — inicialização de `selected` reativa a `all`.
-- Possível nova migração: função RPC `coach_assessment_counts(coach_id uuid, master boolean)` para retornar contagem/última data por cliente em uma única chamada.
 
-## O que **não** vou mexer
-- Regras de RLS já corrigidas para master coach.
-- Layout visual do FitMindShape além do necessário para memoização.
-- Dados sensíveis (email/telefone/CPF) — continuam sendo buscados sob demanda no modal de edição, nunca cacheados.
+**Migrations (nova):**
+- `entity_share_codes` (código permanente por parceiro/profissional).
+- `external_appointments`.
+- `calendar_shares`.
+- `product_coproductions` + colunas em `partner_products`/`professional_products`.
+- Trigger para gerar share_code automático quando parceiro/profissional é criado.
 
-Posso seguir para a implementação?
+**Server functions (novas):**
+- `src/lib/external-appointments.functions.ts` — CRUD + checagem de conflito reutilizável.
+- `src/lib/calendar-sharing.functions.ts` — gerar código (reusa entity_share_codes), solicitar, aceitar, listar shared calendars.
+- `src/lib/coproduction.functions.ts` — adicionar convite, aceitar/rejeitar, listar pendentes, executar split na venda.
+- Ajuste em `src/lib/partner-orders.functions.ts` e `src/lib/professional-appointments.functions.ts` para consultar `external_appointments` na checagem de slot livre e executar split de coprodução ao finalizar venda.
+
+**UI:**
+- `src/routes/_authenticated/partner.tsx` — nova sub-aba de agenda externa, sub-aba compartilhar, aba solicitações, seção coprodução no editor de produto.
+- `src/routes/_authenticated/professional.tsx` — mesmas mudanças (espelhadas).
+- `src/components/professional/ProfessionalProductsPanel.tsx` — seção co-produção + calculadora atualizada.
+- `src/lib/partnerFinance.ts` — função de split com co-produção.
+- Novo componente compartilhado `src/components/shared/ExternalAppointmentModal.tsx`.
+- Novo componente `src/components/shared/RequestsInbox.tsx` (agrega calendar shares + coproductions).
+
+---
+
+## Ordem de execução
+
+1. Migration 1: `entity_share_codes` + trigger de auto-geração + backfill dos existentes.
+2. Migration 2: `external_appointments` + RLS/grants.
+3. Migration 3: `calendar_shares` + RLS/grants.
+4. Migration 4: `product_coproductions` + colunas nos produtos + trigger de status.
+5. Server functions das três features.
+6. UI parceiro (aba agenda externa, compartilhar, solicitações, coprodução no produto).
+7. UI profissional (mesmas alterações).
+8. Atualizar calculadora e integrar split no fluxo de venda.
+9. `tsgo` para validar tipos.
+
+## Fora de escopo
+
+- Compartilhamento com escrita/edição colaborativa (usuário escolheu somente leitura).
+- Split percentual ou sobre bruto (usuário escolheu valor fixo).
+- Expiração automática de convites de coprodução (produto fica pendente indefinidamente até aceite).
+- Notificações WhatsApp automáticas dos compromissos externos.
+
+Posso seguir para implementação?
