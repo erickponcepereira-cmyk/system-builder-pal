@@ -41,6 +41,11 @@ export function EvaluateTab() {
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
   const [isMaster, setIsMaster] = useState(false);
   const [challengeCandidates, setChallengeCandidates] = useState<ChallengeCandidate[]>([]);
+  // Modal: integrar cliente importado ao cadastro do aluno
+  const [linkingClient, setLinkingClient] = useState<FitMindClient | null>(null);
+  const [linkStudents, setLinkStudents] = useState<{ id: string; name: string; email?: string; coachName?: string }[]>([]);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
