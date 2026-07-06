@@ -953,32 +953,36 @@ export function EvaluateTab() {
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         onCreateGoogleCalendarEvent={async (date, time, clientName, eventName) => {
+          // Google Calendar temporariamente desativado: grava em internal_appointments (agenda interna do coach)
           try {
             const startISO = new Date(`${date}T${time}:00`).toISOString();
             const endISO = new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString();
             const client = clients.find((c) => c.name === clientName);
             const summary = (eventName && eventName.trim()) || `Avaliação — ${clientName}`;
-            const res = await createCoachCalendarEvent({
-              data: {
+            const studentId = (client as any)?.studentId ?? null;
+            const { data: inserted, error } = await supabase
+              .from("internal_appointments" as never)
+              .insert({
+                coach_id: coachInfo.id,
                 summary,
-                description: "Avaliação física agendada via FitMind",
-                startISO,
-                endISO,
-                attendeeEmail: client?.email ?? null,
-                attendeeName: clientName,
-              },
-            });
-            if (!res.connected) {
-              toast.error("Conecte sua conta Google para agendar o evento.", {
-                duration: 10000,
-                action: { label: "Conectar agora", onClick: () => openGoogleConnectPopup() },
-              });
-              return { ok: false, error: "not_connected" };
-            }
-            return { ok: true, htmlLink: res.htmlLink ?? null };
+                description: "Avaliação física agendada (agenda interna FitMind)",
+                start_at: startISO,
+                end_at: endISO,
+                attendee_email: client?.email ?? null,
+                attendee_name: clientName,
+                student_id: studentId,
+                source: "internal",
+                status: "scheduled",
+              } as never)
+              .select("id" as never)
+              .single();
+            if (error) throw error;
+            toast.success("Avaliação agendada na sua agenda interna");
+            return { ok: true, htmlLink: (inserted as any)?.id ? `/coach?appointment=${(inserted as any).id}` : null };
           } catch (e: any) {
-            console.error("createCoachCalendarEvent error:", e);
-            return { ok: false, error: e?.message || "Erro ao criar evento" };
+            console.error("internal appointment create error:", e);
+            toast.error(e?.message || "Erro ao agendar avaliação");
+            return { ok: false, error: e?.message || "Erro ao agendar" };
           }
         }}
         groups={[
