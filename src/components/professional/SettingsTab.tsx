@@ -41,6 +41,8 @@ export function SettingsTab({ coachId, profileId }: Props) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
+  const [pendingCover, setPendingCover] = useState<File | null>(null);
 
   useEffect(() => {
     (async () => {
