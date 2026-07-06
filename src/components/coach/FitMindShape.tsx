@@ -304,6 +304,7 @@ export interface FitMindShapeProps {
   // Lazy-load heavy assessment fields (photos / segments / notes) for a single client.
   // List view receives lightweight summaries; full payload is only fetched on open.
   onLoadFullAssessments?: (clientId: string) => Promise<FitMindAssessment[]>;
+  onLoadFullClient?: (client: FitMindClient) => Promise<FitMindClient>;
   onCreateGoogleCalendarEvent?: (
     date: string,
     time: string,
@@ -391,6 +392,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   onUpdateClient,
   onSearchClients,
   onLoadFullAssessments,
+  onLoadFullClient,
   onCreateGoogleCalendarEvent,
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
@@ -1560,6 +1562,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     e.stopPropagation();
                     setEditingClientData(c);
                     setScreen("edit-client");
+                    if (onLoadFullClient) {
+                      onLoadFullClient(c).then((full) => setEditingClientData(full)).catch(console.error);
+                    }
                   }}
                   title="Editar dados do aluno"
                   style={{
