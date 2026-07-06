@@ -34,6 +34,7 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
   const fetchSummary = useServerFn(getCoachProfileSummary);
   const [summary, setSummary] = useState<CoachProfileSummary>(EMPTY_SUMMARY);
   const [modal, setModal] = useState<{ title: string; rows: ActivityItemRow[] } | null>(null);
+  const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
 
   useEffect(() => {
     if (!coach) return;
