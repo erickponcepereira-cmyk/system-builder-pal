@@ -4,6 +4,7 @@ import { ArrowLeft, Camera, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { maskPhone } from "@/lib/masks";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 
 export const Route = createFileRoute("/_authenticated/student/profile/edit")({
   head: () => ({
@@ -45,6 +46,8 @@ function EditProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+
 
   useEffect(() => {
     (async () => {
@@ -80,19 +83,20 @@ function EditProfilePage() {
   const update = <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) =>
     setForm((c) => ({ ...c, [key]: value }));
 
-  const handlePhoto = async (file: File) => {
+  const handlePhoto = async (blob: Blob) => {
     if (!userId) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error("Foto deve ter no máximo 5MB");
+    if (blob.size > 5 * 1024 * 1024) { toast.error("Foto deve ter no máximo 5MB"); return; }
     setUploading(true);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { toast.error(upErr.message); setUploading(false); return; }
+    const path = `${userId}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { toast.error(upErr.message); setUploading(false); setPendingPhoto(null); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     update("photo_url", pub.publicUrl);
     setUploading(false);
-    toast.success("Foto carregada — não esqueça de salvar");
+    setPendingPhoto(null);
+    toast.success("Foto atualizada — não esqueça de salvar");
   };
+
 
   const save = async () => {
     if (!profileId) return toast.error("Perfil não encontrado");
@@ -163,11 +167,21 @@ function EditProfilePage() {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingPhoto(f); e.target.value = ""; }}
           />
         </div>
-        <p className="text-[11px] text-white/40">Toque na câmera para trocar a foto · Recomendado: 512×512px (1:1)</p>
+        <p className="text-[11px] text-white/40">Toque na câmera para trocar a foto · você poderá ajustar zoom e posição</p>
       </div>
+
+      <ImageCropperDialog
+        file={pendingPhoto}
+        aspect={1}
+        shape="circle"
+        title="Ajustar foto de perfil"
+        onCancel={() => setPendingPhoto(null)}
+        onConfirm={handlePhoto}
+      />
+
 
       {/* Form */}
       <section className="space-y-3 rounded-2xl p-4" style={{ backgroundColor: "#1A1A1A" }}>

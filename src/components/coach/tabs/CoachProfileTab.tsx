@@ -13,6 +13,7 @@ import { money, type CoachContext } from "@/routes/_authenticated/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
 import { BadgeImage } from "@/components/coach/BadgeImage";
 import { getCoachProfileSummary, type ActivityItemRow, type CoachProfileSummary } from "@/lib/coach-profile-summary.functions";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 
 const EMPTY_SUMMARY: CoachProfileSummary = {
   coachId: null, totalActiveStudents: 0, totalSales: 0,
@@ -33,6 +34,7 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
   const fetchSummary = useServerFn(getCoachProfileSummary);
   const [summary, setSummary] = useState<CoachProfileSummary>(EMPTY_SUMMARY);
   const [modal, setModal] = useState<{ title: string; rows: ActivityItemRow[] } | null>(null);
+  const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
 
   useEffect(() => {
     if (!coach) return;
@@ -76,26 +78,27 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     onSaved();
   };
 
-  const uploadAvatar = async (file: File) => {
+  const uploadAvatar = async (blob: Blob) => {
     if (!coach) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error("Imagem deve ter até 5MB");
+    if (blob.size > 5 * 1024 * 1024) { toast.error("Imagem deve ter até 5MB"); return; }
     setUploading(true);
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
-    if (!userId) { setUploading(false); return toast.error("Sessão inválida"); }
-    const ext = file.name.split(".").pop() || "png";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { setUploading(false); return toast.error("Erro ao enviar foto"); }
+    if (!userId) { setUploading(false); toast.error("Sessão inválida"); return; }
+    const path = `${userId}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { setUploading(false); toast.error("Erro ao enviar foto"); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = pub.publicUrl;
     const { error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", coach.profileId);
     setUploading(false);
-    if (updErr) return toast.error("Erro ao salvar foto no perfil");
+    setPendingAvatar(null);
+    if (updErr) { toast.error("Erro ao salvar foto no perfil"); return; }
     onLocalChange({ ...coach, avatarUrl: url });
     toast.success("Foto atualizada");
     onSaved();
   };
+
 
   const activeStudents = summary.totalActiveStudents || coach?.totalActiveStudents || 0;
   const totalSales = summary.totalSales || coach?.totalSales || 0;
@@ -173,7 +176,8 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
             <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50" title="Trocar foto">
               <Camera className="h-3.5 w-3.5" />
             </button>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); }} />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingAvatar(f); e.target.value = ""; }} />
+            <ImageCropperDialog file={pendingAvatar} aspect={1} shape="circle" title="Ajustar foto de perfil" onCancel={() => setPendingAvatar(null)} onConfirm={uploadAvatar} />
           </div>
           <h2 className="text-lg font-bold text-white">{coach?.name || "Coach"}</h2>
           <p className="text-[10px] text-white/40">Foto recomendada: 512×512px (1:1)</p>

@@ -19,6 +19,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
@@ -189,7 +190,15 @@ function PartnerPanel() {
   return (
     <SubscriptionGuard walletSource="partner">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
-      <header className="border-b border-white/5 px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "#111" }}>
+      <header
+        className="border-b border-white/5 px-4 py-3 flex items-center justify-between"
+        style={{
+          backgroundColor: "#111",
+          paddingTop: "max(0.75rem, env(safe-area-inset-top))",
+          paddingLeft: "max(1rem, env(safe-area-inset-left))",
+          paddingRight: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
         <div className="flex items-center gap-2">
           <Logo className="h-8 w-8" />
           <div>
@@ -199,7 +208,7 @@ function PartnerPanel() {
         </div>
         <div className="flex items-center gap-2">
           <RoleSwitcher current="partner" />
-          <button onClick={signOut} className="ml-1 text-white/60 hover:text-white"><LogOut className="h-5 w-5" /></button>
+          <button onClick={signOut} className="ml-1 flex h-10 w-10 items-center justify-center rounded-lg text-white/60 hover:text-white touch-manipulation"><LogOut className="h-5 w-5" /></button>
         </div>
       </header>
 
@@ -1276,17 +1285,20 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
   const [form, setForm] = useState(partner);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [pendingCover, setPendingCover] = useState<File | null>(null);
 
-  const upload = async (file: File, field: "photo_url" | "cover_url") => {
+  const upload = async (blob: Blob, field: "photo_url" | "cover_url") => {
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `partners/${partner.id}/${field}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    const path = `partners/${partner.id}/${field}-${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("store-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
-    setForm({ ...form, [field]: data.publicUrl });
+    setForm((f) => ({ ...f, [field]: data.publicUrl }));
     setUploading(false);
+    if (field === "photo_url") setPendingPhoto(null); else setPendingCover(null);
   };
+
 
   const save = async () => {
     setSaving(true);
@@ -1305,7 +1317,7 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
           <div>
             <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Trocar foto"}
-              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "photo_url")} />
+              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setPendingPhoto(f); e.target.value = ""; }} />
             </label>
             <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
           </div>
@@ -1323,7 +1335,7 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
           <div className="flex items-center gap-2">
             <label className="cursor-pointer rounded bg-white/10 px-3 py-1.5 text-xs text-white">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (form.cover_url ? "Trocar capa" : "Adicionar capa")}
-              <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && upload(e.target.files[0], "cover_url")} />
+              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setPendingCover(f); e.target.value = ""; }} />
             </label>
             {form.cover_url && (
               <button type="button" onClick={() => setForm({ ...form, cover_url: null })} className="text-[11px] text-red-300 hover:underline">Remover</button>
@@ -1349,6 +1361,8 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
       </div>
       <button onClick={save} disabled={saving} className="w-full rounded bg-primary py-2 text-sm font-bold text-primary-foreground">{saving ? <Loader2 className="h-4 w-4 animate-spin inline" /> : <><Save className="inline h-4 w-4 mr-1" /> Salvar</>}</button>
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
+      <ImageCropperDialog file={pendingPhoto} aspect={1} shape="circle" title="Ajustar logo / foto" onCancel={() => setPendingPhoto(null)} onConfirm={(b) => upload(b, "photo_url")} />
+      <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={(b) => upload(b, "cover_url")} />
     </div>
   );
 }

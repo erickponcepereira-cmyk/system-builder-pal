@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Save, Plus, Trash2, GripVertical, Loader2, Camera, Globe, Instagram } from "lucide-react";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 
 
 interface Props { coachId: string; profileId: string }
@@ -40,6 +41,8 @@ export function SettingsTab({ coachId, profileId }: Props) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState<File | null>(null);
+  const [pendingCover, setPendingCover] = useState<File | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -78,28 +81,31 @@ export function SettingsTab({ coachId, profileId }: Props) {
     })();
   }, [coachId, profileId]);
 
-  const uploadAvatar = async (file: File) => {
+  const uploadAvatar = async (blob: Blob) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
-    const path = `${user.id}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (upErr) return toast.error(upErr.message);
+    if (!user) { toast.error("Sessão expirada. Faça login novamente."); return; }
+    const path = `${user.id}/${Date.now()}-avatar.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { toast.error(upErr.message); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     setAvatarUrl(pub.publicUrl);
     await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("id", profileId);
+    setPendingAvatar(null);
     toast.success("Foto atualizada");
   };
 
-  const uploadCover = async (file: File) => {
+  const uploadCover = async (blob: Blob) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return toast.error("Sessão expirada. Faça login novamente.");
-    const path = `${user.id}/cover-${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (upErr) return toast.error(upErr.message);
+    if (!user) { toast.error("Sessão expirada. Faça login novamente."); return; }
+    const path = `${user.id}/cover-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { toast.error(upErr.message); return; }
     const { data: pubUrl } = supabase.storage.from("avatars").getPublicUrl(path);
     setPub((prev) => ({ ...prev, cover_url: pubUrl.publicUrl }));
+    setPendingCover(null);
     toast.success("Capa atualizada (clique em Salvar perfil)");
   };
+
 
   const saveProfile = async () => {
     setSaving(true);
@@ -186,7 +192,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
             </div>
             <div>
               <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingAvatar(f); e.target.value = ""; }} />
                 Trocar foto
               </label>
               <p className="mt-1 text-[10px] text-white/40">Recomendado: 512×512px (1:1)</p>
@@ -205,7 +211,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
               )}
               <div className="flex items-center gap-2">
                 <label className="cursor-pointer rounded-lg bg-white/5 px-3 py-2 text-xs text-white hover:bg-white/10 inline-block">
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingCover(f); e.target.value = ""; }} />
                   {pub.cover_url ? "Trocar capa" : "Adicionar capa"}
                 </label>
                 {pub.cover_url && (
@@ -312,6 +318,9 @@ export function SettingsTab({ coachId, profileId }: Props) {
           </button>
         </div>
       )}
+
+      <ImageCropperDialog file={pendingAvatar} aspect={1} shape="circle" title="Ajustar foto de perfil" onCancel={() => setPendingAvatar(null)} onConfirm={uploadAvatar} />
+      <ImageCropperDialog file={pendingCover} aspect={1200 / 400} title="Ajustar capa do perfil" outputSize={1600} onCancel={() => setPendingCover(null)} onConfirm={uploadCover} />
     </>
   );
 }
