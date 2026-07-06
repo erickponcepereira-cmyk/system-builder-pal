@@ -13,6 +13,7 @@ import { money, type CoachContext } from "@/routes/_authenticated/coach";
 import { TopSellingProducts } from "@/components/coach/TopSellingProducts";
 import { BadgeImage } from "@/components/coach/BadgeImage";
 import { getCoachProfileSummary, type ActivityItemRow, type CoachProfileSummary } from "@/lib/coach-profile-summary.functions";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 
 const EMPTY_SUMMARY: CoachProfileSummary = {
   coachId: null, totalActiveStudents: 0, totalSales: 0,
