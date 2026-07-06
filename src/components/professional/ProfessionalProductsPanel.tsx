@@ -127,6 +127,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     setEditing(e => e ? { ...e, image_url: data.publicUrl } : e);
     setUploading(false);
   };
+  void upload; void uploading;
 
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
