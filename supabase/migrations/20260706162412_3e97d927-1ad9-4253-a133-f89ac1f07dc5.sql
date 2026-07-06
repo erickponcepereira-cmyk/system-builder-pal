@@ -1,0 +1,1 @@
+UPDATE public.subscription_invoices SET status='paid', paid_at=now() WHERE id='d2a8aa23-3f3d-48e1-8a32-d8b5c21dce1e' AND status='blocked';
