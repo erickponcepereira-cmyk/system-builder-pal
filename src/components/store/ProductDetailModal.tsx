@@ -145,7 +145,7 @@ export function ProductDetailModal({
         onClick={(e) => e.stopPropagation()}
         className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
       >
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-muted">
+        <div className="relative mx-auto mt-4 h-[300px] w-[300px] max-w-full overflow-hidden rounded-2xl bg-muted">
           {currentImage ? (
             <img src={currentImage} alt={product.title} className="h-full w-full object-cover transition-opacity" />
           ) : (
