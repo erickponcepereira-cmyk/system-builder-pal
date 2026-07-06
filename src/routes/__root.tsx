@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
+import { registerAppServiceWorker } from "@/pwa-register";
 
 function NotFoundComponent() {
   return (
@@ -73,7 +74,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});}if(typeof caches!=='undefined'&&caches.keys){caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).catch(function(){});}}catch(e){}})();`,
+            __html: `(function(){try{var h=location.hostname;var isPreview=(h.indexOf('id-preview--')===0||h.indexOf('preview--')===0||h==='lovableproject.com'||h.endsWith('.lovableproject.com')||h.endsWith('.lovableproject-dev.com')||h.endsWith('.beta.lovable.dev'));var killSw=(new URLSearchParams(location.search)).get('sw')==='off';if((isPreview||killSw)&&'serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){var u=(r.active&&r.active.scriptURL)||(r.installing&&r.installing.scriptURL)||(r.waiting&&r.waiting.scriptURL)||'';if(u.indexOf('firebase-messaging')===-1&&u.indexOf('OneSignal')===-1){r.unregister();}});}).catch(function(){});}}catch(e){}})();`,
           }}
         />
       </head>
@@ -88,6 +89,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   useEffect(() => {
+    // Registra o service worker mínimo (produção fora de preview) para viabilizar
+    // instalação como app (WebAPK) no Chrome Android.
+    registerAppServiceWorker();
+
     // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
     import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
       initPushNotifications({ onToken: saveTokenToSupabase }).catch((err) => {
