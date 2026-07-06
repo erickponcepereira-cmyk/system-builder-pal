@@ -155,7 +155,16 @@ function PartnerProfilePage() {
                             {p.discount_percent}% OFF
                           </div>
                         ) : null}
-                        {p.image_url ? <img src={p.image_url} className="h-28 w-full object-cover" alt={p.name} /> : <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>}
+                        {(p.image_urls && p.image_urls.length) || p.image_url ? (
+                          <ProductImageCarousel
+                            images={p.image_urls && p.image_urls.length ? p.image_urls : (p.image_url ? [p.image_url] : [])}
+                            alt={p.name}
+                            className="h-28 w-full"
+                            rounded=""
+                          />
+                        ) : (
+                          <div className="h-28 w-full bg-white/5 flex items-center justify-center"><Tag className="h-6 w-6 text-white/30" /></div>
+                        )}
                         <div className="p-2.5 flex-1 flex flex-col">
                           <div className="flex items-center gap-1 mb-1">
                             <span className={`text-[9px] px-1.5 py-0.5 rounded ${isDiscount ? "bg-amber-500/15 text-amber-400" : isFree ? "bg-green-500/15 text-green-400" : "bg-blue-500/15 text-blue-400"}`}>
