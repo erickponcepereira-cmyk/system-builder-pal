@@ -395,6 +395,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
   initialClientId,
   getChallengeCandidatesForClient,
+  onLinkClientToStudent,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
