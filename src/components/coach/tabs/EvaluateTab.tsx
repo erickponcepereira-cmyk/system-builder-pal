@@ -670,6 +670,7 @@ export function EvaluateTab() {
             }))
         }
         onLoadFullAssessments={loadFullAssessmentsForClient}
+        onLinkClientToStudent={openLinkClientModal}
         onCreateClient={createClient}
         onUpdateClient={async (client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
