@@ -523,24 +523,25 @@ export function EvaluateTab() {
 
 
   // ─── Integrar cliente importado (Fineshape) a um aluno cadastrado ──────────
-  const openLinkClientModal = async (client: FitMindClient) => {
+  // Busca server-side com ilike (nome/email). Evita puxar 2000 linhas de uma vez.
+  const runLinkSearch = async (term: string) => {
     if (!coachInfo.id) return;
-    setLinkingClient(client);
-    setLinkSearch("");
-    setLinkStudents([]);
     setLinkLoading(true);
     try {
-      // Master vê todos; coach comum vê apenas seus alunos
+      const t = term.trim();
       let q = supabase
         .from("students")
         .select("id,coach_id,profile_id,profiles!students_profile_id_fkey(name,email)")
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(t ? 30 : 50);
       if (!isMaster) q = q.eq("coach_id", coachInfo.id);
+      if (t) {
+        // ilike no join usando or() no schema PostgREST
+        q = q.or(`name.ilike.%${t}%,email.ilike.%${t}%`, { foreignTable: "profiles" } as any);
+      }
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data as any[]) || [];
-      // Nomes dos coaches (para master; próprio coach sempre = coachInfo.name)
       const coachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter(Boolean)));
       const coachMap = new Map<string, string>();
       if (coachIds.length) {
@@ -550,21 +551,39 @@ export function EvaluateTab() {
           .in("id", coachIds);
         ((cs as any[]) || []).forEach((c) => coachMap.set(c.id, c.profiles?.name || "Coach"));
       }
-      const list = rows.map((r) => ({
-        id: r.id as string,
-        name: (r.profiles?.name as string) || "Aluno",
-        email: (r.profiles?.email as string) || undefined,
-        coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
-      }));
+      const list = rows
+        .filter((r) => r.profiles?.name) // remove ruído quando o or() no join não bate
+        .map((r) => ({
+          id: r.id as string,
+          name: (r.profiles?.name as string) || "Aluno",
+          email: (r.profiles?.email as string) || undefined,
+          coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
+        }));
       list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
       setLinkStudents(list);
     } catch (e: any) {
       console.error(e);
-      toast.error("Erro ao carregar alunos do sistema");
+      toast.error("Erro ao buscar alunos do sistema");
     } finally {
       setLinkLoading(false);
     }
   };
+
+  const openLinkClientModal = async (client: FitMindClient) => {
+    if (!coachInfo.id) return;
+    setLinkingClient(client);
+    setLinkSearch("");
+    setLinkStudents([]);
+    await runLinkSearch("");
+  };
+
+  // Debounce da busca no modal
+  useEffect(() => {
+    if (!linkingClient) return;
+    const t = setTimeout(() => { runLinkSearch(linkSearch); }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkSearch, linkingClient]);
 
   const linkClientToStudent = async (client: FitMindClient, studentId: string) => {
     if (!coachInfo.id) return;
