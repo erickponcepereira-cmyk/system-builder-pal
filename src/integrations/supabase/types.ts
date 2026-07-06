@@ -3064,6 +3064,77 @@ export type Database = {
           },
         ]
       }
+      evaluation_link_audit: {
+        Row: {
+          action: string
+          client_id: string | null
+          coach_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          new_student_id: string | null
+          performed_by: string | null
+          performed_by_role: string | null
+          previous_student_id: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          client_id?: string | null
+          coach_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_student_id?: string | null
+          performed_by?: string | null
+          performed_by_role?: string | null
+          previous_student_id?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          client_id?: string | null
+          coach_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_student_id?: string | null
+          performed_by?: string | null
+          performed_by_role?: string | null
+          previous_student_id?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_link_audit_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "coach_evaluation_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_link_audit_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_link_audit_new_student_id_fkey"
+            columns: ["new_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_link_audit_previous_student_id_fkey"
+            columns: ["previous_student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_attendances: {
         Row: {
           avatar_url: string | null

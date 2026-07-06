@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
-import { createCoachCalendarEvent } from "@/lib/google-calendar.functions";
+// Google Calendar desativado temporariamente — usando agenda interna
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
 
@@ -48,6 +48,14 @@ export function EvaluateTab() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
   const [challengeBannerOpen, setChallengeBannerOpen] = useState(false);
+  // Confirmação irreversível de vinculação
+  const [confirmLink, setConfirmLink] = useState<{
+    client: FitMindClient;
+    student: { id: string; name: string; email?: string };
+    existingClientName?: string; // se aluno já vinculado a outro cliente
+  } | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const [confirmBusy, setConfirmBusy] = useState(false);
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
@@ -64,19 +72,8 @@ export function EvaluateTab() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
-  const openGoogleConnectPopup = async () => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) { toast.error("Faça login novamente."); return; }
-    const w = 520, h = 640;
-    const left = window.screenX + (window.outerWidth - w) / 2;
-    const top = window.screenY + (window.outerHeight - h) / 2;
-    window.open(
-      `/api/oauth/google/start?popup=1&access_token=${encodeURIComponent(token)}`,
-      "google-oauth",
-      `width=${w},height=${h},left=${left},top=${top}`
-    );
-  };
+  // openGoogleConnectPopup removido — Google Calendar desativado temporariamente
+
 
   const mapAssessment = (row: any): FitMindAssessment => ({
     id: row.id,
@@ -599,54 +596,90 @@ export function EvaluateTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkSearch, linkingClient]);
 
-  const linkClientToStudent = async (client: FitMindClient, studentId: string) => {
+  // Passo 1: usuário escolheu um aluno na lista → checa duplicidade e abre confirmação
+  const requestLinkClientToStudent = async (client: FitMindClient, student: { id: string; name: string; email?: string }) => {
     if (!coachInfo.id) return;
     try {
-      // Já existe um evaluation-client para este student neste coach? Se sim, mesclar.
       const targetCoachId = (client as any).coachId || coachInfo.id;
-      const { data: existing } = await supabase
+      // Verifica se este aluno já está vinculado a algum outro cadastro deste coach
+      const { data: existing, error: exErr } = await supabase
         .from("coach_evaluation_clients" as never)
-        .select("id" as never)
+        .select("id,name" as never)
         .eq("coach_id" as never, targetCoachId as never)
-        .eq("student_id" as never, studentId as never)
+        .eq("student_id" as never, student.id as never)
+        .neq("id" as never, client.id as never)
         .maybeSingle();
+      if (exErr) throw exErr;
+      const existingClientName = existing ? (existing as any).name : undefined;
+      setConfirmText("");
+      setConfirmLink({ client, student, existingClientName });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erro ao verificar vinculação");
+    }
+  };
 
-      let keepClientId = client.id;
-      if (existing && (existing as any).id && (existing as any).id !== client.id) {
-        // Mesclar: mover todas as avaliações do cliente importado para o existente
-        keepClientId = (existing as any).id;
-        const { error: mvErr } = await supabase
-          .from("coach_body_assessments" as never)
-          .update({ client_id: keepClientId, student_id: studentId } as never)
-          .eq("client_id" as never, client.id as never);
-        if (mvErr) throw mvErr;
-        // Remove o cliente importado (agora sem avaliações)
-        await supabase
-          .from("coach_evaluation_clients" as never)
-          .delete()
-          .eq("id" as never, client.id as never);
-      } else {
-        // Vincular o cliente importado ao aluno do sistema
-        const { error: upErr } = await supabase
-          .from("coach_evaluation_clients" as never)
-          .update({ student_id: studentId } as never)
-          .eq("id" as never, client.id as never);
-        if (upErr) throw upErr;
-        // Atualizar assessments existentes com student_id para o aluno enxergar
-        const { error: aErr } = await supabase
-          .from("coach_body_assessments" as never)
-          .update({ student_id: studentId } as never)
-          .eq("client_id" as never, client.id as never);
-        if (aErr) throw aErr;
-      }
+  // Passo 2: usuário confirmou digitando CONFIRMAR → executa a vinculação e registra auditoria
+  const executeConfirmedLink = async () => {
+    if (!confirmLink) return;
+    if (confirmText.trim().toUpperCase() !== "CONFIRMAR") {
+      toast.error("Digite CONFIRMAR para prosseguir.");
+      return;
+    }
+    // Bloqueia se aluno já está vinculado a outro cadastro
+    if (confirmLink.existingClientName) {
+      toast.error(
+        `Este aluno já está vinculado ao cadastro "${confirmLink.existingClientName}". Peça ao admin para desfazer a vinculação anterior antes de refazer.`
+      );
+      return;
+    }
+    setConfirmBusy(true);
+    const { client, student } = confirmLink;
+    try {
+      const targetCoachId = (client as any).coachId || coachInfo.id;
+      // Captura estado anterior para auditoria
+      const { data: before } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("student_id" as never)
+        .eq("id" as never, client.id as never)
+        .maybeSingle();
+      const previousStudentId = (before as any)?.student_id ?? null;
+
+      // Vincula o cliente ao aluno
+      const { error: upErr } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .update({ student_id: student.id } as never)
+        .eq("id" as never, client.id as never);
+      if (upErr) throw upErr;
+      const { error: aErr } = await supabase
+        .from("coach_body_assessments" as never)
+        .update({ student_id: student.id } as never)
+        .eq("client_id" as never, client.id as never);
+      if (aErr) throw aErr;
+
+      // Registra auditoria
+      const { data: sess } = await supabase.auth.getUser();
+      await supabase.from("evaluation_link_audit" as never).insert({
+        coach_id: targetCoachId,
+        client_id: client.id,
+        previous_student_id: previousStudentId,
+        new_student_id: student.id,
+        action: previousStudentId ? "transfer" : "link",
+        performed_by: sess.user?.id ?? null,
+        performed_by_role: "coach",
+        metadata: { client_name: client.name, student_name: student.name },
+      } as never);
 
       toast.success("Avaliações integradas ao cadastro do aluno");
+      setConfirmLink(null);
       setLinkingClient(null);
       clientSummaryCache.delete(coachInfo.id);
       await loadClients();
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erro ao integrar cadastro");
+    } finally {
+      setConfirmBusy(false);
     }
   };
 
@@ -909,32 +942,36 @@ export function EvaluateTab() {
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         onCreateGoogleCalendarEvent={async (date, time, clientName, eventName) => {
+          // Google Calendar temporariamente desativado: grava em internal_appointments (agenda interna do coach)
           try {
             const startISO = new Date(`${date}T${time}:00`).toISOString();
             const endISO = new Date(new Date(startISO).getTime() + 60 * 60 * 1000).toISOString();
             const client = clients.find((c) => c.name === clientName);
             const summary = (eventName && eventName.trim()) || `Avaliação — ${clientName}`;
-            const res = await createCoachCalendarEvent({
-              data: {
+            const studentId = (client as any)?.studentId ?? null;
+            const { data: inserted, error } = await supabase
+              .from("internal_appointments" as never)
+              .insert({
+                coach_id: coachInfo.id,
                 summary,
-                description: "Avaliação física agendada via FitMind",
-                startISO,
-                endISO,
-                attendeeEmail: client?.email ?? null,
-                attendeeName: clientName,
-              },
-            });
-            if (!res.connected) {
-              toast.error("Conecte sua conta Google para agendar o evento.", {
-                duration: 10000,
-                action: { label: "Conectar agora", onClick: () => openGoogleConnectPopup() },
-              });
-              return { ok: false, error: "not_connected" };
-            }
-            return { ok: true, htmlLink: res.htmlLink ?? null };
+                description: "Avaliação física agendada (agenda interna FitMind)",
+                start_at: startISO,
+                end_at: endISO,
+                attendee_email: client?.email ?? null,
+                attendee_name: clientName,
+                student_id: studentId,
+                source: "internal",
+                status: "scheduled",
+              } as never)
+              .select("id" as never)
+              .single();
+            if (error) throw error;
+            toast.success("Avaliação agendada na sua agenda interna");
+            return { ok: true, htmlLink: (inserted as any)?.id ? `/coach?appointment=${(inserted as any).id}` : null };
           } catch (e: any) {
-            console.error("createCoachCalendarEvent error:", e);
-            return { ok: false, error: e?.message || "Erro ao criar evento" };
+            console.error("internal appointment create error:", e);
+            toast.error(e?.message || "Erro ao agendar avaliação");
+            return { ok: false, error: e?.message || "Erro ao agendar" };
           }
         }}
         groups={[
@@ -993,7 +1030,7 @@ export function EvaluateTab() {
                   .map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => linkClientToStudent(linkingClient, s.id)}
+                      onClick={() => requestLinkClientToStudent(linkingClient, s)}
                       className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0">
@@ -1014,6 +1051,78 @@ export function EvaluateTab() {
             <p className="text-[11px] text-white/40 mt-3">
               Após integrar, todas as avaliações passam a aparecer para o aluno no perfil dele e nos históricos do coach.
             </p>
+          </div>
+        </div>
+      )}
+
+      {confirmLink && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => !confirmBusy && setConfirmLink(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-red-500/40 bg-zinc-950 p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-white mb-2">
+              Confirmar vinculação irreversível
+            </h3>
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100 mb-3">
+              <p className="font-semibold mb-1">⚠️ Esta ação é IRREVERSÍVEL pelo coach.</p>
+              <p>
+                As avaliações de <b>{confirmLink.client.name}</b> serão vinculadas
+                permanentemente ao aluno <b>{confirmLink.student.name}</b>
+                {confirmLink.student.email ? ` (${confirmLink.student.email})` : ""}.
+                Apenas o administrador poderá desfazer.
+              </p>
+            </div>
+
+            {confirmLink.existingClientName && (
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-100 mb-3">
+                <p className="font-semibold mb-1">🚫 Vinculação bloqueada</p>
+                <p>
+                  Este aluno já está vinculado ao cadastro
+                  {" "}<b>"{confirmLink.existingClientName}"</b>. Peça ao admin para
+                  desfazer a vinculação anterior antes de vincular novamente.
+                </p>
+              </div>
+            )}
+
+            {!confirmLink.existingClientName && (
+              <>
+                <label className="block text-xs text-white/70 mb-1.5">
+                  Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
+                </label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="CONFIRMAR"
+                  className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
+                  disabled={confirmBusy}
+                  autoFocus
+                />
+              </>
+            )}
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setConfirmLink(null)}
+                disabled={confirmBusy}
+                className="px-3 py-2 text-sm text-white/70 hover:text-white disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              {!confirmLink.existingClientName && (
+                <button
+                  onClick={executeConfirmedLink}
+                  disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
+                  className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {confirmBusy ? "Vinculando..." : "Vincular permanentemente"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

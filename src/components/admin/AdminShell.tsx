@@ -53,6 +53,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; exact
   { to: "/admin/professional-releases", label: "Liberar Profissionais", icon: UserCheck, perm: "professionals" },
   { to: "/admin/professional-products", label: "Produtos de Profissionais", icon: Stethoscope, perm: "professionals" },
   { to: "/admin/assessment-deletions", label: "Exclusões de Avaliações", icon: AlertTriangle, perm: "assessment_deletions" },
+  { to: "/admin/evaluation-links", label: "Vinculações de Avaliação", icon: AlertTriangle, perm: "assessment_deletions" },
   { to: "/admin/push-notifications", label: "Push Notifications", icon: Bell, perm: "settings" },
   { to: "/admin/settings", label: "Configurações", icon: Settings, perm: "settings" },
 ];
