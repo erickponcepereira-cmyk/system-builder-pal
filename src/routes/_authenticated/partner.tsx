@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock } from "lucide-react";
+import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
+import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports" | "scanner";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab";
 
 
 interface Partner {
@@ -184,6 +186,7 @@ function PartnerPanel() {
     { key: "reports" as Tab, label: "Relatórios", icon: BarChart3 },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
+    { key: "collab" as Tab, label: "Colaboração", icon: Share2 },
     { key: "profile" as Tab, label: "Perfil", icon: UserCog },
   ];
 
@@ -234,6 +237,8 @@ function PartnerPanel() {
         {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
         {tab === "reports" && <PartnerReports />}
         {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
+        {tab === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
+
 
       </main>
 
@@ -823,6 +828,17 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
               
             </div>
+            {editing.id && editing.kind === "paid" && (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <CoproductionEditor
+                  productType="partner"
+                  productId={editing.id}
+                  creatorType="partner"
+                  creatorId={partner.id}
+                  productNetValueBrl={Number(editing.partner_net_amount || editing.price || 0)}
+                />
+              </div>
+            )}
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
               <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><Save className="inline h-4 w-4 mr-1" /> Salvar</button>

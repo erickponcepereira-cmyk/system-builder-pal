@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
-import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard } from "lucide-react";
+import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2 } from "lucide-react";
+import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { OverviewTab } from "@/components/professional/OverviewTab";
 import { StorePage } from "@/components/student/StorePage";
 
@@ -84,6 +85,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   fitmind_calendar: { label: "Agenda FitMind", icon: CalendarDays },
   appointments: { label: "Atendimentos", icon: Calendar },
   subscription: { label: "Mensalidade", icon: Wallet },
+  collab: { label: "Colaboração", icon: Share2 },
 };
 
 function ProfessionalPanel() {
@@ -166,7 +168,7 @@ function ProfessionalPanel() {
 
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
-  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "settings", "fitmind_calendar"];
+  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collab", "settings", "fitmind_calendar"];
   const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription"])).filter((t) => t !== "collaborators" && t !== "network" && t !== "overview")];
 
 
@@ -241,6 +243,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "store") return <StorePage coachMode audience="professional" />;
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
+  if (tab === "collab") return <CollabWorkspace ownerType="professional" ownerId={info.coachId} />;
 
   if (tab === "appointments") return <AppointmentsTab coachId={info.coachId} />;
 
