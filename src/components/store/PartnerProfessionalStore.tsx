@@ -412,7 +412,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={backToSections} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
           <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {visibleCats.map((c) => (
               <button key={c.id} onClick={() => setActiveCategory(c.id)} className="rounded-2xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                 <div className="aspect-square w-full bg-white/5">
