@@ -82,21 +82,51 @@ export function StoreItemsManager() {
     (!filterKind || it.kind === filterKind)
   );
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: FileList | File[]) => {
     if (!editing) return;
+    const list = Array.from(files);
+    if (!list.length) return;
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `items/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from("store-images").getPublicUrl(path);
-      setEditing({ ...editing, image_url: data.publicUrl });
+      const uploaded: string[] = [];
+      for (const file of list) {
+        const ext = file.name.split(".").pop();
+        const path = `items/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: false });
+        if (error) throw error;
+        const { data } = supabase.storage.from("store-images").getPublicUrl(path);
+        uploaded.push(data.publicUrl);
+      }
+      const current = (editing.image_urls && editing.image_urls.length)
+        ? editing.image_urls
+        : (editing.image_url ? [editing.image_url] : []);
+      const next = [...current, ...uploaded];
+      setEditing({ ...editing, image_urls: next, image_url: next[0] || null });
     } catch (e: any) {
       alert("Erro ao enviar imagem: " + e.message);
     } finally {
       setUploading(false);
     }
+  };
+
+  const removeImageAt = (idx: number) => {
+    if (!editing) return;
+    const current = (editing.image_urls && editing.image_urls.length)
+      ? [...editing.image_urls]
+      : (editing.image_url ? [editing.image_url] : []);
+    current.splice(idx, 1);
+    setEditing({ ...editing, image_urls: current, image_url: current[0] || null });
+  };
+
+  const moveImage = (idx: number, dir: -1 | 1) => {
+    if (!editing) return;
+    const current = (editing.image_urls && editing.image_urls.length)
+      ? [...editing.image_urls]
+      : (editing.image_url ? [editing.image_url] : []);
+    const j = idx + dir;
+    if (j < 0 || j >= current.length) return;
+    [current[idx], current[j]] = [current[j], current[idx]];
+    setEditing({ ...editing, image_urls: current, image_url: current[0] || null });
   };
 
   const save = async () => {
