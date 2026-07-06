@@ -161,6 +161,18 @@ export interface FitMindClient {
   coachId?: string;
   // Master Coach: nome do coach titular do aluno (quando exibido para um master)
   coachName?: string;
+  // Vínculo com aluno da plataforma (usado para vincular avaliação ao Desafio)
+  studentId?: string;
+}
+
+// Uma "vaga" pendente no Desafio para um aluno
+export interface FitMindChallengeCandidate {
+  enrollmentId: string;
+  type: "initial" | "final";
+  studentId: string;
+  studentName: string;
+  compLabel: string;
+  groupNumber?: number;
 }
 
 export interface FitMindAssessment {
@@ -237,6 +249,9 @@ export interface FitMindAssessment {
   nextAssessmentDate?: string;
   nextAssessmentTime?: string;
   groupId?: string;
+  // Vínculo com Desafio (opcional)
+  challengeEnrollmentId?: string;
+  challengeType?: "initial" | "final";
 }
 
 export interface FitMindCoach {
@@ -299,6 +314,8 @@ export interface FitMindShapeProps {
   themeFontFamily?: string;
   // Pré-seleção de cliente (usado quando vindo do Desafio)
   initialClientId?: string;
+  // Retorna vagas pendentes no Desafio para um cliente (usado no editar avaliação)
+  getChallengeCandidatesForClient?: (client: FitMindClient) => FitMindChallengeCandidate[];
 }
 
 // ============================================================
@@ -375,6 +392,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   themeColor = "#dc2626",
   themeFontFamily = "'Outfit', 'Inter', sans-serif",
   initialClientId,
+  getChallengeCandidatesForClient,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
@@ -2902,6 +2920,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
         <AssessmentComparison
           client={selectedClient}
           themeColor={themeColor}
+          challengeCandidates={getChallengeCandidatesForClient?.(selectedClient) ?? []}
           onBack={() => setScreen("result")}
           onDelete={
             onDeleteAssessment

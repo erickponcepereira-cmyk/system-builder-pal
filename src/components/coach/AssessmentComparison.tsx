@@ -17,7 +17,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ChevronLeft, TrendingDown, TrendingUp, Minus, CheckSquare, Square, Printer, Trash2, Pencil, X } from "lucide-react";
-import type { FitMindAssessment, FitMindClient } from "./FitMindShape";
+import type { FitMindAssessment, FitMindClient, FitMindChallengeCandidate } from "./FitMindShape";
 
 interface Props {
   client: FitMindClient;
@@ -25,6 +25,7 @@ interface Props {
   onBack: () => void;
   onDelete?: (assessmentId: string, reason: string) => Promise<void>;
   onEdit?: (assessment: FitMindAssessment) => Promise<void>;
+  challengeCandidates?: FitMindChallengeCandidate[];
 }
 
 type MetricKey =
@@ -78,7 +79,7 @@ const fmtNum = (v?: number, unit = "") => {
   return `${+v.toFixed(1)}${unit ? ` ${unit}` : ""}`;
 };
 
-const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit }) => {
+const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626", onBack, onDelete, onEdit, challengeCandidates = [] }) => {
   const [editing, setEditing] = useState<FitMindAssessment | null>(null);
   const [editForm, setEditForm] = useState<Partial<FitMindAssessment>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -539,6 +540,44 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                 style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13, resize: "vertical" }}
               />
             </label>
+
+            {(challengeCandidates.length > 0 || editForm.challengeEnrollmentId) && (
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginTop: 12 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  🏆 Vincular ao Desafio
+                </span>
+                <select
+                  value={editForm.challengeEnrollmentId && editForm.challengeType
+                    ? `${editForm.challengeEnrollmentId}|${editForm.challengeType}`
+                    : ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (!v) {
+                      setEditForm((f) => ({ ...f, challengeEnrollmentId: undefined, challengeType: undefined }));
+                    } else {
+                      const [eid, type] = v.split("|");
+                      setEditForm((f) => ({ ...f, challengeEnrollmentId: eid, challengeType: type as "initial" | "final" }));
+                    }
+                  }}
+                  style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
+                >
+                  <option value="">Não vincular</option>
+                  {editForm.challengeEnrollmentId && editForm.challengeType && !challengeCandidates.some(c => c.enrollmentId === editForm.challengeEnrollmentId && c.type === editForm.challengeType) && (
+                    <option value={`${editForm.challengeEnrollmentId}|${editForm.challengeType}`}>
+                      Vínculo atual · Pesagem {editForm.challengeType === "initial" ? "Inicial" : "Final"}
+                    </option>
+                  )}
+                  {challengeCandidates.map((c) => (
+                    <option key={`${c.enrollmentId}-${c.type}`} value={`${c.enrollmentId}|${c.type}`}>
+                      {c.compLabel} · Pesagem {c.type === "initial" ? "Inicial" : "Final"}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: 10, color: "#64748b" }}>
+                  Ao salvar, esta avaliação será registrada como pesagem do desafio (peso, % gordura e massa muscular são sincronizados automaticamente).
+                </span>
+              </label>
+            )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button onClick={closeEdit} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "10px 12px", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
