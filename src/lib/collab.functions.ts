@@ -200,12 +200,12 @@ export const listSharedAgenda = createServerFn({ method: "POST" })
       .order("starts_at", { ascending: true });
     let internals: any[] = [];
     if (data.ownerType === "professional") {
-      const { data } = await supabase
+      const { data: appts } = await supabase
         .from("professional_appointments")
         .select("id,starts_at,ends_at,status,notes")
-        .eq("professional_coach_id", data?.ownerId as any).neq("status", "cancelled")
+        .eq("professional_coach_id", data.ownerId).neq("status", "cancelled")
         .order("starts_at", { ascending: true });
-      internals = data || [];
+      internals = appts || [];
     }
     return { externals: externals || [], internals };
   });
