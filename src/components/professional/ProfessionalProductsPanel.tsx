@@ -22,6 +22,7 @@ interface ProProduct {
   description: string | null;
   image_url: string | null;
   price: number;
+  original_price?: number | null;
   stock: number | null;
   redemption_instructions: string | null;
   status: string;
@@ -81,6 +82,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const blank = (): Partial<ProProduct> => ({
     coach_id: coachId,
     name: "", description: "", image_url: "", price: 0, stock: null,
+    original_price: null,
     redemption_instructions: "", is_active_by_professional: true,
     price_input_mode: "charge",
     coach_commission_percentage: 10,
@@ -139,6 +141,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       payload = {
         ...payload,
         price: 0,
+        original_price: null,
         professional_net_amount: 0,
         coach_commission_amount: 0,
         network_l1_amount: 0,
@@ -157,6 +160,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       payload = {
         ...payload,
         price: b.gross,
+        original_price: editing.original_price && editing.original_price > b.gross ? Number(editing.original_price) : null,
         professional_net_amount: b.partnerNet,
         coach_commission_amount: b.coachCommission,
         network_l1_amount: b.networkL1,
@@ -237,6 +241,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${statusColor(p.status)}`}>{p.status}</span>
               </div>
               <div className="mt-0.5 text-[11px] text-white/60">
+                {p.original_price && p.original_price > p.price && (
+                  <span className="mr-2 text-white/40 line-through">R$ {Number(p.original_price).toFixed(2)}</span>
+                )}
                 <span className="text-primary font-semibold">R$ {Number(p.price).toFixed(2)}</span>
                 {typeof p.professional_net_amount === "number" && p.professional_net_amount > 0 && (
                   <span className="ml-2">• Líquido: <span className="text-green-400">R$ {p.professional_net_amount.toFixed(2)}</span></span>
@@ -602,7 +609,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
       </div>
 
       {mode === "charge" ? (
-        <Field label="Preço cobrado do cliente">
+        <Field label="Valor de venda cobrado do cliente">
           <CurrencyInputBRL value={charge} onChange={updateCharge} />
         </Field>
       ) : (
@@ -611,6 +618,11 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
           <p className="mt-1 text-[10px] text-white/40">O preço cobrado é aumentado automaticamente para cobrir as taxas (igual simulação de cartão em apps bancários).</p>
         </Field>
       )}
+
+      <Field label="Valor original do produto (opcional)">
+        <CurrencyInputBRL value={Number(product.original_price || 0)} onChange={(n) => onChange({ original_price: n > 0 ? n : null })} />
+        <p className="mt-1 text-[10px] text-white/40">Use quando houver desconto. O cliente verá o valor original riscado e o valor de venda em destaque.</p>
+      </Field>
 
       <div>
         <label className="text-xs text-white/60">Forma de pagamento simulada</label>
