@@ -266,6 +266,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         sectionId: it.section_id ?? null, categoryId: it.category_id ?? null,
         tag: it.kind === "digital" ? "Digital" : undefined,
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
+        imageUrls: (it.image_urls && it.image_urls.length ? it.image_urls : (it.image_url ? [it.image_url] : [])),
         commissionCoach: it.commission_coach, commissionLevel1: it.commission_level1,
         commissionLevel2: it.commission_level2, commissionLevel3: it.commission_level3,
         commissionCoachAbsolute: earningsById.get(it.id)?.coachCommission ?? null,
