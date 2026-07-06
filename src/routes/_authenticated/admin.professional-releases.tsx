@@ -82,8 +82,10 @@ function ProfessionalReleasesPage() {
   const fetchList = useServerFn(listAllProfessionalReleases);
   const confirmEmail = useServerFn(adminConfirmProfessionalEmail);
   const setSpecialty = useServerFn(adminSetProfessionalSpecialty);
+  const grantActivation = useServerFn(adminGrantProfessionalActivation);
   const approveFinal = useServerFn(adminApproveProfessionalFinal);
   const fetchAudit = useServerFn(getProfessionalReleaseAudit);
+
 
   const [rows, setRows] = useState<Row[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
