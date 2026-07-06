@@ -166,36 +166,29 @@ export function EvaluateTab() {
       return out;
     };
 
-    const fetchAllAssessments = async () => {
-      const map = new Map<string, any[]>();
-      let aFrom = 0;
-      while (true) {
-        let aq = supabase
-          .from("coach_body_assessments" as never)
-          .select(ASSESSMENT_LIGHT_COLS as never)
-          .order("assessment_date" as never, { ascending: false })
-          .range(aFrom, aFrom + PAGE - 1);
-        if (!masterFlag) aq = aq.eq("coach_id" as never, coach.id as never);
-        const { data: aData, error: aErr } = await aq;
-        if (aErr) break;
-        const aRows = (aData as any[]) || [];
-        aRows.forEach((r) => {
-          const arr = map.get(r.client_id) || [];
-          arr.push(r);
-          map.set(r.client_id, arr);
-        });
-        if (aRows.length < PAGE) break;
-        aFrom += PAGE;
+    // PERF: usa RPC agregada em vez de baixar milhares de linhas leves.
+    const fetchAssessmentSummary = async () => {
+      const map = new Map<string, { total: number; last_at: string | null }>();
+      const { data, error } = await supabase.rpc(
+        "coach_assessment_counts" as never,
+        { _coach_id: coach.id, _master: masterFlag } as never,
+      );
+      if (error) {
+        console.warn("coach_assessment_counts:", error);
+        return map;
       }
+      ((data as any[]) || []).forEach((r) => {
+        map.set(r.client_id, { total: Number(r.total || 0), last_at: r.last_at || null });
+      });
       return map;
     };
 
     let all: any[] = [];
-    let assessmentsByClient = new Map<string, any[]>();
+    let summaryByClient = new Map<string, { total: number; last_at: string | null }>();
     try {
-      const [c1, c2] = await Promise.all([fetchAllClients(), fetchAllAssessments()]);
+      const [c1, c2] = await Promise.all([fetchAllClients(), fetchAssessmentSummary()]);
       all = c1;
-      assessmentsByClient = c2;
+      summaryByClient = c2;
     } catch {
       return toast.error("Erro ao carregar alunos da avaliação");
     }
