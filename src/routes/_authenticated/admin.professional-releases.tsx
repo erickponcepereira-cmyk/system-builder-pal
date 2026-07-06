@@ -245,8 +245,10 @@ function ProfessionalReleasesPage() {
           {filtered.map((r) => {
             const emailDone = r.email_confirmed;
             const specDone = !!r.specialty_key;
+            const actDone = !!r.activation_paid_at;
             const approved = !!r.approved_at;
             const spec = specialties.find((s) => s.key === r.specialty_key);
+
 
             return (
               <div key={r.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
