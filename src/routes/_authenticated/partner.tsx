@@ -19,6 +19,7 @@ import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
