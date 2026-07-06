@@ -83,19 +83,20 @@ function EditProfilePage() {
   const update = <K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) =>
     setForm((c) => ({ ...c, [key]: value }));
 
-  const handlePhoto = async (file: File) => {
+  const handlePhoto = async (blob: Blob) => {
     if (!userId) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error("Foto deve ter no máximo 5MB");
+    if (blob.size > 5 * 1024 * 1024) return toast.error("Foto deve ter no máximo 5MB");
     setUploading(true);
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { toast.error(upErr.message); setUploading(false); return; }
+    const path = `${userId}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+    if (upErr) { toast.error(upErr.message); setUploading(false); setPendingPhoto(null); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     update("photo_url", pub.publicUrl);
     setUploading(false);
-    toast.success("Foto carregada — não esqueça de salvar");
+    setPendingPhoto(null);
+    toast.success("Foto atualizada — não esqueça de salvar");
   };
+
 
   const save = async () => {
     if (!profileId) return toast.error("Perfil não encontrado");
