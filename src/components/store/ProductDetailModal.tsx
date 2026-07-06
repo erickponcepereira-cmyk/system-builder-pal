@@ -128,6 +128,13 @@ export function ProductDetailModal({
   const totalEstimatedCard = coachGainCard + extraGainCard;
   const totalEstimatedPix = coachGainPix + extraGainPix;
   const [revealCommissions, setRevealCommissions] = useState(false);
+  const gallery = (product.imageUrls && product.imageUrls.length > 0)
+    ? product.imageUrls
+    : (product.imageUrl ? [product.imageUrl] : []);
+  const [imgIdx, setImgIdx] = useState(0);
+  const currentImage = gallery[Math.min(imgIdx, Math.max(0, gallery.length - 1))] || null;
+  const prevImage = () => setImgIdx((i) => (gallery.length ? (i - 1 + gallery.length) % gallery.length : 0));
+  const nextImage = () => setImgIdx((i) => (gallery.length ? (i + 1) % gallery.length : 0));
 
 
   return (
