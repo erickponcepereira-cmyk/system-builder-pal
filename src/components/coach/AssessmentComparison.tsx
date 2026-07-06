@@ -90,6 +90,7 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
   const closeEdit = () => { setEditing(null); setEditForm({}); };
   const saveEdit = async () => {
     if (!editing || !onEdit) return;
+    if (!String(editForm.scaleNumber || "").trim()) return;
     setSavingEdit(true);
     try {
       await onEdit({ ...editing, ...editForm } as FitMindAssessment);
@@ -452,6 +453,16 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
                 type="date"
                 value={(editForm.date || "").slice(0, 10)}
                 onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value ? new Date(e.target.value).toISOString() : f.date }))}
+                style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
+              />
+            </label>
+
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginBottom: 10 }}>
+              <span>Número da balança *</span>
+              <input
+                type="text"
+                value={(editForm.scaleNumber as string | undefined) ?? ""}
+                onChange={(e) => setEditForm((f) => ({ ...f, scaleNumber: e.target.value.slice(0, 50) }))}
                 style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
               />
             </label>
