@@ -144,7 +144,7 @@ export function EvaluateTab() {
     const cached = clientSummaryCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       setClients(cached.clients);
-      await loadChallengeCandidates(coach.id, masterFlag);
+      void loadChallengeCandidates(coach.id, masterFlag);
       return;
     }
 
@@ -201,7 +201,7 @@ export function EvaluateTab() {
     setClients(mappedClients);
 
     // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
-    await loadChallengeCandidates(coach.id, masterFlag);
+    void loadChallengeCandidates(coach.id, masterFlag);
   };
 
   const loadChallengeCandidates = async (coachId: string, master: boolean) => {
@@ -771,13 +771,13 @@ export function EvaluateTab() {
           setClients((current) =>
             current.map((item) =>
               item.id === client.id
-                ? { ...item, assessments: (item.assessments || []).filter((a) => a.id !== assessmentId) }
+                ? { ...item, assessments: (client.assessments || []).filter((a) => a.id !== assessmentId) }
                 : item,
             ),
           );
           toast.success("Avaliação excluída");
           clientSummaryCache.delete(coachInfo.id);
-          await loadClients();
+          fullAssessmentsCacheRef.current.delete(client.id);
         }}
         onEditAssessment={async (updated, client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");
@@ -833,7 +833,9 @@ export function EvaluateTab() {
               : "Avaliação atualizada"
           );
           clientSummaryCache.delete(coachInfo.id);
-          await loadClients();
+          const updatedAssessments = (client.assessments || []).map((item) => (item.id === updated.id ? updated : item));
+          fullAssessmentsCacheRef.current.set(client.id, updatedAssessments);
+          setClients((current) => current.map((item) => item.id === client.id ? { ...item, assessments: updatedAssessments } : item));
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         onCreateGoogleCalendarEvent={async (date, time, clientName, eventName) => {
