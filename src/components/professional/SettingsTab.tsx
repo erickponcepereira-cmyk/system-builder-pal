@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Save, Plus, Trash2, GripVertical, Loader2, Camera, Globe, Instagram } from "lucide-react";
+import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 
 
 interface Props { coachId: string; profileId: string }
