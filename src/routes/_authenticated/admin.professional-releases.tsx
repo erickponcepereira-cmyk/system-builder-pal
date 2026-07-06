@@ -11,8 +11,9 @@ import {
 import { toast } from "sonner";
 import {
   Loader2, CheckCircle2, Circle, Mail, Stethoscope, Settings2,
-  History, ChevronDown, ChevronUp, ClipboardList,
+  History, ChevronDown, ChevronUp, ClipboardList, CreditCard,
 } from "lucide-react";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/admin/professional-releases")({
