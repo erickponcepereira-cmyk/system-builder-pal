@@ -807,7 +807,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         <header className="flex items-center justify-between pt-2">
           <div>
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
-            <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
+            <h1 className="text-2xl font-bold text-foreground">Parceiros & Profissionais</h1>
           </div>
           <button onClick={() => setCartOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card">
             <ShoppingBag className="h-5 w-5 text-muted-foreground" />
