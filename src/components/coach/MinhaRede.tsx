@@ -312,50 +312,158 @@ function AbaProduto({
     ? Math.max(0, +(bd.distributable - bd.cost - bd.platform - bd.nutri).toFixed(2))
     : 0;
 
+  // Buscar/filtrar/recolher
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [filtroSecao, setFiltroSecao] = useState<string>("__all__");
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("__all__");
+
+  const secoes = useMemo(() => {
+    const map = new Map<string, string>();
+    produtos.forEach((p) => { map.set(p.section_name, p.section_name); });
+    return Array.from(map.keys()).sort();
+  }, [produtos]);
+
+  const categorias = useMemo(() => {
+    const map = new Set<string>();
+    produtos.forEach((p) => { if (p.category_name) map.add(p.category_name); });
+    return Array.from(map).sort();
+  }, [produtos]);
+
+  const produtosFiltrados = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return produtos.filter((p) => {
+      if (filtroSecao !== "__all__" && p.section_name !== filtroSecao) return false;
+      if (filtroCategoria !== "__all__" && (p.category_name || "") !== filtroCategoria) return false;
+      if (q && !p.nome.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [produtos, busca, filtroSecao, filtroCategoria]);
+
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Selecionar produto</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {produtos.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setProdutoId(p.id)}
-              className={`flex items-center justify-between px-4 py-3 rounded-xl border text-left transition-all ${
-                produtoId === p.id
-                  ? "border-emerald-500/60 bg-emerald-500/10 shadow-[0_0_14px_rgba(16,185,129,0.1)]"
-                  : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
-              }`}
-            >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${produtoId === p.id ? "bg-emerald-400" : "bg-zinc-600"}`} />
-                {editandoId === p.id ? (
-                  <input
-                    autoFocus
-                    value={nomeTemp}
-                    onChange={(e) => setNomeTemp(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") salvarNome(p.id); if (e.key === "Escape") setEditandoId(null); }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="bg-transparent border-b border-emerald-400 text-sm text-zinc-100 outline-none w-full"
-                  />
-                ) : (
-                  <span className="text-sm text-zinc-200 truncate">{p.nome}</span>
-                )}
+      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+        <button
+          onClick={() => setAberto((v) => !v)}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <Package size={16} className="text-emerald-400 flex-shrink-0" />
+            <div className="text-left min-w-0">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Produto selecionado</p>
+              {produtoSel ? (
+                <p className="text-sm text-zinc-100 font-medium truncate">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border mr-2 ${KIND_META[produtoSel.kind].classes}`}>
+                    {KIND_META[produtoSel.kind].label}
+                  </span>
+                  {produtoSel.nome} <span className="text-zinc-500">· {fmt(produtoSel.preco)}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-zinc-400">Nenhum produto selecionado</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs text-zinc-500">{produtos.length}</span>
+            {aberto ? <ChevronDown size={16} className="text-zinc-400" /> : <ChevronRight size={16} className="text-zinc-400" />}
+          </div>
+        </button>
+
+        {aberto && (
+          <div className="border-t border-white/10 p-3 space-y-3">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar por nome..."
+                className="w-full bg-black/30 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500/40"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <select
+                  value={filtroSecao}
+                  onChange={(e) => setFiltroSecao(e.target.value)}
+                  className="w-full appearance-none bg-black/30 border border-white/10 rounded-lg pl-7 pr-3 py-2 text-xs text-zinc-200 outline-none focus:border-emerald-500/40"
+                >
+                  <option value="__all__">Todas as seções</option>
+                  {secoes.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                <span className="text-sm font-semibold text-zinc-300">{fmt(p.preco)}</span>
-                {editandoId === p.id ? (
-                  <button onClick={(e) => { e.stopPropagation(); salvarNome(p.id); }} className="text-emerald-400"><Check size={13} /></button>
-                ) : (
-                  <button onClick={(e) => { e.stopPropagation(); setEditandoId(p.id); setNomeTemp(p.nome); }} className="text-zinc-500 hover:text-zinc-300">
-                    <Edit3 size={12} />
+              <div className="relative">
+                <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <select
+                  value={filtroCategoria}
+                  onChange={(e) => setFiltroCategoria(e.target.value)}
+                  className="w-full appearance-none bg-black/30 border border-white/10 rounded-lg pl-7 pr-3 py-2 text-xs text-zinc-200 outline-none focus:border-emerald-500/40"
+                >
+                  <option value="__all__">Todas as categorias</option>
+                  {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {produtosFiltrados.length === 0 ? (
+              <div className="text-center py-6 text-xs text-zinc-500">Nenhum produto encontrado</div>
+            ) : (
+              <div className="max-h-[360px] overflow-y-auto pr-1 grid grid-cols-1 gap-2">
+                {produtosFiltrados.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => { setProdutoId(p.id); setAberto(false); }}
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition-all ${
+                      produtoId === p.id
+                        ? "border-emerald-500/60 bg-emerald-500/10"
+                        : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${produtoId === p.id ? "bg-emerald-400" : "bg-zinc-600"}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${KIND_META[p.kind].classes}`}>
+                            {KIND_META[p.kind].label}
+                          </span>
+                          {editandoId === p.id ? (
+                            <input
+                              autoFocus
+                              value={nomeTemp}
+                              onChange={(e) => setNomeTemp(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") salvarNome(p.id); if (e.key === "Escape") setEditandoId(null); }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-transparent border-b border-emerald-400 text-sm text-zinc-100 outline-none flex-1 min-w-0"
+                            />
+                          ) : (
+                            <span className="text-sm text-zinc-200 truncate">{p.nome}</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 mt-0.5 truncate">
+                          {p.section_name}{p.category_name ? ` · ${p.category_name}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className="text-sm font-semibold text-zinc-300">{fmt(p.preco)}</span>
+                      {p.kind === "fitmind" && (
+                        editandoId === p.id ? (
+                          <button onClick={(e) => { e.stopPropagation(); salvarNome(p.id); }} className="text-emerald-400"><Check size={13} /></button>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); setEditandoId(p.id); setNomeTemp(p.nome); }} className="text-zinc-500 hover:text-zinc-300">
+                            <Edit3 size={12} />
+                          </button>
+                        )
+                      )}
+                    </div>
                   </button>
-                )}
+                ))}
               </div>
-            </button>
-          ))}
-        </div>
+            )}
+          </div>
+        )}
       </div>
+
 
       <PayMethodToggle method={payMethod} setMethod={setPayMethod} />
 
