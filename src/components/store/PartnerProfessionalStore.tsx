@@ -477,7 +477,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   {mode === "reseller" && (
                     <button
                       type="button"
-                      onClick={(e) => handleToggleHide("product", productKind, p.id, e)}
+                      onClick={(e) => handleToggleHide("product", pProductKind, p.id, e)}
                       title={productHidden ? "Mostrar para sua rede" : "Ocultar da sua rede"}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
                     >
