@@ -43,6 +43,21 @@ export const listPartnersForApproval = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+export const listPartnerProductsForApproval = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAuthorized(context.userId);
+    const { data, error } = await supabaseAdmin
+      .from("partner_products")
+      .select(
+        "id, partner_id, name, kind, redemption_mode, status, price, image_url, admin_notes, created_at, partners:partners!partner_products_partner_id_fkey(fantasy_name)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
 export const getPartnerDetails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { partnerId: string }) =>
