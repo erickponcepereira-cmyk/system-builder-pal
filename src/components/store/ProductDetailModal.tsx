@@ -151,8 +151,9 @@ export function ProductDetailModal({
         {/* Barra fixa com botão de fechar — sempre visível */}
         <div
           className="flex items-center justify-end border-b border-border/40 bg-card/95 px-3 py-2 backdrop-blur shrink-0"
-          style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+          style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
         >
+
           <button
             type="button"
             onClick={onClose}
