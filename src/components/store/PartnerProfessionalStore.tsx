@@ -370,7 +370,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           )}
 
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {visibleSections.map((s) => {
             const sectionHidden = vis.isHiddenByMe("section", null, s.id);
             return (
@@ -412,7 +412,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={backToSections} className="text-xs text-white/60 hover:text-primary">← Voltar para seções</button>
           <h2 className="text-base font-bold text-white">{currentSection?.name}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {visibleCats.map((c) => (
               <button key={c.id} onClick={() => setActiveCategory(c.id)} className="rounded-2xl border border-white/5 text-left" style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                 <div className="aspect-square w-full bg-white/5">
@@ -435,7 +435,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         <div className="space-y-3">
           <button onClick={() => setActiveCategory(null)} className="text-xs text-white/60 hover:text-primary">← Voltar para {currentSection?.name}</button>
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {items.map((p) => {
               const productHidden = vis.isHiddenByMe("product", productKind, p.id);
               return (
@@ -505,7 +505,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             onClick={(e) => e.stopPropagation()}
             className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
           >
-            <div className="relative aspect-square w-full overflow-hidden rounded-t-2xl bg-muted">
+            <div className="relative mx-auto mt-4 h-[300px] w-[300px] max-w-full overflow-hidden rounded-2xl bg-muted">
               {(selected.image_urls && selected.image_urls.length > 0) || selected.image_url ? (
                 <ProductImageCarousel
                   images={selected.image_urls && selected.image_urls.length ? selected.image_urls : (selected.image_url ? [selected.image_url] : [])}

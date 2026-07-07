@@ -27,10 +27,11 @@ type PublicProfile = {
   services: string;
   specializations: string[];
   cover_url: string | null;
+  public_whatsapp: string;
 };
 
 const EMPTY_PROFILE: PublicProfile = {
-  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [], cover_url: null,
+  headline: "", bio_long: "", instagram: "", website: "", social_links: [], services: "", specializations: [], cover_url: null, public_whatsapp: "",
 };
 
 export function SettingsTab({ coachId, profileId }: Props) {
@@ -54,7 +55,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
       const { data: pubRow } = await supabase
         .from("professional_public_profile" as never)
-        .select("headline,bio_long,instagram,website,social_links,services,specializations,cover_url" as never)
+        .select("headline,bio_long,instagram,website,social_links,services,specializations,cover_url,public_whatsapp" as never)
         .eq("profile_id" as never, profileId as never)
         .maybeSingle();
       if (pubRow) {
@@ -68,6 +69,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
           services: r.services || "",
           specializations: Array.isArray(r.specializations) ? r.specializations : [],
           cover_url: r.cover_url || null,
+          public_whatsapp: r.public_whatsapp || "",
         });
       }
 
@@ -122,6 +124,7 @@ export function SettingsTab({ coachId, profileId }: Props) {
         services: pub.services.slice(0, 2000) || null,
         specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
         cover_url: pub.cover_url,
+        public_whatsapp: pub.public_whatsapp.slice(0, 30) || null,
       } as never, { onConflict: "profile_id" } as never);
     setSaving(false);
     if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
@@ -253,6 +256,16 @@ export function SettingsTab({ coachId, profileId }: Props) {
               <input value={pub.website} onChange={(e) => setPub({ ...pub, website: e.target.value })} placeholder="https://..." className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none" />
             </Field>
           </div>
+
+          <Field label="WhatsApp empresarial público (loja)">
+            <input
+              value={pub.public_whatsapp}
+              onChange={(e) => setPub({ ...pub, public_whatsapp: e.target.value })}
+              placeholder="(00) 00000-0000 — em branco usa o WhatsApp do seu perfil"
+              className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none"
+            />
+            <p className="mt-1 text-[10px] text-white/40">Este número aparece publicamente na loja para os alunos entrarem em contato.</p>
+          </Field>
 
           <div>
             <div className="flex items-center justify-between mb-2">

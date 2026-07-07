@@ -406,12 +406,14 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       const [{ data: profile }, { data: pub }] = await Promise.all([
         supabase.from("profiles").select("name, avatar_url").eq("id", coach.profile_id).maybeSingle(),
         supabase.from("professional_public_profile" as never)
-          .select("headline,bio_long,instagram,website,services,social_links" as never)
+          .select("headline,bio_long,instagram,website,services,social_links,public_whatsapp" as never)
           .eq("profile_id" as never, coach.profile_id as never)
           .maybeSingle(),
       ]);
       if (cancelled || !profile) { if (!cancelled) setDetailProfessional(null); return; }
       const p = (pub as any) || {};
+      // Fallback: use profile.phone when no public whatsapp is set
+      const { data: profPhone } = await supabase.from("profiles").select("phone").eq("id", coach.profile_id).maybeSingle();
       setDetailProfessional({
         name: (profile as any).name || "Profissional",
         avatarUrl: (profile as any).avatar_url || null,
@@ -420,6 +422,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         instagram: p.instagram ?? null,
         website: p.website ?? null,
         services: p.services ?? null,
+        publicWhatsapp: p.public_whatsapp ?? (profPhone as any)?.phone ?? null,
         socialLinks: Array.isArray(p.social_links) ? p.social_links : [],
       });
     })();

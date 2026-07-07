@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingBag, X, Plus, TrendingUp, Instagram, Globe, UserRound, Link as LinkIcon, Eye, EyeOff, ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 
 export interface ProductDetail {
@@ -62,6 +62,7 @@ export interface ProfessionalCard {
   instagram?: string | null;
   website?: string | null;
   services?: string | null;
+  publicWhatsapp?: string | null;
   socialLinks?: Array<{ label?: string; url: string }> | null;
 }
 
@@ -145,7 +146,7 @@ export function ProductDetailModal({
         onClick={(e) => e.stopPropagation()}
         className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
       >
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl bg-muted">
+        <div className="relative mx-auto mt-4 h-[300px] w-[300px] max-w-full overflow-hidden rounded-2xl bg-muted">
           {currentImage ? (
             <img src={currentImage} alt={product.title} className="h-full w-full object-cover transition-opacity" />
           ) : (
@@ -395,8 +396,17 @@ export function ProductDetailModal({
                   <p className="mt-1 whitespace-pre-line text-xs text-foreground/90">{professional.services}</p>
                 </div>
               )}
-              {(professional.instagram || professional.website || (professional.socialLinks?.length ?? 0) > 0) && (
+              {(professional.instagram || professional.website || professional.publicWhatsapp || (professional.socialLinks?.length ?? 0) > 0) && (
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {professional.publicWhatsapp && (
+                    <a
+                      href={`https://wa.me/55${professional.publicWhatsapp.replace(/\D/g, "")}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-green-500/40 bg-green-500/10 px-3 py-1 text-[11px] font-medium text-green-300 hover:bg-green-500/20"
+                    >
+                      <MessageCircle className="h-3 w-3" /> WhatsApp
+                    </a>
+                  )}
                   {professional.instagram && (
                     <a
                       href={professional.instagram.startsWith("http") ? professional.instagram : `https://instagram.com/${professional.instagram.replace(/^@/, "")}`}

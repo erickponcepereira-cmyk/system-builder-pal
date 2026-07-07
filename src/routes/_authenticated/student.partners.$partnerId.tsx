@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/student/partners/$partnerI
 
 interface Partner {
   id: string; fantasy_name: string; description: string | null; photo_url: string | null; cover_url: string | null;
-  whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
+  whatsapp: string | null; public_whatsapp: string | null; instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   free_redeem_policy?: "all" | "one_per_month" | null;
 }
@@ -71,7 +71,8 @@ function PartnerProfilePage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!partner) return <div className="min-h-screen flex flex-col items-center justify-center text-white gap-3" style={{ backgroundColor: "#0A0A0A" }}><p>Parceiro não encontrado.</p><Link to="/student/partners" className="text-primary text-sm">Voltar</Link></div>;
 
-  const waLink = partner.whatsapp ? `https://wa.me/55${partner.whatsapp.replace(/\D/g, "")}` : null;
+  const contactWhats = partner.public_whatsapp || partner.whatsapp;
+  const waLink = contactWhats ? `https://wa.me/55${contactWhats.replace(/\D/g, "")}` : null;
 
   return (
     <div className="min-h-screen pb-20" style={{ backgroundColor: "#0A0A0A" }}>

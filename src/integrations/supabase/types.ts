@@ -5708,6 +5708,7 @@ export type Database = {
           master_coach_commission_pct: number
           photo_url: string | null
           profile_id: string
+          public_whatsapp: string | null
           referral_code: string | null
           referral_link: string | null
           specialty: string | null
@@ -5749,6 +5750,7 @@ export type Database = {
           master_coach_commission_pct?: number
           photo_url?: string | null
           profile_id: string
+          public_whatsapp?: string | null
           referral_code?: string | null
           referral_link?: string | null
           specialty?: string | null
@@ -5790,6 +5792,7 @@ export type Database = {
           master_coach_commission_pct?: number
           photo_url?: string | null
           profile_id?: string
+          public_whatsapp?: string | null
           referral_code?: string | null
           referral_link?: string | null
           specialty?: string | null
@@ -7213,6 +7216,7 @@ export type Database = {
           headline: string | null
           instagram: string | null
           profile_id: string
+          public_whatsapp: string | null
           services: string | null
           social_links: Json
           specializations: string[]
@@ -7226,6 +7230,7 @@ export type Database = {
           headline?: string | null
           instagram?: string | null
           profile_id: string
+          public_whatsapp?: string | null
           services?: string | null
           social_links?: Json
           specializations?: string[]
@@ -7239,6 +7244,7 @@ export type Database = {
           headline?: string | null
           instagram?: string | null
           profile_id?: string
+          public_whatsapp?: string | null
           services?: string | null
           social_links?: Json
           specializations?: string[]

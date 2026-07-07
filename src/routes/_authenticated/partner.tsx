@@ -44,6 +44,7 @@ type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store
 interface Partner {
   id: string; profile_id: string; fantasy_name: string; description: string | null;
   photo_url: string | null; cover_url: string | null; whatsapp: string | null;
+  public_whatsapp: string | null;
   instagram: string | null; facebook: string | null; website: string | null;
   address: string | null; city: string | null; state: string | null;
   status: string; document: string | null; document_type: string | null;
@@ -455,8 +456,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       ...editing,
       ...extra,
       partner_id: partner.id,
-      status: "pending" as const,
-      admin_notes: null,
+      status: (editing.status as string | undefined) || "pending",
+      admin_notes: editing.admin_notes ?? null,
       image_url: (editing.image_urls?.[0] ?? (emptyToNull(editing.image_url) as string | null)) || null,
       image_urls: editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : []),
       description: emptyToNull(editing.description) as string | null,
@@ -620,7 +621,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   onClick={() => {
                     const { id: _id, ...rest } = p;
                     void _id;
-                    setEditing({ ...rest, name: `${p.name} (cópia)`, status: "pending", admin_notes: null, is_active_by_partner: true });
+                    setEditing({ ...rest, name: `${p.name} (cópia)`, status: p.status, admin_notes: p.admin_notes, is_active_by_partner: true });
                   }}
                   className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
                 >
@@ -1374,7 +1375,8 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
         <Field label="Área de atuação"><input className="field-input" placeholder="Ex: Alimentação saudável" value={form.business_area || ""} onChange={e => setForm({ ...form, business_area: e.target.value })} /></Field>
         <Field label="Especialidade"><input className="field-input" placeholder="Ex: Açaí e smoothies" value={form.specialty || ""} onChange={e => setForm({ ...form, specialty: e.target.value })} /></Field>
       </div>
-      <Field label="WhatsApp"><input className="field-input" value={form.whatsapp || ""} onChange={e => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} /></Field>
+      <Field label="WhatsApp (privado — usado internamente)"><input className="field-input" value={form.whatsapp || ""} onChange={e => setForm({ ...form, whatsapp: maskPhone(e.target.value) })} /></Field>
+      <Field label="WhatsApp empresarial público (loja)"><input className="field-input" value={form.public_whatsapp || ""} placeholder="(00) 00000-0000 — em branco usa o privado" onChange={e => setForm({ ...form, public_whatsapp: maskPhone(e.target.value) })} /></Field>
       <Field label="Instagram (@usuario ou URL)"><input className="field-input" value={form.instagram || ""} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
       <Field label="Facebook (URL)"><input className="field-input" value={form.facebook || ""} onChange={e => setForm({ ...form, facebook: e.target.value })} /></Field>
       <Field label="Website"><input className="field-input" value={form.website || ""} onChange={e => setForm({ ...form, website: e.target.value })} /></Field>
