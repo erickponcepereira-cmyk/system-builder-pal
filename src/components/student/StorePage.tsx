@@ -725,8 +725,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     <div className="flex gap-2 rounded-full bg-card p-1">
       {([
         { id: "fitmind", label: "FitMind" },
-        { id: "partner", label: "Parceiros" },
-        { id: "professional", label: "Profissionais" },
+        { id: "market", label: "Parceiros & Profissionais" },
       ] as const).map((t) => (
         <button key={t.id} onClick={() => setStoreTab(t.id)} className={`flex-1 rounded-full px-3 py-1.5 text-xs font-bold transition ${storeTab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
           {t.label}
