@@ -13,31 +13,37 @@ export type CoachGoalsPayload = {
 };
 
 async function resolveCoachId(userId: string, override?: string): Promise<string> {
-  // If override provided, check admin
-  if (override) {
-    const { data: prof } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (prof?.role !== "admin") throw new Error("Apenas admin pode editar metas de outro coach");
-    return override;
-  }
-  // Resolve via profile -> coach
+  // Resolve caller's own coach id via profile -> coach
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("id")
+    .select("id, role")
     .eq("user_id", userId)
     .maybeSingle();
   if (!profile?.id) throw new Error("Perfil não encontrado");
-  const { data: coach } = await supabaseAdmin
+
+  const { data: ownCoach } = await supabaseAdmin
     .from("coaches")
     .select("id")
     .eq("profile_id", profile.id)
     .maybeSingle();
-  if (!coach?.id) throw new Error("Você não está vinculado a um cadastro de coach");
-  return coach.id;
+
+  // If an override was passed and it's the caller's own coach id, treat as self-edit
+  if (override && ownCoach?.id && override === ownCoach.id) {
+    return ownCoach.id;
+  }
+
+  // Override for someone else → requires admin
+  if (override) {
+    if (profile.role !== "admin") {
+      throw new Error("Apenas admin pode editar metas de outro coach");
+    }
+    return override;
+  }
+
+  if (!ownCoach?.id) throw new Error("Você não está vinculado a um cadastro de coach");
+  return ownCoach.id;
 }
+
 
 export const getCoachGoals = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => (d || {}) as { coachId?: string; reference_month?: string })
