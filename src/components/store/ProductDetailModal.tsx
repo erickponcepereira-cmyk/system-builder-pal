@@ -141,13 +141,18 @@ export function ProductDetailModal({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-background/90 p-0 sm:p-4 backdrop-blur-sm"
+      style={{ height: "100dvh" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative flex h-full sm:h-auto max-h-full sm:max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border sm:border-border bg-card"
+        className="relative flex h-full sm:h-auto w-full max-w-lg flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border sm:border-border bg-card sm:max-h-[92vh]"
+        style={{ maxHeight: "100dvh" }}
       >
         {/* Barra fixa com botão de fechar — sempre visível */}
-        <div className="flex items-center justify-end border-b border-border/40 bg-card/95 px-3 py-2 backdrop-blur shrink-0">
+        <div
+          className="flex items-center justify-end border-b border-border/40 bg-card/95 px-3 py-2 backdrop-blur shrink-0"
+          style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+        >
           <button
             type="button"
             onClick={onClose}
@@ -158,7 +163,8 @@ export function ProductDetailModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: "touch" }}>
+
         <div className="relative mx-auto mt-4 aspect-square w-full max-w-[300px] overflow-hidden rounded-2xl bg-muted">
           {currentImage ? (
             <img src={currentImage} alt={product.title} className="h-full w-full object-cover transition-opacity" />
@@ -207,7 +213,7 @@ export function ProductDetailModal({
 
 
 
-        <div className="space-y-4 p-5">
+        <div className="space-y-4 p-5" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
           <div>
             {product.category && (
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
