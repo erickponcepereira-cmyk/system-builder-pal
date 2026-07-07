@@ -115,7 +115,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const [pendingReferrerStudentId, setPendingReferrerStudentId] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
 
-  const [storeTab, setStoreTab] = useState<"fitmind" | "partner" | "professional">("fitmind");
+  const [storeTab, setStoreTab] = useState<"fitmind" | "market">("fitmind");
 
   const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
 
