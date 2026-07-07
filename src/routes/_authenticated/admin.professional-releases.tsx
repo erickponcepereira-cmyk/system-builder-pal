@@ -294,7 +294,9 @@ function ProfessionalReleasesPage() {
                         );
                       })()}
                       {(() => {
-                        const m = MONTHLY_BADGE[r.monthly?.status ?? "none"];
+                        const m = (r.monthly as { reason?: "historic" | null } | undefined)?.reason === "historic"
+                          ? { label: "Isento — profissional histórico", cls: "bg-blue-500/15 text-blue-300" }
+                          : MONTHLY_BADGE[r.monthly?.status ?? "none"];
                         return (
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${m.cls}`}
                             title={r.monthly?.last_invoice_month ? `Últ. fatura: ${new Date(r.monthly.last_invoice_month).toLocaleDateString("pt-BR")} (${r.monthly.last_invoice_status || "—"})` : undefined}>
@@ -302,6 +304,7 @@ function ProfessionalReleasesPage() {
                           </span>
                         );
                       })()}
+
                     </div>
                   </div>
                 </div>

@@ -109,12 +109,20 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
       if (!invMap.has(i.user_id)) invMap.set(i.user_id, i);
     }
     const today = new Date().toISOString().slice(0, 10);
-    const computeMonthly = (uid?: string) => {
-      if (!uid) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+    const computeMonthly = (uid: string | undefined, historic: boolean) => {
+      if (!uid) {
+        return {
+          status: historic ? ("exempt" as const) : ("none" as const),
+          reason: historic ? ("historic" as const) : null,
+          paid_until: null,
+          last_invoice_status: null,
+          last_invoice_month: null,
+        };
+      }
       const sub = subMap.get(uid);
       const inv = invMap.get(uid) || null;
-      if (!sub && !inv) return { status: "none" as const, paid_until: null, last_invoice_status: null, last_invoice_month: null };
       let status: "paid" | "exempt" | "pending" | "overdue" | "blocked" | "cancelled" | "none" = "none";
+      let reason: "historic" | null = null;
       if (sub && (sub.status === "exempt_monthly" || sub.status === "exempt_annual" || sub.status === "exempt_permanent")) status = "exempt";
       else if (inv?.status === "blocked") status = "blocked";
       else if (inv?.status === "overdue") status = "overdue";
@@ -123,8 +131,10 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
       else if (inv?.status === "paid") status = "paid";
       else if (inv?.status === "exempted") status = "exempt";
       else if (inv?.status === "cancelled") status = "cancelled";
+      else if (historic) { status = "exempt"; reason = "historic"; }
       return {
         status,
+        reason,
         paid_until: sub?.paid_until ?? null,
         last_invoice_status: inv?.status ?? null,
         last_invoice_month: inv?.reference_month ?? null,
@@ -137,9 +147,10 @@ export const listAllProfessionalReleases = createServerFn({ method: "GET" })
       professionals: rows.map((r) => ({
         ...r,
         email_confirmed: r.profile?.user_id ? !!confirmedMap.get(r.profile.user_id) : false,
-        monthly: computeMonthly(r.profile?.user_id),
+        monthly: computeMonthly(r.profile?.user_id, r.activation_source === "already_coach" || !!r.already_coach),
       })),
     };
+
   });
 
 

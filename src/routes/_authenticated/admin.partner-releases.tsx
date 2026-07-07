@@ -40,7 +40,7 @@ type Row = {
   documents_reviewed_at: string | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
-  monthly: { status: MonthlyStatus; paid_until: string | null; last_invoice_status: string | null; last_invoice_month: string | null };
+  monthly: { status: MonthlyStatus; reason?: "historic" | null; paid_until: string | null; last_invoice_status: string | null; last_invoice_month: string | null };
 };
 
 type StageFilter = "all" | "email" | "activation" | "documents" | "approval" | "approved";
@@ -223,8 +223,11 @@ function PartnerReleasesPage() {
             const activationDone = !!r.activation_paid_at;
             const docsDone = !!r.documents_reviewed_at;
             const approved = r.status === "approved";
-            const monthly = r.monthly ?? { status: "none" as MonthlyStatus, paid_until: null, last_invoice_status: null, last_invoice_month: null };
-            const mb = MONTHLY_BADGE[monthly.status];
+            const monthly = r.monthly ?? { status: "none" as MonthlyStatus, reason: null, paid_until: null, last_invoice_status: null, last_invoice_month: null };
+            const mb = monthly.reason === "historic"
+              ? { label: "Isento — parceiro histórico", cls: "bg-blue-500/15 text-blue-300" }
+              : MONTHLY_BADGE[monthly.status];
+
 
             return (
               <div key={r.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
