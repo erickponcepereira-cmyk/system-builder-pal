@@ -159,6 +159,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       )
       .eq("status" as never, "approved" as never)
       .eq("is_active_by_professional" as never, true as never)
+      .eq("is_ready_for_sale" as never, true as never)
       .order("created_at" as never, { ascending: false });
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
