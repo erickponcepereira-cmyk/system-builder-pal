@@ -466,7 +466,9 @@ export function ProductDetailModal({
             <Plus className="h-4 w-4" /> {needsSlot && !slot ? "Escolha um horário" : (addLabel || "Adicionar ao carrinho")}
           </button>
         </div>
+        </div>
       </div>
     </div>
   );
 }
+
