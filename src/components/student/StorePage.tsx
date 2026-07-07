@@ -151,16 +151,28 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     const { data: catRows } = await supabase.from("store_categories" as never).select("id,section_id,name,image_url,card_width,card_height" as never).eq("is_active" as never, true as never).order("sort_order" as never);
     setStoreCategories(((catRows as unknown as CategoryRow[]) || []));
 
-    // Produtos de parceiros (profissionais) — apenas aprovados e ativos
-    const { data: partnerRows } = await supabase
-      .from("professional_products" as never)
-      .select(
-        "id,name,description,image_url,price,original_price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
-      )
-      .eq("status" as never, "approved" as never)
-      .eq("is_active_by_professional" as never, true as never)
-      .eq("is_ready_for_sale" as never, true as never)
-      .order("created_at" as never, { ascending: false });
+    // Produtos de parceiros (profissionais) — apenas aprovados e ativos.
+    // Paginamos porque o default do PostgREST é 1000 e já há mais que isso.
+    const PP_PAGE = 1000;
+    const partnerRowsAll: any[] = [];
+    for (let ppFrom = 0; ; ppFrom += PP_PAGE) {
+      const { data: chunk, error: ppErr } = await supabase
+        .from("professional_products" as never)
+        .select(
+          "id,name,description,image_url,price,original_price,is_schedulable,default_duration_minutes,coach:coaches!professional_products_coach_id_fkey(id,specialty_key,profile:profiles!coaches_profile_id_fkey(name))" as never,
+        )
+        .eq("status" as never, "approved" as never)
+        .eq("is_active_by_professional" as never, true as never)
+        .eq("is_ready_for_sale" as never, true as never)
+        .order("created_at" as never, { ascending: false } as never)
+        .range(ppFrom, ppFrom + PP_PAGE - 1);
+      if (ppErr) break;
+      const rows = (chunk as any[]) || [];
+      partnerRowsAll.push(...rows);
+      if (rows.length < PP_PAGE) break;
+      if (ppFrom > 20000) break;
+    }
+    const partnerRows = partnerRowsAll;
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
     const allSections = (sectionsRes.data as unknown as Array<SectionRow & { target_audience?: string | null }>) || [];
