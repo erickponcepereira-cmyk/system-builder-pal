@@ -28,6 +28,7 @@ function BenefitsBadges({ price, compact = false }: { price: number; compact?: b
 }
 
 type Kind = "partner" | "professional" | "market";
+type CardKind = "partner" | "professional";
 
 type Section = { id: string; name: string; image_url: string | null; target_audience?: string | null };
 type Category = { id: string; section_id: string; name: string; image_url: string | null };
@@ -43,7 +44,7 @@ export type PartnerStoreCard = {
   section_id: string | null;
   category_id: string | null;
   seller: string;
-  kind: Kind;
+  kind: CardKind;
   isSchedulable?: boolean;
   professionalCoachId?: string | null;
   durationMinutes?: number;
