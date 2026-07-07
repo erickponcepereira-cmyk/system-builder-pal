@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFromCharge, DEFAULT_PARTNER_FEES } from "@/lib/partnerFinance";
+import { reviewPartnerProduct } from "@/lib/partner-approvals.functions";
 import { toast } from "sonner";
 
 type Kind = "partner_products" | "professional_products";
@@ -11,7 +13,10 @@ interface Props {
   productId: string;
   onClose: () => void;
   onChanged?: () => void;
+  /** When true, use the server function (works for master-of-partnerships coaches without RLS). */
+  useServerReview?: boolean;
 }
+
 
 interface ProductFull {
   id: string;
@@ -39,7 +44,9 @@ interface ProductFull {
 const money = (v: number | null | undefined) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function ProductReviewModal({ table, productId, onClose, onChanged }: Props) {
+export function ProductReviewModal({ table, productId, onClose, onChanged, useServerReview }: Props) {
+  const reviewPartnerProductFn = useServerFn(reviewPartnerProduct);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [product, setProduct] = useState<ProductFull | null>(null);
@@ -84,20 +91,31 @@ export function ProductReviewModal({ table, productId, onClose, onChanged }: Pro
       return;
     }
     setSaving(true);
-    const patch: Record<string, unknown> = { status: decision, admin_notes: note || null };
-    if (decision === "approved" && table === "partner_products") {
-      patch.approved_at = new Date().toISOString();
+    try {
+      if (useServerReview && table === "partner_products") {
+        await reviewPartnerProductFn({ data: { productId, decision, notes: note || undefined } });
+      } else {
+        const patch: Record<string, unknown> = { status: decision, admin_notes: note || null };
+        if (decision === "approved" && table === "partner_products") {
+          patch.approved_at = new Date().toISOString();
+        }
+        const { error } = await supabase
+          .from(table as never)
+          .update(patch as never)
+          .eq("id" as never, productId);
+        if (error) throw new Error(error.message);
+      }
+      toast.success(decision === "approved" ? "Produto aprovado" : "Produto reprovado");
+      onChanged?.();
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao revisar");
+    } finally {
+      setSaving(false);
     }
-    const { error } = await supabase
-      .from(table as never)
-      .update(patch as never)
-      .eq("id" as never, productId);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(decision === "approved" ? "Produto aprovado" : "Produto reprovado");
-    onChanged?.();
-    onClose();
   };
+
+
 
   if (loading || !product) {
     return (
