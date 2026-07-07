@@ -96,8 +96,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const myReferralCode = useMyReferralCode();
   const vis = useStoreVisibility(mode === "reseller");
-  const productKind: HideProductKind = kind === "partner" ? "partner_product" : "professional_product";
-  const vendorType = kind === "partner" ? "vendor_partner" : "vendor_professional";
+  const productKindFor = (ck: CardKind): HideProductKind => (ck === "partner" ? "partner_product" : "professional_product");
+  const vendorTypeFor = (ck: CardKind) => (ck === "partner" ? "vendor_partner" : "vendor_professional") as const;
+  // Retrocompat: quando kind é único, expõe os alvos usados pelo toggle "ocultar todos".
+  const singleCardKind: CardKind | null = kind === "market" ? null : (kind as CardKind);
+  const productKind: HideProductKind = singleCardKind ? productKindFor(singleCardKind) : "professional_product";
+  const vendorType = singleCardKind ? vendorTypeFor(singleCardKind) : "vendor_professional";
 
   const handleToggleHide = async (
     targetType: Parameters<typeof vis.toggleHidden>[0],
