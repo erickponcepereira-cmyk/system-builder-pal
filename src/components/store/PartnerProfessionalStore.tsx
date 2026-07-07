@@ -344,15 +344,17 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   // Itens ocultados por algum upline são SEMPRE removidos (inclusive para coaches downline).
   // Itens ocultados por mim mesmo continuam visíveis (em modo coach) com toggle, para eu poder reexibir.
   const isViewerFilter = mode !== "reseller";
-  const uplineHidesVendor = vis.isHiddenByUpline(vendorType, null, null);
+  const uplineHidesVendor = singleCardKind ? vis.isHiddenByUpline(vendorTypeFor(singleCardKind), null, null) : false;
   const visibleCards = cards.filter((c) => {
-    if (uplineHidesVendor) return false;
+    const cVendor = vendorTypeFor(c.kind);
+    const cProductKind = productKindFor(c.kind);
+    if (vis.isHiddenByUpline(cVendor, null, null)) return false;
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
-    if (vis.isHiddenByUpline("product", productKind, c.id)) return false;
+    if (vis.isHiddenByUpline("product", cProductKind, c.id)) return false;
     if (isViewerFilter) {
-      if (vis.isHiddenForViewer(vendorType, null, null)) return false;
+      if (vis.isHiddenForViewer(cVendor, null, null)) return false;
       if (c.section_id && vis.isHiddenForViewer("section", null, c.section_id)) return false;
-      if (vis.isHiddenForViewer("product", productKind, c.id)) return false;
+      if (vis.isHiddenForViewer("product", cProductKind, c.id)) return false;
     }
     return true;
   });
