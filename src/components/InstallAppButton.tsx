@@ -22,6 +22,12 @@ function detectPlatform(): "ios" | "android" | "desktop" {
   return "desktop";
 }
 
+function isIosSafari() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+}
+
 export function InstallAppButton({ className = "" }: { className?: string }) {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -68,7 +74,7 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
       }
       return;
     }
-    // iOS Safari has no programmatic install — show inline instructions
+    // iOS has no programmatic install prompt — show the Apple-supported flow.
     setShowIosHelp(true);
   };
 
@@ -83,7 +89,7 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
         }
       >
         <Download className="h-4 w-4 text-primary" />
-        Ainda não tem nossa versão app? Baixe agora!
+        {platform === "ios" ? "Instalar FitMind no iPhone" : "Ainda não tem nossa versão app? Baixe agora!"}
       </button>
 
       {showIosHelp && (
@@ -109,9 +115,10 @@ export function InstallAppButton({ className = "" }: { className?: string }) {
             </div>
             {platform === "ios" ? (
               <ol className="space-y-2 text-sm text-white/80">
-                <li>1. Toque no botão <strong>Compartilhar</strong> (ícone de quadrado com seta) na barra inferior do Safari.</li>
-                <li>2. Role e toque em <strong>“Adicionar à Tela de Início”</strong>.</li>
-                <li>3. Confirme em <strong>Adicionar</strong>. Pronto: o app FitMind aparece na sua tela inicial.</li>
+                {!isIosSafari() && <li>1. Abra este site no <strong>Safari</strong> do iPhone.</li>}
+                <li>{isIosSafari() ? "1" : "2"}. Toque no botão <strong>Compartilhar</strong> (quadrado com seta) na barra inferior.</li>
+                <li>{isIosSafari() ? "2" : "3"}. Toque em <strong>“Adicionar à Tela de Início”</strong>.</li>
+                <li>{isIosSafari() ? "3" : "4"}. Confirme em <strong>Adicionar</strong>. No iPhone, esse é o modo de instalar apps web.</li>
               </ol>
             ) : platform === "android" ? (
               <ol className="space-y-2 text-sm text-white/80">
