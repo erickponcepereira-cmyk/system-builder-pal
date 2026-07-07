@@ -213,7 +213,7 @@ export function ProductDetailModal({
 
 
 
-        <div className="space-y-4 p-5">
+        <div className="space-y-4 p-5" style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
           <div>
             {product.category && (
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
