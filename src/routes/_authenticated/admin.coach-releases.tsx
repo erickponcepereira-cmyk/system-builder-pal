@@ -412,7 +412,11 @@ function CoachReleasesPage() {
                     />
                     {(() => {
                       const m = r.monthly ?? { status: "none" as MonthlyStatus, paid_until: null, last_invoice_status: null, last_invoice_month: null };
-                      const b = MONTHLY_BADGE[m.status];
+                      const historic = (m as { reason?: "historic" | null }).reason === "historic";
+                      const b = historic
+                        ? { label: "Isento — coach histórico", cls: "bg-blue-500/15 text-blue-300" }
+                        : MONTHLY_BADGE[m.status];
+
                       const tip = [
                         m.paid_until ? `Paga até ${new Date(m.paid_until).toLocaleDateString("pt-BR")}` : null,
                         m.last_invoice_month ? `Última fatura: ${m.last_invoice_month}${m.last_invoice_status ? ` (${m.last_invoice_status})` : ""}` : null,
