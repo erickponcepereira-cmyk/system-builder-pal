@@ -44,7 +44,9 @@ interface ProductFull {
 const money = (v: number | null | undefined) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function ProductReviewModal({ table, productId, onClose, onChanged }: Props) {
+export function ProductReviewModal({ table, productId, onClose, onChanged, useServerReview }: Props) {
+  const reviewPartnerProductFn = useServerFn(reviewPartnerProduct);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [product, setProduct] = useState<ProductFull | null>(null);
