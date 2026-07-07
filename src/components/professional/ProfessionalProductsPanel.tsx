@@ -138,8 +138,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     let payload: Record<string, unknown> = {
       ...editing,
       coach_id: coachId,
-      status: "pending" as const,
-      admin_notes: null,
+      status: (editing.status as string | undefined) || "pending",
+      admin_notes: (editing as { admin_notes?: string | null }).admin_notes ?? null,
       image_url: (editing.image_urls?.[0] ?? (emptyToNull(editing.image_url) as string | null)) || null,
       image_urls: editing.image_urls?.length ? editing.image_urls : (editing.image_url ? [editing.image_url] : []),
       description: emptyToNull(editing.description) as string | null,
