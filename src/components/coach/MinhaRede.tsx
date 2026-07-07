@@ -666,6 +666,11 @@ export function MinhaRede() {
         const mapped: ProdutoT[] = (list ?? []).map((p: any) => ({
           id: p.id,
           nome: p.name,
+          kind:                    (p.kind ?? "fitmind") as ProdutoKind,
+          section_id:              p.section_id ?? null,
+          section_name:            p.section_name ?? (p.kind === "partner" ? "Parceiro" : p.kind === "professional" ? "Profissional" : "FitMind"),
+          category_id:             p.category_id ?? null,
+          category_name:           p.category_name ?? null,
           preco: Number(p.price ?? 0),
           pix_fee_pct:             Number(p.pix_fee_pct ?? p.pix_fee_percentage ?? 0.99),
           card_fee_pct:            Number(p.card_fee_pct ?? p.card_fee_percentage ?? 4.98),
@@ -689,6 +694,7 @@ export function MinhaRede() {
           product_cost_slots:      Number(p.product_cost_slots ?? 0),
           nutritionist_fee:        Number(p.nutritionist_fee ?? 0),
         }));
+
         setProdutos(mapped);
         if (mapped.length > 0) setProdutoId(mapped[0].id);
       } catch (e) {
