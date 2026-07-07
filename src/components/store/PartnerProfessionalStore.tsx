@@ -186,17 +186,27 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       };
 
       const fetchProfessionals = async (): Promise<PartnerStoreCard[]> => {
-        const { data, error } = await supabase
-          .from("professional_products" as never)
-          .select(
-            "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
-          )
-          .eq("status" as never, "approved")
-          .eq("is_active_by_professional" as never, true)
-          .eq("is_ready_for_sale" as never, true as never)
-          .limit(1000);
-        if (error) console.error("[pp store]", error);
-        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
+        // Paginação: o limite default do PostgREST é 1000; buscamos em lotes até esgotar.
+        const PAGE = 1000;
+        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await supabase
+            .from("professional_products" as never)
+            .select(
+              "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+            )
+            .eq("status" as never, "approved")
+            .eq("is_active_by_professional" as never, true)
+            .eq("is_ready_for_sale" as never, true as never)
+            .order("created_at" as never, { ascending: false } as never)
+            .range(from, from + PAGE - 1);
+          if (error) { console.error("[pp store]", error); break; }
+          const rows = (data as unknown as typeof all) || [];
+          all.push(...rows);
+          if (rows.length < PAGE) break;
+          if (from > 20000) break; // safety
+        }
+        return all.map((r) => ({
           id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
           section_id: r.section_id, category_id: r.category_id,
           seller: r.coaches?.profile?.name || "Profissional",
