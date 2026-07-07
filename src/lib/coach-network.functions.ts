@@ -3,7 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-client-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { calculateDistribution, type ValueSlot, type PaymentFeeConfig } from "@/lib/financialEngine";
+import { computeFromCharge, DEFAULT_PARTNER_FEES, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { z } from "zod";
+
 
 
 async function resolveCoachId(userId: string): Promise<string> {
