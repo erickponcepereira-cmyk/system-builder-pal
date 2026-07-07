@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { computeFromCharge, DEFAULT_PARTNER_FEES } from "@/lib/partnerFinance";
+import { reviewPartnerProduct } from "@/lib/partner-approvals.functions";
 import { toast } from "sonner";
 
 type Kind = "partner_products" | "professional_products";
@@ -11,7 +13,10 @@ interface Props {
   productId: string;
   onClose: () => void;
   onChanged?: () => void;
+  /** When true, use the server function (works for master-of-partnerships coaches without RLS). */
+  useServerReview?: boolean;
 }
+
 
 interface ProductFull {
   id: string;
