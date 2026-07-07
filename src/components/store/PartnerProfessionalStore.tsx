@@ -148,8 +148,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         supabase.from("store_sections").select("id,name,image_url,target_audience").eq("is_active", true).order("sort_order"),
         supabase.from("store_categories").select("id,section_id,name,image_url").eq("is_active", true).order("sort_order"),
       ]);
-      // Mostra apenas seções sem audiência definida ou marcadas para este tipo (parceiro/profissional)
-      const filteredSections = ((s as Section[]) || []).filter((x) => !x.target_audience || x.target_audience === kind);
+      // Mostra apenas seções sem audiência definida ou marcadas para os tipos ativos.
+      const audiences: string[] = kind === "market" ? ["partner", "professional"] : [kind];
+      const filteredSections = ((s as Section[]) || []).filter((x) => !x.target_audience || audiences.includes(x.target_audience));
       setSections(filteredSections);
       setCategories((c as Category[]) || []);
 
@@ -164,7 +165,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         }
       }
 
-      if (kind === "partner") {
+      const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("partner_products" as never)
           .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
@@ -172,18 +173,19 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
           .eq("is_ready_for_sale" as never, true as never)
-          .is("deleted_at" as never, null as never);
+          .is("deleted_at" as never, null as never)
+          .limit(1000);
         if (error) console.error("[partner store]", error);
-        setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
-            section_id: r.section_id, category_id: r.category_id,
-            seller: r.partners?.fantasy_name || "Parceiro",
-            kind: "partner",
-            coachCommissionPct: r.coach_commission_percentage ?? null,
-          })),
-        );
-      } else {
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
+          id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
+          section_id: r.section_id, category_id: r.category_id,
+          seller: r.partners?.fantasy_name || "Parceiro",
+          kind: "partner" as const,
+          coachCommissionPct: r.coach_commission_percentage ?? null,
+        }));
+      };
+
+      const fetchProfessionals = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("professional_products" as never)
           .select(
@@ -191,21 +193,29 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           )
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true)
-          .eq("is_ready_for_sale" as never, true as never);
+          .eq("is_ready_for_sale" as never, true as never)
+          .limit(1000);
         if (error) console.error("[pp store]", error);
-        setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
-            section_id: r.section_id, category_id: r.category_id,
-            seller: r.coaches?.profile?.name || "Profissional",
-            kind: "professional",
-            isSchedulable: !!r.is_schedulable,
-            professionalCoachId: r.coach_id,
-            durationMinutes: r.default_duration_minutes ?? 30,
-            coachCommissionPct: r.coach_commission_percentage ?? null,
-          })),
-        );
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
+          id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
+          section_id: r.section_id, category_id: r.category_id,
+          seller: r.coaches?.profile?.name || "Profissional",
+          kind: "professional" as const,
+          isSchedulable: !!r.is_schedulable,
+          professionalCoachId: r.coach_id,
+          durationMinutes: r.default_duration_minutes ?? 30,
+          coachCommissionPct: r.coach_commission_percentage ?? null,
+        }));
+      };
+
+      let merged: PartnerStoreCard[] = [];
+      if (kind === "partner") merged = await fetchPartners();
+      else if (kind === "professional") merged = await fetchProfessionals();
+      else {
+        const [a, b] = await Promise.all([fetchPartners(), fetchProfessionals()]);
+        merged = [...a, ...b];
       }
+      setCards(merged);
       setLoading(false);
     })();
   }, [kind, mode]);
