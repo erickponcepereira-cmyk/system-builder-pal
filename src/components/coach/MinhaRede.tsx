@@ -21,9 +21,15 @@ type PayMethod = "pix" | "card";
 
 type NodeT = { id: string; nome: string; vendas: number; parentId: string | null };
 type NodesMap = Record<string, NodeT>;
+type ProdutoKind = "fitmind" | "partner" | "professional";
 type ProdutoT = {
   id: string;
   nome: string;
+  kind: ProdutoKind;
+  section_id: string | null;
+  section_name: string;
+  category_id: string | null;
+  category_name: string | null;
   preco: number;
   pix_fee_pct: number;
   card_fee_pct: number;
@@ -47,6 +53,13 @@ type ProdutoT = {
   product_cost_slots: number;
   nutritionist_fee: number;
 };
+
+const KIND_META: Record<ProdutoKind, { label: string; classes: string }> = {
+  fitmind:      { label: "FitMind",      classes: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
+  partner:      { label: "Parceiro",     classes: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
+  professional: { label: "Profissional", classes: "bg-sky-500/15 text-sky-300 border-sky-500/30" },
+};
+
 
 // ─── SELETORES POR MÉTODO ───────────────────────────────────────────
 function getCoachCommission(p: ProdutoT, method: PayMethod) {
