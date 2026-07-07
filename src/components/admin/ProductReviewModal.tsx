@@ -91,20 +91,31 @@ export function ProductReviewModal({ table, productId, onClose, onChanged, useSe
       return;
     }
     setSaving(true);
-    const patch: Record<string, unknown> = { status: decision, admin_notes: note || null };
-    if (decision === "approved" && table === "partner_products") {
-      patch.approved_at = new Date().toISOString();
+    try {
+      if (useServerReview && table === "partner_products") {
+        await reviewPartnerProductFn({ data: { productId, decision, notes: note || undefined } });
+      } else {
+        const patch: Record<string, unknown> = { status: decision, admin_notes: note || null };
+        if (decision === "approved" && table === "partner_products") {
+          patch.approved_at = new Date().toISOString();
+        }
+        const { error } = await supabase
+          .from(table as never)
+          .update(patch as never)
+          .eq("id" as never, productId);
+        if (error) throw new Error(error.message);
+      }
+      toast.success(decision === "approved" ? "Produto aprovado" : "Produto reprovado");
+      onChanged?.();
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao revisar");
+    } finally {
+      setSaving(false);
     }
-    const { error } = await supabase
-      .from(table as never)
-      .update(patch as never)
-      .eq("id" as never, productId);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(decision === "approved" ? "Produto aprovado" : "Produto reprovado");
-    onChanged?.();
-    onClose();
   };
+
+
 
   if (loading || !product) {
     return (
