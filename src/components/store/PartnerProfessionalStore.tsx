@@ -166,6 +166,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
+          .eq("is_ready_for_sale" as never, true as never)
           .is("deleted_at" as never, null as never);
         if (error) console.error("[partner store]", error);
         setCards(
