@@ -27,7 +27,7 @@ function BenefitsBadges({ price, compact = false }: { price: number; compact?: b
   );
 }
 
-type Kind = "partner" | "professional";
+type Kind = "partner" | "professional" | "market";
 
 type Section = { id: string; name: string; image_url: string | null; target_audience?: string | null };
 type Category = { id: string; section_id: string; name: string; image_url: string | null };
