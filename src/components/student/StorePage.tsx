@@ -374,8 +374,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
     } catch { /* ignore */ }
     if (!pendingId) return;
-    if (pendingKind === "partner" && storeTab !== "partner") { setStoreTab("partner"); return; }
-    if (pendingKind === "professional" && storeTab !== "professional") { setStoreTab("professional"); return; }
+    if ((pendingKind === "partner" || pendingKind === "professional") && storeTab !== "market") { setStoreTab("market"); return; }
     if ((!pendingKind || pendingKind === "challenge") && storeTab !== "fitmind") { setStoreTab("fitmind"); return; }
     if (storeTab === "fitmind" && items.length) {
       const match = items.find((it) => it.sourceId === pendingId);
