@@ -40,7 +40,7 @@ type Row = {
   documents_reviewed_at: string | null;
   email_confirmed: boolean;
   profile: { id: string; name?: string; email?: string; phone?: string } | null;
-  monthly: { status: MonthlyStatus; paid_until: string | null; last_invoice_status: string | null; last_invoice_month: string | null };
+  monthly: { status: MonthlyStatus; reason?: "historic" | null; paid_until: string | null; last_invoice_status: string | null; last_invoice_month: string | null };
 };
 
 type StageFilter = "all" | "email" | "activation" | "documents" | "approval" | "approved";
