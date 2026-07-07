@@ -140,13 +140,26 @@ export function ProductDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-background/90 p-0 sm:p-4 backdrop-blur-sm"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card"
+        className="relative flex h-full sm:h-auto max-h-full sm:max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border sm:border-border bg-card"
       >
-        <div className="relative mx-auto mt-4 h-[300px] w-[300px] max-w-full overflow-hidden rounded-2xl bg-muted">
+        {/* Barra fixa com botão de fechar — sempre visível */}
+        <div className="flex items-center justify-end border-b border-border/40 bg-card/95 px-3 py-2 backdrop-blur shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground hover:bg-muted/80"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+        <div className="relative mx-auto mt-4 aspect-square w-full max-w-[300px] overflow-hidden rounded-2xl bg-muted">
           {currentImage ? (
             <img src={currentImage} alt={product.title} className="h-full w-full object-cover transition-opacity" />
           ) : (
@@ -185,18 +198,13 @@ export function ProductDetailModal({
               </div>
             </>
           )}
-          <button
-            onClick={onClose}
-            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
-          >
-            <X className="h-4 w-4" />
-          </button>
           {product.tag && (
             <span className="absolute left-3 top-3 rounded-full bg-primary px-3 py-1 text-[10px] font-bold text-primary-foreground">
               {product.tag}
             </span>
           )}
         </div>
+
 
 
         <div className="space-y-4 p-5">
@@ -458,7 +466,9 @@ export function ProductDetailModal({
             <Plus className="h-4 w-4" /> {needsSlot && !slot ? "Escolha um horário" : (addLabel || "Adicionar ao carrinho")}
           </button>
         </div>
+        </div>
       </div>
     </div>
   );
 }
+
