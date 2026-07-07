@@ -456,7 +456,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {items.map((p) => {
-              const productHidden = vis.isHiddenByMe("product", productKind, p.id);
+              const pProductKind = productKindFor(p.kind);
+              const productHidden = vis.isHiddenByMe("product", pProductKind, p.id);
               return (
               <div key={p.id} className="relative">
                 <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
