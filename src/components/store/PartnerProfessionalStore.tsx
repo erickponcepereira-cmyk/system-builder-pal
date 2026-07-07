@@ -97,7 +97,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const myReferralCode = useMyReferralCode();
   const vis = useStoreVisibility(mode === "reseller");
   const productKindFor = (ck: CardKind): HideProductKind => (ck === "partner" ? "partner_product" : "professional_product");
-  const vendorTypeFor = (ck: CardKind) => (ck === "partner" ? "vendor_partner" : "vendor_professional") as const;
+  const vendorTypeFor = (ck: CardKind) => ck === "partner" ? "vendor_partner" as const : "vendor_professional" as const;
   // Retrocompat: quando kind é único, expõe os alvos usados pelo toggle "ocultar todos".
   const singleCardKind: CardKind | null = kind === "market" ? null : (kind as CardKind);
   const productKind: HideProductKind = singleCardKind ? productKindFor(singleCardKind) : "professional_product";
