@@ -27,7 +27,8 @@ function BenefitsBadges({ price, compact = false }: { price: number; compact?: b
   );
 }
 
-type Kind = "partner" | "professional";
+type Kind = "partner" | "professional" | "market";
+type CardKind = "partner" | "professional";
 
 type Section = { id: string; name: string; image_url: string | null; target_audience?: string | null };
 type Category = { id: string; section_id: string; name: string; image_url: string | null };
@@ -43,7 +44,7 @@ export type PartnerStoreCard = {
   section_id: string | null;
   category_id: string | null;
   seller: string;
-  kind: Kind;
+  kind: CardKind;
   isSchedulable?: boolean;
   professionalCoachId?: string | null;
   durationMinutes?: number;
@@ -95,8 +96,12 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
   const myReferralCode = useMyReferralCode();
   const vis = useStoreVisibility(mode === "reseller");
-  const productKind: HideProductKind = kind === "partner" ? "partner_product" : "professional_product";
-  const vendorType = kind === "partner" ? "vendor_partner" : "vendor_professional";
+  const productKindFor = (ck: CardKind): HideProductKind => (ck === "partner" ? "partner_product" : "professional_product");
+  const vendorTypeFor = (ck: CardKind) => ck === "partner" ? "vendor_partner" as const : "vendor_professional" as const;
+  // Retrocompat: quando kind é único, expõe os alvos usados pelo toggle "ocultar todos".
+  const singleCardKind: CardKind | null = kind === "market" ? null : (kind as CardKind);
+  const productKind: HideProductKind = singleCardKind ? productKindFor(singleCardKind) : "professional_product";
+  const vendorType = singleCardKind ? vendorTypeFor(singleCardKind) : "vendor_professional";
 
   const handleToggleHide = async (
     targetType: Parameters<typeof vis.toggleHidden>[0],
@@ -143,8 +148,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         supabase.from("store_sections").select("id,name,image_url,target_audience").eq("is_active", true).order("sort_order"),
         supabase.from("store_categories").select("id,section_id,name,image_url").eq("is_active", true).order("sort_order"),
       ]);
-      // Mostra apenas seções sem audiência definida ou marcadas para este tipo (parceiro/profissional)
-      const filteredSections = ((s as Section[]) || []).filter((x) => !x.target_audience || x.target_audience === kind);
+      // Mostra apenas seções sem audiência definida ou marcadas para os tipos ativos.
+      const audiences: string[] = kind === "market" ? ["partner", "professional"] : [kind];
+      const filteredSections = ((s as Section[]) || []).filter((x) => !x.target_audience || audiences.includes(x.target_audience));
       setSections(filteredSections);
       setCategories((c as Category[]) || []);
 
@@ -159,7 +165,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         }
       }
 
-      if (kind === "partner") {
+      const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("partner_products" as never)
           .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
@@ -167,18 +173,19 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
           .eq("is_ready_for_sale" as never, true as never)
-          .is("deleted_at" as never, null as never);
+          .is("deleted_at" as never, null as never)
+          .limit(1000);
         if (error) console.error("[partner store]", error);
-        setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
-            section_id: r.section_id, category_id: r.category_id,
-            seller: r.partners?.fantasy_name || "Parceiro",
-            kind: "partner",
-            coachCommissionPct: r.coach_commission_percentage ?? null,
-          })),
-        );
-      } else {
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
+          id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
+          section_id: r.section_id, category_id: r.category_id,
+          seller: r.partners?.fantasy_name || "Parceiro",
+          kind: "partner" as const,
+          coachCommissionPct: r.coach_commission_percentage ?? null,
+        }));
+      };
+
+      const fetchProfessionals = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("professional_products" as never)
           .select(
@@ -186,21 +193,29 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           )
           .eq("status" as never, "approved")
           .eq("is_active_by_professional" as never, true)
-          .eq("is_ready_for_sale" as never, true as never);
+          .eq("is_ready_for_sale" as never, true as never)
+          .limit(1000);
         if (error) console.error("[pp store]", error);
-        setCards(
-          ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
-            id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
-            section_id: r.section_id, category_id: r.category_id,
-            seller: r.coaches?.profile?.name || "Profissional",
-            kind: "professional",
-            isSchedulable: !!r.is_schedulable,
-            professionalCoachId: r.coach_id,
-            durationMinutes: r.default_duration_minutes ?? 30,
-            coachCommissionPct: r.coach_commission_percentage ?? null,
-          })),
-        );
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
+          id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
+          section_id: r.section_id, category_id: r.category_id,
+          seller: r.coaches?.profile?.name || "Profissional",
+          kind: "professional" as const,
+          isSchedulable: !!r.is_schedulable,
+          professionalCoachId: r.coach_id,
+          durationMinutes: r.default_duration_minutes ?? 30,
+          coachCommissionPct: r.coach_commission_percentage ?? null,
+        }));
+      };
+
+      let merged: PartnerStoreCard[] = [];
+      if (kind === "partner") merged = await fetchPartners();
+      else if (kind === "professional") merged = await fetchProfessionals();
+      else {
+        const [a, b] = await Promise.all([fetchPartners(), fetchProfessionals()]);
+        merged = [...a, ...b];
       }
+      setCards(merged);
       setLoading(false);
     })();
   }, [kind, mode]);
@@ -329,15 +344,17 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   // Itens ocultados por algum upline são SEMPRE removidos (inclusive para coaches downline).
   // Itens ocultados por mim mesmo continuam visíveis (em modo coach) com toggle, para eu poder reexibir.
   const isViewerFilter = mode !== "reseller";
-  const uplineHidesVendor = vis.isHiddenByUpline(vendorType, null, null);
+  const uplineHidesVendor = singleCardKind ? vis.isHiddenByUpline(vendorTypeFor(singleCardKind), null, null) : false;
   const visibleCards = cards.filter((c) => {
-    if (uplineHidesVendor) return false;
+    const cVendor = vendorTypeFor(c.kind);
+    const cProductKind = productKindFor(c.kind);
+    if (vis.isHiddenByUpline(cVendor, null, null)) return false;
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
-    if (vis.isHiddenByUpline("product", productKind, c.id)) return false;
+    if (vis.isHiddenByUpline("product", cProductKind, c.id)) return false;
     if (isViewerFilter) {
-      if (vis.isHiddenForViewer(vendorType, null, null)) return false;
+      if (vis.isHiddenForViewer(cVendor, null, null)) return false;
       if (c.section_id && vis.isHiddenForViewer("section", null, c.section_id)) return false;
-      if (vis.isHiddenForViewer("product", productKind, c.id)) return false;
+      if (vis.isHiddenForViewer("product", cProductKind, c.id)) return false;
     }
     return true;
   });
@@ -355,7 +372,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-white">Seções</h2>
-          {mode === "reseller" && !uplineHidesVendor && (
+          {mode === "reseller" && singleCardKind && !uplineHidesVendor && (
             <button
               type="button"
               onClick={() => handleToggleHide(vendorType, null, null)}
@@ -363,11 +380,11 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
               title="Ocultar/exibir todos os produtos deste tipo para sua rede"
             >
               {vis.isHiddenByMe(vendorType, null, null)
-                ? `✓ Mostrar todos (${kind === "partner" ? "parceiros" : "profissionais"})`
-                : `Ocultar todos (${kind === "partner" ? "parceiros" : "profissionais"}) da rede`}
+                ? `✓ Mostrar todos (${singleCardKind === "partner" ? "parceiros" : "profissionais"})`
+                : `Ocultar todos (${singleCardKind === "partner" ? "parceiros" : "profissionais"}) da rede`}
             </button>
           )}
-          {mode === "reseller" && uplineHidesVendor && (
+          {mode === "reseller" && singleCardKind && uplineHidesVendor && (
             <span className="text-[11px] rounded-full border border-white/10 px-3 py-1 text-white/40">Bloqueado pelo seu upline</span>
           )}
 
@@ -439,7 +456,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           <h2 className="text-base font-bold text-white">{currentCat?.name}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {items.map((p) => {
-              const productHidden = vis.isHiddenByMe("product", productKind, p.id);
+              const pProductKind = productKindFor(p.kind);
+              const productHidden = vis.isHiddenByMe("product", pProductKind, p.id);
               return (
               <div key={p.id} className="relative">
                 <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
@@ -459,7 +477,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   {mode === "reseller" && (
                     <button
                       type="button"
-                      onClick={(e) => handleToggleHide("product", productKind, p.id, e)}
+                      onClick={(e) => handleToggleHide("product", pProductKind, p.id, e)}
                       title={productHidden ? "Mostrar para sua rede" : "Ocultar da sua rede"}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-lg hover:bg-black"
                     >

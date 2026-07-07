@@ -115,7 +115,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const [pendingReferrerStudentId, setPendingReferrerStudentId] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
 
-  const [storeTab, setStoreTab] = useState<"fitmind" | "partner" | "professional">("fitmind");
+  const [storeTab, setStoreTab] = useState<"fitmind" | "market">("fitmind");
 
   const fetchRealEarnings = useServerFn(listProductsWithRealEarnings);
 
@@ -374,8 +374,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       pendingKind = sessionStorage.getItem("fitmind_pending_product_kind");
     } catch { /* ignore */ }
     if (!pendingId) return;
-    if (pendingKind === "partner" && storeTab !== "partner") { setStoreTab("partner"); return; }
-    if (pendingKind === "professional" && storeTab !== "professional") { setStoreTab("professional"); return; }
+    if ((pendingKind === "partner" || pendingKind === "professional") && storeTab !== "market") { setStoreTab("market"); return; }
     if ((!pendingKind || pendingKind === "challenge") && storeTab !== "fitmind") { setStoreTab("fitmind"); return; }
     if (storeTab === "fitmind" && items.length) {
       const match = items.find((it) => it.sourceId === pendingId);
@@ -726,8 +725,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     <div className="flex gap-2 rounded-full bg-card p-1">
       {([
         { id: "fitmind", label: "FitMind" },
-        { id: "partner", label: "Parceiros" },
-        { id: "professional", label: "Profissionais" },
+        { id: "market", label: "Parceiros & Profissionais" },
       ] as const).map((t) => (
         <button key={t.id} onClick={() => setStoreTab(t.id)} className={`flex-1 rounded-full px-3 py-1.5 text-xs font-bold transition ${storeTab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
           {t.label}
@@ -809,7 +807,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         <header className="flex items-center justify-between pt-2">
           <div>
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Loja</p>
-            <h1 className="text-2xl font-bold text-foreground">{storeTab === "partner" ? "Produtos de Parceiros" : "Produtos de Profissionais"}</h1>
+            <h1 className="text-2xl font-bold text-foreground">Parceiros & Profissionais</h1>
           </div>
           <button onClick={() => setCartOpen(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-card">
             <ShoppingBag className="h-5 w-5 text-muted-foreground" />
