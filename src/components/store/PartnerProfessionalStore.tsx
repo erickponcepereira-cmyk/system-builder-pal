@@ -185,7 +185,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
           )
           .eq("status" as never, "approved")
-          .eq("is_active_by_professional" as never, true);
+          .eq("is_active_by_professional" as never, true)
+          .eq("is_ready_for_sale" as never, true as never);
         if (error) console.error("[pp store]", error);
         setCards(
           ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }>) || []).map((r) => ({
