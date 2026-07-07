@@ -125,12 +125,54 @@ function AdminSubscriptionsPage() {
 
       {tab === "invoices" && (
         <>
-          <div className="mb-3 flex gap-2">
+          {(() => {
+            const blocking = invs.filter((i) => i.status === "blocked" || i.status === "overdue");
+            if (!blocking.length) return null;
+            const blockedCount = blocking.filter((i) => i.status === "blocked").length;
+            return (
+              <div className="mb-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-red-300">
+                      {blocking.length} fatura(s) em aberto — {blockedCount} bloqueando acesso ao sistema
+                    </p>
+                    <p className="text-xs text-red-200/70">
+                      Faturas com status "Atrasada" viram "Bloqueado" após os dias de carência configurados no plano.
+                    </p>
+                  </div>
+                  <button onClick={() => setFilterStatus("blocked")}
+                    className="rounded bg-red-600 px-3 py-1.5 text-xs font-bold whitespace-nowrap">
+                    Ver bloqueadas
+                  </button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {blocking.slice(0, 20).map((i) => (
+                    <span key={i.id} className="rounded bg-white/5 px-2 py-1 text-xs text-white/80">
+                      {i.profile?.name ?? i.profile?.email ?? i.user_id.slice(0, 8)} · {fmtMonth(i.reference_month)} · {STATUS_LABEL[i.status]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+          <div className="mb-3 flex flex-wrap gap-2">
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
               className="rounded bg-white/5 px-3 py-1 text-sm">
               <option value="">Todos os status</option>
               {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
+            {[
+              ["", "Todas"],
+              ["pending", "Pendentes"],
+              ["overdue", "Atrasadas"],
+              ["blocked", "Bloqueando acesso"],
+              ["paid", "Pagas"],
+            ].map(([k, l]) => (
+              <button key={k} onClick={() => setFilterStatus(k)}
+                className={`rounded px-3 py-1 text-xs font-medium ${filterStatus === k ? "bg-primary text-white" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+                {l}
+              </button>
+            ))}
           </div>
           <div className="overflow-x-auto rounded-xl border border-white/10">
             <table className="w-full text-sm">
