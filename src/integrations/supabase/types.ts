@@ -6096,6 +6096,51 @@ export type Database = {
         }
         Relationships: []
       }
+      product_coproduction_credits: {
+        Row: {
+          amount_brl: number
+          collaborator_id: string
+          collaborator_type: string
+          coproduction_id: string
+          created_at: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          amount_brl: number
+          collaborator_id: string
+          collaborator_type: string
+          coproduction_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          amount_brl?: number
+          collaborator_id?: string
+          collaborator_type?: string
+          coproduction_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_coproduction_credits_coproduction_id_fkey"
+            columns: ["coproduction_id"]
+            isOneToOne: false
+            referencedRelation: "product_coproductions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_coproduction_credits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_coproductions: {
         Row: {
           collaborator_id: string
