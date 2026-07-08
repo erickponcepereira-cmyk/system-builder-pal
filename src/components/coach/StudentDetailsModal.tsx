@@ -396,7 +396,7 @@ export default function StudentDetailsModal({ studentId, onClose, initialTab = "
                 <>
                   {bodyAssess.length > 0 && (
                     <div>
-                      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">FitMindShape / Bioimpedância (coach)</p>
+                      <p className="mb-2 text-[10px] uppercase tracking-wide text-white/40">FitMind Diagnóstico 360 / Bioimpedância (coach)</p>
                       <div className="space-y-2">
                         {bodyAssess.map((a) => (
                           <div key={a.id} className="rounded-xl border border-white/5 p-3" style={{ backgroundColor: "#0F0F0F" }}>

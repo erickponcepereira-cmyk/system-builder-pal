@@ -591,7 +591,7 @@ export function ChallengeTab({ coachId }: Props) {
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Link do resultado FitMindShape (opcional)</label>
+              <label className="text-xs text-muted-foreground">Link do resultado FitMind Diagnóstico 360 (opcional)</label>
               <input type="url" placeholder="https://..." value={shareUrl}
                 onChange={e => setShareUrl(e.target.value)}
                 className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />

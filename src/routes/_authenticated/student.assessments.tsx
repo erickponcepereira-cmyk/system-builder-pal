@@ -121,7 +121,7 @@ function MyAssessmentsPage() {
         ) : rows.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center">
             <Activity className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Você ainda não possui avaliações registradas. Peça ao seu coach para realizar a bioimpedância no FitMindShape.</p>
+            <p className="text-sm text-muted-foreground">Você ainda não possui avaliações registradas. Peça ao seu coach para realizar a bioimpedância no FitMind Diagnóstico 360.</p>
           </div>
         ) : (
           <>

@@ -693,7 +693,7 @@ export function EvaluateTab() {
               Vinculado ao Desafio FitMind · {challengeLink.compLabel} · Pesagem {challengeLink.type === "initial" ? "Inicial" : "Final"}
             </p>
             <p className="text-muted-foreground text-xs mt-0.5">
-              Aluno: <b>{challengeLink.studentName}</b>. Selecione esse aluno na lista do FitMindShape e finalize a avaliação — peso, % gordura e link compartilhável serão salvos automaticamente no desafio.
+              Aluno: <b>{challengeLink.studentName}</b>. Selecione esse aluno na lista do FitMind Diagnóstico 360 e finalize a avaliação — peso, % gordura e link compartilhável serão salvos automaticamente no desafio.
             </p>
           </div>
           <button onClick={() => setChallengeLink(null)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
