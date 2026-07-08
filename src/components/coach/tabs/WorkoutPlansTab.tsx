@@ -63,14 +63,26 @@ export function WorkoutPlansTab() {
       const { data: coach } = await supabase
         .from("coaches").select("id").eq("profile_id", profile.id).maybeSingle();
       if (!coach) return;
-      const { data } = await supabase
-        .from("students")
-        .select("id, profile_id, profiles!students_profile_id_fkey(id, name, user_id)")
-        .eq("coach_id", coach.id);
-      const list = (data || []).map((s: any) => ({
+      const [{ data }, { data: selfStud }] = await Promise.all([
+        supabase
+          .from("students")
+          .select("id, profile_id, profiles!students_profile_id_fkey(id, name, user_id)")
+          .eq("coach_id", coach.id),
+        supabase
+          .from("students")
+          .select("id, profile_id, profiles!students_profile_id_fkey(id, name, user_id)")
+          .eq("profile_id", profile.id)
+          .maybeSingle(),
+      ]);
+      const merged: any[] = [];
+      if (selfStud) merged.push({ ...(selfStud as any), __self: true });
+      ((data as any[]) || []).forEach((s) => {
+        if (!merged.some((m) => m.id === s.id)) merged.push(s);
+      });
+      const list = merged.map((s: any) => ({
         id: s.id,
         profile_id: s.profile_id,
-        name: s.profiles?.name || "Aluno",
+        name: (s.profiles?.name || "Aluno") + (s.__self ? " (eu)" : ""),
         user_id: s.profiles?.user_id || null,
       }));
       setStudents(list);
