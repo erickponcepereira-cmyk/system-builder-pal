@@ -912,7 +912,7 @@ function AdminChallengePage() {
             <h3 className="font-bold text-foreground">
               Pesagem {weighModal.type === "initial" ? "Inicial" : "Final"} — {weighModal.studentName}
             </h3>
-            <p className="text-xs text-muted-foreground">Use os valores da bioimpedância do FitMindShape. Cole o link compartilhável para auditoria.</p>
+            <p className="text-xs text-muted-foreground">Use os valores da bioimpedância do FitMind Diagnóstico 360. Cole o link compartilhável para auditoria.</p>
             <div>
               <label className="text-xs text-muted-foreground">Data</label>
               <input type="date" value={weighModal.date} onChange={e => setWeighModal({ ...weighModal, date: e.target.value })}
@@ -936,7 +936,7 @@ function AdminChallengePage() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Link de compartilhamento FitMindShape (auditoria)</label>
+              <label className="text-xs text-muted-foreground">Link de compartilhamento FitMind Diagnóstico 360 (auditoria)</label>
               <input type="url" placeholder="https://.../resultado/..." value={weighModal.share_url}
                 onChange={e => setWeighModal({ ...weighModal, share_url: e.target.value })}
                 className="mt-1 w-full rounded-lg bg-muted px-3 py-2 text-sm text-foreground" />

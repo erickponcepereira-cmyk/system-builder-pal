@@ -273,7 +273,7 @@ function HealthGoalsCard() {
 
   const sourceLabel =
     data.lastAssessmentSource === "fitmindshape"
-      ? "FitMindShape"
+      ? "FitMind Diagnóstico 360"
       : data.lastAssessmentSource === "students_table"
       ? "registro manual"
       : null;

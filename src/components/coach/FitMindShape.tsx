@@ -1107,7 +1107,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               letterSpacing: "-0.02em",
             }}
           >
-            FitMind Shape
+            FitMind Diagnóstico 360
           </div>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
             Olá, {coach.name} 👋

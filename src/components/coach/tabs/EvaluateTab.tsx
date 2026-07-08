@@ -138,6 +138,33 @@ export function EvaluateTab() {
     const masterFlag = !!masterResult;
     setIsMaster(masterFlag);
 
+    // Garante uma ficha de avaliação para o próprio coach — permite que ele registre a própria avaliação
+    try {
+      const { data: existingSelf } = await supabase
+        .from("coach_evaluation_clients" as never)
+        .select("id" as never)
+        .eq("coach_id" as never, coach.id as never)
+        .is("student_id" as never, null as never)
+        .ilike("name" as never, `${p.name || "Meu perfil"}%` as never)
+        .maybeSingle();
+      if (!existingSelf) {
+        await supabase
+          .from("coach_evaluation_clients" as never)
+          .insert({
+            coach_id: coach.id,
+            name: `${p.name || "Meu perfil"} (eu)`,
+            email: p.email || null,
+            whatsapp: p.phone || null,
+            language: "pt",
+            gender: "other",
+            groups: ["self"],
+          } as never);
+      }
+    } catch (e) {
+      console.warn("self-eval client bootstrap:", e);
+    }
+
+
     const cacheKey = coach.id;
     const cached = clientSummaryCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
@@ -693,7 +720,7 @@ export function EvaluateTab() {
               Vinculado ao Desafio FitMind · {challengeLink.compLabel} · Pesagem {challengeLink.type === "initial" ? "Inicial" : "Final"}
             </p>
             <p className="text-muted-foreground text-xs mt-0.5">
-              Aluno: <b>{challengeLink.studentName}</b>. Selecione esse aluno na lista do FitMindShape e finalize a avaliação — peso, % gordura e link compartilhável serão salvos automaticamente no desafio.
+              Aluno: <b>{challengeLink.studentName}</b>. Selecione esse aluno na lista do FitMind Diagnóstico 360 e finalize a avaliação — peso, % gordura e link compartilhável serão salvos automaticamente no desafio.
             </p>
           </div>
           <button onClick={() => setChallengeLink(null)} className="text-xs text-muted-foreground hover:text-foreground">✕</button>
