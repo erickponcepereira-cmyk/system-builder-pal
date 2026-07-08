@@ -521,12 +521,18 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                 </button>
                 <button
                   type="button"
-                  onClick={() => { const p = openBenefit; setOpenBenefit(null); generateCoupon(p); }}
+                  onClick={() => {
+                    const p = openBenefit;
+                    const scheduled = (schedulesByProduct[p.id] || []).length > 0;
+                    setOpenBenefit(null);
+                    if (scheduled && p.redemption_mode !== "discount") setBookingProduct(p);
+                    else generateCoupon(p);
+                  }}
                   disabled={generating === openBenefit.id}
                   className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2.5 text-xs font-bold text-primary-foreground disabled:opacity-60"
                 >
                   {generating === openBenefit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                  {openBenefit.redemption_mode === "discount" ? "Gerar cupom" : "Resgatar"}
+                  {openBenefit.redemption_mode === "discount" ? "Gerar cupom" : (schedulesByProduct[openBenefit.id] || []).length > 0 ? "Reservar" : "Resgatar"}
                 </button>
               </div>
             </div>
