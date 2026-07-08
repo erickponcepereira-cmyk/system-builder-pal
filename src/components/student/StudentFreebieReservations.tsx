@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
-import { CalendarDays, CheckCircle2, Clock, Loader2, QrCode, X, Ticket } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, Loader2, MapPin, QrCode, X, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 type Reservation = {
@@ -10,7 +10,7 @@ type Reservation = {
   slot_start: string;
   slot_end: string;
   status: string;
-  partner_products: { name: string } | null;
+  partner_products: { name: string; redemption_location_name: string | null; redemption_location_url: string | null } | null;
   partners: { fantasy_name: string; address: string | null } | null;
 };
 
