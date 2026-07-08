@@ -61,6 +61,7 @@ function formatSchedules(rows: ScheduleRow[]): string[] {
 export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolean } = {}) {
   const navigate = useNavigate();
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [schedulesByProduct, setSchedulesByProduct] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [openBenefit, setOpenBenefit] = useState<PartnerFreeProduct | null>(null);
@@ -69,6 +70,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
   const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
