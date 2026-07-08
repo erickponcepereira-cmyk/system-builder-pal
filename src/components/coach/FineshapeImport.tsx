@@ -44,8 +44,9 @@ const mapGender = (g: string): "male" | "female" | "other" => {
   const v = (g || "").toLowerCase();
   if (v.startsWith("masc")) return "male";
   if (v.startsWith("fem")) return "female";
-  return "other";
+  return "female";
 };
+
 
 const mapMethod = (m: string): string => {
   const v = (m || "").toLowerCase();

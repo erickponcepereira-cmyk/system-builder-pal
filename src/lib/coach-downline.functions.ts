@@ -105,25 +105,27 @@ export const getCoachDownlineReport = createServerFn({ method: "POST" })
     const studentToCoach = new Map(students.map((s) => [s.id, s.coach_id]));
     const allStudentIds = students.map((s) => s.id);
 
-    // Paid transactions for these students in range
+    // Paid transactions for these students in range (exclude mirror tx from store_orders)
     const txMap = new Map<string, { revenue: number; orders: number }>();
     if (allStudentIds.length) {
       const { data: txs } = await supabaseAdmin
         .from("transactions")
-        .select("student_id, gross_amount")
+        .select("student_id, gross_amount, metadata")
         .in("student_id", allStudentIds)
         .eq("status", "paid")
         .not("paid_at", "is", null)
         .gte("paid_at", fromIso)
         .lte("paid_at", toIso);
-      ((txs as { student_id: string; gross_amount: number }[] | null) || []).forEach((t) => {
-        const coachId = studentToCoach.get(t.student_id);
-        if (!coachId) return;
-        const cur = txMap.get(coachId) || { revenue: 0, orders: 0 };
-        cur.revenue += Number(t.gross_amount) || 0;
-        cur.orders += 1;
-        txMap.set(coachId, cur);
-      });
+      ((txs as { student_id: string; gross_amount: number; metadata: { store_order_id?: string } | null }[] | null) || [])
+        .filter((t) => !t.metadata?.store_order_id)
+        .forEach((t) => {
+          const coachId = studentToCoach.get(t.student_id);
+          if (!coachId) return;
+          const cur = txMap.get(coachId) || { revenue: 0, orders: 0 };
+          cur.revenue += Number(t.gross_amount) || 0;
+          cur.orders += 1;
+          txMap.set(coachId, cur);
+        });
 
       const { data: orders } = await supabaseAdmin
         .from("store_orders")
@@ -141,6 +143,7 @@ export const getCoachDownlineReport = createServerFn({ method: "POST" })
         txMap.set(coachId, cur);
       });
     }
+
 
     // My commissions from these downline coaches in range
     const commByCoach = new Map<string, number>();

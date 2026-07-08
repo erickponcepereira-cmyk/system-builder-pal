@@ -1653,8 +1653,8 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
               >
                 <option value="female">Feminino</option>
                 <option value="male">Masculino</option>
-                <option value="other">Outro</option>
               </select>
+
             </div>
             <div>
               <label className="fm-label">Etnia</label>
