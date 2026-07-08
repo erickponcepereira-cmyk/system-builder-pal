@@ -427,6 +427,8 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
     const rankingCoaches = collectDownline(coachId, byUpline, me || null);
     const ids = rankingCoaches.map((r) => r.coach.id);
     const revenue = await loadRevenueByCoach(supabaseAdmin, ids, data.from, data.to);
+    // Medalha do mês: sempre baseada no VP do mês atual, independente do filtro de datas
+    const monthRevenue = await loadRevenueByCoach(supabaseAdmin, ids, firstOfMonthDate(), todayDate());
     const medalRules = await loadMedalRules(supabaseAdmin);
     const patentRules = await loadPatentRules(supabaseAdmin);
     const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
@@ -448,7 +450,7 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
         downlineCoaches: collectDownline(coach.id, byUpline).length,
         individualRevenue: revenue.get(coach.id) || 0,
         networkRevenue: 0,
-        medal: medalFor(revenue.get(coach.id) || 0, medalRules),
+        medal: medalFor(monthRevenue.get(coach.id) || 0, medalRules),
         patent: patentForCoach(coach.id, patentRules, windowsRevenueByCoach, byUpline),
         categories: categoriesForCoach(coach as any, partnerProfileIds, masterCoachIds, specialtyLabels),
         sponsorName: level >= 2 && coach.upline_coach_id && byId.has(coach.upline_coach_id) ? coachName(byId.get(coach.upline_coach_id)!) : null,
