@@ -297,8 +297,8 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
   const studentIds = students.map((s) => s.id);
   if (!studentIds.length) return revenue;
   const [txRes, storeRes, partnerRes] = await Promise.all([
-    supabaseAdmin.from("transactions").select("student_id,gross_amount,metadata").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
-    supabaseAdmin.from("store_orders").select("id,student_id,total_amount").in("student_id", studentIds).eq("status", "paid").gte("updated_at", fromIso).lte("updated_at", toIso),
+    supabaseAdmin.from("transactions").select("student_id,gross_amount").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
+    supabaseAdmin.from("store_orders").select("student_id,total_amount").in("student_id", studentIds).eq("status", "paid").gte("updated_at", fromIso).lte("updated_at", toIso),
     supabaseAdmin.from("partner_product_orders").select("student_id,gross_amount").in("student_id", studentIds).eq("status", "paid").not("paid_at", "is", null).gte("paid_at", fromIso).lte("paid_at", toIso),
   ]);
   const add = (studentId: string, amount: number) => {
@@ -306,16 +306,8 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
     if (!coachId) return;
     revenue.set(coachId, (revenue.get(coachId) || 0) + (Number(amount) || 0));
   };
-  const linkedOrderIds = new Set<string>();
-  ((txRes.data as Array<{ student_id: string; gross_amount: number; metadata: any }> | null) || []).forEach((r) => {
-    add(r.student_id, r.gross_amount);
-    const linked = r?.metadata?.store_order_id;
-    if (linked) linkedOrderIds.add(String(linked));
-  });
-  ((storeRes.data as Array<{ id: string; student_id: string; total_amount: number }> | null) || []).forEach((r) => {
-    if (linkedOrderIds.has(r.id)) return;
-    add(r.student_id, r.total_amount);
-  });
+  ((txRes.data as Array<{ student_id: string; gross_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.gross_amount));
+  ((storeRes.data as Array<{ student_id: string; total_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.total_amount));
   ((partnerRes.data as Array<{ student_id: string; gross_amount: number }> | null) || []).forEach((r) => add(r.student_id, r.gross_amount));
   return revenue;
 }
@@ -427,8 +419,6 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
     const rankingCoaches = collectDownline(coachId, byUpline, me || null);
     const ids = rankingCoaches.map((r) => r.coach.id);
     const revenue = await loadRevenueByCoach(supabaseAdmin, ids, data.from, data.to);
-    // Medalha do mês: sempre baseada no VP do mês atual, independente do filtro de datas
-    const monthRevenue = await loadRevenueByCoach(supabaseAdmin, ids, firstOfMonthDate(), todayDate());
     const medalRules = await loadMedalRules(supabaseAdmin);
     const patentRules = await loadPatentRules(supabaseAdmin);
     const distinctWindows = Array.from(new Set(patentRules.map((p) => p.time_window_months))).filter((m) => m > 0);
@@ -450,7 +440,7 @@ export const getMyNetworkRanking = createServerFn({ method: "POST" })
         downlineCoaches: collectDownline(coach.id, byUpline).length,
         individualRevenue: revenue.get(coach.id) || 0,
         networkRevenue: 0,
-        medal: medalFor(monthRevenue.get(coach.id) || 0, medalRules),
+        medal: medalFor(revenue.get(coach.id) || 0, medalRules),
         patent: patentForCoach(coach.id, patentRules, windowsRevenueByCoach, byUpline),
         categories: categoriesForCoach(coach as any, partnerProfileIds, masterCoachIds, specialtyLabels),
         sponsorName: level >= 2 && coach.upline_coach_id && byId.has(coach.upline_coach_id) ? coachName(byId.get(coach.upline_coach_id)!) : null,
