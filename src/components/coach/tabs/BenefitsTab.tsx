@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock } from "lucide-react";
+import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock, MapPin, CalendarDays } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
+import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 
 type PartnerFreeProduct = {
   id: string;
@@ -20,9 +21,16 @@ type PartnerFreeProduct = {
   estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
+  weekly_limit_per_student: number | null;
+  redemption_location_name: string | null;
+  redemption_location_url: string | null;
   partner_id: string;
-  partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
+  partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string; address: string | null } | null;
 };
+
+type ScheduleRow = { partner_product_id: string; weekday: number; start_time: string; end_time: string };
+
+const WEEKDAY_LABEL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function formatBenefitWindow(start?: string | null, end?: string | null) {
   const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
@@ -34,18 +42,35 @@ function formatBenefitWindow(start?: string | null, end?: string | null) {
   return null;
 }
 
+function formatSchedules(rows: ScheduleRow[]): string[] {
+  const byDay = new Map<number, string[]>();
+  for (const r of rows) {
+    const s = r.start_time.slice(0, 5);
+    const e = r.end_time.slice(0, 5);
+    if (!byDay.has(r.weekday)) byDay.set(r.weekday, []);
+    byDay.get(r.weekday)!.push(`${s}–${e}`);
+  }
+  const out: string[] = [];
+  for (let d = 0; d < 7; d++) {
+    if (byDay.has(d)) out.push(`${WEEKDAY_LABEL[d]} ${byDay.get(d)!.join(" · ")}`);
+  }
+  return out;
+}
+
 
 export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolean } = {}) {
   const navigate = useNavigate();
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
+  const [schedulesByProduct, setSchedulesByProduct] = useState<Record<string, ScheduleRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [openPartner, setOpenPartner] = useState<string | null>(null);
   const [openBenefit, setOpenBenefit] = useState<PartnerFreeProduct | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
-  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null; locationName: string | null; locationUrl: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
@@ -80,7 +105,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,weekly_limit_per_student,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -88,6 +113,22 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         .order("created_at" as never, { ascending: false });
       const pf = ((data as unknown as PartnerFreeProduct[]) || []).filter((x) => x.partners?.status === "approved");
       setPartnerFreebies(pf);
+
+      // Fetch schedules for the products we display
+      const ids = pf.map((p) => p.id);
+      if (ids.length > 0) {
+        const { data: schedRows } = await supabase
+          .from("partner_product_schedules" as never)
+          .select("partner_product_id,weekday,start_time,end_time" as never)
+          .eq("active" as never, true as never)
+          .in("partner_product_id" as never, ids as never);
+        const map: Record<string, ScheduleRow[]> = {};
+        for (const r of ((schedRows as unknown) as ScheduleRow[]) || []) {
+          if (!map[r.partner_product_id]) map[r.partner_product_id] = [];
+          map[r.partner_product_id].push(r);
+        }
+        setSchedulesByProduct(map);
+      }
 
       if (sId) {
         const { data: redeemed } = await supabase
@@ -114,7 +155,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: p.redemption_location_name, locationUrl: p.redemption_location_url });
   };
 
   const handleScan = (decoded: string) => {
@@ -246,6 +287,8 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {list.map((p) => {
                     const isDiscount = p.redemption_mode === "discount";
+                    const scheduleLines = formatSchedules(schedulesByProduct[p.id] || []);
+                    const isScheduled = scheduleLines.length > 0;
                     return (
                       <div
                         key={p.id}
@@ -270,10 +313,27 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
                           {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
                           <div className="mt-auto pt-3 flex flex-col gap-2">
-                            {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                            {isScheduled ? (
+                              <div className="rounded-lg bg-primary/10 px-2 py-1.5 text-[11px] font-bold text-primary space-y-0.5">
+                                <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Dias e horários</p>
+                                {scheduleLines.map((line) => (
+                                  <p key={line} className="pl-4 text-primary/90">{line}</p>
+                                ))}
+                              </div>
+                            ) : formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                               <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
                                 <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
                               </p>
+                            )}
+                            {p.redemption_location_name && (
+                              <a
+                                href={p.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(p.redemption_location_name)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-lg bg-white/5 px-2 py-1 text-[11px] font-bold text-white/80 hover:bg-white/10"
+                              >
+                                <MapPin className="h-3.5 w-3.5 text-primary" /> {p.redemption_location_name}
+                              </a>
                             )}
                             {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
                               <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
@@ -306,12 +366,15 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             </button>
                             <button
                               type="button"
-                              onClick={() => generateCoupon(p)}
+                              onClick={() => {
+                                if (isScheduled && !isDiscount) setBookingProduct(p);
+                                else generateCoupon(p);
+                              }}
                               disabled={generating === p.id}
                               className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
                             >
                               {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                              {isDiscount ? "Gerar cupom" : "Resgatar"}
+                              {isDiscount ? "Gerar cupom" : isScheduled ? "Reservar" : "Resgatar"}
                             </button>
                           </div>
                         </div>
@@ -387,10 +450,36 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                   {openBenefit.partners?.city ? ` · ${openBenefit.partners.city}/${openBenefit.partners.state || ""}` : ""}
                 </p>
               </div>
-              {formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time) && (
-                <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
-                  <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time)}
-                </p>
+              {(() => {
+                const lines = formatSchedules(schedulesByProduct[openBenefit.id] || []);
+                if (lines.length > 0) {
+                  return (
+                    <div className="rounded-lg bg-primary/10 px-3 py-2 text-[12px] font-bold text-primary space-y-0.5">
+                      <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Dias e horários disponíveis</p>
+                      {lines.map((line) => <p key={line} className="pl-4 text-primary/90">{line}</p>)}
+                    </div>
+                  );
+                }
+                return formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time) && (
+                  <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                    <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time)}
+                  </p>
+                );
+              })()}
+              {openBenefit.redemption_location_name && (
+                <a
+                  href={openBenefit.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(openBenefit.redemption_location_name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10"
+                >
+                  <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Local de resgate</p>
+                    <p className="text-xs font-medium text-white">{openBenefit.redemption_location_name}</p>
+                    <p className="text-[10px] text-primary mt-0.5">Abrir no mapa →</p>
+                  </div>
+                </a>
               )}
               {openBenefit.description && (
                 <p className="text-sm text-white/70 whitespace-pre-wrap leading-relaxed">{openBenefit.description}</p>
@@ -432,17 +521,38 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                 </button>
                 <button
                   type="button"
-                  onClick={() => { const p = openBenefit; setOpenBenefit(null); generateCoupon(p); }}
+                  onClick={() => {
+                    const p = openBenefit;
+                    const scheduled = (schedulesByProduct[p.id] || []).length > 0;
+                    setOpenBenefit(null);
+                    if (scheduled && p.redemption_mode !== "discount") setBookingProduct(p);
+                    else generateCoupon(p);
+                  }}
                   disabled={generating === openBenefit.id}
                   className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2.5 text-xs font-bold text-primary-foreground disabled:opacity-60"
                 >
                   {generating === openBenefit.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                  {openBenefit.redemption_mode === "discount" ? "Gerar cupom" : "Resgatar"}
+                  {openBenefit.redemption_mode === "discount" ? "Gerar cupom" : (schedulesByProduct[openBenefit.id] || []).length > 0 ? "Reservar" : "Resgatar"}
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {bookingProduct && (
+        <PartnerFreebieBookingModal
+          product={{
+            id: bookingProduct.id,
+            name: bookingProduct.name,
+            weekly_limit_per_student: bookingProduct.weekly_limit_per_student,
+            redemption_location_name: bookingProduct.redemption_location_name,
+            redemption_location_url: bookingProduct.redemption_location_url,
+            partner_address: bookingProduct.partners?.address ?? null,
+          }}
+          onClose={() => setBookingProduct(null)}
+          onReserved={() => { setBookingProduct(null); toast.success("Reserva criada! Veja em Minhas reservas no portal do aluno."); }}
+        />
       )}
     </>
   );

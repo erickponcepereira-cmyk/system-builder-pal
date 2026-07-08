@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, Users, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Slot = { slot_start: string; slot_end: string; capacity: number; taken: number; remaining: number };
 
 interface Props {
-  product: { id: string; name: string; weekly_limit_per_student: number | null };
+  product: {
+    id: string;
+    name: string;
+    weekly_limit_per_student: number | null;
+    redemption_location_name?: string | null;
+    redemption_location_url?: string | null;
+    partner_address?: string | null;
+  };
   onClose: () => void;
   onReserved: (reservation: { id: string; qr_token: string; slot_end: string }) => void;
 }
@@ -125,6 +132,22 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           </div>
           <button onClick={onClose}><X className="h-5 w-5 text-white/60" /></button>
         </div>
+
+        {product.redemption_location_name && (
+          <a
+            href={product.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(product.redemption_location_name)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex items-start gap-2 rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10"
+          >
+            <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Local de resgate</p>
+              <p className="text-xs font-medium text-white">{product.redemption_location_name}</p>
+              <p className="text-[10px] text-primary mt-0.5">Abrir no mapa →</p>
+            </div>
+          </a>
+        )}
 
         <div className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-[11px] text-white/80 flex items-center gap-2">
           <Users className="h-3.5 w-3.5 text-primary" />

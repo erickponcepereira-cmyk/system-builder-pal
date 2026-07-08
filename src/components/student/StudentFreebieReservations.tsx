@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
-import { CalendarDays, CheckCircle2, Clock, Loader2, QrCode, X, Ticket } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock, Loader2, MapPin, QrCode, X, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 type Reservation = {
@@ -10,7 +10,7 @@ type Reservation = {
   slot_start: string;
   slot_end: string;
   status: string;
-  partner_products: { name: string } | null;
+  partner_products: { name: string; redemption_location_name: string | null; redemption_location_url: string | null } | null;
   partners: { fantasy_name: string; address: string | null } | null;
 };
 
@@ -28,7 +28,7 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
     if (!u.user) { setLoading(false); return; }
     const { data } = await supabase
       .from("partner_freebie_reservations" as never)
-      .select("id, qr_token, slot_start, slot_end, status, partner_products(name), partners(fantasy_name, address)")
+      .select("id, qr_token, slot_start, slot_end, status, partner_products(name, redemption_location_name, redemption_location_url), partners(fantasy_name, address)")
       .eq("profile_id" as never, u.user.id as never)
       .gte("slot_end" as never, new Date(Date.now() - 24 * 3600 * 1000).toISOString() as never)
       .order("slot_start" as never);
@@ -132,7 +132,17 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
                 <p className="mt-3 text-xs text-white/60 flex items-center justify-center gap-1">
                   <CalendarDays className="h-3 w-3" /> {fmtDay(selected.slot_start)} · {fmtTime(selected.slot_start)}–{fmtTime(selected.slot_end)}
                 </p>
-                {selected.partners?.address && (
+                {selected.partner_products?.redemption_location_name ? (
+                  <a
+                    href={selected.partner_products.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(selected.partner_products.redemption_location_name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 mx-auto flex w-fit items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-white/10"
+                  >
+                    <MapPin className="h-3.5 w-3.5 text-primary" /> {selected.partner_products.redemption_location_name}
+                    <span className="text-primary text-[10px]">→</span>
+                  </a>
+                ) : selected.partners?.address && (
                   <p className="mt-1 text-[11px] text-white/45">{selected.partners.address}</p>
                 )}
                 <p className="mt-3 text-[10px] text-white/40">Mostre este QR ao parceiro para registrar sua presença.</p>

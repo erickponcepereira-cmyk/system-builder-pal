@@ -80,6 +80,8 @@ interface Product {
   event_capacity?: number | null;
   event_start_time?: string | null;
   event_end_time?: string | null;
+  redemption_location_name?: string | null;
+  redemption_location_url?: string | null;
 }
 
 
@@ -472,6 +474,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
         ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
         : null,
       weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
+      redemption_location_name: editing.kind === "free" ? (emptyToNull(editing.redemption_location_name) as string | null) : null,
+      redemption_location_url: editing.kind === "free" ? (emptyToNull(editing.redemption_location_url) as string | null) : null,
     };
     try {
       const finalPaidPrice = Number((extra.price ?? editing.price) || 0);
@@ -777,6 +781,34 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   Salve o produto primeiro para configurar dias e horários disponíveis (agenda com vagas e reserva).
                 </p>
               )}
+
+              {editing.kind === "free" && (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-xs font-bold text-white">Local de resgate (opcional)</div>
+                  <p className="mt-1 text-[10px] text-white/45">
+                    Preencha apenas se o resgate acontece em um endereço diferente do cadastro da sua empresa. O aluno verá o nome e um link para abrir no mapa junto do QR code.
+                  </p>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    <Field label="Nome do local">
+                      <input
+                        value={editing.redemption_location_name || ""}
+                        onChange={e => setEditing({ ...editing, redemption_location_name: e.target.value })}
+                        placeholder="Ex.: Academia Move — Cuiabá/MT"
+                        className="field-input"
+                      />
+                    </Field>
+                    <Field label="Link do mapa (Google Maps, Waze, etc.)">
+                      <input
+                        value={editing.redemption_location_url || ""}
+                        onChange={e => setEditing({ ...editing, redemption_location_url: e.target.value })}
+                        placeholder="https://maps.google.com/?q=..."
+                        className="field-input"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              )}
+
 
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>

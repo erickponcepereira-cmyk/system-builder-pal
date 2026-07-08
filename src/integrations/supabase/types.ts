@@ -5468,6 +5468,8 @@ export type Database = {
           price: number | null
           price_input_mode: string
           redemption_instructions: string | null
+          redemption_location_name: string | null
+          redemption_location_url: string | null
           redemption_mode: string
           section_id: string | null
           status: string
@@ -5515,6 +5517,8 @@ export type Database = {
           price?: number | null
           price_input_mode?: string
           redemption_instructions?: string | null
+          redemption_location_name?: string | null
+          redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
           status?: string
@@ -5562,6 +5566,8 @@ export type Database = {
           price?: number | null
           price_input_mode?: string
           redemption_instructions?: string | null
+          redemption_location_name?: string | null
+          redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
           status?: string

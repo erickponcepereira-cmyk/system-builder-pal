@@ -62,7 +62,9 @@ type PartnerFreeProduct = {
   benefit_end_time: string | null;
   uses_scheduling: boolean | null;
   weekly_limit_per_student: number | null;
-  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
+  redemption_location_name: string | null;
+  redemption_location_url: string | null;
+  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null; address: string | null } | null;
 };
 
 type ProfessionalFreeProduct = {
@@ -105,7 +107,7 @@ function StudentFreebies() {
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
-  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null; locationName: string | null; locationUrl: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
   const [reservationsRefresh, setReservationsRefresh] = useState(0);
@@ -117,7 +119,7 @@ function StudentFreebies() {
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: p.redemption_location_name, locationUrl: p.redemption_location_url });
   };
 
   const generateProCoupon = async (p: ProfessionalFreeProduct) => {
@@ -127,7 +129,7 @@ function StudentFreebies() {
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: null, locationUrl: null });
   };
 
   // Carteirinha gate
@@ -161,7 +163,7 @@ function StudentFreebies() {
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,partners(fantasy_name,photo_url,status,business_area)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,redemption_location_name,redemption_location_url,partners(fantasy_name,photo_url,status,business_area,address)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -675,7 +677,14 @@ function StudentFreebies() {
       {coupon && <CouponModal coupon={coupon} onClose={() => setCoupon(null)} />}
       {bookingProduct && (
         <PartnerFreebieBookingModal
-          product={{ id: bookingProduct.id, name: bookingProduct.name, weekly_limit_per_student: bookingProduct.weekly_limit_per_student }}
+          product={{
+            id: bookingProduct.id,
+            name: bookingProduct.name,
+            weekly_limit_per_student: bookingProduct.weekly_limit_per_student,
+            redemption_location_name: bookingProduct.redemption_location_name,
+            redemption_location_url: bookingProduct.redemption_location_url,
+            partner_address: bookingProduct.partners?.address ?? null,
+          }}
           onClose={() => setBookingProduct(null)}
           onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
         />

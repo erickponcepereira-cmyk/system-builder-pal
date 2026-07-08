@@ -276,7 +276,61 @@ async function loadMyAppointments(from: Date, to: Date): Promise<FitmindEvent[]>
   }
 }
 
-// ─── Main component ──────────────────────────────────────────────────────────
+// ─── Parceiro: reservas de brindes dos alunos ────────────────────────────
+
+async function loadPartnerFreebieReservations(from: Date, to: Date): Promise<FitmindEvent[]> {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return [];
+    const { data: profile } = await supabase
+      .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
+    if (!profile) return [];
+    const { data: partner } = await supabase
+      .from("partners" as never).select("id").eq("profile_id" as never, (profile as { id: string }).id).maybeSingle();
+    if (!partner) return [];
+
+    const { data: rows } = await supabase
+      .from("partner_freebie_reservations" as never)
+      .select(
+        "id,slot_start,slot_end,status,partner_products(name),profile:profiles!partner_freebie_reservations_profile_id_fkey(name)" as never,
+      )
+      .eq("partner_id" as never, (partner as { id: string }).id)
+      .in("status" as never, ["reserved", "used"] as never)
+      .gte("slot_start" as never, from.toISOString() as never)
+      .lt("slot_start" as never, to.toISOString() as never);
+
+    return ((rows as any[]) || []).map((r) => {
+      const productName = r.partner_products?.name || "Reserva";
+      const studentName = r.profile?.name || "Aluno";
+      const used = r.status === "used";
+      const color = used ? "#22c55e" : "#f59e0b";
+      return {
+        id: `pfr-${r.id}`,
+        title: `🎟️ ${productName}`,
+        subtitle: `com ${studentName}`,
+        description: used ? "Presença confirmada." : "Reserva confirmada, aguardando check-in.",
+        location: null,
+        image_url: null,
+        color,
+        category: "aula",
+        tags: [used ? "resgatado" : "reservado"],
+        starts_at: r.slot_start,
+        ends_at: r.slot_end,
+        all_day: false,
+        is_highlighted: !used,
+        is_important: false,
+        highlight_color: color,
+        highlight_label: used ? "Resgatado" : "Reservado",
+        google_calendar_title: productName,
+        google_calendar_description: `Reserva de brinde de ${studentName}`,
+        google_calendar_location: null,
+      } satisfies FitmindEvent;
+    });
+  } catch (e) {
+    console.warn("loadPartnerFreebieReservations failed", e);
+    return [];
+  }
+}
 
 interface FitmindCalendarProps {
   /** Modo compacto (sidebar / widget). Padrão: false (tela inteira) */
@@ -370,7 +424,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         .lt("date" as never, tzDateKey(to) as never),
       loadMyChallengeEvents(from, to),
       loadMyAppointments(from, to),
-    ]).then(([evRes, dayRes, challengeEvents, appointmentEvents]) => {
+      loadPartnerFreebieReservations(from, to),
+    ]).then(([evRes, dayRes, challengeEvents, appointmentEvents, freebieReservationEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
       const base = ((evRes.data as any[]) || []).map((r) => ({
@@ -378,7 +433,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         responsible_coach_name: r.responsible_coach?.profiles?.name || null,
         responsible_coach_whatsapp: r.responsible_coach?.profiles?.phone || null,
       })) as FitmindEvent[];
-      setEvents([...base, ...challengeEvents, ...appointmentEvents]);
+      setEvents([...base, ...challengeEvents, ...appointmentEvents, ...freebieReservationEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
