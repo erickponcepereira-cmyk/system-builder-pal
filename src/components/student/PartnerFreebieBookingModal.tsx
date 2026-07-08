@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, Users, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Slot = { slot_start: string; slot_end: string; capacity: number; taken: number; remaining: number };
 
 interface Props {
-  product: { id: string; name: string; weekly_limit_per_student: number | null };
+  product: {
+    id: string;
+    name: string;
+    weekly_limit_per_student: number | null;
+    redemption_location_name?: string | null;
+    redemption_location_url?: string | null;
+    partner_address?: string | null;
+  };
   onClose: () => void;
   onReserved: (reservation: { id: string; qr_token: string; slot_end: string }) => void;
 }
