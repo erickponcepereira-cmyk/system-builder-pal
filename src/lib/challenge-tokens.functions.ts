@@ -121,7 +121,12 @@ export const getMyChallengeTokens = createServerFn({ method: "GET" })
       return { balance: 0, totalEarned: 0, totalConsumed: 0, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [], blocked: false };
     }
 
+    // Exceção temporária para simulação (Nathan Utuari)
+    const CHALLENGE_EXCEPTION_STUDENT_IDS = new Set<string>([
+      "3715f4e9-36db-436b-a57f-5b8fe34c0530",
+    ]);
     const blocked: ChallengeTokenSummary["blocked"] =
+      CHALLENGE_EXCEPTION_STUDENT_IDS.has(student.id) ? false :
       student.roleFlags.isProfessional ? { reason: "aluno_profissional" } :
       student.roleFlags.isCoach ? { reason: "aluno_coach" } :
       student.roleFlags.isPartner ? { reason: "aluno_parceiro" } :
