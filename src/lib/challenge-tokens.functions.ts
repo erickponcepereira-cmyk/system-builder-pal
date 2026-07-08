@@ -121,7 +121,12 @@ export const getMyChallengeTokens = createServerFn({ method: "GET" })
       return { balance: 0, totalEarned: 0, totalConsumed: 0, currentTurma: null, alreadyEnrolledInCurrent: false, joinableTurmas: [], blocked: false };
     }
 
+    // Exceção temporária para simulação (Nathan Utuari)
+    const CHALLENGE_EXCEPTION_STUDENT_IDS = new Set<string>([
+      "3715f4e9-36db-436b-a57f-5b8fe34c0530",
+    ]);
     const blocked: ChallengeTokenSummary["blocked"] =
+      CHALLENGE_EXCEPTION_STUDENT_IDS.has(student.id) ? false :
       student.roleFlags.isProfessional ? { reason: "aluno_profissional" } :
       student.roleFlags.isCoach ? { reason: "aluno_coach" } :
       student.roleFlags.isPartner ? { reason: "aluno_parceiro" } :
@@ -185,7 +190,10 @@ export const joinChallengeWithToken = createServerFn({ method: "POST" })
       await logAttempt({ studentId: null, success: false, errorCode: "student_not_found", errorMessage: "Aluno não encontrado." });
       return { ok: false, error: "Aluno não encontrado." };
     }
-    if (student.roleFlags.isCoach || student.roleFlags.isProfessional || student.roleFlags.isPartner) {
+    const CHALLENGE_EXCEPTION_STUDENT_IDS_JOIN = new Set<string>([
+      "3715f4e9-36db-436b-a57f-5b8fe34c0530",
+    ]);
+    if (!CHALLENGE_EXCEPTION_STUDENT_IDS_JOIN.has(student.id) && (student.roleFlags.isCoach || student.roleFlags.isProfessional || student.roleFlags.isPartner)) {
       const reason = student.roleFlags.isProfessional ? "coach_is_professional" : student.roleFlags.isCoach ? "coach_is_coach" : "coach_is_partner";
       await logAttempt({ studentId: student.id, success: false, errorCode: reason, errorMessage: "Coaches, profissionais e parceiros não podem participar do desafio." });
       return { ok: false, error: "Coaches, profissionais e parceiros não podem participar do desafio. Esta funcionalidade é exclusiva para alunos." };
