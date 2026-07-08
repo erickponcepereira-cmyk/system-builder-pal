@@ -107,7 +107,7 @@ function StudentFreebies() {
   const [showMyQR, setShowMyQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [pageMode, setPageMode] = useState<"free" | "discount">("free");
-  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null } | null>(null);
+  const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null; locationName: string | null; locationUrl: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
   const [reservationsRefresh, setReservationsRefresh] = useState(0);
