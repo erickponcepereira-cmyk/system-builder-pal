@@ -287,6 +287,8 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {list.map((p) => {
                     const isDiscount = p.redemption_mode === "discount";
+                    const scheduleLines = formatSchedules(schedulesByProduct[p.id] || []);
+                    const isScheduled = scheduleLines.length > 0;
                     return (
                       <div
                         key={p.id}
@@ -311,10 +313,27 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                           <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.partners?.fantasy_name}{p.partners?.city ? ` · ${p.partners.city}/${p.partners.state || ""}` : ""}</p>
                           {p.description && <p className="mt-2 text-xs text-white/60 line-clamp-3">{p.description}</p>}
                           <div className="mt-auto pt-3 flex flex-col gap-2">
-                            {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
+                            {isScheduled ? (
+                              <div className="rounded-lg bg-primary/10 px-2 py-1.5 text-[11px] font-bold text-primary space-y-0.5">
+                                <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Dias e horários</p>
+                                {scheduleLines.map((line) => (
+                                  <p key={line} className="pl-4 text-primary/90">{line}</p>
+                                ))}
+                              </div>
+                            ) : formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) && (
                               <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
                                 <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(p.benefit_start_time, p.benefit_end_time)}
                               </p>
+                            )}
+                            {p.redemption_location_name && (
+                              <a
+                                href={p.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(p.redemption_location_name)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-lg bg-white/5 px-2 py-1 text-[11px] font-bold text-white/80 hover:bg-white/10"
+                              >
+                                <MapPin className="h-3.5 w-3.5 text-primary" /> {p.redemption_location_name}
+                              </a>
                             )}
                             {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
                               <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
@@ -347,12 +366,15 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                             </button>
                             <button
                               type="button"
-                              onClick={() => generateCoupon(p)}
+                              onClick={() => {
+                                if (isScheduled && !isDiscount) setBookingProduct(p);
+                                else generateCoupon(p);
+                              }}
                               disabled={generating === p.id}
                               className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
                             >
                               {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                              {isDiscount ? "Gerar cupom" : "Resgatar"}
+                              {isDiscount ? "Gerar cupom" : isScheduled ? "Reservar" : "Resgatar"}
                             </button>
                           </div>
                         </div>
