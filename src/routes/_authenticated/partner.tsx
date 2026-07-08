@@ -80,6 +80,8 @@ interface Product {
   event_capacity?: number | null;
   event_start_time?: string | null;
   event_end_time?: string | null;
+  redemption_location_name?: string | null;
+  redemption_location_url?: string | null;
 }
 
 
