@@ -132,7 +132,17 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
                 <p className="mt-3 text-xs text-white/60 flex items-center justify-center gap-1">
                   <CalendarDays className="h-3 w-3" /> {fmtDay(selected.slot_start)} · {fmtTime(selected.slot_start)}–{fmtTime(selected.slot_end)}
                 </p>
-                {selected.partners?.address && (
+                {selected.partner_products?.redemption_location_name ? (
+                  <a
+                    href={selected.partner_products.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(selected.partner_products.redemption_location_name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 mx-auto flex w-fit items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-white/10"
+                  >
+                    <MapPin className="h-3.5 w-3.5 text-primary" /> {selected.partner_products.redemption_location_name}
+                    <span className="text-primary text-[10px]">→</span>
+                  </a>
+                ) : selected.partners?.address && (
                   <p className="mt-1 text-[11px] text-white/45">{selected.partners.address}</p>
                 )}
                 <p className="mt-3 text-[10px] text-white/40">Mostre este QR ao parceiro para registrar sua presença.</p>
