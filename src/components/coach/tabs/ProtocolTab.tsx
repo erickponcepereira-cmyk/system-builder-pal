@@ -135,14 +135,27 @@ export function ProtocolTab() {
 
 
 
-      const { data: studs } = await supabase
-        .from("students")
-        .select("id, profile_id, current_weight, goal_weight, profiles!students_profile_id_fkey(name,email)")
-        .eq("coach_id", coach.id);
-      setStudents(((studs as any[]) || []).map((s) => ({
+      // Alunos do coach + o próprio coach (caso possua ficha de aluno) para permitir montar protocolo/treino para si mesmo
+      const [{ data: studs }, { data: selfStud }] = await Promise.all([
+        supabase
+          .from("students")
+          .select("id, profile_id, current_weight, goal_weight, profiles!students_profile_id_fkey(name,email)")
+          .eq("coach_id", coach.id),
+        supabase
+          .from("students")
+          .select("id, profile_id, current_weight, goal_weight, profiles!students_profile_id_fkey(name,email)")
+          .eq("profile_id", profile.id)
+          .maybeSingle(),
+      ]);
+      const merged: any[] = [];
+      if (selfStud) merged.push({ ...(selfStud as any), __self: true });
+      ((studs as any[]) || []).forEach((s) => {
+        if (!merged.some((m) => m.id === s.id)) merged.push(s);
+      });
+      setStudents(merged.map((s) => ({
         id: s.id,
         profile_id: s.profile_id,
-        name: s.profiles?.name || "Aluno",
+        name: (s.profiles?.name || "Aluno") + (s.__self ? " (eu)" : ""),
         email: s.profiles?.email || "",
         current_weight: s.current_weight,
         goal_weight: s.goal_weight,
