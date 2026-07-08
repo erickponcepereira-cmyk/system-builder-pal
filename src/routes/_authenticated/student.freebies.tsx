@@ -62,7 +62,9 @@ type PartnerFreeProduct = {
   benefit_end_time: string | null;
   uses_scheduling: boolean | null;
   weekly_limit_per_student: number | null;
-  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null } | null;
+  redemption_location_name: string | null;
+  redemption_location_url: string | null;
+  partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null; address: string | null } | null;
 };
 
 type ProfessionalFreeProduct = {
