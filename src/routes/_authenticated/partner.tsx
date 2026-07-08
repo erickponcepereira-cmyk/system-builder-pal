@@ -474,6 +474,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
         ? (editing.monthly_redeem_limit && editing.monthly_redeem_limit > 0 ? editing.monthly_redeem_limit : null)
         : null,
       weekly_limit_per_student: editing.kind === "free" ? Math.max(1, Number(editing.weekly_limit_per_student || 1)) : 1,
+      redemption_location_name: editing.kind === "free" ? (emptyToNull(editing.redemption_location_name) as string | null) : null,
+      redemption_location_url: editing.kind === "free" ? (emptyToNull(editing.redemption_location_url) as string | null) : null,
     };
     try {
       const finalPaidPrice = Number((extra.price ?? editing.price) || 0);
