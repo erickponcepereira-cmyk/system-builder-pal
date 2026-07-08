@@ -105,7 +105,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
 
       const { data } = await supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,partner_id,partners(fantasy_name,photo_url,city,state,status)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,weekly_limit_per_student,redemption_location_name,redemption_location_url,partner_id,partners(fantasy_name,photo_url,city,state,status,address)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -113,6 +113,22 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         .order("created_at" as never, { ascending: false });
       const pf = ((data as unknown as PartnerFreeProduct[]) || []).filter((x) => x.partners?.status === "approved");
       setPartnerFreebies(pf);
+
+      // Fetch schedules for the products we display
+      const ids = pf.map((p) => p.id);
+      if (ids.length > 0) {
+        const { data: schedRows } = await supabase
+          .from("partner_product_schedules" as never)
+          .select("partner_product_id,weekday,start_time,end_time" as never)
+          .eq("active" as never, true as never)
+          .in("partner_product_id" as never, ids as never);
+        const map: Record<string, ScheduleRow[]> = {};
+        for (const r of ((schedRows as unknown) as ScheduleRow[]) || []) {
+          if (!map[r.partner_product_id]) map[r.partner_product_id] = [];
+          map[r.partner_product_id].push(r);
+        }
+        setSchedulesByProduct(map);
+      }
 
       if (sId) {
         const { data: redeemed } = await supabase
