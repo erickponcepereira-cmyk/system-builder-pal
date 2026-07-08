@@ -1,36 +1,33 @@
-# Corrigir gênero "outros" e duplicação no relatório Rede/Downline
+## Problemas identificados
 
-## 1) Gênero — remover "Outro"
+**1. Coach não vê os dias/horários específicos** — `CoachBenefitsTab` só lê `benefit_start_time`/`benefit_end_time` (janela única legada). Produtos com múltiplas janelas por dia (tabela `partner_product_schedules`, ex. "Aula de Muay Thai") nunca são consultados, então o coach não vê nenhuma indicação de agenda.
 
-Estado atual no banco: `female: 4649`, `male: 1701`, `other: 13`.
+**2. Aluno recebe "Perfil de aluno não encontrado"** — o RPC `reserve_partner_freebie` faz `SELECT id FROM students WHERE profile_id = auth.uid()` e lança essa exceção quando o usuário não tem registro em `students` (caso dos coaches/parceiros/profissionais que nunca foram criados como aluno).
 
-**Causas dos "other":**
-- `src/components/coach/FineshapeImport.tsx` `mapGender()` — quando a coluna Sexo do Fineshape vem em branco ou com prefixo diferente de "masc"/"fem", grava `"other"`.
-- `src/components/coach/FitMindShape.tsx` — os selects de gênero (novo cliente linha 1656 e editar cliente ~1886) oferecem a opção `"Outro"`.
+**3. Reservas não aparecem na agenda do parceiro** — `FitmindCalendar` inclui `professional_appointments`, mas ignora completamente `partner_freebie_reservations`. O parceiro não vê os agendamentos que estão sendo feitos nos seus produtos.
 
-**Ações:**
-- `FineshapeImport.tsx`: no `mapGender`, quando não identificar prefixo, cair em `"female"` (default do formulário) em vez de `"other"`.
-- `FitMindShape.tsx`: remover o `<option value="other">Outro</option>` dos dois selects, mantendo apenas Feminino/Masculino.
-- Migração de dados: `UPDATE coach_evaluation_clients SET gender='female' WHERE gender='other'` — 13 registros. Coach pode ajustar caso a caso depois; hoje esses 13 já aparecem como masculino no resultado (após a correção anterior), o que também é chute — padronizar para `female` mantém consistência com o default do form.
+## Correções
 
-## 2) Relatório Rede/Downline — duplicação de vendas
+### 1. Mostrar dias/horários no card do coach (`src/components/coach/tabs/BenefitsTab.tsx`)
 
-**Causa:** `src/lib/coach-downline.functions.ts` soma receita a partir de duas fontes independentes para os mesmos alunos:
-- `transactions` (linhas 111-127)
-- `store_orders` (linhas 128-142)
+- Buscar em paralelo os `partner_product_schedules` (weekday, start_time, end_time, active) de todos os produtos exibidos e mapear por `partner_product_id`.
+- No card, quando o produto tem schedules ativos, substituir a linha única "Disponível das … às …" por uma lista compacta agrupando por dia da semana, ex.: `Seg 07:00–08:00 · 08:00–09:00 | Qua 07:00–08:00 …`. Se não tiver schedules, mantém o comportamento atual com `benefit_start_time/end_time`.
+- Continua usando `student_generate_partner_coupon` para produtos sem schedules; para produtos com schedules, o coach passa a abrir o mesmo modal de reserva usado pelo aluno (`PartnerFreebieBookingModal`) em vez de gerar cupom direto.
 
-Toda venda feita pela loja gera **um `store_order` + uma transação-espelho** com `metadata.store_order_id`. O `coach-reports.functions.ts` (relatório "Vendas" pessoal) já filtra esses espelhos com `.filter((t) => !t.metadata?.store_order_id)` — por isso o próprio relatório do Erick mostra R$ 359,80 correto e o downline do Nathan mostra R$ 719,60 (exatos 2×).
+### 2. Corrigir "Perfil de aluno não encontrado" (migration Supabase)
 
-**Correção em `coach-downline.functions.ts`:**
-- Incluir `metadata` no `select` de `transactions`.
-- Filtrar `!t.metadata?.store_order_id` antes de somar `txMap`, exatamente como o relatório de Vendas faz.
-- Também aumentar o `select` de `commissions` para incluir `metadata` da transação e ignorar mirror ao contabilizar (evita comissão duplicada quando uma venda gera comissão tanto no `transaction` original quanto no espelho).
-- (Opcional) Somar também `partner_product_orders` na receita do coach downline, para paridade com o relatório de Vendas — mantenho fora do escopo desta correção; caso a Ana Flávia ainda apareça inflada apenas por isso, aviso.
+Atualizar `public.reserve_partner_freebie` para, quando o usuário autenticado não tiver linha em `students`, criar uma automaticamente vinculada ao `profile_id` (mesmo padrão já usado em `registration.server.ts`) antes de prosseguir com a reserva. Nada muda para quem já é aluno.
 
-**Nenhuma migração de dados de comissão** — os valores no banco estão corretos, o problema é só de agregação no relatório.
+### 3. Agenda do parceiro (`src/components/FitmindCalendar.tsx`)
 
-## Arquivos alterados
-- `src/components/coach/FineshapeImport.tsx` (mapGender)
-- `src/components/coach/FitMindShape.tsx` (2 selects de gênero)
-- `src/lib/coach-downline.functions.ts` (dedupe mirror tx)
-- Migração SQL: normalizar 13 registros `other` → `female` em `coach_evaluation_clients`
+- Adicionar uma nova fonte de eventos análoga a `professional_appointments`: para o parceiro logado, buscar `partner_freebie_reservations` (join com `partner_products(name)` e `students → profiles(name)`) filtradas por `partner_id` do parceiro atual e status `reserved`/`used`, no intervalo do mês visível.
+- Mapear cada reserva para o mesmo shape `FitmindEvent` já usado por appointments (título = nome do produto, subtítulo = nome do aluno, `starts_at`/`ends_at` da reserva, `category: "aula"`), e concatenar no `setEvents([...base, ...challengeEvents, ...appointmentEvents, ...freebieEvents])`.
+- Detectar o contexto de parceiro do mesmo jeito que já é feito para profissional (via `partners.profile_id = auth.uid()`), sem quebrar as demais telas (coach/aluno/profissional) que também usam `FitmindCalendar`.
+
+## Detalhes técnicos
+
+- Migration única alterando `reserve_partner_freebie` (mantém `SECURITY DEFINER`, mesmo `search_path`). Após o `SELECT ... INTO v_student_id`, adicionar `IF v_student_id IS NULL THEN INSERT INTO public.students(profile_id) VALUES (v_uid) RETURNING id INTO v_student_id; END IF;`.
+- Query nova em `FitmindCalendar` só roda quando `partnerId` do usuário atual for encontrado; o restante das fontes fica intacto.
+- No `BenefitsTab`, o fetch de schedules é uma consulta `.in("partner_product_id", ids)` após carregar os produtos, para não fazer N+1.
+
+Preciso que crie a aba de localização para produtos gratuitos, quando o resgate é em um lugar diferente do cadastrado, esse link de localização deve aparecer quando o cliente clicar e abaixo do QR code com nome de localização. 
