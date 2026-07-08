@@ -347,23 +347,28 @@ export function getBodyFatCategoryACSM(
 // MÚSCULO ESQUELÉTICO — Janssen et al. (2002) por sexo+idade
 // % do peso corporal (FineShape adota a mesma referência)
 // ============================================================
-type SmmBand = { min: number; max: number };
+type SmmBand = {
+  normalMin: number;
+  normalMax: number;
+  highMax: number;   // Alto: (normalMax, highMax]
+  veryHighMin: number; // Muito Alto: >= veryHighMin
+};
 
 function getJanssenBand(gender: "male" | "female", age: number): SmmBand {
-  // Faixas alinhadas ao FineShape (Janssen et al. 2002 / referência clínica).
+  // Referência FitMind Shape (tabela oficial por sexo e faixa etária).
   if (gender === "male") {
-    if (age < 40) return { min: 33.3, max: 39.3 };
-    if (age < 60) return { min: 32.4, max: 37.4 };
-    return            { min: 30.1, max: 34.1 };
+    if (age < 40) return { normalMin: 33.3, normalMax: 39.3, highMax: 44.0, veryHighMin: 44.1 };
+    if (age < 60) return { normalMin: 33.1, normalMax: 39.1, highMax: 43.8, veryHighMin: 43.9 };
+    return              { normalMin: 32.9, normalMax: 38.9, highMax: 43.6, veryHighMin: 43.7 };
   }
-  if (age < 40) return { min: 24.3, max: 30.3 };
-  if (age < 60) return { min: 24.1, max: 30.1 };
-  return            { min: 22.3, max: 27.3 };
+  if (age < 40) return { normalMin: 24.3, normalMax: 30.3, highMax: 35.3, veryHighMin: 35.4 };
+  if (age < 60) return { normalMin: 24.1, normalMax: 30.1, highMax: 35.1, veryHighMin: 35.2 };
+  return              { normalMin: 23.9, normalMax: 29.9, highMax: 34.9, veryHighMin: 35.0 };
 }
 
 export function getSkeletalMuscleReference(gender: "male" | "female", age = 30): string {
   const b = getJanssenBand(gender, age);
-  return `${b.min.toFixed(1).replace(".", ",")}–${b.max.toFixed(1).replace(".", ",")}%`;
+  return `${b.normalMin.toFixed(1).replace(".", ",")}–${b.normalMax.toFixed(1).replace(".", ",")}%`;
 }
 
 export function getSkeletalMuscleCategoryJanssen(
@@ -372,10 +377,12 @@ export function getSkeletalMuscleCategoryJanssen(
   age = 30,
 ): { label: string; eval: "good" | "normal" | "warning" | "danger"; color: string } {
   const b = getJanssenBand(gender, age);
-  if (pct < b.min) return { label: "Baixo",  eval: "warning", color: "#facc15" };
-  if (pct <= b.max) return { label: "Normal", eval: "good",    color: "#22c55e" };
-  return                   { label: "Alto",   eval: "good",    color: "#16a34a" };
+  if (pct < b.normalMin) return { label: "Baixo",       eval: "warning", color: "#facc15" };
+  if (pct <= b.normalMax) return { label: "Normal",      eval: "good",    color: "#22c55e" };
+  if (pct >= b.veryHighMin) return { label: "Muito Alto",  eval: "good",    color: "#3b82f6" };
+  return                        { label: "Alto",        eval: "good",    color: "#16a34a" };
 }
+
 
 // ============================================================
 // MASSA MUSCULAR TOTAL — referência FineShape
