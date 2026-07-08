@@ -1,28 +1,36 @@
-# Correção das referências de Músculo Esquelético
+# Corrigir gênero "outros" e duplicação no relatório Rede/Downline
 
-Comparei a tabela enviada com o código em `src/lib/body-composition-calculator.ts` (função `getJanssenBand` + classificador `getSkeletalMuscleCategoryJanssen`) e há divergências reais.
+## 1) Gênero — remover "Outro"
 
-## Divergências encontradas
+Estado atual no banco: `female: 4649`, `male: 1701`, `other: 13`.
 
-| Grupo | Tabela (Normal) | Código atual | Status |
-|---|---|---|---|
-| Mulher 18-39 | 24,3 – 30,3 | 24,3 – 30,3 | OK |
-| Mulher 40-59 | 24,1 – 30,1 | 24,1 – 30,1 | OK |
-| Mulher 60-80 | 23,9 – 29,9 | 22,3 – 27,3 | **Errado** |
-| Homem 18-39 | 33,3 – 39,3 | 33,3 – 39,3 | OK |
-| Homem 40-59 | 33,1 – 39,1 | 32,4 – 37,4 | **Errado** |
-| Homem 60-80 | 32,9 – 38,9 | 30,1 – 34,1 | **Errado** |
+**Causas dos "other":**
+- `src/components/coach/FineshapeImport.tsx` `mapGender()` — quando a coluna Sexo do Fineshape vem em branco ou com prefixo diferente de "masc"/"fem", grava `"other"`.
+- `src/components/coach/FitMindShape.tsx` — os selects de gênero (novo cliente linha 1656 e editar cliente ~1886) oferecem a opção `"Outro"`.
 
-Além disso, a tabela define 4 categorias (Baixo / Normal / Alto / Muito Alto) e o código atual só tem 3 (Baixo / Normal / Alto), então "Muito Alto" nunca é reportado.
+**Ações:**
+- `FineshapeImport.tsx`: no `mapGender`, quando não identificar prefixo, cair em `"female"` (default do formulário) em vez de `"other"`.
+- `FitMindShape.tsx`: remover o `<option value="other">Outro</option>` dos dois selects, mantendo apenas Feminino/Masculino.
+- Migração de dados: `UPDATE coach_evaluation_clients SET gender='female' WHERE gender='other'` — 13 registros. Coach pode ajustar caso a caso depois; hoje esses 13 já aparecem como masculino no resultado (após a correção anterior), o que também é chute — padronizar para `female` mantém consistência com o default do form.
 
-## O que vou alterar
+## 2) Relatório Rede/Downline — duplicação de vendas
 
-Arquivo único: `src/lib/body-composition-calculator.ts`
+**Causa:** `src/lib/coach-downline.functions.ts` soma receita a partir de duas fontes independentes para os mesmos alunos:
+- `transactions` (linhas 111-127)
+- `store_orders` (linhas 128-142)
 
-1. Substituir `getJanssenBand` por faixas completas com 4 tiers por sexo/idade, exatamente iguais à tabela:
-   - Mulher: 18-39 (24,3-30,3 / 30,4-35,3 / ≥35,4), 40-59 (24,1-30,1 / 30,2-35,1 / ≥35,2), 60-80 (23,9-29,9 / 30,0-34,9 / ≥35,0)
-   - Homem: 18-39 (33,3-39,3 / 39,4-44,0 / ≥44,1), 40-59 (33,1-39,1 / 39,2-43,8 / ≥43,9), 60-80 (32,9-38,9 / 39,0-43,6 / ≥43,7)
-2. Atualizar `getSkeletalMuscleCategoryJanssen` para retornar 4 rótulos: **Baixo** (amarelo), **Normal** (verde), **Alto** (verde escuro) e **Muito Alto** (novo — proponho azul `#3b82f6` para diferenciar de Alto). O tipo `eval` continua `"good" | "normal" | "warning" | "danger"` — "Muito Alto" fica como `"good"`.
-3. Atualizar `getSkeletalMuscleReference` para exibir o range Normal (min–max do tier Normal) do grupo etário do aluno, mantendo o formato "24,3–30,3%".
+Toda venda feita pela loja gera **um `store_order` + uma transação-espelho** com `metadata.store_order_id`. O `coach-reports.functions.ts` (relatório "Vendas" pessoal) já filtra esses espelhos com `.filter((t) => !t.metadata?.store_order_id)` — por isso o próprio relatório do Erick mostra R$ 359,80 correto e o downline do Nathan mostra R$ 719,60 (exatos 2×).
 
-Nenhuma alteração em UI/telas — os consumidores (`FitMindShape.tsx`) já usam essas funções e vão pegar as faixas corretas automaticamente.
+**Correção em `coach-downline.functions.ts`:**
+- Incluir `metadata` no `select` de `transactions`.
+- Filtrar `!t.metadata?.store_order_id` antes de somar `txMap`, exatamente como o relatório de Vendas faz.
+- Também aumentar o `select` de `commissions` para incluir `metadata` da transação e ignorar mirror ao contabilizar (evita comissão duplicada quando uma venda gera comissão tanto no `transaction` original quanto no espelho).
+- (Opcional) Somar também `partner_product_orders` na receita do coach downline, para paridade com o relatório de Vendas — mantenho fora do escopo desta correção; caso a Ana Flávia ainda apareça inflada apenas por isso, aviso.
+
+**Nenhuma migração de dados de comissão** — os valores no banco estão corretos, o problema é só de agregação no relatório.
+
+## Arquivos alterados
+- `src/components/coach/FineshapeImport.tsx` (mapGender)
+- `src/components/coach/FitMindShape.tsx` (2 selects de gênero)
+- `src/lib/coach-downline.functions.ts` (dedupe mirror tx)
+- Migração SQL: normalizar 13 registros `other` → `female` em `coach_evaluation_clients`
