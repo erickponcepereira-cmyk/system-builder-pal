@@ -539,6 +539,21 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
           </div>
         </div>
       )}
+
+      {bookingProduct && (
+        <PartnerFreebieBookingModal
+          product={{
+            id: bookingProduct.id,
+            name: bookingProduct.name,
+            weekly_limit_per_student: bookingProduct.weekly_limit_per_student,
+            redemption_location_name: bookingProduct.redemption_location_name,
+            redemption_location_url: bookingProduct.redemption_location_url,
+            partner_address: bookingProduct.partners?.address ?? null,
+          }}
+          onClose={() => setBookingProduct(null)}
+          onReserved={() => { setBookingProduct(null); toast.success("Reserva criada! Veja em Minhas reservas no portal do aluno."); }}
+        />
+      )}
     </>
   );
 }
