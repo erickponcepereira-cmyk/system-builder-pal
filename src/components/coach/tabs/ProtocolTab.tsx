@@ -144,7 +144,7 @@ export function ProtocolTab() {
         supabase
           .from("students")
           .select("id, profile_id, current_weight, goal_weight, profiles!students_profile_id_fkey(name,email)")
-          .eq("profile_id", profile.id)
+          .eq("profile_id", profile!.id)
           .maybeSingle(),
       ]);
       const merged: any[] = [];
