@@ -198,7 +198,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const bmiCat = getBMICategory(a.bmi || computedBMI);
   const avatarEntry = { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
   const avatarIndex = avatarEntry.index;
-  const clientGenderBin: "male" | "female" = client.gender === "male" ? "male" : "female";
+  const clientGenderBin: "male" | "female" = client.gender === "female" ? "female" : "male";
   const fatCat = getBodyFatCategory(a.bodyFat, client.gender, a.age || 30);
   const viscCat = getVisceralCategory(a.visceralFat);
   const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
