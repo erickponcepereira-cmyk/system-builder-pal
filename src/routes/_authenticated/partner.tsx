@@ -782,6 +782,34 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 </p>
               )}
 
+              {editing.kind === "free" && (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-xs font-bold text-white">Local de resgate (opcional)</div>
+                  <p className="mt-1 text-[10px] text-white/45">
+                    Preencha apenas se o resgate acontece em um endereço diferente do cadastro da sua empresa. O aluno verá o nome e um link para abrir no mapa junto do QR code.
+                  </p>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    <Field label="Nome do local">
+                      <input
+                        value={editing.redemption_location_name || ""}
+                        onChange={e => setEditing({ ...editing, redemption_location_name: e.target.value })}
+                        placeholder="Ex.: Academia Move — Cuiabá/MT"
+                        className="field-input"
+                      />
+                    </Field>
+                    <Field label="Link do mapa (Google Maps, Waze, etc.)">
+                      <input
+                        value={editing.redemption_location_url || ""}
+                        onChange={e => setEditing({ ...editing, redemption_location_url: e.target.value })}
+                        placeholder="https://maps.google.com/?q=..."
+                        className="field-input"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              )}
+
+
 
               <Field label="Nome"><input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" /></Field>
               <Field label="Descrição"><textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} className="field-input" /></Field>
