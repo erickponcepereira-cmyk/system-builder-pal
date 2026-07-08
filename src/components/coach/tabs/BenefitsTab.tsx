@@ -155,7 +155,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
     if (error) { toast.error(error.message); return; }
     const rows = data as unknown as { coupon_id: string; token: string }[];
     if (!rows || rows.length === 0) { toast.error("Não foi possível gerar o cupom."); return; }
-    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time) });
+    setCoupon({ token: rows[0].token, productName: p.name, discountPercent: p.discount_percent, benefitWindow: formatBenefitWindow(p.benefit_start_time, p.benefit_end_time), locationName: p.redemption_location_name, locationUrl: p.redemption_location_url });
   };
 
   const handleScan = (decoded: string) => {
