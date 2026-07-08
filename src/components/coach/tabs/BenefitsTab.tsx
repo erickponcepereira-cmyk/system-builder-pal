@@ -450,10 +450,36 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                   {openBenefit.partners?.city ? ` · ${openBenefit.partners.city}/${openBenefit.partners.state || ""}` : ""}
                 </p>
               </div>
-              {formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time) && (
-                <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
-                  <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time)}
-                </p>
+              {(() => {
+                const lines = formatSchedules(schedulesByProduct[openBenefit.id] || []);
+                if (lines.length > 0) {
+                  return (
+                    <div className="rounded-lg bg-primary/10 px-3 py-2 text-[12px] font-bold text-primary space-y-0.5">
+                      <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Dias e horários disponíveis</p>
+                      {lines.map((line) => <p key={line} className="pl-4 text-primary/90">{line}</p>)}
+                    </div>
+                  );
+                }
+                return formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time) && (
+                  <p className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">
+                    <Clock className="h-3.5 w-3.5" /> {formatBenefitWindow(openBenefit.benefit_start_time, openBenefit.benefit_end_time)}
+                  </p>
+                );
+              })()}
+              {openBenefit.redemption_location_name && (
+                <a
+                  href={openBenefit.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(openBenefit.redemption_location_name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10"
+                >
+                  <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Local de resgate</p>
+                    <p className="text-xs font-medium text-white">{openBenefit.redemption_location_name}</p>
+                    <p className="text-[10px] text-primary mt-0.5">Abrir no mapa →</p>
+                  </div>
+                </a>
               )}
               {openBenefit.description && (
                 <p className="text-sm text-white/70 whitespace-pre-wrap leading-relaxed">{openBenefit.description}</p>
