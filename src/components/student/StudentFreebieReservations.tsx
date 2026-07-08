@@ -28,7 +28,7 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
     if (!u.user) { setLoading(false); return; }
     const { data } = await supabase
       .from("partner_freebie_reservations" as never)
-      .select("id, qr_token, slot_start, slot_end, status, partner_products(name), partners(fantasy_name, address)")
+      .select("id, qr_token, slot_start, slot_end, status, partner_products(name, redemption_location_name, redemption_location_url), partners(fantasy_name, address)")
       .eq("profile_id" as never, u.user.id as never)
       .gte("slot_end" as never, new Date(Date.now() - 24 * 3600 * 1000).toISOString() as never)
       .order("slot_start" as never);
