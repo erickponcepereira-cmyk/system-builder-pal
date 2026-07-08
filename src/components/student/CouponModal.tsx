@@ -98,6 +98,17 @@ export function CouponModal({ coupon, onClose }: { coupon: CouponData; onClose: 
             </div>
 
             <p className="text-[10px] text-white/40 break-all font-mono w-full">{coupon.token}</p>
+            {coupon.locationName && (
+              <a
+                href={coupon.locationUrl || `https://maps.google.com/?q=${encodeURIComponent(coupon.locationName)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 mx-auto flex w-fit items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/20"
+              >
+                <MapPin className="h-3.5 w-3.5" /> {coupon.locationName}
+                <span className="text-primary/70">→</span>
+              </a>
+            )}
             <p className="text-[11px] text-white/60 mt-3">
               Apresente este QR no parceiro para validar. O cupom é único e expira após o uso.
             </p>
