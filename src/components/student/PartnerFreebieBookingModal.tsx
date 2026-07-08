@@ -133,6 +133,22 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
           <button onClick={onClose}><X className="h-5 w-5 text-white/60" /></button>
         </div>
 
+        {product.redemption_location_name && (
+          <a
+            href={product.redemption_location_url || `https://maps.google.com/?q=${encodeURIComponent(product.redemption_location_name)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex items-start gap-2 rounded-lg bg-white/5 px-3 py-2 hover:bg-white/10"
+          >
+            <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Local de resgate</p>
+              <p className="text-xs font-medium text-white">{product.redemption_location_name}</p>
+              <p className="text-[10px] text-primary mt-0.5">Abrir no mapa →</p>
+            </div>
+          </a>
+        )}
+
         <div className="mb-3 rounded-lg bg-primary/10 px-3 py-2 text-[11px] text-white/80 flex items-center gap-2">
           <Users className="h-3.5 w-3.5 text-primary" />
           Você já usou <b className="text-white">{usedThisWeek}/{limit}</b> reservas esta semana.
