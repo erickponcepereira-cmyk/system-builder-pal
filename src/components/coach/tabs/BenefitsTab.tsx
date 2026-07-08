@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock } from "lucide-react";
+import { Building2, QrCode, ScanLine, ShieldAlert, Ticket, Loader2, X, Clock, MapPin, CalendarDays } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { QRScannerModal } from "@/components/QRScannerModal";
 import { CouponModal } from "@/components/student/CouponModal";
+import { PartnerFreebieBookingModal } from "@/components/student/PartnerFreebieBookingModal";
 
 type PartnerFreeProduct = {
   id: string;
@@ -20,9 +21,16 @@ type PartnerFreeProduct = {
   estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
+  weekly_limit_per_student: number | null;
+  redemption_location_name: string | null;
+  redemption_location_url: string | null;
   partner_id: string;
-  partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string } | null;
+  partners: { fantasy_name: string; photo_url: string | null; city: string | null; state: string | null; status: string; address: string | null } | null;
 };
+
+type ScheduleRow = { partner_product_id: string; weekday: number; start_time: string; end_time: string };
+
+const WEEKDAY_LABEL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function formatBenefitWindow(start?: string | null, end?: string | null) {
   const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
@@ -32,6 +40,21 @@ function formatBenefitWindow(start?: string | null, end?: string | null) {
   if (s) return `Disponível a partir das ${s}`;
   if (e) return `Disponível até ${e}`;
   return null;
+}
+
+function formatSchedules(rows: ScheduleRow[]): string[] {
+  const byDay = new Map<number, string[]>();
+  for (const r of rows) {
+    const s = r.start_time.slice(0, 5);
+    const e = r.end_time.slice(0, 5);
+    if (!byDay.has(r.weekday)) byDay.set(r.weekday, []);
+    byDay.get(r.weekday)!.push(`${s}–${e}`);
+  }
+  const out: string[] = [];
+  for (let d = 0; d < 7; d++) {
+    if (byDay.has(d)) out.push(`${WEEKDAY_LABEL[d]} ${byDay.get(d)!.join(" · ")}`);
+  }
+  return out;
 }
 
 
