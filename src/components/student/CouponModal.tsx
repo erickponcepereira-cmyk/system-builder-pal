@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { X, Ticket, Clock, CheckCircle2 } from "lucide-react";
+import { X, Ticket, Clock, CheckCircle2, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface CouponData {
@@ -8,6 +8,8 @@ export interface CouponData {
   productName: string;
   discountPercent?: number | null;
   benefitWindow?: string | null;
+  locationName?: string | null;
+  locationUrl?: string | null;
 }
 
 export function CouponModal({ coupon, onClose }: { coupon: CouponData; onClose: () => void }) {
