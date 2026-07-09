@@ -10419,14 +10419,24 @@ export type Database = {
           total: number
         }[]
       }
-      create_partner_company_order: {
-        Args: {
-          _partner_product_id: string
-          _payment_method?: string
-          _student_id?: string
-        }
-        Returns: string
-      }
+      create_partner_company_order:
+        | {
+            Args: {
+              _partner_product_id: string
+              _payment_method?: string
+              _student_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _partner_product_id: string
+              _payment_method: string
+              _referred_by_student_id?: string
+              _student_id: string
+            }
+            Returns: string
+          }
       create_partner_product_order:
         | {
             Args: {
