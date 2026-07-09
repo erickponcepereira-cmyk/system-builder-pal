@@ -511,7 +511,8 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
       loadMyChallengeEvents(from, to),
       loadMyAppointments(from, to),
       loadPartnerFreebieReservations(from, to),
-    ]).then(([evRes, dayRes, challengeEvents, appointmentEvents, freebieReservationEvents]) => {
+      loadProfessionalCoachAppointments(from, to),
+    ]).then(([evRes, dayRes, challengeEvents, appointmentEvents, freebieReservationEvents, professionalCoachEvents]) => {
       if (evRes.error)  toast.error(evRes.error.message);
       if (dayRes.error) toast.error(dayRes.error.message);
       const base = ((evRes.data as any[]) || []).map((r) => ({
@@ -519,7 +520,7 @@ export function FitmindCalendar({ compact = false, onlyHighlighted = false }: Fi
         responsible_coach_name: r.responsible_coach?.profiles?.name || null,
         responsible_coach_whatsapp: r.responsible_coach?.profiles?.phone || null,
       })) as FitmindEvent[];
-      setEvents([...base, ...challengeEvents, ...appointmentEvents, ...freebieReservationEvents]);
+      setEvents([...base, ...challengeEvents, ...appointmentEvents, ...freebieReservationEvents, ...professionalCoachEvents]);
       setHighlightedDays((dayRes.data as unknown as HighlightedDay[]) || []);
       setLoading(false);
     });
