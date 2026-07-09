@@ -65,6 +65,7 @@ interface ProProduct {
   event_start_time?: string | null;
   event_end_time?: string | null;
   payment_timing?: "at_booking" | "later";
+  sort_order?: number | null;
 }
 
 const WEEKDAYS = [
