@@ -122,6 +122,7 @@ export function StoreManager() {
   };
   const createSection = async () => {
     if (!newSection?.name) return;
+    const audiences = newSection.target_audiences || [];
     const payload = {
       name: newSection.name,
       slug: newSection.slug || slugify(newSection.name),
@@ -131,7 +132,8 @@ export function StoreManager() {
       is_active: newSection.is_active ?? true,
       card_width: newSection.card_width ?? null,
       card_height: newSection.card_height ?? null,
-      target_audience: newSection.target_audience ?? null,
+      target_audience: audiences[0] ?? null,
+      target_audiences: audiences,
     };
     await supabase.from("store_sections").insert(payload as never);
     setNewSection(null);
