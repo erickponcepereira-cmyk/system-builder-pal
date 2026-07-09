@@ -142,6 +142,37 @@ export function StoreManager() {
     load();
   };
 
+  const saveSubcategory = async (id: string) => {
+    const payload: any = { ...draftSubcategory };
+    if (payload.name) payload.slug = payload.slug || slugify(payload.name);
+    await supabase.from("store_subcategories" as any).update(payload).eq("id", id);
+    setEditingSubcategory(null);
+    setDraftSubcategory({});
+    load();
+  };
+  const createSubcategory = async (categoryId: string) => {
+    if (!newSubcategoryDraft?.name) return;
+    await supabase.from("store_subcategories" as any).insert({
+      category_id: categoryId,
+      name: newSubcategoryDraft.name,
+      slug: newSubcategoryDraft.slug || slugify(newSubcategoryDraft.name),
+      icon: newSubcategoryDraft.icon || null,
+      image_url: newSubcategoryDraft.image_url || null,
+      sort_order: newSubcategoryDraft.sort_order ?? 0,
+      is_active: newSubcategoryDraft.is_active ?? true,
+      card_width: newSubcategoryDraft.card_width ?? null,
+      card_height: newSubcategoryDraft.card_height ?? null,
+    } as any);
+    setNewSubcategoryFor(null);
+    setNewSubcategoryDraft({});
+    load();
+  };
+  const deleteSubcategory = async (id: string) => {
+    if (!confirm("Excluir esta subcategoria?")) return;
+    await supabase.from("store_subcategories" as any).delete().eq("id", id);
+    load();
+  };
+
   const approveSection = async (id: string) => {
     await supabase.from("store_sections").update({ pending: false, is_active: true }).eq("id", id);
     load();
