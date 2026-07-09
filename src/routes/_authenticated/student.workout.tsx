@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus, Target, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus, Target, Sparkles, Wrench } from "lucide-react";
 import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig, listPersonalChallenges, createPersonalChallenge, deletePersonalChallenge } from "@/lib/workouts.functions";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import fitmindLogo from "@/assets/fitmind-logo.png";
+import { StudentWorkoutBuilder } from "@/components/student/StudentWorkoutBuilder";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/student/workout")({
   head: () => ({ meta: [{ title: "Meu Treino — FitMind Club" }] }),
@@ -71,7 +73,8 @@ function nextLetter(plans: Plan[], currentLetter?: string | null): Plan | null {
 
 function WorkoutPage() {
   const navigate = useNavigate();
-  const [view, setView] = useState<"home" | "active" | "history">("home");
+  const [view, setView] = useState<"home" | "active" | "history" | "builder">("home");
+  const [studentUserId, setStudentUserId] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,12 +112,33 @@ function WorkoutPage() {
   };
 
   useEffect(() => { reload(); }, []);
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setStudentUserId(data.user?.id || null)); }, []);
 
   if (view === "active" && activePlan) {
     return <ActiveSession key={activePlan.id} plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} onFinished={(p) => setLastCompletedPlan(p)} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
+  }
+  if (view === "builder") {
+    return (
+      <div className="space-y-4 p-4 pb-8">
+        <header className="flex items-center gap-3">
+          <button onClick={() => { setView("home"); reload(); }} className="rounded-full bg-white/5 p-2 text-white/70">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-white">Montar meu treino</h1>
+            <p className="text-[11px] text-white/45">Escolha treinos prontos e personalize do seu jeito</p>
+          </div>
+        </header>
+        {studentUserId ? (
+          <StudentWorkoutBuilder studentUserId={studentUserId} onChanged={reload} />
+        ) : (
+          <p className="py-12 text-center text-sm text-white/50">Carregando...</p>
+        )}
+      </div>
+    );
   }
 
   const next = nextLetter(plans, planLetter(lastCompletedPlan));
@@ -137,6 +161,9 @@ function WorkoutPage() {
           <h1 className="text-lg font-bold text-white">Meu Treino</h1>
           <p className="text-[11px] text-white/45">Treine, evolua, conquiste 🏆</p>
         </div>
+        <button onClick={() => setView("builder")} className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary">
+          <Wrench className="h-3.5 w-3.5" /> Montar
+        </button>
         <button onClick={() => setView("history")} className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary">
           <History className="h-3.5 w-3.5" /> Histórico
         </button>
@@ -230,8 +257,11 @@ function WorkoutPage() {
           <Dumbbell className="mx-auto h-10 w-10 text-white/30" />
           <p className="mt-3 text-sm font-semibold text-white">Nenhum treino configurado</p>
           <p className="mt-1 text-[11px] text-white/50">
-            Peça ao seu coach para configurar um plano de treino para você.
+            Peça ao seu coach para configurar um plano — ou monte o seu escolhendo entre os treinos prontos.
           </p>
+          <button onClick={() => setView("builder")} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
+            <Wrench className="h-3.5 w-3.5" /> Montar meu treino
+          </button>
         </div>
       ) : (
         <div className="space-y-3">

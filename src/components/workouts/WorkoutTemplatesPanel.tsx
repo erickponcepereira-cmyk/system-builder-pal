@@ -32,11 +32,19 @@ interface Props {
   onEnableForStudent?: (template: WorkoutTemplate, letter: string) => Promise<void> | void;
   /** Display name for the targeted student (shown in the modal). */
   enableStudentName?: string | null;
+  /** Hide create/edit/delete controls (used by student/self-service views). */
+  readOnly?: boolean;
+  /** Custom title/subtitle to override defaults. */
+  title?: string;
+  subtitle?: string;
+  /** Custom label for the letter picker section in the detail modal. */
+  enableSectionTitle?: string;
+  enableSectionHint?: string;
 }
 
 const EMPTY_ITEM = (): WorkoutTemplateItem => ({ name: "", sets: "", reps: "", rest: "", notes: "" });
 
-export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enableStudentName }: Props) {
+export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enableStudentName, readOnly, title, subtitle, enableSectionTitle, enableSectionHint }: Props) {
   const [list, setList] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -137,12 +145,14 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
     <div className="space-y-4 text-white">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-2"><Dumbbell className="h-5 w-5 text-primary" /> Treinos prontos</h2>
-          <p className="text-xs text-white/60">{mode === "admin" ? "Templates globais disponíveis a todos os coaches." : "Templates globais + seus templates pessoais."}</p>
+          <h2 className="text-lg font-bold flex items-center gap-2"><Dumbbell className="h-5 w-5 text-primary" /> {title || "Treinos prontos"}</h2>
+          <p className="text-xs text-white/60">{subtitle || (mode === "admin" ? "Templates globais disponíveis a todos os coaches." : "Templates globais + seus templates pessoais.")}</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-          <Plus className="h-4 w-4" /> Novo treino
-        </button>
+        {!readOnly && (
+          <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+            <Plus className="h-4 w-4" /> Novo treino
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -175,7 +185,7 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
                   {t.description && <p className="mt-2 line-clamp-2 text-xs text-white/60">{t.description}</p>}
                   <p className="mt-2 text-[11px] text-primary">{t.items?.length || 0} exercício{(t.items?.length || 0) !== 1 ? "s" : ""} · Ver detalhes →</p>
                 </button>
-                {canEdit && (
+                {canEdit && !readOnly && (
                   <div className="mt-3 flex gap-2">
                     <button onClick={() => openEdit(t)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-xs"><Pencil className="h-3.5 w-3.5" /> Editar</button>
                     <button onClick={() => remove(t)} className="rounded-lg bg-red-500/15 px-2 py-1.5 text-xs text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -204,8 +214,8 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
             {viewing.description && <p className="mb-4 text-sm text-white/70 whitespace-pre-wrap">{viewing.description}</p>}
             {onEnableForStudent && (
               <div className="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-3">
-                <p className="text-xs font-bold text-white">Habilitar para {enableStudentName || "o aluno"}</p>
-                <p className="mt-0.5 text-[11px] text-white/60">Cada letra cria um dia de treino separado (A, B, C, D, E). Adicione vários para montar uma semana completa.</p>
+                <p className="text-xs font-bold text-white">{enableSectionTitle || `Habilitar para ${enableStudentName || "o aluno"}`}</p>
+                <p className="mt-0.5 text-[11px] text-white/60">{enableSectionHint || "Cada letra cria um dia de treino separado (A, B, C, D, E). Adicione vários para montar uma semana completa."}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {["A", "B", "C", "D", "E"].map((L) => (
                     <button
@@ -240,7 +250,7 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
         </div>
       )}
 
-      {showForm && (
+      {showForm && !readOnly && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-6">
             <div className="mb-4 flex items-center justify-between">
