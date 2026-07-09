@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } from "@/lib/student-health.functions";
 import { ProtectedImage } from "@/components/security/ProtectedImage";
+import { WindowMethod } from "@/components/student/WindowMethod";
+import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
 
@@ -121,6 +123,20 @@ function StudentEvolution() {
       <HealthGoalsCard />
 
       {student && <WaterTrackerCard studentId={student.id} />}
+
+      {student && (
+        <section className="rounded-2xl bg-card p-4">
+          <WindowMethod studentId={student.id} />
+        </section>
+      )}
+
+      {student && (
+        <section className="rounded-2xl bg-card p-4">
+          <WindowMethodHistory studentId={student.id} />
+        </section>
+      )}
+
+
 
 
       <section className="rounded-2xl bg-card p-4">
