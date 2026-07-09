@@ -81,6 +81,11 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
       if (payFilter === "paid" && !isPaid) return false;
       if (payFilter === "pending" && isPaid) return false;
     }
+    if (kindFilter !== "all") {
+      const isFree = a.product_kind === "free";
+      if (kindFilter === "free" && !isFree) return false;
+      if (kindFilter === "paid" && isFree) return false;
+    }
     return true;
   });
 
