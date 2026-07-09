@@ -290,16 +290,13 @@ export function StoreManager() {
             <input className="input-dark md:col-span-2" placeholder="Nome da seção" value={newSection.name || ""} onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} />
             <input className="input-dark" placeholder="slug (auto)" value={newSection.slug || ""} onChange={(e) => setNewSection({ ...newSection, slug: e.target.value })} />
             <input className="input-dark" placeholder="ícone (lucide name)" value={newSection.icon || ""} onChange={(e) => setNewSection({ ...newSection, icon: e.target.value })} />
-            <select
-              className="input-dark md:col-span-2"
-              value={newSection.target_audience || ""}
-              onChange={(e) => setNewSection({ ...newSection, target_audience: e.target.value || null })}
-            >
-              <option value="">Aba de destino — Todas</option>
-              <option value="partner">Parceiros</option>
-              <option value="professional">Profissionais</option>
-              <option value="fitmind">Fitmind</option>
-            </select>
+            <div className="md:col-span-4">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Aparece nas abas</p>
+              <AudienceChecklist
+                value={newSection.target_audiences || []}
+                onChange={(next) => setNewSection({ ...newSection, target_audiences: next })}
+              />
+            </div>
             <div className="md:col-span-2"><StoreImageUpload value={newSection.image_url} onChange={(url) => setNewSection({ ...newSection, image_url: url })} folder="sections" placeholder="Enviar imagem (400x400px)" /></div>
             <input type="number" className="input-dark" placeholder="largura px (ex: 160)" value={newSection.card_width ?? ""} onChange={(e) => setNewSection({ ...newSection, card_width: e.target.value ? Number(e.target.value) : null })} />
             <input type="number" className="input-dark" placeholder="altura px (ex: 160)" value={newSection.card_height ?? ""} onChange={(e) => setNewSection({ ...newSection, card_height: e.target.value ? Number(e.target.value) : null })} />
