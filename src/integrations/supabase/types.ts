@@ -7158,12 +7158,16 @@ export type Database = {
           price_input_mode: string
           professional_net_amount: number | null
           redemption_instructions: string | null
+          redemption_location_name: string | null
+          redemption_location_url: string | null
           redemption_mode: string
           section_id: string | null
           status: string
           stock: number | null
           subcategory_id: string | null
           updated_at: string
+          uses_scheduling: boolean
+          weekly_limit_per_student: number
         }
         Insert: {
           admin_notes?: string | null
@@ -7206,12 +7210,16 @@ export type Database = {
           price_input_mode?: string
           professional_net_amount?: number | null
           redemption_instructions?: string | null
+          redemption_location_name?: string | null
+          redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
           status?: string
           stock?: number | null
           subcategory_id?: string | null
           updated_at?: string
+          uses_scheduling?: boolean
+          weekly_limit_per_student?: number
         }
         Update: {
           admin_notes?: string | null
@@ -7254,12 +7262,16 @@ export type Database = {
           price_input_mode?: string
           professional_net_amount?: number | null
           redemption_instructions?: string | null
+          redemption_location_name?: string | null
+          redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
           status?: string
           stock?: number | null
           subcategory_id?: string | null
           updated_at?: string
+          uses_scheduling?: boolean
+          weekly_limit_per_student?: number
         }
         Relationships: [
           {
@@ -8250,6 +8262,7 @@ export type Database = {
           slug: string
           sort_order: number
           target_audience: string | null
+          target_audiences: string[]
           updated_at: string
         }
         Insert: {
@@ -8266,6 +8279,7 @@ export type Database = {
           slug: string
           sort_order?: number
           target_audience?: string | null
+          target_audiences?: string[]
           updated_at?: string
         }
         Update: {
@@ -8282,6 +8296,7 @@ export type Database = {
           slug?: string
           sort_order?: number
           target_audience?: string | null
+          target_audiences?: string[]
           updated_at?: string
         }
         Relationships: []

@@ -51,6 +51,10 @@ interface ProProduct {
   benefit_start_time?: string | null;
   benefit_end_time?: string | null;
   monthly_redeem_limit?: number | null;
+  weekly_limit_per_student?: number | null;
+  uses_scheduling?: boolean | null;
+  redemption_location_name?: string | null;
+  redemption_location_url?: string | null;
   // Advanced availability
   availability_weekdays?: number[];
   availability_recurrence?: "single" | "weekly";
@@ -107,6 +111,10 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     benefit_start_time: null,
     benefit_end_time: null,
     monthly_redeem_limit: null,
+    weekly_limit_per_student: 1,
+    uses_scheduling: false,
+    redemption_location_name: null,
+    redemption_location_url: null,
     availability_weekdays: [],
     availability_recurrence: "weekly",
     availability_validity_days: null,
@@ -151,6 +159,10 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       benefit_end_time: emptyToNull(editing.benefit_end_time) as string | null,
       availability_weekdays: editing.availability_weekdays || [],
       availability_hours: editing.availability_hours || {},
+      redemption_location_name: emptyToNull(editing.redemption_location_name) as string | null,
+      redemption_location_url: emptyToNull(editing.redemption_location_url) as string | null,
+      uses_scheduling: !!editing.uses_scheduling,
+      weekly_limit_per_student: Math.max(1, Number(editing.weekly_limit_per_student || 1)),
     };
 
     if (isFree) {
@@ -374,6 +386,30 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   <Field label="Limite de uso por mês (opcional)">
                     <input type="number" min={1} value={editing.monthly_redeem_limit ?? ""} onChange={e => setEditing({ ...editing, monthly_redeem_limit: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" placeholder="Deixe vazio para ilimitado" />
                   </Field>
+
+                  {editing.redemption_mode !== "discount" && (
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-3">
+                      <label className="flex items-center gap-2 text-xs font-bold text-white">
+                        <input type="checkbox" checked={!!editing.uses_scheduling} onChange={e => setEditing({ ...editing, uses_scheduling: e.target.checked })} />
+                        Aluno reserva horário para resgatar
+                      </label>
+                      {editing.uses_scheduling && (
+                        <Field label="Reservas por aluno / semana">
+                          <input type="number" min={1} value={editing.weekly_limit_per_student ?? 1} onChange={e => setEditing({ ...editing, weekly_limit_per_student: Math.max(1, Number(e.target.value || 1)) })} className="field-input" />
+                        </Field>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-white/50">Local de resgate</p>
+                    <Field label="Nome do local (opcional)">
+                      <input value={editing.redemption_location_name || ""} onChange={e => setEditing({ ...editing, redemption_location_name: e.target.value })} className="field-input" placeholder="Ex: Consultório Centro" />
+                    </Field>
+                    <Field label="Link do mapa (Google Maps, Waze, etc.)">
+                      <input value={editing.redemption_location_url || ""} onChange={e => setEditing({ ...editing, redemption_location_url: e.target.value })} className="field-input" placeholder="https://maps.app.goo.gl/..." />
+                    </Field>
+                  </div>
                 </div>
               ) : (
                 <PaidPricingEditor

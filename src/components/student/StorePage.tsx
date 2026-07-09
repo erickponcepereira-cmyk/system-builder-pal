@@ -148,7 +148,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,image_urls,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
-      supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height,target_audience" as never).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height,target_audience,target_audiences" as never).eq("is_active" as never, true as never).order("sort_order" as never),
       supabase.from("products" as never).select("id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
@@ -184,9 +184,14 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     const partnerRows = partnerRowsAll;
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
-    const allSections = (sectionsRes.data as unknown as Array<SectionRow & { target_audience?: string | null }>) || [];
-    // Loja FitMind: oculta seções marcadas para parceiros/profissionais
-    const sections = allSections.filter((s) => !s.target_audience || s.target_audience === "fitmind") as SectionRow[];
+    const allSections = (sectionsRes.data as unknown as Array<SectionRow & { target_audience?: string | null; target_audiences?: string[] | null }>) || [];
+    // Loja FitMind: mostra seções marcadas para "fitmind" (via array multi ou legado) ou sem público definido
+    const sections = allSections.filter((s) => {
+      const list = (s.target_audiences && s.target_audiences.length > 0)
+        ? s.target_audiences
+        : (s.target_audience ? [s.target_audience] : []);
+      return list.length === 0 || list.includes("fitmind");
+    }) as SectionRow[];
     setStoreSections(sections);
     const sectionName = (id: string) => sections.find((s) => s.id === id)?.name || "Loja";
 

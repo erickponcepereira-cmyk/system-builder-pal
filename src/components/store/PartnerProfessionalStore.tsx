@@ -30,7 +30,7 @@ function BenefitsBadges({ price, compact = false }: { price: number; compact?: b
 type Kind = "partner" | "professional" | "market";
 type CardKind = "partner" | "professional";
 
-type Section = { id: string; name: string; image_url: string | null; target_audience?: string | null };
+type Section = { id: string; name: string; image_url: string | null; target_audience?: string | null; target_audiences?: string[] | null };
 type Category = { id: string; section_id: string; name: string; image_url: string | null };
 
 export type PartnerStoreCard = {
@@ -145,12 +145,17 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
     (async () => {
       setLoading(true);
       const [{ data: s }, { data: c }] = await Promise.all([
-        supabase.from("store_sections").select("id,name,image_url,target_audience").eq("is_active", true).order("sort_order"),
+        supabase.from("store_sections").select("id,name,image_url,target_audience,target_audiences").eq("is_active", true).order("sort_order"),
         supabase.from("store_categories").select("id,section_id,name,image_url").eq("is_active", true).order("sort_order"),
       ]);
       // Mostra apenas seções sem audiência definida ou marcadas para os tipos ativos.
       const audiences: string[] = kind === "market" ? ["partner", "professional"] : [kind];
-      const filteredSections = ((s as Section[]) || []).filter((x) => !x.target_audience || audiences.includes(x.target_audience));
+      const filteredSections = ((s as Section[]) || []).filter((x) => {
+        const list = (x.target_audiences && x.target_audiences.length > 0)
+          ? x.target_audiences
+          : (x.target_audience ? [x.target_audience] : []);
+        return list.length === 0 || list.some((a) => audiences.includes(a));
+      });
       setSections(filteredSections);
       setCategories((c as Category[]) || []);
 

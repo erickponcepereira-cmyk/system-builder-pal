@@ -15,6 +15,7 @@ interface Section {
   card_height: number | null;
   pending?: boolean | null;
   target_audience?: string | null;
+  target_audiences?: string[] | null;
 }
 interface Category {
   id: string;
@@ -45,6 +46,37 @@ interface Subcategory {
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+const AUDIENCE_OPTIONS: { value: string; label: string }[] = [
+  { value: "partner", label: "Parceiros" },
+  { value: "professional", label: "Profissionais" },
+  { value: "fitmind", label: "Fitmind (aluno/coach)" },
+];
+
+function AudienceChecklist({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
+  const toggle = (v: string) => {
+    if (value.includes(v)) onChange(value.filter((x) => x !== v));
+    else onChange([...value, v]);
+  };
+  return (
+    <div className="flex flex-wrap gap-2">
+      {AUDIENCE_OPTIONS.map((opt) => {
+        const on = value.includes(opt.value);
+        return (
+          <button
+            type="button"
+            key={opt.value}
+            onClick={() => toggle(opt.value)}
+            className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold border transition ${on ? "bg-primary/20 border-primary/50 text-primary" : "bg-white/5 border-white/10 text-white/60 hover:text-white"}`}
+          >
+            {on ? "✓ " : ""}{opt.label}
+          </button>
+        );
+      })}
+      {value.length === 0 && <span className="text-[11px] text-white/40 self-center">Nenhuma marcada = aparece em todas</span>}
+    </div>
+  );
 }
 
 export function StoreManager() {
@@ -83,6 +115,9 @@ export function StoreManager() {
   const saveSection = async (id: string) => {
     const payload: any = { ...draftSection };
     if (payload.name) payload.slug = payload.slug || slugify(payload.name);
+    if (Array.isArray(payload.target_audiences)) {
+      payload.target_audience = payload.target_audiences[0] ?? null;
+    }
     await supabase.from("store_sections").update(payload).eq("id", id);
     setEditingSection(null);
     setDraftSection({});
@@ -90,6 +125,7 @@ export function StoreManager() {
   };
   const createSection = async () => {
     if (!newSection?.name) return;
+    const audiences = newSection.target_audiences || [];
     const payload = {
       name: newSection.name,
       slug: newSection.slug || slugify(newSection.name),
@@ -99,7 +135,8 @@ export function StoreManager() {
       is_active: newSection.is_active ?? true,
       card_width: newSection.card_width ?? null,
       card_height: newSection.card_height ?? null,
-      target_audience: newSection.target_audience ?? null,
+      target_audience: audiences[0] ?? null,
+      target_audiences: audiences,
     };
     await supabase.from("store_sections").insert(payload as never);
     setNewSection(null);
@@ -253,16 +290,13 @@ export function StoreManager() {
             <input className="input-dark md:col-span-2" placeholder="Nome da seção" value={newSection.name || ""} onChange={(e) => setNewSection({ ...newSection, name: e.target.value })} />
             <input className="input-dark" placeholder="slug (auto)" value={newSection.slug || ""} onChange={(e) => setNewSection({ ...newSection, slug: e.target.value })} />
             <input className="input-dark" placeholder="ícone (lucide name)" value={newSection.icon || ""} onChange={(e) => setNewSection({ ...newSection, icon: e.target.value })} />
-            <select
-              className="input-dark md:col-span-2"
-              value={newSection.target_audience || ""}
-              onChange={(e) => setNewSection({ ...newSection, target_audience: e.target.value || null })}
-            >
-              <option value="">Aba de destino — Todas</option>
-              <option value="partner">Parceiros</option>
-              <option value="professional">Profissionais</option>
-              <option value="fitmind">Fitmind</option>
-            </select>
+            <div className="md:col-span-4">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Aparece nas abas</p>
+              <AudienceChecklist
+                value={newSection.target_audiences || []}
+                onChange={(next) => setNewSection({ ...newSection, target_audiences: next })}
+              />
+            </div>
             <div className="md:col-span-2"><StoreImageUpload value={newSection.image_url} onChange={(url) => setNewSection({ ...newSection, image_url: url })} folder="sections" placeholder="Enviar imagem (400x400px)" /></div>
             <input type="number" className="input-dark" placeholder="largura px (ex: 160)" value={newSection.card_width ?? ""} onChange={(e) => setNewSection({ ...newSection, card_width: e.target.value ? Number(e.target.value) : null })} />
             <input type="number" className="input-dark" placeholder="altura px (ex: 160)" value={newSection.card_height ?? ""} onChange={(e) => setNewSection({ ...newSection, card_height: e.target.value ? Number(e.target.value) : null })} />
@@ -294,16 +328,10 @@ export function StoreManager() {
                   <>
                     <input className="input-dark flex-1" value={draftSection.name ?? s.name} onChange={(e) => setDraftSection({ ...draftSection, name: e.target.value })} />
                     <input className="input-dark w-32" value={draftSection.slug ?? s.slug} onChange={(e) => setDraftSection({ ...draftSection, slug: e.target.value })} />
-                    <select
-                      className="input-dark w-36"
-                      value={draftSection.target_audience ?? s.target_audience ?? ""}
-                      onChange={(e) => setDraftSection({ ...draftSection, target_audience: e.target.value || null })}
-                    >
-                      <option value="">Todas as abas</option>
-                      <option value="partner">Parceiros</option>
-                      <option value="professional">Profissionais</option>
-                      <option value="fitmind">Fitmind</option>
-                    </select>
+                    <AudienceChecklist
+                      value={draftSection.target_audiences ?? s.target_audiences ?? (s.target_audience ? [s.target_audience] : [])}
+                      onChange={(next) => setDraftSection({ ...draftSection, target_audiences: next })}
+                    />
                     <StoreImageUpload value={draftSection.image_url ?? s.image_url} onChange={(url) => setDraftSection({ ...draftSection, image_url: url })} folder="sections" placeholder="Imagem" />
                     <input type="number" className="input-dark w-20" placeholder="larg" value={draftSection.card_width ?? s.card_width ?? ""} onChange={(e) => setDraftSection({ ...draftSection, card_width: e.target.value ? Number(e.target.value) : null })} />
                     <input type="number" className="input-dark w-20" placeholder="alt" value={draftSection.card_height ?? s.card_height ?? ""} onChange={(e) => setDraftSection({ ...draftSection, card_height: e.target.value ? Number(e.target.value) : null })} />
@@ -320,13 +348,16 @@ export function StoreManager() {
                       <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10" />
                     )}
                     <div className="flex-1">
-                      <div className="font-semibold text-white flex items-center gap-2">
+                      <div className="font-semibold text-white flex items-center gap-2 flex-wrap">
                         {s.name}
-                        {s.target_audience && (
-                          <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary uppercase">
-                            {s.target_audience === "partner" ? "Parceiros" : s.target_audience === "professional" ? "Profissionais" : "Fitmind"}
+                        {(s.target_audiences && s.target_audiences.length > 0
+                          ? s.target_audiences
+                          : (s.target_audience ? [s.target_audience] : [])
+                        ).map((a) => (
+                          <span key={a} className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary uppercase">
+                            {a === "partner" ? "Parceiros" : a === "professional" ? "Profissionais" : "Fitmind"}
                           </span>
-                        )}
+                        ))}
                         {s.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
                       </div>
                       <div className="text-xs text-white/40">/{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s)</div>

@@ -292,28 +292,40 @@ async function loadPartnerFreebieReservations(from: Date, to: Date): Promise<Fit
     const { data: rows } = await supabase
       .from("partner_freebie_reservations" as never)
       .select(
-        "id,slot_start,slot_end,status,partner_products(name),profile:profiles!partner_freebie_reservations_profile_id_fkey(name)" as never,
+        "id,slot_start,slot_end,status,partner_products(name,redemption_location_name,redemption_location_url),profile:profiles!partner_freebie_reservations_profile_id_fkey(name,phone),student:students!partner_freebie_reservations_student_id_fkey(coach:coaches!students_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name,phone)))" as never,
       )
       .eq("partner_id" as never, (partner as { id: string }).id)
       .in("status" as never, ["reserved", "used"] as never)
       .gte("slot_start" as never, from.toISOString() as never)
       .lt("slot_start" as never, to.toISOString() as never);
 
+    const digits = (v: string | null | undefined) => (v || "").replace(/\D+/g, "");
     return ((rows as any[]) || []).map((r) => {
       const productName = r.partner_products?.name || "Reserva";
       const studentName = r.profile?.name || "Aluno";
+      const studentPhoneRaw = r.profile?.phone as string | null | undefined;
+      const studentPhone = digits(studentPhoneRaw);
+      const coachName = r.student?.coach?.profile?.name as string | null | undefined;
       const used = r.status === "used";
       const color = used ? "#22c55e" : "#f59e0b";
+      const waLink = studentPhone ? `https://wa.me/${studentPhone.length <= 11 ? "55" + studentPhone : studentPhone}` : null;
+      const parts: string[] = [];
+      if (waLink) parts.push(`WhatsApp do aluno: ${studentPhoneRaw} (${waLink})`);
+      else if (studentPhoneRaw) parts.push(`WhatsApp do aluno: ${studentPhoneRaw}`);
+      if (coachName) parts.push(`Coach responsável: ${coachName}`);
+      const description = [used ? "Presença confirmada." : "Reserva confirmada, aguardando check-in.", ...parts].join("\n");
+      const subtitleBits = [`com ${studentName}`];
+      if (coachName) subtitleBits.push(`Coach ${coachName}`);
       return {
         id: `pfr-${r.id}`,
         title: `🎟️ ${productName}`,
-        subtitle: `com ${studentName}`,
-        description: used ? "Presença confirmada." : "Reserva confirmada, aguardando check-in.",
-        location: null,
+        subtitle: subtitleBits.join(" · "),
+        description,
+        location: r.partner_products?.redemption_location_name || null,
         image_url: null,
         color,
         category: "aula",
-        tags: [used ? "resgatado" : "reservado"],
+        tags: [used ? "resgatado" : "reservado", ...(waLink ? ["whatsapp"] : [])],
         starts_at: r.slot_start,
         ends_at: r.slot_end,
         all_day: false,
@@ -322,8 +334,9 @@ async function loadPartnerFreebieReservations(from: Date, to: Date): Promise<Fit
         highlight_color: color,
         highlight_label: used ? "Resgatado" : "Reservado",
         google_calendar_title: productName,
-        google_calendar_description: `Reserva de brinde de ${studentName}`,
-        google_calendar_location: null,
+        google_calendar_description: description,
+        google_calendar_location: r.partner_products?.redemption_location_url || r.partner_products?.redemption_location_name || null,
+        
       } satisfies FitmindEvent;
     });
   } catch (e) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-type Section = { id: string; name: string; pending: boolean | null; is_active: boolean; target_audience?: string | null };
+type Section = { id: string; name: string; pending: boolean | null; is_active: boolean; target_audience?: string | null; target_audiences?: string[] | null };
 type Category = { id: string; section_id: string; name: string; pending: boolean | null; is_active: boolean };
 
 interface Props {
@@ -20,12 +20,17 @@ export function CategoryPicker({ sectionId, categoryId, onChange, targetAudience
 
   const load = async () => {
     const [{ data: s }, { data: c }] = await Promise.all([
-      supabase.from("store_sections").select("id,name,pending,is_active,target_audience").order("name"),
+      supabase.from("store_sections").select("id,name,pending,is_active,target_audience,target_audiences").order("name"),
       supabase.from("store_categories").select("id,section_id,name,pending,is_active").order("name"),
     ]);
     let secs = ((s as Section[]) || []).filter((x) => x.is_active && !x.pending);
     if (targetAudience) {
-      secs = secs.filter((x) => !x.target_audience || x.target_audience === targetAudience);
+      secs = secs.filter((x) => {
+        const list = (x.target_audiences && x.target_audiences.length > 0)
+          ? x.target_audiences
+          : (x.target_audience ? [x.target_audience] : []);
+        return list.length === 0 || list.includes(targetAudience);
+      });
     }
     setSections(secs);
     setCategories(((c as Category[]) || []).filter((x) => x.is_active && !x.pending));
