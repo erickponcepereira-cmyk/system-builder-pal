@@ -368,6 +368,7 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
         payload[`meal_${n}_exercise`] = m.exercise;
       });
       await supabase.from("window_method_logs" as never).upsert(payload as never, { onConflict: "student_id,log_date" } as never);
+      setSavedAt(Date.now());
     } finally {
       setSaving(false);
     }
