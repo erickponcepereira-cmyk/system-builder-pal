@@ -499,7 +499,7 @@ function StudentFreebies() {
                               {p.discount_percent}% OFF
                             </div>
                           ) : null}
-                          {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                          {p.image_url && <img src={p.image_url} alt={p.name} className="aspect-square w-full object-contain bg-black/40" />}
                           <div className="p-4">
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="font-bold text-white">{p.name}</h3>
