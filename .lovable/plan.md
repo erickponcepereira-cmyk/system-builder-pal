@@ -1,39 +1,32 @@
+# Plano — Reorganização Herbalife + Espelho read-only + Boleto
 
-## O que aconteceu
+## Fase 1 — Reorganização de seções (ESTA FASE)
+- Criar seção "Suplementos" (target_audience = fitmind e outra para partner/professional respectivamente, ou usar `target_audiences` array).
+- Transformar seções "Herbalife" e "Herbalife (Parceiros)" em categorias dentro de "Suplementos".
+- Categorias existentes (Chás Funcionais, Nutrição Esportiva 24h, Proteínas Funcionais, Se Torne Cliente Premium, Se Torne Consultor Herbalife, Nutrição Externa) viram subcategorias dentro da nova categoria "Herbalife".
+- Reapontar `products.section_id/category_id/subcategory_id`, `partner_products.*`, `professional_products.*` das linhas afetadas para a nova estrutura.
+- Manter seções antigas com `is_active=false` como legado (não deletar) até validar.
 
-O cliente **conseguiu se cadastrar** (o usuário foi criado no backend), mas ao abrir o link do e-mail de confirmação caiu direto no host do backend (`...supabase.co`) recebendo `No API key found in request`. Isso significa que o link chegou **sem o token** (`?token=...&type=signup&redirect_to=...`) — só o host — ou o token já foi consumido/expirou.
+## Fase 2 — Espelho read-only Herbalife → parceiro/profissional
+- Adicionar colunas em `partner_products` e `professional_products`:
+  - `mirror_source_product_id uuid REFERENCES public.products(id)`
+  - `is_mirrored boolean` (true = read-only, herdado)
+- View / lógica: quando exibir catálogo do parceiro/profissional, incluir também os espelhos.
+- UI de edição: se `is_mirrored`, campos travados (preço, foto, descrição, cost). Só pode ativar/desativar exibição.
+- Botão admin "Migrar catálogo Herbalife para parceiro X" cria os registros espelho em lote.
 
-## Correções
+## Fase 3 — Custo Herbalife no painel de pedidos
+- Ao registrar venda de produto Herbalife via parceiro/profissional, chamar `orderpool.functions.ts` para inserir entry em `product_order_pool_entries` com o `cost` do produto original.
+- Recalcular repasses: subtrair o custo antes do partner_net_amount / professional_net_amount.
+- Refletir no ProductFinancialEditor / painel financeiro existente.
 
-### 1. Garantir Site URL e Redirect URLs corretos no Auth
-Configurar via ferramenta de auth do Cloud:
-- **Site URL:** `https://fitmindclub.lovable.app`
-- **Redirect URLs (allowlist):** adicionar
-  - `https://fitmindclub.lovable.app/*`
-  - `https://fitmindclub.lovable.app/login`
-  - `https://id-preview--57e54ea4-86cc-4948-814d-71b2815329a0.lovable.app/*` (preview)
+## Fase 4 — Fluxo de boleto Herbalife
+- Nova tabela `herbalife_boletos`:
+  - order_id (fk partner_product_orders ou store_orders), boleto_file_url, boleto_barcode, submitted_at, submitted_by, admin_paid_at, admin_paid_by, payment_proof_url, status ('pending_admin_payment'|'paid').
+- UI parceiro/profissional: aba "Vendas Herbalife" (nome cliente, produtos, data, forma pgto, prazo, endereço, botão anexar boleto/código).
+- UI admin em `admin.product-orders`: painel de boletos pendentes com botão "Confirmar pagamento" + upload comprovante.
+- Notificação parceiro quando admin confirma pagamento.
 
-Sem isso, o `emailRedirectTo: ${window.location.origin}/login` pode ser rejeitado e o link volta apontando só para o host do backend.
+---
 
-### 2. Revisar o template de e-mail "Confirm signup"
-Confirmar que o corpo do template usa:
-```
-<a href="{{ .ConfirmationURL }}">Confirmar minha conta</a>
-```
-E **não** apenas `{{ .SiteURL }}` ou texto solto com o link colado. Se o template atual estiver quebrado, restaurar para o padrão.
-
-### 3. Melhorar a tela pós-cadastro (CheckEmailNotice)
-- Já existe botão "Reenviar e-mail de confirmação" — deixar mais visível e adicionar aviso: *"Se o link do e-mail não abrir corretamente, copie e cole a URL inteira no navegador (WhatsApp/apps de mensagem às vezes cortam links longos)."*
-- Trocar o `emailRedirectTo` do reenvio para bater exatamente com o do cadastro original.
-
-### 4. Recuperar o cliente atual
-- Pedir para o cliente clicar em **"Reenviar e-mail de confirmação"** na tela após o cadastro, OU
-- Confirmar manualmente o e-mail dele pelo painel de Users do backend (ação de admin, uma vez).
-
-## Fora do escopo
-- Não mexer em regras de negócio, comissões, papéis, checkout.
-- Não alterar o fluxo de cadastro em si — o cadastro está funcionando; o problema é só o link de confirmação.
-
-## Preciso confirmar com você
-1. O cliente recebeu o e-mail no Gmail/Outlook e clicou lá, ou o link foi repassado por WhatsApp antes? (isso muda o diagnóstico: se veio do WhatsApp, é só truncamento do link e a correção 3 resolve).
-2. Posso ajustar Site URL / Redirect URLs do Auth agora (correção 1)?
+## Iniciando Fase 1 agora.
