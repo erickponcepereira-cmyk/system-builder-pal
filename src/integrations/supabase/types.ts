@@ -4040,6 +4040,62 @@ export type Database = {
           },
         ]
       }
+      herbalife_boletos: {
+        Row: {
+          admin_paid_at: string | null
+          admin_paid_by: string | null
+          boleto_barcode: string | null
+          boleto_file_url: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          payment_proof_url: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_paid_at?: string | null
+          admin_paid_by?: string | null
+          boleto_barcode?: string | null
+          boleto_file_url?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          payment_proof_url?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_paid_at?: string | null
+          admin_paid_by?: string | null
+          boleto_barcode?: string | null
+          boleto_file_url?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          payment_proof_url?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "herbalife_boletos_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "partner_product_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_appointments: {
         Row: {
           attendee_confirmed: boolean
