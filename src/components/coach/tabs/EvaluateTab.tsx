@@ -53,9 +53,11 @@ export function EvaluateTab() {
     client: FitMindClient;
     student: { id: string; name: string; email?: string };
     existingClientName?: string; // se aluno já vinculado a outro cliente
+    existingClientId?: string;
   } | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [transferMergeAndDelete, setTransferMergeAndDelete] = useState(true);
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
@@ -638,8 +640,10 @@ export function EvaluateTab() {
         .maybeSingle();
       if (exErr) throw exErr;
       const existingClientName = existing ? (existing as any).name : undefined;
+      const existingClientId = existing ? (existing as any).id : undefined;
       setConfirmText("");
-      setConfirmLink({ client, student, existingClientName });
+      setTransferMergeAndDelete(true);
+      setConfirmLink({ client, student, existingClientName, existingClientId });
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erro ao verificar vinculação");
@@ -653,15 +657,9 @@ export function EvaluateTab() {
       toast.error("Digite CONFIRMAR para prosseguir.");
       return;
     }
-    // Bloqueia se aluno já está vinculado a outro cadastro
-    if (confirmLink.existingClientName) {
-      toast.error(
-        `Este aluno já está vinculado ao cadastro "${confirmLink.existingClientName}". Peça ao admin para desfazer a vinculação anterior antes de refazer.`
-      );
-      return;
-    }
     setConfirmBusy(true);
-    const { client, student } = confirmLink;
+    const { client, student, existingClientId } = confirmLink;
+    const isTransfer = !!existingClientId;
     try {
       const targetCoachId = (client as any).coachId || coachInfo.id;
       // Captura estado anterior para auditoria
@@ -671,6 +669,30 @@ export function EvaluateTab() {
         .eq("id" as never, client.id as never)
         .maybeSingle();
       const previousStudentId = (before as any)?.student_id ?? null;
+
+      // Se transferência: mover avaliações do cadastro antigo → novo e desvincular o antigo
+      if (isTransfer && existingClientId) {
+        // Move todas avaliações do cadastro antigo para o novo (novo client_id + student_id)
+        const { error: mvErr } = await supabase
+          .from("coach_body_assessments" as never)
+          .update({ client_id: client.id, student_id: student.id } as never)
+          .eq("client_id" as never, existingClientId as never);
+        if (mvErr) throw mvErr;
+        // Desvincula o cadastro antigo (ou apaga se opção marcada)
+        if (transferMergeAndDelete) {
+          const { error: delErr } = await supabase
+            .from("coach_evaluation_clients" as never)
+            .delete()
+            .eq("id" as never, existingClientId as never);
+          if (delErr) throw delErr;
+        } else {
+          const { error: unErr } = await supabase
+            .from("coach_evaluation_clients" as never)
+            .update({ student_id: null } as never)
+            .eq("id" as never, existingClientId as never);
+          if (unErr) throw unErr;
+        }
+      }
 
       // Vincula o cliente ao aluno
       const { error: upErr } = await supabase
@@ -691,13 +713,18 @@ export function EvaluateTab() {
         client_id: client.id,
         previous_student_id: previousStudentId,
         new_student_id: student.id,
-        action: previousStudentId ? "transfer" : "link",
+        action: isTransfer ? "transfer" : (previousStudentId ? "transfer" : "link"),
         performed_by: sess.user?.id ?? null,
         performed_by_role: "coach",
-        metadata: { client_name: client.name, student_name: student.name },
+        metadata: {
+          client_name: client.name,
+          student_name: student.name,
+          transferred_from_client_id: existingClientId ?? null,
+          duplicate_deleted: isTransfer && transferMergeAndDelete,
+        },
       } as never);
 
-      toast.success("Avaliações integradas ao cadastro do aluno");
+      toast.success(isTransfer ? "Vínculo transferido e avaliações mescladas" : "Avaliações integradas ao cadastro do aluno");
       setConfirmLink(null);
       setLinkingClient(null);
       clientSummaryCache.delete(coachInfo.id);
@@ -1105,32 +1132,39 @@ export function EvaluateTab() {
             </div>
 
             {confirmLink.existingClientName && (
-              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-100 mb-3">
-                <p className="font-semibold mb-1">🚫 Vinculação bloqueada</p>
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-100 mb-3 space-y-2">
+                <p className="font-semibold">⚠️ Este aluno já está vinculado a outro cadastro</p>
                 <p>
-                  Este aluno já está vinculado ao cadastro
-                  {" "}<b>"{confirmLink.existingClientName}"</b>. Peça ao admin para
-                  desfazer a vinculação anterior antes de vincular novamente.
+                  Cadastro atual: <b>"{confirmLink.existingClientName}"</b>.
+                  Ao confirmar, todas as avaliações do cadastro atual serão
+                  <b> movidas para "{confirmLink.client.name}"</b> e o vínculo
+                  passará para este cadastro.
                 </p>
+                <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={transferMergeAndDelete}
+                    onChange={(e) => setTransferMergeAndDelete(e.target.checked)}
+                    disabled={confirmBusy}
+                    className="h-4 w-4"
+                  />
+                  <span>Excluir o cadastro duplicado <b>"{confirmLink.existingClientName}"</b> após transferir (recomendado)</span>
+                </label>
               </div>
             )}
 
-            {!confirmLink.existingClientName && (
-              <>
-                <label className="block text-xs text-white/70 mb-1.5">
-                  Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
-                </label>
-                <input
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="CONFIRMAR"
-                  className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
-                  disabled={confirmBusy}
-                  autoFocus
-                />
-              </>
-            )}
+            <label className="block text-xs text-white/70 mb-1.5">
+              Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
+            </label>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="CONFIRMAR"
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
+              disabled={confirmBusy}
+              autoFocus
+            />
 
             <div className="flex items-center justify-end gap-2">
               <button
@@ -1140,15 +1174,15 @@ export function EvaluateTab() {
               >
                 Cancelar
               </button>
-              {!confirmLink.existingClientName && (
-                <button
-                  onClick={executeConfirmedLink}
-                  disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
-                  className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {confirmBusy ? "Vinculando..." : "Vincular permanentemente"}
-                </button>
-              )}
+              <button
+                onClick={executeConfirmedLink}
+                disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
+                className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {confirmBusy
+                  ? (confirmLink.existingClientName ? "Transferindo..." : "Vinculando...")
+                  : (confirmLink.existingClientName ? "Transferir vínculo" : "Vincular permanentemente")}
+              </button>
             </div>
           </div>
         </div>
