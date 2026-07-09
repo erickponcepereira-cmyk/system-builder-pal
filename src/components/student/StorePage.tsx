@@ -492,11 +492,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         const inSection = item.sectionId === activeSection.id || item.category === activeSection.name;
         if (!inSection) return false;
         if (activeSubcategory && item.categoryId !== activeSubcategory.id) return false;
+        if (activeSubSub && item.subcategoryId !== activeSubSub.id) return false;
       }
       if (needle && !item.title.toLowerCase().includes(needle) && !(item.description || "").toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [activeSection, activeSubcategory, items, query, vis, coachMode]);
+  }, [activeSection, activeSubcategory, activeSubSub, items, query, vis, coachMode]);
 
   const visibleStoreSections = useMemo(() => {
     return storeSections.filter((s) => {
