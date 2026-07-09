@@ -584,7 +584,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       {products.length === 0 && <p className="text-sm text-white/40 text-center py-8">Nenhum produto cadastrado ainda.</p>}
 
       <div className="space-y-2">
-        {products.map(p => (
+        {[...products].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((p, idx, arr) => (
           <div key={p.id} className="rounded-xl p-3 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
             {p.image_url ? <img src={p.image_url} className="h-16 w-16 rounded object-cover" alt={p.name} /> : <div className="h-16 w-16 rounded bg-white/5" />}
             <div className="flex-1 min-w-0">
