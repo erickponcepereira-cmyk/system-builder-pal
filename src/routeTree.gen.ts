@@ -65,6 +65,7 @@ import { Route as AuthenticatedStudentCardRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStudentCalendarRouteImport } from './routes/_authenticated/student.calendar'
 import { Route as AuthenticatedStudentBenefitsRouteImport } from './routes/_authenticated/student.benefits'
 import { Route as AuthenticatedStudentAssessmentsRouteImport } from './routes/_authenticated/student.assessments'
+import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from './routes/_authenticated/professional.orders-in-progress'
 import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
@@ -430,6 +431,12 @@ const AuthenticatedStudentAssessmentsRoute =
     path: '/assessments',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedProfessionalOrdersInProgressRoute =
+  AuthenticatedProfessionalOrdersInProgressRouteImport.update({
+    id: '/orders-in-progress',
+    path: '/orders-in-progress',
+    getParentRoute: () => AuthenticatedProfessionalRoute,
+  } as any)
 const AuthenticatedPartnerOrdersInProgressRoute =
   AuthenticatedPartnerOrdersInProgressRouteImport.update({
     id: '/orders-in-progress',
@@ -793,7 +800,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
-  '/professional': typeof AuthenticatedProfessionalRoute
+  '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
@@ -850,6 +857,7 @@ export interface FileRoutesByFullPath {
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -907,7 +915,7 @@ export interface FileRoutesByTo {
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
-  '/professional': typeof AuthenticatedProfessionalRoute
+  '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -963,6 +971,7 @@ export interface FileRoutesByTo {
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -1023,7 +1032,7 @@ export interface FileRoutesById {
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
   '/_authenticated/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
-  '/_authenticated/professional': typeof AuthenticatedProfessionalRoute
+  '/_authenticated/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
@@ -1080,6 +1089,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/_authenticated/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/_authenticated/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/_authenticated/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/_authenticated/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -1197,6 +1207,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/partner/orders-in-progress'
+    | '/professional/orders-in-progress'
     | '/student/assessments'
     | '/student/benefits'
     | '/student/calendar'
@@ -1310,6 +1321,7 @@ export interface FileRouteTypes {
     | '/admin/test-sales'
     | '/admin/users'
     | '/partner/orders-in-progress'
+    | '/professional/orders-in-progress'
     | '/student/assessments'
     | '/student/benefits'
     | '/student/calendar'
@@ -1426,6 +1438,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/test-sales'
     | '/_authenticated/admin/users'
     | '/_authenticated/partner/orders-in-progress'
+    | '/_authenticated/professional/orders-in-progress'
     | '/_authenticated/student/assessments'
     | '/_authenticated/student/benefits'
     | '/_authenticated/student/calendar'
@@ -1890,6 +1903,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/student/assessments'
       preLoaderRoute: typeof AuthenticatedStudentAssessmentsRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
+    }
+    '/_authenticated/professional/orders-in-progress': {
+      id: '/_authenticated/professional/orders-in-progress'
+      path: '/orders-in-progress'
+      fullPath: '/professional/orders-in-progress'
+      preLoaderRoute: typeof AuthenticatedProfessionalOrdersInProgressRouteImport
+      parentRoute: typeof AuthenticatedProfessionalRoute
     }
     '/_authenticated/partner/orders-in-progress': {
       id: '/_authenticated/partner/orders-in-progress'
@@ -2447,6 +2467,21 @@ const AuthenticatedPartnerRouteChildren: AuthenticatedPartnerRouteChildren = {
 const AuthenticatedPartnerRouteWithChildren =
   AuthenticatedPartnerRoute._addFileChildren(AuthenticatedPartnerRouteChildren)
 
+interface AuthenticatedProfessionalRouteChildren {
+  AuthenticatedProfessionalOrdersInProgressRoute: typeof AuthenticatedProfessionalOrdersInProgressRoute
+}
+
+const AuthenticatedProfessionalRouteChildren: AuthenticatedProfessionalRouteChildren =
+  {
+    AuthenticatedProfessionalOrdersInProgressRoute:
+      AuthenticatedProfessionalOrdersInProgressRoute,
+  }
+
+const AuthenticatedProfessionalRouteWithChildren =
+  AuthenticatedProfessionalRoute._addFileChildren(
+    AuthenticatedProfessionalRouteChildren,
+  )
+
 interface AuthenticatedStudentPartnersRouteChildren {
   AuthenticatedStudentPartnersPartnerIdRoute: typeof AuthenticatedStudentPartnersPartnerIdRoute
 }
@@ -2547,7 +2582,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
   AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRouteWithChildren
   AuthenticatedPortalSelectorRoute: typeof AuthenticatedPortalSelectorRoute
-  AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRoute
+  AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRouteWithChildren
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
 }
 
@@ -2557,7 +2592,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
   AuthenticatedPartnerRoute: AuthenticatedPartnerRouteWithChildren,
   AuthenticatedPortalSelectorRoute: AuthenticatedPortalSelectorRoute,
-  AuthenticatedProfessionalRoute: AuthenticatedProfessionalRoute,
+  AuthenticatedProfessionalRoute: AuthenticatedProfessionalRouteWithChildren,
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
 }
 
