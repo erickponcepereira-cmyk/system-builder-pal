@@ -48,6 +48,37 @@ function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+const AUDIENCE_OPTIONS: { value: string; label: string }[] = [
+  { value: "partner", label: "Parceiros" },
+  { value: "professional", label: "Profissionais" },
+  { value: "fitmind", label: "Fitmind (aluno/coach)" },
+];
+
+function AudienceChecklist({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
+  const toggle = (v: string) => {
+    if (value.includes(v)) onChange(value.filter((x) => x !== v));
+    else onChange([...value, v]);
+  };
+  return (
+    <div className="flex flex-wrap gap-2">
+      {AUDIENCE_OPTIONS.map((opt) => {
+        const on = value.includes(opt.value);
+        return (
+          <button
+            type="button"
+            key={opt.value}
+            onClick={() => toggle(opt.value)}
+            className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold border transition ${on ? "bg-primary/20 border-primary/50 text-primary" : "bg-white/5 border-white/10 text-white/60 hover:text-white"}`}
+          >
+            {on ? "✓ " : ""}{opt.label}
+          </button>
+        );
+      })}
+      {value.length === 0 && <span className="text-[11px] text-white/40 self-center">Nenhuma marcada = aparece em todas</span>}
+    </div>
+  );
+}
+
 export function StoreManager() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
