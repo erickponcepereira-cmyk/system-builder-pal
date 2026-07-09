@@ -233,6 +233,27 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     load();
   };
 
+  const move = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= products.length) return;
+    const a = products[index];
+    const b = products[target];
+    // Compute new sort orders preserving order (dense re-numbering if ties)
+    const list = [...products];
+    [list[index], list[target]] = [list[target], list[index]];
+    const updates = list.map((p, i) => ({ id: p.id, sort_order: i }));
+    // Optimistic UI
+    setProducts(list.map((p, i) => ({ ...p, sort_order: i })));
+    const { error } = await supabase
+      .from("professional_products" as never)
+      .upsert(updates as never, { onConflict: "id" } as never);
+    if (error) {
+      toast.error(error.message);
+      load();
+    }
+    void a; void b;
+  };
+
   if (loading) {
     return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
