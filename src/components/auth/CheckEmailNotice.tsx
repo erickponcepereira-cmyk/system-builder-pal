@@ -61,6 +61,12 @@ export function CheckEmailNotice({ email }: { email: string }) {
           <p className="mt-3 text-xs text-white/40">
             Não encontrou o e-mail? Verifique a caixa de spam ou lixo eletrônico.
           </p>
+          <div className="mt-4 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-left text-xs text-amber-200">
+            <strong className="block mb-1">Importante:</strong>
+            Abra o link direto no seu app de e-mail (Gmail, Outlook, etc.).
+            Se receber por WhatsApp ou outro mensageiro, <b>copie e cole a URL completa no navegador</b> —
+            apps de mensagem costumam cortar links longos, e sem o código a página mostra "No API key found".
+          </div>
           <div className="mt-6 space-y-3">
             <button
               type="button"
