@@ -462,6 +462,13 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     },
     [activeSection, storeCategories, vis, coachMode],
   );
+  const subsubsOfActive = useMemo(
+    () => {
+      if (!activeSubcategory) return [] as SubcategoryRow[];
+      return storeSubcategories.filter((sc) => sc.category_id === activeSubcategory.id);
+    },
+    [activeSubcategory, storeSubcategories],
+  );
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
