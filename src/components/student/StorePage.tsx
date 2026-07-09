@@ -1135,7 +1135,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
               return (
                 <div key={s.id} className="relative">
                   <button
-                    onClick={() => { setActiveSection(s); setActiveSubcategory(null); }}
+                    onClick={() => { setActiveSection(s); setActiveSubcategory(null); setActiveSubSub(null); }}
                     className={`w-full overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent ${secHidden ? "opacity-40" : ""}`}
                     style={{ width: s.card_width ? `${s.card_width}px` : undefined, height: s.card_height ? `${s.card_height}px` : undefined }}
                   >
