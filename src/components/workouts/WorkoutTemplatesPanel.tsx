@@ -185,7 +185,7 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
                   {t.description && <p className="mt-2 line-clamp-2 text-xs text-white/60">{t.description}</p>}
                   <p className="mt-2 text-[11px] text-primary">{t.items?.length || 0} exercício{(t.items?.length || 0) !== 1 ? "s" : ""} · Ver detalhes →</p>
                 </button>
-                {canEdit && (
+                {canEdit && !readOnly && (
                   <div className="mt-3 flex gap-2">
                     <button onClick={() => openEdit(t)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-white/10 px-2 py-1.5 text-xs"><Pencil className="h-3.5 w-3.5" /> Editar</button>
                     <button onClick={() => remove(t)} className="rounded-lg bg-red-500/15 px-2 py-1.5 text-xs text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
