@@ -47,6 +47,7 @@ export type PartnerStoreCard = {
   kind: CardKind;
   isSchedulable?: boolean;
   professionalCoachId?: string | null;
+  creatorCoachId?: string | null;
   durationMinutes?: number;
   scheduledSlot?: string | null;
   coachCommissionPct?: number | null;
