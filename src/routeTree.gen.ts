@@ -67,6 +67,7 @@ import { Route as AuthenticatedStudentBenefitsRouteImport } from './routes/_auth
 import { Route as AuthenticatedStudentAssessmentsRouteImport } from './routes/_authenticated/student.assessments'
 import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from './routes/_authenticated/professional.orders-in-progress'
 import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
+import { Route as AuthenticatedPartnerHerbalifeBoletosRouteImport } from './routes/_authenticated/partner.herbalife-boletos'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
 import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
@@ -441,6 +442,12 @@ const AuthenticatedPartnerOrdersInProgressRoute =
   AuthenticatedPartnerOrdersInProgressRouteImport.update({
     id: '/orders-in-progress',
     path: '/orders-in-progress',
+    getParentRoute: () => AuthenticatedPartnerRoute,
+  } as any)
+const AuthenticatedPartnerHerbalifeBoletosRoute =
+  AuthenticatedPartnerHerbalifeBoletosRouteImport.update({
+    id: '/herbalife-boletos',
+    path: '/herbalife-boletos',
     getParentRoute: () => AuthenticatedPartnerRoute,
   } as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
@@ -856,6 +863,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
@@ -970,6 +978,7 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
@@ -1088,6 +1097,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
   '/_authenticated/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/_authenticated/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
@@ -1206,6 +1216,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
     | '/professional/orders-in-progress'
     | '/student/assessments'
@@ -1320,6 +1331,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
     | '/professional/orders-in-progress'
     | '/student/assessments'
@@ -1437,6 +1449,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/subscriptions'
     | '/_authenticated/admin/test-sales'
     | '/_authenticated/admin/users'
+    | '/_authenticated/partner/herbalife-boletos'
     | '/_authenticated/partner/orders-in-progress'
     | '/_authenticated/professional/orders-in-progress'
     | '/_authenticated/student/assessments'
@@ -1916,6 +1929,13 @@ declare module '@tanstack/react-router' {
       path: '/orders-in-progress'
       fullPath: '/partner/orders-in-progress'
       preLoaderRoute: typeof AuthenticatedPartnerOrdersInProgressRouteImport
+      parentRoute: typeof AuthenticatedPartnerRoute
+    }
+    '/_authenticated/partner/herbalife-boletos': {
+      id: '/_authenticated/partner/herbalife-boletos'
+      path: '/herbalife-boletos'
+      fullPath: '/partner/herbalife-boletos'
+      preLoaderRoute: typeof AuthenticatedPartnerHerbalifeBoletosRouteImport
       parentRoute: typeof AuthenticatedPartnerRoute
     }
     '/_authenticated/admin/users': {
@@ -2456,10 +2476,13 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedPartnerRouteChildren {
+  AuthenticatedPartnerHerbalifeBoletosRoute: typeof AuthenticatedPartnerHerbalifeBoletosRoute
   AuthenticatedPartnerOrdersInProgressRoute: typeof AuthenticatedPartnerOrdersInProgressRoute
 }
 
 const AuthenticatedPartnerRouteChildren: AuthenticatedPartnerRouteChildren = {
+  AuthenticatedPartnerHerbalifeBoletosRoute:
+    AuthenticatedPartnerHerbalifeBoletosRoute,
   AuthenticatedPartnerOrdersInProgressRoute:
     AuthenticatedPartnerOrdersInProgressRoute,
 }
