@@ -91,7 +91,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
         ? supabaseAdmin.from("students").select("id,coach_id,profiles!students_profile_id_fkey(name,email,phone,avatar_url)").in("id", studentIds)
         : Promise.resolve({ data: [] }),
       productIds.length
-        ? supabaseAdmin.from("professional_products").select("id,name").in("id", productIds)
+        ? supabaseAdmin.from("professional_products").select("id,name,kind").in("id", productIds)
         : Promise.resolve({ data: [] }),
       sellerIds.length
         ? supabaseAdmin.from("coaches").select("id,profiles!coaches_profile_id_fkey(name)").in("id", sellerIds)
