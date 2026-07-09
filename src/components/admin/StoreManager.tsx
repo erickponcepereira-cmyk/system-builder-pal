@@ -358,8 +358,6 @@ export function StoreManager() {
                             {a === "partner" ? "Parceiros" : a === "professional" ? "Profissionais" : "Fitmind"}
                           </span>
                         ))}
-                          </span>
-                        )}
                         {s.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
                       </div>
                       <div className="text-xs text-white/40">/{s.slug} · ordem {s.sort_order} · {s.is_active ? "ativa" : "inativa"} · {cats.length} categoria(s)</div>
