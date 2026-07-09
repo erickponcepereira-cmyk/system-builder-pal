@@ -1132,32 +1132,39 @@ export function EvaluateTab() {
             </div>
 
             {confirmLink.existingClientName && (
-              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-100 mb-3">
-                <p className="font-semibold mb-1">🚫 Vinculação bloqueada</p>
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-100 mb-3 space-y-2">
+                <p className="font-semibold">⚠️ Este aluno já está vinculado a outro cadastro</p>
                 <p>
-                  Este aluno já está vinculado ao cadastro
-                  {" "}<b>"{confirmLink.existingClientName}"</b>. Peça ao admin para
-                  desfazer a vinculação anterior antes de vincular novamente.
+                  Cadastro atual: <b>"{confirmLink.existingClientName}"</b>.
+                  Ao confirmar, todas as avaliações do cadastro atual serão
+                  <b> movidas para "{confirmLink.client.name}"</b> e o vínculo
+                  passará para este cadastro.
                 </p>
+                <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={transferMergeAndDelete}
+                    onChange={(e) => setTransferMergeAndDelete(e.target.checked)}
+                    disabled={confirmBusy}
+                    className="h-4 w-4"
+                  />
+                  <span>Excluir o cadastro duplicado <b>"{confirmLink.existingClientName}"</b> após transferir (recomendado)</span>
+                </label>
               </div>
             )}
 
-            {!confirmLink.existingClientName && (
-              <>
-                <label className="block text-xs text-white/70 mb-1.5">
-                  Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
-                </label>
-                <input
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="CONFIRMAR"
-                  className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
-                  disabled={confirmBusy}
-                  autoFocus
-                />
-              </>
-            )}
+            <label className="block text-xs text-white/70 mb-1.5">
+              Digite <b className="text-white">CONFIRMAR</b> para prosseguir:
+            </label>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="CONFIRMAR"
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 mb-3 focus:outline-none focus:border-red-500/60"
+              disabled={confirmBusy}
+              autoFocus
+            />
 
             <div className="flex items-center justify-end gap-2">
               <button
@@ -1167,15 +1174,15 @@ export function EvaluateTab() {
               >
                 Cancelar
               </button>
-              {!confirmLink.existingClientName && (
-                <button
-                  onClick={executeConfirmedLink}
-                  disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
-                  className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {confirmBusy ? "Vinculando..." : "Vincular permanentemente"}
-                </button>
-              )}
+              <button
+                onClick={executeConfirmedLink}
+                disabled={confirmBusy || confirmText.trim().toUpperCase() !== "CONFIRMAR"}
+                className="px-4 py-2 text-sm font-bold rounded-lg bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {confirmBusy
+                  ? (confirmLink.existingClientName ? "Transferindo..." : "Vinculando...")
+                  : (confirmLink.existingClientName ? "Transferir vínculo" : "Vincular permanentemente")}
+              </button>
             </div>
           </div>
         </div>
