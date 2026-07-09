@@ -338,9 +338,9 @@ function StudentFreebies() {
 
             {/* Indicadores de economia (topo) */}
             {(() => {
-              const filteredPartner = partnerFreebies.filter((p) =>
+              const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               const totalSavings = filteredPartner.reduce((sum, p) => {
                 const ev = Number(p.estimated_value || 0);
                 if (p.redemption_mode === "discount") return sum + ev * (Number(p.discount_percent || 0) / 100);
@@ -393,9 +393,9 @@ function StudentFreebies() {
             })()}
 
             {(() => {
-              const filteredPartner = partnerFreebies.filter((p) =>
+              const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               const showItems = pageMode === "free" && items.length > 0;
               const isEmpty = filteredPartner.length === 0 && !showItems;
               if (isEmpty) {
@@ -407,9 +407,9 @@ function StudentFreebies() {
             })()}
 
             {(() => {
-              const filteredPartner = partnerFreebies.filter((p) =>
+              const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               if (filteredPartner.length === 0) return null;
               const byArea = new Map<string, PartnerFreeProduct[]>();
               filteredPartner.forEach((p) => {
@@ -520,9 +520,9 @@ function StudentFreebies() {
             })()}
 
             {(() => {
-              const filteredPro = professionalFreebies.filter((p) =>
+              const filteredPro = professionalFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               if (filteredPro.length === 0) return null;
               return (
                 <div className="mb-6 space-y-3">
