@@ -202,13 +202,33 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
                       >
                         {a.student_name || "Aluno"}
                       </button>
-                      <p className="text-[11px] text-white/50 truncate">
-                        {a.product_name || "Consulta"}
+                      <p className="text-[11px] text-white/50 truncate flex items-center gap-1.5">
+                        {a.product_kind === "free" && (
+                          <span className="inline-flex items-center gap-0.5 rounded bg-green-500/20 text-green-300 px-1.5 py-0.5 text-[9px] font-bold uppercase">
+                            <Gift className="h-2.5 w-2.5" /> Gratuito
+                          </span>
+                        )}
+                        <span className="truncate">{a.product_name || "Consulta"}</span>
                       </p>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-white/40">
                         {a.student_coach_name && <span>Coach: <span className="text-white/70">{a.student_coach_name}</span></span>}
                         {a.seller_name && <span>Vendido por: <span className="text-white/70">{a.seller_name}</span></span>}
                         {a.order_number && <span>Pedido: <span className="text-white/70">{a.order_number}</span></span>}
+                        {a.student_phone && (() => {
+                          const digits = a.student_phone.replace(/\D+/g, "");
+                          const wa = digits.length <= 11 ? "55" + digits : digits;
+                          return (
+                            <a
+                              href={`https://wa.me/${wa}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-green-400 hover:text-green-300"
+                            >
+                              <MessageCircle className="h-3 w-3" /> WhatsApp
+                            </a>
+                          );
+                        })()}
                       </div>
                       <p className="mt-1 text-xs text-primary">{fmt(a.starts_at)}</p>
                     </div>
