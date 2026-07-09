@@ -780,6 +780,34 @@ function StudentFreebies() {
           onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
         />
       )}
+      {selectedPro && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => setSelectedPro(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141414] p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              {selectedPro.coaches?.profiles?.avatar_url ? (
+                <img src={selectedPro.coaches.profiles.avatar_url} alt="" className="h-14 w-14 rounded-full object-cover" />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                  {(selectedPro.coaches?.profiles?.name || "P").slice(0, 1)}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-white truncate">{selectedPro.coaches?.profiles?.name || "Profissional"}</p>
+                {selectedPro.coaches?.specialty_key && <p className="text-xs text-primary">{selectedPro.coaches.specialty_key}</p>}
+              </div>
+              <button type="button" onClick={() => setSelectedPro(null)} className="text-white/60"><X className="h-5 w-5" /></button>
+            </div>
+            {selectedPro.coaches?.profiles?.bio && (
+              <p className="mt-3 text-xs text-white/70 whitespace-pre-line">{selectedPro.coaches.profiles.bio}</p>
+            )}
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="text-[10px] uppercase font-bold text-white/40">Benefício</p>
+              <p className="mt-1 text-sm font-bold text-white">{selectedPro.name}</p>
+              {selectedPro.description && <p className="mt-1 text-xs text-white/60">{selectedPro.description}</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
