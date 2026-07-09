@@ -103,6 +103,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const [detailProfessional, setDetailProfessional] = useState<ProfessionalCard | null>(null);
   const [storeSections, setStoreSections] = useState<SectionRow[]>([]);
   const [storeCategories, setStoreCategories] = useState<CategoryRow[]>([]);
+  const [storeSubcategories, setStoreSubcategories] = useState<SubcategoryRow[]>([]);
 
   // Coach-only state
   const [clients, setClients] = useState<SaleClient[]>([]);
