@@ -51,23 +51,31 @@ export function StoreManager() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expandedCat, setExpandedCat] = useState<Record<string, boolean>>({});
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<string | null>(null);
   const [draftSection, setDraftSection] = useState<Partial<Section>>({});
   const [draftCategory, setDraftCategory] = useState<Partial<Category>>({});
+  const [draftSubcategory, setDraftSubcategory] = useState<Partial<Subcategory>>({});
   const [newSection, setNewSection] = useState<Partial<Section> | null>(null);
   const [newCategoryFor, setNewCategoryFor] = useState<string | null>(null);
   const [newCategoryDraft, setNewCategoryDraft] = useState<Partial<Category>>({});
+  const [newSubcategoryFor, setNewSubcategoryFor] = useState<string | null>(null);
+  const [newSubcategoryDraft, setNewSubcategoryDraft] = useState<Partial<Subcategory>>({});
 
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: c }] = await Promise.all([
+    const [{ data: s }, { data: c }, { data: sc }] = await Promise.all([
       supabase.from("store_sections").select("*").order("sort_order"),
       supabase.from("store_categories").select("*").order("sort_order"),
+      supabase.from("store_subcategories" as any).select("*").order("sort_order"),
     ]);
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
+    setSubcategories(((sc as unknown) as Subcategory[]) || []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
