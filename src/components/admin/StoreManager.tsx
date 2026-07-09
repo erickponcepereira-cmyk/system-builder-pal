@@ -115,6 +115,9 @@ export function StoreManager() {
   const saveSection = async (id: string) => {
     const payload: any = { ...draftSection };
     if (payload.name) payload.slug = payload.slug || slugify(payload.name);
+    if (Array.isArray(payload.target_audiences)) {
+      payload.target_audience = payload.target_audiences[0] ?? null;
+    }
     await supabase.from("store_sections").update(payload).eq("id", id);
     setEditingSection(null);
     setDraftSection({});
