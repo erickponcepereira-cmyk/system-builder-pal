@@ -259,6 +259,9 @@ export function StoreItemsManager() {
   const editingCategories = editing?.section_id
     ? categories.filter((c) => c.section_id === editing.section_id)
     : [];
+  const editingSubcategories = editing?.category_id
+    ? subcategories.filter((sc) => sc.category_id === editing.category_id)
+    : [];
 
   return (
     <div className="space-y-6">
