@@ -260,6 +260,16 @@ function StudentFreebies() {
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${studentId}`
     : "";
 
+  const matchesTaxonomy = (p: { section_id: string | null; category_id: string | null; subcategory_id: string | null }) => {
+    if (filterSection && p.section_id !== filterSection) return false;
+    if (filterCategory && p.category_id !== filterCategory) return false;
+    if (filterSubcategory && p.subcategory_id !== filterSubcategory) return false;
+    return true;
+  };
+  const catsForSection = filterSection ? categories.filter((c) => c.section_id === filterSection) : [];
+  const subsForCategory = filterCategory ? subcategories.filter((s) => s.category_id === filterCategory) : [];
+
+
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-[#0F0F0F] px-4 py-3">
