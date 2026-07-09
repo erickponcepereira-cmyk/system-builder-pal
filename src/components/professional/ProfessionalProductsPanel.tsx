@@ -248,12 +248,17 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     const updates = list.map((p, i) => ({ id: p.id, sort_order: i }));
     // Optimistic UI
     setProducts(list.map((p, i) => ({ ...p, sort_order: i })));
-    const { error } = await supabase
-      .from("professional_products" as never)
-      .upsert(updates as never, { onConflict: "id" } as never);
-    if (error) {
-      toast.error(error.message);
-      load();
+    // Update row-by-row (upsert dispara policy de INSERT do RLS mesmo em conflito)
+    for (const u of updates) {
+      const { error } = await supabase
+        .from("professional_products" as never)
+        .update({ sort_order: u.sort_order } as never)
+        .eq("id" as never, u.id);
+      if (error) {
+        toast.error(error.message);
+        load();
+        return;
+      }
     }
     void a; void b;
   };
