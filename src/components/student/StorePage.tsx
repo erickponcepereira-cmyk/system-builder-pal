@@ -11,7 +11,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
-import { useStoreVisibility, mapStoreItemKind, isFitmindKind } from "@/lib/coach-store-overrides";
+import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 
