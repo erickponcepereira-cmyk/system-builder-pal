@@ -222,6 +222,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           kind: "professional" as const,
           isSchedulable: !!r.is_schedulable,
           professionalCoachId: r.coach_id,
+          creatorCoachId: r.coach_id,
           durationMinutes: r.default_duration_minutes ?? 30,
           coachCommissionPct: r.coach_commission_percentage ?? null,
         }));
