@@ -640,8 +640,10 @@ export function EvaluateTab() {
         .maybeSingle();
       if (exErr) throw exErr;
       const existingClientName = existing ? (existing as any).name : undefined;
+      const existingClientId = existing ? (existing as any).id : undefined;
       setConfirmText("");
-      setConfirmLink({ client, student, existingClientName });
+      setTransferMergeAndDelete(true);
+      setConfirmLink({ client, student, existingClientName, existingClientId });
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erro ao verificar vinculação");
@@ -655,15 +657,9 @@ export function EvaluateTab() {
       toast.error("Digite CONFIRMAR para prosseguir.");
       return;
     }
-    // Bloqueia se aluno já está vinculado a outro cadastro
-    if (confirmLink.existingClientName) {
-      toast.error(
-        `Este aluno já está vinculado ao cadastro "${confirmLink.existingClientName}". Peça ao admin para desfazer a vinculação anterior antes de refazer.`
-      );
-      return;
-    }
     setConfirmBusy(true);
-    const { client, student } = confirmLink;
+    const { client, student, existingClientId } = confirmLink;
+    const isTransfer = !!existingClientId;
     try {
       const targetCoachId = (client as any).coachId || coachInfo.id;
       // Captura estado anterior para auditoria
@@ -673,6 +669,30 @@ export function EvaluateTab() {
         .eq("id" as never, client.id as never)
         .maybeSingle();
       const previousStudentId = (before as any)?.student_id ?? null;
+
+      // Se transferência: mover avaliações do cadastro antigo → novo e desvincular o antigo
+      if (isTransfer && existingClientId) {
+        // Move todas avaliações do cadastro antigo para o novo (novo client_id + student_id)
+        const { error: mvErr } = await supabase
+          .from("coach_body_assessments" as never)
+          .update({ client_id: client.id, student_id: student.id } as never)
+          .eq("client_id" as never, existingClientId as never);
+        if (mvErr) throw mvErr;
+        // Desvincula o cadastro antigo (ou apaga se opção marcada)
+        if (transferMergeAndDelete) {
+          const { error: delErr } = await supabase
+            .from("coach_evaluation_clients" as never)
+            .delete()
+            .eq("id" as never, existingClientId as never);
+          if (delErr) throw delErr;
+        } else {
+          const { error: unErr } = await supabase
+            .from("coach_evaluation_clients" as never)
+            .update({ student_id: null } as never)
+            .eq("id" as never, existingClientId as never);
+          if (unErr) throw unErr;
+        }
+      }
 
       // Vincula o cliente ao aluno
       const { error: upErr } = await supabase
@@ -693,13 +713,18 @@ export function EvaluateTab() {
         client_id: client.id,
         previous_student_id: previousStudentId,
         new_student_id: student.id,
-        action: previousStudentId ? "transfer" : "link",
+        action: isTransfer ? "transfer" : (previousStudentId ? "transfer" : "link"),
         performed_by: sess.user?.id ?? null,
         performed_by_role: "coach",
-        metadata: { client_name: client.name, student_name: student.name },
+        metadata: {
+          client_name: client.name,
+          student_name: student.name,
+          transferred_from_client_id: existingClientId ?? null,
+          duplicate_deleted: isTransfer && transferMergeAndDelete,
+        },
       } as never);
 
-      toast.success("Avaliações integradas ao cadastro do aluno");
+      toast.success(isTransfer ? "Vínculo transferido e avaliações mescladas" : "Avaliações integradas ao cadastro do aluno");
       setConfirmLink(null);
       setLinkingClient(null);
       clientSummaryCache.delete(coachInfo.id);
