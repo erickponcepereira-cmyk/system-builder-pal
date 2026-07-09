@@ -250,7 +250,7 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
         </div>
       )}
 
-      {showForm && (
+      {showForm && !readOnly && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0F0F0F] p-6">
             <div className="mb-4 flex items-center justify-between">
