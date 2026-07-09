@@ -6,6 +6,7 @@ import { ProductDownloadsManager } from "./ProductDownloadsManager";
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
+interface Subcategory { id: string; category_id: string; name: string; }
 type Audience = "student" | "coach" | "partner" | "professional";
 const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
   { value: "student", label: "Alunos" },
@@ -18,6 +19,7 @@ interface Item {
   id: string;
   section_id: string | null;
   category_id: string | null;
+  subcategory_id?: string | null;
   kind: "physical" | "digital";
   name: string;
   description: string | null;
@@ -49,6 +51,7 @@ export function StoreItemsManager() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [filterSection, setFilterSection] = useState<string>("");
   const [filterCategory, setFilterCategory] = useState<string>("");
@@ -60,17 +63,19 @@ export function StoreItemsManager() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: c }, { data: i }] = await Promise.all([
+    const [{ data: s }, { data: c }, { data: sc }, { data: i }] = await Promise.all([
       supabase.from("store_sections").select("id,name").order("sort_order"),
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
+      supabase.from("store_subcategories" as any).select("id,category_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
+        .select("id,section_id,category_id,subcategory_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
+    setSubcategories(((sc as unknown) as Subcategory[]) || []);
     setItems(((i as unknown) as Item[]) || []);
     setLoading(false);
   };
@@ -140,6 +145,7 @@ export function StoreItemsManager() {
       const payload: any = {
         section_id: editing.section_id,
         category_id: editing.category_id || null,
+        subcategory_id: editing.subcategory_id || null,
         kind: editing.kind,
         name: editing.name,
         description: editing.description || null,
@@ -252,6 +258,9 @@ export function StoreItemsManager() {
 
   const editingCategories = editing?.section_id
     ? categories.filter((c) => c.section_id === editing.section_id)
+    : [];
+  const editingSubcategories = editing?.category_id
+    ? subcategories.filter((sc) => sc.category_id === editing.category_id)
     : [];
 
   return (
@@ -414,16 +423,28 @@ export function StoreItemsManager() {
 
               <div>
                 <label className="text-xs text-white/60 mb-1 block">Seção</label>
-                <select className="input-dark w-full" value={editing.section_id || ""} onChange={(e) => setEditing({ ...editing, section_id: e.target.value, category_id: null })}>
+                <select className="input-dark w-full" value={editing.section_id || ""} onChange={(e) => setEditing({ ...editing, section_id: e.target.value, category_id: null, subcategory_id: null })}>
                   <option value="">Selecione...</option>
                   {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs text-white/60 mb-1 block">Categoria</label>
-                <select className="input-dark w-full" value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })}>
+                <select className="input-dark w-full" value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null, subcategory_id: null })}>
                   <option value="">Sem categoria</option>
                   {editingCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-white/60 mb-1 block">Subcategoria</label>
+                <select
+                  className="input-dark w-full disabled:opacity-50"
+                  disabled={!editing.category_id || editingSubcategories.length === 0}
+                  value={editing.subcategory_id || ""}
+                  onChange={(e) => setEditing({ ...editing, subcategory_id: e.target.value || null })}
+                >
+                  <option value="">{editingSubcategories.length === 0 ? "— nenhuma cadastrada —" : "Sem subcategoria"}</option>
+                  {editingSubcategories.map((sc) => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
                 </select>
               </div>
 

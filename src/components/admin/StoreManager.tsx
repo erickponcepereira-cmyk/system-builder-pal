@@ -29,6 +29,19 @@ interface Category {
   card_height: number | null;
   pending?: boolean | null;
 }
+interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+  card_width: number | null;
+  card_height: number | null;
+  pending?: boolean | null;
+}
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -38,23 +51,31 @@ export function StoreManager() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expandedCat, setExpandedCat] = useState<Record<string, boolean>>({});
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingSubcategory, setEditingSubcategory] = useState<string | null>(null);
   const [draftSection, setDraftSection] = useState<Partial<Section>>({});
   const [draftCategory, setDraftCategory] = useState<Partial<Category>>({});
+  const [draftSubcategory, setDraftSubcategory] = useState<Partial<Subcategory>>({});
   const [newSection, setNewSection] = useState<Partial<Section> | null>(null);
   const [newCategoryFor, setNewCategoryFor] = useState<string | null>(null);
   const [newCategoryDraft, setNewCategoryDraft] = useState<Partial<Category>>({});
+  const [newSubcategoryFor, setNewSubcategoryFor] = useState<string | null>(null);
+  const [newSubcategoryDraft, setNewSubcategoryDraft] = useState<Partial<Subcategory>>({});
 
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: c }] = await Promise.all([
+    const [{ data: s }, { data: c }, { data: sc }] = await Promise.all([
       supabase.from("store_sections").select("*").order("sort_order"),
       supabase.from("store_categories").select("*").order("sort_order"),
+      supabase.from("store_subcategories" as any).select("*").order("sort_order"),
     ]);
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
+    setSubcategories(((sc as unknown) as Subcategory[]) || []);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -118,6 +139,37 @@ export function StoreManager() {
   const deleteCategory = async (id: string) => {
     if (!confirm("Excluir esta categoria?")) return;
     await supabase.from("store_categories").delete().eq("id", id);
+    load();
+  };
+
+  const saveSubcategory = async (id: string) => {
+    const payload: any = { ...draftSubcategory };
+    if (payload.name) payload.slug = payload.slug || slugify(payload.name);
+    await supabase.from("store_subcategories" as any).update(payload).eq("id", id);
+    setEditingSubcategory(null);
+    setDraftSubcategory({});
+    load();
+  };
+  const createSubcategory = async (categoryId: string) => {
+    if (!newSubcategoryDraft?.name) return;
+    await supabase.from("store_subcategories" as any).insert({
+      category_id: categoryId,
+      name: newSubcategoryDraft.name,
+      slug: newSubcategoryDraft.slug || slugify(newSubcategoryDraft.name),
+      icon: newSubcategoryDraft.icon || null,
+      image_url: newSubcategoryDraft.image_url || null,
+      sort_order: newSubcategoryDraft.sort_order ?? 0,
+      is_active: newSubcategoryDraft.is_active ?? true,
+      card_width: newSubcategoryDraft.card_width ?? null,
+      card_height: newSubcategoryDraft.card_height ?? null,
+    } as any);
+    setNewSubcategoryFor(null);
+    setNewSubcategoryDraft({});
+    load();
+  };
+  const deleteSubcategory = async (id: string) => {
+    if (!confirm("Excluir esta subcategoria?")) return;
+    await supabase.from("store_subcategories" as any).delete().eq("id", id);
     load();
   };
 
@@ -294,40 +346,98 @@ export function StoreManager() {
                 <div className="border-t border-white/5 bg-black/20 p-4 space-y-2">
                   {cats.map((c) => {
                     const isCatEditing = editingCategory === c.id;
+                    const subs = subcategories.filter((sc) => sc.category_id === c.id).sort((a, b) => a.sort_order - b.sort_order);
+                    const catOpen = expandedCat[c.id] ?? false;
                     return (
-                      <div key={c.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
-                        {isCatEditing ? (
-                          <>
-                            <input className="input-dark flex-1" value={draftCategory.name ?? c.name} onChange={(e) => setDraftCategory({ ...draftCategory, name: e.target.value })} />
-                            <input className="input-dark w-28" value={draftCategory.slug ?? c.slug} onChange={(e) => setDraftCategory({ ...draftCategory, slug: e.target.value })} />
-                            <StoreImageUpload value={draftCategory.image_url ?? c.image_url} onChange={(url) => setDraftCategory({ ...draftCategory, image_url: url })} folder="categories" placeholder="Imagem" />
-                            <input type="number" className="input-dark w-16" placeholder="larg" value={draftCategory.card_width ?? c.card_width ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_width: e.target.value ? Number(e.target.value) : null })} />
-                            <input type="number" className="input-dark w-16" placeholder="alt" value={draftCategory.card_height ?? c.card_height ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_height: e.target.value ? Number(e.target.value) : null })} />
-                            <input type="number" className="input-dark w-16" value={draftCategory.sort_order ?? c.sort_order} onChange={(e) => setDraftCategory({ ...draftCategory, sort_order: Number(e.target.value) })} />
-                            <label className="flex items-center gap-1.5 text-xs text-white/70"><input type="checkbox" checked={draftCategory.is_active ?? c.is_active} onChange={(e) => setDraftCategory({ ...draftCategory, is_active: e.target.checked })} />Ativa</label>
-                            <button onClick={() => saveCategory(c.id)} className="rounded-md bg-primary p-1.5 text-primary-foreground"><Save className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => { setEditingCategory(null); setDraftCategory({}); }} className="rounded-md bg-white/5 p-1.5 text-white/60"><X className="h-3.5 w-3.5" /></button>
-                          </>
-                        ) : (
-                          <>
-                            {c.image_url ? (
-                              <img src={c.image_url} alt="" className="h-8 w-8 rounded-md object-cover border border-white/10" />
+                      <div key={c.id} className="rounded-lg bg-white/5 overflow-hidden">
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          {isCatEditing ? (
+                            <>
+                              <input className="input-dark flex-1" value={draftCategory.name ?? c.name} onChange={(e) => setDraftCategory({ ...draftCategory, name: e.target.value })} />
+                              <input className="input-dark w-28" value={draftCategory.slug ?? c.slug} onChange={(e) => setDraftCategory({ ...draftCategory, slug: e.target.value })} />
+                              <StoreImageUpload value={draftCategory.image_url ?? c.image_url} onChange={(url) => setDraftCategory({ ...draftCategory, image_url: url })} folder="categories" placeholder="Imagem" />
+                              <input type="number" className="input-dark w-16" placeholder="larg" value={draftCategory.card_width ?? c.card_width ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_width: e.target.value ? Number(e.target.value) : null })} />
+                              <input type="number" className="input-dark w-16" placeholder="alt" value={draftCategory.card_height ?? c.card_height ?? ""} onChange={(e) => setDraftCategory({ ...draftCategory, card_height: e.target.value ? Number(e.target.value) : null })} />
+                              <input type="number" className="input-dark w-16" value={draftCategory.sort_order ?? c.sort_order} onChange={(e) => setDraftCategory({ ...draftCategory, sort_order: Number(e.target.value) })} />
+                              <label className="flex items-center gap-1.5 text-xs text-white/70"><input type="checkbox" checked={draftCategory.is_active ?? c.is_active} onChange={(e) => setDraftCategory({ ...draftCategory, is_active: e.target.checked })} />Ativa</label>
+                              <button onClick={() => saveCategory(c.id)} className="rounded-md bg-primary p-1.5 text-primary-foreground"><Save className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => { setEditingCategory(null); setDraftCategory({}); }} className="rounded-md bg-white/5 p-1.5 text-white/60"><X className="h-3.5 w-3.5" /></button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => setExpandedCat({ ...expandedCat, [c.id]: !catOpen })} className="text-white/60 hover:text-white">
+                                {catOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                              </button>
+                              {c.image_url ? (
+                                <img src={c.image_url} alt="" className="h-8 w-8 rounded-md object-cover border border-white/10" />
+                              ) : (
+                                <div className="h-8 w-8 rounded-md bg-white/5 border border-white/10" />
+                              )}
+                              <div className="flex-1 text-sm text-white flex items-center gap-2">
+                                {c.name}
+                                {c.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
+                                <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"} · {subs.length} sub</span>
+                              </div>
+                              {c.pending && (
+                                <button onClick={() => approveCategory(c.id)} className="flex items-center gap-1 rounded-md bg-green-500/15 px-2 py-1.5 text-[11px] font-bold text-green-400 hover:bg-green-500/25">
+                                  <CheckCircle2 className="h-3 w-3" /> Aprovar
+                                </button>
+                              )}
+                              <button onClick={() => { setEditingCategory(c.id); setDraftCategory(c); }} className="rounded-md bg-white/5 p-1.5 text-white/70 hover:text-white"><Pencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => deleteCategory(c.id)} className="rounded-md bg-red-500/10 p-1.5 text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </>
+                          )}
+                        </div>
+
+                        {catOpen && (
+                          <div className="border-t border-white/5 bg-black/30 px-3 py-2 space-y-1.5">
+                            {subs.map((sc) => {
+                              const isSubEditing = editingSubcategory === sc.id;
+                              return (
+                                <div key={sc.id} className="flex flex-wrap items-center gap-2 rounded-md bg-white/5 px-2 py-1.5">
+                                  {isSubEditing ? (
+                                    <>
+                                      <input className="input-dark flex-1 min-w-[140px]" value={draftSubcategory.name ?? sc.name} onChange={(e) => setDraftSubcategory({ ...draftSubcategory, name: e.target.value })} />
+                                      <input className="input-dark w-24" value={draftSubcategory.slug ?? sc.slug} onChange={(e) => setDraftSubcategory({ ...draftSubcategory, slug: e.target.value })} />
+                                      <StoreImageUpload value={draftSubcategory.image_url ?? sc.image_url} onChange={(url) => setDraftSubcategory({ ...draftSubcategory, image_url: url })} folder="subcategories" placeholder="Imagem" />
+                                      <input type="number" className="input-dark w-14" value={draftSubcategory.sort_order ?? sc.sort_order} onChange={(e) => setDraftSubcategory({ ...draftSubcategory, sort_order: Number(e.target.value) })} />
+                                      <label className="flex items-center gap-1 text-xs text-white/70"><input type="checkbox" checked={draftSubcategory.is_active ?? sc.is_active} onChange={(e) => setDraftSubcategory({ ...draftSubcategory, is_active: e.target.checked })} />Ativa</label>
+                                      <button onClick={() => saveSubcategory(sc.id)} className="rounded-md bg-primary p-1.5 text-primary-foreground"><Save className="h-3 w-3" /></button>
+                                      <button onClick={() => { setEditingSubcategory(null); setDraftSubcategory({}); }} className="rounded-md bg-white/5 p-1.5 text-white/60"><X className="h-3 w-3" /></button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {sc.image_url ? (
+                                        <img src={sc.image_url} alt="" className="h-6 w-6 rounded object-cover border border-white/10" />
+                                      ) : (
+                                        <div className="h-6 w-6 rounded bg-white/5 border border-white/10" />
+                                      )}
+                                      <div className="flex-1 text-xs text-white flex items-center gap-2">
+                                        {sc.name}
+                                        <span className="text-[11px] text-white/40">/{sc.slug} · ordem {sc.sort_order} · {sc.is_active ? "ativa" : "inativa"}</span>
+                                      </div>
+                                      <button onClick={() => { setEditingSubcategory(sc.id); setDraftSubcategory(sc); }} className="rounded bg-white/5 p-1 text-white/70 hover:text-white"><Pencil className="h-3 w-3" /></button>
+                                      <button onClick={() => deleteSubcategory(sc.id)} className="rounded bg-red-500/10 p-1 text-red-400"><Trash2 className="h-3 w-3" /></button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {newSubcategoryFor === c.id ? (
+                              <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-black/40 px-2 py-1.5">
+                                <input autoFocus className="input-dark flex-1 min-w-[140px]" placeholder="Nome da subcategoria" value={newSubcategoryDraft.name || ""} onChange={(e) => setNewSubcategoryDraft({ ...newSubcategoryDraft, name: e.target.value })} />
+                                <input className="input-dark w-24" placeholder="slug" value={newSubcategoryDraft.slug || ""} onChange={(e) => setNewSubcategoryDraft({ ...newSubcategoryDraft, slug: e.target.value })} />
+                                <StoreImageUpload value={newSubcategoryDraft.image_url} onChange={(url) => setNewSubcategoryDraft({ ...newSubcategoryDraft, image_url: url })} folder="subcategories" placeholder="Imagem" />
+                                <input type="number" className="input-dark w-14" placeholder="ordem" value={newSubcategoryDraft.sort_order ?? subs.length} onChange={(e) => setNewSubcategoryDraft({ ...newSubcategoryDraft, sort_order: Number(e.target.value) })} />
+                                <button onClick={() => createSubcategory(c.id)} className="rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground">Salvar</button>
+                                <button onClick={() => { setNewSubcategoryFor(null); setNewSubcategoryDraft({}); }} className="rounded-md bg-white/5 px-2 py-1 text-[11px] text-white/60">Cancelar</button>
+                              </div>
                             ) : (
-                              <div className="h-8 w-8 rounded-md bg-white/5 border border-white/10" />
-                            )}
-                            <div className="flex-1 text-sm text-white flex items-center gap-2">
-                              {c.name}
-                              {c.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
-                              <span className="text-xs text-white/40">/{c.slug} · ordem {c.sort_order} · {c.is_active ? "ativa" : "inativa"}</span>
-                            </div>
-                            {c.pending && (
-                              <button onClick={() => approveCategory(c.id)} className="flex items-center gap-1 rounded-md bg-green-500/15 px-2 py-1.5 text-[11px] font-bold text-green-400 hover:bg-green-500/25">
-                                <CheckCircle2 className="h-3 w-3" /> Aprovar
+                              <button onClick={() => { setNewSubcategoryFor(c.id); setNewSubcategoryDraft({ sort_order: subs.length, is_active: true }); }} className="flex items-center gap-1 text-[11px] text-primary hover:opacity-80">
+                                <Plus className="h-3 w-3" /> Adicionar subcategoria
                               </button>
                             )}
-                            <button onClick={() => { setEditingCategory(c.id); setDraftCategory(c); }} className="rounded-md bg-white/5 p-1.5 text-white/70 hover:text-white"><Pencil className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => deleteCategory(c.id)} className="rounded-md bg-red-500/10 p-1.5 text-red-400"><Trash2 className="h-3.5 w-3.5" /></button>
-                          </>
+                          </div>
                         )}
                       </div>
                     );

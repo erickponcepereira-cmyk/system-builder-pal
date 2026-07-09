@@ -6576,6 +6576,7 @@ export type Database = {
           sort_order: number | null
           status: string | null
           stock: number | null
+          subcategory_id: string | null
           subtitle: string | null
           tax_percentage: number | null
           type: Database["public"]["Enums"]["product_type"] | null
@@ -6662,6 +6663,7 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           stock?: number | null
+          subcategory_id?: string | null
           subtitle?: string | null
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
@@ -6748,6 +6750,7 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           stock?: number | null
+          subcategory_id?: string | null
           subtitle?: string | null
           tax_percentage?: number | null
           type?: Database["public"]["Enums"]["product_type"] | null
@@ -6767,6 +6770,13 @@ export type Database = {
             columns: ["creator_coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "store_subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -8252,6 +8262,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      store_subcategories: {
+        Row: {
+          card_height: number | null
+          card_width: number | null
+          category_id: string
+          created_at: string
+          icon: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          pending: boolean
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          card_height?: number | null
+          card_width?: number | null
+          category_id: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          pending?: boolean
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          card_height?: number | null
+          card_width?: number | null
+          category_id?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          pending?: boolean
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_challenge_tokens: {
         Row: {
