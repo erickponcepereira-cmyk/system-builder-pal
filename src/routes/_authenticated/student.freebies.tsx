@@ -193,6 +193,7 @@ function StudentFreebies() {
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_professional" as never, true as never)
+        .order("sort_order" as never, { ascending: true } as never)
         .order("created_at" as never, { ascending: false }),
       supabase.from("store_sections" as never).select("id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
       supabase.from("store_categories" as never).select("id,section_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
