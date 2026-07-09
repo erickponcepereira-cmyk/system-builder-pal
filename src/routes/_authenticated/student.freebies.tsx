@@ -401,7 +401,7 @@ function StudentFreebies() {
                               ) : null}
                               {p.image_url && (
                                 <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="block w-full">
-                                  <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />
+                                  <img src={p.image_url} alt={p.name} className="aspect-square w-full object-contain bg-black/40" />
                                 </button>
                               )}
                               <div className="p-4">
