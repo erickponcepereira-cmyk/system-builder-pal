@@ -335,7 +335,7 @@ async function loadPartnerFreebieReservations(from: Date, to: Date): Promise<Fit
         google_calendar_title: productName,
         google_calendar_description: description,
         google_calendar_location: r.partner_products?.redemption_location_url || r.partner_products?.redemption_location_name || null,
-        external_link: waLink,
+        
       } satisfies FitmindEvent;
     });
   } catch (e) {
