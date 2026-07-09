@@ -5472,6 +5472,7 @@ export type Database = {
           redemption_location_url: string | null
           redemption_mode: string
           section_id: string | null
+          sort_order: number
           status: string
           stock: number | null
           system_fee_fixed: number
@@ -5521,6 +5522,7 @@ export type Database = {
           redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
+          sort_order?: number
           status?: string
           stock?: number | null
           system_fee_fixed?: number
@@ -5570,6 +5572,7 @@ export type Database = {
           redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
+          sort_order?: number
           status?: string
           stock?: number | null
           system_fee_fixed?: number
