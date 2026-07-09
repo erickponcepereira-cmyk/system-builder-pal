@@ -345,6 +345,79 @@ async function loadPartnerFreebieReservations(from: Date, to: Date): Promise<Fit
   }
 }
 
+// ─── Profissional: agendamentos (pagos + gratuitos) que ele atende ──────
+async function loadProfessionalCoachAppointments(from: Date, to: Date): Promise<FitmindEvent[]> {
+  try {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return [];
+    const { data: profile } = await supabase
+      .from("profiles").select("id").eq("user_id", auth.user.id).maybeSingle();
+    if (!profile) return [];
+    const { data: coach } = await supabase
+      .from("coaches" as never)
+      .select("id,is_professional")
+      .eq("profile_id" as never, (profile as { id: string }).id)
+      .maybeSingle();
+    const c = coach as unknown as { id: string; is_professional: boolean | null } | null;
+    if (!c || !c.is_professional) return [];
+
+    const { data: appts } = await supabase
+      .from("professional_appointments" as never)
+      .select(
+        "id,starts_at,ends_at,status,order_id,professional_products(name,kind,redemption_location_name,redemption_location_url),profile:profiles!professional_appointments_student_id_fkey(name,phone),student:students!professional_appointments_student_id_fkey(coach:coaches!students_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name)))" as never,
+      )
+      .eq("professional_coach_id" as never, c.id as never)
+      .neq("status" as never, "cancelled" as never)
+      .gte("starts_at" as never, from.toISOString() as never)
+      .lt("starts_at" as never, to.toISOString() as never);
+
+    const digits = (v: string | null | undefined) => (v || "").replace(/\D+/g, "");
+    return ((appts as any[]) || []).map((a) => {
+      const isFree = a.professional_products?.kind === "free";
+      const prodName = a.professional_products?.name || "Consulta";
+      const studentName = a.profile?.name || "Aluno";
+      const studentPhoneRaw = a.profile?.phone as string | null | undefined;
+      const studentPhone = digits(studentPhoneRaw);
+      const coachName = a.student?.coach?.profile?.name as string | null | undefined;
+      const waLink = studentPhone
+        ? `https://wa.me/${studentPhone.length <= 11 ? "55" + studentPhone : studentPhone}`
+        : null;
+      const color = isFree ? "#22c55e" : "#3b82f6";
+      const parts: string[] = [];
+      if (waLink) parts.push(`WhatsApp do aluno: ${studentPhoneRaw} (${waLink})`);
+      else if (studentPhoneRaw) parts.push(`WhatsApp do aluno: ${studentPhoneRaw}`);
+      if (coachName) parts.push(`Coach responsável: ${coachName}`);
+      const description = [isFree ? "Agendamento de benefício gratuito." : "Consulta profissional.", ...parts].join("\n");
+      const subtitleBits = [`com ${studentName}`];
+      if (coachName) subtitleBits.push(`Coach ${coachName}`);
+      return {
+        id: `pcoach-appt-${a.id}`,
+        title: isFree ? `🎁 ${prodName}` : `🩺 ${prodName}`,
+        subtitle: subtitleBits.join(" · "),
+        description,
+        location: a.professional_products?.redemption_location_name || null,
+        image_url: null,
+        color,
+        category: "avaliacao",
+        tags: [isFree ? "gratuito" : "consulta", ...(waLink ? ["whatsapp"] : [])],
+        starts_at: a.starts_at,
+        ends_at: a.ends_at,
+        all_day: false,
+        is_highlighted: isFree,
+        is_important: false,
+        highlight_color: color,
+        highlight_label: isFree ? "Gratuito" : null,
+        google_calendar_title: prodName,
+        google_calendar_description: description,
+        google_calendar_location: a.professional_products?.redemption_location_url || a.professional_products?.redemption_location_name || null,
+      } satisfies FitmindEvent;
+    });
+  } catch (e) {
+    console.warn("loadProfessionalCoachAppointments failed", e);
+    return [];
+  }
+}
+
 interface FitmindCalendarProps {
   /** Modo compacto (sidebar / widget). Padrão: false (tela inteira) */
   compact?: boolean;
