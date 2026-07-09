@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus, Target, Sparkles } from "lucide-react";
+import { ArrowLeft, Play, Pause, Check, Clock, Dumbbell, Flame, Trophy, Calendar as CalendarIcon, TrendingUp, History, Award, ChevronRight, X, Plus, Target, Sparkles, Wrench } from "lucide-react";
 import { listWorkoutPlans, startWorkoutSession, logSet, logCardio, finishWorkoutSession, getWorkoutHistory, getLastExerciseLogs, updateExerciseUserConfig, listPersonalChallenges, createPersonalChallenge, deletePersonalChallenge } from "@/lib/workouts.functions";
 import { toast } from "sonner";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import fitmindLogo from "@/assets/fitmind-logo.png";
+import { StudentWorkoutBuilder } from "@/components/student/StudentWorkoutBuilder";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/student/workout")({
   head: () => ({ meta: [{ title: "Meu Treino — FitMind Club" }] }),
