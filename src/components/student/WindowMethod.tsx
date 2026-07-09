@@ -326,6 +326,7 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
   const [meals, setMeals] = useState<MealState[]>(emptyMeals());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const targetDate = date || new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
