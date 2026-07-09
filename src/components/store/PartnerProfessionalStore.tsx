@@ -362,20 +362,20 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (cards.length === 0) return <p className="text-sm text-white/50 text-center py-10">Nenhum produto disponível ainda.</p>;
 
-  // Itens ocultados por algum upline são SEMPRE removidos (inclusive para coaches downline).
+  // Itens ocultados por algum upline são SEMPRE removidos (inclusive para coaches downline),
+  // exceto quando o criador do produto está entre o viewer e o hider na cadeia.
   // Itens ocultados por mim mesmo continuam visíveis (em modo coach) com toggle, para eu poder reexibir.
   const isViewerFilter = mode !== "reseller";
   const uplineHidesVendor = singleCardKind ? vis.isHiddenByUpline(vendorTypeFor(singleCardKind), null, null) : false;
   const visibleCards = cards.filter((c) => {
-    const cVendor = vendorTypeFor(c.kind);
     const cProductKind = productKindFor(c.kind);
-    if (vis.isHiddenByUpline(cVendor, null, null)) return false;
+    const creator = c.creatorCoachId ?? c.professionalCoachId ?? null;
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
-    if (vis.isHiddenByUpline("product", cProductKind, c.id)) return false;
+    // Product-level (inclui vendor_partner/vendor_professional) com exceção do criador.
+    if (vis.isHiddenByUpline("product", cProductKind, c.id, creator)) return false;
     if (isViewerFilter) {
-      if (vis.isHiddenForViewer(cVendor, null, null)) return false;
       if (c.section_id && vis.isHiddenForViewer("section", null, c.section_id)) return false;
-      if (vis.isHiddenForViewer("product", cProductKind, c.id)) return false;
+      if (vis.isHiddenForViewer("product", cProductKind, c.id, creator)) return false;
     }
     return true;
   });
