@@ -184,9 +184,14 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
     const partnerRows = partnerRowsAll;
     const earningsById = new Map<string, any>((realEarnings as any[]).map((e) => [e.id, e]));
 
-    const allSections = (sectionsRes.data as unknown as Array<SectionRow & { target_audience?: string | null }>) || [];
-    // Loja FitMind: oculta seções marcadas para parceiros/profissionais
-    const sections = allSections.filter((s) => !s.target_audience || s.target_audience === "fitmind") as SectionRow[];
+    const allSections = (sectionsRes.data as unknown as Array<SectionRow & { target_audience?: string | null; target_audiences?: string[] | null }>) || [];
+    // Loja FitMind: mostra seções marcadas para "fitmind" (via array multi ou legado) ou sem público definido
+    const sections = allSections.filter((s) => {
+      const list = (s.target_audiences && s.target_audiences.length > 0)
+        ? s.target_audiences
+        : (s.target_audience ? [s.target_audience] : []);
+      return list.length === 0 || list.includes("fitmind");
+    }) as SectionRow[];
     setStoreSections(sections);
     const sectionName = (id: string) => sections.find((s) => s.id === id)?.name || "Loja";
 
