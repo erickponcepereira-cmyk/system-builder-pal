@@ -280,3 +280,144 @@ select option {
   background-color: #1a1a1a;
   color: #ffffff;
 }
+
+/* ============================================================
+   WHITE LABEL CAROL — correção visual global
+   Mantém FitMind normal e só corrige quando data-theme="carol"
+   ============================================================ */
+:root[data-theme="carol"],
+:root[data-theme="carol"] body {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  color-scheme: light;
+}
+
+/* Corrige fundos pretos antigos */
+:root[data-theme="carol"] .bg-black,
+:root[data-theme="carol"] .bg-neutral-950,
+:root[data-theme="carol"] .bg-neutral-900,
+:root[data-theme="carol"] .bg-zinc-950,
+:root[data-theme="carol"] .bg-zinc-900,
+:root[data-theme="carol"] .bg-stone-950,
+:root[data-theme="carol"] .bg-stone-900,
+:root[data-theme="carol"] .bg-slate-950,
+:root[data-theme="carol"] .bg-slate-900,
+:root[data-theme="carol"] [style*="background-color: #0A0A0A"],
+:root[data-theme="carol"] [style*="background-color:#0A0A0A"],
+:root[data-theme="carol"] [style*="background-color: #0a0a0a"],
+:root[data-theme="carol"] [style*="background-color:#0a0a0a"],
+:root[data-theme="carol"] [style*="background-color: #0F0F0F"],
+:root[data-theme="carol"] [style*="background-color:#0F0F0F"],
+:root[data-theme="carol"] [style*="background-color: #111111"],
+:root[data-theme="carol"] [style*="background-color:#111111"],
+:root[data-theme="carol"] [style*="background-color: #1A1A1A"],
+:root[data-theme="carol"] [style*="background-color:#1A1A1A"] {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+/* Corrige textos brancos fracos */
+:root[data-theme="carol"] .text-white,
+:root[data-theme="carol"] .text-white\/90,
+:root[data-theme="carol"] .text-white\/80,
+:root[data-theme="carol"] .text-white\/70,
+:root[data-theme="carol"] .text-white\/60 {
+  color: var(--foreground) !important;
+}
+
+:root[data-theme="carol"] .text-white\/50,
+:root[data-theme="carol"] .text-white\/40,
+:root[data-theme="carol"] .text-white\/30,
+:root[data-theme="carol"] .text-white\/20 {
+  color: var(--muted-foreground) !important;
+}
+
+/* Corrige cards transparentes muito claros */
+:root[data-theme="carol"] .bg-white\/5,
+:root[data-theme="carol"] .bg-white\/10,
+:root[data-theme="carol"] .bg-white\/\[0\.03\] {
+  background-color: color-mix(in srgb, var(--card) 82%, white 18%) !important;
+}
+
+/* Corrige bordas brancas invisíveis */
+:root[data-theme="carol"] .border-white\/5,
+:root[data-theme="carol"] .border-white\/10,
+:root[data-theme="carol"] .border-white\/20 {
+  border-color: var(--border) !important;
+}
+
+/* Inputs */
+:root[data-theme="carol"] input,
+:root[data-theme="carol"] textarea,
+:root[data-theme="carol"] select {
+  background-color: var(--input) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="carol"] input::placeholder,
+:root[data-theme="carol"] textarea::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* Botões */
+:root[data-theme="carol"] .bg-primary {
+  background-color: var(--primary) !important;
+}
+
+:root[data-theme="carol"] .text-primary-foreground {
+  color: var(--primary-foreground) !important;
+}
+
+/* Sidebar e barras */
+:root[data-theme="carol"] .bg-sidebar {
+  background-color: var(--sidebar) !important;
+  color: var(--sidebar-foreground) !important;
+}
+
+/* Calendário escuro antigo */
+:root[data-theme="carol"] .fc,
+:root[data-theme="carol"] .fc-scrollgrid,
+:root[data-theme="carol"] .fc-theme-standard td,
+:root[data-theme="carol"] .fc-theme-standard th {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="carol"] .fc .fc-daygrid-day-number,
+:root[data-theme="carol"] .fc .fc-col-header-cell-cushion {
+  color: var(--foreground) !important;
+}
+
+:root[data-theme="carol"] .fc-event {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+/* Toasts, badges e avisos */
+:root[data-theme="carol"] .text-muted-foreground {
+  color: var(--muted-foreground) !important;
+}
+
+:root[data-theme="carol"] .bg-muted {
+  background-color: var(--muted) !important;
+}
+
+:root[data-theme="carol"] .border-border {
+  border-color: var(--border) !important;
+}
+
+/* Evita que áreas internas fiquem pretas */
+:root[data-theme="carol"] main,
+:root[data-theme="carol"] section,
+:root[data-theme="carol"] article {
+  color: var(--foreground);
+}
+
+/* Cards principais */
+:root[data-theme="carol"] .rounded-2xl,
+:root[data-theme="carol"] .rounded-xl {
+  border-color: var(--border);
+}
