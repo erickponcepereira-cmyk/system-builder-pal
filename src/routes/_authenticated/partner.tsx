@@ -305,6 +305,19 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
   return (
     <div className="space-y-3">
       <WhatsAppGroupCard />
+      <a
+        href="/partner/orders-in-progress"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 hover:bg-primary/15 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Clock className="h-5 w-5 text-primary" />
+          <div>
+            <p className="text-sm font-bold text-white">Compras em andamento</p>
+            <p className="text-[11px] text-white/60">Pedidos físicos, endereço e prazo de entrega</p>
+          </div>
+        </div>
+        <span className="text-xs text-primary font-medium">Abrir →</span>
+      </a>
       {!hasActiveFree && (
         <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
           <AlertTriangle className="inline h-4 w-4 mr-1" /> Você precisa de pelo menos <b>1 produto gratuito aprovado e ativo</b> para publicar produtos pagos. Os pagos ficam pausados enquanto isso.

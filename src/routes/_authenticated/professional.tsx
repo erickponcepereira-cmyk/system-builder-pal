@@ -211,6 +211,20 @@ function ProfessionalPanel() {
 
         <div className="mb-4"><WhatsAppGroupCard /></div>
 
+        <Link
+          to="/professional/orders-in-progress"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 hover:bg-primary/15 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Package className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-bold text-white">Compras em andamento</p>
+              <p className="text-[11px] text-white/60">Acompanhe pedidos físicos, endereço e prazo de entrega</p>
+            </div>
+          </div>
+          <span className="text-xs text-primary font-medium">Abrir →</span>
+        </Link>
+
 
 
         {/* Tabs nav */}
