@@ -66,6 +66,8 @@ interface ProProduct {
   event_end_time?: string | null;
   payment_timing?: "at_booking" | "later";
   sort_order?: number | null;
+  is_physical?: boolean;
+  delivery_days?: number | null;
 }
 
 const WEEKDAYS = [
@@ -467,6 +469,32 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               <Field label="Estoque (opcional)">
                 <input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" />
               </Field>
+
+              {editing.kind !== "free" && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-primary">
+                    <input
+                      type="checkbox"
+                      checked={!!editing.is_physical}
+                      onChange={e => setEditing({ ...editing, is_physical: e.target.checked })}
+                    />
+                    Produto físico (requer entrega)
+                  </label>
+                  {editing.is_physical && (
+                    <Field label="Prazo médio de entrega (dias) *">
+                      <input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={editing.delivery_days ?? ""}
+                        onChange={e => setEditing({ ...editing, delivery_days: e.target.value === "" ? null : Math.max(1, Number(e.target.value)) })}
+                        placeholder="Ex.: 7"
+                        className="field-input"
+                      />
+                    </Field>
+                  )}
+                </div>
+              )}
 
               <CategoryPicker
                 targetAudience="professional"

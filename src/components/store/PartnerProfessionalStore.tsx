@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2, IdCard, Ticket } from "lucide-react";
+import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2, IdCard, Ticket, Package } from "lucide-react";
 import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
@@ -9,6 +9,9 @@ import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
 import { useStoreVisibility, type HideProductKind } from "@/lib/coach-store-overrides";
 import { computePartnerProductBenefits } from "@/lib/partner-product-benefits";
+import { ShippingAddressForm, type ShippingAddress } from "@/components/shipping/ShippingAddressForm";
+import { useServerFn } from "@tanstack/react-start";
+import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 
 function BenefitsBadges({ price, compact = false }: { price: number; compact?: boolean }) {
   const { cardDays, challengeTickets } = computePartnerProductBenefits(price);
@@ -51,6 +54,8 @@ export type PartnerStoreCard = {
   durationMinutes?: number;
   scheduledSlot?: string | null;
   coachCommissionPct?: number | null;
+  isPhysical?: boolean;
+  deliveryDays?: number | null;
 };
 
 const money = (v: number) =>
@@ -95,6 +100,9 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   const [slot, setSlot] = useState<string | null>(null);
   const [ownStudentId, setOwnStudentId] = useState<string | null>(null);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string } | null>(null);
+  const [shipping, setShipping] = useState<ShippingAddress>({ shipping_zip: "", shipping_address: "", shipping_number: "", shipping_reference: "", shipping_location_url: "" });
+  const [shippingValid, setShippingValid] = useState(false);
+  const attachShipping = useServerFn(attachShippingToOrder);
   const myReferralCode = useMyReferralCode();
   const vis = useStoreVisibility(mode === "reseller");
   const productKindFor = (ck: CardKind): HideProductKind => (ck === "partner" ? "partner_product" : "professional_product");
@@ -174,7 +182,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name,upline_coach_id)")
+          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,is_physical,delivery_days,partners(fantasy_name,upline_coach_id)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
@@ -183,25 +191,27 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .order("sort_order" as never, { ascending: true } as never)
           .limit(1000);
         if (error) console.error("[partner store]", error);
-        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
           id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
           section_id: r.section_id, category_id: r.category_id,
           seller: r.partners?.fantasy_name || "Parceiro",
           kind: "partner" as const,
           coachCommissionPct: r.coach_commission_percentage ?? null,
           creatorCoachId: r.partners?.upline_coach_id ?? null,
+          isPhysical: !!r.is_physical,
+          deliveryDays: r.delivery_days ?? null,
         }));
       };
 
       const fetchProfessionals = async (): Promise<PartnerStoreCard[]> => {
         // Paginação: o limite default do PostgREST é 1000; buscamos em lotes até esgotar.
         const PAGE = 1000;
-        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
+        const all: Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_id: string; is_schedulable?: boolean; default_duration_minutes?: number; coach_commission_percentage?: number | null; is_physical?: boolean; delivery_days?: number | null; coaches?: { profile?: { name: string | null } | null } | null }> = [];
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from("professional_products" as never)
             .select(
-              "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
+              "id,name,description,image_url,image_urls,price,original_price,section_id,category_id,coach_id,is_schedulable,default_duration_minutes,coach_commission_percentage,is_physical,delivery_days,coaches!professional_products_coach_id_fkey(profile:profiles!coaches_profile_id_fkey(name))",
             )
             .eq("status" as never, "approved")
             .eq("is_active_by_professional" as never, true)
@@ -226,6 +236,8 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           creatorCoachId: r.coach_id,
           durationMinutes: r.default_duration_minutes ?? 30,
           coachCommissionPct: r.coach_commission_percentage ?? null,
+          isPhysical: !!r.is_physical,
+          deliveryDays: r.delivery_days ?? null,
         }));
       };
 
@@ -290,6 +302,10 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       toast.error("Conta de aluno não encontrada. Faça login como aluno para comprar.");
       return;
     }
+    if (selected.isPhysical && !shippingValid) {
+      toast.error("Preencha o endereço de entrega e aceite os termos.");
+      return;
+    }
     setBuying(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -336,6 +352,22 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
         ppId = data as unknown as string;
       }
       if (!ppId) throw new Error("Pedido não retornado");
+      if (selected.isPhysical) {
+        try {
+          await attachShipping({
+            data: {
+              kind: "partner_product_order",
+              order_id: ppId,
+              save_to_profile: mode === "student",
+              delivery_days: selected.deliveryDays ?? null,
+              ...shipping,
+              shipping_location_url: shipping.shipping_location_url || undefined,
+            },
+          });
+        } catch (e) {
+          console.warn("attach shipping", e);
+        }
+      }
       const { data: od } = await supabase
         .from("partner_product_orders" as never)
         .select("id,order_number,gross_amount")
@@ -586,6 +618,21 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                   value={slot}
                   onChange={setSlot}
                 />
+              )}
+              {selected.isPhysical && (
+                <div>
+                  <div className="mb-2 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
+                    <Package className="h-4 w-4" />
+                    Produto físico · prazo médio {selected.deliveryDays ?? "—"} dia(s)
+                  </div>
+                  <ShippingAddressForm
+                    value={shipping}
+                    onChange={setShipping}
+                    onValidityChange={setShippingValid}
+                    deliveryDays={selected.deliveryDays ?? null}
+                    autoLoadProfile={mode === "student"}
+                  />
+                </div>
               )}
               {mode === "reseller" && (
                 <CommissionBreakdown price={selected.price} pct={selected.coachCommissionPct} />

@@ -14,6 +14,7 @@ import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCom
 import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
+import { attachShippingToOrder } from "@/lib/shipping-orders.functions";
 
 type SaleClient = { id: string; name: string; email: string | null; phone: string | null; cpf?: string | null; coachName?: string | null };
 type CoachSaleRow = { orderId: string; orderNumber: string; status: string; total: number; createdAt: string; paymentMethod: string; clientName: string; productTitles: string; commissionAmount: number; commissionStatus: string | null };
@@ -46,13 +47,14 @@ interface StoreProduct extends ProductDetail {
 type CartItem = StoreProduct & { quantity: number };
 type OrderRow = { id: string; order_number: string; status: string; total_amount: number; created_at: string | null };
 
-type ShippingForm = { name: string; phone: string; zip: string; address: string; city: string; state: string };
+type ShippingForm = { name: string; phone: string; zip: string; address: string; city: string; state: string; number: string; reference: string; location_url: string };
+
 
 type SectionRow = { id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
 type CategoryRow = { id: string; section_id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
 type SubcategoryRow = { id: string; category_id: string; name: string; image_url: string | null; card_width: number | null; card_height: number | null };
 
-const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "" };
+const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "", number: "", reference: "", location_url: "" };
 
 const productCategory = (type?: string | null) => ({
   enrollment: "Inscrições", plan_30: "Planos 30d", protocol_90: "Protocolos 90d",
@@ -96,6 +98,9 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const [cartOpen, setCartOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [shipping, setShipping] = useState<ShippingForm>(initialShipping);
+  const [shippingAcceptTerm, setShippingAcceptTerm] = useState(false);
+  const [shippingAcceptCorrect, setShippingAcceptCorrect] = useState(false);
+  const attachShippingFn = useServerFn(attachShippingToOrder);
   const [checkingOut, setCheckingOut] = useState(false);
   const [payOrder, setPayOrder] = useState<{ id: string; total: number; number: string; email: string; name: string; sourceKind: "store_order" | "partner_product_order"; paidItemIds: string[] } | null>(null);
 
@@ -619,8 +624,12 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         return;
       }
 
-      if (needsShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state)) {
-        toast.error("Preencha os dados de entrega.");
+      if (needsShipping && (!shipping.name || !shipping.phone || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.number || !shipping.reference)) {
+        toast.error("Preencha todos os dados de entrega.");
+        return;
+      }
+      if (needsShipping && (!shippingAcceptTerm || !shippingAcceptCorrect)) {
+        toast.error("Aceite os termos de entrega antes de finalizar.");
         return;
       }
 
@@ -634,6 +643,31 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         .eq("id" as never, orderId as never)
         .maybeSingle();
       const od = orderData as unknown as { id: string; order_number: string; total_amount: number } | null;
+      if (needsShipping && od?.id) {
+        try {
+          // Determinar prazo médio máximo dos produtos físicos no carrinho
+          const productIds = fitmindItems.map((i) => i.sourceId).filter(Boolean);
+          let maxDeliveryDays: number | null = null;
+          if (productIds.length) {
+            const { data: prods } = await supabase.from("products").select("id,delivery_days").in("id", productIds as never);
+            const days = ((prods as any[]) || []).map((p) => Number(p.delivery_days || 0)).filter((n) => n > 0);
+            maxDeliveryDays = days.length ? Math.max(...days) : null;
+          }
+          await attachShippingFn({
+            data: {
+              kind: "store_order",
+              order_id: od.id,
+              save_to_profile: true,
+              delivery_days: maxDeliveryDays,
+              shipping_zip: shipping.zip,
+              shipping_address: `${shipping.address}${shipping.city ? `, ${shipping.city}` : ""}${shipping.state ? ` - ${shipping.state}` : ""}`,
+              shipping_number: shipping.number,
+              shipping_reference: shipping.reference,
+              shipping_location_url: shipping.location_url || undefined,
+            },
+          });
+        } catch (e) { console.warn("attach fitmind shipping", e); }
+      }
       setCartOpen(false);
       setPayOrder({
         id: od?.id || String(orderId), total: Number(od?.total_amount || total), number: od?.order_number || "pedido",
@@ -1406,11 +1440,19 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
               ))}
             </div>
             {requiresShipping && (
-              <div className="mb-4 grid gap-2">
-                <p className="text-xs font-bold text-foreground">Entrega</p>
-                {(["name", "phone", "zip", "address", "city", "state"] as const).map((field) => (
-                  <input key={field} value={shipping[field]} onChange={(event) => setShipping((current) => ({ ...current, [field]: event.target.value }))} placeholder={{ name: "Nome", phone: "Telefone", zip: "CEP", address: "Endereço", city: "Cidade", state: "UF" }[field]} className="rounded-xl bg-muted px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground" />
+              <div className="mb-4 grid gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-bold text-primary">Entrega (produto físico)</p>
+                {(["name", "phone", "zip", "address", "number", "city", "state", "reference", "location_url"] as const).map((field) => (
+                  <input key={field} value={shipping[field] || ""} onChange={(event) => setShipping((current) => ({ ...current, [field]: event.target.value }))} placeholder={{ name: "Nome", phone: "Telefone", zip: "CEP", address: "Logradouro", number: "Número", city: "Cidade", state: "UF", reference: "Referência (ex.: portão azul)", location_url: "Link do mapa (opcional)" }[field]} className="rounded-xl bg-muted px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground" />
                 ))}
+                <label className="mt-1 flex items-start gap-2 text-[11px] text-foreground">
+                  <input type="checkbox" checked={shippingAcceptTerm} onChange={(e) => setShippingAcceptTerm(e.target.checked)} className="mt-0.5" />
+                  <span>Aceito que o produto será entregue neste endereço, respeitando o prazo médio informado pelo vendedor.</span>
+                </label>
+                <label className="flex items-start gap-2 text-[11px] text-foreground">
+                  <input type="checkbox" checked={shippingAcceptCorrect} onChange={(e) => setShippingAcceptCorrect(e.target.checked)} className="mt-0.5" />
+                  <span>Declaro que preenchi corretamente os dados de localização.</span>
+                </label>
               </div>
             )}
             <div className="mb-4 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
