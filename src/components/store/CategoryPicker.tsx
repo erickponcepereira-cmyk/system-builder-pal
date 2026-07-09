@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-type Section = { id: string; name: string; pending: boolean | null; is_active: boolean; target_audience?: string | null };
+type Section = { id: string; name: string; pending: boolean | null; is_active: boolean; target_audience?: string | null; target_audiences?: string[] | null };
 type Category = { id: string; section_id: string; name: string; pending: boolean | null; is_active: boolean };
 
 interface Props {
