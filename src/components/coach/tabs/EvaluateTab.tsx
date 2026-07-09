@@ -53,9 +53,11 @@ export function EvaluateTab() {
     client: FitMindClient;
     student: { id: string; name: string; email?: string };
     existingClientName?: string; // se aluno já vinculado a outro cliente
+    existingClientId?: string;
   } | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [transferMergeAndDelete, setTransferMergeAndDelete] = useState(true);
   // Per-client cache of full assessment rows (photos + segments + notes).
   // Persists across re-renders; cleared by loadClients() after save/edit/delete.
   const fullAssessmentsCacheRef = useRef<Map<string, FitMindAssessment[]>>(new Map());
