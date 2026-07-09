@@ -15,6 +15,7 @@ interface Section {
   card_height: number | null;
   pending?: boolean | null;
   target_audience?: string | null;
+  target_audiences?: string[] | null;
 }
 interface Category {
   id: string;
