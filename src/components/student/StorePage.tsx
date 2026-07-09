@@ -40,6 +40,7 @@ interface StoreProduct extends ProductDetail {
   creatorCoachId?: string | null;
   sectionId?: string | null;
   categoryId?: string | null;
+  subcategoryId?: string | null;
 }
 
 type CartItem = StoreProduct & { quantity: number };
