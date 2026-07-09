@@ -51,6 +51,7 @@ export function StoreItemsManager() {
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [filterSection, setFilterSection] = useState<string>("");
   const [filterCategory, setFilterCategory] = useState<string>("");
@@ -62,17 +63,19 @@ export function StoreItemsManager() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: c }, { data: i }] = await Promise.all([
+    const [{ data: s }, { data: c }, { data: sc }, { data: i }] = await Promise.all([
       supabase.from("store_sections").select("id,name").order("sort_order"),
       supabase.from("store_categories").select("id,section_id,name").order("sort_order"),
+      supabase.from("store_subcategories" as any).select("id,category_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
+        .select("id,section_id,category_id,subcategory_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
     setSections((s as Section[]) || []);
     setCategories((c as Category[]) || []);
+    setSubcategories(((sc as unknown) as Subcategory[]) || []);
     setItems(((i as unknown) as Item[]) || []);
     setLoading(false);
   };
