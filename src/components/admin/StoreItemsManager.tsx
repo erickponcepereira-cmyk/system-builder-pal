@@ -423,16 +423,28 @@ export function StoreItemsManager() {
 
               <div>
                 <label className="text-xs text-white/60 mb-1 block">Seção</label>
-                <select className="input-dark w-full" value={editing.section_id || ""} onChange={(e) => setEditing({ ...editing, section_id: e.target.value, category_id: null })}>
+                <select className="input-dark w-full" value={editing.section_id || ""} onChange={(e) => setEditing({ ...editing, section_id: e.target.value, category_id: null, subcategory_id: null })}>
                   <option value="">Selecione...</option>
                   {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs text-white/60 mb-1 block">Categoria</label>
-                <select className="input-dark w-full" value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })}>
+                <select className="input-dark w-full" value={editing.category_id || ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null, subcategory_id: null })}>
                   <option value="">Sem categoria</option>
                   {editingCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-white/60 mb-1 block">Subcategoria</label>
+                <select
+                  className="input-dark w-full disabled:opacity-50"
+                  disabled={!editing.category_id || editingSubcategories.length === 0}
+                  value={editing.subcategory_id || ""}
+                  onChange={(e) => setEditing({ ...editing, subcategory_id: e.target.value || null })}
+                >
+                  <option value="">{editingSubcategories.length === 0 ? "— nenhuma cadastrada —" : "Sem subcategoria"}</option>
+                  {editingSubcategories.map((sc) => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
                 </select>
               </div>
 
