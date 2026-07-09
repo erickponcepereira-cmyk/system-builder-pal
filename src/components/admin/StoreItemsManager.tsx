@@ -145,6 +145,7 @@ export function StoreItemsManager() {
       const payload: any = {
         section_id: editing.section_id,
         category_id: editing.category_id || null,
+        subcategory_id: editing.subcategory_id || null,
         kind: editing.kind,
         name: editing.name,
         description: editing.description || null,
