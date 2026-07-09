@@ -29,6 +29,19 @@ interface Category {
   card_height: number | null;
   pending?: boolean | null;
 }
+interface Subcategory {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+  card_width: number | null;
+  card_height: number | null;
+  pending?: boolean | null;
+}
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
