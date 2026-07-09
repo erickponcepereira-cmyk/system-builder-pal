@@ -348,11 +348,16 @@ export function StoreManager() {
                       <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10" />
                     )}
                     <div className="flex-1">
-                      <div className="font-semibold text-white flex items-center gap-2">
+                      <div className="font-semibold text-white flex items-center gap-2 flex-wrap">
                         {s.name}
-                        {s.target_audience && (
-                          <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary uppercase">
-                            {s.target_audience === "partner" ? "Parceiros" : s.target_audience === "professional" ? "Profissionais" : "Fitmind"}
+                        {(s.target_audiences && s.target_audiences.length > 0
+                          ? s.target_audiences
+                          : (s.target_audience ? [s.target_audience] : [])
+                        ).map((a) => (
+                          <span key={a} className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-bold text-primary uppercase">
+                            {a === "partner" ? "Parceiros" : a === "professional" ? "Profissionais" : "Fitmind"}
+                          </span>
+                        ))}
                           </span>
                         )}
                         {s.pending && <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold text-yellow-300">Pendente</span>}
