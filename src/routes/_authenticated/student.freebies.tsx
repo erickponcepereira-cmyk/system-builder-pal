@@ -64,6 +64,9 @@ type PartnerFreeProduct = {
   weekly_limit_per_student: number | null;
   redemption_location_name: string | null;
   redemption_location_url: string | null;
+  section_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null; address: string | null } | null;
 };
 
@@ -80,8 +83,15 @@ type ProfessionalFreeProduct = {
   estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
-  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null } | null } | null;
+  section_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null; bio?: string | null } | null } | null;
 };
+
+type StoreSection = { id: string; name: string };
+type StoreCategory = { id: string; section_id: string; name: string };
+type StoreSubcategory = { id: string; category_id: string; name: string };
 
 function formatBenefitWindow(start?: string | null, end?: string | null) {
   const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
