@@ -19,6 +19,7 @@ interface Item {
   id: string;
   section_id: string | null;
   category_id: string | null;
+  subcategory_id?: string | null;
   kind: "physical" | "digital";
   name: string;
   description: string | null;
