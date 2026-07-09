@@ -6,6 +6,7 @@ import { ProductDownloadsManager } from "./ProductDownloadsManager";
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
+interface Subcategory { id: string; category_id: string; name: string; }
 type Audience = "student" | "coach" | "partner" | "professional";
 const AUDIENCE_OPTIONS: { value: Audience; label: string }[] = [
   { value: "student", label: "Alunos" },
