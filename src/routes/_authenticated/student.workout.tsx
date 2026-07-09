@@ -257,8 +257,11 @@ function WorkoutPage() {
           <Dumbbell className="mx-auto h-10 w-10 text-white/30" />
           <p className="mt-3 text-sm font-semibold text-white">Nenhum treino configurado</p>
           <p className="mt-1 text-[11px] text-white/50">
-            Peça ao seu coach para configurar um plano de treino para você.
+            Peça ao seu coach para configurar um plano — ou monte o seu escolhendo entre os treinos prontos.
           </p>
+          <button onClick={() => setView("builder")} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold text-primary-foreground">
+            <Wrench className="h-3.5 w-3.5" /> Montar meu treino
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
