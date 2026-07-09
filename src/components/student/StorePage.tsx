@@ -1089,14 +1089,17 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar produtos..." className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />
       </div>
 
-      {(activeSection || activeSubcategory) && (
+      {(activeSection || activeSubcategory || activeSubSub) && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button onClick={() => { setActiveSection(null); setActiveSubcategory(null); }} className="rounded-full bg-card px-3 py-1.5 font-bold text-foreground">← Loja</button>
+          <button onClick={() => { setActiveSection(null); setActiveSubcategory(null); setActiveSubSub(null); }} className="rounded-full bg-card px-3 py-1.5 font-bold text-foreground">← Loja</button>
           {activeSection && (
-            <button onClick={() => setActiveSubcategory(null)} className="rounded-full bg-primary/15 px-3 py-1.5 font-bold text-primary">{activeSection.name}</button>
+            <button onClick={() => { setActiveSubcategory(null); setActiveSubSub(null); }} className={`rounded-full px-3 py-1.5 font-bold ${activeSubcategory || activeSubSub ? "bg-primary/15 text-primary" : "bg-primary text-primary-foreground"}`}>{activeSection.name}</button>
           )}
           {activeSubcategory && (
-            <span className="rounded-full bg-primary px-3 py-1.5 font-bold text-primary-foreground">{activeSubcategory.name}</span>
+            <button onClick={() => setActiveSubSub(null)} className={`rounded-full px-3 py-1.5 font-bold ${activeSubSub ? "bg-primary/15 text-primary" : "bg-primary text-primary-foreground"}`}>{activeSubcategory.name}</button>
+          )}
+          {activeSubSub && (
+            <span className="rounded-full bg-primary px-3 py-1.5 font-bold text-primary-foreground">{activeSubSub.name}</span>
           )}
         </div>
       )}
