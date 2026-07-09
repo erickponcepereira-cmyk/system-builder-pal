@@ -292,7 +292,7 @@ select option {
   color-scheme: light;
 }
 
-/* Corrige fundos pretos antigos */
+/* Corrige fundos pretos antigos (classes utilitárias + estilos inline em hex E rgb) */
 :root[data-theme="carol"] .bg-black,
 :root[data-theme="carol"] .bg-neutral-950,
 :root[data-theme="carol"] .bg-neutral-900,
@@ -302,19 +302,29 @@ select option {
 :root[data-theme="carol"] .bg-stone-900,
 :root[data-theme="carol"] .bg-slate-950,
 :root[data-theme="carol"] .bg-slate-900,
-:root[data-theme="carol"] [style*="background-color: #0A0A0A"],
-:root[data-theme="carol"] [style*="background-color:#0A0A0A"],
-:root[data-theme="carol"] [style*="background-color: #0a0a0a"],
-:root[data-theme="carol"] [style*="background-color:#0a0a0a"],
-:root[data-theme="carol"] [style*="background-color: #0F0F0F"],
-:root[data-theme="carol"] [style*="background-color:#0F0F0F"],
-:root[data-theme="carol"] [style*="background-color: #111111"],
-:root[data-theme="carol"] [style*="background-color:#111111"],
-:root[data-theme="carol"] [style*="background-color: #1A1A1A"],
-:root[data-theme="carol"] [style*="background-color:#1A1A1A"] {
+:root[data-theme="carol"] [class*="bg-[#0A0A0A]"],
+:root[data-theme="carol"] [class*="bg-[#0F0F0F]"],
+:root[data-theme="carol"] [class*="bg-[#111"],
+:root[data-theme="carol"] [class*="bg-[#141414]"],
+:root[data-theme="carol"] [class*="bg-[#1A1A1A]"],
+:root[data-theme="carol"] [style*="#0A0A0A"],
+:root[data-theme="carol"] [style*="#0a0a0a"],
+:root[data-theme="carol"] [style*="#0F0F0F"],
+:root[data-theme="carol"] [style*="#0f0f0f"],
+:root[data-theme="carol"] [style*="#111111"],
+:root[data-theme="carol"] [style*="#141414"],
+:root[data-theme="carol"] [style*="#1A1A1A"],
+:root[data-theme="carol"] [style*="#1a1a1a"],
+:root[data-theme="carol"] [style*="rgb(10, 10, 10)"],
+:root[data-theme="carol"] [style*="rgb(15, 15, 15)"],
+:root[data-theme="carol"] [style*="rgb(17, 17, 17)"],
+:root[data-theme="carol"] [style*="rgb(20, 20, 20)"],
+:root[data-theme="carol"] [style*="rgb(26, 26, 26)"] {
   background-color: var(--card) !important;
   color: var(--card-foreground) !important;
+  border-color: var(--border) !important;
 }
+
 
 /* Corrige textos brancos fracos */
 :root[data-theme="carol"] .text-white,
@@ -325,26 +335,30 @@ select option {
   color: var(--foreground) !important;
 }
 
+/* Textos brancos claros — força foreground escuro */
+:root[data-theme="carol"] .text-white,
+:root[data-theme="carol"] [class*="text-white/"] {
+  color: var(--foreground) !important;
+}
+
 :root[data-theme="carol"] .text-white\/50,
+:root[data-theme="carol"] .text-white\/45,
 :root[data-theme="carol"] .text-white\/40,
 :root[data-theme="carol"] .text-white\/30,
-:root[data-theme="carol"] .text-white\/20 {
+:root[data-theme="carol"] .text-white\/20,
+:root[data-theme="carol"] .text-white\/10 {
   color: var(--muted-foreground) !important;
 }
 
-/* Corrige cards transparentes muito claros */
-:root[data-theme="carol"] .bg-white\/5,
-:root[data-theme="carol"] .bg-white\/10,
-:root[data-theme="carol"] .bg-white\/\[0\.03\] {
+/* Cards translúcidos e bordas brancas */
+:root[data-theme="carol"] [class*="bg-white/"] {
   background-color: color-mix(in srgb, var(--card) 82%, white 18%) !important;
 }
 
-/* Corrige bordas brancas invisíveis */
-:root[data-theme="carol"] .border-white\/5,
-:root[data-theme="carol"] .border-white\/10,
-:root[data-theme="carol"] .border-white\/20 {
+:root[data-theme="carol"] [class*="border-white/"] {
   border-color: var(--border) !important;
 }
+
 
 /* Inputs */
 :root[data-theme="carol"] input,
