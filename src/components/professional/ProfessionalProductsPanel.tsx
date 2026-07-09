@@ -159,6 +159,10 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       benefit_end_time: emptyToNull(editing.benefit_end_time) as string | null,
       availability_weekdays: editing.availability_weekdays || [],
       availability_hours: editing.availability_hours || {},
+      redemption_location_name: emptyToNull(editing.redemption_location_name) as string | null,
+      redemption_location_url: emptyToNull(editing.redemption_location_url) as string | null,
+      uses_scheduling: !!editing.uses_scheduling,
+      weekly_limit_per_student: Math.max(1, Number(editing.weekly_limit_per_student || 1)),
     };
 
     if (isFree) {
