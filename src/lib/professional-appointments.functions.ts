@@ -102,7 +102,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
     ]);
 
     type StudentRow = { id: string; coach_id: string | null; profiles: { name: string | null; email: string | null; phone: string | null; avatar_url: string | null } | null };
-    type ProductRow = { id: string; name: string | null };
+    type ProductRow = { id: string; name: string | null; kind: string | null };
     type CoachRow = { id: string; profiles: { name: string | null } | null };
     type OrderRow = { id: string; status: string | null; order_number: string | null };
 
