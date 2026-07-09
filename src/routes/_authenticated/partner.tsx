@@ -527,6 +527,21 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     onReload();
   };
 
+  const moveProduct = async (p: Product, dir: -1 | 1) => {
+    const sorted = [...products].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const idx = sorted.findIndex((x) => x.id === p.id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= sorted.length) return;
+    const other = sorted[j];
+    const myOrder = p.sort_order ?? idx;
+    const otherOrder = other.sort_order ?? j;
+    const { error: e1 } = await supabase.from("partner_products" as never).update({ sort_order: otherOrder } as never).eq("id" as never, p.id);
+    if (e1) return toast.error(e1.message);
+    const { error: e2 } = await supabase.from("partner_products" as never).update({ sort_order: myOrder } as never).eq("id" as never, other.id);
+    if (e2) return toast.error(e2.message);
+    onReload();
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
