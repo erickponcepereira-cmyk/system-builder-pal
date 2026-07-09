@@ -132,6 +132,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
         student_coach_name: studentCoach?.profiles?.name || null,
         seller_name: seller?.profiles?.name || null,
         product_name: productMap.get(a.product_id)?.name || null,
+        product_kind: productMap.get(a.product_id)?.kind || null,
         order_status: order?.status || null,
         order_number: order?.order_number || null,
       };
