@@ -109,6 +109,13 @@ function StudentFreebies() {
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [professionalFreebies, setProfessionalFreebies] = useState<ProfessionalFreeProduct[]>([]);
+  const [sections, setSections] = useState<StoreSection[]>([]);
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
+  const [subcategories, setSubcategories] = useState<StoreSubcategory[]>([]);
+  const [filterSection, setFilterSection] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterSubcategory, setFilterSubcategory] = useState<string>("");
+  const [selectedPro, setSelectedPro] = useState<ProfessionalFreeProduct | null>(null);
   const [savedTotal, setSavedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
