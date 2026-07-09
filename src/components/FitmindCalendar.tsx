@@ -310,8 +310,9 @@ async function loadPartnerFreebieReservations(from: Date, to: Date): Promise<Fit
       const color = used ? "#22c55e" : "#f59e0b";
       const waLink = studentPhone ? `https://wa.me/${studentPhone.length <= 11 ? "55" + studentPhone : studentPhone}` : null;
       const parts: string[] = [];
-      if (studentPhoneRaw) parts.push(`WhatsApp: ${studentPhoneRaw}`);
-      if (coachName) parts.push(`Coach: ${coachName}`);
+      if (waLink) parts.push(`WhatsApp do aluno: ${studentPhoneRaw} (${waLink})`);
+      else if (studentPhoneRaw) parts.push(`WhatsApp do aluno: ${studentPhoneRaw}`);
+      if (coachName) parts.push(`Coach responsável: ${coachName}`);
       const description = [used ? "Presença confirmada." : "Reserva confirmada, aguardando check-in.", ...parts].join("\n");
       const subtitleBits = [`com ${studentName}`];
       if (coachName) subtitleBits.push(`Coach ${coachName}`);
