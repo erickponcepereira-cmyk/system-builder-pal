@@ -478,21 +478,18 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const fitmindHiddenViewer = vis.isHiddenForViewer("vendor_fitmind", null, null);
-    const fitmindHiddenByUpline = vis.isHiddenByUpline("vendor_fitmind", null, null);
     return items.filter((item) => {
       const pk = mapStoreItemKind(item.kind);
-      // Upline hides são SEMPRE aplicadas (inclusive em coach mode).
-      if (pk && isFitmindKind(pk) && fitmindHiddenByUpline) return false;
+      const creator = item.creatorCoachId ?? null;
+      // Section/category hides não têm criador — regra clássica.
       if (item.sectionId && vis.isHiddenByUpline("section", null, item.sectionId)) return false;
       if (item.categoryId && vis.isHiddenByUpline("category", null, item.categoryId)) return false;
-      if (pk && vis.isHiddenByUpline("product", pk, item.sourceId)) return false;
-      // Para viewers (aluno/parceiro/profissional), também esconde as minhas próprias hides.
+      // Product-level hide (inclui vendor_fitmind quando aplicável) com exceção do criador.
+      if (pk && vis.isHiddenByUpline("product", pk, item.sourceId, creator)) return false;
       if (!coachMode) {
-        if (pk && isFitmindKind(pk) && fitmindHiddenViewer) return false;
         if (item.sectionId && vis.isHiddenForViewer("section", null, item.sectionId)) return false;
         if (item.categoryId && vis.isHiddenForViewer("category", null, item.categoryId)) return false;
-        if (pk && vis.isHiddenForViewer("product", pk, item.sourceId)) return false;
+        if (pk && vis.isHiddenForViewer("product", pk, item.sourceId, creator)) return false;
       }
       if (activeSection) {
         const inSection = item.sectionId === activeSection.id || item.category === activeSection.name;
