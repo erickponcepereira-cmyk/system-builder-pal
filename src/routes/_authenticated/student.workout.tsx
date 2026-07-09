@@ -161,6 +161,9 @@ function WorkoutPage() {
           <h1 className="text-lg font-bold text-white">Meu Treino</h1>
           <p className="text-[11px] text-white/45">Treine, evolua, conquiste 🏆</p>
         </div>
+        <button onClick={() => setView("builder")} className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary">
+          <Wrench className="h-3.5 w-3.5" /> Montar
+        </button>
         <button onClick={() => setView("history")} className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary">
           <History className="h-3.5 w-3.5" /> Histórico
         </button>
