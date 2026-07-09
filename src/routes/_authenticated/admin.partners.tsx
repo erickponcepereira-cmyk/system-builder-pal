@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Loader2, Eye } from "lucide-react";
+import { Building2, Loader2, Eye, Package } from "lucide-react";
 import { PartnerDetailsModal } from "@/components/partners/PartnerDetailsModal";
 import { ProductReviewModal } from "@/components/admin/ProductReviewModal";
+import { mirrorHerbalifeCatalog, unmirrorHerbalifeCatalog } from "@/lib/mirror-herbalife.functions";
+
 
 export const Route = createFileRoute("/_authenticated/admin/partners")({
   head: () => ({ meta: [{ title: "Empresas Parceiras — Admin" }] }),
@@ -74,6 +76,38 @@ function AdminPartners() {
                   {p.status !== "approved" && <button onClick={() => updatePartner(p.id, { status: "approved" })} className="text-[11px] rounded bg-green-500/15 text-green-400 px-2 py-1">Aprovar</button>}
                   {p.status !== "blocked" && <button onClick={() => updatePartner(p.id, { status: "blocked" })} className="text-[11px] rounded bg-red-500/15 text-red-400 px-2 py-1">Bloquear</button>}
                   {p.status === "blocked" && <button onClick={() => updatePartner(p.id, { status: "approved" })} className="text-[11px] rounded bg-white/10 text-white px-2 py-1">Reativar</button>}
+                  {p.status === "approved" && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Migrar todo o catálogo Herbalife para "${p.fantasy_name}"?\n\nOs produtos ficam espelhados (read-only) e sincronizam automaticamente com o catálogo Fitmind.`)) return;
+                          try {
+                            const r = await mirrorHerbalifeCatalog({ data: { kind: "partner", targetId: p.id } });
+                            toast.success(`Catálogo Herbalife: ${r.created} produtos criados, ${r.skipped} já existiam.`);
+                          } catch (e) {
+                            toast.error(e instanceof Error ? e.message : "Erro ao migrar");
+                          }
+                        }}
+                        className="text-[11px] rounded bg-primary/15 text-primary px-2 py-1 inline-flex items-center gap-1"
+                      >
+                        <Package className="h-3 w-3" /> Migrar Herbalife
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Remover todos os espelhos Herbalife de "${p.fantasy_name}"?`)) return;
+                          try {
+                            const r = await unmirrorHerbalifeCatalog({ data: { kind: "partner", targetId: p.id } });
+                            toast.success(`${r.removed} espelhos removidos.`);
+                          } catch (e) {
+                            toast.error(e instanceof Error ? e.message : "Erro ao remover");
+                          }
+                        }}
+                        className="text-[11px] rounded bg-white/5 text-white/60 px-2 py-1"
+                      >
+                        Remover Herbalife
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

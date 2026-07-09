@@ -5476,9 +5476,11 @@ export type Database = {
           image_url: string | null
           image_urls: string[]
           is_active_by_partner: boolean
+          is_mirrored: boolean
           is_physical: boolean
           is_ready_for_sale: boolean
           kind: string
+          mirror_source_product_id: string | null
           monthly_redeem_limit: number | null
           name: string
           network_l1_amount: number | null
@@ -5529,9 +5531,11 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_partner?: boolean
+          is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
           kind: string
+          mirror_source_product_id?: string | null
           monthly_redeem_limit?: number | null
           name: string
           network_l1_amount?: number | null
@@ -5582,9 +5586,11 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_partner?: boolean
+          is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
           kind?: string
+          mirror_source_product_id?: string | null
           monthly_redeem_limit?: number | null
           name?: string
           network_l1_amount?: number | null
@@ -5624,6 +5630,20 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_products_mirror_source_product_id_fkey"
+            columns: ["mirror_source_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_products_mirror_source_product_id_fkey"
+            columns: ["mirror_source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
@@ -7175,10 +7195,12 @@ export type Database = {
           image_url: string | null
           image_urls: string[]
           is_active_by_professional: boolean
+          is_mirrored: boolean
           is_physical: boolean
           is_ready_for_sale: boolean
           is_schedulable: boolean
           kind: string
+          mirror_source_product_id: string | null
           monthly_redeem_limit: number | null
           name: string
           network_l1_amount: number | null
@@ -7230,10 +7252,12 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_professional?: boolean
+          is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
           is_schedulable?: boolean
           kind?: string
+          mirror_source_product_id?: string | null
           monthly_redeem_limit?: number | null
           name: string
           network_l1_amount?: number | null
@@ -7285,10 +7309,12 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_professional?: boolean
+          is_mirrored?: boolean
           is_physical?: boolean
           is_ready_for_sale?: boolean
           is_schedulable?: boolean
           kind?: string
+          mirror_source_product_id?: string | null
           monthly_redeem_limit?: number | null
           name?: string
           network_l1_amount?: number | null
@@ -7325,6 +7351,20 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_products_mirror_source_product_id_fkey"
+            columns: ["mirror_source_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_commission_preview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_products_mirror_source_product_id_fkey"
+            columns: ["mirror_source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
