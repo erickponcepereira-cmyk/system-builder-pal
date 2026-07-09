@@ -556,7 +556,7 @@ function StudentFreebies() {
               ));
               if (filteredPro.length === 0) return null;
               return (
-                <div className="mb-6 space-y-3">
+                <div id="professionals-freebies" className="mb-6 space-y-3 scroll-mt-24">
                   <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <Gift className="h-4 w-4 text-primary" />
                     {pageMode === "discount" ? "Descontos de profissionais" : "Benefícios de profissionais"}
@@ -565,6 +565,7 @@ function StudentFreebies() {
                     {filteredPro.map((p) => {
                       const isDiscount = p.redemption_mode === "discount";
                       const proName = p.coaches?.profiles?.name || "Profissional";
+                      const proAvatar = p.coaches?.profiles?.avatar_url || null;
                       return (
                         <div key={p.id} className="text-left rounded-2xl overflow-hidden border border-white/5 block relative" style={{ backgroundColor: "#1A1A1A" }}>
                           {isDiscount && p.discount_percent ? (
@@ -572,13 +573,20 @@ function StudentFreebies() {
                               {p.discount_percent}% OFF
                             </div>
                           ) : null}
-                          {p.image_url && <img src={p.image_url} alt={p.name} className="aspect-square w-full object-contain bg-black/40" />}
+                          {p.image_url && (
+                            <button type="button" onClick={() => setSelectedPro(p)} className="block w-full">
+                              <img src={p.image_url} alt={p.name} className="aspect-square w-full object-contain bg-black/40" />
+                            </button>
+                          )}
                           <div className="p-4">
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="font-bold text-white">{p.name}</h3>
                               {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>}
                             </div>
-                            <p className="mt-1 text-[11px] text-white/40">por {proName}</p>
+                            <button type="button" onClick={() => setSelectedPro(p)} className="mt-1 flex items-center gap-2 text-[11px] text-white/50 hover:text-white/80">
+                              {proAvatar && <img src={proAvatar} alt="" className="h-4 w-4 rounded-full object-cover" />}
+                              por {proName}
+                            </button>
                             {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
                             {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
                               <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
@@ -595,15 +603,24 @@ function StudentFreebies() {
                               </p>
                             )}
                             {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                            <button
-                              type="button"
-                              onClick={() => generateProCoupon(p)}
-                              disabled={generating === p.id}
-                              className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
-                            >
-                              {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                              {isDiscount ? "Gerar cupom" : "Resgatar"}
-                            </button>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPro(p)}
+                                className="rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 text-xs font-semibold text-white/80"
+                              >
+                                Ver profissional
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => generateProCoupon(p)}
+                                disabled={generating === p.id}
+                                className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                              >
+                                {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                                {isDiscount ? "Gerar cupom" : "Resgatar"}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
