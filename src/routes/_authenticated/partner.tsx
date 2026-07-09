@@ -647,7 +647,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 >
                   <Copy className="h-3 w-3" /> Duplicar
                 </button>
-                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
+                <button onClick={() => moveProduct(p, -1)} disabled={idx === 0} className="text-[11px] text-white/60 hover:text-white disabled:opacity-30" title="Mover para cima">↑</button>
+                <button onClick={() => moveProduct(p, 1)} disabled={idx === arr.length - 1} className="text-[11px] text-white/60 hover:text-white disabled:opacity-30" title="Mover para baixo">↓</button>
+                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Ocultar do aluno" : "Mostrar para o aluno"}>{p.is_active_by_partner ? "Ocultar" : "Mostrar"}</button>
                 <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>
               </div>
             </div>
