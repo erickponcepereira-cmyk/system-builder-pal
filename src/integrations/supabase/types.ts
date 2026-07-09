@@ -5475,6 +5475,7 @@ export type Database = {
           sort_order: number
           status: string
           stock: number | null
+          subcategory_id: string | null
           system_fee_fixed: number
           tax_percentage: number
           updated_at: string
@@ -5525,6 +5526,7 @@ export type Database = {
           sort_order?: number
           status?: string
           stock?: number | null
+          subcategory_id?: string | null
           system_fee_fixed?: number
           tax_percentage?: number
           updated_at?: string
@@ -5575,6 +5577,7 @@ export type Database = {
           sort_order?: number
           status?: string
           stock?: number | null
+          subcategory_id?: string | null
           system_fee_fixed?: number
           tax_percentage?: number
           updated_at?: string
@@ -5608,6 +5611,13 @@ export type Database = {
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "store_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "store_subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -7152,6 +7162,7 @@ export type Database = {
           section_id: string | null
           status: string
           stock: number | null
+          subcategory_id: string | null
           updated_at: string
         }
         Insert: {
@@ -7199,6 +7210,7 @@ export type Database = {
           section_id?: string | null
           status?: string
           stock?: number | null
+          subcategory_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -7246,6 +7258,7 @@ export type Database = {
           section_id?: string | null
           status?: string
           stock?: number | null
+          subcategory_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -7268,6 +7281,13 @@ export type Database = {
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "store_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "store_subcategories"
             referencedColumns: ["id"]
           },
         ]

@@ -199,6 +199,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             .eq("status" as never, "approved")
             .eq("is_active_by_professional" as never, true)
             .eq("is_ready_for_sale" as never, true as never)
+            .neq("kind" as never, "free" as never)
             .order("created_at" as never, { ascending: false } as never)
             .range(from, from + PAGE - 1);
           if (error) { console.error("[pp store]", error); break; }
@@ -474,7 +475,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 <button onClick={() => setSelected(p)} className={`w-full rounded-2xl border border-white/5 p-3 text-left ${productHidden ? "opacity-40" : ""}`} style={{ backgroundColor: "#1A1A1A", contain: "layout paint" }}>
                   <div className="mb-2 flex aspect-square w-full items-center justify-center rounded-xl bg-white/5">
                     {p.image_url ? (
-                      <img src={p.image_url} alt={p.name} loading="lazy" decoding="async" className="h-full w-full rounded-xl object-cover" />
+                      <img src={p.image_url} alt={p.name} loading="lazy" decoding="async" className="h-full w-full rounded-xl object-contain" />
                     ) : (
                       <ShoppingBag className="h-8 w-8 text-white/30" />
                     )}

@@ -64,6 +64,9 @@ type PartnerFreeProduct = {
   weekly_limit_per_student: number | null;
   redemption_location_name: string | null;
   redemption_location_url: string | null;
+  section_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
   partners: { fantasy_name: string; photo_url: string | null; status: string; business_area: string | null; address: string | null } | null;
 };
 
@@ -80,8 +83,15 @@ type ProfessionalFreeProduct = {
   estimated_value: number | null;
   benefit_start_time: string | null;
   benefit_end_time: string | null;
-  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null } | null } | null;
+  section_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  coaches: { specialty_key: string | null; profiles: { name: string | null; avatar_url: string | null; bio?: string | null } | null } | null;
 };
+
+type StoreSection = { id: string; name: string };
+type StoreCategory = { id: string; section_id: string; name: string };
+type StoreSubcategory = { id: string; category_id: string; name: string };
 
 function formatBenefitWindow(start?: string | null, end?: string | null) {
   const fmt = (value?: string | null) => value ? value.slice(0, 5) : null;
@@ -99,6 +109,13 @@ function StudentFreebies() {
   const [mine, setMine] = useState<Redemption[]>([]);
   const [partnerFreebies, setPartnerFreebies] = useState<PartnerFreeProduct[]>([]);
   const [professionalFreebies, setProfessionalFreebies] = useState<ProfessionalFreeProduct[]>([]);
+  const [sections, setSections] = useState<StoreSection[]>([]);
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
+  const [subcategories, setSubcategories] = useState<StoreSubcategory[]>([]);
+  const [filterSection, setFilterSection] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterSubcategory, setFilterSubcategory] = useState<string>("");
+  const [selectedPro, setSelectedPro] = useState<ProfessionalFreeProduct | null>(null);
   const [savedTotal, setSavedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
@@ -158,12 +175,12 @@ function StudentFreebies() {
       }
     }
 
-    const [a, b, c, d] = await Promise.all([
+    const [a, b, c, d, secRes, catRes, subRes] = await Promise.all([
       supabase.from("freebies" as never).select("*").eq("is_active" as never, true).order("sort_order"),
       supabase.from("freebie_redemptions" as never).select("id,freebie_id,status,created_at,freebies(name)" as never).order("created_at" as never, { ascending: false }),
       supabase
         .from("partner_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,redemption_location_name,redemption_location_url,partners(fantasy_name,photo_url,status,business_area,address)" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,partner_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,uses_scheduling,weekly_limit_per_student,redemption_location_name,redemption_location_url,section_id,category_id,subcategory_id,partners(fantasy_name,photo_url,status,business_area,address)" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
@@ -172,17 +189,23 @@ function StudentFreebies() {
         .order("created_at" as never, { ascending: false }),
       supabase
         .from("professional_products" as never)
-        .select("id,name,description,image_url,redemption_instructions,stock,coach_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,coaches!professional_products_coach_id_fkey(specialty_key,profiles!coaches_profile_id_fkey(name,avatar_url))" as never)
+        .select("id,name,description,image_url,redemption_instructions,stock,coach_id,redemption_mode,discount_percent,estimated_value,benefit_start_time,benefit_end_time,section_id,category_id,subcategory_id,coaches!professional_products_coach_id_fkey(specialty_key,profiles!coaches_profile_id_fkey(name,avatar_url,bio))" as never)
         .eq("kind" as never, "free" as never)
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_professional" as never, true as never)
         .order("created_at" as never, { ascending: false }),
+      supabase.from("store_sections" as never).select("id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
+      supabase.from("store_categories" as never).select("id,section_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
+      supabase.from("store_subcategories" as never).select("id,category_id,name").eq("is_active" as never, true as never).order("sort_order" as never, { ascending: true } as never),
     ]);
     setItems((a.data as unknown as Freebie[]) || []);
     setMine((b.data as unknown as Redemption[]) || []);
     const pf = ((c.data as unknown as PartnerFreeProduct[]) || []).filter((p) => p.partners?.status === "approved");
     setPartnerFreebies(pf);
     setProfessionalFreebies((d.data as unknown as ProfessionalFreeProduct[]) || []);
+    setSections((secRes.data as unknown as StoreSection[]) || []);
+    setCategories((catRes.data as unknown as StoreCategory[]) || []);
+    setSubcategories((subRes.data as unknown as StoreSubcategory[]) || []);
 
     // Total economizado: cupons já resgatados (status='redeemed') deste aluno
     const sIdLocal = (await supabase.auth.getUser()).data.user
@@ -237,6 +260,16 @@ function StudentFreebies() {
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${studentId}`
     : "";
 
+  const matchesTaxonomy = (p: { section_id: string | null; category_id: string | null; subcategory_id: string | null }) => {
+    if (filterSection && p.section_id !== filterSection) return false;
+    if (filterCategory && p.category_id !== filterCategory) return false;
+    if (filterSubcategory && p.subcategory_id !== filterSubcategory) return false;
+    return true;
+  };
+  const catsForSection = filterSection ? categories.filter((c) => c.section_id === filterSection) : [];
+  const subsForCategory = filterCategory ? subcategories.filter((s) => s.category_id === filterCategory) : [];
+
+
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: "#0A0A0A" }}>
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-[#0F0F0F] px-4 py-3">
@@ -249,9 +282,18 @@ function StudentFreebies() {
             {pageMode === "discount" ? "Cupons de desconto exclusivos de parceiros" : "Brindes e bônus para você resgatar"}
           </p>
         </div>
-        <Link to="/student/partners" className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-3 py-1.5">
-          <Building2 className="h-3.5 w-3.5" /> Parceiros
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link to="/student/partners" className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-2.5 py-1.5">
+            <Building2 className="h-3.5 w-3.5" /> Parceiros
+          </Link>
+          <button
+            type="button"
+            onClick={() => document.getElementById("professionals-freebies")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-2.5 py-1.5"
+          >
+            <Gift className="h-3.5 w-3.5" /> Profissionais
+          </button>
+        </div>
       </div>
 
       <div className="p-4">
@@ -296,9 +338,9 @@ function StudentFreebies() {
 
             {/* Indicadores de economia (topo) */}
             {(() => {
-              const filteredPartner = partnerFreebies.filter((p) =>
+              const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               const totalSavings = filteredPartner.reduce((sum, p) => {
                 const ev = Number(p.estimated_value || 0);
                 if (p.redemption_mode === "discount") return sum + ev * (Number(p.discount_percent || 0) / 100);
@@ -350,10 +392,41 @@ function StudentFreebies() {
               );
             })()}
 
+            {/* Filtros: seção / categoria / subcategoria */}
+            <div className="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select
+                value={filterSection}
+                onChange={(e) => { setFilterSection(e.target.value); setFilterCategory(""); setFilterSubcategory(""); }}
+                className="rounded-lg bg-[#141414] border border-white/10 px-3 py-2 text-xs text-white"
+              >
+                <option value="">Todas as seções</option>
+                {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select
+                value={filterCategory}
+                onChange={(e) => { setFilterCategory(e.target.value); setFilterSubcategory(""); }}
+                disabled={!filterSection}
+                className="rounded-lg bg-[#141414] border border-white/10 px-3 py-2 text-xs text-white disabled:opacity-40"
+              >
+                <option value="">Todas as categorias</option>
+                {catsForSection.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select
+                value={filterSubcategory}
+                onChange={(e) => setFilterSubcategory(e.target.value)}
+                disabled={!filterCategory || subsForCategory.length === 0}
+                className="rounded-lg bg-[#141414] border border-white/10 px-3 py-2 text-xs text-white disabled:opacity-40"
+              >
+                <option value="">Todas as subcategorias</option>
+                {subsForCategory.map((sc) => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
+              </select>
+            </div>
+
+
             {(() => {
-              const filteredPartner = partnerFreebies.filter((p) =>
+              const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               const showItems = pageMode === "free" && items.length > 0;
               const isEmpty = filteredPartner.length === 0 && !showItems;
               if (isEmpty) {
@@ -365,9 +438,9 @@ function StudentFreebies() {
             })()}
 
             {(() => {
-              const filteredPartner = partnerFreebies.filter((p) =>
+              const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               if (filteredPartner.length === 0) return null;
               const byArea = new Map<string, PartnerFreeProduct[]>();
               filteredPartner.forEach((p) => {
@@ -401,7 +474,7 @@ function StudentFreebies() {
                               ) : null}
                               {p.image_url && (
                                 <button type="button" onClick={() => setOpenPartner(p.partner_id)} className="block w-full">
-                                  <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />
+                                  <img src={p.image_url} alt={p.name} className="aspect-square w-full object-contain bg-black/40" />
                                 </button>
                               )}
                               <div className="p-4">
@@ -478,12 +551,12 @@ function StudentFreebies() {
             })()}
 
             {(() => {
-              const filteredPro = professionalFreebies.filter((p) =>
+              const filteredPro = professionalFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
-              );
+              ));
               if (filteredPro.length === 0) return null;
               return (
-                <div className="mb-6 space-y-3">
+                <div id="professionals-freebies" className="mb-6 space-y-3 scroll-mt-24">
                   <h2 className="text-sm font-bold text-white flex items-center gap-2">
                     <Gift className="h-4 w-4 text-primary" />
                     {pageMode === "discount" ? "Descontos de profissionais" : "Benefícios de profissionais"}
@@ -492,6 +565,7 @@ function StudentFreebies() {
                     {filteredPro.map((p) => {
                       const isDiscount = p.redemption_mode === "discount";
                       const proName = p.coaches?.profiles?.name || "Profissional";
+                      const proAvatar = p.coaches?.profiles?.avatar_url || null;
                       return (
                         <div key={p.id} className="text-left rounded-2xl overflow-hidden border border-white/5 block relative" style={{ backgroundColor: "#1A1A1A" }}>
                           {isDiscount && p.discount_percent ? (
@@ -499,13 +573,20 @@ function StudentFreebies() {
                               {p.discount_percent}% OFF
                             </div>
                           ) : null}
-                          {p.image_url && <img src={p.image_url} alt={p.name} className="h-40 w-full object-cover" />}
+                          {p.image_url && (
+                            <button type="button" onClick={() => setSelectedPro(p)} className="block w-full">
+                              <img src={p.image_url} alt={p.name} className="aspect-square w-full object-contain bg-black/40" />
+                            </button>
+                          )}
                           <div className="p-4">
                             <div className="flex items-start justify-between gap-2">
                               <h3 className="font-bold text-white">{p.name}</h3>
                               {!isDiscount && <span className="text-[10px] px-2 py-0.5 rounded bg-primary/20 text-primary uppercase">Grátis</span>}
                             </div>
-                            <p className="mt-1 text-[11px] text-white/40">por {proName}</p>
+                            <button type="button" onClick={() => setSelectedPro(p)} className="mt-1 flex items-center gap-2 text-[11px] text-white/50 hover:text-white/80">
+                              {proAvatar && <img src={proAvatar} alt="" className="h-4 w-4 rounded-full object-cover" />}
+                              por {proName}
+                            </button>
                             {p.description && <p className="mt-1 text-xs text-white/60 line-clamp-2">{p.description}</p>}
                             {typeof p.estimated_value === "number" && p.estimated_value > 0 && (
                               <div className="mt-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-1.5">
@@ -522,15 +603,24 @@ function StudentFreebies() {
                               </p>
                             )}
                             {p.redemption_instructions && <p className="mt-2 text-[11px] text-yellow-400/80 line-clamp-2">⚠ {p.redemption_instructions}</p>}
-                            <button
-                              type="button"
-                              onClick={() => generateProCoupon(p)}
-                              disabled={generating === p.id}
-                              className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
-                            >
-                              {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
-                              {isDiscount ? "Gerar cupom" : "Resgatar"}
-                            </button>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPro(p)}
+                                className="rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 py-2 text-xs font-semibold text-white/80"
+                              >
+                                Ver profissional
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => generateProCoupon(p)}
+                                disabled={generating === p.id}
+                                className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary hover:bg-primary/90 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+                              >
+                                {generating === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ticket className="h-3.5 w-3.5" />}
+                                {isDiscount ? "Gerar cupom" : "Resgatar"}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -576,7 +666,7 @@ function StudentFreebies() {
                                 sponsor_instagram: it.sponsor_instagram, sponsor_website: it.sponsor_website,
                               })}
                             >
-                              {it.image_url && <img src={it.image_url} alt={it.name} className="h-40 w-full object-cover" />}
+                              {it.image_url && <img src={it.image_url} alt={it.name} className="aspect-square w-full object-contain bg-black/40" />}
                               <div className="p-4">
                                 <div className="flex items-start justify-between gap-2">
                                   <h3 className="font-bold text-white">{it.name}</h3>
@@ -689,6 +779,34 @@ function StudentFreebies() {
           onClose={() => setBookingProduct(null)}
           onReserved={() => { setBookingProduct(null); setReservationsRefresh((n) => n + 1); }}
         />
+      )}
+      {selectedPro && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => setSelectedPro(null)}>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141414] p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              {selectedPro.coaches?.profiles?.avatar_url ? (
+                <img src={selectedPro.coaches.profiles.avatar_url} alt="" className="h-14 w-14 rounded-full object-cover" />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                  {(selectedPro.coaches?.profiles?.name || "P").slice(0, 1)}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-white truncate">{selectedPro.coaches?.profiles?.name || "Profissional"}</p>
+                {selectedPro.coaches?.specialty_key && <p className="text-xs text-primary">{selectedPro.coaches.specialty_key}</p>}
+              </div>
+              <button type="button" onClick={() => setSelectedPro(null)} className="text-white/60"><X className="h-5 w-5" /></button>
+            </div>
+            {selectedPro.coaches?.profiles?.bio && (
+              <p className="mt-3 text-xs text-white/70 whitespace-pre-line">{selectedPro.coaches.profiles.bio}</p>
+            )}
+            <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="text-[10px] uppercase font-bold text-white/40">Benefício</p>
+              <p className="mt-1 text-sm font-bold text-white">{selectedPro.name}</p>
+              {selectedPro.description && <p className="mt-1 text-xs text-white/60">{selectedPro.description}</p>}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
