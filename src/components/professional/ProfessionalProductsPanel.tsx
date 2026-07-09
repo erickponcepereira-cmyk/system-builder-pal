@@ -51,6 +51,10 @@ interface ProProduct {
   benefit_start_time?: string | null;
   benefit_end_time?: string | null;
   monthly_redeem_limit?: number | null;
+  weekly_limit_per_student?: number | null;
+  uses_scheduling?: boolean | null;
+  redemption_location_name?: string | null;
+  redemption_location_url?: string | null;
   // Advanced availability
   availability_weekdays?: number[];
   availability_recurrence?: "single" | "weekly";
