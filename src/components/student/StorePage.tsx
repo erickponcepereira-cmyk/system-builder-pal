@@ -1254,7 +1254,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
             <div key={item.id} className="relative">
               <button onClick={() => setDetailProduct(item)} className="w-full rounded-2xl bg-card p-3 text-left transition-colors hover:bg-accent">
                 <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-muted">
-                  {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
+                  {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="h-full w-full object-contain" /> : <ShoppingBag className="h-8 w-8 text-muted-foreground" />}
                 </div>
                 {item.tag && <span className="mb-1 inline-block rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-bold text-primary">{item.tag}</span>}
                 <p className="min-h-[32px] text-xs font-medium text-foreground line-clamp-2">{item.title}</p>
