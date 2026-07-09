@@ -320,6 +320,19 @@ function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { 
         </div>
         <span className="text-xs text-primary font-medium">Abrir →</span>
       </a>
+      <a
+        href="/partner/herbalife-boletos"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 hover:bg-emerald-500/15 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Clock className="h-5 w-5 text-emerald-300" />
+          <div>
+            <p className="text-sm font-bold text-white">Boletos Herbalife</p>
+            <p className="text-[11px] text-white/60">Anexe o boleto de cada venda para a Fitmind pagar</p>
+          </div>
+        </div>
+        <span className="text-xs text-emerald-300 font-medium">Abrir →</span>
+      </a>
       {!hasActiveFree && (
         <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
           <AlertTriangle className="inline h-4 w-4 mr-1" /> Você precisa de pelo menos <b>1 produto gratuito aprovado e ativo</b> para publicar produtos pagos. Os pagos ficam pausados enquanto isso.
