@@ -112,12 +112,33 @@ function WorkoutPage() {
   };
 
   useEffect(() => { reload(); }, []);
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setStudentUserId(data.user?.id || null)); }, []);
 
   if (view === "active" && activePlan) {
     return <ActiveSession key={activePlan.id} plan={activePlan} plans={plans} onExit={() => { setActivePlan(null); setView("home"); reload(); }} onStartNext={(p) => { setActivePlan(p); }} onFinished={(p) => setLastCompletedPlan(p)} />;
   }
   if (view === "history") {
     return <HistoryView onBack={() => setView("home")} />;
+  }
+  if (view === "builder") {
+    return (
+      <div className="space-y-4 p-4 pb-8">
+        <header className="flex items-center gap-3">
+          <button onClick={() => { setView("home"); reload(); }} className="rounded-full bg-white/5 p-2 text-white/70">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-white">Montar meu treino</h1>
+            <p className="text-[11px] text-white/45">Escolha treinos prontos e personalize do seu jeito</p>
+          </div>
+        </header>
+        {studentUserId ? (
+          <StudentWorkoutBuilder studentUserId={studentUserId} onChanged={reload} />
+        ) : (
+          <p className="py-12 text-center text-sm text-white/50">Carregando...</p>
+        )}
+      </div>
+    );
   }
 
   const next = nextLetter(plans, planLetter(lastCompletedPlan));
