@@ -143,6 +143,19 @@ export function AppointmentsTab({ coachId }: { coachId: string }) {
                   </button>
                 ))}
               </div>
+              <div className="flex rounded-lg bg-white/5 p-0.5 text-[11px]">
+                {(["all", "paid", "free"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setKindFilter(f)}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      kindFilter === f ? "bg-primary text-primary-foreground" : "text-white/60"
+                    }`}
+                  >
+                    {f === "all" ? "Tipo" : f === "paid" ? "Pagos" : "Gratuitos"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
