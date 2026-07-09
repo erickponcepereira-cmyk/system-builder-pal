@@ -124,6 +124,20 @@ function StudentEvolution() {
 
       {student && <WaterTrackerCard studentId={student.id} />}
 
+      {student && (
+        <section className="rounded-2xl bg-card p-4">
+          <WindowMethod studentId={student.id} />
+        </section>
+      )}
+
+      {student && (
+        <section className="rounded-2xl bg-card p-4">
+          <WindowMethodHistory studentId={student.id} />
+        </section>
+      )}
+
+
+
 
       <section className="rounded-2xl bg-card p-4">
         <div className="mb-3 flex items-center justify-between">
