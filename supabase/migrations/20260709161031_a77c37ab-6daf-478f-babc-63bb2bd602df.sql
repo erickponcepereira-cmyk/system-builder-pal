@@ -1,0 +1,3 @@
+DROP FUNCTION IF EXISTS public.create_partner_company_order(_student_id uuid, _partner_product_id uuid, _payment_method text, _referred_by_student_id uuid);
+DROP FUNCTION IF EXISTS public.create_partner_product_order(_student_id uuid, _partner_product_id uuid, _payment_method text, _referred_by_student_id uuid);
+DROP FUNCTION IF EXISTS public.create_scheduled_professional_order(_student_id uuid, _professional_product_id uuid, _scheduled_for timestamp with time zone, _payment_method text, _referred_by_student_id uuid);
