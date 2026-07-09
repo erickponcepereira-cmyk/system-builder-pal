@@ -328,16 +328,10 @@ export function StoreManager() {
                   <>
                     <input className="input-dark flex-1" value={draftSection.name ?? s.name} onChange={(e) => setDraftSection({ ...draftSection, name: e.target.value })} />
                     <input className="input-dark w-32" value={draftSection.slug ?? s.slug} onChange={(e) => setDraftSection({ ...draftSection, slug: e.target.value })} />
-                    <select
-                      className="input-dark w-36"
-                      value={draftSection.target_audience ?? s.target_audience ?? ""}
-                      onChange={(e) => setDraftSection({ ...draftSection, target_audience: e.target.value || null })}
-                    >
-                      <option value="">Todas as abas</option>
-                      <option value="partner">Parceiros</option>
-                      <option value="professional">Profissionais</option>
-                      <option value="fitmind">Fitmind</option>
-                    </select>
+                    <AudienceChecklist
+                      value={draftSection.target_audiences ?? s.target_audiences ?? (s.target_audience ? [s.target_audience] : [])}
+                      onChange={(next) => setDraftSection({ ...draftSection, target_audiences: next })}
+                    />
                     <StoreImageUpload value={draftSection.image_url ?? s.image_url} onChange={(url) => setDraftSection({ ...draftSection, image_url: url })} folder="sections" placeholder="Imagem" />
                     <input type="number" className="input-dark w-20" placeholder="larg" value={draftSection.card_width ?? s.card_width ?? ""} onChange={(e) => setDraftSection({ ...draftSection, card_width: e.target.value ? Number(e.target.value) : null })} />
                     <input type="number" className="input-dark w-20" placeholder="alt" value={draftSection.card_height ?? s.card_height ?? ""} onChange={(e) => setDraftSection({ ...draftSection, card_height: e.target.value ? Number(e.target.value) : null })} />
