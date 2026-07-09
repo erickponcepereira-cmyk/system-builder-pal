@@ -1,48 +1,39 @@
-## Objetivo
 
-Melhorar a experiência de criação/redefinição de senha com:
+## O que aconteceu
 
-1. Mensagens de erro em português (BR) mais claras quando a senha for rejeitada por ser vazada (HIBP) ou comum, em vez do genérico "Senha fraca".
-2. Um medidor visual de força de senha em tempo real nos formulários de senha.
+O cliente **conseguiu se cadastrar** (o usuário foi criado no backend), mas ao abrir o link do e-mail de confirmação caiu direto no host do backend (`...supabase.co`) recebendo `No API key found in request`. Isso significa que o link chegou **sem o token** (`?token=...&type=signup&redirect_to=...`) — só o host — ou o token já foi consumido/expirou.
 
-## Mudanças
+## Correções
 
-### 1) Tradução de erros (`src/lib/auth-errors.ts`)
+### 1. Garantir Site URL e Redirect URLs corretos no Auth
+Configurar via ferramenta de auth do Cloud:
+- **Site URL:** `https://fitmindclub.lovable.app`
+- **Redirect URLs (allowlist):** adicionar
+  - `https://fitmindclub.lovable.app/*`
+  - `https://fitmindclub.lovable.app/login`
+  - `https://id-preview--57e54ea4-86cc-4948-814d-71b2815329a0.lovable.app/*` (preview)
 
-- Detectar variações do provider para senha vazada/comum:
-  - `"pwned"`, `"has been leaked"`, `"compromised"`, `"password is known"` → **"Esta senha apareceu em vazamentos de dados conhecidos. Escolha uma senha única diferente."**
-  - `"weak password"`, `"password is too weak"`, `"password strength"` → **"Senha muito fácil de adivinhar. Evite sequências (123, abc), palavras comuns e datas. Combine palavras aleatórias, números e símbolos."**
-  - `"password should be at least"` / `"too short"` → **"A senha deve ter pelo menos 8 caracteres."**
-- Manter fallback atual para outros casos.
+Sem isso, o `emailRedirectTo: ${window.location.origin}/login` pode ser rejeitado e o link volta apontando só para o host do backend.
 
-### 2) Componente `PasswordStrengthMeter` (novo)
+### 2. Revisar o template de e-mail "Confirm signup"
+Confirmar que o corpo do template usa:
+```
+<a href="{{ .ConfirmationURL }}">Confirmar minha conta</a>
+```
+E **não** apenas `{{ .SiteURL }}` ou texto solto com o link colado. Se o template atual estiver quebrado, restaurar para o padrão.
 
-- Arquivo: `src/components/auth/PasswordStrengthMeter.tsx`.
-- Recebe `password: string` e opcional `email?: string` / `name?: string` para penalizar semelhança.
-- Cálculo local (sem libs novas):
-  - Score 0–4 baseado em: comprimento (≥8, ≥12, ≥16), variedade (minúscula, maiúscula, número, símbolo), penalidades por sequências (`123`, `abc`, `qwerty`), repetições (`aaaa`), palavras comuns em PT/EN (`senha`, `password`, `admin`, `fitness`, `123456`, `qwerty`), e semelhança com email/nome.
-  - Lista embutida curta de senhas muito comuns.
-- UI: barra segmentada (4 blocos) com cores do design system (destructive → warning → primary → success) + rótulo: **Muito fraca / Fraca / Razoável / Forte / Muito forte**.
-- Checklist com ícones (✓/○) para: 8+ caracteres, maiúscula, minúscula, número, símbolo, sem sequências óbvias.
-- Nota informativa: **"Senhas que já apareceram em vazamentos serão rejeitadas mesmo cumprindo todos os requisitos."**
+### 3. Melhorar a tela pós-cadastro (CheckEmailNotice)
+- Já existe botão "Reenviar e-mail de confirmação" — deixar mais visível e adicionar aviso: *"Se o link do e-mail não abrir corretamente, copie e cole a URL inteira no navegador (WhatsApp/apps de mensagem às vezes cortam links longos)."*
+- Trocar o `emailRedirectTo` do reenvio para bater exatamente com o do cadastro original.
 
-### 3) Integração nos formulários existentes
+### 4. Recuperar o cliente atual
+- Pedir para o cliente clicar em **"Reenviar e-mail de confirmação"** na tela após o cadastro, OU
+- Confirmar manualmente o e-mail dele pelo painel de Users do backend (ação de admin, uma vez).
 
-Adicionar o medidor abaixo do campo de senha (sem alterar validação/submit atual):
+## Fora do escopo
+- Não mexer em regras de negócio, comissões, papéis, checkout.
+- Não alterar o fluxo de cadastro em si — o cadastro está funcionando; o problema é só o link de confirmação.
 
-- `src/routes/reset-password.tsx` (campo "Nova senha").
-- `src/routes/register.tsx` (se houver campo de senha no cadastro).
-- Qualquer outra tela de definição de senha encontrada durante a implementação (será verificada com busca).
-
-### Fora do escopo
-
-- Não alterar política do provider (HIBP continua ativo).
-- Não bloquear submit com base no medidor (o servidor continua sendo a fonte de verdade); o medidor é apenas orientativo.
-- Sem novas dependências.
-
-## Arquivos afetados
-
-- `src/lib/auth-errors.ts` (editar)
-- `src/components/auth/PasswordStrengthMeter.tsx` (criar)
-- `src/routes/reset-password.tsx` (editar)
-- `src/routes/register.tsx` e demais telas de senha localizadas (editar)
+## Preciso confirmar com você
+1. O cliente recebeu o e-mail no Gmail/Outlook e clicou lá, ou o link foi repassado por WhatsApp antes? (isso muda o diagnóstico: se veio do WhatsApp, é só truncamento do link e a correção 3 resolve).
+2. Posso ajustar Site URL / Redirect URLs do Auth agora (correção 1)?
