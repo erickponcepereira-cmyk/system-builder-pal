@@ -1,32 +1,58 @@
-## Problema
 
-Três funções RPC do checkout têm overloads antigos e quebrados que referenciam `s.upline_coach_id` — coluna inexistente em `public.students` (a correta é `s.coach_id`). Como cada função tem múltiplas assinaturas, o PostgREST pode resolver para a versão errada e o pedido falha com `column s.upline_coach_id does not exist`.
+## 1) Dias de carteirinha na loja FitMind
 
-Funções afetadas (assinaturas antigas a remover):
-- `create_partner_company_order(_partner_product_id, _student_id, _payment_method)` e `(_student_id, _partner_product_id, _payment_method, _referred_by_student_id)`
-- `create_partner_product_order(_student_id, _partner_product_id, _payment_method, _referred_by_student_id)`
-- `create_scheduled_professional_order(_professional_product_id, _starts_at, _payment_method, _student_id)`, `(..., _referred_by_student_id)` e `(_student_id, _professional_product_id, _scheduled_for, _payment_method, _referred_by_student_id)`
+**Diagnóstico:** o badge `🪪 Xd carteirinha` já existe no grid da loja e no modal de detalhe, mas os selects em `StorePage.tsx` (`products` para challenges/plans e `products` para itens de seção) **não incluem** a coluna `card_access_days`. Resultado: `cardDays` chega sempre `0` e o badge nunca aparece.
 
-As assinaturas “boas” (que o app usa hoje) permanecem:
-- `create_partner_company_order(_partner_product_id, _student_id, _payment_method)` — manter apenas se não tiver `s.upline_coach_id`; caso contrário, corrigir.
-- `create_partner_product_order(_professional_product_id, _payment_method, _buyer_student_id[, _referred_by_student_id])`
-- Precisamos deixar exatamente UMA versão de cada função ativa e funcional.
+**Correção:** adicionar `card_access_days` aos dois selects em `src/components/student/StorePage.tsx` (linhas 148 e 152). Nada mais muda — a renderização já está pronta.
 
-## Correção
+Vendas por `digital_products` e `store_products` não têm coluna `card_access_days` no banco, então continuam sem badge (é fora do escopo pedido).
 
-Migração única que:
+## 2) Ocultamento assimétrico com base no criador
 
-1. `DROP FUNCTION` em todas as assinaturas listadas de `create_partner_company_order`, `create_partner_product_order` e `create_scheduled_professional_order`.
-2. `CREATE OR REPLACE FUNCTION` recriando apenas as versões corretas (usando `s.coach_id`, mantendo a lógica financeira atual já validada — inclusive Master Coach, cross-bonus, fitcoin e rede 3/2/1%).
-   - `create_partner_company_order(_partner_product_id uuid, _student_id uuid DEFAULT NULL, _payment_method text DEFAULT 'pix')`
-   - `create_partner_product_order(_professional_product_id uuid, _payment_method text DEFAULT 'pix', _buyer_student_id uuid DEFAULT NULL, _referred_by_student_id uuid DEFAULT NULL)` + wrapper de 3 args mantido.
-   - `create_scheduled_professional_order(_professional_product_id uuid, _starts_at timestamptz, _payment_method text DEFAULT 'pix', _student_id uuid DEFAULT NULL, _referred_by_student_id uuid DEFAULT NULL)`
-3. `GRANT EXECUTE ... TO authenticated` em todas.
+**Regra final** (produto P criado pelo coach C, ocultado pelo coach U):
+- Um viewer V só é afetado pela ocultação se **U está na cadeia upline de V**.
+- Se, além disso, **C também está na cadeia de V numa posição abaixo de U** (ou V é o próprio C), o ocultamento é **ignorado** para V.
+- Caso contrário, o produto fica oculto.
 
-## Verificação após aplicar
+Isso cobre os dois casos do exemplo (Nathan/Ana) automaticamente.
 
-- Rodar `SELECT proname, pg_get_function_identity_arguments(...)` para confirmar que só as assinaturas novas existem.
-- Buscar `s.upline_coach_id` no `pg_proc` de novo — deve voltar vazio.
-- Testar compra de produto de parceiro no app (fluxo do print).
+**Escopo aplicado (conforme escolha):**
+- Ocultamento de produto individual: `partner_product`, `professional_product`, `item` (products com kind), `store_product`, `digital`.
+- Ocultamento vendor-wide (`vendor_partner`, `vendor_professional`, `vendor_fitmind`): mesma regra, usando o criador do produto que está sendo avaliado no momento — o filtro passa a receber o `creator_coach_id` do item e decide caso a caso.
+- Ocultamento por seção/categoria: mantém comportamento atual (não têm "criador").
 
-Nenhum código do frontend precisa mudar; as chamadas atuais já batem com as assinaturas mantidas.
+**Onde fica no banco:**
+
+Nova função `public.store_visible_for_viewer(_creator_coach_id uuid, _target_type text, _product_kind text, _target_id uuid)` que retorna `boolean`. Ela:
+1. Monta a cadeia upline do viewer com profundidade (`get_viewer_upline_chain_with_depth`).
+2. Verifica todos os hides ativos aplicáveis (por `target_id`, ou vendor-wide compatível com o `product_kind`).
+3. Para cada hide, checa a exceção do criador: se `_creator_coach_id` = viewer_self ou está na cadeia com `depth < depth(hider)`, ignora esse hide.
+4. Retorna `true` se nenhum hide sobrar.
+
+Também substituímos `store_hidden_for_viewer()` por `store_hidden_for_viewer_v2()` que retorna, além de `target_type/product_kind/target_id`, o `hider_coach_id` e `hider_depth`, para o cliente poder aplicar a exceção sem uma chamada por item.
+
+**Fonte do `creator_coach_id`:**
+- `products` (challenges/items) → coluna `creator_coach_id` existente.
+- `professional_products` → coluna `coach_id`.
+- `partner_products` → derivar via `partners.upline_coach_id` (parceiro sempre tem coach upline responsável).
+- `digital_products` / `store_products` → não têm criador coach → exceção nunca se aplica (comportamento antigo).
+
+**Mudança no front (`coach-store-overrides.ts` + `StorePage.tsx` + `PartnerProfessionalStore.tsx`):**
+- `useStoreVisibility` passa a guardar a lista completa `hiddenRows` com `hider_coach_id` e `hider_depth`, além do mapa `viewerChain: Map<coach_id, depth>` do viewer.
+- Nova função `isHiddenForViewer(targetType, kind, targetId, creatorCoachId)`:
+  - Filtra hides aplicáveis ao alvo (id-exato ou vendor-wide equivalente).
+  - Para cada hide, aplica a exceção do criador.
+- Todos os call-sites que hoje chamam `isHiddenForViewer(...)` / `isHiddenByUpline(...)` passam a informar o `creatorCoachId` do item (já mapeado nos dados da loja: `creatorCoachId` para items/challenges, `professionalCoachId` para produtos de profissional, `coach.id` para produtos de parceiro).
+
+## 3) Verificação
+- Loja FitMind: badge de carteirinha volta a aparecer em produtos com `card_access_days > 0`.
+- Cenário Nathan/Ana:
+  - Ana oculta produto do Nathan → invisível só para descendentes de Ana.
+  - Nathan oculta produto criado por Ana → invisível para todos exceto Ana e sua downline.
+- Ocultamento por seção/categoria continua comportamento atual.
+
+## Arquivos afetados
+- `src/components/student/StorePage.tsx` — adicionar `card_access_days` nos selects; passar `creatorCoachId` para checagens de visibilidade.
+- `src/lib/coach-store-overrides.ts` — novo shape (rows + chain) e nova assinatura de `isHiddenForViewer`.
+- `src/components/store/PartnerProfessionalStore.tsx` e demais consumidores — repassar `creatorCoachId` nas chamadas.
+- Nova migration SQL: `store_hidden_for_viewer_v2()` + índice de apoio se necessário.

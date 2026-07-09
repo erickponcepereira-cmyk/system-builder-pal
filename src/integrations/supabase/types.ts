@@ -11036,6 +11036,7 @@ export type Database = {
           target_type: string
         }[]
       }
+      store_visibility_context: { Args: never; Returns: Json }
       student_check_in: {
         Args: { _activity_type?: string; _notes?: string }
         Returns: string

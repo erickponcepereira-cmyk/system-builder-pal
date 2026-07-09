@@ -11,7 +11,7 @@ import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
-import { useStoreVisibility, mapStoreItemKind, isFitmindKind } from "@/lib/coach-store-overrides";
+import { useStoreVisibility, mapStoreItemKind } from "@/lib/coach-store-overrides";
 import { Eye, EyeOff } from "lucide-react";
 import { maskCPFSensitive } from "@/lib/masks";
 
@@ -145,11 +145,11 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const load = async () => {
     const [{ data: userData }, plans, digital, physical, sectionsRes, itemsRes, realEarnings] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,image_urls,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount").eq("status", "active").order("sort_order"),
+      supabase.from("products").select("id,name,subtitle,description,price,original_price,type,product_type,is_price_range,min_price,max_price,badge_label,status,image_url,image_urls,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,card_access_days").eq("status", "active").order("sort_order"),
       supabase.from("digital_products").select("id,title,description,price,original_price,type,status,is_featured,cover_url").eq("status", "active").order("sort_order"),
       supabase.from("store_products").select("id,name,description,price,original_price,category,status,is_herbalife,stock,image_url").eq("status", "active").order("sort_order"),
       supabase.from("store_sections" as never).select("id,name,image_url,card_width,card_height,target_audience,target_audiences" as never).eq("is_active" as never, true as never).order("sort_order" as never),
-      supabase.from("products" as never).select("id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
+      supabase.from("products" as never).select("id,section_id,category_id,subcategory_id,name,short_description,description,image_url,image_urls,price,original_price,kind,stock,is_active,commission_coach,commission_level1,commission_level2,commission_level3,app_fee,app_fee_percentage,card_fee_percentage,credit_fee_percentage,tax_percentage,cost,other_costs,creator_coach_id,points_per_sale,duration_days,has_challenge_access,challenge_tokens_amount,card_access_days,visibility_audiences" as never).not("kind" as never, "is", null).eq("is_active" as never, true as never).order("sort_order" as never),
       fetchRealEarnings().catch(() => [] as any[]),
     ]);
     const [{ data: catRows }, { data: subcatRows }] = await Promise.all([
@@ -478,21 +478,18 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const fitmindHiddenViewer = vis.isHiddenForViewer("vendor_fitmind", null, null);
-    const fitmindHiddenByUpline = vis.isHiddenByUpline("vendor_fitmind", null, null);
     return items.filter((item) => {
       const pk = mapStoreItemKind(item.kind);
-      // Upline hides são SEMPRE aplicadas (inclusive em coach mode).
-      if (pk && isFitmindKind(pk) && fitmindHiddenByUpline) return false;
+      const creator = item.creatorCoachId ?? null;
+      // Section/category hides não têm criador — regra clássica.
       if (item.sectionId && vis.isHiddenByUpline("section", null, item.sectionId)) return false;
       if (item.categoryId && vis.isHiddenByUpline("category", null, item.categoryId)) return false;
-      if (pk && vis.isHiddenByUpline("product", pk, item.sourceId)) return false;
-      // Para viewers (aluno/parceiro/profissional), também esconde as minhas próprias hides.
+      // Product-level hide (inclui vendor_fitmind quando aplicável) com exceção do criador.
+      if (pk && vis.isHiddenByUpline("product", pk, item.sourceId, creator)) return false;
       if (!coachMode) {
-        if (pk && isFitmindKind(pk) && fitmindHiddenViewer) return false;
         if (item.sectionId && vis.isHiddenForViewer("section", null, item.sectionId)) return false;
         if (item.categoryId && vis.isHiddenForViewer("category", null, item.categoryId)) return false;
-        if (pk && vis.isHiddenForViewer("product", pk, item.sourceId)) return false;
+        if (pk && vis.isHiddenForViewer("product", pk, item.sourceId, creator)) return false;
       }
       if (activeSection) {
         const inSection = item.sectionId === activeSection.id || item.category === activeSection.name;

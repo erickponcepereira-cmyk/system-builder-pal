@@ -47,6 +47,7 @@ export type PartnerStoreCard = {
   kind: CardKind;
   isSchedulable?: boolean;
   professionalCoachId?: string | null;
+  creatorCoachId?: string | null;
   durationMinutes?: number;
   scheduledSlot?: string | null;
   coachCommissionPct?: number | null;
@@ -173,7 +174,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       const fetchPartners = async (): Promise<PartnerStoreCard[]> => {
         const { data, error } = await supabase
           .from("partner_products" as never)
-          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name)")
+          .select("id,name,description,image_url,image_urls,price,original_price,section_id,category_id,partner_id,coach_commission_percentage,partners(fantasy_name,upline_coach_id)")
           .eq("status" as never, "approved")
           .eq("kind" as never, "paid")
           .eq("is_active_by_partner" as never, true)
@@ -182,12 +183,13 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .order("sort_order" as never, { ascending: true } as never)
           .limit(1000);
         if (error) console.error("[partner store]", error);
-        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
+        return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null; upline_coach_id: string | null } | null }>) || []).map((r) => ({
           id: r.id, name: r.name, description: r.description, image_url: r.image_url, image_urls: r.image_urls || [], price: Number(r.price), originalPrice: r.original_price ? Number(r.original_price) : null,
           section_id: r.section_id, category_id: r.category_id,
           seller: r.partners?.fantasy_name || "Parceiro",
           kind: "partner" as const,
           coachCommissionPct: r.coach_commission_percentage ?? null,
+          creatorCoachId: r.partners?.upline_coach_id ?? null,
         }));
       };
 
@@ -221,6 +223,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           kind: "professional" as const,
           isSchedulable: !!r.is_schedulable,
           professionalCoachId: r.coach_id,
+          creatorCoachId: r.coach_id,
           durationMinutes: r.default_duration_minutes ?? 30,
           coachCommissionPct: r.coach_commission_percentage ?? null,
         }));
@@ -359,20 +362,20 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (cards.length === 0) return <p className="text-sm text-white/50 text-center py-10">Nenhum produto disponível ainda.</p>;
 
-  // Itens ocultados por algum upline são SEMPRE removidos (inclusive para coaches downline).
+  // Itens ocultados por algum upline são SEMPRE removidos (inclusive para coaches downline),
+  // exceto quando o criador do produto está entre o viewer e o hider na cadeia.
   // Itens ocultados por mim mesmo continuam visíveis (em modo coach) com toggle, para eu poder reexibir.
   const isViewerFilter = mode !== "reseller";
   const uplineHidesVendor = singleCardKind ? vis.isHiddenByUpline(vendorTypeFor(singleCardKind), null, null) : false;
   const visibleCards = cards.filter((c) => {
-    const cVendor = vendorTypeFor(c.kind);
     const cProductKind = productKindFor(c.kind);
-    if (vis.isHiddenByUpline(cVendor, null, null)) return false;
+    const creator = c.creatorCoachId ?? c.professionalCoachId ?? null;
     if (c.section_id && vis.isHiddenByUpline("section", null, c.section_id)) return false;
-    if (vis.isHiddenByUpline("product", cProductKind, c.id)) return false;
+    // Product-level (inclui vendor_partner/vendor_professional) com exceção do criador.
+    if (vis.isHiddenByUpline("product", cProductKind, c.id, creator)) return false;
     if (isViewerFilter) {
-      if (vis.isHiddenForViewer(cVendor, null, null)) return false;
       if (c.section_id && vis.isHiddenForViewer("section", null, c.section_id)) return false;
-      if (vis.isHiddenForViewer("product", cProductKind, c.id)) return false;
+      if (vis.isHiddenForViewer("product", cProductKind, c.id, creator)) return false;
     }
     return true;
   });
