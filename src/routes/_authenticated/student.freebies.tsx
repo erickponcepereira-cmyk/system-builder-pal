@@ -576,7 +576,7 @@ function StudentFreebies() {
                                 sponsor_instagram: it.sponsor_instagram, sponsor_website: it.sponsor_website,
                               })}
                             >
-                              {it.image_url && <img src={it.image_url} alt={it.name} className="h-40 w-full object-cover" />}
+                              {it.image_url && <img src={it.image_url} alt={it.name} className="aspect-square w-full object-contain bg-black/40" />}
                               <div className="p-4">
                                 <div className="flex items-start justify-between gap-2">
                                   <h3 className="font-bold text-white">{it.name}</h3>
