@@ -470,6 +470,22 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
             />
           </div>
 
+          {!readOnly && (
+            <button
+              onClick={() => goal && save(meals, goal)}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold py-3 hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {saving ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</>
+              ) : savedAt && Date.now() - savedAt < 3000 ? (
+                <><Check className="h-4 w-4" /> Salvo!</>
+              ) : (
+                <><Save className="h-4 w-4" /> Salvar Método das Janelas</>
+              )}
+            </button>
+          )}
+
         </>
       )}
 
