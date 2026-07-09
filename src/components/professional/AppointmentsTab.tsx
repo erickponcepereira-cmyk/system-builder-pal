@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Calendar, Loader2, X, CheckCircle2, User as UserIcon, Clock } from "lucide-react";
+import { Calendar, Loader2, X, CheckCircle2, User as UserIcon, Clock, MessageCircle, Gift } from "lucide-react";
 import { AvailabilityEditor } from "./AvailabilityEditor";
 import { useServerFn } from "@tanstack/react-start";
 import { getProfessionalAppointments, type ProfessionalAppointmentItem } from "@/lib/professional-appointments.functions";
