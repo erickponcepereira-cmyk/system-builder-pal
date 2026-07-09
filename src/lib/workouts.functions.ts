@@ -669,6 +669,84 @@ export const enableTemplateForStudent = createServerFn({ method: "POST" })
   });
 
 /**
+ * Student-facing: activate a workout_template for the CURRENT authenticated
+ * student, creating a workout_plan owned by them (coach_id = self so the
+ * student can edit/delete it via RLS "Coaches/students manage plans").
+ */
+export const enableTemplateForSelf = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      template_id: z.string().uuid(),
+      letter: z.string().max(2).nullable().optional(),
+      day_of_week: z.number().int().min(0).max(6).nullable().optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: tpl, error: tplErr } = await supabase
+      .from("workout_templates" as never)
+      .select("name, items" as never)
+      .eq("id" as never, data.template_id as never)
+      .maybeSingle();
+    if (tplErr) throw new Error(tplErr.message);
+    if (!tpl) throw new Error("Treino pronto não encontrado");
+
+    const tplName = (tpl as any).name as string;
+    const items = ((tpl as any).items || []) as Array<{ name: string; sets?: string; reps?: string; rest?: string; notes?: string }>;
+    const letter = (data.letter || "").toUpperCase().slice(0, 2) || null;
+    const planName = letter ? `Treino ${letter} — ${tplName}` : tplName;
+
+    const { data: created, error } = await supabase
+      .from("workout_plans")
+      .insert({
+        student_id: userId,
+        coach_id: userId,
+        name: planName,
+        day_of_week: data.day_of_week ?? null,
+        letter,
+        notes: `Montado pelo aluno a partir de "${tplName}"`,
+      } as never)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    const planId = created.id;
+
+    const parseIntSafe = (s?: string | null) => {
+      if (!s) return null;
+      const m = String(s).match(/\d+/);
+      return m ? parseInt(m[0], 10) : null;
+    };
+    const rows = items.filter((it) => it.name?.trim()).map((it, i) => {
+      const rest = parseRestRange(it.rest);
+      return {
+        plan_id: planId,
+        order_index: i,
+        exercise_name: it.name,
+        sets: parseIntSafe(it.sets) ?? 3,
+        reps: it.reps ?? null,
+        load_kg: null,
+        rest_seconds: rest.min,
+        rest_seconds_max: rest.max,
+        equipment_config: null,
+        media_url: null,
+        notes: it.notes ?? null,
+        is_cardio: false,
+        cardio_duration_min: null,
+        cardio_pace: null,
+        cardio_speed: null,
+        cardio_elevation: null,
+      };
+    });
+    if (rows.length > 0) {
+      const { error: exErr } = await supabase.from("workout_exercises").insert(rows as never);
+      if (exErr) throw new Error(exErr.message);
+    }
+    return { ok: true, plan_id: planId, plan_name: planName };
+  });
+
+/**
  * Persist the student's equipment configuration (e.g. "Pino 4, banco 2")
  * on a specific exercise of their plan, so it pre-fills on next sessions.
  */
