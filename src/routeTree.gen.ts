@@ -66,7 +66,9 @@ import { Route as AuthenticatedStudentCalendarRouteImport } from './routes/_auth
 import { Route as AuthenticatedStudentBenefitsRouteImport } from './routes/_authenticated/student.benefits'
 import { Route as AuthenticatedStudentAssessmentsRouteImport } from './routes/_authenticated/student.assessments'
 import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from './routes/_authenticated/professional.orders-in-progress'
+import { Route as AuthenticatedProfessionalHerbalifeBoletosRouteImport } from './routes/_authenticated/professional.herbalife-boletos'
 import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
+import { Route as AuthenticatedPartnerHerbalifeBoletosRouteImport } from './routes/_authenticated/partner.herbalife-boletos'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
 import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
@@ -96,6 +98,7 @@ import { Route as AuthenticatedAdminNetworkUnlockHistoryRouteImport } from './ro
 import { Route as AuthenticatedAdminNetworkUnlockRouteImport } from './routes/_authenticated/admin.network-unlock'
 import { Route as AuthenticatedAdminNetworkRankingRouteImport } from './routes/_authenticated/admin.network-ranking'
 import { Route as AuthenticatedAdminLibraryRouteImport } from './routes/_authenticated/admin.library'
+import { Route as AuthenticatedAdminHerbalifeBoletosRouteImport } from './routes/_authenticated/admin.herbalife-boletos'
 import { Route as AuthenticatedAdminFreebiesRouteImport } from './routes/_authenticated/admin.freebies'
 import { Route as AuthenticatedAdminFitmindEventsReportsRouteImport } from './routes/_authenticated/admin.fitmind-events-reports'
 import { Route as AuthenticatedAdminFitmindEventsRouteImport } from './routes/_authenticated/admin.fitmind-events'
@@ -437,10 +440,22 @@ const AuthenticatedProfessionalOrdersInProgressRoute =
     path: '/orders-in-progress',
     getParentRoute: () => AuthenticatedProfessionalRoute,
   } as any)
+const AuthenticatedProfessionalHerbalifeBoletosRoute =
+  AuthenticatedProfessionalHerbalifeBoletosRouteImport.update({
+    id: '/herbalife-boletos',
+    path: '/herbalife-boletos',
+    getParentRoute: () => AuthenticatedProfessionalRoute,
+  } as any)
 const AuthenticatedPartnerOrdersInProgressRoute =
   AuthenticatedPartnerOrdersInProgressRouteImport.update({
     id: '/orders-in-progress',
     path: '/orders-in-progress',
+    getParentRoute: () => AuthenticatedPartnerRoute,
+  } as any)
+const AuthenticatedPartnerHerbalifeBoletosRoute =
+  AuthenticatedPartnerHerbalifeBoletosRouteImport.update({
+    id: '/herbalife-boletos',
+    path: '/herbalife-boletos',
     getParentRoute: () => AuthenticatedPartnerRoute,
   } as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
@@ -613,6 +628,12 @@ const AuthenticatedAdminLibraryRoute =
   AuthenticatedAdminLibraryRouteImport.update({
     id: '/library',
     path: '/library',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminHerbalifeBoletosRoute =
+  AuthenticatedAdminHerbalifeBoletosRouteImport.update({
+    id: '/herbalife-boletos',
+    path: '/herbalife-boletos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminFreebiesRoute =
@@ -827,6 +848,7 @@ export interface FileRoutesByFullPath {
   '/admin/fitmind-events': typeof AuthenticatedAdminFitmindEventsRoute
   '/admin/fitmind-events-reports': typeof AuthenticatedAdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
+  '/admin/herbalife-boletos': typeof AuthenticatedAdminHerbalifeBoletosRoute
   '/admin/library': typeof AuthenticatedAdminLibraryRoute
   '/admin/network-ranking': typeof AuthenticatedAdminNetworkRankingRoute
   '/admin/network-unlock': typeof AuthenticatedAdminNetworkUnlockRoute
@@ -856,7 +878,9 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
@@ -941,6 +965,7 @@ export interface FileRoutesByTo {
   '/admin/fitmind-events': typeof AuthenticatedAdminFitmindEventsRoute
   '/admin/fitmind-events-reports': typeof AuthenticatedAdminFitmindEventsReportsRoute
   '/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
+  '/admin/herbalife-boletos': typeof AuthenticatedAdminHerbalifeBoletosRoute
   '/admin/library': typeof AuthenticatedAdminLibraryRoute
   '/admin/network-ranking': typeof AuthenticatedAdminNetworkRankingRoute
   '/admin/network-unlock': typeof AuthenticatedAdminNetworkUnlockRoute
@@ -970,7 +995,9 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
@@ -1059,6 +1086,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/fitmind-events': typeof AuthenticatedAdminFitmindEventsRoute
   '/_authenticated/admin/fitmind-events-reports': typeof AuthenticatedAdminFitmindEventsReportsRoute
   '/_authenticated/admin/freebies': typeof AuthenticatedAdminFreebiesRoute
+  '/_authenticated/admin/herbalife-boletos': typeof AuthenticatedAdminHerbalifeBoletosRoute
   '/_authenticated/admin/library': typeof AuthenticatedAdminLibraryRoute
   '/_authenticated/admin/network-ranking': typeof AuthenticatedAdminNetworkRankingRoute
   '/_authenticated/admin/network-unlock': typeof AuthenticatedAdminNetworkUnlockRoute
@@ -1088,7 +1116,9 @@ export interface FileRoutesById {
   '/_authenticated/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/partner/herbalife-boletos': typeof AuthenticatedPartnerHerbalifeBoletosRoute
   '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/_authenticated/professional/herbalife-boletos': typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   '/_authenticated/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/_authenticated/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/_authenticated/student/benefits': typeof AuthenticatedStudentBenefitsRoute
@@ -1177,6 +1207,7 @@ export interface FileRouteTypes {
     | '/admin/fitmind-events'
     | '/admin/fitmind-events-reports'
     | '/admin/freebies'
+    | '/admin/herbalife-boletos'
     | '/admin/library'
     | '/admin/network-ranking'
     | '/admin/network-unlock'
@@ -1206,7 +1237,9 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
+    | '/professional/herbalife-boletos'
     | '/professional/orders-in-progress'
     | '/student/assessments'
     | '/student/benefits'
@@ -1291,6 +1324,7 @@ export interface FileRouteTypes {
     | '/admin/fitmind-events'
     | '/admin/fitmind-events-reports'
     | '/admin/freebies'
+    | '/admin/herbalife-boletos'
     | '/admin/library'
     | '/admin/network-ranking'
     | '/admin/network-unlock'
@@ -1320,7 +1354,9 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/partner/herbalife-boletos'
     | '/partner/orders-in-progress'
+    | '/professional/herbalife-boletos'
     | '/professional/orders-in-progress'
     | '/student/assessments'
     | '/student/benefits'
@@ -1408,6 +1444,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/fitmind-events'
     | '/_authenticated/admin/fitmind-events-reports'
     | '/_authenticated/admin/freebies'
+    | '/_authenticated/admin/herbalife-boletos'
     | '/_authenticated/admin/library'
     | '/_authenticated/admin/network-ranking'
     | '/_authenticated/admin/network-unlock'
@@ -1437,7 +1474,9 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/subscriptions'
     | '/_authenticated/admin/test-sales'
     | '/_authenticated/admin/users'
+    | '/_authenticated/partner/herbalife-boletos'
     | '/_authenticated/partner/orders-in-progress'
+    | '/_authenticated/professional/herbalife-boletos'
     | '/_authenticated/professional/orders-in-progress'
     | '/_authenticated/student/assessments'
     | '/_authenticated/student/benefits'
@@ -1911,11 +1950,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfessionalOrdersInProgressRouteImport
       parentRoute: typeof AuthenticatedProfessionalRoute
     }
+    '/_authenticated/professional/herbalife-boletos': {
+      id: '/_authenticated/professional/herbalife-boletos'
+      path: '/herbalife-boletos'
+      fullPath: '/professional/herbalife-boletos'
+      preLoaderRoute: typeof AuthenticatedProfessionalHerbalifeBoletosRouteImport
+      parentRoute: typeof AuthenticatedProfessionalRoute
+    }
     '/_authenticated/partner/orders-in-progress': {
       id: '/_authenticated/partner/orders-in-progress'
       path: '/orders-in-progress'
       fullPath: '/partner/orders-in-progress'
       preLoaderRoute: typeof AuthenticatedPartnerOrdersInProgressRouteImport
+      parentRoute: typeof AuthenticatedPartnerRoute
+    }
+    '/_authenticated/partner/herbalife-boletos': {
+      id: '/_authenticated/partner/herbalife-boletos'
+      path: '/herbalife-boletos'
+      fullPath: '/partner/herbalife-boletos'
+      preLoaderRoute: typeof AuthenticatedPartnerHerbalifeBoletosRouteImport
       parentRoute: typeof AuthenticatedPartnerRoute
     }
     '/_authenticated/admin/users': {
@@ -2119,6 +2172,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/admin/library'
       preLoaderRoute: typeof AuthenticatedAdminLibraryRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/herbalife-boletos': {
+      id: '/_authenticated/admin/herbalife-boletos'
+      path: '/herbalife-boletos'
+      fullPath: '/admin/herbalife-boletos'
+      preLoaderRoute: typeof AuthenticatedAdminHerbalifeBoletosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/freebies': {
@@ -2354,6 +2414,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminFitmindEventsRoute: typeof AuthenticatedAdminFitmindEventsRoute
   AuthenticatedAdminFitmindEventsReportsRoute: typeof AuthenticatedAdminFitmindEventsReportsRoute
   AuthenticatedAdminFreebiesRoute: typeof AuthenticatedAdminFreebiesRoute
+  AuthenticatedAdminHerbalifeBoletosRoute: typeof AuthenticatedAdminHerbalifeBoletosRoute
   AuthenticatedAdminLibraryRoute: typeof AuthenticatedAdminLibraryRoute
   AuthenticatedAdminNetworkRankingRoute: typeof AuthenticatedAdminNetworkRankingRoute
   AuthenticatedAdminNetworkUnlockRoute: typeof AuthenticatedAdminNetworkUnlockRoute
@@ -2411,6 +2472,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminFitmindEventsReportsRoute:
     AuthenticatedAdminFitmindEventsReportsRoute,
   AuthenticatedAdminFreebiesRoute: AuthenticatedAdminFreebiesRoute,
+  AuthenticatedAdminHerbalifeBoletosRoute:
+    AuthenticatedAdminHerbalifeBoletosRoute,
   AuthenticatedAdminLibraryRoute: AuthenticatedAdminLibraryRoute,
   AuthenticatedAdminNetworkRankingRoute: AuthenticatedAdminNetworkRankingRoute,
   AuthenticatedAdminNetworkUnlockRoute: AuthenticatedAdminNetworkUnlockRoute,
@@ -2456,10 +2519,13 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedPartnerRouteChildren {
+  AuthenticatedPartnerHerbalifeBoletosRoute: typeof AuthenticatedPartnerHerbalifeBoletosRoute
   AuthenticatedPartnerOrdersInProgressRoute: typeof AuthenticatedPartnerOrdersInProgressRoute
 }
 
 const AuthenticatedPartnerRouteChildren: AuthenticatedPartnerRouteChildren = {
+  AuthenticatedPartnerHerbalifeBoletosRoute:
+    AuthenticatedPartnerHerbalifeBoletosRoute,
   AuthenticatedPartnerOrdersInProgressRoute:
     AuthenticatedPartnerOrdersInProgressRoute,
 }
@@ -2468,11 +2534,14 @@ const AuthenticatedPartnerRouteWithChildren =
   AuthenticatedPartnerRoute._addFileChildren(AuthenticatedPartnerRouteChildren)
 
 interface AuthenticatedProfessionalRouteChildren {
+  AuthenticatedProfessionalHerbalifeBoletosRoute: typeof AuthenticatedProfessionalHerbalifeBoletosRoute
   AuthenticatedProfessionalOrdersInProgressRoute: typeof AuthenticatedProfessionalOrdersInProgressRoute
 }
 
 const AuthenticatedProfessionalRouteChildren: AuthenticatedProfessionalRouteChildren =
   {
+    AuthenticatedProfessionalHerbalifeBoletosRoute:
+      AuthenticatedProfessionalHerbalifeBoletosRoute,
     AuthenticatedProfessionalOrdersInProgressRoute:
       AuthenticatedProfessionalOrdersInProgressRoute,
   }

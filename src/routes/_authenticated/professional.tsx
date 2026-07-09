@@ -225,6 +225,20 @@ function ProfessionalPanel() {
           <span className="text-xs text-primary font-medium">Abrir →</span>
         </Link>
 
+        <Link
+          to="/professional/herbalife-boletos"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 hover:bg-emerald-500/15 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Package className="h-5 w-5 text-emerald-300" />
+            <div>
+              <p className="text-sm font-bold text-white">Boletos Herbalife</p>
+              <p className="text-[11px] text-white/60">Anexe o boleto de cada venda para a Fitmind pagar</p>
+            </div>
+          </div>
+          <span className="text-xs text-emerald-300 font-medium">Abrir →</span>
+        </Link>
+
 
 
         {/* Tabs nav */}
