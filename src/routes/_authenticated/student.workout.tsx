@@ -73,7 +73,8 @@ function nextLetter(plans: Plan[], currentLetter?: string | null): Plan | null {
 
 function WorkoutPage() {
   const navigate = useNavigate();
-  const [view, setView] = useState<"home" | "active" | "history">("home");
+  const [view, setView] = useState<"home" | "active" | "history" | "builder">("home");
+  const [studentUserId, setStudentUserId] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
