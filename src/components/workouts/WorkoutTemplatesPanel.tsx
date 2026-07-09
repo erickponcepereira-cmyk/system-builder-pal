@@ -165,15 +165,15 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
 
       {loading ? <Loader2 className="mx-auto mt-6 h-6 w-6 animate-spin text-primary" /> :
        filtered.length === 0 ? <p className="rounded-xl bg-white/5 p-6 text-center text-sm text-white/50">Nenhum treino cadastrado.</p> : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => {
             const canEdit = mode === "admin" || t.created_by_coach_id === coachId;
             return (
-              <div key={t.id} className="rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-primary/40 hover:bg-white/[0.07]">
-                <button onClick={() => setViewing(t)} className="block w-full text-left">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-bold">{t.name}</h3>
+              <div key={t.id} className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-primary/40 hover:bg-white/[0.07]">
+                <button onClick={() => setViewing(t)} className="block w-full min-w-0 text-left">
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words text-sm font-bold">{t.name}</h3>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">{GOAL_LABELS[t.goal]}</span>
                         {t.level && <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/70">{t.level}</span>}
