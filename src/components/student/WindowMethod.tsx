@@ -2,7 +2,7 @@
 // Método das Janelas FitMind
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity, Check, Save } from "lucide-react";
 import janelaFechadaAsset from "@/assets/janela_fechada.png.asset.json";
 import janelaMeioAsset from "@/assets/janela_meio_aberta.png.asset.json";
 import janelaAbertaAsset from "@/assets/janela_aberta.png.asset.json";
@@ -326,6 +326,7 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
   const [meals, setMeals] = useState<MealState[]>(emptyMeals());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const targetDate = date || new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
@@ -367,6 +368,7 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
         payload[`meal_${n}_exercise`] = m.exercise;
       });
       await supabase.from("window_method_logs" as never).upsert(payload as never, { onConflict: "student_id,log_date" } as never);
+      setSavedAt(Date.now());
     } finally {
       setSaving(false);
     }
@@ -467,6 +469,22 @@ export function WindowMethod({ studentId, readOnly = false, date, hideExplanatio
               loading="lazy"
             />
           </div>
+
+          {!readOnly && (
+            <button
+              onClick={() => goal && save(meals, goal)}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-primary text-primary-foreground font-bold py-3 hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {saving ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Salvando...</>
+              ) : savedAt && Date.now() - savedAt < 3000 ? (
+                <><Check className="h-4 w-4" /> Salvo!</>
+              ) : (
+                <><Save className="h-4 w-4" /> Salvar Método das Janelas</>
+              )}
+            </button>
+          )}
 
         </>
       )}
