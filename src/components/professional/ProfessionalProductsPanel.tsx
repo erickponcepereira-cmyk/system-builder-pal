@@ -68,6 +68,8 @@ interface ProProduct {
   sort_order?: number | null;
   is_physical?: boolean;
   delivery_days?: number | null;
+  is_mirrored?: boolean;
+  mirror_source_product_id?: string | null;
 }
 
 const WEEKDAYS = [
@@ -331,24 +333,33 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               {p.status === "rejected" && p.admin_notes && (
                 <p className="text-[10px] text-red-300 mt-1">Obs.: {p.admin_notes}</p>
               )}
-              <div className="mt-1.5 flex gap-2">
-                <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
-                <button
-                  onClick={() => {
-                    const { id: _id, ...rest } = p;
-                    void _id;
-                    setEditing({ ...rest, name: `${p.name} (cópia)`, status: p.status, admin_notes: p.admin_notes, is_active_by_professional: true });
-                  }}
-                  className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
-                >
-                  <Copy className="h-3 w-3" /> Duplicar
-                </button>
+              <div className="mt-1.5 flex gap-2 items-center flex-wrap">
+                {p.is_mirrored && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Herbalife (espelho)</span>
+                )}
+                {!p.is_mirrored && (
+                  <>
+                    <button onClick={() => setEditing(p)} className="text-[11px] text-white/60 hover:text-white">Editar</button>
+                    <button
+                      onClick={() => {
+                        const { id: _id, ...rest } = p;
+                        void _id;
+                        setEditing({ ...rest, name: `${p.name} (cópia)`, status: p.status, admin_notes: p.admin_notes, is_active_by_professional: true, is_mirrored: false, mirror_source_product_id: null });
+                      }}
+                      className="text-[11px] text-white/60 hover:text-white inline-flex items-center gap-1"
+                    >
+                      <Copy className="h-3 w-3" /> Duplicar
+                    </button>
+                  </>
+                )}
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">
                   {p.is_active_by_professional ? "Ocultar" : "Mostrar"}
                 </button>
-                <button onClick={() => remove(p.id)} className="text-[11px] text-red-400">
-                  <Trash2 className="inline h-3 w-3" />
-                </button>
+                {!p.is_mirrored && (
+                  <button onClick={() => remove(p.id)} className="text-[11px] text-red-400">
+                    <Trash2 className="inline h-3 w-3" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
