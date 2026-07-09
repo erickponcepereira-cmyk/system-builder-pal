@@ -205,6 +205,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
             .eq("is_active_by_professional" as never, true)
             .eq("is_ready_for_sale" as never, true as never)
             .neq("kind" as never, "free" as never)
+            .order("sort_order" as never, { ascending: true } as never)
             .order("created_at" as never, { ascending: false } as never)
             .range(from, from + PAGE - 1);
           if (error) { console.error("[pp store]", error); break; }

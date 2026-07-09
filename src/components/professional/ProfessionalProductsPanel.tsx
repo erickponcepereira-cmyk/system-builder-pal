@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy } from "lucide-react";
+import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
 
@@ -65,6 +65,7 @@ interface ProProduct {
   event_start_time?: string | null;
   event_end_time?: string | null;
   payment_timing?: "at_booking" | "later";
+  sort_order?: number | null;
 }
 
 const WEEKDAYS = [
@@ -84,6 +85,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       .from("professional_products" as never)
       .select("*")
       .eq("coach_id" as never, coachId)
+      .order("sort_order" as never, { ascending: true })
       .order("created_at" as never, { ascending: false });
     setProducts((data as unknown as ProProduct[]) || []);
     setLoading(false);
@@ -231,6 +233,27 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     load();
   };
 
+  const move = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= products.length) return;
+    const a = products[index];
+    const b = products[target];
+    // Compute new sort orders preserving order (dense re-numbering if ties)
+    const list = [...products];
+    [list[index], list[target]] = [list[target], list[index]];
+    const updates = list.map((p, i) => ({ id: p.id, sort_order: i }));
+    // Optimistic UI
+    setProducts(list.map((p, i) => ({ ...p, sort_order: i })));
+    const { error } = await supabase
+      .from("professional_products" as never)
+      .upsert(updates as never, { onConflict: "id" } as never);
+    if (error) {
+      toast.error(error.message);
+      load();
+    }
+    void a; void b;
+  };
+
   if (loading) {
     return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -258,8 +281,28 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       )}
 
       <div className="space-y-2">
-        {products.map(p => (
+        {products.map((p, index) => (
           <div key={p.id} className="rounded-xl p-3 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
+            <div className="flex flex-col items-center justify-center gap-1">
+              <button
+                type="button"
+                onClick={() => move(index, -1)}
+                disabled={index === 0}
+                className="rounded-md bg-white/5 p-1 text-white/60 hover:bg-white/10 disabled:opacity-30"
+                title="Mover para cima"
+              >
+                <ArrowUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => move(index, 1)}
+                disabled={index === products.length - 1}
+                className="rounded-md bg-white/5 p-1 text-white/60 hover:bg-white/10 disabled:opacity-30"
+                title="Mover para baixo"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
             {p.image_url
               ? <img src={p.image_url} className="h-16 w-16 rounded object-cover" alt={p.name} />
               : <div className="h-16 w-16 rounded bg-white/5" />}
@@ -267,6 +310,9 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-white truncate">{p.name}</p>
                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${statusColor(p.status)}`}>{p.status}</span>
+                {!p.is_active_by_professional && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/60">Oculto</span>
+                )}
               </div>
               <div className="mt-0.5 text-[11px] text-white/60">
                 {p.original_price && p.original_price > p.price && (
@@ -296,7 +342,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   <Copy className="h-3 w-3" /> Duplicar
                 </button>
                 <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">
-                  {p.is_active_by_professional ? "Desativar" : "Ativar"}
+                  {p.is_active_by_professional ? "Ocultar" : "Mostrar"}
                 </button>
                 <button onClick={() => remove(p.id)} className="text-[11px] text-red-400">
                   <Trash2 className="inline h-3 w-3" />
