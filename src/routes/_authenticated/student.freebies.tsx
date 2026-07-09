@@ -392,6 +392,37 @@ function StudentFreebies() {
               );
             })()}
 
+            {/* Filtros: seção / categoria / subcategoria */}
+            <div className="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select
+                value={filterSection}
+                onChange={(e) => { setFilterSection(e.target.value); setFilterCategory(""); setFilterSubcategory(""); }}
+                className="rounded-lg bg-[#141414] border border-white/10 px-3 py-2 text-xs text-white"
+              >
+                <option value="">Todas as seções</option>
+                {sections.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select
+                value={filterCategory}
+                onChange={(e) => { setFilterCategory(e.target.value); setFilterSubcategory(""); }}
+                disabled={!filterSection}
+                className="rounded-lg bg-[#141414] border border-white/10 px-3 py-2 text-xs text-white disabled:opacity-40"
+              >
+                <option value="">Todas as categorias</option>
+                {catsForSection.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select
+                value={filterSubcategory}
+                onChange={(e) => setFilterSubcategory(e.target.value)}
+                disabled={!filterCategory || subsForCategory.length === 0}
+                className="rounded-lg bg-[#141414] border border-white/10 px-3 py-2 text-xs text-white disabled:opacity-40"
+              >
+                <option value="">Todas as subcategorias</option>
+                {subsForCategory.map((sc) => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
+              </select>
+            </div>
+
+
             {(() => {
               const filteredPartner = partnerFreebies.filter((p) => matchesTaxonomy(p) && (
                 pageMode === "discount" ? p.redemption_mode === "discount" : (p.redemption_mode ?? "free") === "free"
