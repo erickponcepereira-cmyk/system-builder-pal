@@ -16,6 +16,7 @@ import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskCPF, maskPhone, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
 type Specialty = { key: string; label: string; description: string | null; requires_admin_setup: boolean };
@@ -397,6 +398,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {!existingMode && <PasswordStrengthMeter password={password} email={email} name={name} />}
               </div>
               {!existingMode && (
                 <div className="space-y-2">
