@@ -19,6 +19,7 @@ export type ProfessionalAppointmentItem = {
   student_coach_name: string | null;
   seller_name: string | null;
   product_name: string | null;
+  product_kind: string | null;
   order_status: string | null;
   order_number: string | null;
 };
@@ -90,7 +91,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
         ? supabaseAdmin.from("students").select("id,coach_id,profiles!students_profile_id_fkey(name,email,phone,avatar_url)").in("id", studentIds)
         : Promise.resolve({ data: [] }),
       productIds.length
-        ? supabaseAdmin.from("professional_products").select("id,name").in("id", productIds)
+        ? supabaseAdmin.from("professional_products").select("id,name,kind").in("id", productIds)
         : Promise.resolve({ data: [] }),
       sellerIds.length
         ? supabaseAdmin.from("coaches").select("id,profiles!coaches_profile_id_fkey(name)").in("id", sellerIds)
@@ -101,7 +102,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
     ]);
 
     type StudentRow = { id: string; coach_id: string | null; profiles: { name: string | null; email: string | null; phone: string | null; avatar_url: string | null } | null };
-    type ProductRow = { id: string; name: string | null };
+    type ProductRow = { id: string; name: string | null; kind: string | null };
     type CoachRow = { id: string; profiles: { name: string | null } | null };
     type OrderRow = { id: string; status: string | null; order_number: string | null };
 
@@ -131,6 +132,7 @@ export const getProfessionalAppointments = createServerFn({ method: "GET" })
         student_coach_name: studentCoach?.profiles?.name || null,
         seller_name: seller?.profiles?.name || null,
         product_name: productMap.get(a.product_id)?.name || null,
+        product_kind: productMap.get(a.product_id)?.kind || null,
         order_status: order?.status || null,
         order_number: order?.order_number || null,
       };
