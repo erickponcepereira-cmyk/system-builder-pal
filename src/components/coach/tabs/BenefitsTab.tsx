@@ -110,6 +110,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
         .eq("status" as never, "approved" as never)
         .eq("is_active_by_partner" as never, true as never)
         .is("deleted_at" as never, null as never)
+        .order("sort_order" as never, { ascending: true } as never)
         .order("created_at" as never, { ascending: false });
       const pf = ((data as unknown as PartnerFreeProduct[]) || []).filter((x) => x.partners?.status === "approved");
       setPartnerFreebies(pf);

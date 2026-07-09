@@ -82,6 +82,7 @@ interface Product {
   event_end_time?: string | null;
   redemption_location_name?: string | null;
   redemption_location_url?: string | null;
+  sort_order?: number | null;
 }
 
 
@@ -121,7 +122,7 @@ function PartnerPanel() {
     const pt = p as unknown as Partner;
     setPartner(pt);
     const [pr, ps, v, coach, student] = await Promise.all([
-      supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).is("deleted_at" as never, null as never).order("created_at" as never, { ascending: false }),
+      supabase.from("partner_products" as never).select("*").eq("partner_id" as never, pt.id).is("deleted_at" as never, null as never).order("sort_order" as never, { ascending: true } as never).order("created_at" as never, { ascending: false }),
       supabase.from("partner_posts" as never).select("*").eq("partner_id" as never, pt.id).order("created_at" as never, { ascending: false }).limit(30),
       supabase.from("partner_visits" as never).select("id" as never, { count: "exact", head: true }).eq("partner_id" as never, pt.id),
       supabase.from("coaches").select("id, referral_code, upline_coach_id").eq("profile_id", profile.id).maybeSingle(),
@@ -526,6 +527,21 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     onReload();
   };
 
+  const moveProduct = async (p: Product, dir: -1 | 1) => {
+    const sorted = [...products].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const idx = sorted.findIndex((x) => x.id === p.id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= sorted.length) return;
+    const other = sorted[j];
+    const myOrder = p.sort_order ?? idx;
+    const otherOrder = other.sort_order ?? j;
+    const { error: e1 } = await supabase.from("partner_products" as never).update({ sort_order: otherOrder } as never).eq("id" as never, p.id);
+    if (e1) return toast.error(e1.message);
+    const { error: e2 } = await supabase.from("partner_products" as never).update({ sort_order: myOrder } as never).eq("id" as never, other.id);
+    if (e2) return toast.error(e2.message);
+    onReload();
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -568,7 +584,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
       {products.length === 0 && <p className="text-sm text-white/40 text-center py-8">Nenhum produto cadastrado ainda.</p>}
 
       <div className="space-y-2">
-        {products.map(p => (
+        {[...products].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((p, idx, arr) => (
           <div key={p.id} className="rounded-xl p-3 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
             {p.image_url ? <img src={p.image_url} className="h-16 w-16 rounded object-cover" alt={p.name} /> : <div className="h-16 w-16 rounded bg-white/5" />}
             <div className="flex-1 min-w-0">
@@ -631,7 +647,9 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 >
                   <Copy className="h-3 w-3" /> Duplicar
                 </button>
-                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white">{p.is_active_by_partner ? "Desativar" : "Ativar"}</button>
+                <button onClick={() => moveProduct(p, -1)} disabled={idx === 0} className="text-[11px] text-white/60 hover:text-white disabled:opacity-30" title="Mover para cima">↑</button>
+                <button onClick={() => moveProduct(p, 1)} disabled={idx === arr.length - 1} className="text-[11px] text-white/60 hover:text-white disabled:opacity-30" title="Mover para baixo">↓</button>
+                <button onClick={() => toggleActive(p)} className="text-[11px] text-white/60 hover:text-white" title={p.is_active_by_partner ? "Ocultar do aluno" : "Mostrar para o aluno"}>{p.is_active_by_partner ? "Ocultar" : "Mostrar"}</button>
                 <button onClick={() => remove(p.id)} className="text-[11px] text-red-400"><Trash2 className="inline h-3 w-3" /></button>
               </div>
             </div>
