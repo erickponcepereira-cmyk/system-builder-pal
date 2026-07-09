@@ -174,6 +174,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
           .eq("is_active_by_partner" as never, true)
           .eq("is_ready_for_sale" as never, true as never)
           .is("deleted_at" as never, null as never)
+          .order("sort_order" as never, { ascending: true } as never)
           .limit(1000);
         if (error) console.error("[partner store]", error);
         return ((data as unknown as Array<{ id: string; name: string; description: string | null; image_url: string | null; image_urls?: string[] | null; price: number; original_price?: number | null; section_id: string | null; category_id: string | null; coach_commission_percentage?: number | null; partners?: { fantasy_name: string | null } | null }>) || []).map((r) => ({
