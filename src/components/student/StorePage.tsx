@@ -76,6 +76,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [activeSection, setActiveSection] = useState<SectionRow | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<CategoryRow | null>(null);
+  const [activeSubSub, setActiveSubSub] = useState<SubcategoryRow | null>(null);
   const [query, setQuery] = useState("");
   const cartStorageKey = coachMode ? "fitmind_cart_coach" : "fitmind_cart_student";
   const [cart, setCart] = useState<CartItem[]>(() => {
