@@ -68,6 +68,7 @@ function applyThemeToDocument(theme: BrandTheme) {
   links.forEach((l) => { l.href = theme.faviconUrl; });
 
   // Cor de fundo do body/html (evita flash)
+  document.documentElement.style.backgroundColor = theme.tokens.background;
   document.body.style.backgroundColor = theme.tokens.background;
 }
 
