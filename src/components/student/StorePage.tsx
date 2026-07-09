@@ -1227,7 +1227,27 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         </section>
       )}
 
-      {activeSection && (subcatsOfActive.length === 0 || activeSubcategory) && (
+      {activeSubcategory && !activeSubSub && subsubsOfActive.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {subsubsOfActive.map((sc) => (
+            <button
+              key={sc.id}
+              onClick={() => setActiveSubSub(sc)}
+              className="w-full overflow-hidden rounded-2xl bg-card text-left transition-colors hover:bg-accent"
+              style={{ width: sc.card_width ? `${sc.card_width}px` : undefined, height: sc.card_height ? `${sc.card_height}px` : undefined }}
+            >
+              {sc.image_url ? (
+                <img src={sc.image_url} alt={sc.name} className="h-24 w-full object-cover" />
+              ) : (
+                <div className="flex h-24 w-full items-center justify-center bg-muted"><ShoppingBag className="h-6 w-6 text-muted-foreground" /></div>
+              )}
+              <p className="px-3 py-2 text-sm font-bold text-foreground">{sc.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeSection && (subcatsOfActive.length === 0 || (activeSubcategory && (subsubsOfActive.length === 0 || activeSubSub))) && (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((item) => (
             <div key={item.id} className="relative">
