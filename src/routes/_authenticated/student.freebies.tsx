@@ -272,9 +272,18 @@ function StudentFreebies() {
             {pageMode === "discount" ? "Cupons de desconto exclusivos de parceiros" : "Brindes e bônus para você resgatar"}
           </p>
         </div>
-        <Link to="/student/partners" className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-3 py-1.5">
-          <Building2 className="h-3.5 w-3.5" /> Parceiros
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <Link to="/student/partners" className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-2.5 py-1.5">
+            <Building2 className="h-3.5 w-3.5" /> Parceiros
+          </Link>
+          <button
+            type="button"
+            onClick={() => document.getElementById("professionals-freebies")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary text-[10px] font-bold px-2.5 py-1.5"
+          >
+            <Gift className="h-3.5 w-3.5" /> Profissionais
+          </button>
+        </div>
       </div>
 
       <div className="p-4">
