@@ -13,10 +13,26 @@ export function translateAuthError(raw: unknown): string {
     return "Este e-mail já está cadastrado. Tente fazer login ou use a opção 'Esqueci minha senha'.";
   if (msg.includes("user already exists") || (msg.includes("already") && msg.includes("user")))
     return "Já existe uma conta com este e-mail. Faça login para continuar.";
-  if (msg.includes("password should be at least") || msg.includes("password is too short"))
+  if (msg.includes("password should be at least") || msg.includes("password is too short") || msg.includes("too short"))
     return "A senha é muito curta. Use no mínimo 8 caracteres, com 1 maiúscula e 1 número.";
-  if (msg.includes("weak password") || msg.includes("password is too weak"))
-    return "Senha fraca. Combine letras maiúsculas, minúsculas, números e símbolos.";
+  if (
+    msg.includes("pwned") ||
+    msg.includes("has been leaked") ||
+    msg.includes("compromised") ||
+    msg.includes("password is known") ||
+    msg.includes("found in a data breach") ||
+    msg.includes("data breach")
+  )
+    return "Esta senha já apareceu em vazamentos de dados públicos e não pode ser usada. Escolha uma senha única, que você não use em outros sites.";
+  if (
+    msg.includes("weak password") ||
+    msg.includes("password is too weak") ||
+    msg.includes("password strength") ||
+    msg.includes("password does not meet") ||
+    msg.includes("password too common") ||
+    msg.includes("common password")
+  )
+    return "Senha muito fácil de adivinhar. Evite sequências (123, abc, qwerty), datas de nascimento e palavras comuns. Combine palavras aleatórias, números e símbolos.";
   if (msg.includes("unable to validate email") || msg.includes("invalid email") || msg.includes("invalid format"))
     return "E-mail inválido. Confira se está no formato nome@dominio.com.";
   if (msg.includes("rate limit") || msg.includes("too many requests"))

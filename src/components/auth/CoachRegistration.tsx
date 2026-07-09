@@ -15,6 +15,7 @@ import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskCPF, maskPhone, maskCEP, generateReferralCode, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 
 // ============================================================
@@ -313,6 +314,7 @@ export function CoachRegistration({ onBack }: { onBack: () => void }) {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <PasswordStrengthMeter password={password} email={email} name={name} />
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">Confirmar senha *</Label>

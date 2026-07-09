@@ -14,6 +14,7 @@ import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskPhone } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { useBranding } from "@/components/theme-provider";
 import { CAROL_COACH_ID } from "@/lib/branding";
@@ -263,20 +264,8 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <ul className="mt-2 space-y-1 text-[11px]">
-                {([
-                  ["Mínimo 8 caracteres", password.length >= 8],
-                  ["1 letra maiúscula (A-Z)", /[A-Z]/.test(password)],
-                  ["1 letra minúscula (a-z)", /[a-z]/.test(password)],
-                  ["1 número (0-9)", /[0-9]/.test(password)],
-                  ["1 caractere especial (!@#$...)", /[^A-Za-z0-9]/.test(password)],
-                ] as const).map(([label, ok]) => (
-                  <li key={label} className={`flex items-center gap-1.5 ${ok ? "text-emerald-500" : "text-muted-foreground"}`}>
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                    {label}
-                  </li>
-                ))}
-              </ul>
+              <PasswordStrengthMeter password={password} email={email} name={name} />
+
             </div>
             <label className="flex items-start gap-2 cursor-pointer pt-1">
               <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-1" />

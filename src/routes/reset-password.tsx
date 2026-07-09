@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -129,6 +130,7 @@ function ResetPasswordPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <PasswordStrengthMeter password={password} />
               </div>
               <div className="space-y-2">
                 <Label className="text-white/70">Confirmar nova senha</Label>

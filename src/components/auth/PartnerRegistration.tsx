@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
 import { maskCNPJ, maskCPF, maskPhone, isValidCPF } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { CoachSelector, type CoachOption } from "@/components/auth/CoachSelector";
 import { checkEmailAvailable } from "@/lib/email-check.functions";
@@ -426,6 +427,9 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {!(existingEmailMode && !authProfile) && (
+                  <PasswordStrengthMeter password={password} email={email} name={responsibleName} />
+                )}
               </div>
             )}
 
