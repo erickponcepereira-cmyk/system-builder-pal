@@ -561,43 +561,69 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
               />
             </label>
 
-            {(challengeCandidates.length > 0 || editForm.challengeEnrollmentId) && (
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#cbd5e1", marginTop: 12 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  🏆 Vincular ao Desafio
-                </span>
-                <select
-                  value={editForm.challengeEnrollmentId && editForm.challengeType
-                    ? `${editForm.challengeEnrollmentId}|${editForm.challengeType}`
-                    : ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (!v) {
-                      setEditForm((f) => ({ ...f, challengeEnrollmentId: undefined, challengeType: undefined }));
-                    } else {
-                      const [eid, type] = v.split("|");
-                      setEditForm((f) => ({ ...f, challengeEnrollmentId: eid, challengeType: type as "initial" | "final" }));
-                    }
-                  }}
-                  style={{ background: "#0A0A0A", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 6, padding: "6px 8px", color: "#fff", fontSize: 13 }}
-                >
-                  <option value="">Não vincular</option>
-                  {editForm.challengeEnrollmentId && editForm.challengeType && !challengeCandidates.some(c => c.enrollmentId === editForm.challengeEnrollmentId && c.type === editForm.challengeType) && (
-                    <option value={`${editForm.challengeEnrollmentId}|${editForm.challengeType}`}>
-                      Vínculo atual · Pesagem {editForm.challengeType === "initial" ? "Inicial" : "Final"}
-                    </option>
-                  )}
-                  {challengeCandidates.map((c) => (
-                    <option key={`${c.enrollmentId}-${c.type}`} value={`${c.enrollmentId}|${c.type}`}>
-                      {c.compLabel} · Pesagem {c.type === "initial" ? "Inicial" : "Final"}
-                    </option>
-                  ))}
-                </select>
-                <span style={{ fontSize: 10, color: "#64748b" }}>
-                  Ao salvar, esta avaliação será registrada como pesagem do desafio (peso, % gordura e massa muscular são sincronizados automaticamente).
-                </span>
-              </label>
-            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11, color: "#cbd5e1", marginTop: 12, padding: 10, border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, background: "rgba(220,38,38,0.05)" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: "#fff" }}>
+                🏆 Vincular avaliação ao desafio atual
+              </span>
+
+              {editForm.challengeEnrollmentId && editForm.challengeType && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 6, padding: "6px 8px" }}>
+                  <span style={{ fontSize: 12, color: "#bbf7d0" }}>
+                    Vinculada · Pesagem {editForm.challengeType === "initial" ? "Inicial" : "Final"}
+                    {challengeCandidates.find(c => c.enrollmentId === editForm.challengeEnrollmentId)?.compLabel
+                      ? ` · ${challengeCandidates.find(c => c.enrollmentId === editForm.challengeEnrollmentId)?.compLabel}`
+                      : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm((f) => ({ ...f, challengeEnrollmentId: undefined, challengeType: undefined }))}
+                    style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 11 }}
+                  >
+                    Desvincular
+                  </button>
+                </div>
+              )}
+
+              {challengeCandidates.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {challengeCandidates.map((c) => {
+                    const selected = editForm.challengeEnrollmentId === c.enrollmentId && editForm.challengeType === c.type;
+                    return (
+                      <button
+                        key={`${c.enrollmentId}-${c.type}`}
+                        type="button"
+                        onClick={() => setEditForm((f) => ({ ...f, challengeEnrollmentId: c.enrollmentId, challengeType: c.type }))}
+                        disabled={selected}
+                        style={{
+                          background: selected ? "rgba(34,197,94,0.2)" : themeColor,
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "8px 10px",
+                          cursor: selected ? "default" : "pointer",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          opacity: selected ? 0.7 : 1,
+                          textAlign: "left",
+                        }}
+                      >
+                        {selected ? "✓ " : "+ "}Vincular como Pesagem {c.type === "initial" ? "Inicial" : "Final"} · {c.compLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                !editForm.challengeEnrollmentId && (
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                    Nenhum desafio ativo com pesagem pendente para este aluno.
+                  </span>
+                )
+              )}
+
+              <span style={{ fontSize: 10, color: "#64748b" }}>
+                Ao salvar, esta avaliação será registrada como pesagem do desafio (peso, % gordura e massa muscular são sincronizados automaticamente).
+              </span>
+            </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button onClick={closeEdit} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "10px 12px", cursor: "pointer", fontSize: 13 }}>Cancelar</button>
