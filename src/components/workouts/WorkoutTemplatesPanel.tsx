@@ -214,8 +214,8 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
             {viewing.description && <p className="mb-4 text-sm text-white/70 whitespace-pre-wrap">{viewing.description}</p>}
             {onEnableForStudent && (
               <div className="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-3">
-                <p className="text-xs font-bold text-white">Habilitar para {enableStudentName || "o aluno"}</p>
-                <p className="mt-0.5 text-[11px] text-white/60">Cada letra cria um dia de treino separado (A, B, C, D, E). Adicione vários para montar uma semana completa.</p>
+                <p className="text-xs font-bold text-white">{enableSectionTitle || `Habilitar para ${enableStudentName || "o aluno"}`}</p>
+                <p className="mt-0.5 text-[11px] text-white/60">{enableSectionHint || "Cada letra cria um dia de treino separado (A, B, C, D, E). Adicione vários para montar uma semana completa."}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {["A", "B", "C", "D", "E"].map((L) => (
                     <button
