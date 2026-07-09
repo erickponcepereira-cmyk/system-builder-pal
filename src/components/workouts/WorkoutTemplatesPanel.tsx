@@ -32,11 +32,19 @@ interface Props {
   onEnableForStudent?: (template: WorkoutTemplate, letter: string) => Promise<void> | void;
   /** Display name for the targeted student (shown in the modal). */
   enableStudentName?: string | null;
+  /** Hide create/edit/delete controls (used by student/self-service views). */
+  readOnly?: boolean;
+  /** Custom title/subtitle to override defaults. */
+  title?: string;
+  subtitle?: string;
+  /** Custom label for the letter picker section in the detail modal. */
+  enableSectionTitle?: string;
+  enableSectionHint?: string;
 }
 
 const EMPTY_ITEM = (): WorkoutTemplateItem => ({ name: "", sets: "", reps: "", rest: "", notes: "" });
 
-export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enableStudentName }: Props) {
+export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enableStudentName, readOnly, title, subtitle, enableSectionTitle, enableSectionHint }: Props) {
   const [list, setList] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
