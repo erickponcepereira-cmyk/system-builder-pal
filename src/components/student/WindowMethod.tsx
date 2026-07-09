@@ -2,7 +2,7 @@
 // Método das Janelas FitMind
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import { Loader2, TrendingDown, Dumbbell, Info, ChevronDown, ChevronUp, Activity, Check, Save } from "lucide-react";
 import janelaFechadaAsset from "@/assets/janela_fechada.png.asset.json";
 import janelaMeioAsset from "@/assets/janela_meio_aberta.png.asset.json";
 import janelaAbertaAsset from "@/assets/janela_aberta.png.asset.json";
