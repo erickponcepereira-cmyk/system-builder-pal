@@ -19,6 +19,7 @@ export type ProfessionalAppointmentItem = {
   student_coach_name: string | null;
   seller_name: string | null;
   product_name: string | null;
+  product_kind: string | null;
   order_status: string | null;
   order_number: string | null;
 };
