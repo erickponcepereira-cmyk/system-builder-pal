@@ -1529,13 +1529,13 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                   <Phone size={14} />
                 </a>
               )}
-              {onLinkClientToStudent && !c.studentId && (
+              {onLinkClientToStudent && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onLinkClientToStudent(c);
                   }}
-                  title="Integrar avaliações a um aluno cadastrado no sistema"
+                  title={c.studentId ? "Alterar/transferir vínculo com aluno" : "Integrar avaliações a um aluno cadastrado no sistema"}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -1543,9 +1543,9 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     height: 28,
                     padding: "0 8px",
                     borderRadius: 8,
-                    background: "rgba(220,38,38,0.18)",
-                    color: "#fca5a5",
-                    border: "1px solid rgba(220,38,38,0.45)",
+                    background: c.studentId ? "rgba(59,130,246,0.15)" : "rgba(220,38,38,0.18)",
+                    color: c.studentId ? "#93c5fd" : "#fca5a5",
+                    border: c.studentId ? "1px solid rgba(59,130,246,0.45)" : "1px solid rgba(220,38,38,0.45)",
                     cursor: "pointer",
                     marginRight: 6,
                     fontSize: 11,
@@ -1553,7 +1553,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Integrar
+                  {c.studentId ? "Alterar vínculo" : "Integrar"}
                 </button>
               )}
               {onUpdateClient && (
