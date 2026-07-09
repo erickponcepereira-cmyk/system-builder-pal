@@ -145,12 +145,14 @@ export function WorkoutTemplatesPanel({ mode, coachId, onEnableForStudent, enabl
     <div className="space-y-4 text-white">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-2"><Dumbbell className="h-5 w-5 text-primary" /> Treinos prontos</h2>
-          <p className="text-xs text-white/60">{mode === "admin" ? "Templates globais disponíveis a todos os coaches." : "Templates globais + seus templates pessoais."}</p>
+          <h2 className="text-lg font-bold flex items-center gap-2"><Dumbbell className="h-5 w-5 text-primary" /> {title || "Treinos prontos"}</h2>
+          <p className="text-xs text-white/60">{subtitle || (mode === "admin" ? "Templates globais disponíveis a todos os coaches." : "Templates globais + seus templates pessoais.")}</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-          <Plus className="h-4 w-4" /> Novo treino
-        </button>
+        {!readOnly && (
+          <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+            <Plus className="h-4 w-4" /> Novo treino
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
