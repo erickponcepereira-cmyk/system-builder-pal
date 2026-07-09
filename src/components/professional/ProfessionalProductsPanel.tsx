@@ -85,6 +85,7 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       .from("professional_products" as never)
       .select("*")
       .eq("coach_id" as never, coachId)
+      .order("sort_order" as never, { ascending: true })
       .order("created_at" as never, { ascending: false });
     setProducts((data as unknown as ProProduct[]) || []);
     setLoading(false);
