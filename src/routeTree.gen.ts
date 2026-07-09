@@ -49,6 +49,7 @@ import { Route as AuthenticatedStudentProfileRouteImport } from './routes/_authe
 import { Route as AuthenticatedStudentProfessionalTrackRouteImport } from './routes/_authenticated/student.professional-track'
 import { Route as AuthenticatedStudentPartnersRouteImport } from './routes/_authenticated/student.partners'
 import { Route as AuthenticatedStudentPartnerTrackRouteImport } from './routes/_authenticated/student.partner-track'
+import { Route as AuthenticatedStudentOrdersInProgressRouteImport } from './routes/_authenticated/student.orders-in-progress'
 import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/_authenticated/student.notifications'
 import { Route as AuthenticatedStudentMedicalRecordRouteImport } from './routes/_authenticated/student.medical-record'
 import { Route as AuthenticatedStudentLibraryRouteImport } from './routes/_authenticated/student.library'
@@ -64,6 +65,8 @@ import { Route as AuthenticatedStudentCardRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStudentCalendarRouteImport } from './routes/_authenticated/student.calendar'
 import { Route as AuthenticatedStudentBenefitsRouteImport } from './routes/_authenticated/student.benefits'
 import { Route as AuthenticatedStudentAssessmentsRouteImport } from './routes/_authenticated/student.assessments'
+import { Route as AuthenticatedProfessionalOrdersInProgressRouteImport } from './routes/_authenticated/professional.orders-in-progress'
+import { Route as AuthenticatedPartnerOrdersInProgressRouteImport } from './routes/_authenticated/partner.orders-in-progress'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
 import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
@@ -86,6 +89,7 @@ import { Route as AuthenticatedAdminPartnersRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminPartnerWalletRouteImport } from './routes/_authenticated/admin.partner-wallet'
 import { Route as AuthenticatedAdminPartnerReleasesRouteImport } from './routes/_authenticated/admin.partner-releases'
 import { Route as AuthenticatedAdminPartnerOrdersRouteImport } from './routes/_authenticated/admin.partner-orders'
+import { Route as AuthenticatedAdminOrdersInProgressRouteImport } from './routes/_authenticated/admin.orders-in-progress'
 import { Route as AuthenticatedAdminOrdersRouteImport } from './routes/_authenticated/admin.orders'
 import { Route as AuthenticatedAdminNutritionistWalletRouteImport } from './routes/_authenticated/admin.nutritionist-wallet'
 import { Route as AuthenticatedAdminNetworkUnlockHistoryRouteImport } from './routes/_authenticated/admin.network-unlock-history'
@@ -331,6 +335,12 @@ const AuthenticatedStudentPartnerTrackRoute =
     path: '/partner-track',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedStudentOrdersInProgressRoute =
+  AuthenticatedStudentOrdersInProgressRouteImport.update({
+    id: '/orders-in-progress',
+    path: '/orders-in-progress',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedStudentNotificationsRoute =
   AuthenticatedStudentNotificationsRouteImport.update({
     id: '/notifications',
@@ -420,6 +430,18 @@ const AuthenticatedStudentAssessmentsRoute =
     id: '/assessments',
     path: '/assessments',
     getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
+const AuthenticatedProfessionalOrdersInProgressRoute =
+  AuthenticatedProfessionalOrdersInProgressRouteImport.update({
+    id: '/orders-in-progress',
+    path: '/orders-in-progress',
+    getParentRoute: () => AuthenticatedProfessionalRoute,
+  } as any)
+const AuthenticatedPartnerOrdersInProgressRoute =
+  AuthenticatedPartnerOrdersInProgressRouteImport.update({
+    id: '/orders-in-progress',
+    path: '/orders-in-progress',
+    getParentRoute: () => AuthenticatedPartnerRoute,
   } as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   id: '/users',
@@ -549,6 +571,12 @@ const AuthenticatedAdminPartnerOrdersRoute =
   AuthenticatedAdminPartnerOrdersRouteImport.update({
     id: '/partner-orders',
     path: '/partner-orders',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminOrdersInProgressRoute =
+  AuthenticatedAdminOrdersInProgressRouteImport.update({
+    id: '/orders-in-progress',
+    path: '/orders-in-progress',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminOrdersRoute =
@@ -770,9 +798,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
-  '/partner': typeof AuthenticatedPartnerRoute
+  '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
-  '/professional': typeof AuthenticatedProfessionalRoute
+  '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
@@ -805,6 +833,7 @@ export interface FileRoutesByFullPath {
   '/admin/network-unlock-history': typeof AuthenticatedAdminNetworkUnlockHistoryRoute
   '/admin/nutritionist-wallet': typeof AuthenticatedAdminNutritionistWalletRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
+  '/admin/orders-in-progress': typeof AuthenticatedAdminOrdersInProgressRoute
   '/admin/partner-orders': typeof AuthenticatedAdminPartnerOrdersRoute
   '/admin/partner-releases': typeof AuthenticatedAdminPartnerReleasesRoute
   '/admin/partner-wallet': typeof AuthenticatedAdminPartnerWalletRoute
@@ -827,6 +856,8 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -842,6 +873,7 @@ export interface FileRoutesByFullPath {
   '/student/library': typeof AuthenticatedStudentLibraryRoute
   '/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
+  '/student/orders-in-progress': typeof AuthenticatedStudentOrdersInProgressRoute
   '/student/partner-track': typeof AuthenticatedStudentPartnerTrackRoute
   '/student/partners': typeof AuthenticatedStudentPartnersRouteWithChildren
   '/student/professional-track': typeof AuthenticatedStudentProfessionalTrackRoute
@@ -881,9 +913,9 @@ export interface FileRoutesByTo {
   '/termos-profissional': typeof TermosProfissionalRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
-  '/partner': typeof AuthenticatedPartnerRoute
+  '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
-  '/professional': typeof AuthenticatedProfessionalRoute
+  '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -915,6 +947,7 @@ export interface FileRoutesByTo {
   '/admin/network-unlock-history': typeof AuthenticatedAdminNetworkUnlockHistoryRoute
   '/admin/nutritionist-wallet': typeof AuthenticatedAdminNutritionistWalletRoute
   '/admin/orders': typeof AuthenticatedAdminOrdersRoute
+  '/admin/orders-in-progress': typeof AuthenticatedAdminOrdersInProgressRoute
   '/admin/partner-orders': typeof AuthenticatedAdminPartnerOrdersRoute
   '/admin/partner-releases': typeof AuthenticatedAdminPartnerReleasesRoute
   '/admin/partner-wallet': typeof AuthenticatedAdminPartnerWalletRoute
@@ -937,6 +970,8 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -952,6 +987,7 @@ export interface FileRoutesByTo {
   '/student/library': typeof AuthenticatedStudentLibraryRoute
   '/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
+  '/student/orders-in-progress': typeof AuthenticatedStudentOrdersInProgressRoute
   '/student/partner-track': typeof AuthenticatedStudentPartnerTrackRoute
   '/student/partners': typeof AuthenticatedStudentPartnersRouteWithChildren
   '/student/professional-track': typeof AuthenticatedStudentProfessionalTrackRoute
@@ -994,9 +1030,9 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
-  '/_authenticated/partner': typeof AuthenticatedPartnerRoute
+  '/_authenticated/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
-  '/_authenticated/professional': typeof AuthenticatedProfessionalRoute
+  '/_authenticated/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
@@ -1029,6 +1065,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/network-unlock-history': typeof AuthenticatedAdminNetworkUnlockHistoryRoute
   '/_authenticated/admin/nutritionist-wallet': typeof AuthenticatedAdminNutritionistWalletRoute
   '/_authenticated/admin/orders': typeof AuthenticatedAdminOrdersRoute
+  '/_authenticated/admin/orders-in-progress': typeof AuthenticatedAdminOrdersInProgressRoute
   '/_authenticated/admin/partner-orders': typeof AuthenticatedAdminPartnerOrdersRoute
   '/_authenticated/admin/partner-releases': typeof AuthenticatedAdminPartnerReleasesRoute
   '/_authenticated/admin/partner-wallet': typeof AuthenticatedAdminPartnerWalletRoute
@@ -1051,6 +1088,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/partner/orders-in-progress': typeof AuthenticatedPartnerOrdersInProgressRoute
+  '/_authenticated/professional/orders-in-progress': typeof AuthenticatedProfessionalOrdersInProgressRoute
   '/_authenticated/student/assessments': typeof AuthenticatedStudentAssessmentsRoute
   '/_authenticated/student/benefits': typeof AuthenticatedStudentBenefitsRoute
   '/_authenticated/student/calendar': typeof AuthenticatedStudentCalendarRoute
@@ -1066,6 +1105,7 @@ export interface FileRoutesById {
   '/_authenticated/student/library': typeof AuthenticatedStudentLibraryRoute
   '/_authenticated/student/medical-record': typeof AuthenticatedStudentMedicalRecordRoute
   '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
+  '/_authenticated/student/orders-in-progress': typeof AuthenticatedStudentOrdersInProgressRoute
   '/_authenticated/student/partner-track': typeof AuthenticatedStudentPartnerTrackRoute
   '/_authenticated/student/partners': typeof AuthenticatedStudentPartnersRouteWithChildren
   '/_authenticated/student/professional-track': typeof AuthenticatedStudentProfessionalTrackRoute
@@ -1143,6 +1183,7 @@ export interface FileRouteTypes {
     | '/admin/network-unlock-history'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/orders-in-progress'
     | '/admin/partner-orders'
     | '/admin/partner-releases'
     | '/admin/partner-wallet'
@@ -1165,6 +1206,8 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/partner/orders-in-progress'
+    | '/professional/orders-in-progress'
     | '/student/assessments'
     | '/student/benefits'
     | '/student/calendar'
@@ -1180,6 +1223,7 @@ export interface FileRouteTypes {
     | '/student/library'
     | '/student/medical-record'
     | '/student/notifications'
+    | '/student/orders-in-progress'
     | '/student/partner-track'
     | '/student/partners'
     | '/student/professional-track'
@@ -1253,6 +1297,7 @@ export interface FileRouteTypes {
     | '/admin/network-unlock-history'
     | '/admin/nutritionist-wallet'
     | '/admin/orders'
+    | '/admin/orders-in-progress'
     | '/admin/partner-orders'
     | '/admin/partner-releases'
     | '/admin/partner-wallet'
@@ -1275,6 +1320,8 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/test-sales'
     | '/admin/users'
+    | '/partner/orders-in-progress'
+    | '/professional/orders-in-progress'
     | '/student/assessments'
     | '/student/benefits'
     | '/student/calendar'
@@ -1290,6 +1337,7 @@ export interface FileRouteTypes {
     | '/student/library'
     | '/student/medical-record'
     | '/student/notifications'
+    | '/student/orders-in-progress'
     | '/student/partner-track'
     | '/student/partners'
     | '/student/professional-track'
@@ -1366,6 +1414,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/network-unlock-history'
     | '/_authenticated/admin/nutritionist-wallet'
     | '/_authenticated/admin/orders'
+    | '/_authenticated/admin/orders-in-progress'
     | '/_authenticated/admin/partner-orders'
     | '/_authenticated/admin/partner-releases'
     | '/_authenticated/admin/partner-wallet'
@@ -1388,6 +1437,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/subscriptions'
     | '/_authenticated/admin/test-sales'
     | '/_authenticated/admin/users'
+    | '/_authenticated/partner/orders-in-progress'
+    | '/_authenticated/professional/orders-in-progress'
     | '/_authenticated/student/assessments'
     | '/_authenticated/student/benefits'
     | '/_authenticated/student/calendar'
@@ -1403,6 +1454,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/library'
     | '/_authenticated/student/medical-record'
     | '/_authenticated/student/notifications'
+    | '/_authenticated/student/orders-in-progress'
     | '/_authenticated/student/partner-track'
     | '/_authenticated/student/partners'
     | '/_authenticated/student/professional-track'
@@ -1740,6 +1792,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentPartnerTrackRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/student/orders-in-progress': {
+      id: '/_authenticated/student/orders-in-progress'
+      path: '/orders-in-progress'
+      fullPath: '/student/orders-in-progress'
+      preLoaderRoute: typeof AuthenticatedStudentOrdersInProgressRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
     '/_authenticated/student/notifications': {
       id: '/_authenticated/student/notifications'
       path: '/notifications'
@@ -1844,6 +1903,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/student/assessments'
       preLoaderRoute: typeof AuthenticatedStudentAssessmentsRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
+    }
+    '/_authenticated/professional/orders-in-progress': {
+      id: '/_authenticated/professional/orders-in-progress'
+      path: '/orders-in-progress'
+      fullPath: '/professional/orders-in-progress'
+      preLoaderRoute: typeof AuthenticatedProfessionalOrdersInProgressRouteImport
+      parentRoute: typeof AuthenticatedProfessionalRoute
+    }
+    '/_authenticated/partner/orders-in-progress': {
+      id: '/_authenticated/partner/orders-in-progress'
+      path: '/orders-in-progress'
+      fullPath: '/partner/orders-in-progress'
+      preLoaderRoute: typeof AuthenticatedPartnerOrdersInProgressRouteImport
+      parentRoute: typeof AuthenticatedPartnerRoute
     }
     '/_authenticated/admin/users': {
       id: '/_authenticated/admin/users'
@@ -1997,6 +2070,13 @@ declare module '@tanstack/react-router' {
       path: '/partner-orders'
       fullPath: '/admin/partner-orders'
       preLoaderRoute: typeof AuthenticatedAdminPartnerOrdersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/orders-in-progress': {
+      id: '/_authenticated/admin/orders-in-progress'
+      path: '/orders-in-progress'
+      fullPath: '/admin/orders-in-progress'
+      preLoaderRoute: typeof AuthenticatedAdminOrdersInProgressRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/orders': {
@@ -2280,6 +2360,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminNetworkUnlockHistoryRoute: typeof AuthenticatedAdminNetworkUnlockHistoryRoute
   AuthenticatedAdminNutritionistWalletRoute: typeof AuthenticatedAdminNutritionistWalletRoute
   AuthenticatedAdminOrdersRoute: typeof AuthenticatedAdminOrdersRoute
+  AuthenticatedAdminOrdersInProgressRoute: typeof AuthenticatedAdminOrdersInProgressRoute
   AuthenticatedAdminPartnerOrdersRoute: typeof AuthenticatedAdminPartnerOrdersRoute
   AuthenticatedAdminPartnerReleasesRoute: typeof AuthenticatedAdminPartnerReleasesRoute
   AuthenticatedAdminPartnerWalletRoute: typeof AuthenticatedAdminPartnerWalletRoute
@@ -2338,6 +2419,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminNutritionistWalletRoute:
     AuthenticatedAdminNutritionistWalletRoute,
   AuthenticatedAdminOrdersRoute: AuthenticatedAdminOrdersRoute,
+  AuthenticatedAdminOrdersInProgressRoute:
+    AuthenticatedAdminOrdersInProgressRoute,
   AuthenticatedAdminPartnerOrdersRoute: AuthenticatedAdminPartnerOrdersRoute,
   AuthenticatedAdminPartnerReleasesRoute:
     AuthenticatedAdminPartnerReleasesRoute,
@@ -2371,6 +2454,33 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedPartnerRouteChildren {
+  AuthenticatedPartnerOrdersInProgressRoute: typeof AuthenticatedPartnerOrdersInProgressRoute
+}
+
+const AuthenticatedPartnerRouteChildren: AuthenticatedPartnerRouteChildren = {
+  AuthenticatedPartnerOrdersInProgressRoute:
+    AuthenticatedPartnerOrdersInProgressRoute,
+}
+
+const AuthenticatedPartnerRouteWithChildren =
+  AuthenticatedPartnerRoute._addFileChildren(AuthenticatedPartnerRouteChildren)
+
+interface AuthenticatedProfessionalRouteChildren {
+  AuthenticatedProfessionalOrdersInProgressRoute: typeof AuthenticatedProfessionalOrdersInProgressRoute
+}
+
+const AuthenticatedProfessionalRouteChildren: AuthenticatedProfessionalRouteChildren =
+  {
+    AuthenticatedProfessionalOrdersInProgressRoute:
+      AuthenticatedProfessionalOrdersInProgressRoute,
+  }
+
+const AuthenticatedProfessionalRouteWithChildren =
+  AuthenticatedProfessionalRoute._addFileChildren(
+    AuthenticatedProfessionalRouteChildren,
+  )
 
 interface AuthenticatedStudentPartnersRouteChildren {
   AuthenticatedStudentPartnersPartnerIdRoute: typeof AuthenticatedStudentPartnersPartnerIdRoute
@@ -2417,6 +2527,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentLibraryRoute: typeof AuthenticatedStudentLibraryRoute
   AuthenticatedStudentMedicalRecordRoute: typeof AuthenticatedStudentMedicalRecordRoute
   AuthenticatedStudentNotificationsRoute: typeof AuthenticatedStudentNotificationsRoute
+  AuthenticatedStudentOrdersInProgressRoute: typeof AuthenticatedStudentOrdersInProgressRoute
   AuthenticatedStudentPartnerTrackRoute: typeof AuthenticatedStudentPartnerTrackRoute
   AuthenticatedStudentPartnersRoute: typeof AuthenticatedStudentPartnersRouteWithChildren
   AuthenticatedStudentProfessionalTrackRoute: typeof AuthenticatedStudentProfessionalTrackRoute
@@ -2446,6 +2557,8 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
     AuthenticatedStudentMedicalRecordRoute,
   AuthenticatedStudentNotificationsRoute:
     AuthenticatedStudentNotificationsRoute,
+  AuthenticatedStudentOrdersInProgressRoute:
+    AuthenticatedStudentOrdersInProgressRoute,
   AuthenticatedStudentPartnerTrackRoute: AuthenticatedStudentPartnerTrackRoute,
   AuthenticatedStudentPartnersRoute:
     AuthenticatedStudentPartnersRouteWithChildren,
@@ -2467,9 +2580,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAssinaturaRoute: typeof AuthenticatedAssinaturaRoute
   AuthenticatedCoachRoute: typeof AuthenticatedCoachRoute
-  AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRoute
+  AuthenticatedPartnerRoute: typeof AuthenticatedPartnerRouteWithChildren
   AuthenticatedPortalSelectorRoute: typeof AuthenticatedPortalSelectorRoute
-  AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRoute
+  AuthenticatedProfessionalRoute: typeof AuthenticatedProfessionalRouteWithChildren
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
 }
 
@@ -2477,9 +2590,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAssinaturaRoute: AuthenticatedAssinaturaRoute,
   AuthenticatedCoachRoute: AuthenticatedCoachRoute,
-  AuthenticatedPartnerRoute: AuthenticatedPartnerRoute,
+  AuthenticatedPartnerRoute: AuthenticatedPartnerRouteWithChildren,
   AuthenticatedPortalSelectorRoute: AuthenticatedPortalSelectorRoute,
-  AuthenticatedProfessionalRoute: AuthenticatedProfessionalRoute,
+  AuthenticatedProfessionalRoute: AuthenticatedProfessionalRouteWithChildren,
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
 }
 

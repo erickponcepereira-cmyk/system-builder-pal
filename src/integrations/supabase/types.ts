@@ -5184,6 +5184,8 @@ export type Database = {
           coach_commission_pct: number
           coach_net_amount: number
           created_at: string
+          delivery_days: number | null
+          delivery_started_at: string | null
           gross_amount: number
           id: string
           master_coach_cross_beneficiary_coach_id: string | null
@@ -5211,6 +5213,11 @@ export type Database = {
           release_status: Database["public"]["Enums"]["release_status_type"]
           sale_channel: string
           selling_coach_id: string | null
+          shipping_address: string | null
+          shipping_location_url: string | null
+          shipping_number: string | null
+          shipping_reference: string | null
+          shipping_zip: string | null
           status: string
           student_id: string
           system_fee: number
@@ -5227,6 +5234,8 @@ export type Database = {
           coach_commission_pct?: number
           coach_net_amount?: number
           created_at?: string
+          delivery_days?: number | null
+          delivery_started_at?: string | null
           gross_amount?: number
           id?: string
           master_coach_cross_beneficiary_coach_id?: string | null
@@ -5254,6 +5263,11 @@ export type Database = {
           release_status?: Database["public"]["Enums"]["release_status_type"]
           sale_channel?: string
           selling_coach_id?: string | null
+          shipping_address?: string | null
+          shipping_location_url?: string | null
+          shipping_number?: string | null
+          shipping_reference?: string | null
+          shipping_zip?: string | null
           status?: string
           student_id: string
           system_fee?: number
@@ -5270,6 +5284,8 @@ export type Database = {
           coach_commission_pct?: number
           coach_net_amount?: number
           created_at?: string
+          delivery_days?: number | null
+          delivery_started_at?: string | null
           gross_amount?: number
           id?: string
           master_coach_cross_beneficiary_coach_id?: string | null
@@ -5297,6 +5313,11 @@ export type Database = {
           release_status?: Database["public"]["Enums"]["release_status_type"]
           sale_channel?: string
           selling_coach_id?: string | null
+          shipping_address?: string | null
+          shipping_location_url?: string | null
+          shipping_number?: string | null
+          shipping_reference?: string | null
+          shipping_zip?: string | null
           status?: string
           student_id?: string
           system_fee?: number
@@ -5443,6 +5464,7 @@ export type Database = {
           coach_commission_percentage: number
           created_at: string
           deleted_at: string | null
+          delivery_days: number | null
           description: string | null
           discount_percent: number | null
           estimated_value: number | null
@@ -5454,6 +5476,7 @@ export type Database = {
           image_url: string | null
           image_urls: string[]
           is_active_by_partner: boolean
+          is_physical: boolean
           is_ready_for_sale: boolean
           kind: string
           monthly_redeem_limit: number | null
@@ -5494,6 +5517,7 @@ export type Database = {
           coach_commission_percentage?: number
           created_at?: string
           deleted_at?: string | null
+          delivery_days?: number | null
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
@@ -5505,6 +5529,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_partner?: boolean
+          is_physical?: boolean
           is_ready_for_sale?: boolean
           kind: string
           monthly_redeem_limit?: number | null
@@ -5545,6 +5570,7 @@ export type Database = {
           coach_commission_percentage?: number
           created_at?: string
           deleted_at?: string | null
+          delivery_days?: number | null
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
@@ -5556,6 +5582,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_partner?: boolean
+          is_physical?: boolean
           is_ready_for_sale?: boolean
           kind?: string
           monthly_redeem_limit?: number | null
@@ -6533,6 +6560,7 @@ export type Database = {
           creator_commission_percentage: number | null
           credit_fee_percentage: number | null
           debit_fee_percentage: number | null
+          delivery_days: number | null
           description: string | null
           duration_days: number | null
           feature_awards: boolean | null
@@ -6620,6 +6648,7 @@ export type Database = {
           creator_commission_percentage?: number | null
           credit_fee_percentage?: number | null
           debit_fee_percentage?: number | null
+          delivery_days?: number | null
           description?: string | null
           duration_days?: number | null
           feature_awards?: boolean | null
@@ -6707,6 +6736,7 @@ export type Database = {
           creator_commission_percentage?: number | null
           credit_fee_percentage?: number | null
           debit_fee_percentage?: number | null
+          delivery_days?: number | null
           description?: string | null
           duration_days?: number | null
           feature_awards?: boolean | null
@@ -7133,6 +7163,7 @@ export type Database = {
           created_at: string
           default_duration_minutes: number
           deleted_at: string | null
+          delivery_days: number | null
           description: string | null
           discount_percent: number | null
           estimated_value: number | null
@@ -7144,6 +7175,7 @@ export type Database = {
           image_url: string | null
           image_urls: string[]
           is_active_by_professional: boolean
+          is_physical: boolean
           is_ready_for_sale: boolean
           is_schedulable: boolean
           kind: string
@@ -7186,6 +7218,7 @@ export type Database = {
           created_at?: string
           default_duration_minutes?: number
           deleted_at?: string | null
+          delivery_days?: number | null
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
@@ -7197,6 +7230,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_professional?: boolean
+          is_physical?: boolean
           is_ready_for_sale?: boolean
           is_schedulable?: boolean
           kind?: string
@@ -7239,6 +7273,7 @@ export type Database = {
           created_at?: string
           default_duration_minutes?: number
           deleted_at?: string | null
+          delivery_days?: number | null
           description?: string | null
           discount_percent?: number | null
           estimated_value?: number | null
@@ -7250,6 +7285,7 @@ export type Database = {
           image_url?: string | null
           image_urls?: string[]
           is_active_by_professional?: boolean
+          is_physical?: boolean
           is_ready_for_sale?: boolean
           is_schedulable?: boolean
           kind?: string
@@ -8088,6 +8124,8 @@ export type Database = {
         Row: {
           available_at: string | null
           created_at: string
+          delivery_days: number | null
+          delivery_started_at: string | null
           fitcoin_used: number
           id: string
           metadata: Json
@@ -8105,8 +8143,11 @@ export type Database = {
           sale_channel: string
           shipping_address: string | null
           shipping_city: string | null
+          shipping_location_url: string | null
           shipping_name: string | null
+          shipping_number: string | null
           shipping_phone: string | null
+          shipping_reference: string | null
           shipping_state: string | null
           shipping_zip: string | null
           status: string
@@ -8119,6 +8160,8 @@ export type Database = {
         Insert: {
           available_at?: string | null
           created_at?: string
+          delivery_days?: number | null
+          delivery_started_at?: string | null
           fitcoin_used?: number
           id?: string
           metadata?: Json
@@ -8136,8 +8179,11 @@ export type Database = {
           sale_channel?: string
           shipping_address?: string | null
           shipping_city?: string | null
+          shipping_location_url?: string | null
           shipping_name?: string | null
+          shipping_number?: string | null
           shipping_phone?: string | null
+          shipping_reference?: string | null
           shipping_state?: string | null
           shipping_zip?: string | null
           status?: string
@@ -8150,6 +8196,8 @@ export type Database = {
         Update: {
           available_at?: string | null
           created_at?: string
+          delivery_days?: number | null
+          delivery_started_at?: string | null
           fitcoin_used?: number
           id?: string
           metadata?: Json
@@ -8167,8 +8215,11 @@ export type Database = {
           sale_channel?: string
           shipping_address?: string | null
           shipping_city?: string | null
+          shipping_location_url?: string | null
           shipping_name?: string | null
+          shipping_number?: string | null
           shipping_phone?: string | null
+          shipping_reference?: string | null
           shipping_state?: string | null
           shipping_zip?: string | null
           status?: string
@@ -8206,11 +8257,13 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string | null
+          delivery_days: number | null
           description: string | null
           herbalife_product_code: string | null
           id: string
           image_url: string | null
           is_herbalife: boolean | null
+          is_physical: boolean
           name: string
           original_price: number | null
           price: number
@@ -8221,11 +8274,13 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string | null
+          delivery_days?: number | null
           description?: string | null
           herbalife_product_code?: string | null
           id?: string
           image_url?: string | null
           is_herbalife?: boolean | null
+          is_physical?: boolean
           name: string
           original_price?: number | null
           price: number
@@ -8236,11 +8291,13 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string | null
+          delivery_days?: number | null
           description?: string | null
           herbalife_product_code?: string | null
           id?: string
           image_url?: string | null
           is_herbalife?: boolean | null
+          is_physical?: boolean
           name?: string
           original_price?: number | null
           price?: number
@@ -8808,6 +8865,11 @@ export type Database = {
           referral_code: string | null
           referral_link: string | null
           referred_by_student_id: string | null
+          shipping_address: string | null
+          shipping_location_url: string | null
+          shipping_number: string | null
+          shipping_reference: string | null
+          shipping_zip: string | null
           target_fat_percentage: number | null
           target_muscle_mass: number | null
           updated_at: string | null
@@ -8847,6 +8909,11 @@ export type Database = {
           referral_code?: string | null
           referral_link?: string | null
           referred_by_student_id?: string | null
+          shipping_address?: string | null
+          shipping_location_url?: string | null
+          shipping_number?: string | null
+          shipping_reference?: string | null
+          shipping_zip?: string | null
           target_fat_percentage?: number | null
           target_muscle_mass?: number | null
           updated_at?: string | null
@@ -8886,6 +8953,11 @@ export type Database = {
           referral_code?: string | null
           referral_link?: string | null
           referred_by_student_id?: string | null
+          shipping_address?: string | null
+          shipping_location_url?: string | null
+          shipping_number?: string | null
+          shipping_reference?: string | null
+          shipping_zip?: string | null
           target_fat_percentage?: number | null
           target_muscle_mass?: number | null
           updated_at?: string | null

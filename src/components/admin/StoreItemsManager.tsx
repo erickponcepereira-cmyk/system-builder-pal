@@ -29,6 +29,7 @@ interface Item {
   price: number;
   original_price: number | null;
   stock: number | null;
+  delivery_days?: number | null;
   sku: string | null;
   is_featured: boolean;
   is_active: boolean;
@@ -69,7 +70,7 @@ export function StoreItemsManager() {
       supabase.from("store_subcategories" as any).select("id,category_id,name").order("sort_order"),
       supabase
         .from("products")
-        .select("id,section_id,category_id,subcategory_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
+        .select("id,section_id,category_id,subcategory_id,kind,name,description,short_description,image_url,image_urls,price,original_price,stock,delivery_days,sku,is_featured,is_active,has_challenge_access,challenge_tokens_amount,sort_order,visibility_audiences")
         .not("kind", "is", null)
         .order("sort_order"),
     ]);
@@ -155,6 +156,7 @@ export function StoreItemsManager() {
         price: Number(editing.price) || 0,
         original_price: editing.original_price ? Number(editing.original_price) : null,
         stock: editing.kind === "physical" && editing.stock !== null && editing.stock !== undefined ? Number(editing.stock) : null,
+        delivery_days: editing.kind === "physical" && editing.delivery_days ? Number(editing.delivery_days) : null,
         sku: editing.sku || null,
         is_featured: !!editing.is_featured,
         is_active: !!editing.is_active,
@@ -473,6 +475,20 @@ export function StoreItemsManager() {
                 <div>
                   <label className="text-xs text-white/60 mb-1 block">Estoque</label>
                   <input type="number" className="input-dark w-full" value={editing.stock ?? ""} onChange={(e) => setEditing({ ...editing, stock: e.target.value ? Number(e.target.value) : null })} />
+                </div>
+              )}
+              {editing.kind === "physical" && (
+                <div>
+                  <label className="text-xs text-white/60 mb-1 block">Prazo médio de entrega (dias) *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    className="input-dark w-full"
+                    value={(editing as any).delivery_days ?? ""}
+                    onChange={(e) => setEditing({ ...editing, delivery_days: e.target.value ? Number(e.target.value) : null } as any)}
+                    placeholder="Ex.: 10"
+                  />
                 </div>
               )}
               <div>

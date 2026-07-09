@@ -83,6 +83,8 @@ interface Product {
   redemption_location_name?: string | null;
   redemption_location_url?: string | null;
   sort_order?: number | null;
+  is_physical?: boolean;
+  delivery_days?: number | null;
 }
 
 
@@ -848,6 +850,32 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
               {editing.kind === "paid" && (
                 <Field label="Estoque (opcional)"><input type="number" value={editing.stock ?? ""} onChange={e => setEditing({ ...editing, stock: e.target.value === "" ? null : Number(e.target.value) })} className="field-input" /></Field>
+              )}
+
+              {editing.kind === "paid" && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <label className="flex items-center gap-2 text-xs font-bold text-primary">
+                    <input
+                      type="checkbox"
+                      checked={!!(editing as any).is_physical}
+                      onChange={e => setEditing({ ...editing, is_physical: e.target.checked } as any)}
+                    />
+                    Produto físico (requer entrega)
+                  </label>
+                  {(editing as any).is_physical && (
+                    <Field label="Prazo médio de entrega (dias) *">
+                      <input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={(editing as any).delivery_days ?? ""}
+                        onChange={e => setEditing({ ...editing, delivery_days: e.target.value === "" ? null : Math.max(1, Number(e.target.value)) } as any)}
+                        placeholder="Ex.: 7"
+                        className="field-input"
+                      />
+                    </Field>
+                  )}
+                </div>
               )}
 
               <CategoryPicker
