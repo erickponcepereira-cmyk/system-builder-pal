@@ -284,7 +284,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
         id: `item-${it.id}`, sourceId: it.id, title: it.name, subtitle: it.short_description, description: it.description,
         price: Number(it.price || 0), originalPrice: it.original_price ? Number(it.original_price) : null,
         category: sectionName(it.section_id), kind: "item" as const,
-        sectionId: it.section_id ?? null, categoryId: it.category_id ?? null,
+        sectionId: it.section_id ?? null, categoryId: it.category_id ?? null, subcategoryId: it.subcategory_id ?? null,
         tag: it.kind === "digital" ? "Digital" : undefined,
         stock: it.kind === "physical" ? it.stock : null, imageUrl: it.image_url,
         imageUrls: (it.image_urls && it.image_urls.length ? it.image_urls : (it.image_url ? [it.image_url] : [])),
