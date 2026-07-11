@@ -68,7 +68,7 @@ export const adminSearchStudents = createServerFn({ method: "POST" })
         .select("id, name")
         .in("id", cpIds);
       const cpMap = new Map((cprofs || []).map((p) => [p.id, p.name as string | null]));
-      coachMap = new Map((coaches || []).map((c) => [c.id, cpMap.get(c.profile_id) || null]));
+      coachMap = new Map<string, string>((coaches || []).map((c) => [c.id, cpMap.get(c.profile_id) || ""]));
     }
 
     const profMap = new Map((profs || []).map((p) => [p.id, p]));
