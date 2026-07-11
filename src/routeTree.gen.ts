@@ -73,6 +73,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminTestSalesRouteImport } from './routes/_authenticated/admin.test-sales'
 import { Route as AuthenticatedAdminSubscriptionsRouteImport } from './routes/_authenticated/admin.subscriptions'
 import { Route as AuthenticatedAdminStudentsRouteImport } from './routes/_authenticated/admin.students'
+import { Route as AuthenticatedAdminStudentTraceRouteImport } from './routes/_authenticated/admin.student-trace'
 import { Route as AuthenticatedAdminStoreReportsRouteImport } from './routes/_authenticated/admin.store-reports'
 import { Route as AuthenticatedAdminStoreRouteImport } from './routes/_authenticated/admin.store'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
@@ -481,6 +482,12 @@ const AuthenticatedAdminStudentsRoute =
     path: '/students',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminStudentTraceRoute =
+  AuthenticatedAdminStudentTraceRouteImport.update({
+    id: '/student-trace',
+    path: '/student-trace',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminStoreReportsRoute =
   AuthenticatedAdminStoreReportsRouteImport.update({
     id: '/store-reports',
@@ -874,6 +881,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/store': typeof AuthenticatedAdminStoreRoute
   '/admin/store-reports': typeof AuthenticatedAdminStoreReportsRoute
+  '/admin/student-trace': typeof AuthenticatedAdminStudentTraceRoute
   '/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
@@ -991,6 +999,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/store': typeof AuthenticatedAdminStoreRoute
   '/admin/store-reports': typeof AuthenticatedAdminStoreReportsRoute
+  '/admin/student-trace': typeof AuthenticatedAdminStudentTraceRoute
   '/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
@@ -1112,6 +1121,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/store': typeof AuthenticatedAdminStoreRoute
   '/_authenticated/admin/store-reports': typeof AuthenticatedAdminStoreReportsRoute
+  '/_authenticated/admin/student-trace': typeof AuthenticatedAdminStudentTraceRoute
   '/_authenticated/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/_authenticated/admin/subscriptions': typeof AuthenticatedAdminSubscriptionsRoute
   '/_authenticated/admin/test-sales': typeof AuthenticatedAdminTestSalesRoute
@@ -1233,6 +1243,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/store'
     | '/admin/store-reports'
+    | '/admin/student-trace'
     | '/admin/students'
     | '/admin/subscriptions'
     | '/admin/test-sales'
@@ -1350,6 +1361,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/store'
     | '/admin/store-reports'
+    | '/admin/student-trace'
     | '/admin/students'
     | '/admin/subscriptions'
     | '/admin/test-sales'
@@ -1470,6 +1482,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/store'
     | '/_authenticated/admin/store-reports'
+    | '/_authenticated/admin/student-trace'
     | '/_authenticated/admin/students'
     | '/_authenticated/admin/subscriptions'
     | '/_authenticated/admin/test-sales'
@@ -1999,6 +2012,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminStudentsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/student-trace': {
+      id: '/_authenticated/admin/student-trace'
+      path: '/student-trace'
+      fullPath: '/admin/student-trace'
+      preLoaderRoute: typeof AuthenticatedAdminStudentTraceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/store-reports': {
       id: '/_authenticated/admin/store-reports'
       path: '/store-reports'
@@ -2440,6 +2460,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
   AuthenticatedAdminStoreRoute: typeof AuthenticatedAdminStoreRoute
   AuthenticatedAdminStoreReportsRoute: typeof AuthenticatedAdminStoreReportsRoute
+  AuthenticatedAdminStudentTraceRoute: typeof AuthenticatedAdminStudentTraceRoute
   AuthenticatedAdminStudentsRoute: typeof AuthenticatedAdminStudentsRoute
   AuthenticatedAdminSubscriptionsRoute: typeof AuthenticatedAdminSubscriptionsRoute
   AuthenticatedAdminTestSalesRoute: typeof AuthenticatedAdminTestSalesRoute
@@ -2508,6 +2529,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
   AuthenticatedAdminStoreRoute: AuthenticatedAdminStoreRoute,
   AuthenticatedAdminStoreReportsRoute: AuthenticatedAdminStoreReportsRoute,
+  AuthenticatedAdminStudentTraceRoute: AuthenticatedAdminStudentTraceRoute,
   AuthenticatedAdminStudentsRoute: AuthenticatedAdminStudentsRoute,
   AuthenticatedAdminSubscriptionsRoute: AuthenticatedAdminSubscriptionsRoute,
   AuthenticatedAdminTestSalesRoute: AuthenticatedAdminTestSalesRoute,
@@ -2704,13 +2726,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
