@@ -315,14 +315,14 @@ export const adminTraceStudent = createServerFn({ method: "POST" })
     const { data: lastTx } = await supabaseAdmin
       .from("transactions")
       .select("created_at")
-      .eq("payer_profile_id", student.profile_id)
+      .eq("student_id", student.id)
       .order("created_at", { ascending: false })
       .limit(1);
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
       .select("id, status")
       .eq("student_id", student.id)
-      .in("status", ["active", "trialing"])
+      .eq("status", "active")
       .limit(1);
 
     return {
