@@ -10666,6 +10666,10 @@ export type Database = {
         Args: { _gender?: string; _student_id: string }
         Returns: string
       }
+      ensure_coach_evaluation_client_for_student: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
       ensure_student_for_profile: {
         Args: {
           _partner_id?: string
