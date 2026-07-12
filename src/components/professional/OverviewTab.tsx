@@ -117,6 +117,15 @@ export function OverviewTab({ coachId, coachName }: Props) {
     toast.success("Link copiado!");
   };
 
+  const shareReferral = async () => {
+    if (!fullReferral) return;
+    const shareData = { title: "FitMind Club", text: "Entre no FitMind Club pelo meu link:", url: fullReferral };
+    if (typeof navigator !== "undefined" && (navigator as Navigator).share) {
+      try { await (navigator as Navigator).share(shareData); return; } catch { /* fallback */ }
+    }
+    copyReferral();
+  };
+
   const teamWaLink = stats.uplineCoachPhone
     ? `https://wa.me/${onlyDigits(stats.uplineCoachPhone)}?text=${encodeURIComponent(
         `Olá ${stats.uplineCoachName || ""}! Sou ${coachName} e gostaria de saber mais sobre como montar minha equipe de profissionais.`,
@@ -139,16 +148,33 @@ export function OverviewTab({ coachId, coachName }: Props) {
 
       {/* Referral */}
       <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <LinkIcon className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-bold text-white">Seu link de indicação</h2>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <LinkIcon className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-bold text-white">Seu link de indicação</h2>
+          </div>
+          {fullReferral && (
+            <button
+              type="button"
+              onClick={shareReferral}
+              aria-label="Compartilhar link de indicação"
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 hover:bg-primary/30 active:scale-95 transition"
+            >
+              <Share2 className="h-5 w-5 text-primary" />
+            </button>
+          )}
         </div>
         {fullReferral ? (
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 truncate rounded-lg bg-white/5 px-3 py-2 text-xs text-white/80 font-mono">{fullReferral}</div>
-            <button onClick={copyReferral} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 flex items-center justify-center gap-1">
-              <Copy className="h-3 w-3" /> Copiar
-            </button>
+            <div className="flex gap-2">
+              <button onClick={copyReferral} className="rounded-lg bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 flex items-center justify-center gap-1">
+                <Copy className="h-3 w-3" /> Copiar
+              </button>
+              <button onClick={shareReferral} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 flex items-center justify-center gap-1">
+                <Share2 className="h-3 w-3" /> Compartilhar
+              </button>
+            </div>
           </div>
         ) : (
           <p className="text-xs text-white/50">Link de indicação ainda não disponível.</p>
