@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Users, Package, Link as LinkIcon, Copy, MessageCircle, UserPlus, Loader2 } from "lucide-react";
+import { Calendar, Users, Package, Link as LinkIcon, Copy, MessageCircle, UserPlus, Loader2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { InstallAppButton } from "@/components/InstallAppButton";
