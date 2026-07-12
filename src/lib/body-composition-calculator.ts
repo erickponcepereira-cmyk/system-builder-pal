@@ -296,36 +296,46 @@ export function calculateBodyComposition(input: MeasurementInput): CalculatedRes
 }
 
 // ============================================================
-// FAIXAS DE REFERÊNCIA — ACSM (padrão FineShape) por idade e sexo
+// FAIXAS DE REFERÊNCIA — % Gordura Corporal
+// Tabela oficial "Avaliação do Bem Estar Fit Mind" (Omron/Tanita)
+// por sexo e faixa etária.
 // ============================================================
-// Fonte: American College of Sports Medicine — Guidelines, tabela de
-// composição corporal por faixa etária. Mesma tabela usada pelo FineShape.
+// Categorias: Baixo | Normal | Alto | Muito Alto
 
-type AcsmBand = { healthyMin: number; healthyMax: number; overweightMax: number };
+type FatBand = {
+  lowMax: number;    // < lowMax → Baixo
+  normalMax: number; // [lowMax, normalMax] → Normal
+  highMax: number;   // (normalMax, highMax] → Alto ; > highMax → Muito Alto
+};
 
-function getAcsmBand(gender: "male" | "female", age: number): AcsmBand {
-  // Faixas alinhadas ao FineShape (Lohman/ACSM, valores estreitos).
+function getFitMindFatBand(gender: "male" | "female", age: number): FatBand {
   if (gender === "male") {
-    if (age < 40) return { healthyMin: 14, healthyMax: 19, overweightMax: 24 };
-    if (age < 60) return { healthyMin: 17, healthyMax: 21, overweightMax: 27 };
-    return            { healthyMin: 19, healthyMax: 23, overweightMax: 29 };
+    if (age < 40) return { lowMax: 8,  normalMax: 19.9, highMax: 24.9 };
+    if (age < 60) return { lowMax: 11, normalMax: 21.9, highMax: 27.9 };
+    return              { lowMax: 13, normalMax: 24.9, highMax: 29.9 };
   }
-  if (age < 40) return { healthyMin: 24, healthyMax: 29, overweightMax: 35 };
-  if (age < 60) return { healthyMin: 25, healthyMax: 31, overweightMax: 37 };
-  return            { healthyMin: 26, healthyMax: 32, overweightMax: 39 };
+  if (age < 40) return { lowMax: 21, normalMax: 32.9, highMax: 38.9 };
+  if (age < 60) return { lowMax: 23, normalMax: 33.9, highMax: 39.9 };
+  return              { lowMax: 24, normalMax: 35.9, highMax: 41.9 };
+}
+
+// Compatibilidade interna: mantém o nome usado por calculateBodyComposition().
+function getAcsmBand(gender: "male" | "female", age: number): { healthyMin: number; healthyMax: number; overweightMax: number } {
+  const b = getFitMindFatBand(gender, age);
+  return { healthyMin: b.lowMax, healthyMax: b.normalMax, overweightMax: b.highMax };
 }
 
 export function getBodyFatReference(gender: "male" | "female", age = 30): string {
-  const b = getAcsmBand(gender, age);
-  return `${b.healthyMin}–${b.healthyMax}%`;
+  const b = getFitMindFatBand(gender, age);
+  return `${b.lowMax.toString().replace(".", ",")}–${b.normalMax.toString().replace(".", ",")}%`;
 }
 
 export function getBodyFatHealthyRange(
   gender: "male" | "female",
   age = 30,
 ): { min: number; max: number } {
-  const b = getAcsmBand(gender, age);
-  return { min: b.healthyMin, max: b.healthyMax };
+  const b = getFitMindFatBand(gender, age);
+  return { min: b.lowMax, max: b.normalMax };
 }
 
 export function getBodyFatCategoryACSM(
@@ -333,15 +343,16 @@ export function getBodyFatCategoryACSM(
   gender: "male" | "female",
   age = 30,
 ): { label: string; eval: "good" | "normal" | "warning" | "danger"; color: string } {
-  const b = getAcsmBand(gender, age);
-  if (bodyFat < b.healthyMin)
-    return { label: "Abaixo do saudável", eval: "warning", color: "#60a5fa" };
-  if (bodyFat <= b.healthyMax)
-    return { label: "Saudável", eval: "good", color: "#22c55e" };
-  if (bodyFat <= b.overweightMax)
-    return { label: "Sobrepeso", eval: "warning", color: "#facc15" };
-  return { label: "Obesidade", eval: "danger", color: "#ef4444" };
+  const b = getFitMindFatBand(gender, age);
+  if (bodyFat < b.lowMax)
+    return { label: "Baixo", eval: "warning", color: "#60a5fa" };
+  if (bodyFat <= b.normalMax)
+    return { label: "Normal", eval: "good", color: "#22c55e" };
+  if (bodyFat <= b.highMax)
+    return { label: "Alto", eval: "warning", color: "#facc15" };
+  return { label: "Muito Alto", eval: "danger", color: "#ef4444" };
 }
+
 
 // ============================================================
 // MÚSCULO ESQUELÉTICO — Janssen et al. (2002) por sexo+idade
@@ -449,19 +460,25 @@ export function getBoneMassCategory(
 }
 
 // ============================================================
-// GORDURA VISCERAL — Tanita (padrão FineShape)
+// GORDURA VISCERAL — Tabela "Avaliação do Bem Estar Fit Mind"
+// 6 níveis: 1-2 Ideal · 3-4 Normal · 5-6 Médio · 7-9 Alto ·
+//           10-12 Muito Alto · >12 Perigo à Saúde
 // ============================================================
 export function getVisceralFatCategory(
   v: number,
 ): { label: string; eval: "good" | "warning" | "danger"; color: string } {
-  if (v <= 9)  return { label: "Saudável",  eval: "good",    color: "#22c55e" };
-  if (v <= 14) return { label: "Alto",      eval: "warning", color: "#fb923c" };
-  return                { label: "Muito alto", eval: "danger",  color: "#ef4444" };
+  if (v <= 2)  return { label: "Ideal",             eval: "good",    color: "#22c55e" };
+  if (v <= 4)  return { label: "Normal",            eval: "good",    color: "#4ade80" };
+  if (v <= 6)  return { label: "Médio",             eval: "warning", color: "#facc15" };
+  if (v <= 9)  return { label: "Alto",              eval: "warning", color: "#fb923c" };
+  if (v <= 12) return { label: "Muito Alto",        eval: "danger",  color: "#f87171" };
+  return              { label: "Perigo à Saúde",    eval: "danger",  color: "#b91c1c" };
 }
 
 export function getVisceralFatReference(): string {
-  return "1–9 (saudável)";
+  return "1–2 (ideal)";
 }
+
 
 // ============================================================
 // METABOLISMO BASAL — Harris-Benedict revisado (Roza-Shizgal)

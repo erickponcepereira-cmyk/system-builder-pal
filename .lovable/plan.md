@@ -1,33 +1,80 @@
-## Diagnóstico
+## Comparação — Tabelas atuais vs. folha "Avaliação do Bem Estar Fit Mind"
 
-Fernando Arruda **está** cadastrado como aluno (profile ativo + linha em `students`, coach = Lucinei Correa Almeida). Ele não aparece na aba de bioimpedância porque essa tela lista os registros da tabela `coach_evaluation_clients` (via RPC `coach_evaluation_client_summaries`), e Fernando **não tem** uma linha lá.
+### 1. IMC (Classificação da OMS)
+**Referência:** <18,5 (baixo) · 18,5–24,9 (normal) · 25–29,9 (sobrepeso) · ≥30 (obesidade)
+**Código atual (`BMI_RANGES`):** usa 8 faixas só para o avatar (18,5 / 24,9 / 27,4 / 29,9 / 34,9 / 39,9 / 44,9 / >). Os pontos de corte principais (18,5 / 25 / 30) coincidem com a OMS.
+**Status:** ✅ compatível (as 8 faixas do avatar são um refinamento estético — os limites OMS estão preservados).
 
-Hoje a linha em `coach_evaluation_clients` só é criada:
-- quando o coach abre manualmente o vínculo de desafio para o aluno (código em `EvaluateTab.tsx` linhas ~388–423), ou
-- quando o coach cria um cliente à mão.
+### 2. % Gordura (Fat) por Gênero e Idade
+**Referência (folha):**
 
-Não existe trigger nem hook no cadastro do aluno que crie essa ficha. Resultado: **todo aluno que se cadastra pelo link do coach fica invisível na aba Avaliar até ser "tocado" por algum outro fluxo**. Auditando o banco agora, **71 alunos estão sem ficha de avaliação** — Fernando é apenas o caso reportado.
+| Gênero | Idade  | Baixo   | Normal      | Alto        | Muito Alto |
+|--------|--------|---------|-------------|-------------|------------|
+| Mulher | 20-39  | <21,0   | 21,0-32,9   | 33,0-38,9   | ≥39,0      |
+| Mulher | 40-59  | <23,0   | 23,0-33,9   | 34,0-39,9   | ≥40,0      |
+| Mulher | 60-79  | <24,0   | 24,0-35,9   | 36,0-41,9   | ≥42,0      |
+| Homem  | 20-39  | <8,0    | 8,0-19,9    | 20,0-24,9   | ≥25,0      |
+| Homem  | 40-59  | <11,0   | 11,0-21,9   | 22,0-27,9   | ≥28,0      |
+| Homem  | 60-79  | <13,0   | 13,0-24,9   | 25,0-29,9   | ≥30,0      |
 
-## Correção
+**Código atual (`getAcsmBand`):** usa faixas ACSM/Lohman muito mais estreitas:
+- Homem <40: normal 14–19 (folha: 8–19,9) · overweight máx 24 (folha ≥25 = muito alto)
+- Mulher <40: normal 24–29 (folha: 21–32,9) · overweight máx 35 (folha ≥39)
 
-Uma única migration que resolve o passado e o futuro:
+**Status:** ❌ **divergente**. A folha (referência Omron/Tanita) é mais tolerante que ACSM. Alunos classificados como "Sobrepeso/Obesidade" hoje seriam "Normal" pela tabela oficial Fit Mind.
 
-### 1. Trigger `AFTER INSERT` em `public.students`
-Cria automaticamente a linha correspondente em `coach_evaluation_clients` já vinculada por `student_id`, puxando nome / email / whatsapp / avatar / gênero / altura / peso do `profiles` + `students`. Idempotente (não recria se já existir uma linha com o mesmo `student_id` para aquele coach).
+### 3. % Músculo Esquelético por Gênero e Idade
+**Referência (folha):**
 
-### 2. Trigger `AFTER UPDATE OF coach_id` em `public.students`
-Cobre transferências de aluno entre coaches: garante ficha no novo coach (a ficha antiga fica preservada com o histórico).
+| Gênero | Idade  | Baixo   | Normal      | Alto        | Muito Alto |
+|--------|--------|---------|-------------|-------------|------------|
+| Mulher | 18-39  | <24,3   | 24,3-30,3   | 30,4-35,3   | ≥35,4      |
+| Mulher | 40-59  | <24,1   | 24,1-30,1   | 30,2-35,1   | ≥35,2      |
+| Mulher | 60-80  | <23,9   | 23,9-29,9   | 30,0-34,9   | ≥35,0      |
+| Homem  | 18-39  | <33,3   | 33,3-39,3   | 39,4-44,0   | ≥44,1      |
+| Homem  | 40-59  | <33,1   | 33,1-39,1   | 39,2-43,8   | ≥43,9      |
+| Homem  | 60-80  | <32,9   | 32,9-38,9   | 39,0-43,6   | ≥43,7      |
 
-### 3. Backfill único
-Insere ficha para todos os 71 alunos existentes que hoje não têm `coach_evaluation_clients` — incluindo Fernando. Usa os mesmos campos do trigger.
+**Código atual (`getJanssenBand`):** valores idênticos aos da folha.
+**Status:** ✅ **bate exatamente** com a referência.
 
-### Detalhes técnicos
+### 4. % Gordura Visceral
+**Referência (folha):** 6 níveis
+1-2 (Ideal) · 3-4 (Normal) · 5-6 (Médio) · 7-9 (Alto) · 10-12 (Muito Alto) · >12 (Perigo p/ Saúde)
 
-- Função `public.ensure_coach_evaluation_client_for_student(student_id uuid)` `SECURITY DEFINER`, `SET search_path = public`, faz o `INSERT ... WHERE NOT EXISTS`.
-- Trigger `trg_students_ensure_eval_client` (AFTER INSERT OR UPDATE OF coach_id) chama a função.
-- Mapeamento de gênero: `profiles.gender` (`M`/`F`/`O`) → `coach_evaluation_clients.gender` (`male`/`female`/`other`); NULL vira `other`.
-- `groups` inicia como `{}` (default) — o coach classifica depois se quiser.
-- `GRANT EXECUTE` na função para `authenticated` e `service_role` (o trigger roda como definer, mas mantém explícito para chamadas manuais no admin, se precisar).
-- Backfill roda **antes** de criar o trigger para evitar dupla escrita durante a mesma transação.
+**Código atual (`getVisceralFatCategory`):** apenas 3 níveis
+≤9 (Saudável) · 10-14 (Alto) · >14 (Muito Alto)
 
-Nenhuma mudança de front-end é necessária — a aba Avaliar passa a listar todos os alunos automaticamente. Após a migration, Fernando aparece imediatamente para o coach Lucinei fazer a bioimpedância, e o problema não se repete para novos cadastros nem para transferências.
+**Status:** ❌ **divergente**. Faltam os níveis intermediários e o limite superior está errado: pela folha o "perigo à saúde" já começa em >12, no código só em >14.
+
+---
+
+## Correções propostas
+
+**Arquivo:** `src/lib/body-composition-calculator.ts`
+
+1. **Substituir `getAcsmBand`** pelas faixas do "Bem Estar Fit Mind" (Omron/Tanita) por gênero+idade (3 faixas etárias × 2 gêneros). Renomear helpers correlatos (`getBodyFatReference`, `getBodyFatCategoryACSM`, `getBodyFatHealthyRange`) para retornarem os novos limites, mantendo a mesma assinatura para não quebrar callers em `FitMindShape.tsx`/`FitMindShapeResultView.tsx`. Categorias retornadas: `"Baixo" | "Normal" | "Alto" | "Muito Alto"` mapeadas para `eval` `warning/good/warning/danger`.
+
+2. **Substituir `getVisceralFatCategory`** por uma versão de 6 níveis idêntica à folha:
+   - 1-2 → Ideal (good, verde)
+   - 3-4 → Normal (good, verde-claro)
+   - 5-6 → Médio (normal, amarelo)
+   - 7-9 → Alto (warning, laranja)
+   - 10-12 → Muito Alto (danger leve, vermelho-claro)
+   - >12 → Perigo à Saúde (danger, vermelho-escuro)
+   
+   Atualizar `getVisceralFatReference()` para "1–2 (ideal)".
+
+3. **Manter `getJanssenBand`** (% Músculo Esquelético) — já está correto.
+
+4. **Manter `BMI_RANGES`** em `FitMindShape.tsx` — o refinamento em 8 níveis é para o avatar, os cortes OMS (18,5/25/30) continuam preservados.
+
+### Nada será alterado
+
+- Cálculo de gordura corporal (Weltman/Penrose/Deurenberg) — só a **classificação** muda.
+- Metabolismo basal, RCQ, água corporal, massa óssea, idade corporal.
+- Frontend: nenhuma mudança de UI necessária (as funções expõem `label`/`color`/`eval` que os componentes já consomem).
+
+### Verificação
+
+Após a mudança, revalidar em `FitMindShape` uma avaliação de teste (ex.: mulher 30 anos, 28% gordura → deve virar "Normal", não "Sobrepeso"; visceral 11 → "Muito Alto", não "Alto").
