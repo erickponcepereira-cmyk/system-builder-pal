@@ -149,7 +149,21 @@ export function OverviewTab({
               Compartilhe e ganhe comissões
             </p>
           </div>
-          <Share2 className="h-5 w-5 text-primary-foreground/80" />
+          <button
+            type="button"
+            onClick={async () => {
+              if (!referralLink) return;
+              const shareData = { title: "FitMind Club", text: "Entre no FitMind Club pelo meu link:", url: referralLink };
+              if (typeof navigator !== "undefined" && (navigator as Navigator).share) {
+                try { await (navigator as Navigator).share(shareData); return; } catch { /* fallback */ }
+              }
+              onCopy();
+            }}
+            aria-label="Compartilhar link de indicação"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-foreground/20 hover:bg-primary-foreground/30 active:scale-95 transition"
+          >
+            <Share2 className="h-5 w-5 text-primary-foreground" />
+          </button>
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2.5">
           <span className="flex-1 text-xs text-primary-foreground truncate font-mono">
@@ -157,6 +171,7 @@ export function OverviewTab({
           </span>
           <button
             onClick={onCopy}
+            aria-label="Copiar link"
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-foreground/20 hover:bg-primary-foreground/30"
           >
             <Copy className="h-3.5 w-3.5 text-primary-foreground" />
