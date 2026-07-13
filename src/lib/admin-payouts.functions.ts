@@ -957,9 +957,9 @@ export const registerManualPayout = createServerFn({ method: "POST" })
       .single();
     if (insErr || !ins) throw new Error(insErr?.message || "Erro ao criar solicitação");
 
-    const { error: rpcErr } = await supabaseAdmin.rpc("update_coach_withdrawal_status" as never, {
+    const { error: rpcErr } = await supabaseAdmin.rpc("admin_mark_withdrawal_paid" as never, {
       _withdrawal_id: (ins as { id: string }).id,
-      _status: "paid",
+      _admin_user_id: context.userId,
       _notes: data.notes || null,
     } as never);
     if (rpcErr) throw new Error(rpcErr.message);
