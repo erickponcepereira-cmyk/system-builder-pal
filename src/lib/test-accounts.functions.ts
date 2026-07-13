@@ -94,7 +94,7 @@ export const simulateTestPayInvoice = createServerFn({ method: "POST" })
     await supabaseAdmin.from("subscription_invoices").update({
       status: "paid",
       paid_at: new Date().toISOString(),
-      payment_method: "test",
+      payment_method: "manual_admin",
       is_test: true,
     }).eq("id", data.invoice_id);
     return { ok: true };
