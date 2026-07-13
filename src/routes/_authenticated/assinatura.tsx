@@ -29,7 +29,8 @@ const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("pt-BR") : "—";
 
 function AssinaturaPage() {
-  const [tab, setTab] = useState<TabKey>("monthly");
+  const initialTab: TabKey = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "annual" ? "annual" : "monthly";
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const [walletSource, setWalletSource] = useState<Role>("coach");
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
