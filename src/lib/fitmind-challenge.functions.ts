@@ -150,11 +150,11 @@ export const linkFitmindAssessmentToChallenge = createServerFn({ method: "POST" 
           status: "weighed_final",
         };
 
-    const { data: updatedEnrollment, error: enrollmentUpdateError } = await supabaseAdmin
+    const { error: enrollmentUpdateError } = await supabaseAdmin
       .from("competition_enrollments" as never)
       .update(enrollmentPayload as never)
       .eq("id" as never, enrollment.id as never)
-      .select("id, status, initial_weight, final_weight, initial_body_fat, final_body_fat, initial_muscle_mass, final_muscle_mass" as never)
+      .select("id" as never)
       .maybeSingle();
     if (enrollmentUpdateError) throw new Error(enrollmentUpdateError.message);
 
@@ -170,6 +170,5 @@ export const linkFitmindAssessmentToChallenge = createServerFn({ method: "POST" 
       shareUrl,
       assessmentId: assessment.id,
       studentId: enrollment.student_id,
-      enrollment: updatedEnrollment as Record<string, unknown> | null,
     };
   });
