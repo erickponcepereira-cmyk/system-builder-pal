@@ -454,7 +454,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>{client.name}</div>
             <div style={{ fontSize: 13, color: "#ffffff99" }}>
-              {client.gender === "male" ? "Masculino" : "Feminino"} · {a.age} anos · {a.height}cm ·{" "}
+              {client.gender === "male" ? "Masculino" : "Feminino"} · {currentAge || "—"} anos · {a.height}cm ·{" "}
               {new Date(a.date || Date.now()).toLocaleDateString("pt-BR")}
             </div>
           </div>
@@ -609,7 +609,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
                   { l: "Peso", ref: `Referência: ${refWeight}${weightDelta ? ` · ${weightDelta}` : ""}`, result: a.weight ? `${a.weight} kg` : "—", color: weightEval.c, tag: weightEval.t },
                   { l: "Músculo Esquelético", ref: `Referência: ${refSkeletal}`, result: a.skeletalMuscle ? `${a.skeletalMuscle}% (${skKg} kg)` : "—", color: skEval.c, tag: skEval.t },
                   { l: "Massa Muscular", ref: `Referência: ${refMuscleMass}`, result: a.muscleMass ? `${a.muscleMass}% (${muscleKg} kg)` : "—", color: muscleEval.c, tag: muscleEval.t },
-                  { l: "Idade Corporal", ref: `Idade real: ${a.age || "—"} anos`, result: bodyAgeYears ? `${bodyAgeYears} anos` : "—", color: bodyAgeEval.c, tag: bodyAgeEval.t },
+                  { l: "Idade Corporal", ref: `Idade real: ${currentAge || "—"} anos`, result: bodyAgeYears ? `${bodyAgeYears} anos` : "—", color: bodyAgeEval.c, tag: bodyAgeEval.t },
                 ].map((r) => (
                   <tr key={r.l} style={{ borderTop: "1px solid #f1f5f9", verticalAlign: "top" }}>
                     <td style={{ padding: "10px 4px" }}>
@@ -777,7 +777,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
           <div style={{ display: "flex", gap: 12, justifyContent: "center", padding: "8px 0" }}>
             <div style={{ textAlign: "center", flex: 1, background: "#f0fdf4", borderRadius: 12, padding: 16 }}>
               <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Referência</div>
-              <div style={{ fontSize: 36, fontWeight: 900, color: "#0f172a" }}>{a.age}</div>
+              <div style={{ fontSize: 36, fontWeight: 900, color: "#0f172a" }}>{currentAge || "—"}</div>
               <div style={{ fontSize: 12, color: "#64748b" }}>anos</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", color: "#64748b", fontSize: 20 }}>→</div>
