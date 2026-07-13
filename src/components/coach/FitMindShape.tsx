@@ -72,6 +72,7 @@ import {
   Share2,
   Eye,
   EyeOff,
+  RefreshCw,
 } from "lucide-react";
 import {
   calculateBodyComposition,
