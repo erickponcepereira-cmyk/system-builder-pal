@@ -67,16 +67,19 @@ function AssinaturaPage() {
     })();
   }, []);
 
+  const loadAnnual = async () => {
+    setAnnualLoading(true);
+    try {
+      const r = await fnAnnual();
+      setAnnual(r);
+    } finally {
+      setAnnualLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      setAnnualLoading(true);
-      try {
-        const r = await fnAnnual();
-        setAnnual(r);
-      } finally {
-        setAnnualLoading(false);
-      }
-    })();
+    loadAnnual();
+    (async () => { try { const t = await fnIsTest(); setIsTest(Boolean(t?.isTest)); } catch { /* ignore */ } })();
   }, []);
 
   return (
