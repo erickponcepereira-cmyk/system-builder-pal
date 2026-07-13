@@ -321,6 +321,8 @@ export interface FitMindShapeProps {
   getChallengeCandidatesForClient?: (client: FitMindClient) => FitMindChallengeCandidate[];
   // Abre modal de integrar um cliente importado (Fineshape) a um aluno já cadastrado no sistema
   onLinkClientToStudent?: (client: FitMindClient) => void;
+  // Recarrega a lista de clientes/avaliações sob demanda (botão Sincronizar)
+  onSync?: () => Promise<void> | void;
 }
 
 // ============================================================
