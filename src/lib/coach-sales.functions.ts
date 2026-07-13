@@ -283,7 +283,7 @@ export const listCoachSalesHistory = createServerFn({ method: "GET" })
 
     // Pedidos de alunos do coach OU pedidos com metadata.created_by_coach_id = coachId
     const { data: studentRows } = await supabaseAdmin
-      .from("students").select("id").eq("coach_id", coachId);
+      .from("students").select("id").eq("coach_id", coachId).eq("is_test", false);
     const studentIds = (studentRows || []).map((s: any) => s.id);
 
     const { data: orders } = await supabaseAdmin
