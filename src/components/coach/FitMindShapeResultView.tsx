@@ -32,6 +32,7 @@ import {
   getBasalMetabolismCategory,
   AVATAR_LABELS_8,
 } from "@/lib/body-composition-calculator";
+import { calcAgeFromBirthdate } from "@/lib/water-goal";
 import type { FitMindClient, FitMindAssessment } from "./FitMindShape";
 
 import bodyAbaixo from "@/assets/body-abaixo.png";
