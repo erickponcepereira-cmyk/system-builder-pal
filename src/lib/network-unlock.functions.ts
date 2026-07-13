@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { computeMonthlySnapshot, upsertMonthlySnapshot } from "@/lib/network-unlock.server";
 import { dedupeCommissions } from "@/lib/financial-dedupe";
 
@@ -44,6 +43,7 @@ export type HistoryEntry = {
 export const getWalletSplit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WalletSplit> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("id").eq("user_id", userId).maybeSingle();
@@ -63,22 +63,67 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     const cutoff = await getServerCutoffIso();
     let commQ = supabaseAdmin
       .from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,available_at,created_at,slot_label,is_referral")
-      .eq("beneficiary_profile_id", profile.id);
+      .eq("beneficiary_profile_id", profile.id)
+      .eq("is_referral", false);
     if (cutoff) commQ = commQ.gte("created_at", cutoff);
     const { data: comms } = await commQ;
+
+    const monthKeys = Array.from(new Set(((comms as Array<any> | null) || []).map((c) => {
+      const created = new Date(c.created_at);
+      if (Number.isNaN(created.getTime())) return null;
+      return `${created.getUTCFullYear()}-${created.getUTCMonth() + 1}`;
+    }).filter(Boolean) as string[]));
+
+    const unlockByMonth = new Map<string, boolean>([
+      [`${now.getFullYear()}-${now.getMonth() + 1}`, snap.anyCompleted],
+    ]);
+    if (monthKeys.length) {
+      const years = Array.from(new Set(monthKeys.map((k) => Number(k.split("-")[0]))));
+      const { data: unlockRows } = await supabaseAdmin
+        .from("network_unlock_history")
+        .select("period_year,period_month,any_completed")
+        .eq("profile_id", profile.id)
+        .in("period_year", years);
+      ((unlockRows as Array<{ period_year: number; period_month: number; any_completed: boolean }> | null) || []).forEach((row) => {
+        unlockByMonth.set(`${row.period_year}-${row.period_month}`, Boolean(row.any_completed));
+      });
+    }
+
+    const { data: withdrawalRows } = await supabaseAdmin
+      .from("withdrawal_requests")
+      .select("amount,status")
+      .eq("profile_id", profile.id)
+      .is("partner_id", null)
+      .is("professional_coach_id", null)
+      .in("status", ["requested", "approved", "processing", "paid"] as never);
+    const withdrawalDeduction = ((withdrawalRows as Array<{ amount: number | string; status: string }> | null) || [])
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
     const direct = { available: 0, pending: 0, total: 0 };
     const network = { available: 0, pending: 0, total: 0, locked: !snap.anyCompleted };
     const nowMs = Date.now();
     dedupeCommissions((comms as Array<any> | null) || []).forEach((c) => {
       const amt = Number(c.amount) || 0;
-      const bucket = c.level === 0 ? direct : network;
+      const label = String(c.slot_label || "");
+      const isNetwork = Number(c.level || 0) > 0 || (/(^|\s)(linha|upline)\s*\d+/i.test(label) && !/sem\s+upline/i.test(label));
+      const bucket = isNetwork ? network : direct;
       bucket.total += amt;
-      const released = c.status === "available" || c.status === "paid"
-        || (c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
-      if (released) bucket.available += amt;
-      else bucket.pending += amt;
+      const released = c.status === "available" || (c.status === "pending" && c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
+      const created = new Date(c.created_at);
+      const monthUnlocked = !Number.isNaN(created.getTime())
+        ? Boolean(unlockByMonth.get(`${created.getUTCFullYear()}-${created.getUTCMonth() + 1}`))
+        : false;
+      if (released && (!isNetwork || monthUnlocked)) bucket.available += amt;
+      else if (c.status === "pending") bucket.pending += amt;
     });
-    const withdrawable = direct.available + (snap.anyCompleted ? network.available : 0);
+
+    let remainingDeduction = withdrawalDeduction;
+    const directDeduction = Math.min(direct.available, remainingDeduction);
+    direct.available = Math.max(0, direct.available - directDeduction);
+    remainingDeduction -= directDeduction;
+    if (remainingDeduction > 0) network.available = Math.max(0, network.available - remainingDeduction);
+
+    const withdrawable = direct.available + network.available;
 
     return {
       direct,
@@ -99,6 +144,7 @@ export const getWalletSplit = createServerFn({ method: "GET" })
 export const getMyUnlockHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<HistoryEntry[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
     if (!profile) return [];
