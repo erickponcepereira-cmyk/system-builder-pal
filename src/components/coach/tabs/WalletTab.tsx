@@ -12,7 +12,7 @@ import { AchievementMembersModal } from "@/components/coach/AchievementMembersMo
 import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 import { PendingInfo } from "@/components/PendingInfo";
 
-const MIN_WITHDRAWAL = 100;
+const MIN_WITHDRAWAL = 50;
 
 
 
