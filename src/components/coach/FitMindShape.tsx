@@ -2647,7 +2647,6 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
                       id={inputId}
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       style={{ display: "none" }}
                       onChange={(e) =>
                         handlePhotoFile(v.key, e.target.files?.[0] || null)
