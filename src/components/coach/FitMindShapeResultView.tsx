@@ -951,7 +951,7 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
                 disabled={!canCompare}
                 title={!canCompare ? "Nenhuma avaliação registrada" : "Comparar / editar / excluir avaliações"}
               >
-                Comparar avaliações
+                Editar / vincular desafio
               </button>
             )}
             {onPrint && (

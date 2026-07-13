@@ -477,6 +477,31 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     setScreen("assessment");
   }, [initialClientId, clients]);
 
+  // Mantém o aluno aberto sincronizado com atualizações do componente pai,
+  // como integração ao cadastro real ou vínculo ao desafio.
+  useEffect(() => {
+    if (!selectedClient) return;
+    const latest = clients.find((item) => item.id === selectedClient.id);
+    if (!latest) return;
+    const changed = latest.studentId !== selectedClient.studentId
+      || latest.coachId !== selectedClient.coachId
+      || latest.coachName !== selectedClient.coachName
+      || latest.name !== selectedClient.name
+      || latest.birthDate !== selectedClient.birthDate;
+    if (!changed) return;
+    setSelectedClient((current) => current && current.id === latest.id
+      ? {
+          ...current,
+          studentId: latest.studentId,
+          coachId: latest.coachId,
+          coachName: latest.coachName,
+          name: latest.name,
+          birthDate: latest.birthDate,
+          groups: latest.groups,
+        }
+      : current);
+  }, [clients, selectedClient]);
+
   // Lazy-load full assessment payload (photos / segments / notes) on demand.
   // List view receives lightweight summaries — the parent fetches the rest only when a
   // client is opened, and caches the result. Falls back to the client's existing data.
