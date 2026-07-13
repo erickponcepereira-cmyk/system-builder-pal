@@ -655,9 +655,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function StatusPill({ status }: { status: string | null }) {
   const Icon = status === "paid" ? CheckCircle2 : status === "rejected" ? XCircle : Clock;
-  const label = status === "paid" ? "Pago" : status === "approved" ? "Aprovado" : status === "rejected" ? "Recusado" : "Pendente";
+  const label = status === "paid" ? "Pago" : status === "approved" || status === "processing" ? "Aprovado" : status === "rejected" ? "Rejeitado" : "Pendente";
+  const tone = status === "paid" || status === "approved" || status === "processing" ? "bg-green-500/15 text-green-400" : status === "rejected" ? "bg-red-500/15 text-red-400" : "bg-primary/15 text-primary";
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${tone}`}>
       <Icon className="h-3 w-3" /> {label}
     </span>
   );
