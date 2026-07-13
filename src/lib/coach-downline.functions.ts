@@ -89,11 +89,12 @@ export const getCoachDownlineReport = createServerFn({ method: "POST" })
 
     const downlineIds = ordered.map((o) => o.c.id);
 
-    // Students for all downline coaches
+    // Students for all downline coaches (excluindo contas de teste)
     const { data: studentRows } = await supabaseAdmin
       .from("students")
       .select("id, coach_id")
-      .in("coach_id", downlineIds);
+      .in("coach_id", downlineIds)
+      .eq("is_test", false);
     type SR = { id: string; coach_id: string };
     const students = (studentRows as SR[] | null) || [];
     const studentsByCoach = new Map<string, string[]>();
