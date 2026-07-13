@@ -563,50 +563,91 @@ export function EvaluateTab() {
 
 
   // ─── Integrar cliente importado (Fineshape) a um aluno cadastrado ──────────
-  // Busca server-side com ilike (nome/email). Evita puxar 2000 linhas de uma vez.
+  // Busca server-side. Quando há termo, buscamos primeiro os profiles que
+  // batem (name/email) e depois os students associados — o filtro embed do
+  // PostgREST via `foreignTable` retorna vazio silenciosamente quando o join
+  // não é forçado como INNER. Ver bug de busca em branco no modal Integrar.
   const runLinkSearch = async (term: string) => {
     if (!coachInfo.id) return;
     setLinkLoading(true);
     try {
       const t = term.trim();
-      let q = supabase
+      const normalize = (s: string) =>
+        (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+      // Sem termo: pega os N mais recentes do escopo do coach.
+      if (!t) {
+        let q = supabase
+          .from("students")
+          .select("id,coach_id,profile_id,profiles!inner(name,email)")
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (!isMaster) q = q.eq("coach_id", coachInfo.id);
+        const { data, error } = await q;
+        if (error) throw error;
+        await hydrateLinkStudents((data as any[]) || []);
+        return;
+      }
+
+      // Com termo: primeiro pega profiles que batem (name/email),
+      // depois busca students que apontam para esses profiles.
+      const like = `%${t.replace(/[%_]/g, "\\$&")}%`;
+      const { data: profs, error: pErr } = await supabase
+        .from("profiles")
+        .select("id,name,email")
+        .or(`name.ilike.${like},email.ilike.${like}`)
+        .limit(50);
+      if (pErr) throw pErr;
+      const profileIds = ((profs as any[]) || []).map((p) => p.id).filter(Boolean);
+      if (profileIds.length === 0) {
+        setLinkStudents([]);
+        return;
+      }
+      let sq = supabase
         .from("students")
-        .select("id,coach_id,profile_id,profiles!students_profile_id_fkey(name,email)")
-        .order("created_at", { ascending: false })
-        .limit(t ? 30 : 50);
-      if (!isMaster) q = q.eq("coach_id", coachInfo.id);
-      if (t) {
-        // ilike no join usando or() no schema PostgREST
-        q = q.or(`name.ilike.%${t}%,email.ilike.%${t}%`, { foreignTable: "profiles" } as any);
-      }
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = (data as any[]) || [];
-      const coachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter(Boolean)));
-      const coachMap = new Map<string, string>();
-      if (coachIds.length) {
-        const { data: cs } = await supabase
-          .from("coaches")
-          .select("id, profiles!coaches_profile_id_fkey(name)")
-          .in("id", coachIds);
-        ((cs as any[]) || []).forEach((c) => coachMap.set(c.id, c.profiles?.name || "Coach"));
-      }
-      const list = rows
-        .filter((r) => r.profiles?.name) // remove ruído quando o or() no join não bate
-        .map((r) => ({
-          id: r.id as string,
-          name: (r.profiles?.name as string) || "Aluno",
-          email: (r.profiles?.email as string) || undefined,
-          coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
-        }));
-      list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-      setLinkStudents(list);
+        .select("id,coach_id,profile_id,profiles!inner(name,email)")
+        .in("profile_id", profileIds)
+        .limit(100);
+      if (!isMaster) sq = sq.eq("coach_id", coachInfo.id);
+      const { data: rows, error: sErr } = await sq;
+      if (sErr) throw sErr;
+
+      // Filtro cliente-side defensivo (case/diacritic-insensitive).
+      const nq = normalize(t);
+      const filtered = ((rows as any[]) || []).filter((r) => {
+        const n = normalize(r.profiles?.name || "");
+        const e = normalize(r.profiles?.email || "");
+        return n.includes(nq) || e.includes(nq);
+      });
+      await hydrateLinkStudents(filtered);
     } catch (e: any) {
-      console.error(e);
+      console.error("[LinkSearch] erro:", e, "term:", term);
       toast.error("Erro ao buscar alunos do sistema");
     } finally {
       setLinkLoading(false);
     }
+  };
+
+  const hydrateLinkStudents = async (rows: any[]) => {
+    const coachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter(Boolean)));
+    const coachMap = new Map<string, string>();
+    if (coachIds.length) {
+      const { data: cs } = await supabase
+        .from("coaches")
+        .select("id, profiles!coaches_profile_id_fkey(name)")
+        .in("id", coachIds);
+      ((cs as any[]) || []).forEach((c) => coachMap.set(c.id, (c as any).profiles?.name || "Coach"));
+    }
+    const list = rows
+      .filter((r) => r.profiles?.name)
+      .map((r) => ({
+        id: r.id as string,
+        name: (r.profiles?.name as string) || "Aluno",
+        email: (r.profiles?.email as string) || undefined,
+        coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
+      }));
+    list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    setLinkStudents(list);
   };
 
   const openLinkClientModal = async (client: FitMindClient) => {
