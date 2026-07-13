@@ -11,6 +11,7 @@ import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { wipeTestSelf, getIsTestUser } from "@/lib/test-accounts.functions";
+import { cancelMyWithdrawalRequest, requestStudentWithdrawal } from "@/lib/withdrawals.functions";
 
 export const Route = createFileRoute("/_authenticated/student/profile")({
   component: ProfilePage,
@@ -99,6 +100,8 @@ function ProfilePage() {
   }>>([]);
   const fetchTokenHistory = useServerFn(getMyChallengeTokenHistory);
   const fetchReferralCommissions = useServerFn(getMyReferralCommissions);
+  const sendStudentWithdrawal = useServerFn(requestStudentWithdrawal);
+  const cancelWithdrawalRequest = useServerFn(cancelMyWithdrawalRequest);
 
   useEffect(() => {
     (async () => {
@@ -204,20 +207,23 @@ function ProfilePage() {
     if (amount < 50) return toast.error("Saque mínimo: R$ 50,00");
     if (amount > wallet.available_balance) return toast.error("Saldo disponível insuficiente");
     if (!pixKey || !holderName || !holderCpf) return toast.error("Preencha os dados do PIX");
-    const { error } = await supabase.from("student_withdrawal_requests").insert({
-      student_id: studentId,
-      amount,
-      pix_key: pixKey,
-      pix_key_type: pixKeyType,
-      holder_name: holderName,
-      holder_cpf: holderCpf,
-      status: "requested",
-    } as never);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      const wr = await sendStudentWithdrawal({ data: { studentId, amount, pixKey, pixKeyType, holderName, holderCpf } });
       toast.success("Saque solicitado!");
-      setWithdrawals((current) => [{ id: crypto.randomUUID(), amount, status: "requested", requested_at: new Date().toISOString(), paid_at: null }, ...current]);
+      setWithdrawals((current) => [{ id: wr.id, amount: wr.amount, status: wr.status, requested_at: wr.requested_at, paid_at: wr.paid_at }, ...current]);
       setWithdrawOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao solicitar saque");
+    }
+  };
+
+  const cancelWithdrawal = async (id: string) => {
+    try {
+      await cancelWithdrawalRequest({ data: { withdrawalId: id, kind: "student" } });
+      setWithdrawals((current) => current.map((w) => w.id === id ? { ...w, status: "rejected" } : w));
+      toast.success("Solicitação cancelada. Você já pode refazer com o valor correto.");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao cancelar solicitação");
     }
   };
 
@@ -425,7 +431,14 @@ function ProfilePage() {
                     <p className="text-xs font-bold text-white">R$ {Number(withdrawal.amount).toFixed(2).replace(".", ",")}</p>
                     <p className="text-[10px] text-white/40">{withdrawal.requested_at ? new Date(withdrawal.requested_at).toLocaleDateString("pt-BR") : "—"}</p>
                   </div>
-                  <StatusPill status={withdrawal.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusPill status={withdrawal.status} />
+                    {withdrawal.status === "requested" && (
+                      <button onClick={() => cancelWithdrawal(withdrawal.id)} className="rounded-md bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-400">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -642,9 +655,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function StatusPill({ status }: { status: string | null }) {
   const Icon = status === "paid" ? CheckCircle2 : status === "rejected" ? XCircle : Clock;
-  const label = status === "paid" ? "Pago" : status === "approved" ? "Aprovado" : status === "rejected" ? "Recusado" : "Pendente";
+  const label = status === "paid" ? "Pago" : status === "approved" || status === "processing" ? "Aprovado" : status === "rejected" ? "Rejeitado" : "Pendente";
+  const tone = status === "paid" || status === "approved" || status === "processing" ? "bg-green-500/15 text-green-400" : status === "rejected" ? "bg-red-500/15 text-red-400" : "bg-primary/15 text-primary";
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${tone}`}>
       <Icon className="h-3 w-3" /> {label}
     </span>
   );

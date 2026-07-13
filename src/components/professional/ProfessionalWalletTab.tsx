@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Wallet, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getClientCutoffIso } from "@/lib/test-mode";
 import { SaleChannelBadge, type SaleChannel } from "@/components/ui/SaleChannelBadge";
+import { cancelMyWithdrawalRequest, requestSellerWithdrawal } from "@/lib/withdrawals.functions";
 
 function statusStyle(status: string) {
   const s = (status || "").toLowerCase();
@@ -20,7 +22,15 @@ function statusStyle(status: string) {
 const brl = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const MIN_WITHDRAWAL = 100;
+const MIN_WITHDRAWAL = 50;
+
+const withdrawalLabel = (status?: string | null) => {
+  if (status === "requested") return "Pendente";
+  if (status === "approved" || status === "processing") return "Aprovado";
+  if (status === "paid") return "Pago";
+  if (status === "rejected") return "Rejeitado";
+  return status || "—";
+};
 
 type WalletRow = {
   available_balance: number;
@@ -55,6 +65,8 @@ type WithdrawRow = {
 };
 
 export function ProfessionalWalletTab() {
+  const sendWithdrawal = useServerFn(requestSellerWithdrawal);
+  const cancelWithdrawalRequest = useServerFn(cancelMyWithdrawalRequest);
   const [coachId, setCoachId] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletRow | null>(null);
@@ -191,21 +203,26 @@ export function ProfessionalWalletTab() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase
-      .from("withdrawal_requests")
-      .insert({
-        profile_id: profileId,
-        professional_coach_id: coachId,
-        amount: value,
-        pix_key: pixKey.trim(),
-        pix_key_type: "other",
-        status: "requested",
-      } as never);
-    setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Solicitação enviada");
-    setOpen(false); setAmount("");
-    load();
+    try {
+      await sendWithdrawal({ data: { source: "professional", entityId: coachId, amount: value, pixKey: pixKey.trim(), pixKeyType: "other" } });
+      toast.success("Solicitação enviada");
+      setOpen(false); setAmount("");
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao solicitar saque");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function cancelWithdrawal(id: string) {
+    try {
+      await cancelWithdrawalRequest({ data: { withdrawalId: id, kind: "seller" } });
+      toast.success("Solicitação cancelada. Você já pode refazer com o valor correto.");
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao cancelar solicitação");
+    }
   }
 
   if (loading) {
@@ -284,13 +301,18 @@ export function ProfessionalWalletTab() {
             {withdraws.map((wr) => {
               const st = statusStyle(wr.status);
               return (
-                <div key={wr.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
+                <div key={wr.id} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2">
                   <div>
                     <p className="text-sm text-white">{brl(wr.amount)}</p>
                     <p className="text-[11px] text-white/40">
-                      {new Date(wr.requested_at).toLocaleDateString("pt-BR")} · <span className={`font-semibold ${st.label}`}>{wr.status}</span>
+                      {new Date(wr.requested_at).toLocaleDateString("pt-BR")} · <span className={`font-semibold ${st.label}`}>{withdrawalLabel(wr.status)}</span>
                     </p>
                   </div>
+                  {wr.status === "requested" && (
+                    <button onClick={() => cancelWithdrawal(wr.id)} className="rounded-md bg-destructive/15 px-2 py-1 text-[10px] font-bold text-destructive hover:bg-destructive/25">
+                      Cancelar
+                    </button>
+                  )}
                 </div>
               );
             })}

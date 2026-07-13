@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Users, TrendingUp, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PendingInfo } from "@/components/PendingInfo";
+import { requestSellerWithdrawal } from "@/lib/withdrawals.functions";
 
-const MIN_WITHDRAWAL = 100;
+const MIN_WITHDRAWAL = 50;
 
 type Stats = {
   available: number;
@@ -195,7 +197,8 @@ function Stat({ icon, label, value, hint, accent, pendingHelp }: { icon: React.R
 }
 
 
-function WithdrawModal({ profileId, available, onClose }: { profileId: string; available: number; onClose: () => void }) {
+function WithdrawModal({ available, onClose }: { profileId: string; available: number; onClose: () => void }) {
+  const sendWithdrawal = useServerFn(requestSellerWithdrawal);
   const [amount, setAmount] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [pixKeyType, setPixKeyType] = useState("cpf");
@@ -209,17 +212,15 @@ function WithdrawModal({ profileId, available, onClose }: { profileId: string; a
     if (!pixKey.trim()) return toast.error("Informe sua chave PIX");
 
     setSaving(true);
-    const { error } = await supabase.from("withdrawal_requests").insert({
-      profile_id: profileId,
-      amount: value,
-      pix_key: pixKey.trim(),
-      pix_key_type: pixKeyType,
-      status: "requested",
-    });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação.`);
-    onClose();
+    try {
+      await sendWithdrawal({ data: { source: "coach", amount: value, pixKey: pixKey.trim(), pixKeyType } });
+      toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação.`);
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao solicitar saque");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

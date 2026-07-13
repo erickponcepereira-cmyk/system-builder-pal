@@ -132,8 +132,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const studentReferrerIds = Array.from(
       new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
-        // Fitcoin só conta como saque quando o aluno também é seller (coach/parceiro/profissional)
-        .filter((id) => sellerSet.has(id) && cls.studentByProfile.has(id)))
+        // Aluno indicador só entra aqui quando NÃO é seller; se também for coach/parceiro/profissional, fica apenas no grupo seller.
+        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id)))
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
@@ -344,8 +344,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const { data: refRecvRaw } = await refQ;
       profileIds = Array.from(new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
-        // Só lista alunos indicadores que também são sellers (coach/parceiro/profissional)
-        .filter((id) => sellerSet.has(id) && cls.studentByProfile.has(id))));
+        // Aluno indicador só entra aqui quando NÃO é seller; evita duplicar o mesmo saque nos dois grupos.
+        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id))));
       roleOf = () => "student_referrer";
     }
 
@@ -914,18 +914,49 @@ export const listPendingWithdrawals = createServerFn({ method: "POST" })
       .order("requested_at", { ascending: false });
 
     const cls = await classifyProfiles();
+    const sellerSet = new Set(cls.sellerProfileIds);
 
-    return ((rows as Array<{ id: string; profile_id: string; amount: number; status: string | null; pix_key: string | null; pix_key_type: string | null; requested_at: string | null; profiles: { name: string; email: string | null } | null }>) || []).map((r) => {
+    const sellerRows = ((rows as Array<{ id: string; profile_id: string; amount: number; status: string | null; pix_key: string | null; pix_key_type: string | null; requested_at: string | null; profiles: { name: string; email: string | null } | null }>) || []).map((r) => {
       const sellerRole = cls.sellerRoleByProfile.get(r.profile_id) || null;
       return {
         id: r.id, profileId: r.profile_id,
         name: r.profiles?.name || "—", email: r.profiles?.email || null,
         amount: n(r.amount), status: r.status,
         pix_key: r.pix_key, pix_key_type: r.pix_key_type, requested_at: r.requested_at,
-        group: sellerRole ? "seller" : "student_referrer",
+        group: sellerRole ? "seller" as PayoutGroup : "student_referrer" as PayoutGroup,
         sellerRole,
       };
     });
+
+    const { data: studentRowsRaw } = await supabaseAdmin
+      .from("student_withdrawal_requests" as never)
+      .select("id,student_id,amount,status,pix_key,pix_key_type,requested_at" as never)
+      .in("status" as never, ["requested", "approved", "processing"] as never)
+      .order("requested_at" as never, { ascending: false });
+    const studentRows = ((studentRowsRaw as unknown as Array<{ id: string; student_id: string; amount: number; status: string | null; pix_key: string | null; pix_key_type: string | null; requested_at: string | null }>) || []);
+    const studentIds = studentRows.map((r) => r.student_id).filter(Boolean);
+    const { data: studentProfilesRaw } = studentIds.length
+      ? await supabaseAdmin.from("students").select("id,profile_id,profiles!students_profile_id_fkey(name,email)").in("id", studentIds)
+      : { data: [] as unknown };
+    const studentProfileById = new Map(((studentProfilesRaw as Array<{ id: string; profile_id: string; profiles: { name: string; email: string | null } | null }>) || []).map((s) => [s.id, s]));
+    const studentPendingRows = studentRows
+      .map((r) => ({ row: r, student: studentProfileById.get(r.student_id) }))
+      .filter(({ student }) => student?.profile_id && !sellerSet.has(student.profile_id))
+      .map(({ row, student }) => ({
+        id: row.id,
+        profileId: student!.profile_id,
+        name: student!.profiles?.name || "—",
+        email: student!.profiles?.email || null,
+        amount: n(row.amount),
+        status: row.status,
+        pix_key: row.pix_key,
+        pix_key_type: row.pix_key_type,
+        requested_at: row.requested_at,
+        group: "student_referrer" as PayoutGroup,
+        sellerRole: null,
+      }));
+
+    return [...sellerRows, ...studentPendingRows].sort((a, b) => (b.requested_at || "").localeCompare(a.requested_at || ""));
   });
 
 // ============= Baixar saque manualmente =============
@@ -957,9 +988,9 @@ export const registerManualPayout = createServerFn({ method: "POST" })
       .single();
     if (insErr || !ins) throw new Error(insErr?.message || "Erro ao criar solicitação");
 
-    const { error: rpcErr } = await supabaseAdmin.rpc("update_coach_withdrawal_status" as never, {
+    const { error: rpcErr } = await supabaseAdmin.rpc("admin_mark_withdrawal_paid" as never, {
       _withdrawal_id: (ins as { id: string }).id,
-      _status: "paid",
+      _admin_user_id: context.userId,
       _notes: data.notes || null,
     } as never);
     if (rpcErr) throw new Error(rpcErr.message);
@@ -971,11 +1002,63 @@ export const updateWithdrawalStatus = createServerFn({ method: "POST" })
   .inputValidator((data: { withdrawalId: string; status: "approved" | "paid" | "rejected"; notes?: string }) => data)
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    const { error } = await supabaseAdmin.rpc("update_coach_withdrawal_status" as never, {
-      _withdrawal_id: data.withdrawalId,
-      _status: data.status,
-      _notes: data.notes || null,
-    } as never);
-    if (error) throw new Error(error.message);
+
+    const { data: sellerWithdrawal } = await supabaseAdmin
+      .from("withdrawal_requests")
+      .select("id")
+      .eq("id", data.withdrawalId)
+      .maybeSingle();
+
+    if (sellerWithdrawal?.id) {
+      if (data.status === "paid") {
+        const { error } = await supabaseAdmin.rpc("admin_mark_withdrawal_paid" as never, {
+          _withdrawal_id: data.withdrawalId,
+          _admin_user_id: context.userId,
+          _notes: data.notes || null,
+        } as never);
+        if (error) throw new Error(error.message);
+      } else {
+        const { data: adminProfile } = await supabaseAdmin.from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+        const { error } = await supabaseAdmin
+          .from("withdrawal_requests")
+          .update({
+            status: data.status,
+            notes: data.notes || undefined,
+            approved_at: data.status === "approved" ? new Date().toISOString() : undefined,
+            approved_by: adminProfile?.id || undefined,
+          } as never)
+          .eq("id", data.withdrawalId);
+        if (error) throw new Error(error.message);
+      }
+      return { ok: true };
+    }
+
+    const { data: studentWithdrawal } = await supabaseAdmin
+      .from("student_withdrawal_requests" as never)
+      .select("id" as never)
+      .eq("id" as never, data.withdrawalId as never)
+      .maybeSingle();
+    if (!(studentWithdrawal as any)?.id) throw new Error("Saque não encontrado");
+
+    if (data.status === "paid") {
+      const { error } = await supabaseAdmin.rpc("admin_mark_student_withdrawal_paid" as never, {
+        _withdrawal_id: data.withdrawalId,
+        _admin_user_id: context.userId,
+        _notes: data.notes || null,
+      } as never);
+      if (error) throw new Error(error.message);
+    } else {
+      const { data: adminProfile } = await supabaseAdmin.from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+      const { error } = await supabaseAdmin
+        .from("student_withdrawal_requests" as never)
+        .update({
+          status: data.status,
+          notes: data.notes || undefined,
+          approved_at: data.status === "approved" ? new Date().toISOString() : undefined,
+          approved_by: adminProfile?.id || undefined,
+        } as never)
+        .eq("id" as never, data.withdrawalId as never);
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });
