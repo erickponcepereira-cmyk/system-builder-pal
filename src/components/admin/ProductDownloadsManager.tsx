@@ -1,27 +1,43 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
-import { listProductDownloadsForAdmin, type ProductDownloadRow } from "@/lib/product-downloads.functions";
+import { FileText, Loader2, Trash2, Upload } from "lucide-react";
+import {
+  listProductDownloadsForAdmin,
+  listPartnerProductDownloads,
+  type ProductDownloadRow,
+} from "@/lib/product-downloads.functions";
 
-interface Props { productId: string; }
+interface Props {
+  productId?: string;
+  partnerProductId?: string;
+}
 
 const MAX_MB = 200;
 
-export function ProductDownloadsManager({ productId }: Props) {
+export function ProductDownloadsManager({ productId, partnerProductId }: Props) {
   const [rows, setRows] = useState<ProductDownloadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const listAdmin = useServerFn(listProductDownloadsForAdmin);
+  const listPartner = useServerFn(listPartnerProductDownloads);
+
+  const isPartner = !!partnerProductId;
+  const targetId = (partnerProductId || productId) as string;
+
   const load = async () => {
     setLoading(true);
     try {
-      const list = await listProductDownloadsForAdmin({ data: { productId } });
+      const list = isPartner
+        ? await listPartner({ data: { partnerProductId: partnerProductId! } })
+        : await listAdmin({ data: { productId: productId! } });
       setRows(list);
     } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, [productId]);
+  useEffect(() => { if (targetId) load(); /* eslint-disable-next-line */ }, [targetId]);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -35,19 +51,23 @@ export function ProductDownloadsManager({ productId }: Props) {
         }
         setProgress(`Enviando ${i + 1}/${files.length}: ${file.name}`);
         const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-        const path = `${productId}/${crypto.randomUUID()}.${ext}`;
+        const path = isPartner
+          ? `pp/${partnerProductId}/${crypto.randomUUID()}.${ext}`
+          : `${productId}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("product-downloads")
           .upload(path, file, { upsert: false, contentType: file.type || undefined });
         if (upErr) throw upErr;
-        const { error: insErr } = await supabase.from("product_downloads").insert({
-          product_id: productId,
+        const payload: any = {
           name: file.name,
           file_path: path,
           mime_type: file.type || null,
           size_bytes: file.size,
           sort_order: rows.length + i,
-        } as never);
+        };
+        if (isPartner) payload.partner_product_id = partnerProductId;
+        else payload.product_id = productId;
+        const { error: insErr } = await supabase.from("product_downloads").insert(payload as never);
         if (insErr) throw insErr;
       }
       await load();
@@ -60,9 +80,8 @@ export function ProductDownloadsManager({ productId }: Props) {
     }
   };
 
-  const remove = async (row: ProductDownloadRow & { file_path?: string }) => {
+  const remove = async (row: ProductDownloadRow) => {
     if (!confirm(`Excluir "${row.name}"?`)) return;
-    // buscar path para deletar do storage
     const { data: full } = await supabase.from("product_downloads").select("file_path").eq("id", row.id).maybeSingle();
     const filePath = (full as any)?.file_path as string | undefined;
     if (filePath) await supabase.storage.from("product-downloads").remove([filePath]);

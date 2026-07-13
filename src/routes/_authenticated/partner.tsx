@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
+import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
 
 import { Logo } from "@/components/Logo";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -964,6 +965,11 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                   creatorId={partner.id}
                   productNetValueBrl={Number(editing.partner_net_amount || editing.price || 0)}
                 />
+              </div>
+            )}
+            {editing.id && editing.kind === "paid" && (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <ProductDownloadsManager partnerProductId={editing.id} />
               </div>
             )}
             <div className="mt-4 flex gap-2">

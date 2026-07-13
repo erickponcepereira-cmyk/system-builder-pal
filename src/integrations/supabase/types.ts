@@ -6360,7 +6360,8 @@ export type Database = {
           id: string
           mime_type: string | null
           name: string
-          product_id: string
+          partner_product_id: string | null
+          product_id: string | null
           size_bytes: number | null
           sort_order: number
           updated_at: string
@@ -6371,7 +6372,8 @@ export type Database = {
           id?: string
           mime_type?: string | null
           name: string
-          product_id: string
+          partner_product_id?: string | null
+          product_id?: string | null
           size_bytes?: number | null
           sort_order?: number
           updated_at?: string
@@ -6382,12 +6384,20 @@ export type Database = {
           id?: string
           mime_type?: string | null
           name?: string
-          product_id?: string
+          partner_product_id?: string | null
+          product_id?: string | null
           size_bytes?: number | null
           sort_order?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_downloads_partner_product_id_fkey"
+            columns: ["partner_product_id"]
+            isOneToOne: false
+            referencedRelation: "partner_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_downloads_product_id_fkey"
             columns: ["product_id"]
