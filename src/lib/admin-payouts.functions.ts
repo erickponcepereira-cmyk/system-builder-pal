@@ -982,6 +982,7 @@ export const updateWithdrawalStatus = createServerFn({ method: "POST" })
       if (data.status === "paid") {
         const { error } = await supabaseAdmin.rpc("admin_mark_withdrawal_paid" as never, {
           _withdrawal_id: data.withdrawalId,
+          _admin_user_id: context.userId,
           _notes: data.notes || null,
         } as never);
         if (error) throw new Error(error.message);
@@ -1011,6 +1012,7 @@ export const updateWithdrawalStatus = createServerFn({ method: "POST" })
     if (data.status === "paid") {
       const { error } = await supabaseAdmin.rpc("admin_mark_student_withdrawal_paid" as never, {
         _withdrawal_id: data.withdrawalId,
+        _admin_user_id: context.userId,
         _notes: data.notes || null,
       } as never);
       if (error) throw new Error(error.message);
