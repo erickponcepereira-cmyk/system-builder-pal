@@ -967,11 +967,19 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 />
               </div>
             )}
-            {editing.id && editing.kind === "paid" && (
+            {editing.kind === "paid" && (
               <div className="mt-4 border-t border-white/10 pt-4">
-                <ProductDownloadsManager partnerProductId={editing.id} />
+                {editing.id ? (
+                  <ProductDownloadsManager partnerProductId={editing.id} />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-white/20 bg-white/5 p-3 text-xs text-white/60">
+                    <p className="font-semibold text-white/80 mb-1">Arquivos para download após compra</p>
+                    <p>Salve o produto primeiro para poder anexar ebooks/PDFs. Depois, edite este produto novamente para enviar os arquivos.</p>
+                  </div>
+                )}
               </div>
             )}
+
             <div className="mt-4 flex gap-2">
               <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
               <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><Save className="inline h-4 w-4 mr-1" /> Salvar</button>
