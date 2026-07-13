@@ -128,8 +128,8 @@ function collectDownline(rootCoachId: string, byUpline: Map<string, CoachRow[]>,
 
 async function loadBase(supabaseAdmin: any) {
   const [{ data: coachesRaw }, { data: studentsRaw }, { data: partnersRaw }, { data: mastersRaw }, { data: masterBadgesRaw }, { data: specsRaw }] = await Promise.all([
-    supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,specialty_key,herbalife_portal_url,profiles!coaches_profile_id_fkey(name,email)"),
-    supabaseAdmin.from("students").select("id,coach_id,profile_id"),
+    supabaseAdmin.from("coaches").select("id,profile_id,upline_coach_id,is_professional,specialty_key,herbalife_portal_url,profiles!coaches_profile_id_fkey(name,email)").eq("is_test", false),
+    supabaseAdmin.from("students").select("id,coach_id,profile_id").eq("is_test", false),
     supabaseAdmin.from("partners").select("profile_id"),
     supabaseAdmin.from("master_coaches").select("coach_id,status"),
     supabaseAdmin.from("coach_badges").select("coach_id").eq("badge_key", "master_coach"),
