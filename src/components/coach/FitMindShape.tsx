@@ -426,6 +426,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     [clients, coach.id],
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleSync = useCallback(async () => {
+    if (!onSync || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await onSync();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [onSync, isSyncing]);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
   const [calcWarnings, setCalcWarnings] = useState<string[]>([]);
