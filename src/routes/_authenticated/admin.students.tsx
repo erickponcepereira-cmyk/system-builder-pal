@@ -67,6 +67,7 @@ function AdminStudents() {
           profiles!students_profile_id_fkey(user_id, name, email, phone, city),
           coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
         `)
+        .eq("is_test", false)
         .order("created_at", { ascending: false })
         .limit(500),
       supabase
