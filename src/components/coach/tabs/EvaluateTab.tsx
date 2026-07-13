@@ -142,14 +142,19 @@ export function EvaluateTab() {
 
     // Garante uma ficha de avaliação para o próprio coach — permite que ele registre a própria avaliação
     try {
+      // Usa `limit(1)` em vez de `maybeSingle()` porque o modo single retorna
+      // erro quando já existem duplicatas (caso do bug "Ana Flávia (eu)" 5x),
+      // fazendo o código pensar que não existe e inserir mais uma. Aqui só
+      // criamos se realmente não houver NENHUM cadastro self do coach.
       const { data: existingSelf } = await supabase
         .from("coach_evaluation_clients" as never)
         .select("id" as never)
         .eq("coach_id" as never, coach.id as never)
         .is("student_id" as never, null as never)
         .ilike("name" as never, `${p.name || "Meu perfil"}%` as never)
-        .maybeSingle();
-      if (!existingSelf) {
+        .limit(1);
+      const hasSelf = Array.isArray(existingSelf) && existingSelf.length > 0;
+      if (!hasSelf) {
         await supabase
           .from("coach_evaluation_clients" as never)
           .insert({
