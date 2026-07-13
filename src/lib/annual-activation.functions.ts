@@ -85,7 +85,7 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
         source: resolveSource({
           activation_paid_at: partner.activation_paid_at,
           activation_source: (partner as { activation_source?: string | null }).activation_source ?? null,
-          activation_order_id: (partner as { activation_order_id?: string | null }).activation_order_id ?? null,
+          activation_order_id: null,
           already_coach: null,
         }),
         note: (partner as { activation_note?: string | null }).activation_note ?? null,
