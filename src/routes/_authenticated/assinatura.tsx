@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Calendar, CheckCircle2, Loader2, Wallet as WalletIcon, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
+import { toast } from "sonner";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
+import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
   head: () => ({
