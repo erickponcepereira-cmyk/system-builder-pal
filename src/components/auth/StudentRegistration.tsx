@@ -34,6 +34,7 @@ type ReferralContext = {
 };
 
 export function StudentRegistration({ onBack }: { onBack: () => void }) {
+  const navigate = useNavigate();
   const { setOverride, clearOverride } = useBranding();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
