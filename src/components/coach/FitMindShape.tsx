@@ -1152,6 +1152,38 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             Olá, {coach.name} 👋
           </div>
         </div>
+        {onSync && (
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={isSyncing}
+            title="Sincronizar dados"
+            aria-label="Sincronizar dados"
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--foreground)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: isSyncing ? "wait" : "pointer",
+              opacity: isSyncing ? 0.7 : 1,
+            }}
+          >
+            <RefreshCw
+              size={16}
+              style={{
+                animation: isSyncing ? "fm-spin 1s linear infinite" : undefined,
+              }}
+            />
+            {isSyncing ? "Sincronizando..." : "Sincronizar"}
+          </button>
+        )}
       </div>
 
       <div
