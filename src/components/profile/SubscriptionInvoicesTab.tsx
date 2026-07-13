@@ -29,11 +29,14 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [mpMethod, setMpMethod] = useState<"pix" | "card" | null>(null);
+  const [isTest, setIsTest] = useState(false);
 
   const fnGet = useServerFn(getMySubscription);
   const fnUpd = useServerFn(updateMySubscriptionPrefs);
   const fnPay = useServerFn(payInvoiceWithWallet);
   const fnEnsure = useServerFn(ensureMySubscription);
+  const fnIsTest = useServerFn(getIsTestUser);
+  const fnTestPay = useServerFn(simulateTestPayInvoice);
 
   const load = async () => {
     setLoading(true);
