@@ -268,9 +268,9 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const idealWeightMin = heightM ? +(18.5 * heightM * heightM).toFixed(1) : 0;
   const idealWeightMax = heightM ? +(24.9 * heightM * heightM).toFixed(1) : 0;
   const refWeight = heightM ? `${idealWeightMin}–${idealWeightMax} kg` : "—";
-  const refSkeletal = getSkeletalMuscleReference(clientGenderBin, a.age || 30);
+  const refSkeletal = getSkeletalMuscleReference(clientGenderBin, currentAge || 30);
   const refBMI = "18,5–25,0 kg/m²";
-  const refBodyFat = getBodyFatReference(clientGenderBin, a.age || 30);
+  const refBodyFat = getBodyFatReference(clientGenderBin, currentAge || 30);
   const refVisceral = getVisceralFatReference();
   const refMuscleMass = getMuscleMassReference(clientGenderBin);
   const refWater = getBodyWaterReference(clientGenderBin);
@@ -283,18 +283,20 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   const refRcq = client.gender === "male" ? "0,90–0,95" : "0,80–0,85";
   // Harris-Benedict original (1919) — alinhado ao FineShape
   const harrisBenedictFor = (w: number) => {
-    if (!w || !a.height || !a.age) return 0;
+    if (!w || !a.height || !currentAge) return 0;
     return Math.round(
       client.gender === "male"
-        ? 66.5 + 13.75 * w + 5.003 * a.height - 6.755 * a.age
-        : 655.1 + 9.563 * w + 1.850 * a.height - 4.676 * a.age,
+        ? 66.5 + 13.75 * w + 5.003 * a.height - 6.755 * currentAge
+        : 655.1 + 9.563 * w + 1.850 * a.height - 4.676 * currentAge,
     );
   };
   const harrisBenedict = harrisBenedictFor(a.weight || 0);
   const basalKcal = a.basalMetabolism && a.basalMetabolism > 0 ? Math.round(a.basalMetabolism) : harrisBenedict;
   // Faixa ideal = metabolismo para o peso ideal (faixa saudável de IMC)
-  const refBasal = idealWeightMin && idealWeightMax
-    ? `${harrisBenedictFor(idealWeightMin)}–${harrisBenedictFor(idealWeightMax)} kcal`
+  const idealBasalMin = idealWeightMin ? harrisBenedictFor(idealWeightMin) : 0;
+  const idealBasalMax = idealWeightMax ? harrisBenedictFor(idealWeightMax) : 0;
+  const refBasal = idealBasalMin && idealBasalMax
+    ? `${idealBasalMin}–${idealBasalMax} kcal`
     : "—";
 
   const weightEval = (() => {
@@ -308,12 +310,12 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   })();
   const skEval = (() => {
     if (!a.skeletalMuscle) return { c: "var(--muted-foreground)", t: "—" };
-    const cat = getSkeletalMuscleCategoryJanssen(a.skeletalMuscle, clientGenderBin, a.age || 30);
+    const cat = getSkeletalMuscleCategoryJanssen(a.skeletalMuscle, clientGenderBin, currentAge || 30);
     return { c: cat.color, t: cat.label };
   })();
   const skKg = a.skeletalMuscle && a.weight ? +((a.skeletalMuscle / 100) * a.weight).toFixed(1) : 0;
   const bodyAgeYears = a.bodyAge ? Math.round(a.bodyAge) : 0;
-  const bodyAgeDelta = bodyAgeYears - (a.age || 0);
+  const bodyAgeDelta = bodyAgeYears - (currentAge || 0);
   const bodyAgeEval = (() => {
     if (!bodyAgeYears) return { c: "var(--muted-foreground)", t: "—" };
     if (bodyAgeDelta <= 0) return { c: "#22c55e", t: bodyAgeDelta === 0 ? "Igual à idade real" : `${bodyAgeDelta} anos (excelente)` };
@@ -340,16 +342,26 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
   })();
   const fatDelta = (() => {
     if (!a.bodyFat || !a.weight) return null as null | string;
-    const { min: idealMinPct, max: idealMaxPct } = getBodyFatHealthyRange(clientGenderBin, a.age || 30);
+    const { min: idealMinPct, max: idealMaxPct } = getBodyFatHealthyRange(clientGenderBin, currentAge || 30);
     if (a.bodyFat < idealMinPct) return `Faltam ${(+((idealMinPct - a.bodyFat) * a.weight / 100).toFixed(1))} kg de gordura para o mínimo`;
     if (a.bodyFat <= idealMaxPct) return "Dentro do recomendado";
     const kgToLose = +((a.bodyFat - idealMaxPct) * a.weight / 100).toFixed(1);
     return `Precisa perder ${kgToLose} kg de gordura para entrar no recomendado`;
   })();
+  // Classifica o metabolismo basal contra a faixa ideal (peso saudável),
+  // não contra o Harris-Benedict do peso atual (essa comparação sempre daria
+  // ~1.0 → "Normal", mesmo com sobrepeso significativo).
   const basalEval = (() => {
-    if (!basalKcal || !harrisBenedict) return { c: "var(--muted-foreground)", t: "—" };
-    const cat = getBasalMetabolismCategory(basalKcal, harrisBenedict);
-    return { c: cat.color, t: cat.label };
+    if (!basalKcal) return { c: "var(--muted-foreground)", t: "—" };
+    if (!idealBasalMin || !idealBasalMax) {
+      // Sem faixa ideal disponível — cai no Harris-Benedict do peso atual.
+      if (!harrisBenedict) return { c: "var(--muted-foreground)", t: "—" };
+      const cat = getBasalMetabolismCategory(basalKcal, harrisBenedict);
+      return { c: cat.color, t: cat.label };
+    }
+    if (basalKcal < idealBasalMin) return { c: "#fb923c", t: "Baixo" };
+    if (basalKcal <= idealBasalMax) return { c: "#22c55e", t: "Normal" };
+    return { c: "#facc15", t: "Acima" };
   })();
 
   const histGordura = histWeight;
