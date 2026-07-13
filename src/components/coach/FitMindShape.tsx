@@ -802,6 +802,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-step-dot { flex: 1; height: 4px; border-radius: 999px; background: var(--muted); transition: background .3s; }
     .fm-step-dot.active { background: var(--fm-primary); }
     @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fm-spin { to { transform: rotate(360deg); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
     /* Result screen — theme-aware via tokens */
     .fm-result-screen { color: var(--foreground); }
