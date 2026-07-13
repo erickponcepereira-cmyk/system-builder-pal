@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Calendar, CheckCircle2, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, CreditCard, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
+import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
 import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
