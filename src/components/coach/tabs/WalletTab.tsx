@@ -11,6 +11,7 @@ import { getIndividualCareer, type IndividualCareer, type MedalRule } from "@/li
 import { AchievementMembersModal } from "@/components/coach/AchievementMembersModal";
 import { MasterCoachBadge } from "@/components/ui/MasterCoachBadge";
 import { PendingInfo } from "@/components/PendingInfo";
+import { cancelMyWithdrawalRequest, requestSellerWithdrawal, type WithdrawalRequestKind } from "@/lib/withdrawals.functions";
 
 const MIN_WITHDRAWAL = 50;
 
@@ -22,7 +23,15 @@ const TIER_COLOR_WALLET: Record<string, string> = {
   bronze: "#CD7F32", silver: "#C0C0C0", gold: "#FFD700", platinum: "#E5E4E2", crown: "#FFB300", club: "#FF6B35",
 };
 
-type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean; customer?: string; product?: string; isMasterCoachSale?: boolean; masterCoachName?: string | null };
+type HistoryItem = { id: string; who: string; type: string; value: number; created_at: string; isNetwork: boolean; customer?: string; product?: string; isMasterCoachSale?: boolean; masterCoachName?: string | null; rawWithdrawalId?: string; withdrawalKind?: WithdrawalRequestKind; withdrawalStatus?: string | null };
+
+const withdrawalLabel = (status?: string | null) => {
+  if (status === "requested") return "Pendente";
+  if (status === "approved" || status === "processing") return "Aprovado";
+  if (status === "paid") return "Pago";
+  if (status === "rejected") return "Rejeitado";
+  return status || "—";
+};
 
 
 export function WalletTab() {
@@ -30,6 +39,8 @@ export function WalletTab() {
   const fetchCareer = useServerFn(getCareerProgress);
   const fetchMedals = useServerFn(getIndividualCareer);
   const fetchHistory = useServerFn(getMyWalletHistory);
+  const sendWithdrawal = useServerFn(requestSellerWithdrawal);
+  const cancelWithdrawalRequest = useServerFn(cancelMyWithdrawalRequest);
 
   const [bank, setBank] = useState<{
     coachId: string | null;
@@ -108,10 +119,13 @@ export function WalletTab() {
         items.push({
           id: `w-${wr.id}`,
           who: "Saque PIX",
-          type: wr.status === "paid" ? `Aprovado em ${new Date(wr.paid_at || wr.requested_at).toLocaleDateString("pt-BR")}` : `Status: ${wr.status}`,
+          type: wr.status === "paid" ? `Pago em ${new Date(wr.paid_at || wr.requested_at).toLocaleDateString("pt-BR")}` : `Status: ${withdrawalLabel(wr.status)}`,
           value: -Number(wr.amount),
           created_at: wr.paid_at || wr.requested_at,
           isNetwork: false,
+          rawWithdrawalId: wr.id,
+          withdrawalKind: "seller",
+          withdrawalStatus: wr.status,
         });
       });
       items.sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -155,19 +169,29 @@ export function WalletTab() {
       }).eq("id", bank.coachId);
       if (upErr) throw upErr;
 
-      const { data: userData } = await supabase.auth.getUser();
-      const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", userData.user!.id).maybeSingle();
-      if (!profile?.id) throw new Error("Perfil não encontrado");
-
-      const { error: insErr } = await supabase.from("withdrawal_requests").insert({
-        profile_id: profile.id,
+      const wr = await sendWithdrawal({ data: {
+        source: "coach",
+        entityId: bank.coachId,
         amount: value,
-        pix_key: bank.pix_key.trim(),
-        pix_key_type: bank.pix_key_type,
-        status: "requested",
-        notes: [bank.bank_name, bank.bank_agency, bank.bank_account, bank.bank_account_type].filter(Boolean).join(" · ") || null,
-      });
-      if (insErr) throw insErr;
+        pixKey: bank.pix_key.trim(),
+        pixKeyType: bank.pix_key_type,
+        bankName: bank.bank_name,
+        bankAgency: bank.bank_agency,
+        bankAccount: bank.bank_account,
+        bankAccountType: bank.bank_account_type,
+      } });
+      setHistory((current) => [{
+        id: `w-${wr.id}`,
+        who: "Saque PIX",
+        type: `Status: ${withdrawalLabel(wr.status)}`,
+        value: -Number(wr.amount),
+        created_at: wr.requested_at || new Date().toISOString(),
+        isNetwork: false,
+        rawWithdrawalId: wr.id,
+        withdrawalKind: wr.kind,
+        withdrawalStatus: wr.status,
+      }, ...current].slice(0, 20));
+      fetchSplit().then((r) => setSplit(r)).catch(() => {});
 
       toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação do admin.`);
       setOpen(false);
@@ -180,6 +204,17 @@ export function WalletTab() {
       setSaving(false);
     }
 
+  };
+
+  const cancelWithdrawal = async (item: HistoryItem) => {
+    if (!item.rawWithdrawalId || !item.withdrawalKind) return;
+    try {
+      await cancelWithdrawalRequest({ data: { withdrawalId: item.rawWithdrawalId, kind: item.withdrawalKind } });
+      setHistory((current) => current.map((h) => h.id === item.id ? { ...h, type: "Status: Rejeitado (cancelado)", withdrawalStatus: "rejected" } : h));
+      toast.success("Solicitação cancelada. Você já pode refazer com o valor correto.");
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao cancelar solicitação");
+    }
   };
 
   const mask = (v: number) => walletVisible ? brl(v) : "R$ ••••";
@@ -467,6 +502,11 @@ export function WalletTab() {
                     </p>
                   )}
                   <p className="text-[10px] text-white/30 mt-0.5">{new Date(t.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+                  {t.rawWithdrawalId && t.withdrawalStatus === "requested" && (
+                    <button onClick={() => cancelWithdrawal(t)} className="mt-2 rounded-md bg-destructive/15 px-2 py-1 text-[10px] font-bold text-destructive hover:bg-destructive/25">
+                      Cancelar e refazer
+                    </button>
+                  )}
                 </div>
                 <span className={`text-sm font-bold whitespace-nowrap ${t.value > 0 ? "text-success" : "text-white/70"}`}>
                   {t.value > 0 ? "+" : "-"}{brl(Math.abs(t.value))}

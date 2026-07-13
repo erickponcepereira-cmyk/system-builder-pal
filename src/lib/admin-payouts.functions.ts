@@ -132,8 +132,8 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
     const studentReferrerIds = Array.from(
       new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
-        // Fitcoin só conta como saque quando o aluno também é seller (coach/parceiro/profissional)
-        .filter((id) => sellerSet.has(id) && cls.studentByProfile.has(id)))
+        // Aluno indicador só entra aqui quando NÃO é seller; se também for coach/parceiro/profissional, fica apenas no grupo seller.
+        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id)))
     );
 
     // Agregados de comissões para totais "ganho" e "bloqueado" coerentes
@@ -344,8 +344,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
       const { data: refRecvRaw } = await refQ;
       profileIds = Array.from(new Set(((refRecvRaw as Array<{ beneficiary_profile_id: string }>) || [])
         .map((r) => r.beneficiary_profile_id)
-        // Só lista alunos indicadores que também são sellers (coach/parceiro/profissional)
-        .filter((id) => sellerSet.has(id) && cls.studentByProfile.has(id))));
+        // Aluno indicador só entra aqui quando NÃO é seller; evita duplicar o mesmo saque nos dois grupos.
+        .filter((id) => !sellerSet.has(id) && cls.studentByProfile.has(id))));
       roleOf = () => "student_referrer";
     }
 
@@ -971,11 +971,61 @@ export const updateWithdrawalStatus = createServerFn({ method: "POST" })
   .inputValidator((data: { withdrawalId: string; status: "approved" | "paid" | "rejected"; notes?: string }) => data)
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    const { error } = await supabaseAdmin.rpc("update_coach_withdrawal_status" as never, {
-      _withdrawal_id: data.withdrawalId,
-      _status: data.status,
-      _notes: data.notes || null,
-    } as never);
-    if (error) throw new Error(error.message);
+
+    const { data: sellerWithdrawal } = await supabaseAdmin
+      .from("withdrawal_requests")
+      .select("id")
+      .eq("id", data.withdrawalId)
+      .maybeSingle();
+
+    if (sellerWithdrawal?.id) {
+      if (data.status === "paid") {
+        const { error } = await supabaseAdmin.rpc("admin_mark_withdrawal_paid" as never, {
+          _withdrawal_id: data.withdrawalId,
+          _notes: data.notes || null,
+        } as never);
+        if (error) throw new Error(error.message);
+      } else {
+        const { data: adminProfile } = await supabaseAdmin.from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+        const { error } = await supabaseAdmin
+          .from("withdrawal_requests")
+          .update({
+            status: data.status,
+            notes: data.notes || undefined,
+            approved_at: data.status === "approved" ? new Date().toISOString() : undefined,
+            approved_by: adminProfile?.id || undefined,
+          } as never)
+          .eq("id", data.withdrawalId);
+        if (error) throw new Error(error.message);
+      }
+      return { ok: true };
+    }
+
+    const { data: studentWithdrawal } = await supabaseAdmin
+      .from("student_withdrawal_requests" as never)
+      .select("id" as never)
+      .eq("id" as never, data.withdrawalId as never)
+      .maybeSingle();
+    if (!(studentWithdrawal as any)?.id) throw new Error("Saque não encontrado");
+
+    if (data.status === "paid") {
+      const { error } = await supabaseAdmin.rpc("admin_mark_student_withdrawal_paid" as never, {
+        _withdrawal_id: data.withdrawalId,
+        _notes: data.notes || null,
+      } as never);
+      if (error) throw new Error(error.message);
+    } else {
+      const { data: adminProfile } = await supabaseAdmin.from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+      const { error } = await supabaseAdmin
+        .from("student_withdrawal_requests" as never)
+        .update({
+          status: data.status,
+          notes: data.notes || undefined,
+          approved_at: data.status === "approved" ? new Date().toISOString() : undefined,
+          approved_by: adminProfile?.id || undefined,
+        } as never)
+        .eq("id" as never, data.withdrawalId as never);
+      if (error) throw new Error(error.message);
+    }
     return { ok: true };
   });

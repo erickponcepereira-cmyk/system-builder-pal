@@ -10576,6 +10576,22 @@ export type Database = {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
       }
+      admin_mark_student_withdrawal_paid: {
+        Args: {
+          _admin_user_id: string
+          _notes?: string
+          _withdrawal_id: string
+        }
+        Returns: undefined
+      }
+      admin_mark_withdrawal_paid: {
+        Args: {
+          _admin_user_id: string
+          _notes?: string
+          _withdrawal_id: string
+        }
+        Returns: undefined
+      }
       admin_purge_user_dependents: { Args: { _user_id: string }; Returns: Json }
       admin_reprocess_partner_order: {
         Args: { _order_id: string }
