@@ -197,7 +197,7 @@ function Stat({ icon, label, value, hint, accent, pendingHelp }: { icon: React.R
 }
 
 
-function WithdrawModal({ profileId, available, onClose }: { profileId: string; available: number; onClose: () => void }) {
+function WithdrawModal({ available, onClose }: { profileId: string; available: number; onClose: () => void }) {
   const sendWithdrawal = useServerFn(requestSellerWithdrawal);
   const [amount, setAmount] = useState("");
   const [pixKey, setPixKey] = useState("");
