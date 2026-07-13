@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X } from "lucide-react";
+import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X, TestTube2 } from "lucide-react";
 import {
   getMySubscription, updateMySubscriptionPrefs, payInvoiceWithWallet, ensureMySubscription,
 } from "@/lib/subscriptions.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { getIsTestUser, simulateTestPayInvoice } from "@/lib/test-accounts.functions";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 const parseLocalDate = (d: string) => {
@@ -28,11 +29,14 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [mpMethod, setMpMethod] = useState<"pix" | "card" | null>(null);
+  const [isTest, setIsTest] = useState(false);
 
   const fnGet = useServerFn(getMySubscription);
   const fnUpd = useServerFn(updateMySubscriptionPrefs);
   const fnPay = useServerFn(payInvoiceWithWallet);
   const fnEnsure = useServerFn(ensureMySubscription);
+  const fnIsTest = useServerFn(getIsTestUser);
+  const fnTestPay = useServerFn(simulateTestPayInvoice);
 
   const load = async () => {
     setLoading(true);
@@ -43,6 +47,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         r = await fnGet();
       }
       setState(r);
+      try { const t = await fnIsTest(); setIsTest(Boolean(t?.isTest)); } catch { /* ignore */ }
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
@@ -90,19 +95,36 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
             {current.status === "blocked" && <AlertTriangle className="h-8 w-8 text-red-400" />}
           </div>
           <div className="flex flex-wrap gap-2">
-            <button disabled={busy || walletBalance < current.amount}
-              onClick={() => payWallet(current.id)}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold disabled:opacity-40">
-              <Wallet className="h-4 w-4" /> Descontar da carteira ({fmt(walletBalance)})
-            </button>
-            <button onClick={() => setMpMethod("pix")}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold">
-              <QrCode className="h-4 w-4" /> Pagar com PIX
-            </button>
-            <button onClick={() => setMpMethod("card")}
-              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">
-              <CreditCard className="h-4 w-4" /> Pagar com Cartão
-            </button>
+            {isTest ? (
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try { await fnTestPay({ data: { invoice_id: current.id } } as any); toast.success("Fatura marcada como paga (teste)"); await load(); }
+                  catch (e: any) { toast.error(e.message); }
+                  finally { setBusy(false); }
+                }}
+                className="flex items-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 text-sm font-bold text-black disabled:opacity-40"
+              >
+                <TestTube2 className="h-4 w-4" /> Simular pagamento (teste)
+              </button>
+            ) : (
+              <>
+                <button disabled={busy || walletBalance < current.amount}
+                  onClick={() => payWallet(current.id)}
+                  className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-bold disabled:opacity-40">
+                  <Wallet className="h-4 w-4" /> Descontar da carteira ({fmt(walletBalance)})
+                </button>
+                <button onClick={() => setMpMethod("pix")}
+                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold">
+                  <QrCode className="h-4 w-4" /> Pagar com PIX
+                </button>
+                <button onClick={() => setMpMethod("card")}
+                  className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold">
+                  <CreditCard className="h-4 w-4" /> Pagar com Cartão
+                </button>
+              </>
+            )}
           </div>
           {mpMethod && (
             <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">

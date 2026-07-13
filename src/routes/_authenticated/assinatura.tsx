@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Calendar, CheckCircle2, Loader2, Wallet as WalletIcon, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
+import { toast } from "sonner";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
+import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
   head: () => ({
@@ -31,9 +33,13 @@ function AssinaturaPage() {
 
   const [annual, setAnnual] = useState<any>(null);
   const [annualLoading, setAnnualLoading] = useState(true);
+  const [isTest, setIsTest] = useState(false);
+  const [busyTest, setBusyTest] = useState(false);
 
   const fnGet = useServerFn(getMySubscription);
   const fnAnnual = useServerFn(getMyAnnualActivation);
+  const fnIsTest = useServerFn(getIsTestUser);
+  const fnPayAnnual = useServerFn(simulateTestPayAnnual);
 
   useEffect(() => {
     (async () => {
@@ -61,16 +67,19 @@ function AssinaturaPage() {
     })();
   }, []);
 
+  const loadAnnual = async () => {
+    setAnnualLoading(true);
+    try {
+      const r = await fnAnnual();
+      setAnnual(r);
+    } finally {
+      setAnnualLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      setAnnualLoading(true);
-      try {
-        const r = await fnAnnual();
-        setAnnual(r);
-      } finally {
-        setAnnualLoading(false);
-      }
-    })();
+    loadAnnual();
+    (async () => { try { const t = await fnIsTest(); setIsTest(Boolean(t?.isTest)); } catch { /* ignore */ } })();
   }, []);
 
   return (
@@ -199,8 +208,22 @@ function AssinaturaPage() {
                   )}
                 </div>
 
+                {isTest && !annual.active && (
+                  <button
+                    disabled={busyTest}
+                    onClick={async () => {
+                      setBusyTest(true);
+                      try { await fnPayAnnual(); toast.success("Anuidade marcada como paga (teste)"); await loadAnnual(); }
+                      catch (e: any) { toast.error(e.message); }
+                      finally { setBusyTest(false); }
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
+                  >
+                    <TestTube2 className="h-4 w-4" /> Simular pagamento de anuidade (teste)
+                  </button>
+                )}
 
-                {!annual.active && annual.isCoach && (
+                {!annual.active && annual.isCoach && !isTest && (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/70">
                     Para renovar sua anuidade, conclua a compra de <strong>{annual.product.name}</strong> pelo fluxo de ativação de coach.
                   </div>

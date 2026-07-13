@@ -1,7 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
+import { bootstrapTestSignup, isTestEmailClient } from "@/lib/test-accounts.functions";
 
 export async function createAuthUser(email: string, password: string, name: string, role: "coach" | "student" | "partner", extraMeta: Record<string, unknown> = {}) {
   const normalizedEmail = email.trim().toLowerCase();
+
+  // Fluxo de conta de teste: bypass de confirmação de e-mail.
+  if (isTestEmailClient(normalizedEmail)) {
+    const { userId } = await bootstrapTestSignup({ data: { email: normalizedEmail, password, name } });
+    // Já podemos logar diretamente porque o usuário foi criado como email_confirmed.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+    if (signInErr) throw new Error(signInErr.message);
+    return { id: userId } as { id: string };
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email: normalizedEmail,
@@ -23,9 +33,6 @@ export async function createAuthUser(email: string, password: string, name: stri
     throw new Error("Não foi possível criar a conta. Tente novamente em instantes.");
   }
 
-  // Quando o e-mail já existe e a confirmação está ativa, o Supabase devolve
-  // um usuário "mascarado" (identities vazio) por segurança. Não logamos —
-  // avisamos para o usuário usar a opção de login/recuperação.
   if (data.user.identities && data.user.identities.length === 0) {
     throw new Error("Este e-mail já está cadastrado. Faça login ou use 'Esqueci minha senha'.");
   }

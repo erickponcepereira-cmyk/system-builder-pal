@@ -10,6 +10,7 @@ import { StudentReferralModal } from "@/components/student/StudentReferralModal"
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 import { getClientCutoffIso } from "@/lib/test-mode";
+import { wipeTestSelf, getIsTestUser } from "@/lib/test-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/student/profile")({
   component: ProfilePage,
@@ -226,6 +227,16 @@ function ProfilePage() {
   };
 
   const handleLogout = async () => {
+    // Conta de teste: apaga tudo antes de sair
+    try {
+      const { isTest } = await getIsTestUser();
+      if (isTest) {
+        await wipeTestSelf();
+        toast.success("Conta de teste apagada. Dados prontos para reutilizar.");
+      }
+    } catch (err) {
+      console.warn("[test] limpeza de conta de teste falhou:", err);
+    }
     await supabase.auth.signOut();
     toast.success("Sessão encerrada");
     navigate({ to: "/login" });
