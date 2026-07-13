@@ -90,12 +90,20 @@ const AssessmentComparison: React.FC<Props> = ({ client, themeColor = "#dc2626",
   const closeEdit = () => { setEditing(null); setEditForm({}); };
   const saveEdit = async () => {
     if (!editing || !onEdit) return;
-    if (!String(editForm.scaleNumber || "").trim()) return;
+    if (!String(editForm.scaleNumber || "").trim()) {
+      const { toast } = await import("sonner");
+      toast.error("Informe o número da balança para salvar a avaliação.");
+      return;
+    }
     setSavingEdit(true);
     try {
       await onEdit({ ...editing, ...editForm } as FitMindAssessment);
       closeEdit();
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      const { toast } = await import("sonner");
+      toast.error(e?.message || "Erro ao salvar o vínculo com o desafio.");
+    }
     finally { setSavingEdit(false); }
   };
   const numField = (key: keyof FitMindAssessment, label: string, unit = "") => (

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import FitMindShape, { type FitMindAssessment, type FitMindClient } from "@/components/coach/FitMindShape";
+import { linkFitmindAssessmentToChallenge } from "@/lib/fitmind-challenge.functions";
 // Google Calendar desativado temporariamente — usando agenda interna
 import FineshapeImport from "@/components/coach/FineshapeImport";
 import { Trophy } from "lucide-react";
@@ -37,6 +39,7 @@ const clientSummaryCache = new Map<string, { expiresAt: number; clients: FitMind
 
 export function EvaluateTab() {
   const navigate = useNavigate();
+  const linkAssessmentToChallengeFn = useServerFn(linkFitmindAssessmentToChallenge);
   const [clients, setClients] = useState<FitMindClient[]>([]);
   const [coachInfo, setCoachInfo] = useState({ id: "", name: "Coach FitMind", email: "", specialty: "Avaliação corporal", phone: "", whatsapp: "", instagram: "", tiktok: "", website: "" });
   const [challengeLink, setChallengeLink] = useState<ChallengeLink | null>(null);
@@ -913,7 +916,11 @@ export function EvaluateTab() {
         initialClientId={challengeLink?.preferredClientId}
         getChallengeCandidatesForClient={(client) =>
           challengeCandidates
-            .filter((c) => client.studentId && c.studentId === client.studentId)
+            .filter((c) => {
+              const freshClient = clients.find((item) => item.id === client.id);
+              const studentId = client.studentId || freshClient?.studentId;
+              return !!studentId && c.studentId === studentId;
+            })
             .map((c) => ({
               enrollmentId: c.enrollmentId,
               type: c.type,
@@ -1049,10 +1056,10 @@ export function EvaluateTab() {
             professional_notes: nz(updated.professionalNotes),
             photos: updated.photos || {},
           };
-          // Vínculo com Desafio (opcional). O trigger sincroniza os pesos no enrollment.
+          const shouldLinkChallenge = !!(updated.challengeEnrollmentId && updated.challengeType);
+          // Vínculo com Desafio (opcional). O server function abaixo valida,
+          // sincroniza a inscrição e mostra erro real caso falhe.
           if (updated.challengeEnrollmentId && updated.challengeType) {
-            payload.challenge_enrollment_id = updated.challengeEnrollmentId;
-            payload.challenge_type = updated.challengeType;
             if ((client as any).studentId) payload.student_id = (client as any).studentId;
           } else if (updated.challengeEnrollmentId === undefined && updated.challengeType === undefined) {
             // Explicitamente desvinculado ("Não vincular")
@@ -1065,15 +1072,33 @@ export function EvaluateTab() {
             .eq("id" as never, updated.id as never)
             .eq("coach_id" as never, targetCoachId as never);
           if (error) { toast.error(error.message || "Erro ao atualizar avaliação"); throw error; }
+          let linkedStudentId = (client as any).studentId as string | undefined;
+          if (shouldLinkChallenge) {
+            const linkResult = await linkAssessmentToChallengeFn({
+              data: {
+                assessmentId: updated.id,
+                enrollmentId: updated.challengeEnrollmentId!,
+                challengeType: updated.challengeType!,
+              },
+            });
+            linkedStudentId = linkResult.studentId || linkedStudentId;
+            await loadChallengeCandidates(coachInfo.id, isMaster);
+          }
           toast.success(
             updated.challengeEnrollmentId
               ? `Avaliação atualizada e vinculada ao Desafio (${updated.challengeType === "initial" ? "Pesagem Inicial" : "Pesagem Final"})`
               : "Avaliação atualizada"
           );
           clientSummaryCache.delete(coachInfo.id);
-          const updatedAssessments = (client.assessments || []).map((item) => (item.id === updated.id ? updated : item));
+          const updatedForState = {
+            ...updated,
+            clientId: client.id,
+            challengeEnrollmentId: updated.challengeEnrollmentId,
+            challengeType: updated.challengeType,
+          };
+          const updatedAssessments = (client.assessments || []).map((item) => (item.id === updated.id ? updatedForState : item));
           fullAssessmentsCacheRef.current.set(client.id, updatedAssessments);
-          setClients((current) => current.map((item) => item.id === client.id ? { ...item, assessments: updatedAssessments } : item));
+          setClients((current) => current.map((item) => item.id === client.id ? { ...item, studentId: linkedStudentId || item.studentId, assessments: updatedAssessments } : item));
         }}
         onSearchClients={async (query) => clients.filter((client) => `${client.name} ${client.email}`.toLowerCase().includes(query.toLowerCase()))}
         onCreateGoogleCalendarEvent={async (date, time, clientName, eventName) => {
