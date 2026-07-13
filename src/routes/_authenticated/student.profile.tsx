@@ -10,6 +10,7 @@ import { StudentReferralModal } from "@/components/student/StudentReferralModal"
 import { PendingInfo } from "@/components/PendingInfo";
 import fitcoinAsset from "@/assets/fitcoin.png.asset.json";
 import { getClientCutoffIso } from "@/lib/test-mode";
+import { wipeTestSelf, getIsTestUser } from "@/lib/test-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/student/profile")({
   component: ProfilePage,
