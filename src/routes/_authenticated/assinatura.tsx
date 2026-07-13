@@ -226,10 +226,12 @@ function AssinaturaPage() {
                   </button>
                 )}
 
-                {!annual.active && annual.isCoach && !isTest && (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/70">
-                    Para renovar sua anuidade, conclua a compra de <strong>{annual.product.name}</strong> pelo fluxo de ativação de coach.
-                  </div>
+                {!annual.active && !isTest && (annual.isCoach || annual.isPartner) && (
+                  <AnnualPaymentBlock
+                    productName={annual.product.name}
+                    productPrice={annual.product.price}
+                    onPaid={loadAnnual}
+                  />
                 )}
               </>
             ) : (
