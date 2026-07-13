@@ -60,7 +60,7 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
         .maybeSingle(),
       supabase
         .from("partners")
-        .select("id, activation_paid_at, activation_order_id, activation_source, activation_note, status, created_at")
+        .select("id, activation_paid_at, activation_source, activation_note, status, created_at")
         .eq("profile_id", profile?.id ?? "")
         .maybeSingle(),
     ]);
