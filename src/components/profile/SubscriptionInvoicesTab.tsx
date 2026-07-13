@@ -47,6 +47,7 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         r = await fnGet();
       }
       setState(r);
+      try { const t = await fnIsTest(); setIsTest(Boolean(t?.isTest)); } catch { /* ignore */ }
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
