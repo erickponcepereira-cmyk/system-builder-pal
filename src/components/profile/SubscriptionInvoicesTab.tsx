@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X } from "lucide-react";
+import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X, TestTube2 } from "lucide-react";
 import {
   getMySubscription, updateMySubscriptionPrefs, payInvoiceWithWallet, ensureMySubscription,
 } from "@/lib/subscriptions.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { getIsTestUser, simulateTestPayInvoice } from "@/lib/test-accounts.functions";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 const parseLocalDate = (d: string) => {
