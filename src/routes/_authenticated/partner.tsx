@@ -242,7 +242,18 @@ function PartnerPanel() {
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
         {tab === "wallet" && <PartnerWalletTab />}
-        {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
+        {tab === "subscription" && (
+          <div className="space-y-4">
+            <a
+              href="/assinatura?tab=annual"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/20"
+            >
+              <span>Ver / pagar Anuidade</span>
+              <span>→</span>
+            </a>
+            <SubscriptionInvoicesTab walletSource="partner" />
+          </div>
+        )}
         {tab === "reports" && <PartnerReports />}
         {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
         {tab === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}

@@ -52,21 +52,50 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    const { data: coach } = await supabase
-      .from("coaches")
-      .select("id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at")
-      .eq("profile_id", profile?.id ?? "")
-      .maybeSingle();
+    const [{ data: coach }, { data: partner }] = await Promise.all([
+      supabase
+        .from("coaches")
+        .select("id, activation_paid_at, activation_order_id, activation_source, activation_note, already_coach, created_at")
+        .eq("profile_id", profile?.id ?? "")
+        .maybeSingle(),
+      supabase
+        .from("partners")
+        .select("id, activation_paid_at, activation_source, activation_note, status, created_at")
+        .eq("profile_id", profile?.id ?? "")
+        .maybeSingle(),
+    ]);
 
     const today = new Date();
     let paidAt: Date | null = null;
     let source: ActivationSource = "none";
     let note: string | null = null;
 
+    // Considera ativações de coach E parceiro; escolhe a mais recente quando ambas pagas.
+    const candidates: Array<{ paidAt: Date; source: ActivationSource; note: string | null }> = [];
     if (coach?.activation_paid_at) {
-      paidAt = new Date(coach.activation_paid_at);
-      source = resolveSource(coach as never);
-      note = (coach as { activation_note?: string | null }).activation_note ?? null;
+      candidates.push({
+        paidAt: new Date(coach.activation_paid_at),
+        source: resolveSource(coach as never),
+        note: (coach as { activation_note?: string | null }).activation_note ?? null,
+      });
+    }
+    if (partner?.activation_paid_at) {
+      candidates.push({
+        paidAt: new Date(partner.activation_paid_at),
+        source: resolveSource({
+          activation_paid_at: partner.activation_paid_at,
+          activation_source: (partner as { activation_source?: string | null }).activation_source ?? null,
+          activation_order_id: null,
+          already_coach: null,
+        }),
+        note: (partner as { activation_note?: string | null }).activation_note ?? null,
+      });
+    }
+    if (candidates.length) {
+      candidates.sort((a, b) => b.paidAt.getTime() - a.paidAt.getTime());
+      paidAt = candidates[0].paidAt;
+      source = candidates[0].source;
+      note = candidates[0].note;
     } else if (coach?.id && profile?.status === "active") {
       paidAt = new Date(coach.created_at ?? profile.created_at ?? Date.now());
       source = "exempt";
@@ -83,6 +112,8 @@ export const getMyAnnualActivation = createServerFn({ method: "GET" })
         ? { id: product.id, name: product.name, price: Number(product.price), is_active: product.is_active }
         : null,
       isCoach: Boolean(coach?.id),
+      isPartner: Boolean(partner?.id),
+      isEligible: Boolean(coach?.id || partner?.id),
       source,
       note,
       paidAt: paidAt ? paidAt.toISOString() : null,

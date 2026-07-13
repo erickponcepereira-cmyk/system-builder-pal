@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Calendar, CheckCircle2, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, CreditCard, Loader2, Wallet as WalletIcon, XCircle, TestTube2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { getMySubscription } from "@/lib/subscriptions.functions";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
+import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
 import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/assinatura")({
@@ -26,7 +29,8 @@ const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("pt-BR") : "—";
 
 function AssinaturaPage() {
-  const [tab, setTab] = useState<TabKey>("monthly");
+  const initialTab: TabKey = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "annual" ? "annual" : "monthly";
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const [walletSource, setWalletSource] = useState<Role>("coach");
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,10 +227,12 @@ function AssinaturaPage() {
                   </button>
                 )}
 
-                {!annual.active && annual.isCoach && !isTest && (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/70">
-                    Para renovar sua anuidade, conclua a compra de <strong>{annual.product.name}</strong> pelo fluxo de ativação de coach.
-                  </div>
+                {!annual.active && !isTest && (annual.isCoach || annual.isPartner) && (
+                  <AnnualPaymentBlock
+                    productName={annual.product.name}
+                    productPrice={annual.product.price}
+                    onPaid={loadAnnual}
+                  />
                 )}
               </>
             ) : (
@@ -235,6 +241,92 @@ function AssinaturaPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function AnnualPaymentBlock({
+  productName,
+  productPrice,
+  onPaid,
+}: {
+  productName: string;
+  productPrice: number;
+  onPaid: () => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [payer, setPayer] = useState<{ email: string; name: string }>({ email: "", name: "" });
+
+  useEffect(() => {
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) return;
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("user_id", uid)
+        .maybeSingle();
+      setPayer({ email: (prof as any)?.email || userData.user?.email || "", name: (prof as any)?.name || "" });
+    })();
+  }, []);
+
+  const startCheckout = async () => {
+    setCreating(true);
+    try {
+      const { data: orderIdRpc, error } = await supabase.rpc(
+        "create_store_order" as never,
+        {
+          _items: [{ kind: "digital", sourceId: ACTIVATION_PRODUCT_ID, quantity: 1 }],
+          _payment_method: "pix",
+          _shipping: {},
+          _notes: "Ativação Anual (assinatura)",
+        } as never,
+      );
+      if (error) throw new Error(error.message);
+      const { data: order } = await supabase
+        .from("store_orders" as never)
+        .select("id,total_amount" as never)
+        .eq("id" as never, orderIdRpc as never)
+        .maybeSingle();
+      const od = order as unknown as { id: string; total_amount: number } | null;
+      setOrderId(od?.id || String(orderIdRpc));
+      setOrderTotal(Number(od?.total_amount || productPrice || 179.9));
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao criar pedido");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (!orderId) {
+    return (
+      <button
+        onClick={startCheckout}
+        disabled={creating}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
+      >
+        {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+        Pagar anuidade ({`R$ ${Number(productPrice || 0).toFixed(2).replace(".", ",")}`})
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <MercadoPagoCheckout
+        source={{ kind: "store_order", id: orderId }}
+        amount={orderTotal}
+        description={productName}
+        defaultPayer={{ email: payer.email, name: payer.name }}
+        initialMethod="pix"
+        onApproved={() => {
+          toast.success("Anuidade paga com sucesso!");
+          onPaid();
+        }}
+      />
     </div>
   );
 }

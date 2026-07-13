@@ -89,14 +89,30 @@ export async function handlePaidStoreOrderForActivation(orderId: string) {
     .select("id, onboarding_stage")
     .eq("profile_id", profileId)
     .maybeSingle();
-  if (!coach || (coach as { onboarding_stage?: string }).onboarding_stage !== "awaiting_payment") return;
+  if (coach && (coach as { onboarding_stage?: string }).onboarding_stage === "awaiting_payment") {
+    await supabaseAdmin
+      .from("coaches")
+      .update({
+        onboarding_stage: "awaiting_quiz_result",
+        activation_paid_at: new Date().toISOString(),
+        activation_order_id: orderId,
+      })
+      .eq("id", (coach as { id: string }).id);
+  }
 
-  await supabaseAdmin
-    .from("coaches")
-    .update({
-      onboarding_stage: "awaiting_quiz_result",
-      activation_paid_at: new Date().toISOString(),
-      activation_order_id: orderId,
-    })
-    .eq("id", (coach as { id: string }).id);
+  // Também marca a ativação anual do parceiro (se existir) — a anuidade é única para ambos os papéis.
+  const { data: partner } = await supabaseAdmin
+    .from("partners")
+    .select("id, activation_paid_at")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (partner && !(partner as { activation_paid_at: string | null }).activation_paid_at) {
+    await supabaseAdmin
+      .from("partners")
+      .update({
+        activation_paid_at: new Date().toISOString(),
+        activation_source: "purchased",
+      })
+      .eq("id", (partner as { id: string }).id);
+  }
 }
