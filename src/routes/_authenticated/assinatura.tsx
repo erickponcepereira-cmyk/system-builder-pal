@@ -208,8 +208,22 @@ function AssinaturaPage() {
                   )}
                 </div>
 
+                {isTest && !annual.active && (
+                  <button
+                    disabled={busyTest}
+                    onClick={async () => {
+                      setBusyTest(true);
+                      try { await fnPayAnnual(); toast.success("Anuidade marcada como paga (teste)"); await loadAnnual(); }
+                      catch (e: any) { toast.error(e.message); }
+                      finally { setBusyTest(false); }
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-yellow-500 px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
+                  >
+                    <TestTube2 className="h-4 w-4" /> Simular pagamento de anuidade (teste)
+                  </button>
+                )}
 
-                {!annual.active && annual.isCoach && (
+                {!annual.active && annual.isCoach && !isTest && (
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/70">
                     Para renovar sua anuidade, conclua a compra de <strong>{annual.product.name}</strong> pelo fluxo de ativação de coach.
                   </div>
