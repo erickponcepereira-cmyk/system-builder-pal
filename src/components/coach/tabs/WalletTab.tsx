@@ -172,11 +172,14 @@ export function WalletTab() {
       toast.success(`Saque de ${brl(value)} solicitado! Aguardando aprovação do admin.`);
       setOpen(false);
       setAmount("");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao solicitar saque");
+    } catch (e: any) {
+      console.error("[withdraw] falha:", e);
+      const msg = e?.message || e?.error_description || e?.hint || e?.details || (typeof e === "string" ? e : null) || "Erro ao solicitar saque";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
+
   };
 
   const mask = (v: number) => walletVisible ? brl(v) : "R$ ••••";
