@@ -402,6 +402,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   initialClientId,
   getChallengeCandidatesForClient,
   onLinkClientToStudent,
+  onSync,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
