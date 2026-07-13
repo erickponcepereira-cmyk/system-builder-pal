@@ -39,13 +39,56 @@ export function describeWaterFormula(
   return `${weightKg}kg × ${factor}ml + 1000ml fixos = ${total}ml/dia · faixa ${ageLabel}`;
 }
 
+/**
+ * Parse a birth date string in ISO (YYYY-MM-DD) or Brazilian (DD/MM/YYYY)
+ * format without applying any timezone shift.
+ * Returns a Date at UTC midnight or null when the input is invalid.
+ */
+export function parseBirthDate(input: string | null | undefined): Date | null {
+  if (!input) return null;
+  const s = String(input).trim();
+  if (!s) return null;
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (dmy) {
+    const day = parseInt(dmy[1], 10);
+    const month = parseInt(dmy[2], 10);
+    let year = parseInt(dmy[3], 10);
+    if (year < 100) year += year >= 30 ? 1900 : 2000;
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const d = new Date(Date.UTC(year, month - 1, day));
+    if (d.getUTCDate() !== day || d.getUTCMonth() !== month - 1) return null;
+    return d;
+  }
+
+  // YYYY-MM-DD (optionally with time). Take just the date portion.
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const year = parseInt(iso[1], 10);
+    const month = parseInt(iso[2], 10);
+    const day = parseInt(iso[3], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const d = new Date(Date.UTC(year, month - 1, day));
+    if (d.getUTCDate() !== day || d.getUTCMonth() !== month - 1) return null;
+    return d;
+  }
+
+  return null;
+}
+
 export function calcAgeFromBirthdate(birthdate: string | null | undefined): number | null {
-  if (!birthdate) return null;
-  const d = new Date(birthdate);
-  if (Number.isNaN(d.getTime())) return null;
+  const d = parseBirthDate(birthdate);
+  if (!d) return null;
   const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  // Compare in the user's local calendar to avoid TZ off-by-one on birthdays.
+  const nowY = now.getFullYear();
+  const nowM = now.getMonth();
+  const nowD = now.getDate();
+  const bY = d.getUTCFullYear();
+  const bM = d.getUTCMonth();
+  const bD = d.getUTCDate();
+  let age = nowY - bY;
+  if (nowM < bM || (nowM === bM && nowD < bD)) age--;
   return age >= 0 && age < 130 ? age : null;
 }

@@ -142,14 +142,19 @@ export function EvaluateTab() {
 
     // Garante uma ficha de avaliação para o próprio coach — permite que ele registre a própria avaliação
     try {
+      // Usa `limit(1)` em vez de `maybeSingle()` porque o modo single retorna
+      // erro quando já existem duplicatas (caso do bug "Ana Flávia (eu)" 5x),
+      // fazendo o código pensar que não existe e inserir mais uma. Aqui só
+      // criamos se realmente não houver NENHUM cadastro self do coach.
       const { data: existingSelf } = await supabase
         .from("coach_evaluation_clients" as never)
         .select("id" as never)
         .eq("coach_id" as never, coach.id as never)
         .is("student_id" as never, null as never)
         .ilike("name" as never, `${p.name || "Meu perfil"}%` as never)
-        .maybeSingle();
-      if (!existingSelf) {
+        .limit(1);
+      const hasSelf = Array.isArray(existingSelf) && existingSelf.length > 0;
+      if (!hasSelf) {
         await supabase
           .from("coach_evaluation_clients" as never)
           .insert({
@@ -258,8 +263,31 @@ export function EvaluateTab() {
         coachName: masterFlag && row.coach_id !== coach.id ? (row.coach_name || "Outro coach") : undefined,
       };
     });
-    clientSummaryCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_SUMMARY_CACHE_TTL_MS, clients: mappedClients });
-    setClients(mappedClients);
+
+    // Dedup: consolida cadastros duplicados por (studentId) quando existe
+    // vínculo, ou por (coach_id + nome normalizado) quando é "self" sem
+    // student_id. Mantém o mais antigo (menor id lexicográfico como fallback)
+    // e junta contagens de avaliações. Corrige duplicatas visíveis como
+    // "Ana Flávia (eu)" e cadastros do mesmo aluno em coaches diferentes.
+    const normalize = (s: string) =>
+      (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+    const dedupMap = new Map<string, typeof mappedClients[number]>();
+    for (const c of mappedClients) {
+      const key = c.studentId
+        ? `sid:${c.studentId}`
+        : `self:${c.coachId}:${normalize(c.name)}`;
+      const prev = dedupMap.get(key);
+      if (!prev) {
+        dedupMap.set(key, c);
+      } else {
+        // Mescla assessments (mantém stubs para contagem correta)
+        const merged = [...(prev.assessments || []), ...(c.assessments || [])];
+        dedupMap.set(key, { ...prev, assessments: merged });
+      }
+    }
+    const deduped = Array.from(dedupMap.values());
+    clientSummaryCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_SUMMARY_CACHE_TTL_MS, clients: deduped });
+    setClients(deduped);
 
     // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
     void loadChallengeCandidates(coach.id, masterFlag);
@@ -563,50 +591,91 @@ export function EvaluateTab() {
 
 
   // ─── Integrar cliente importado (Fineshape) a um aluno cadastrado ──────────
-  // Busca server-side com ilike (nome/email). Evita puxar 2000 linhas de uma vez.
+  // Busca server-side. Quando há termo, buscamos primeiro os profiles que
+  // batem (name/email) e depois os students associados — o filtro embed do
+  // PostgREST via `foreignTable` retorna vazio silenciosamente quando o join
+  // não é forçado como INNER. Ver bug de busca em branco no modal Integrar.
   const runLinkSearch = async (term: string) => {
     if (!coachInfo.id) return;
     setLinkLoading(true);
     try {
       const t = term.trim();
-      let q = supabase
+      const normalize = (s: string) =>
+        (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+      // Sem termo: pega os N mais recentes do escopo do coach.
+      if (!t) {
+        let q = supabase
+          .from("students")
+          .select("id,coach_id,profile_id,profiles!inner(name,email)")
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (!isMaster) q = q.eq("coach_id", coachInfo.id);
+        const { data, error } = await q;
+        if (error) throw error;
+        await hydrateLinkStudents((data as any[]) || []);
+        return;
+      }
+
+      // Com termo: primeiro pega profiles que batem (name/email),
+      // depois busca students que apontam para esses profiles.
+      const like = `%${t.replace(/[%_]/g, "\\$&")}%`;
+      const { data: profs, error: pErr } = await supabase
+        .from("profiles")
+        .select("id,name,email")
+        .or(`name.ilike.${like},email.ilike.${like}`)
+        .limit(50);
+      if (pErr) throw pErr;
+      const profileIds = ((profs as any[]) || []).map((p) => p.id).filter(Boolean);
+      if (profileIds.length === 0) {
+        setLinkStudents([]);
+        return;
+      }
+      let sq = supabase
         .from("students")
-        .select("id,coach_id,profile_id,profiles!students_profile_id_fkey(name,email)")
-        .order("created_at", { ascending: false })
-        .limit(t ? 30 : 50);
-      if (!isMaster) q = q.eq("coach_id", coachInfo.id);
-      if (t) {
-        // ilike no join usando or() no schema PostgREST
-        q = q.or(`name.ilike.%${t}%,email.ilike.%${t}%`, { foreignTable: "profiles" } as any);
-      }
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = (data as any[]) || [];
-      const coachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter(Boolean)));
-      const coachMap = new Map<string, string>();
-      if (coachIds.length) {
-        const { data: cs } = await supabase
-          .from("coaches")
-          .select("id, profiles!coaches_profile_id_fkey(name)")
-          .in("id", coachIds);
-        ((cs as any[]) || []).forEach((c) => coachMap.set(c.id, c.profiles?.name || "Coach"));
-      }
-      const list = rows
-        .filter((r) => r.profiles?.name) // remove ruído quando o or() no join não bate
-        .map((r) => ({
-          id: r.id as string,
-          name: (r.profiles?.name as string) || "Aluno",
-          email: (r.profiles?.email as string) || undefined,
-          coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
-        }));
-      list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-      setLinkStudents(list);
+        .select("id,coach_id,profile_id,profiles!inner(name,email)")
+        .in("profile_id", profileIds)
+        .limit(100);
+      if (!isMaster) sq = sq.eq("coach_id", coachInfo.id);
+      const { data: rows, error: sErr } = await sq;
+      if (sErr) throw sErr;
+
+      // Filtro cliente-side defensivo (case/diacritic-insensitive).
+      const nq = normalize(t);
+      const filtered = ((rows as any[]) || []).filter((r) => {
+        const n = normalize(r.profiles?.name || "");
+        const e = normalize(r.profiles?.email || "");
+        return n.includes(nq) || e.includes(nq);
+      });
+      await hydrateLinkStudents(filtered);
     } catch (e: any) {
-      console.error(e);
+      console.error("[LinkSearch] erro:", e, "term:", term);
       toast.error("Erro ao buscar alunos do sistema");
     } finally {
       setLinkLoading(false);
     }
+  };
+
+  const hydrateLinkStudents = async (rows: any[]) => {
+    const coachIds = Array.from(new Set(rows.map((r) => r.coach_id).filter(Boolean)));
+    const coachMap = new Map<string, string>();
+    if (coachIds.length) {
+      const { data: cs } = await supabase
+        .from("coaches")
+        .select("id, profiles!coaches_profile_id_fkey(name)")
+        .in("id", coachIds);
+      ((cs as any[]) || []).forEach((c) => coachMap.set(c.id, (c as any).profiles?.name || "Coach"));
+    }
+    const list = rows
+      .filter((r) => r.profiles?.name)
+      .map((r) => ({
+        id: r.id as string,
+        name: (r.profiles?.name as string) || "Aluno",
+        email: (r.profiles?.email as string) || undefined,
+        coachName: coachMap.get(r.coach_id) || (r.coach_id === coachInfo.id ? coachInfo.name : "—"),
+      }));
+    list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    setLinkStudents(list);
   };
 
   const openLinkClientModal = async (client: FitMindClient) => {
@@ -629,23 +698,29 @@ export function EvaluateTab() {
   const requestLinkClientToStudent = async (client: FitMindClient, student: { id: string; name: string; email?: string }) => {
     if (!coachInfo.id) return;
     try {
-      const targetCoachId = (client as any).coachId || coachInfo.id;
-      // Verifica se este aluno já está vinculado a algum outro cadastro deste coach
+      // Verifica se este aluno já está vinculado a QUALQUER outro cadastro
+      // (não só do coach atual — bug: vínculos antigos de outros coaches
+      // permaneciam visíveis mesmo após integrar).
       const { data: existing, error: exErr } = await supabase
         .from("coach_evaluation_clients" as never)
-        .select("id,name" as never)
-        .eq("coach_id" as never, targetCoachId as never)
+        .select("id,name,coach_id" as never)
         .eq("student_id" as never, student.id as never)
-        .neq("id" as never, client.id as never)
-        .maybeSingle();
+        .neq("id" as never, client.id as never);
       if (exErr) throw exErr;
-      const existingClientName = existing ? (existing as any).name : undefined;
-      const existingClientId = existing ? (existing as any).id : undefined;
+      const existingRows = (existing as any[]) || [];
+      const existingClientName = existingRows[0]?.name;
+      const existingClientId = existingRows[0]?.id;
       setConfirmText("");
       setTransferMergeAndDelete(true);
-      setConfirmLink({ client, student, existingClientName, existingClientId });
+      setConfirmLink({
+        client,
+        student,
+        existingClientName,
+        existingClientId,
+        existingClientIds: existingRows.map((r) => r.id),
+      } as any);
     } catch (e: any) {
-      console.error(e);
+      console.error("[LinkRequest] erro:", e);
       toast.error(e?.message || "Erro ao verificar vinculação");
     }
   };
@@ -659,7 +734,9 @@ export function EvaluateTab() {
     }
     setConfirmBusy(true);
     const { client, student, existingClientId } = confirmLink;
-    const isTransfer = !!existingClientId;
+    const existingClientIds: string[] = (confirmLink as any).existingClientIds
+      || (existingClientId ? [existingClientId] : []);
+    const isTransfer = existingClientIds.length > 0;
     try {
       const targetCoachId = (client as any).coachId || coachInfo.id;
       // Captura estado anterior para auditoria
@@ -670,26 +747,25 @@ export function EvaluateTab() {
         .maybeSingle();
       const previousStudentId = (before as any)?.student_id ?? null;
 
-      // Se transferência: mover avaliações do cadastro antigo → novo e desvincular o antigo
-      if (isTransfer && existingClientId) {
-        // Move todas avaliações do cadastro antigo para o novo (novo client_id + student_id)
+      // Se transferência: mover avaliações de TODOS os cadastros antigos → novo
+      if (isTransfer && existingClientIds.length > 0) {
         const { error: mvErr } = await supabase
           .from("coach_body_assessments" as never)
           .update({ client_id: client.id, student_id: student.id } as never)
-          .eq("client_id" as never, existingClientId as never);
+          .in("client_id" as never, existingClientIds as never);
         if (mvErr) throw mvErr;
-        // Desvincula o cadastro antigo (ou apaga se opção marcada)
+        // Apaga ou desvincula todos os cadastros antigos.
         if (transferMergeAndDelete) {
           const { error: delErr } = await supabase
             .from("coach_evaluation_clients" as never)
             .delete()
-            .eq("id" as never, existingClientId as never);
+            .in("id" as never, existingClientIds as never);
           if (delErr) throw delErr;
         } else {
           const { error: unErr } = await supabase
             .from("coach_evaluation_clients" as never)
             .update({ student_id: null } as never)
-            .eq("id" as never, existingClientId as never);
+            .in("id" as never, existingClientIds as never);
           if (unErr) throw unErr;
         }
       }
@@ -719,18 +795,23 @@ export function EvaluateTab() {
         metadata: {
           client_name: client.name,
           student_name: student.name,
-          transferred_from_client_id: existingClientId ?? null,
+          transferred_from_client_ids: existingClientIds,
           duplicate_deleted: isTransfer && transferMergeAndDelete,
+          merged_count: existingClientIds.length,
         },
       } as never);
 
-      toast.success(isTransfer ? "Vínculo transferido e avaliações mescladas" : "Avaliações integradas ao cadastro do aluno");
+      toast.success(
+        isTransfer
+          ? `Vínculo transferido e ${existingClientIds.length} cadastro(s) mesclado(s)`
+          : "Avaliações integradas ao cadastro do aluno",
+      );
       setConfirmLink(null);
       setLinkingClient(null);
       clientSummaryCache.delete(coachInfo.id);
       await loadClients();
     } catch (e: any) {
-      console.error(e);
+      console.error("[LinkExecute] erro:", e);
       toast.error(e?.message || "Erro ao integrar cadastro");
     } finally {
       setConfirmBusy(false);
