@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
 import { useBranding } from "@/components/theme-provider";
 import { CAROL_COACH_ID } from "@/lib/branding";
+import { isTestEmailClient, markSelfAsTest } from "@/lib/test-accounts.functions";
 
 
 // ============================================================
