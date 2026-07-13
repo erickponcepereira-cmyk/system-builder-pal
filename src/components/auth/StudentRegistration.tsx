@@ -148,6 +148,15 @@ export function StudentRegistration({ onBack }: { onBack: () => void }) {
 
       sessionStorage.removeItem("fitmind_referral");
       sessionStorage.removeItem("fitmind_selected_area");
+
+      if (isTestEmailClient(email)) {
+        // Conta de teste: já está logada (bootstrapTestSignup fez signIn). Marca is_test e vai direto pro app.
+        try { await markSelfAsTest(); } catch (err) { console.warn("[test] markSelfAsTest falhou:", err); }
+        toast.success("Conta de teste criada. Bem-vindo(a)!");
+        navigate({ to: "/student" });
+        return;
+      }
+
       await supabase.auth.signOut().catch(() => {});
       setRegisteredEmail(email.trim().toLowerCase());
       toast.success(
