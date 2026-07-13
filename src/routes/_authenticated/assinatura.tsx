@@ -243,3 +243,89 @@ function AssinaturaPage() {
     </div>
   );
 }
+
+function AnnualPaymentBlock({
+  productName,
+  productPrice,
+  onPaid,
+}: {
+  productName: string;
+  productPrice: number;
+  onPaid: () => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [payer, setPayer] = useState<{ email: string; name: string }>({ email: "", name: "" });
+
+  useEffect(() => {
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) return;
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("user_id", uid)
+        .maybeSingle();
+      setPayer({ email: (prof as any)?.email || userData.user?.email || "", name: (prof as any)?.name || "" });
+    })();
+  }, []);
+
+  const startCheckout = async () => {
+    setCreating(true);
+    try {
+      const { data: orderIdRpc, error } = await supabase.rpc(
+        "create_store_order" as never,
+        {
+          _items: [{ kind: "digital", sourceId: ACTIVATION_PRODUCT_ID, quantity: 1 }],
+          _payment_method: "pix",
+          _shipping: {},
+          _notes: "Ativação Anual (assinatura)",
+        } as never,
+      );
+      if (error) throw new Error(error.message);
+      const { data: order } = await supabase
+        .from("store_orders" as never)
+        .select("id,total_amount" as never)
+        .eq("id" as never, orderIdRpc as never)
+        .maybeSingle();
+      const od = order as unknown as { id: string; total_amount: number } | null;
+      setOrderId(od?.id || String(orderIdRpc));
+      setOrderTotal(Number(od?.total_amount || productPrice || 179.9));
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao criar pedido");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (!orderId) {
+    return (
+      <button
+        onClick={startCheckout}
+        disabled={creating}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
+      >
+        {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+        Pagar anuidade ({`R$ ${Number(productPrice || 0).toFixed(2).replace(".", ",")}`})
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <MercadoPagoCheckout
+        source={{ kind: "store_order", id: orderId }}
+        amount={orderTotal}
+        description={productName}
+        defaultPayer={{ email: payer.email, name: payer.name }}
+        initialMethod="pix"
+        onApproved={() => {
+          toast.success("Anuidade paga com sucesso!");
+          onPaid();
+        }}
+      />
+    </div>
+  );
+}
