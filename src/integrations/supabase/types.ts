@@ -423,6 +423,7 @@ export type Database = {
           attended: boolean | null
           created_at: string | null
           id: string
+          is_test: boolean
           log_date: string
           notes: string | null
           student_id: string
@@ -433,6 +434,7 @@ export type Database = {
           attended?: boolean | null
           created_at?: string | null
           id?: string
+          is_test?: boolean
           log_date: string
           notes?: string | null
           student_id: string
@@ -443,6 +445,7 @@ export type Database = {
           attended?: boolean | null
           created_at?: string | null
           id?: string
+          is_test?: boolean
           log_date?: string
           notes?: string | null
           student_id?: string
@@ -834,6 +837,7 @@ export type Database = {
           current_streak_active: boolean | null
           delivery_notes: string | null
           id: string
+          is_test: boolean
           period_end: string | null
           period_start: string | null
           reward_delivered: boolean
@@ -854,6 +858,7 @@ export type Database = {
           current_streak_active?: boolean | null
           delivery_notes?: string | null
           id?: string
+          is_test?: boolean
           period_end?: string | null
           period_start?: string | null
           reward_delivered?: boolean
@@ -874,6 +879,7 @@ export type Database = {
           current_streak_active?: boolean | null
           delivery_notes?: string | null
           id?: string
+          is_test?: boolean
           period_end?: string | null
           period_start?: string | null
           reward_delivered?: boolean
@@ -1707,6 +1713,7 @@ export type Database = {
           height: number | null
           height_unit: string
           id: string
+          is_test: boolean
           language: string
           name: string
           notes: string | null
@@ -1727,6 +1734,7 @@ export type Database = {
           height?: number | null
           height_unit?: string
           id?: string
+          is_test?: boolean
           language?: string
           name: string
           notes?: string | null
@@ -1747,6 +1755,7 @@ export type Database = {
           height?: number | null
           height_unit?: string
           id?: string
+          is_test?: boolean
           language?: string
           name?: string
           notes?: string | null
@@ -1876,6 +1885,7 @@ export type Database = {
           awarded_at: string
           coach_id: string
           id: string
+          is_test: boolean
           medal_key: string
           medal_kind: string
           period_month: number | null
@@ -1886,6 +1896,7 @@ export type Database = {
           awarded_at?: string
           coach_id: string
           id?: string
+          is_test?: boolean
           medal_key: string
           medal_kind: string
           period_month?: number | null
@@ -1896,6 +1907,7 @@ export type Database = {
           awarded_at?: string
           coach_id?: string
           id?: string
+          is_test?: boolean
           medal_key?: string
           medal_kind?: string
           period_month?: number | null
@@ -1917,6 +1929,7 @@ export type Database = {
           coach_id: string
           created_at: string
           id: string
+          is_test: boolean
           product_id: string | null
           tree: Json
           updated_at: string
@@ -1926,6 +1939,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           id?: string
+          is_test?: boolean
           product_id?: string | null
           tree?: Json
           updated_at?: string
@@ -1935,6 +1949,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           id?: string
+          is_test?: boolean
           product_id?: string | null
           tree?: Json
           updated_at?: string
@@ -1970,6 +1985,7 @@ export type Database = {
           coach_id: string
           created_at: string
           id: string
+          is_test: boolean
           patent_key: string
           patent_level: number
           qualifying_revenue: number
@@ -1979,6 +1995,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           id?: string
+          is_test?: boolean
           patent_key: string
           patent_level?: number
           qualifying_revenue?: number
@@ -1988,6 +2005,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           id?: string
+          is_test?: boolean
           patent_key?: string
           patent_level?: number
           qualifying_revenue?: number
@@ -1999,6 +2017,7 @@ export type Database = {
           coach_id: string
           created_at: string
           id: string
+          is_test: boolean
           metadata: Json
           points: number
           product_id: string | null
@@ -2009,6 +2028,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           id?: string
+          is_test?: boolean
           metadata?: Json
           points: number
           product_id?: string | null
@@ -2019,6 +2039,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           id?: string
+          is_test?: boolean
           metadata?: Json
           points?: number
           product_id?: string | null
@@ -2220,6 +2241,7 @@ export type Database = {
           inactivity_warning_sent: boolean | null
           instagram: string | null
           is_professional: boolean
+          is_test: boolean
           last_activity_at: string | null
           last_unlock_attempt_at: string | null
           last_unlock_failed_at: string | null
@@ -2281,6 +2303,7 @@ export type Database = {
           inactivity_warning_sent?: boolean | null
           instagram?: string | null
           is_professional?: boolean
+          is_test?: boolean
           last_activity_at?: string | null
           last_unlock_attempt_at?: string | null
           last_unlock_failed_at?: string | null
@@ -2342,6 +2365,7 @@ export type Database = {
           inactivity_warning_sent?: boolean | null
           instagram?: string | null
           is_professional?: boolean
+          is_test?: boolean
           last_activity_at?: string | null
           last_unlock_attempt_at?: string | null
           last_unlock_failed_at?: string | null
@@ -2420,6 +2444,7 @@ export type Database = {
           id: string
           is_master_coach_commission: boolean | null
           is_referral: boolean | null
+          is_test: boolean
           level: number
           master_coach_id: string | null
           partner_order_id: string | null
@@ -2439,6 +2464,7 @@ export type Database = {
           id?: string
           is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
+          is_test?: boolean
           level: number
           master_coach_id?: string | null
           partner_order_id?: string | null
@@ -2458,6 +2484,7 @@ export type Database = {
           id?: string
           is_master_coach_commission?: boolean | null
           is_referral?: boolean | null
+          is_test?: boolean
           level?: number
           master_coach_id?: string | null
           partner_order_id?: string | null
@@ -3202,6 +3229,7 @@ export type Database = {
           display_name: string
           event_id: string
           id: string
+          is_test: boolean
           profile_id: string
           student_id: string | null
         }
@@ -3211,6 +3239,7 @@ export type Database = {
           display_name: string
           event_id: string
           id?: string
+          is_test?: boolean
           profile_id: string
           student_id?: string | null
         }
@@ -3220,6 +3249,7 @@ export type Database = {
           display_name?: string
           event_id?: string
           id?: string
+          is_test?: boolean
           profile_id?: string
           student_id?: string | null
         }
@@ -3252,6 +3282,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          is_test: boolean
           notes: string | null
           profile_id: string
           registered_at: string
@@ -3263,6 +3294,7 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          is_test?: boolean
           notes?: string | null
           profile_id: string
           registered_at?: string
@@ -3274,6 +3306,7 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          is_test?: boolean
           notes?: string | null
           profile_id?: string
           registered_at?: string
@@ -3541,6 +3574,7 @@ export type Database = {
           commission_id: string | null
           created_at: string
           id: string
+          is_test: boolean
           order_id: string | null
           reason: string
           student_id: string
@@ -3551,6 +3585,7 @@ export type Database = {
           commission_id?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           order_id?: string | null
           reason: string
           student_id: string
@@ -3561,6 +3596,7 @@ export type Database = {
           commission_id?: string | null
           created_at?: string
           id?: string
+          is_test?: boolean
           order_id?: string | null
           reason?: string
           student_id?: string
@@ -4543,6 +4579,7 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          is_test: boolean
           mp_payment_id: string | null
           mp_preference_id: string | null
           paid_at: string | null
@@ -4568,6 +4605,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          is_test?: boolean
           mp_payment_id?: string | null
           mp_preference_id?: string | null
           paid_at?: string | null
@@ -4593,6 +4631,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          is_test?: boolean
           mp_payment_id?: string | null
           mp_preference_id?: string | null
           paid_at?: string | null
@@ -4620,6 +4659,7 @@ export type Database = {
           coach_id: string
           created_at: string | null
           id: string
+          is_test: boolean
           is_top_seller: boolean | null
           new_students: number | null
           qualifies_for_career_plan: boolean | null
@@ -4634,6 +4674,7 @@ export type Database = {
           coach_id: string
           created_at?: string | null
           id?: string
+          is_test?: boolean
           is_top_seller?: boolean | null
           new_students?: number | null
           qualifies_for_career_plan?: boolean | null
@@ -4648,6 +4689,7 @@ export type Database = {
           coach_id?: string
           created_at?: string | null
           id?: string
+          is_test?: boolean
           is_top_seller?: boolean | null
           new_students?: number | null
           qualifies_for_career_plan?: boolean | null
@@ -4806,6 +4848,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_read: boolean | null
+          is_test: boolean
           message: string | null
           profile_id: string
           title: string
@@ -4816,6 +4859,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          is_test?: boolean
           message?: string | null
           profile_id: string
           title: string
@@ -4826,6 +4870,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_read?: boolean | null
+          is_test?: boolean
           message?: string | null
           profile_id?: string
           title?: string
@@ -5244,6 +5289,7 @@ export type Database = {
           delivery_started_at: string | null
           gross_amount: number
           id: string
+          is_test: boolean
           master_coach_cross_beneficiary_coach_id: string | null
           master_coach_cross_bonus_amount: number
           metadata: Json
@@ -5294,6 +5340,7 @@ export type Database = {
           delivery_started_at?: string | null
           gross_amount?: number
           id?: string
+          is_test?: boolean
           master_coach_cross_beneficiary_coach_id?: string | null
           master_coach_cross_bonus_amount?: number
           metadata?: Json
@@ -5344,6 +5391,7 @@ export type Database = {
           delivery_started_at?: string | null
           gross_amount?: number
           id?: string
+          is_test?: boolean
           master_coach_cross_beneficiary_coach_id?: string | null
           master_coach_cross_bonus_amount?: number
           metadata?: Json
@@ -7713,6 +7761,7 @@ export type Database = {
           id: string
           instagram: string | null
           is_master_admin: boolean
+          is_test: boolean
           last_app_login_at: string | null
           name: string
           neighborhood: string | null
@@ -7748,6 +7797,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_master_admin?: boolean
+          is_test?: boolean
           last_app_login_at?: string | null
           name: string
           neighborhood?: string | null
@@ -7783,6 +7833,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_master_admin?: boolean
+          is_test?: boolean
           last_app_login_at?: string | null
           name?: string
           neighborhood?: string | null
@@ -8168,6 +8219,7 @@ export type Database = {
           created_at: string
           digital_product_id: string | null
           id: string
+          is_test: boolean
           metadata: Json
           order_id: string
           product_id: string | null
@@ -8182,6 +8234,7 @@ export type Database = {
           created_at?: string
           digital_product_id?: string | null
           id?: string
+          is_test?: boolean
           metadata?: Json
           order_id: string
           product_id?: string | null
@@ -8196,6 +8249,7 @@ export type Database = {
           created_at?: string
           digital_product_id?: string | null
           id?: string
+          is_test?: boolean
           metadata?: Json
           order_id?: string
           product_id?: string | null
@@ -8224,6 +8278,7 @@ export type Database = {
           delivery_started_at: string | null
           fitcoin_used: number
           id: string
+          is_test: boolean
           metadata: Json
           mp_payment_id: string | null
           notes: string | null
@@ -8260,6 +8315,7 @@ export type Database = {
           delivery_started_at?: string | null
           fitcoin_used?: number
           id?: string
+          is_test?: boolean
           metadata?: Json
           mp_payment_id?: string | null
           notes?: string | null
@@ -8296,6 +8352,7 @@ export type Database = {
           delivery_started_at?: string | null
           fitcoin_used?: number
           id?: string
+          is_test?: boolean
           metadata?: Json
           mp_payment_id?: string | null
           notes?: string | null
@@ -8784,6 +8841,7 @@ export type Database = {
           available_balance: number | null
           fitcoin_balance: number
           id: string
+          is_test: boolean
           pending_balance: number | null
           student_id: string
           total_earned: number | null
@@ -8794,6 +8852,7 @@ export type Database = {
           available_balance?: number | null
           fitcoin_balance?: number
           id?: string
+          is_test?: boolean
           pending_balance?: number | null
           student_id: string
           total_earned?: number | null
@@ -8804,6 +8863,7 @@ export type Database = {
           available_balance?: number | null
           fitcoin_balance?: number
           id?: string
+          is_test?: boolean
           pending_balance?: number | null
           student_id?: string
           total_earned?: number | null
@@ -8953,6 +9013,7 @@ export type Database = {
           influencer_promoted_at: string | null
           influencer_promoted_by: string | null
           is_influencer: boolean
+          is_test: boolean
           metabolic_age: number | null
           muscle_mass: number | null
           notes: string | null
@@ -8997,6 +9058,7 @@ export type Database = {
           influencer_promoted_at?: string | null
           influencer_promoted_by?: string | null
           is_influencer?: boolean
+          is_test?: boolean
           metabolic_age?: number | null
           muscle_mass?: number | null
           notes?: string | null
@@ -9041,6 +9103,7 @@ export type Database = {
           influencer_promoted_at?: string | null
           influencer_promoted_by?: string | null
           is_influencer?: boolean
+          is_test?: boolean
           metabolic_age?: number | null
           muscle_mass?: number | null
           notes?: string | null
@@ -9099,6 +9162,7 @@ export type Database = {
           due_date: string
           fee_amount: number
           id: string
+          is_test: boolean
           mp_payment_id: string | null
           net_to_admin: number
           notes: string | null
@@ -9125,6 +9189,7 @@ export type Database = {
           due_date: string
           fee_amount?: number
           id?: string
+          is_test?: boolean
           mp_payment_id?: string | null
           net_to_admin?: number
           notes?: string | null
@@ -9151,6 +9216,7 @@ export type Database = {
           due_date?: string
           fee_amount?: number
           id?: string
+          is_test?: boolean
           mp_payment_id?: string | null
           net_to_admin?: number
           notes?: string | null
@@ -9255,6 +9321,7 @@ export type Database = {
           end_date: string
           id: string
           installments: number | null
+          is_test: boolean
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           payment_method_token: string | null
           product_id: string
@@ -9269,6 +9336,7 @@ export type Database = {
           end_date: string
           id?: string
           installments?: number | null
+          is_test?: boolean
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_method_token?: string | null
           product_id: string
@@ -9283,6 +9351,7 @@ export type Database = {
           end_date?: string
           id?: string
           installments?: number | null
+          is_test?: boolean
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_method_token?: string | null
           product_id?: string
@@ -9415,6 +9484,39 @@ export type Database = {
           term_version?: string
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      test_accounts: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          default_password: string
+          email: string
+          id: string
+          label: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          default_password: string
+          email: string
+          id?: string
+          label?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          default_password?: string
+          email?: string
+          id?: string
+          label?: string | null
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -9552,6 +9654,7 @@ export type Database = {
           gross_amount: number
           id: string
           installments: number | null
+          is_test: boolean
           metadata: Json | null
           mp_payment_id: string | null
           net_amount: number
@@ -9580,6 +9683,7 @@ export type Database = {
           gross_amount: number
           id?: string
           installments?: number | null
+          is_test?: boolean
           metadata?: Json | null
           mp_payment_id?: string | null
           net_amount: number
@@ -9608,6 +9712,7 @@ export type Database = {
           gross_amount?: number
           id?: string
           installments?: number | null
+          is_test?: boolean
           metadata?: Json | null
           mp_payment_id?: string | null
           net_amount?: number
@@ -9679,6 +9784,7 @@ export type Database = {
           custom_amount: number | null
           exempt_until: string | null
           id: string
+          is_test: boolean
           next_invoice_month: string | null
           notes: string | null
           paid_until: string | null
@@ -9695,6 +9801,7 @@ export type Database = {
           custom_amount?: number | null
           exempt_until?: string | null
           id?: string
+          is_test?: boolean
           next_invoice_month?: string | null
           notes?: string | null
           paid_until?: string | null
@@ -9711,6 +9818,7 @@ export type Database = {
           custom_amount?: number | null
           exempt_until?: string | null
           id?: string
+          is_test?: boolean
           next_invoice_month?: string | null
           notes?: string | null
           paid_until?: string | null
@@ -9735,6 +9843,7 @@ export type Database = {
         Row: {
           available_balance: number | null
           id: string
+          is_test: boolean
           pending_balance: number | null
           profile_id: string
           total_earned: number | null
@@ -9744,6 +9853,7 @@ export type Database = {
         Insert: {
           available_balance?: number | null
           id?: string
+          is_test?: boolean
           pending_balance?: number | null
           profile_id: string
           total_earned?: number | null
@@ -9753,6 +9863,7 @@ export type Database = {
         Update: {
           available_balance?: number | null
           id?: string
+          is_test?: boolean
           pending_balance?: number | null
           profile_id?: string
           total_earned?: number | null
@@ -10806,6 +10917,7 @@ export type Database = {
       is_coach: { Args: { _user_id: string }; Returns: boolean }
       is_master_admin: { Args: { _user_id: string }; Returns: boolean }
       is_master_coach: { Args: { _coach_id: string }; Returns: boolean }
+      is_test_email: { Args: { _email: string }; Returns: boolean }
       is_user_blocked_by_subscription: {
         Args: { _user_id: string }
         Returns: boolean
@@ -10946,6 +11058,7 @@ export type Database = {
           due_date: string
           fee_amount: number
           id: string
+          is_test: boolean
           mp_payment_id: string | null
           net_to_admin: number
           notes: string | null
@@ -10996,6 +11109,7 @@ export type Database = {
           due_date: string
           fee_amount: number
           id: string
+          is_test: boolean
           mp_payment_id: string | null
           net_to_admin: number
           notes: string | null
@@ -11117,6 +11231,7 @@ export type Database = {
           due_date: string
           fee_amount: number
           id: string
+          is_test: boolean
           mp_payment_id: string | null
           net_to_admin: number
           notes: string | null
@@ -11152,6 +11267,7 @@ export type Database = {
           due_date: string
           fee_amount: number
           id: string
+          is_test: boolean
           mp_payment_id: string | null
           net_to_admin: number
           notes: string | null
