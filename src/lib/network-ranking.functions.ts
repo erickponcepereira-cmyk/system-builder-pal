@@ -291,7 +291,7 @@ async function loadRevenueByCoach(supabaseAdmin: any, coachIds: string[], from: 
   if (!coachIds.length) return revenue;
   const fromIso = new Date(`${from}T00:00:00`).toISOString();
   const toIso = new Date(`${to}T23:59:59`).toISOString();
-  const { data: studentsRaw } = await supabaseAdmin.from("students").select("id,coach_id").in("coach_id", coachIds);
+  const { data: studentsRaw } = await supabaseAdmin.from("students").select("id,coach_id").in("coach_id", coachIds).eq("is_test", false);
   const students = ((studentsRaw as Array<{ id: string; coach_id: string }> | null) || []);
   const studentToCoach = new Map(students.map((s) => [s.id, s.coach_id]));
   const studentIds = students.map((s) => s.id);
