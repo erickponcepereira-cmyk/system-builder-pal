@@ -1,40 +1,81 @@
-## Diagnóstico
 
-Ao consultar o banco encontrei o seguinte estado das seções e produtos:
+## Objetivo
 
-- **FitMind Suplementos** (id `11111111-…-001`): imagem OK e **56 produtos** já vinculados por `section_id` (Shake, Whey, BCAA, Xtra-Cal, Liftoff etc.). Essa seção **já deveria aparecer** com todos os itens na loja do aluno — se não está, é cache do navegador.
-- **Suplementos (Parceiros/Profissionais)** (id `11111111-…-002`): imagem OK, mas apenas **1 produto** vinculado. Não há produtos "órfãos" no banco de parceiros com nome Herbalife/Shake/Whey para migrar automaticamente.
-- **Herbalife (legado)** e **Herbalife (Parceiros) (legado)**: já estão inativos, sem produtos vinculados.
-- Duas seções compartilham o mesmo `sort_order` (Herbalife legado = 7 e Suplementos-fitmind = 7; idem 11 nas outras), o que pode fazer a ordem "acima do Herbalife" ficar aleatória visualmente.
+Permitir que você use um conjunto fixo de dados de teste (email/CPF/telefone reservados) para percorrer todo o cadastro do aluno — perfil, mensalidade e anuidade — sem validação de e-mail, sem passar pelo Mercado Pago, sem aparecer em nenhum relatório/lista/rede, e com auto-exclusão ao sair (ou na próxima tentativa com os mesmos dados).
 
-Ou seja: no banco já está quase tudo certo, o que falta é **garantir a substituição limpa** para que nada de Herbalife apareça mais e a nova seção Suplementos ocupe visualmente o mesmo lugar em ambas as lojas — hoje e no futuro.
+## 1. Credenciais fixas reservadas
 
-## O que vou fazer
+Uma tabela nova `test_accounts` guarda os "slots" de teste que você pode reutilizar. Cada slot tem:
 
-### 1. Reindexar todos os produtos "Herbalife"/suplementos para Suplementos
-Numa migração de dados única, movo para as duas novas seções Suplementos qualquer produto (nas tabelas `products`, `partner_products`, `professional_products`) que:
-- esteja com `section_id` apontando para uma das seções legado (`Herbalife (legado)` ou `Herbalife (Parceiros) (legado)`), OU
-- tenha `is_herbalife = true` (na tabela `store_products`) e ainda não esteja em Suplementos, OU
-- não tenha `section_id` e o nome contenha "Herbalife".
+- `email` (ex.: `teste1@fitmind.test`, `teste2@fitmind.test`)
+- `cpf` de teste
+- `telefone` de teste
+- `senha_padrao`
+- `label` (ex.: "Teste Aluno 1")
 
-Regra: produto da audiência FitMind vai para Suplementos-FitMind (`…-001`); produto de parceiro/profissional vai para Suplementos-Parceiros (`…-002`).
+Vou pré-popular 3 slots. Qualquer cadastro/login que use um desses e-mails entra no fluxo de teste automaticamente — nenhum toggle global, nenhum botão de admin. Domínio `.test` garante que é impossível confundir com usuário real.
 
-### 2. Encerrar formalmente as seções antigas
-- Marco `Herbalife (legado)` e `Herbalife (Parceiros) (legado)` como `is_active = false` (já estão) e renomeio para deixar claro que não devem mais ser editadas (`Herbalife (desativado — migrado p/ Suplementos)`).
-- Ajusto o `sort_order` das duas novas seções para **um número imediatamente abaixo** das seções irmãs de mesma audiência (garantindo posição estável acima do que sobrou de Herbalife e evitando empates).
+## 2. Bypass de validação de e-mail
 
-### 3. Blindar o comportamento futuro
-- Adiciono um **trigger** em `products`, `partner_products` e `professional_products` que, **antes de INSERT/UPDATE**, se o produto for `is_herbalife = true` (ou o nome começar com "Herbalife ") e o `section_id` estiver vazio, vincula automaticamente à seção Suplementos correspondente à audiência. Isso evita que qualquer produto novo cadastrado como Herbalife caia "fora" da seção Suplementos.
-- Nada muda no frontend do aluno/parceiro; a lista já lê por `section_id` (`StorePage.tsx` linha 500 e `PartnerProfessionalStore.tsx` linha 504), então assim que os `section_id` estiverem corretos os cards aparecem sozinhos com imagem, preço e itens.
+- No signup, quando o e-mail pertence a `test_accounts`, o servidor chama a Auth Admin API com `email_confirm: true` (via server function protegida), então o usuário já entra confirmado — sem link no e-mail.
+- Não altero a configuração global de auto-confirm; só afeta esses e-mails.
 
-### 4. Verificação
-Após aplicar a migração, rodo `SELECT` de contagem por `section_id` em cada tabela e confirmo pelo preview que:
-- a seção **Suplementos** aparece acima de qualquer resquício de Herbalife nas duas lojas,
-- as imagens carregam,
-- os itens (56 na FitMind + os que existirem em parceiros) aparecem dentro dela.
+## 3. Bypass de pagamento (mensalidade e anuidade)
 
-## Não vou fazer
+- Um server function `simulateTestPayment` detecta que o usuário logado é de teste (flag `is_test = true` no `profiles`/`students`) e, quando ele aperta "Pagar mensalidade" ou "Pagar anuidade":
+  - Marca a `subscription`/`annual_activation` como `paid` diretamente.
+  - **Não** cria linha em `transactions`, `commissions`, `mercadopago_payments`, `store_orders`, `subscription_invoices` (ou cria com `is_test = true` que é filtrado em toda leitura — ver item 4).
+  - **Não** dispara o `handlePaidStoreOrderForActivation` normal nem comissões MLM.
+- O frontend do checkout, ao detectar `is_test`, pula o redirect pro Mercado Pago e chama esse endpoint fake — retorno instantâneo "pago".
 
-- Não vou apagar as seções antigas nem os produtos — só desativar/renomear, para preservar histórico de pedidos.
-- Não vou mexer no cálculo de comissão, no fluxo de checkout, nem em RLS.
-- Não vou criar produtos novos "chutando" nomes de Herbalife para preencher Suplementos-Parceiros — se ficar com poucos itens é porque de fato há poucos cadastrados; nesse caso te aviso para você/parceiros adicionarem.
+## 4. Isolamento total nos relatórios
+
+Adiciono coluna `is_test boolean not null default false` nas tabelas que hoje alimentam relatórios/listagens/rede:
+
+- `profiles`, `students`, `coaches` (quando aplicável)
+- `subscriptions`, `subscription_invoices`, `user_subscriptions`
+- `transactions`, `commissions`, `mercadopago_payments`, `store_orders`, `store_order_items`
+- `coach_evaluation_clients`, `coach_network_projections`, `coach_points_log`
+- `wallets`, `student_wallets`, `fitcoin_ledger`
+
+E aplico filtro `WHERE is_test = false` (ou `AND is_test IS DISTINCT FROM true`) em:
+
+- Todas as `*.functions.ts` de relatório (`admin-financial`, `admin-reports`, `coach-reports`, `partner-reports`, `admin-network`, `network-ranking`, `top-selling-products`, `financial.functions`, `financialEngine`, `master-commission`, `admin-students`, `coach-downline`, `coach-sales`).
+- Listagens de admin (`admin.students`, `admin.coaches`, `admin.orders`, `admin.subscriptions`, `admin.financial-summary`, etc.).
+- Painel do coach (downline, rede, alunos, comissões, medalhas, patentes, ranking, projeções).
+
+Regra da casa: qualquer leitura que hoje conta/soma/lista aluno, venda ou comissão passa a excluir `is_test = true`.
+
+## 5. Auto-exclusão
+
+Duas garantias, como você pediu:
+
+**a) Ao clicar em "Sair" com um usuário de teste** — o botão de logout do aluno, ao detectar `is_test`, chama `deleteTestUser` antes do `signOut()`. Essa server function (admin, service role) apaga em cascata:
+- linhas em todas as tabelas `is_test = true` daquele `user_id`
+- `auth.users` via Auth Admin API
+
+**b) Ao entrar novamente com os mesmos dados** — o server function de signup, se o e-mail já existe em `auth.users` E é um slot de teste, executa a mesma limpeza antes de recriar. Assim, mesmo que você feche o app sem clicar em Sair, o próximo cadastro começa limpo.
+
+Nada de trigger no `auth` schema (proibido); a limpeza é feita por server function chamando a Auth Admin API.
+
+## 6. Segurança
+
+- Toda server function de teste (`simulateTestPayment`, `deleteTestUser`, signup-com-bypass) valida que o e-mail alvo está em `test_accounts`. Se não estiver, rejeita — impossível acionar bypass para conta real.
+- `test_accounts` só tem policy de leitura para admin; ninguém consegue "adicionar-se" como conta de teste pelo frontend.
+- Domínio `.test` (reservado por IANA) é a segunda barreira: e-mail real nunca cai aqui.
+
+## Detalhes técnicos
+
+- Migrations: nova tabela `test_accounts` + GRANTs + RLS admin-only; coluna `is_test` nas tabelas listadas; índices em `is_test` onde relatórios varrem muitas linhas.
+- Servidor: `src/lib/test-accounts.functions.ts` com `simulateTestPayment`, `deleteTestUser`, `signupTestAccount` (todos com `requireSupabaseAuth` exceto o signup, que valida contra a whitelist).
+- Frontend: hook `useIsTestUser()` que lê `is_test` do perfil; checkout de mensalidade/anuidade e botão de logout ramificam nesse hook.
+- Filtros de relatório aplicados nas server functions de leitura, não no frontend — evita esquecer uma tela.
+
+## Não estou fazendo
+
+- Não mexo em `test_simulated_sales` nem no `test-mode` global do admin — ferramentas diferentes, propósitos diferentes.
+- Não crio botão "gerar cadastro fake": você usa os slots fixos.
+- Não permito uso dos slots em produção com dado real (validação por domínio `.test` + whitelist).
+- Não altero fluxos de pagamento reais nem regras de MLM/comissão — só os pulam quando `is_test`.
+
+Depois que você aprovar, mostro a lista exata de tabelas onde vou adicionar `is_test` e as funções de relatório que vão receber o filtro, para você confirmar antes de rodar a migration.
