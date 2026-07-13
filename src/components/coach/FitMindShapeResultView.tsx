@@ -195,13 +195,18 @@ const FitMindShapeResultView: React.FC<FitMindShapeResultViewProps> = ({
 
   const AvatarLabels = AVATAR_LABELS_8;
 
+  // Idade sempre derivada do birthDate do cadastro (fonte de verdade),
+  // ignorando o snapshot gravado no assessment. Fallback para a.age
+  // apenas quando o cliente ainda não tem birthDate cadastrado.
+  const currentAge = calcAgeFromBirthdate(client.birthDate) ?? a.age ?? 0;
+
   const bmiCat = getBMICategory(a.bmi || computedBMI);
   const avatarEntry = { index: bmiCat.avatar, label: bmiCat.label, color: bmiCat.color };
   const avatarIndex = avatarEntry.index;
   const clientGenderBin: "male" | "female" = client.gender === "female" ? "female" : "male";
-  const fatCat = getBodyFatCategory(a.bodyFat, client.gender, a.age || 30);
+  const fatCat = getBodyFatCategory(a.bodyFat, client.gender, currentAge || 30);
   const viscCat = getVisceralCategory(a.visceralFat);
-  const ageBodyDiff = a.bodyAge && a.age ? a.bodyAge - a.age : 0;
+  const ageBodyDiff = a.bodyAge && currentAge ? a.bodyAge - currentAge : 0;
 
   const evalColor = (ev: string) =>
     ({ excellent: "#16a34a", good: "#16a34a", normal: "#16a34a", warning: "#eab308", danger: "#dc2626" })[ev] || "#eab308";
