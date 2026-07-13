@@ -263,8 +263,31 @@ export function EvaluateTab() {
         coachName: masterFlag && row.coach_id !== coach.id ? (row.coach_name || "Outro coach") : undefined,
       };
     });
-    clientSummaryCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_SUMMARY_CACHE_TTL_MS, clients: mappedClients });
-    setClients(mappedClients);
+
+    // Dedup: consolida cadastros duplicados por (studentId) quando existe
+    // vínculo, ou por (coach_id + nome normalizado) quando é "self" sem
+    // student_id. Mantém o mais antigo (menor id lexicográfico como fallback)
+    // e junta contagens de avaliações. Corrige duplicatas visíveis como
+    // "Ana Flávia (eu)" e cadastros do mesmo aluno em coaches diferentes.
+    const normalize = (s: string) =>
+      (s || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+    const dedupMap = new Map<string, typeof mappedClients[number]>();
+    for (const c of mappedClients) {
+      const key = c.studentId
+        ? `sid:${c.studentId}`
+        : `self:${c.coachId}:${normalize(c.name)}`;
+      const prev = dedupMap.get(key);
+      if (!prev) {
+        dedupMap.set(key, c);
+      } else {
+        // Mescla assessments (mantém stubs para contagem correta)
+        const merged = [...(prev.assessments || []), ...(c.assessments || [])];
+        dedupMap.set(key, { ...prev, assessments: merged });
+      }
+    }
+    const deduped = Array.from(dedupMap.values());
+    clientSummaryCache.set(cacheKey, { expiresAt: Date.now() + CLIENT_SUMMARY_CACHE_TTL_MS, clients: deduped });
+    setClients(deduped);
 
     // Carrega vagas pendentes de desafio para exibir botão "Avaliar para o Desafio"
     void loadChallengeCandidates(coach.id, masterFlag);
