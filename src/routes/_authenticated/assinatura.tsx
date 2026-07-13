@@ -33,9 +33,13 @@ function AssinaturaPage() {
 
   const [annual, setAnnual] = useState<any>(null);
   const [annualLoading, setAnnualLoading] = useState(true);
+  const [isTest, setIsTest] = useState(false);
+  const [busyTest, setBusyTest] = useState(false);
 
   const fnGet = useServerFn(getMySubscription);
   const fnAnnual = useServerFn(getMyAnnualActivation);
+  const fnIsTest = useServerFn(getIsTestUser);
+  const fnPayAnnual = useServerFn(simulateTestPayAnnual);
 
   useEffect(() => {
     (async () => {
