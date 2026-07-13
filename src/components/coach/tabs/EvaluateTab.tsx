@@ -932,6 +932,13 @@ export function EvaluateTab() {
         }
         onLoadFullAssessments={loadFullAssessmentsForClient}
         onLinkClientToStudent={openLinkClientModal}
+        onSync={async () => {
+          if (coachInfo.id) clientSummaryCache.delete(coachInfo.id);
+          await Promise.all([
+            loadClients(),
+            loadChallengeCandidates(coachInfo.id, isMaster),
+          ]);
+        }}
         onCreateClient={createClient}
         onUpdateClient={async (client) => {
           if (!coachInfo.id) throw new Error("Coach não encontrado");

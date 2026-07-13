@@ -72,6 +72,7 @@ import {
   Share2,
   Eye,
   EyeOff,
+  RefreshCw,
 } from "lucide-react";
 import {
   calculateBodyComposition,
@@ -320,6 +321,8 @@ export interface FitMindShapeProps {
   getChallengeCandidatesForClient?: (client: FitMindClient) => FitMindChallengeCandidate[];
   // Abre modal de integrar um cliente importado (Fineshape) a um aluno já cadastrado no sistema
   onLinkClientToStudent?: (client: FitMindClient) => void;
+  // Recarrega a lista de clientes/avaliações sob demanda (botão Sincronizar)
+  onSync?: () => Promise<void> | void;
 }
 
 // ============================================================
@@ -399,6 +402,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
   initialClientId,
   getChallengeCandidatesForClient,
   onLinkClientToStudent,
+  onSync,
 }) => {
   const [screen, setScreen] = useState<
     "home" | "select-client" | "new-client" | "edit-client" | "assessment" | "result" | "compare"
@@ -422,6 +426,16 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     [clients, coach.id],
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleSync = useCallback(async () => {
+    if (!onSync || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await onSync();
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [onSync, isSyncing]);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [bioUnits, setBioUnits] = useState<Record<string, "%" | "kg" | "cm" | "num">>({});
   const [calcWarnings, setCalcWarnings] = useState<string[]>([]);
@@ -788,6 +802,7 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
     .fm-step-dot { flex: 1; height: 4px; border-radius: 999px; background: var(--muted); transition: background .3s; }
     .fm-step-dot.active { background: var(--fm-primary); }
     @keyframes fm-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fm-spin { to { transform: rotate(360deg); } }
     .fm-animate { animation: fm-fade-in .3s ease; }
     /* Result screen — theme-aware via tokens */
     .fm-result-screen { color: var(--foreground); }
@@ -1138,6 +1153,38 @@ const FitMindShape: React.FC<FitMindShapeProps> = ({
             Olá, {coach.name} 👋
           </div>
         </div>
+        {onSync && (
+          <button
+            type="button"
+            onClick={handleSync}
+            disabled={isSyncing}
+            title="Sincronizar dados"
+            aria-label="Sincronizar dados"
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "var(--card)",
+              color: "var(--foreground)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: isSyncing ? "wait" : "pointer",
+              opacity: isSyncing ? 0.7 : 1,
+            }}
+          >
+            <RefreshCw
+              size={16}
+              style={{
+                animation: isSyncing ? "fm-spin 1s linear infinite" : undefined,
+              }}
+            />
+            {isSyncing ? "Sincronizando..." : "Sincronizar"}
+          </button>
+        )}
       </div>
 
       <div
