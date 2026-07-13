@@ -62,7 +62,8 @@ export const listCoachClients = createServerFn({ method: "GET" })
     const isMaster = !!master;
     let query = supabaseAdmin
       .from("students")
-      .select("id, coach_id, profiles:profile_id(name,email,phone)");
+      .select("id, coach_id, profiles:profile_id(name,email,phone)")
+      .eq("is_test", false);
     if (!isMaster) query = query.eq("coach_id", coachId);
     const { data } = await query;
     const rows = (data || []) as any[];
