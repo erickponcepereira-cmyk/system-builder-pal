@@ -600,12 +600,15 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     partnerOrderRows.forEach(upsertPartnerOrder);
 
     // Comissões — sempre filtradas por beneficiary = essa pessoa
+    // e por natureza (indicação vs venda) de acordo com o grupo aberto.
     let qc = supabaseAdmin
       .from("commissions")
       .select("id,amount,status,level,created_at,transaction_id,partner_order_id,is_referral,available_at,slot_label")
       .eq("beneficiary_profile_id", data.profileId)
       .order("created_at", { ascending: false })
       .limit(500);
+    if (data.group === "seller") qc = qc.or("is_referral.is.null,is_referral.eq.false");
+    else qc = qc.eq("is_referral", true);
     if (fromDate) qc = qc.gte("created_at", fromDate);
     if (data.toDate) qc = qc.lte("created_at", data.toDate);
     const { data: commsRaw } = await qc;
