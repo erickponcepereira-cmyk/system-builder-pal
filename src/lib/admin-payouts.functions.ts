@@ -858,15 +858,13 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       : n((w as Record<string, number> | null)?.available_balance)
         + n((pw as Record<string, number> | null)?.available_balance)
         + n((profw as Record<string, number> | null)?.available_balance)
-        + n((nw as Record<string, number> | null)?.available_balance)
-        + n((sw as Record<string, number> | null)?.available_balance);
+        + n((nw as Record<string, number> | null)?.available_balance);
     const totalWithdrawn = data.group === "student_referrer"
       ? n((sw as Record<string, number> | null)?.total_withdrawn)
       : n((w as Record<string, number> | null)?.total_withdrawn)
         + n((pw as Record<string, number> | null)?.total_withdrawn)
         + n((profw as Record<string, number> | null)?.total_withdrawn)
-        + n((nw as Record<string, number> | null)?.total_withdrawn)
-        + n((sw as Record<string, number> | null)?.total_withdrawn);
+        + n((nw as Record<string, number> | null)?.total_withdrawn);
     const productEarningsAvailable = productEarnings.filter((e) => e.status === "available").reduce((s, e) => s + e.amount, 0);
     const productEarningsPending = productEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
     const productEarningsTotal = productEarnings.reduce((s, e) => s + e.amount, 0);
