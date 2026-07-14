@@ -143,7 +143,7 @@ export function WalletTab() {
   const directAvail = split?.direct.available ?? 0;
   const networkAvail = split?.network.available ?? 0;
   const networkLocked = split?.network.locked ?? true;
-  const withdrawableMax = directAvail + (networkLocked ? 0 : networkAvail);
+  const withdrawableMax = directAvail + networkAvail;
 
   const requestWithdraw = async () => {
     if (!bank.coachId) return;
@@ -153,7 +153,7 @@ export function WalletTab() {
     if (value < MIN_WITHDRAWAL) { toast.error(`Saque mínimo: ${brl(MIN_WITHDRAWAL)}`); return; }
     if (value > withdrawableMax) {
       toast.error(networkLocked
-        ? `Valor maior que o disponível para saque. Sua rede está bloqueada — bata a meta mensal para liberar ${brl(networkAvail)}.`
+        ? `Valor maior que o disponível para saque. A rede do mês atual fica pendente até bater a meta.`
         : "Valor maior que o saldo disponível");
       return;
     }

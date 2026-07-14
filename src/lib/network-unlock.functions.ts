@@ -64,7 +64,7 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     let commQ = supabaseAdmin
       .from("commissions").select("id,transaction_id,partner_order_id,beneficiary_profile_id,beneficiary_coach_id,amount,level,status,available_at,created_at,slot_label,is_referral")
       .eq("beneficiary_profile_id", profile.id)
-      .eq("is_referral", false);
+      .or("is_referral.is.null,is_referral.eq.false");
     if (cutoff) commQ = commQ.gte("created_at", cutoff);
     const { data: comms } = await commQ;
 
