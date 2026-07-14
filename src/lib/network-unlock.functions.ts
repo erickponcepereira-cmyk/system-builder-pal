@@ -53,12 +53,28 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     const snap = await computeMonthlySnapshot(profile.id, now.getFullYear(), now.getMonth() + 1);
 
     // Persist live snapshot so admin reports always reflect latest progress.
-    // Best-effort — never fail the wallet because of this.
     try { await upsertMonthlySnapshot(snap); } catch (e) { console.error("live snapshot upsert failed", e); }
 
-    // Commissions split. Treat a commission as "available" once its
-    // available_at has elapsed, even if status still says pending — there is
-    // no cron job promoting pending → available yet.
+    // Ensure the DB-side wallet reflects the current recalc rules (network
+    // unlock, withdrawals, etc.) before we read it as source of truth.
+    try {
+      await supabaseAdmin.rpc("recalc_wallet_for_profile" as never, { _profile_id: profile.id } as never);
+    } catch (e) { console.error("recalc wallet failed", e); }
+
+    // Single source of truth: `wallets.available_balance` (kept in sync by the
+    // `recalc_wallet_for_profile` trigger and the admin payout flow). This is
+    // the same value the admin panel reads, so both views agree.
+    const { data: walletRow } = await supabaseAdmin
+      .from("wallets")
+      .select("available_balance,pending_balance")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    const walletAvailable = Number((walletRow as { available_balance?: number } | null)?.available_balance || 0);
+    const walletPending = Number((walletRow as { pending_balance?: number } | null)?.pending_balance || 0);
+
+    // Classify commissions into direct vs network — display-only breakdown.
+    // We use it to decide how much of `walletAvailable` is direct vs network
+    // and to show pending totals per bucket.
     const { getServerCutoffIso } = await import("@/lib/test-mode.functions");
     const cutoff = await getServerCutoffIso();
     let commQ = supabaseAdmin
@@ -89,41 +105,58 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       });
     }
 
-    const { data: withdrawalRows } = await supabaseAdmin
-      .from("withdrawal_requests")
-      .select("amount,status")
-      .eq("profile_id", profile.id)
-      .is("partner_id", null)
-      .is("professional_coach_id", null)
-      .in("status", ["requested", "approved", "processing", "paid"] as never);
-    const withdrawalDeduction = ((withdrawalRows as Array<{ amount: number | string; status: string }> | null) || [])
-      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-
-    const direct = { available: 0, pending: 0, total: 0 };
-    const network = { available: 0, pending: 0, total: 0, locked: !snap.anyCompleted };
+    // Raw sums from commissions, before reconciling with the wallet.
+    let directAvailableRaw = 0;
+    let directPending = 0;
+    let directTotal = 0;
+    let networkAvailableRaw = 0;
+    let networkPending = 0;
+    let networkTotal = 0;
     const nowMs = Date.now();
     dedupeCommissions((comms as Array<any> | null) || []).forEach((c) => {
       const amt = Number(c.amount) || 0;
       const label = String(c.slot_label || "");
       const isNetwork = Number(c.level || 0) > 0 || (/(^|\s)(linha|upline)\s*\d+/i.test(label) && !/sem\s+upline/i.test(label));
-      const bucket = isNetwork ? network : direct;
-      bucket.total += amt;
       const released = c.status === "available" || (c.status === "pending" && c.available_at != null && new Date(c.available_at).getTime() <= nowMs);
       const created = new Date(c.created_at);
       const monthUnlocked = !Number.isNaN(created.getTime())
         ? Boolean(unlockByMonth.get(`${created.getUTCFullYear()}-${created.getUTCMonth() + 1}`))
         : false;
-      if (released && (!isNetwork || monthUnlocked)) bucket.available += amt;
-      else if (c.status === "pending") bucket.pending += amt;
+      if (isNetwork) {
+        networkTotal += amt;
+        if (released && monthUnlocked) networkAvailableRaw += amt;
+        else if (c.status === "pending" || (released && !monthUnlocked)) networkPending += amt;
+      } else {
+        directTotal += amt;
+        if (released) directAvailableRaw += amt;
+        else if (c.status === "pending") directPending += amt;
+      }
     });
 
-    let remainingDeduction = withdrawalDeduction;
-    const directDeduction = Math.min(direct.available, remainingDeduction);
-    direct.available = Math.max(0, direct.available - directDeduction);
-    remainingDeduction -= directDeduction;
-    if (remainingDeduction > 0) network.available = Math.max(0, network.available - remainingDeduction);
+    // Reconcile: `walletAvailable` is truth. Distribute it into direct/network
+    // proportionally to the raw released amounts. Direct gets first pick.
+    const rawAvailable = directAvailableRaw + networkAvailableRaw;
+    let directAvailable = directAvailableRaw;
+    let networkAvailable = networkAvailableRaw;
+    if (rawAvailable > walletAvailable + 0.005) {
+      // Wallet is smaller than raw (withdrawals subtracted). Drain direct first,
+      // then network — matches the display expectation of "vendas diretas primeiro".
+      const takeDirect = Math.min(directAvailableRaw, walletAvailable);
+      directAvailable = takeDirect;
+      networkAvailable = Math.max(0, walletAvailable - takeDirect);
+    } else if (rawAvailable < walletAvailable - 0.005) {
+      // Wallet is larger than raw (rare — e.g. legacy adjustments). Attribute
+      // the extra to direct so the coach sees it as withdrawable.
+      directAvailable = walletAvailable - networkAvailable;
+    }
 
-    const withdrawable = direct.available + network.available;
+    const direct = { available: directAvailable, pending: directPending, total: directTotal };
+    const network = { available: networkAvailable, pending: networkPending, total: networkTotal, locked: !snap.anyCompleted };
+    // Withdrawable is the wallet balance — the same value the admin sees and
+    // the same value the withdrawal RPC enforces.
+    const withdrawable = walletAvailable;
+    // Surface any pending discrepancy (should normally be zero).
+    void walletPending;
 
     return {
       direct,
