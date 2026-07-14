@@ -255,8 +255,6 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
         sellerAvail += cre.available; sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       } else {
         sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance) + cre.available;
-        const sid = cls.studentByProfile.get(pid);
-        if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
         if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
         sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       }
