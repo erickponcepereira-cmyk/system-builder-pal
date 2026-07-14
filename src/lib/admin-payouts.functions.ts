@@ -255,8 +255,6 @@ export const getPayoutsDashboard = createServerFn({ method: "POST" })
         sellerAvail += cre.available; sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       } else {
         sellerAvail += n(walletByProfile.get(pid)?.available_balance) + n(partnerWalletByProfile.get(pid)?.available_balance) + n(profWalletByProfile.get(pid)?.available_balance) + n(nutriByProfile.get(pid)?.available_balance) + cre.available;
-        const sid = cls.studentByProfile.get(pid);
-        if (sid) sellerAvail += n(stuWalletByStudent.get(sid)?.available_balance);
         if (agg) { sellerBlocked += agg.blocked; sellerEarned += agg.earned; }
         sellerBlocked += cre.blocked; sellerEarned += cre.earned;
       }
@@ -471,12 +469,12 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         ? (agg?.available || 0) + cre.available
         : (role === "student_referrer"
           ? n(sw?.available_balance)
-          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + n(sw?.available_balance) + cre.available);
+          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + cre.available);
       const totalWithdrawn = cutoff
         ? 0
         : (role === "student_referrer"
           ? n(sw?.total_withdrawn)
-          : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn) + n(sw?.total_withdrawn));
+          : n(w?.total_withdrawn) + n(pw?.total_withdrawn) + n(profw?.total_withdrawn) + n(nw?.total_withdrawn));
       return {
         profileId: p.id,
         name: p.name || "—",
@@ -600,12 +598,15 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
     partnerOrderRows.forEach(upsertPartnerOrder);
 
     // Comissões — sempre filtradas por beneficiary = essa pessoa
+    // e por natureza (indicação vs venda) de acordo com o grupo aberto.
     let qc = supabaseAdmin
       .from("commissions")
       .select("id,amount,status,level,created_at,transaction_id,partner_order_id,is_referral,available_at,slot_label")
       .eq("beneficiary_profile_id", data.profileId)
       .order("created_at", { ascending: false })
       .limit(500);
+    if (data.group === "seller") qc = qc.or("is_referral.is.null,is_referral.eq.false");
+    else qc = qc.eq("is_referral", true);
     if (fromDate) qc = qc.gte("created_at", fromDate);
     if (data.toDate) qc = qc.lte("created_at", data.toDate);
     const { data: commsRaw } = await qc;
@@ -823,15 +824,18 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       });
 
 
-    // Saques: combina os dois canais
-    const { data: wdRaw } = await supabaseAdmin
-      .from("withdrawal_requests")
-      .select("id,amount,status,requested_at,paid_at,notes,pix_key")
-      .eq("profile_id", data.profileId)
-      .order("requested_at", { ascending: false });
-    const sellerWithdrawals = ((wdRaw as Array<PayoutDetails["withdrawals"][number]>) || []);
+    // Saques: canal escolhido pelo grupo — não mistura seller e student_referrer.
+    let sellerWithdrawals: PayoutDetails["withdrawals"] = [];
+    if (data.group === "seller") {
+      const { data: wdRaw } = await supabaseAdmin
+        .from("withdrawal_requests")
+        .select("id,amount,status,requested_at,paid_at,notes,pix_key")
+        .eq("profile_id", data.profileId)
+        .order("requested_at", { ascending: false });
+      sellerWithdrawals = ((wdRaw as Array<PayoutDetails["withdrawals"][number]>) || []);
+    }
     let studentWithdrawals: PayoutDetails["withdrawals"] = [];
-    if (sid) {
+    if (data.group === "student_referrer" && sid) {
       const { data: swdRaw } = await supabaseAdmin
         .from("student_withdrawal_requests" as never)
         .select("id,amount,status,requested_at,paid_at,notes,pix_key" as never)
@@ -858,15 +862,13 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       : n((w as Record<string, number> | null)?.available_balance)
         + n((pw as Record<string, number> | null)?.available_balance)
         + n((profw as Record<string, number> | null)?.available_balance)
-        + n((nw as Record<string, number> | null)?.available_balance)
-        + n((sw as Record<string, number> | null)?.available_balance);
+        + n((nw as Record<string, number> | null)?.available_balance);
     const totalWithdrawn = data.group === "student_referrer"
       ? n((sw as Record<string, number> | null)?.total_withdrawn)
       : n((w as Record<string, number> | null)?.total_withdrawn)
         + n((pw as Record<string, number> | null)?.total_withdrawn)
         + n((profw as Record<string, number> | null)?.total_withdrawn)
-        + n((nw as Record<string, number> | null)?.total_withdrawn)
-        + n((sw as Record<string, number> | null)?.total_withdrawn);
+        + n((nw as Record<string, number> | null)?.total_withdrawn);
     const productEarningsAvailable = productEarnings.filter((e) => e.status === "available").reduce((s, e) => s + e.amount, 0);
     const productEarningsPending = productEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
     const productEarningsTotal = productEarnings.reduce((s, e) => s + e.amount, 0);
