@@ -826,15 +826,18 @@ export const getPayoutDetails = createServerFn({ method: "POST" })
       });
 
 
-    // Saques: combina os dois canais
-    const { data: wdRaw } = await supabaseAdmin
-      .from("withdrawal_requests")
-      .select("id,amount,status,requested_at,paid_at,notes,pix_key")
-      .eq("profile_id", data.profileId)
-      .order("requested_at", { ascending: false });
-    const sellerWithdrawals = ((wdRaw as Array<PayoutDetails["withdrawals"][number]>) || []);
+    // Saques: canal escolhido pelo grupo — não mistura seller e student_referrer.
+    let sellerWithdrawals: PayoutDetails["withdrawals"] = [];
+    if (data.group === "seller") {
+      const { data: wdRaw } = await supabaseAdmin
+        .from("withdrawal_requests")
+        .select("id,amount,status,requested_at,paid_at,notes,pix_key")
+        .eq("profile_id", data.profileId)
+        .order("requested_at", { ascending: false });
+      sellerWithdrawals = ((wdRaw as Array<PayoutDetails["withdrawals"][number]>) || []);
+    }
     let studentWithdrawals: PayoutDetails["withdrawals"] = [];
-    if (sid) {
+    if (data.group === "student_referrer" && sid) {
       const { data: swdRaw } = await supabaseAdmin
         .from("student_withdrawal_requests" as never)
         .select("id,amount,status,requested_at,paid_at,notes,pix_key" as never)
