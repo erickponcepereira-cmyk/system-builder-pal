@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
 
 interface Props {
   images: string[];
@@ -12,11 +13,12 @@ interface Props {
 }
 
 /**
- * Editor de galeria de imagens (capa + carrossel). Uploads múltiplos para o
- * bucket `store-images`. A primeira imagem é a capa exibida em cards.
+ * Editor de galeria de imagens (capa + carrossel). Cada imagem passa por
+ * recorte 1:1 antes do upload para bater com o formato do card.
  */
 export function ProductImageGallery({ images, onChange, folder, bucket = "store-images", max = 8 }: Props) {
   const [uploading, setUploading] = useState(false);
+  const { cropToBlob } = useImageCrop();
 
   const handleUpload = async (files: FileList | File[]) => {
     const list = Array.from(files);
@@ -25,18 +27,20 @@ export function ProductImageGallery({ images, onChange, folder, bucket = "store-
       toast.error(`Máximo de ${max} imagens.`);
       return;
     }
-    setUploading(true);
     try {
       const uploaded: string[] = [];
       for (const file of list) {
-        const ext = file.name.split(".").pop() || "jpg";
+        const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
+        if (!cropped) continue;
+        setUploading(true);
+        const ext = cropped.type === "image/png" ? "png" : "jpg";
         const path = `${folder.replace(/\/$/, "")}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
+        const { error } = await supabase.storage.from(bucket).upload(path, cropped, { upsert: false, contentType: cropped.type });
         if (error) throw error;
         const { data } = supabase.storage.from(bucket).getPublicUrl(path);
         uploaded.push(data.publicUrl);
       }
-      onChange([...images, ...uploaded]);
+      if (uploaded.length) onChange([...images, ...uploaded]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error("Erro ao enviar imagem: " + msg);
@@ -44,6 +48,7 @@ export function ProductImageGallery({ images, onChange, folder, bucket = "store-
       setUploading(false);
     }
   };
+
 
   const removeAt = (idx: number) => {
     const next = [...images];
