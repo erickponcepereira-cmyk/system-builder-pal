@@ -186,6 +186,13 @@ function PortalSelectorPage() {
               </div>
               <button
                 type="button"
+                onClick={() => window.location.reload()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-white hover:bg-primary/20"
+              >
+                Tentar novamente
+              </button>
+              <button
+                type="button"
                 onClick={handleLogout}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white hover:bg-white/10"
               >
