@@ -16,6 +16,7 @@ import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { ProfessionalOnboardingGate } from "@/components/professional/ProfessionalOnboardingGate";
 
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
+import { ProfessionalCollaboratorsPanel } from "@/components/professional/ProfessionalCollaboratorsPanel";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
@@ -44,6 +45,7 @@ type ProInfo = {
   servesWholeNetwork: boolean;
   pendingSetup: boolean;
   approved: boolean;
+  referralCode: string | null;
 };
 
 type AssignmentRow = {
@@ -86,6 +88,7 @@ const TAB_META: Record<string, { label: string; icon: typeof Users }> = {
   appointments: { label: "Atendimentos", icon: Calendar },
   subscription: { label: "Mensalidade", icon: Wallet },
   collab: { label: "Colaboração", icon: Share2 },
+  collaborators: { label: "Colaboradores", icon: Users },
 };
 
 function ProfessionalPanel() {
@@ -110,7 +113,7 @@ function ProfessionalPanel() {
 
       const { data: coachRow } = await supabase
         .from("coaches")
-        .select("id,is_professional,specialty_key,serves_whole_network,specialty_pending_setup,approved_at")
+        .select("id,is_professional,specialty_key,serves_whole_network,specialty_pending_setup,approved_at,referral_code")
         .eq("profile_id", profile.id).maybeSingle();
 
       if (!coachRow || !coachRow.is_professional) {
@@ -137,6 +140,7 @@ function ProfessionalPanel() {
         servesWholeNetwork: !!coachRow.serves_whole_network,
         pendingSetup: !!coachRow.specialty_pending_setup,
         approved: !!coachRow.approved_at,
+        referralCode: (coachRow as { referral_code: string | null }).referral_code ?? null,
       };
 
       setInfo(proInfo);
@@ -168,8 +172,8 @@ function ProfessionalPanel() {
 
 
   const baseTabs = info.specialty?.default_tabs ?? ["students", "diet", "anamnese", "evaluate"];
-  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collab", "settings", "fitmind_calendar"];
-  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription"])).filter((t) => t !== "collaborators" && t !== "network" && t !== "overview")];
+  const ensureTabs = ["overview", "students", "diet", "anamnese", "evaluate", "products", "store", "appointments", "collaborators", "collab", "settings", "fitmind_calendar"];
+  const tabs = ["overview", ...Array.from(new Set([...baseTabs, ...ensureTabs, "subscription"])).filter((t) => t !== "network" && t !== "overview")];
 
 
   return (
@@ -272,6 +276,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
   if (tab === "collab") return <CollabWorkspace ownerType="professional" ownerId={info.coachId} />;
+  if (tab === "collaborators") return <ProfessionalCollaboratorsPanel referralCode={info.referralCode} professionalName={info.name} />;
 
   if (tab === "appointments") return <AppointmentsTab coachId={info.coachId} />;
 
