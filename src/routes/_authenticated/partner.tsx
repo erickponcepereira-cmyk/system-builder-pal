@@ -414,6 +414,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const [policy, setPolicy] = useState<"all" | "one_per_month">((partner.free_redeem_policy as "all" | "one_per_month") || "all");
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [policyDismissed, setPolicyDismissed] = useState(false);
+  const { cropToBlob } = useImageCrop();
+
 
   const activeFreeCount = products.filter(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner).length;
   const showPolicyBanner = activeFreeCount >= 2;
