@@ -25,6 +25,8 @@ import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
+import { PartnerOnboardingGate } from "@/components/partner/PartnerOnboardingGate";
+import { AnnualActivationCard } from "@/components/profile/AnnualActivationCard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
