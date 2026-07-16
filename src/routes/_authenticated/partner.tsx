@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock } from "lucide-react";
+import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
@@ -25,6 +25,8 @@ import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { ImageCropperDialog } from "@/components/ui/ImageCropperDialog";
 import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
+import { PartnerOnboardingGate } from "@/components/partner/PartnerOnboardingGate";
+import { AnnualActivationCard } from "@/components/profile/AnnualActivationCard";
 import { NetworkTreeTab } from "@/components/coach/tabs/NetworkTreeTab";
 import type { CoachContext } from "@/routes/_authenticated/coach";
 import { PartnerReports } from "@/components/partner/PartnerReports";
@@ -39,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/partner")({
   component: PartnerPanel,
 });
 
-type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab";
+type Tab = "overview" | "products" | "timeline" | "qrcode" | "freebies" | "store" | "collaborators" | "network" | "wallet" | "subscription" | "annual" | "profile" | "fitmind_calendar" | "reports" | "scanner" | "collab";
 
 
 interface Partner {
@@ -192,6 +194,7 @@ function PartnerPanel() {
     { key: "network" as Tab, label: "Rede", icon: TrendingUp },
     { key: "wallet" as Tab, label: "Carteira", icon: Wallet },
     { key: "subscription" as Tab, label: "Mensalidade", icon: DollarSign },
+    { key: "annual" as Tab, label: "Anuidade", icon: CreditCard },
     { key: "reports" as Tab, label: "Relatórios", icon: BarChart3 },
     { key: "fitmind_calendar" as Tab, label: "Agenda", icon: CalendarDays },
     { key: "collaborators" as Tab, label: "Colaboradores", icon: Users },
@@ -201,6 +204,7 @@ function PartnerPanel() {
 
 
   return (
+    <PartnerOnboardingGate>
     <SubscriptionGuard walletSource="partner">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header
@@ -243,18 +247,8 @@ function PartnerPanel() {
         {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
         {tab === "wallet" && <PartnerWalletTab />}
-        {tab === "subscription" && (
-          <div className="space-y-4">
-            <a
-              href="/assinatura?tab=annual"
-              className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-bold text-primary hover:bg-primary/20"
-            >
-              <span>Ver / pagar Anuidade</span>
-              <span>→</span>
-            </a>
-            <SubscriptionInvoicesTab walletSource="partner" />
-          </div>
-        )}
+        {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
+        {tab === "annual" && <AnnualActivationCard />}
         {tab === "reports" && <PartnerReports />}
         {tab === "scanner" && <PartnerFreebieScanner partnerId={partner.id} />}
         {tab === "collab" && <CollabWorkspace ownerType="partner" ownerId={partner.id} />}
@@ -272,6 +266,7 @@ function PartnerPanel() {
       </nav>
     </div>
     </SubscriptionGuard>
+    </PartnerOnboardingGate>
   );
 }
 

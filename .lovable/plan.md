@@ -1,69 +1,84 @@
-## Objetivo
+## Problema
 
-Trazer para o painel do profissional a mesma aba "Colaboradores" que já existe no painel do parceiro, com duas formas de vincular:
+- O painel do parceiro é liberado imediatamente após o cadastro: não há gate de anuidade, não há espera de aprovação do admin, não há bloqueio.
+- O painel do profissional já usa `ProfessionalOnboardingGate` (Especialidade → Ativação anual → Aguardando aprovação → painel liberado). O mesmo fluxo precisa existir para o parceiro.
+- A aba "Mensalidade" do parceiro hoje só tem um link externo para `/assinatura?tab=annual`. O usuário quer uma aba "Anuidade" própria ao lado de "Mensalidade".
 
-1. **Convite via QR code / link de indicação** (igual ao parceiro).
-2. **Seleção manual** de um aluno já cadastrado que tenha esse profissional como coach.
+## Escopo
 
-Limite de 7 colaboradores e mesmos benefícios do modelo parceiro (painel de aluno liberado, desafios, produtos gratuitos enquanto o profissional estiver ativo).
+### 1. `getMyPartnerOnboarding` (nova server fn em `src/lib/partner-approvals.functions.ts`)
 
-## Mudanças no banco
+Espelha `getMyProfessionalOnboarding`. Retorna:
 
-Migration nova:
+```
+{
+  isPartner, profileId, partnerId, name, email, fantasyName,
+  activationPaidAt, activationSource, approvedAt, alreadyPartner
+}
+```
 
-- Adicionar coluna `students.professional_coach_id UUID REFERENCES public.coaches(id) ON DELETE SET NULL`.
-- Índice `idx_students_professional_coach_id`.
-- Constraint: se `professional_coach_id` estiver preenchido, ele deve apontar para um coach com `is_professional = true` (via trigger `BEFORE INSERT/UPDATE`).
-- RLS: manter policies existentes de `students`; o novo campo é lido pelas mesmas policies. Adicionar policy adicional permitindo que o profissional (dono do `professional_coach_id`) enxergue esses students (SELECT).
-- Função `link_professional_collaborator(_student_id uuid)` SECURITY DEFINER que:
-  - valida que o caller é o coach com `is_professional=true`,
-  - valida que `students.coach_id` do aluno pertence ao mesmo profile (o profissional é coach direto do aluno),
-  - valida limite de 7 colaboradores atuais do profissional,
-  - grava `professional_coach_id` no student.
-- Função `unlink_professional_collaborator(_student_id uuid)` simétrica.
-- GRANT EXECUTE dessas duas funções para `authenticated`.
+Lê de `partners` do usuário logado.
 
-## Fluxo de convite via link (QR)
+### 2. Novo componente `src/components/partner/PartnerOnboardingGate.tsx`
 
-Reaproveitar o `referral_code` que o coach/profissional já possui em `coaches.referral_code`. Ao processar cadastro por `/r/:code`, se o dono do código for profissional (`is_professional = true`), já preencher `students.professional_coach_id` além do `coach_id` habitual — mantém consistência com o modelo do parceiro. Sem mudança de UX no fluxo de cadastro.
+Cópia estrutural de `ProfessionalOnboardingGate`:
 
-## Server functions novas (`src/lib/professional-collaborators.functions.ts`)
+- Carrega `getMyPartnerOnboarding` no mount.
+- Realtime em `partners` (filter por `id=eq.<partnerId>`) para reagir quando o admin aprova (`approved_at`) ou concede ativação (`activation_paid_at`) — recarrega a página quando aprovar.
+- Stepper com 3 passos: **Cadastro** (sempre done pois o partner já existe) → **Anuidade** (`activation_paid_at`) → **Aprovação** (`approved_at`).
+- Se `!activationPaidAt`: `ActivationStep` — botão "Pagar Anuidade Parceiro" que:
+  - cria `store_orders` via RPC `create_store_order` com o produto de ativação parceiro,
+  - renderiza `<MercadoPagoCheckout>` para PIX,
+  - também exibe botão "Já sou parceiro (avisar admin)" que chama uma nova server fn `markAlreadyPartner` (paralela à `markAlreadyCoach`) que define `activation_source='already_partner'`, `activation_paid_at=now()`, `already_partner=true` e cria uma notificação para o admin.
+- Se `activationPaidAt && !approvedAt`: `WaitingApprovalStep` — mostra card "Anuidade confirmada, aguardando aprovação" com `<SubscriptionInvoicesTab walletSource="partner" />` embutido para que o parceiro já adiante mensalidade.
+- Só libera `children` quando `approvedAt` está preenchido.
 
-Todas com `.middleware([requireSupabaseAuth])`:
+### 3. `markAlreadyPartner` (nova server fn)
 
-- `listProfessionalCollaborators()` → alunos onde `professional_coach_id = coach.id` do caller.
-- `listEligibleStudents()` → alunos onde `students.coach_id` pertence ao caller (via profile) **e** ainda não são colaboradores. Serve o dropdown de seleção manual.
-- `attachProfessionalCollaborator({ studentId })` → chama `link_professional_collaborator`.
-- `detachProfessionalCollaborator({ studentId })` → chama `unlink_professional_collaborator`.
+Em `src/lib/partner-approvals.functions.ts`. Espelha `markAlreadyCoach`: marca `already_partner=true`, `activation_paid_at=now()`, `activation_source='already_partner'`, cria audit `partner_activation_paid` e notifica o admin. Não define `approved_at` — quem aprova ainda é o admin.
 
-## UI
+### 4. Produto de ativação do parceiro
 
-### `src/routes/_authenticated/professional.tsx`
+Reutilizar o mesmo produto de ativação já existente para profissional (`ACTIVATION_PRODUCT_ID`) **apenas se o admin confirmar que o parceiro deve usar o mesmo SKU**. Caso contrário, criar `PARTNER_ACTIVATION_PRODUCT_ID` (constante) apontando para o produto de anuidade do parceiro já cadastrado em `products`. Este ponto precisa de decisão: ver perguntas abaixo.
 
-- Adicionar `"collaborators"` ao `ensureTabs` e ao `TAB_META` (`Colaboradores`, ícone `Users`).
-- Remover o filtro atual `t !== "collaborators"` no cálculo de `tabs`.
-- Renderizar `<ProfessionalCollaboratorsPanel coachId={info.coachId} referralCode={...} name={info.name} />` quando `tab === "collaborators"`. Buscar `coaches.referral_code` no carregamento inicial.
+### 5. `src/routes/_authenticated/partner.tsx`
 
-### Novo componente `src/components/professional/ProfessionalCollaboratorsPanel.tsx`
+- Envolver todo o painel com `<PartnerOnboardingGate>` **por fora** do `<SubscriptionGuard walletSource="partner">`, seguindo o padrão do profissional. Quando o parceiro estiver aprovado, o gate renderiza `children` e o painel funciona normalmente. Enquanto não estiver, o gate ocupa a tela inteira (sem `RoleSwitcher` para não confundir o usuário).
+- Nova aba **"Anuidade"** ao lado de **"Mensalidade"** (chave `annual`). Ícone `CreditCard`. Renderiza um novo componente `PartnerAnnualTab` que:
+  - chama `getMyAnnualActivation`,
+  - reutiliza o mesmo cartão de estado ("Ativa até dd/mm/aaaa" / "Vencida" / "A pagar") que já é usado em `src/routes/_authenticated/assinatura.tsx` (extraír o bloco para um componente compartilhado `AnnualActivationCard` em `src/components/profile/AnnualActivationCard.tsx` para não duplicar).
+  - Se estiver a pagar, mostra `MercadoPagoCheckout` para o pedido de anuidade.
+- Remover o botão "Ver / pagar Anuidade" que hoje aparece dentro da aba "Mensalidade" — passa a ser redundante.
 
-Espelha visualmente o `CollaboratorsPanel` do parceiro, com dois blocos:
+### 6. Extração de `AnnualActivationCard`
 
-1. **Convite** — QR code do link `/r/<referral_code>`, botões Copiar / Compartilhar, contador `x / 7`, aviso quando limite for atingido.
-2. **Vincular aluno existente** — botão "Vincular aluno" abre modal com busca (usando `listEligibleStudents`). Ao confirmar, chama `attachProfessionalCollaborator`.
-3. **Lista "Meus colaboradores"** — cards com foto/nome/e-mail e botão remover (chama `detachProfessionalCollaborator`).
+Novo `src/components/profile/AnnualActivationCard.tsx` que encapsula a UI de anuidade hoje espalhada em `assinatura.tsx`. Reaproveitado em:
 
-Reaproveitar estilos existentes do painel do parceiro para manter identidade visual.
+- `assinatura.tsx` (aba annual atual continua funcionando via mesmo componente).
+- `PartnerAnnualTab` (nova aba do painel parceiro).
+- `PartnerOnboardingGate.ActivationStep` pode continuar com sua própria UI simplificada de pagamento; o card compartilhado é para painéis já aprovados.
+
+### 7. Fluxo do parceiro admin (não muda)
+
+`reviewPartnerStatus` / `adminApprovePartnerFinal` / `adminGrantPartnerActivation` já existem e são suficientes. Nada muda no lado admin.
+
+## Perguntas antes de implementar
+
+1. **Produto de ativação:** o parceiro paga o **mesmo SKU** de ativação anual que o profissional (`ACTIVATION_PRODUCT_ID`, R$ 179,90), ou existe um produto de anuidade específico do parceiro que devo usar? Se sim, qual é o `id`?
+2. **"Já sou parceiro":** manter o botão "Já sou parceiro (avisar admin)" como no professional? Ele permite pular a cobrança da anuidade e avisa o admin.
 
 ## Fora de escopo
 
-- Não mexe no painel do parceiro (só o profissional ganha a aba).
-- Não altera regras de comissão, wallets ou fluxo de vendas.
-- Não altera SubscriptionGuard nem cadastro público — só o `/r/:code` passa a preencher `professional_coach_id` automaticamente quando o dono do código é profissional.
+- Não altera formulário de cadastro (`registration.server.ts`) — status "pending" já é o correto.
+- Não altera aprovação do admin.
+- Não altera `SubscriptionGuard` nem regras de mensalidade.
+- Não mexe em painel profissional (esse fluxo já está correto por indicação do usuário).
 
-## Arquivos afetados
+## Arquivos
 
-- Nova migration SQL (coluna + trigger + policy + funções + grants).
-- `src/lib/professional-collaborators.functions.ts` (novo).
-- `src/components/professional/ProfessionalCollaboratorsPanel.tsx` (novo).
-- `src/routes/_authenticated/professional.tsx` (adiciona aba + wiring).
-- Ajuste no handler do cadastro por `/r/:code` para preencher `professional_coach_id` quando aplicável.
+- `src/lib/partner-approvals.functions.ts` — adicionar `getMyPartnerOnboarding` e `markAlreadyPartner`.
+- `src/components/partner/PartnerOnboardingGate.tsx` — novo.
+- `src/components/partner/PartnerAnnualTab.tsx` — novo.
+- `src/components/profile/AnnualActivationCard.tsx` — novo (extraído de `assinatura.tsx`).
+- `src/routes/_authenticated/partner.tsx` — envolver com gate, adicionar aba `annual`, remover botão duplicado.
+- `src/routes/_authenticated/assinatura.tsx` — trocar bloco inline pela chamada de `AnnualActivationCard` (refactor, sem mudança funcional).
