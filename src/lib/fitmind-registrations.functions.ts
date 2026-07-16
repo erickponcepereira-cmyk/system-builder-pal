@@ -102,7 +102,7 @@ export const getEventRegistrations = createServerFn({ method: "GET" })
       supabaseAdmin.from("coaches").select("profile_id,is_professional").in("profile_id", profileIds),
       supabaseAdmin
         .from("students")
-        .select("profile_id,coaches:coach_id(profiles!coaches_profile_id_fkey(name))")
+        .select("profile_id,coaches!students_coach_id_fkey(profiles!coaches_profile_id_fkey(name))")
         .in("profile_id", profileIds),
       supabaseAdmin.from("partners").select("profile_id").in("profile_id", profileIds).then(
         (r) => r,
