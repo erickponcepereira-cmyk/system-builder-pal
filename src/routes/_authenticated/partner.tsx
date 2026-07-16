@@ -266,6 +266,7 @@ function PartnerPanel() {
       </nav>
     </div>
     </SubscriptionGuard>
+    </PartnerOnboardingGate>
   );
 }
 
