@@ -43,6 +43,8 @@ function FreebiesAdmin() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Freebie | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { cropToBlob } = useImageCrop();
+
 
   const blank = (): Freebie => ({
     id: "", name: "", description: "", image_url: null, kind: "digital",
