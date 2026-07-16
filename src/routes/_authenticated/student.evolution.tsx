@@ -28,6 +28,8 @@ function StudentEvolution() {
   const [caption, setCaption] = useState("");
   const [week, setWeek] = useState("1");
   const [viewerTag, setViewerTag] = useState<string>("");
+  const { cropToBlob } = useImageCrop();
+
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Gallery / compare state
