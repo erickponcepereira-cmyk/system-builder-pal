@@ -47,8 +47,15 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   const redirectedRef = useRef(false);
 
   // Bloqueia qualquer render até resolver a primeira chamada de getSession().
+  // Timeout de segurança para não travar splash em rede lenta.
   useEffect(() => {
     let active = true;
+    const timeoutId = setTimeout(() => {
+      if (!active) return;
+      console.warn("[AUTH_GATE] getSession timeout, liberando splash");
+      setSessionResolved((prev) => (prev ? prev : true));
+    }, 4000);
+
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -60,12 +67,41 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
         if (active) setHasSession(false);
       } finally {
         if (active) setSessionResolved(true);
+        clearTimeout(timeoutId);
       }
     })();
+
+    // Reage a mudanças de auth (logout, login, refresh de token) para não
+    // ficar preso no splash com estado de sessão obsoleto.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+      const ok = Boolean(session?.user);
+      if (event === "SIGNED_OUT") {
+        redirectedRef.current = false;
+        setHasSession(false);
+        setSessionResolved(true);
+        return;
+      }
+      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        setHasSession(ok);
+        setSessionResolved(true);
+      }
+    });
+
     return () => {
       active = false;
+      clearTimeout(timeoutId);
+      sub.subscription.unsubscribe();
     };
   }, []);
+
+  // Reseta a trava de redirect quando o usuário sai do portal-selector,
+  // para que um novo ciclo login→logout→login volte a redirecionar.
+  useEffect(() => {
+    if (pathname !== "/portal-selector" && pathname !== "/" && pathname !== "/login") {
+      redirectedRef.current = false;
+    }
+  }, [pathname]);
 
   // Com sessão válida, se ainda estamos em "/" ou "/login", manda para o
   // seletor de portal. O splash continua visível até a rota mudar.
