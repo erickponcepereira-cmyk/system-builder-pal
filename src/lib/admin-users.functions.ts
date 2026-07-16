@@ -34,6 +34,56 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminUpdateProfile = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({
+      profileId: uuid,
+      name: z.string().trim().min(1).max(120).optional(),
+      email: z.string().trim().email().max(160).optional(),
+      phone: z.string().trim().max(40).nullable().optional(),
+      cpf: z.string().trim().max(20).nullable().optional(),
+      birthdate: z.string().trim().max(20).nullable().optional(),
+    }).parse(input),
+  )
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const { assertAdminProfile } = await import("./admin-network.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertAdminProfile(context.userId);
+
+    const { data: current, error: fetchErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, user_id, email")
+      .eq("id", data.profileId)
+      .maybeSingle();
+    if (fetchErr || !current) throw new Error("Perfil não encontrado.");
+
+    const patch: Record<string, unknown> = {};
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.email !== undefined) patch.email = data.email;
+    if (data.phone !== undefined) patch.phone = data.phone || null;
+    if (data.cpf !== undefined) patch.cpf = data.cpf || null;
+    if (data.birthdate !== undefined) patch.birthdate = data.birthdate || null;
+
+    if (Object.keys(patch).length > 0) {
+      const { error: updErr } = await supabaseAdmin
+        .from("profiles")
+        .update(patch as never)
+        .eq("id", data.profileId);
+      if (updErr) throw new Error("Falha ao atualizar perfil: " + updErr.message);
+    }
+
+    if (data.email && data.email !== current.email && current.user_id) {
+      const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(current.user_id, {
+        email: data.email,
+        email_confirm: true,
+      });
+      if (authErr) throw new Error("Falha ao atualizar e-mail de login: " + authErr.message);
+    }
+
+    return { ok: true };
+  });
+
 export const approveCoachAndConfirmEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ coachId: uuid }).parse(input),

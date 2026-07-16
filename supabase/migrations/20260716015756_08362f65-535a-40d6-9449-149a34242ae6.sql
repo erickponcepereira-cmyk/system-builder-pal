@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.admin_purge_user_dependents(uuid) TO authenticated;

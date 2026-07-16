@@ -1,46 +1,47 @@
-## Diagnóstico
+## Problema
 
-Ana Flávia tem 3 valores diferentes de "disponível" no sistema, todos calculados por lógicas independentes:
+Ao clicar em **Excluir** em `admin.students.tsx`, o backend retorna:
+> `Falha ao limpar dependências: permission denied for function admin_purge_user_dependents`
 
-| Fonte | Valor hoje | Como calcula |
-|---|---|---|
-| `wallets.available_balance` (DB, via trigger `recalc_wallet_for_profile`) | **R$ 28,70** | comissões liberadas − saques ativos − saques pagos |
-| `getWalletSplit` (server fn que a Carteira do coach usa) | **R$ 24,11** | recalcula tudo de novo a partir de `commissions`, mas com regras ligeiramente diferentes (dedupe, deduções, quebra direta/rede) |
-| Admin → Pagamentos → detalhe da Ana | **R$ 0,00** | quando abre como "aluno indicador" lê `student_wallets.available_balance` (=0), mesmo já sendo coach com saldo real |
+A função é `SECURITY DEFINER` e já valida internamente que o chamador é admin, mas uma migração anterior (`20260622152313`) revogou `EXECUTE` de `authenticated`, e o `adminDeleteUser` a chama via `context.supabase` (sessão do admin logado = role `authenticated`), portanto o Postgres bloqueia antes de rodar a checagem interna.
 
-Além disso `getPayoutDetails` mistura fontes quando o grupo é `student_referrer`: mostra disponível=0 (student_wallet) mas total sacado=R$50,56 (que é do wallet de coach). E `getWalletSplit` computa `direct.available` de forma incompatível com o trigger do banco.
+Além disso, o usuário precisa:
+1. Excluir o cadastro do **Jonathan Uzziel Vasquez Gervacio** (coach, `mensphysiqueuzzie@gmail.com`), que ficou preso.
+2. Ter uma opção para **editar** os dados de um cadastro quando forem preenchidos errados (sem precisar excluir e recriar).
 
-## Correções
+## O que vou fazer
 
-### 1. `getWalletSplit` passa a usar `wallets` como fonte de verdade
+### 1. Corrigir a permissão da função (migração)
+Restaurar `GRANT EXECUTE ON FUNCTION public.admin_purge_user_dependents(uuid) TO authenticated`. A função continua segura porque já bloqueia não-admins com `RAISE EXCEPTION 'Acesso negado'`.
 
-`src/lib/network-unlock.functions.ts`:
-- Ler `wallets.available_balance` e `wallets.pending_balance` do perfil.
-- Continuar classificando comissões em direta vs rede apenas para o **display do split** (quanto do disponível é direta, quanto é rede), respeitando o unlock mensal.
-- `withdrawable = wallets.available_balance` (idêntico ao que o trigger e o admin usam).
-- Manter dedução de saques ativos apenas para consistência, mas usando o mesmo filtro do trigger (`requested|approved|processing|paid`) — na prática o `wallets.available_balance` já vem líquido, então não deduzir de novo.
+### 2. Excluir o cadastro do Jonathan
+Após a migração acima ser aprovada, rodo:
+- `admin_purge_user_dependents(user_id do Jonathan)` para limpar dependências (transações, comissões, subscriptions, coach, profile etc.).
+- `auth.admin.deleteUser` não é acessível pelas ferramentas de banco; então, no lugar, deleto diretamente o `profiles` e o `coaches` dele — o CASCADE nas FKs cuida do resto. Se sobrar algum resíduo no `auth.users`, faço o `DELETE FROM auth.users WHERE id = ...` na mesma migração de execução.
 
-### 2. `getPayoutDetails` deixa de misturar fontes
+### 3. Botão "Editar" no painel de alunos
+Em `src/routes/_authenticated/admin.students.tsx`, ao lado de **Promover / Trocar coach / Excluir**, adicionar botão **Editar** que abre um modal para corrigir os campos básicos do cadastro:
 
-`src/lib/admin-payouts.functions.ts`:
-- **Grupo `seller`**: comissões filtradas por `is_referral != true`, saques só de `withdrawal_requests`, disponível/sacado só das wallets de vendedor (`wallets`+`partner_wallets`+`professional_wallets`+`nutritionist_wallets`).
-- **Grupo `student_referrer`**: comissões filtradas por `is_referral = true`, saques só de `student_withdrawal_requests`, disponível/sacado só de `student_wallets`, total ganho/bloqueado calculado só sobre comissões `is_referral=true`.
-- Elimina o caso em que a Ana aparece como aluno indicador mostrando R$50,56 de sacado que na verdade é do canal coach.
+- Nome
+- E-mail
+- WhatsApp / telefone
+- CPF
+- Data de nascimento
 
-### 3. `listPendingWithdrawals` mostra a Ana no grupo coach corretamente
+Salvar chama uma nova server function `adminUpdateProfile` (em `src/lib/admin-users.functions.ts`) que:
+- Verifica que o chamador é admin (`assertAdminProfile`).
+- Atualiza `profiles` via `supabaseAdmin`.
+- Se o e-mail mudou, atualiza também `auth.users` via `supabaseAdmin.auth.admin.updateUserById`.
 
-`src/lib/admin-payouts.functions.ts` (função `listPendingWithdrawals`):
-- Se o perfil é seller (coach/parceiro/profissional) **e** aluno indicador, ele aparece só no grupo `seller` com os números do wallet de coach.
-- Só aparece em `student_referrer` quem é exclusivamente indicador (sem role de seller).
-- Corrige a linha "Ana Flávia Lucas — R$ 0,00" na aba de indicadores.
+Escopo intencionalmente enxuto: só os campos de identificação básicos do perfil. Ajustes de coach/aluno específicos (rede, comissão, turmas etc.) continuam nos painéis próprios.
 
-### 4. Migration de reforço (opcional, só se `wallets.available_balance` estiver errado)
+## Arquivos afetados
 
-Rodar uma vez `PERFORM recalc_wallet_for_profile(...)` para todos os perfis com comissões, garantindo que a carteira reflete a lógica atual do trigger. Não altera schema.
+- `supabase/migrations/<nova>.sql` — restaurar GRANT EXECUTE.
+- Execução SQL — purgar + apagar o cadastro do Jonathan.
+- `src/lib/admin-users.functions.ts` — nova `adminUpdateProfile`.
+- `src/routes/_authenticated/admin.students.tsx` — botão **Editar** + modal.
 
-## Detalhes técnicos
+## Confirmação
 
-- Arquivos alterados: `src/lib/network-unlock.functions.ts`, `src/lib/admin-payouts.functions.ts`.
-- Nenhuma mudança de schema.
-- WalletTab do coach continua chamando `getWalletSplit` sem alteração — só o número muda (passa a bater com o admin).
-- Admin/pagamentos passa a mostrar Ana no grupo Coach com R$ 28,70 disponível, R$ 50,56 sacado, e não duplicar no grupo aluno indicador.
+Confirma que posso: (a) restaurar o GRANT, (b) excluir o cadastro do Jonathan Uzziel Vasquez Gervacio (`mensphysiqueuzzie@gmail.com`), (c) adicionar o botão Editar com os campos listados?

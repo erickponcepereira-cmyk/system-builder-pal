@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Mail, UserCog, X, Loader2, Trash2 } from "lucide-react";
+import { Search, Mail, UserCog, X, Loader2, Trash2, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { adminDeleteUser } from "@/lib/admin-users.functions";
+import { adminDeleteUser, adminUpdateProfile } from "@/lib/admin-users.functions";
 
 
 export const Route = createFileRoute("/_authenticated/admin/students")({
@@ -18,7 +18,7 @@ interface StudentRow {
   goal_weight: number | null;
   created_at: string | null;
   is_influencer: boolean | null;
-  profiles: { user_id: string; name: string; email: string; phone: string | null; city: string | null } | null;
+  profiles: { id: string; user_id: string; name: string; email: string; phone: string | null; city: string | null; cpf: string | null; birthdate: string | null } | null;
   coaches: { id: string; profiles: { name: string } | null } | null;
 }
 
@@ -38,7 +38,46 @@ function AdminStudents() {
   const [coachSearch, setCoachSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState<StudentRow | null>(null);
+  const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "", cpf: "", birthdate: "" });
+  const [savingProfile, setSavingProfile] = useState(false);
   const deleteUserFn = useServerFn(adminDeleteUser);
+  const updateProfileFn = useServerFn(adminUpdateProfile);
+
+  const openProfileEdit = (row: StudentRow) => {
+    setEditingProfile(row);
+    setProfileForm({
+      name: row.profiles?.name || "",
+      email: row.profiles?.email || "",
+      phone: row.profiles?.phone || "",
+      cpf: row.profiles?.cpf || "",
+      birthdate: row.profiles?.birthdate ? row.profiles.birthdate.slice(0, 10) : "",
+    });
+  };
+
+  const saveProfile = async () => {
+    if (!editingProfile?.profiles?.id) return;
+    if (!profileForm.name.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (!profileForm.email.trim()) { toast.error("E-mail é obrigatório"); return; }
+    setSavingProfile(true);
+    try {
+      await updateProfileFn({ data: {
+        profileId: editingProfile.profiles.id,
+        name: profileForm.name.trim(),
+        email: profileForm.email.trim(),
+        phone: profileForm.phone.trim() || null,
+        cpf: profileForm.cpf.trim() || null,
+        birthdate: profileForm.birthdate.trim() || null,
+      } });
+      toast.success("Cadastro atualizado");
+      setEditingProfile(null);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao salvar");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const handleDelete = async (row: StudentRow) => {
     const userId = row.profiles?.user_id;
@@ -64,7 +103,7 @@ function AdminStudents() {
         .from("students")
         .select(`
           id, coach_id, current_weight, goal_weight, created_at, is_influencer,
-          profiles!students_profile_id_fkey(user_id, name, email, phone, city),
+          profiles!students_profile_id_fkey(id, user_id, name, email, phone, city, cpf, birthdate),
           coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
         `)
         .eq("is_test", false)
@@ -215,6 +254,13 @@ function AdminStudents() {
                           ✨ {r.is_influencer ? "Influencer" : "Promover"}
                         </button>
                         <button
+                          onClick={() => openProfileEdit(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white/80 hover:bg-white/10"
+                          title="Editar cadastro"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Editar
+                        </button>
+                        <button
                           onClick={() => openEdit(r)}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
                         >
@@ -295,6 +341,59 @@ function AdminStudents() {
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white">Editar cadastro</h2>
+                <p className="text-xs text-white/50">Corrigir dados do perfil</p>
+              </div>
+              <button onClick={() => !savingProfile && setEditingProfile(null)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { key: "name", label: "Nome", type: "text" },
+                { key: "email", label: "E-mail", type: "email" },
+                { key: "phone", label: "WhatsApp / Telefone", type: "text" },
+                { key: "cpf", label: "CPF", type: "text" },
+                { key: "birthdate", label: "Data de nascimento", type: "date" },
+              ].map((f) => (
+                <div key={f.key}>
+                  <label className="mb-1 block text-[11px] font-bold uppercase text-white/50">{f.label}</label>
+                  <input
+                    type={f.type}
+                    value={(profileForm as any)[f.key]}
+                    onChange={(e) => setProfileForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setEditingProfile(null)}
+                disabled={savingProfile}
+                className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveProfile}
+                disabled={savingProfile}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {savingProfile && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar
               </button>
             </div>
           </div>
