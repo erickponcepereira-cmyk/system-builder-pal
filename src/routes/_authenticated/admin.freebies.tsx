@@ -91,15 +91,18 @@ function FreebiesAdmin() {
 
   const uploadImage = async (file: File) => {
     if (!editing) return;
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem do brinde" });
+    if (!cropped) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `freebies/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { upsert: true, contentType: cropped.type });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setEditing({ ...editing, image_url: data.publicUrl });
     setUploading(false);
   };
+
 
   const markDelivered = async (id: string) => {
     const { error } = await supabase.from("freebie_redemptions" as never)
