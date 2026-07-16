@@ -146,11 +146,14 @@ function RootComponent() {
   }, []);
   return (
     <ThemeProvider>
-      <AuthLoadingGate>
-        <Outlet />
-      </AuthLoadingGate>
-      <Toaster richColors position="top-center" />
+      <ImageCropProvider>
+        <AuthLoadingGate>
+          <Outlet />
+        </AuthLoadingGate>
+        <Toaster richColors position="top-center" />
+      </ImageCropProvider>
     </ThemeProvider>
+
   );
 }
 
