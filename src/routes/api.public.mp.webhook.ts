@@ -76,14 +76,13 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
           const sourceId = (sourceIdRaw || "").trim();
           const paidAmount = Number(payment.transaction_amount || 0);
           const pixData = payment?.point_of_interaction?.transaction_data || {};
-          const pixPayload = payment.payment_method_id === "pix"
-            ? {
-                pix_qr_code: pixData.qr_code || null,
-                pix_qr_code_base64: pixData.qr_code_base64 || null,
-                pix_ticket_url: pixData.ticket_url || null,
-                pix_expires_at: payment.date_of_expiration || null,
-              }
-            : {};
+          const pixPayload: Record<string, string | null> = {};
+          if (payment.payment_method_id === "pix") {
+            if (pixData.qr_code) pixPayload.pix_qr_code = pixData.qr_code;
+            if (pixData.qr_code_base64) pixPayload.pix_qr_code_base64 = pixData.qr_code_base64;
+            if (pixData.ticket_url) pixPayload.pix_ticket_url = pixData.ticket_url;
+            if (payment.date_of_expiration) pixPayload.pix_expires_at = payment.date_of_expiration;
+          }
 
           // ── 1. Idempotência local + gravação bruta sempre ──
           const { data: existing } = await supabaseAdmin
