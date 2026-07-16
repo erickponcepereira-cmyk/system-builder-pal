@@ -346,6 +346,59 @@ function AdminStudents() {
           </div>
         </div>
       )}
+
+      {editingProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 p-5" style={{ backgroundColor: "#1A1A1A" }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white">Editar cadastro</h2>
+                <p className="text-xs text-white/50">Corrigir dados do perfil</p>
+              </div>
+              <button onClick={() => !savingProfile && setEditingProfile(null)} className="rounded-lg p-1 text-white/50 hover:bg-white/5 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                { key: "name", label: "Nome", type: "text" },
+                { key: "email", label: "E-mail", type: "email" },
+                { key: "phone", label: "WhatsApp / Telefone", type: "text" },
+                { key: "cpf", label: "CPF", type: "text" },
+                { key: "birthdate", label: "Data de nascimento", type: "date" },
+              ].map((f) => (
+                <div key={f.key}>
+                  <label className="mb-1 block text-[11px] font-bold uppercase text-white/50">{f.label}</label>
+                  <input
+                    type={f.type}
+                    value={(profileForm as any)[f.key]}
+                    onChange={(e) => setProfileForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setEditingProfile(null)}
+                disabled={savingProfile}
+                className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-white/70 hover:bg-white/5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveProfile}
+                disabled={savingProfile}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {savingProfile && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
