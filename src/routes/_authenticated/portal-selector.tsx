@@ -54,6 +54,7 @@ function PortalSelectorPage() {
           .maybeSingle();
 
         if (profileError || !profile) {
+          console.error("[PORTAL] profile fetch failed", profileError);
           if (active) {
             setError(profileError?.message || "Perfil não encontrado para este usuário.");
             setLoading(false);
@@ -61,27 +62,48 @@ function PortalSelectorPage() {
           return;
         }
 
+        console.log("[PORTAL] profile", { id: profile.id, role: profile.role, status: profile.status });
+
         if (profile.status === "inactive") {
           await supabase.rpc("touch_my_activity" as never);
         } else {
           supabase.rpc("touch_my_activity" as never).then(() => {}, () => {});
         }
 
-        const [
-          { data: coach },
-          { data: student },
-          { data: partner },
-        ] = await Promise.all([
+        const settled = await Promise.allSettled([
           supabase.from("coaches").select("id, approved_at, blocked_at, is_professional").eq("profile_id", profile.id).maybeSingle(),
           supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle(),
-          supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle(),
+          supabase.from("partners").select("id").eq("profile_id", profile.id).maybeSingle(),
         ]);
+
+        const keys = ["coaches", "students", "partners"] as const;
+        let hadQueryError = false;
+        const rows = settled.map((r, i) => {
+          if (r.status === "rejected") {
+            hadQueryError = true;
+            console.error("[PORTAL] query failed", keys[i], r.reason);
+            return null;
+          }
+          if (r.value.error) {
+            hadQueryError = true;
+            console.error("[PORTAL] query error", keys[i], r.value.error);
+            return null;
+          }
+          return r.value.data;
+        });
+        const [coach, student, partner] = rows as [
+          { id: string; approved_at: string | null; blocked_at: string | null; is_professional: boolean } | null,
+          { id: string } | null,
+          { id: string } | null,
+        ];
+
+        console.log("[PORTAL] rows", { coach, student, partner, hadQueryError });
 
         const role = profile.role;
         const canAdmin = role === "admin" || role === "manager" || role === "director";
-        const coachBlocked = !!(coach && (coach as { blocked_at?: string | null }).blocked_at) || profile.status === "blocked";
+        const coachBlocked = !!(coach && coach.blocked_at) || profile.status === "blocked";
         const canCoach = canAdmin || (!!coach && !coachBlocked);
-        const isProfessional = !!(coach && (coach as { is_professional?: boolean }).is_professional);
+        const isProfessional = !!(coach && coach.is_professional);
         const canProfessional = canAdmin || (isProfessional && !coachBlocked);
         const canStudent = role === "student" || !!student;
         const canPartner = role === "partner" || !!partner;
@@ -95,15 +117,20 @@ function PortalSelectorPage() {
           partner: canPartner,
         };
         const count = Number(canAdmin) + Number(canCoach) + Number(canProfessional) + Number(canStudent) + Number(canPartner);
+        console.log("[PORTAL] flags", available, "count", count);
         if (count === 0) {
-          setError("Nenhum painel está liberado para este cadastro.");
+          setError(
+            hadQueryError
+              ? "Não foi possível carregar suas permissões. Tente novamente."
+              : "Nenhum painel está liberado para este cadastro."
+          );
         } else {
           setOptions(available);
         }
         setLoading(false);
       } catch (err) {
         if (!active) return;
-        console.error("[portal-selector] erro:", err);
+        console.error("[PORTAL] erro:", err);
         setError((err as Error)?.message || "Erro ao carregar opções de acesso.");
         setLoading(false);
       }
