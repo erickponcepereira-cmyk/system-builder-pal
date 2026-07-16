@@ -1,42 +1,43 @@
-## Problema confirmado
+## Problema
 
-O fluxo quebrou porque o webhook do Mercado Pago pode chegar antes da tela terminar de registrar o PIX. Quando isso acontece, o backend cria um registro local do pagamento apenas com status, mas sem `pix_qr_code`, `pix_qr_code_base64` e `ticket_url`. Depois, ao clicar para gerar PIX novamente, o sistema reaproveita esse pagamento pendente “quebrado” e a tela mostra **QR Code não retornado**.
+O painel do parceiro continua bloqueado mesmo após admin aprovar e o parceiro pagar tudo.
 
-Também há risco operacional porque a chave de idempotência atual do PIX é fixa por fatura/pedido; se a primeira tentativa fica sem QR, novas tentativas podem continuar presas no mesmo pagamento.
+**Causa raiz:** o "gate" que decide se libera o painel (`PartnerOnboardingGate` + `getMyPartnerOnboarding`) só considera aprovado quando o campo `approved_at` está preenchido. No banco existem parceiros com `status = 'approved'` porém `approved_at = NULL` (ex.: Bulba Cross, Val.miranda beauty, Ana Flávia, Wellbe, etc.). Isso acontece quando:
 
-## Plano de correção
+- O registro foi criado/aprovado por um caminho que grava `status='approved'` sem gravar `approved_at`.
+- O admin clicou "Aprovar" mas o registro já estava com `status='approved'` (então o botão "Aprovar" nem aparece na tela do admin — veja `admin.partners.tsx` que só mostra "Aprovar" quando `status !== 'approved'`).
 
-1. **Corrigir a reutilização de PIX pendente**
-   - Só reaproveitar um PIX pendente se ele tiver pelo menos o código copia-e-cola ou imagem/base64 do QR.
-   - Se existir PIX pendente sem QR, tratar como tentativa inválida para a tela e criar uma nova tentativa segura.
+Resultado: admin acha que já aprovou, parceiro pagou, mas o gate continua exibindo "aguardando aprovação".
 
-2. **Evitar duplicidade real de cobrança**
-   - Antes de criar novo PIX, consultar tentativas existentes da mesma fatura/pedido.
-   - Bloquear apenas pagamentos já aprovados.
-   - Permitir nova geração quando a tentativa anterior ficou sem QR, expirou, foi cancelada/rejeitada ou está inutilizável.
+## Correção
 
-3. **Corrigir corrida com webhook**
-   - Quando o webhook criar ou atualizar um pagamento PIX, também salvar os dados do QR quando eles vierem do Mercado Pago.
-   - Assim, mesmo se o webhook chegar primeiro, o registro local fica completo e a tela consegue reaproveitar corretamente.
+1. **Fonte da verdade = `status`** (com `blocked_at` NULL), não `approved_at`.
+   - `getMyPartnerOnboarding` passa a devolver `approvedAt` derivado: `status === 'approved' && !blocked_at ? (approved_at || updated_at || now) : null`.
+   - `PartnerOnboardingGate`: mantém a checagem via `info.approvedAt` (já refletirá a nova regra) e o canal realtime também dispara quando `status` muda para `approved`.
 
-4. **Fortalecer retorno do PIX**
-   - Após criar o pagamento no Mercado Pago, validar se o retorno possui QR antes de considerar a criação bem-sucedida para o usuário.
-   - Se o provedor retornar resposta incompleta, marcar/localizar a tentativa como inutilizável em vez de deixar o usuário preso no erro.
+2. **Admin: garantir botão sempre acessível.**
+   - Em `admin.partners.tsx`, mostrar o botão "Reaprovar / Liberar painel" também quando `status='approved'` porém `approved_at` NULL, para forçar a gravação do timestamp e disparar realtime/notificação.
+   - `updatePartnerStatus` (já existente) e `adminApprovePartnerFinal` já gravam `approved_at`; nada muda ali.
 
-5. **Corrigir o caso atual já quebrado**
-   - Atualizar o registro pendente recente que está sem QR usando os dados que já chegaram no webhook, ou deixá-lo elegível para nova geração sem bloquear a fatura.
+3. **Backfill no banco (migração):**
+   - `UPDATE partners SET approved_at = COALESCE(approved_at, updated_at, now()) WHERE status = 'approved' AND approved_at IS NULL AND blocked_at IS NULL;`
+   - Isso destrava imediatamente todos os parceiros já aprovados que estão presos (incluindo o caso reportado — Bulba Cross).
 
-6. **Validar o fluxo**
-   - Confirmar no banco que novas tentativas PIX de `subscription_invoice` ficam com QR salvo.
-   - Conferir que pagamentos aprovados continuam idempotentes e não reprocessam a fatura duas vezes.
-   - Verificar que cartão e demais fontes (`store_order`, `transaction`, `partner_product_order`) não sejam afetados.
+4. **Prevenir regressão:** trigger `BEFORE UPDATE OR INSERT ON partners`:
+   - Se `NEW.status = 'approved'` e `NEW.approved_at IS NULL` e `NEW.blocked_at IS NULL` → define `NEW.approved_at = now()`.
+   - Se `NEW.status <> 'approved'` → mantém a lógica atual (não força limpar, mas garante que todo `approved` tenha timestamp).
 
-## Arquivos/áreas afetadas
+5. **Notificação/realtime:** o `useEffect` do canal em `PartnerOnboardingGate` já escuta `UPDATE` na row do parceiro. Como o backfill/trigger vai alterar `approved_at`, o cliente recarrega automaticamente. Também vamos disparar o `reload()` quando `n.status === 'approved'` mesmo sem `approved_at` novo (defesa em profundidade).
 
-- `src/lib/mercadopago-impl.server.ts`: lógica de criação/reuso de PIX e atualização de registros.
-- `src/routes/api.public.mp.webhook.ts`: persistência dos dados de QR recebidos pelo webhook.
-- Banco de dados: ajuste pontual no registro de pagamento PIX quebrado atual, se necessário.
+## Arquivos afetados
 
-## Resultado esperado
+- `supabase/migrations/<new>.sql` — backfill + trigger.
+- `src/lib/partner-approvals.functions.ts` — `getMyPartnerOnboarding` deriva `approvedAt` a partir de `status`.
+- `src/components/partner/PartnerOnboardingGate.tsx` — realtime reage a mudanças de `status`.
+- `src/routes/_authenticated/admin.partners.tsx` — botão "Liberar painel" quando `status='approved'` sem `approved_at`.
 
-Ao clicar em **Pagar com PIX**, o sistema deve sempre mostrar o QR/copia-e-cola quando o Mercado Pago gerar o pagamento; tentativas quebradas não devem travar a fatura, e pagamentos já aprovados não devem duplicar processamento.
+## Validação
+
+- Rodar o UPDATE de backfill e conferir que Bulba Cross fica com `approved_at` preenchido.
+- Recarregar o preview logado como o parceiro afetado: painel deve abrir.
+- Fluxo novo: criar parceiro pending → admin Aprovar → checar que `approved_at` é gravado e realtime destrava o gate sem F5.
