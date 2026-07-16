@@ -9028,6 +9028,7 @@ export type Database = {
           muscle_mass: number | null
           notes: string | null
           partner_id: string | null
+          professional_coach_id: string | null
           profile_id: string
           referral_code: string | null
           referral_link: string | null
@@ -9073,6 +9074,7 @@ export type Database = {
           muscle_mass?: number | null
           notes?: string | null
           partner_id?: string | null
+          professional_coach_id?: string | null
           profile_id: string
           referral_code?: string | null
           referral_link?: string | null
@@ -9118,6 +9120,7 @@ export type Database = {
           muscle_mass?: number | null
           notes?: string | null
           partner_id?: string | null
+          professional_coach_id?: string | null
           profile_id?: string
           referral_code?: string | null
           referral_link?: string | null
@@ -9146,6 +9149,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_professional_coach_id_fkey"
+            columns: ["professional_coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
           {
@@ -10952,6 +10962,10 @@ export type Database = {
         Args: { _group_id: string }
         Returns: undefined
       }
+      link_professional_collaborator: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
       list_all_students_for_master: {
         Args: { _q?: string }
         Returns: {
@@ -11414,6 +11428,10 @@ export type Database = {
         Returns: Json
       }
       unblock_coach: { Args: { _coach_id: string }; Returns: undefined }
+      unlink_professional_collaborator: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
       update_career_challenge_progress: {
         Args: { _coach_id: string; _points: number }
         Returns: undefined
