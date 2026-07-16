@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 import { registerAppServiceWorker } from "@/pwa-register";
+import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
+
 
 function NotFoundComponent() {
   return (
