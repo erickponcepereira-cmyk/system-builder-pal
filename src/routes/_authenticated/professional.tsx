@@ -112,7 +112,7 @@ function ProfessionalPanel() {
 
       const { data: coachRow } = await supabase
         .from("coaches")
-        .select("id,is_professional,specialty_key,serves_whole_network,specialty_pending_setup,approved_at")
+        .select("id,is_professional,specialty_key,serves_whole_network,specialty_pending_setup,approved_at,referral_code")
         .eq("profile_id", profile.id).maybeSingle();
 
       if (!coachRow || !coachRow.is_professional) {
@@ -139,6 +139,7 @@ function ProfessionalPanel() {
         servesWholeNetwork: !!coachRow.serves_whole_network,
         pendingSetup: !!coachRow.specialty_pending_setup,
         approved: !!coachRow.approved_at,
+        referralCode: (coachRow as { referral_code: string | null }).referral_code ?? null,
       };
 
       setInfo(proInfo);
