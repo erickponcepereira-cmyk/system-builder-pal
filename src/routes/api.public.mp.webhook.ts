@@ -112,8 +112,15 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
               .from("mercadopago_payments")
               .update(updatePayload)
               .eq("id", existing.id);
+            if (sourceId) {
+              try {
+                await attachPaymentToSource(kind as SourceKind, sourceId, existing.id);
+              } catch (e) {
+                console.error("[mp webhook] failed to attach existing payment to source:", e);
+              }
+            }
           } else if (ALLOWED_KINDS.has(kind as SourceKind)) {
-            await supabaseAdmin.from("mercadopago_payments").insert({
+            const { data: inserted } = await supabaseAdmin.from("mercadopago_payments").insert({
               mp_payment_id: String(mpPaymentId),
               source_kind: kind,
               source_id: sourceId,
@@ -125,10 +132,10 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
               paid_at: status === "approved" ? new Date().toISOString() : null,
               raw_webhook: payment,
               ...pixPayload,
-            });
-            if (sourceId) {
+            }).select("id").maybeSingle();
+            if (sourceId && inserted?.id) {
               try {
-                await attachPaymentToSource(kind as SourceKind, sourceId, existing?.id || String(mpPaymentId));
+                await attachPaymentToSource(kind as SourceKind, sourceId, inserted.id);
               } catch (e) {
                 console.error("[mp webhook] failed to attach payment to source:", e);
               }
