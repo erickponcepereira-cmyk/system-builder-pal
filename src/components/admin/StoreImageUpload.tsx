@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
 
 interface Props {
   value: string | null | undefined;
@@ -12,26 +13,30 @@ interface Props {
 }
 
 /**
- * Upload de imagem para a loja.
- * Bucket: store-images (público).
- * Tamanho recomendado: 400x400px (quadrado), até 1MB, formato JPG/PNG/WebP.
+ * Upload de imagem para a loja com recorte 1:1 obrigatório.
+ * Bucket: store-images (público). Recomendado até 2MB.
  */
 export function StoreImageUpload({ value, onChange, folder = "store", className, placeholder = "Imagem" }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const { cropToBlob } = useImageCrop();
 
   const handleFile = async (file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Imagem muito grande (máx 2MB)");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 5MB)");
       return;
     }
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
+    if (!cropped) return;
     setBusy(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
+      const isPng = cropped.type === "image/png";
+      const ext = isPng ? "png" : "jpg";
       const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("store-images").upload(path, file, {
+      const { error } = await supabase.storage.from("store-images").upload(path, cropped, {
         cacheControl: "3600",
         upsert: false,
+        contentType: cropped.type,
       });
       if (error) throw error;
       const { data } = supabase.storage.from("store-images").getPublicUrl(path);
@@ -43,6 +48,7 @@ export function StoreImageUpload({ value, onChange, folder = "store", className,
       setBusy(false);
     }
   };
+
 
   return (
     <div className={`flex items-center gap-2 ${className || ""}`}>
