@@ -63,6 +63,8 @@ export function StoreItemsManager() {
   const [editTab, setEditTab] = useState<"general" | "financial">("general");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { cropToBlob } = useImageCrop();
+
 
   const load = async () => {
     setLoading(true);
