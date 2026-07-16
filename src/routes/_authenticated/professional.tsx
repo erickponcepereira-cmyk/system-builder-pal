@@ -44,6 +44,7 @@ type ProInfo = {
   servesWholeNetwork: boolean;
   pendingSetup: boolean;
   approved: boolean;
+  referralCode: string | null;
 };
 
 type AssignmentRow = {
