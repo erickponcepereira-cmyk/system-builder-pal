@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getPayment, mapMpStatus } from "@/server/mercadopago.server";
-import { applyApproval, loadSource, type SourceKind } from "@/lib/mercadopago-impl.server";
+import { applyApproval, attachPaymentToSource, loadSource, type SourceKind } from "@/lib/mercadopago-impl.server";
 
 // Webhook do Mercado Pago. URL pública: /api/public/mp/webhook
 // MP envia POST com { type, data: { id }, action } ou query string.
@@ -75,6 +75,15 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
           const kind = (kindRaw || "").trim();
           const sourceId = (sourceIdRaw || "").trim();
           const paidAmount = Number(payment.transaction_amount || 0);
+          const pixData = payment?.point_of_interaction?.transaction_data || {};
+          const pixPayload = payment.payment_method_id === "pix"
+            ? {
+                pix_qr_code: pixData.qr_code || null,
+                pix_qr_code_base64: pixData.qr_code_base64 || null,
+                pix_ticket_url: pixData.ticket_url || null,
+                pix_expires_at: payment.date_of_expiration || null,
+              }
+            : {};
 
           // ── 1. Idempotência local + gravação bruta sempre ──
           const { data: existing } = await supabaseAdmin
@@ -87,6 +96,7 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
           const basePayload = {
             status_detail: payment.status_detail || null,
             raw_webhook: payment,
+            ...pixPayload,
           } as any;
 
           if (existing) {
@@ -114,7 +124,15 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
               payer_email: payment.payer?.email || null,
               paid_at: status === "approved" ? new Date().toISOString() : null,
               raw_webhook: payment,
+              ...pixPayload,
             });
+            if (sourceId) {
+              try {
+                await attachPaymentToSource(kind as SourceKind, sourceId, existing?.id || String(mpPaymentId));
+              } catch (e) {
+                console.error("[mp webhook] failed to attach payment to source:", e);
+              }
+            }
           }
 
           // ── 2. Só continua para aplicar aprovação se status = approved ──

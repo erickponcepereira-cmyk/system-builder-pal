@@ -272,6 +272,7 @@ export async function handleCreatePix(data: PixInput) {
       if (!reusable || !rowHasPixPayload(reusable)) {
         console.warn("[mp pix] ignoring pending PIX without QR payload", { paymentRowId: existing.id, mpPaymentId: existing.mp_payment_id });
       } else {
+      await attachPaymentToSource(data.source.kind, data.source.id, reusable.id);
       return {
         paymentRowId: reusable.id,
         mpPaymentId: String(reusable.mp_payment_id || ""),
