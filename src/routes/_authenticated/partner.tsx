@@ -1142,17 +1142,21 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState("");
   const [pending, setPending] = useState<string | null>(null);
+  const { cropToBlob } = useImageCrop();
 
   const upload = async (file: File) => {
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem do post" });
+    if (!cropped) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `partners/${partner.id}/posts/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file);
+    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { contentType: cropped.type });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setPending(data.publicUrl);
     setUploading(false);
   };
+
 
   const publish = async () => {
     if (!pending) return;
