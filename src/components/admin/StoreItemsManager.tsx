@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star, Copy } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
 import { ProductDownloadsManager } from "./ProductDownloadsManager";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
