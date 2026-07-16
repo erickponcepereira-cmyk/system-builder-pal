@@ -272,16 +272,16 @@ export async function handleCreatePix(data: PixInput) {
       if (!reusable || !rowHasPixPayload(reusable)) {
         console.warn("[mp pix] ignoring pending PIX without QR payload", { paymentRowId: existing.id, mpPaymentId: existing.mp_payment_id });
       } else {
-      await attachPaymentToSource(data.source.kind, data.source.id, reusable.id);
-      return {
-        paymentRowId: reusable.id,
-        mpPaymentId: String(reusable.mp_payment_id || ""),
-        status: reusable.status,
-        qrCode: (reusable.pix_qr_code as string | null) ?? null,
-        qrCodeBase64: (reusable.pix_qr_code_base64 as string | null) ?? null,
-        ticketUrl: (reusable.pix_ticket_url as string | null) ?? null,
-        amount: Number(reusable.amount),
-      };
+        await attachPaymentToSource(data.source.kind, data.source.id, reusable.id);
+        return {
+          paymentRowId: reusable.id,
+          mpPaymentId: String(reusable.mp_payment_id || ""),
+          status: reusable.status,
+          qrCode: (reusable.pix_qr_code as string | null) ?? null,
+          qrCodeBase64: (reusable.pix_qr_code_base64 as string | null) ?? null,
+          ticketUrl: (reusable.pix_ticket_url as string | null) ?? null,
+          amount: Number(reusable.amount),
+        };
       }
     }
   } else if (existing && BLOCKING_STATUSES.has(existing.status)) {

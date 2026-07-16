@@ -112,7 +112,7 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
               .from("mercadopago_payments")
               .update(updatePayload)
               .eq("id", existing.id);
-            if (sourceId) {
+            if (sourceId && ALLOWED_KINDS.has(kind as SourceKind)) {
               try {
                 await attachPaymentToSource(kind as SourceKind, sourceId, existing.id);
               } catch (e) {
