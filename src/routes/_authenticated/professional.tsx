@@ -275,6 +275,7 @@ function TabContent({ tab, info, assignments }: { tab: string; info: ProInfo; as
   if (tab === "settings") return <SettingsTab coachId={info.coachId} profileId={info.profileId} />;
   if (tab === "fitmind_calendar") return <FitmindCalendar />;
   if (tab === "collab") return <CollabWorkspace ownerType="professional" ownerId={info.coachId} />;
+  if (tab === "collaborators") return <ProfessionalCollaboratorsPanel referralCode={info.referralCode} professionalName={info.name} />;
 
   if (tab === "appointments") return <AppointmentsTab coachId={info.coachId} />;
 
