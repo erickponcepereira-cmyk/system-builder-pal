@@ -38,13 +38,21 @@ function StudentLayout() {
           .maybeSingle();
 
         if (!active) return;
-        const selectedArea = sessionStorage.getItem("fitmind_selected_area");
+        let selectedArea = sessionStorage.getItem("fitmind_selected_area");
         const { data: student } = profile
           ? await supabase.from("students").select("id").eq("profile_id", profile.id).maybeSingle()
           : { data: null };
 
-        // Block pending coaches (not yet released) from the student app
-        if (profile?.id && (profile.role === "coach" || ["manager", "director"].includes(profile.role || ""))) {
+        // Se o usuário chegou direto em /student e tem cadastro de aluno,
+        // tratar como entrada explícita no Painel de Aluno.
+        // O Painel de Aluno é sempre livre, independente de mensalidade de coach/parceiro/profissional.
+        if (student?.id && selectedArea !== "student") {
+          sessionStorage.setItem("fitmind_selected_area", "student");
+          selectedArea = "student";
+        }
+
+        // Block pending coaches (not yet released) from the student app — só se não tem student
+        if (!student?.id && profile?.id && (profile.role === "coach" || ["manager", "director"].includes(profile.role || ""))) {
           const { data: coachRow } = await supabase
             .from("coaches")
             .select("onboarding_stage")
