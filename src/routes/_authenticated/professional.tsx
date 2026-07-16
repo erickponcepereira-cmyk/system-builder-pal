@@ -16,6 +16,7 @@ import { SubscriptionGuard } from "@/components/profile/SubscriptionGuard";
 import { ProfessionalOnboardingGate } from "@/components/professional/ProfessionalOnboardingGate";
 
 import { ProfessionalStudentsTab } from "@/components/professional/ProfessionalStudentsTab";
+import { ProfessionalCollaboratorsPanel } from "@/components/professional/ProfessionalCollaboratorsPanel";
 import { AnamneseTab } from "@/components/professional/AnamneseTab";
 import { SettingsTab } from "@/components/professional/SettingsTab";
 import { ProtocolTab } from "@/components/coach/tabs/ProtocolTab";
