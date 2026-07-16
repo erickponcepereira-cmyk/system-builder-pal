@@ -19,6 +19,8 @@ import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
