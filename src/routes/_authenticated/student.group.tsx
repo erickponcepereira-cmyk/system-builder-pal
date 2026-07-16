@@ -35,6 +35,8 @@ function GroupPage() {
   const [accessError, setAccessError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const { cropToBlob } = useImageCrop();
+
 
   const canSend = useMemo(() => !!group && !!profile && !sending, [group, profile, sending]);
 
