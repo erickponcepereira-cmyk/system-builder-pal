@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, Gift, Loader2, Image as ImageIcon, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 export const Route = createFileRoute("/_authenticated/admin/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — Admin" }] }),
