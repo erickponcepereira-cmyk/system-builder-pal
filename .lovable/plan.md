@@ -1,52 +1,38 @@
 ## Problema
 
-Ao fazer login com uma conta de parceiro (ex.: Bulba Cross), o `/portal-selector` abre **sem exibir nenhum card** de painel (nem "Painel de Parceiro"). No banco a conta está correta: `profiles.role='partner'`, `profiles.status='active'`, existe linha em `partners` com `status='pending'`. As RLS permitem o SELECT do próprio registro. Portanto, logicamente, o botão "Painel de Parceiro" deveria aparecer.
+Duas situações travam o app na splash "Conectando corpo e mente":
 
-Não há erro de build recente; o console não mostra `[PORTAL] mounted` nem `[AUTH_GATE] sessão encontrada` — indício de que a página não termina de resolver ou renderiza um estado silencioso (sem loading, sem erro, sem opções).
-
-## Suspeitas
-
-`src/routes/_authenticated/portal-selector.tsx` usa `as never` na consulta a `partners`:
+**1. Depois de sair (logout)**
+`AuthLoadingGate` só chama `supabase.auth.getSession()` **uma única vez** no primeiro mount. Quando o usuário faz logout, o estado local `hasSession` fica `true` para sempre, e como o pathname passa a ser `/login`, a condição:
 
 ```ts
-supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle()
+const stillRedirecting =
+  sessionResolved && hasSession && (pathname === "/" || pathname === "/login");
 ```
 
-Esses casts existem por herança (antes de `partners` estar em `types.ts`). Hoje a tabela já tem tipos gerados. O `as never` mascara qualquer falha de tipo/consulta e pode ter passado a devolver `undefined`/erro silencioso após atualizações de `@supabase/supabase-js` ou dos tipos, resultando em `partner = undefined`. Nesse caso, `canPartner` ainda deveria ser `true` via `role === "partner"` — o que sugere que talvez o `Promise.all` esteja **rejeitando** e caindo no catch com uma mensagem obscura, ou o `profile.role` está chegando diferente do esperado.
+fica permanentemente `true` → splash fixo. Fechar/abrir o app remonta o componente e resolve. Além disso, `redirectedRef.current` não é resetado no logout, então mesmo que o estado atualizasse a próxima navegação também poderia travar.
 
-Sem logs conclusivos do cliente, a correção segura combina três coisas:
+**2. Ao atualizar a página**
+`getSession()` pode demorar/pendurar em rede ruim (mobile/APK). Como o splash só some quando `sessionResolved` vira `true`, se a promise não resolver, a splash fica infinita. Não há timeout.
 
-1. Remover os `as never` e destravar tipagem real da consulta a `partners`.
-2. Tornar cada consulta do `Promise.all` tolerante a erro individual (não deixar uma falha derrubar as demais).
-3. Adicionar logs de diagnóstico para o próximo turno já mostrar o que está acontecendo com esse usuário.
+## Correção
 
-## Mudanças
+Arquivo único: `src/components/AuthLoadingGate.tsx`
 
-Arquivo único: `src/routes/_authenticated/portal-selector.tsx`
+1. **Assinar `supabase.auth.onAuthStateChange`** dentro do mesmo `useEffect` inicial, além do `getSession()`. Nos eventos `SIGNED_OUT`/`USER_UPDATED`/`SIGNED_IN`, atualizar `hasSession` de acordo com `session?.user`. No `SIGNED_OUT`, também resetar `redirectedRef.current = false`. Retornar o `unsubscribe` no cleanup.
 
-1. **Tipagem correta de `partners`**
-   - Remover todos os `as never` na query de `partners` (tabela já tem tipos gerados).
+2. **Timeout de segurança para `getSession()`**: usar `Promise.race` com `setTimeout` de 4 s. Se estourar, tratar como "sem sessão" e liberar o splash (`setSessionResolved(true)`, `setHasSession(false)`). Isso evita splash infinita em rede lenta — se a sessão realmente existir, o `onAuthStateChange` corrige `hasSession` assim que o cliente terminar de restaurar.
 
-2. **Consultas resilientes**
-   - Substituir `Promise.all` por `Promise.allSettled` para coach/student/partner.
-   - Tratar cada resultado independentemente: se der erro, logar e considerar `null` (não abortar a tela).
-
-3. **Fallback por `role`**
-   - Garantir que, mesmo se a query de `partners` falhar, `canPartner = profile.role === "partner" || !!partner`. Mesma lógica para `canStudent`.
-   - Se `count === 0` E houve erro em alguma sub-query, mostrar a mensagem "Não foi possível carregar suas permissões" com botão "Tentar novamente" (novo botão que dispara `location.reload()`), em vez de "Nenhum painel liberado".
-
-4. **Logs de diagnóstico** (temporários, retirar depois)
-   - `console.log("[PORTAL] profile", { id, role, status })`
-   - `console.log("[PORTAL] rows", { coach, student, partner })`
-   - `console.log("[PORTAL] flags", available, "count", count)`
-   - Em cada catch de sub-query: `console.error("[PORTAL] query failed", key, error)`
+3. **Resetar `redirectedRef` quando o pathname sai de `/portal-selector`** (o usuário já foi para outro painel), para que um logout+login seguinte volte a redirecionar corretamente.
 
 ## Fora de escopo
 
-- Nenhuma alteração em `PartnerOnboardingGate`, `partner.tsx`, migrações, ou fluxo de aprovação.
-- Nenhuma mudança nas RLS de `partners` (já corretas).
-- Login/AuthLoadingGate seguem inalterados.
+- Nenhuma mudança nas rotas, no `portal-selector`, no `login` ou nos gates de painel.
+- Nenhuma alteração em RLS, migrações ou server functions.
+- Estética da splash permanece igual.
 
 ## Validação
 
-Após o deploy, pedir ao usuário para reproduzir e conferir o console — os novos logs `[PORTAL]` mostrarão exatamente qual sub-query falhou (se alguma) e quais flags foram calculadas. Com isso podemos, no próximo turno, remover os logs e travar o caso raiz caso ainda apareça algum comportamento estranho.
+- Login → escolher painel → clicar em "Sair": deve voltar para `/login` sem splash preso.
+- Estar logado, fazer refresh da página com rede lenta: no pior caso o splash cai em ~4 s e o app renderiza a rota atual, sem exigir fechar/abrir.
+- Novo login depois do logout continua redirecionando para `/portal-selector` normalmente.
