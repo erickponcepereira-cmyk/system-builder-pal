@@ -1,84 +1,52 @@
 ## Problema
 
-- O painel do parceiro é liberado imediatamente após o cadastro: não há gate de anuidade, não há espera de aprovação do admin, não há bloqueio.
-- O painel do profissional já usa `ProfessionalOnboardingGate` (Especialidade → Ativação anual → Aguardando aprovação → painel liberado). O mesmo fluxo precisa existir para o parceiro.
-- A aba "Mensalidade" do parceiro hoje só tem um link externo para `/assinatura?tab=annual`. O usuário quer uma aba "Anuidade" própria ao lado de "Mensalidade".
+Ao fazer login com uma conta de parceiro (ex.: Bulba Cross), o `/portal-selector` abre **sem exibir nenhum card** de painel (nem "Painel de Parceiro"). No banco a conta está correta: `profiles.role='partner'`, `profiles.status='active'`, existe linha em `partners` com `status='pending'`. As RLS permitem o SELECT do próprio registro. Portanto, logicamente, o botão "Painel de Parceiro" deveria aparecer.
 
-## Escopo
+Não há erro de build recente; o console não mostra `[PORTAL] mounted` nem `[AUTH_GATE] sessão encontrada` — indício de que a página não termina de resolver ou renderiza um estado silencioso (sem loading, sem erro, sem opções).
 
-### 1. `getMyPartnerOnboarding` (nova server fn em `src/lib/partner-approvals.functions.ts`)
+## Suspeitas
 
-Espelha `getMyProfessionalOnboarding`. Retorna:
+`src/routes/_authenticated/portal-selector.tsx` usa `as never` na consulta a `partners`:
 
-```
-{
-  isPartner, profileId, partnerId, name, email, fantasyName,
-  activationPaidAt, activationSource, approvedAt, alreadyPartner
-}
+```ts
+supabase.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id).maybeSingle()
 ```
 
-Lê de `partners` do usuário logado.
+Esses casts existem por herança (antes de `partners` estar em `types.ts`). Hoje a tabela já tem tipos gerados. O `as never` mascara qualquer falha de tipo/consulta e pode ter passado a devolver `undefined`/erro silencioso após atualizações de `@supabase/supabase-js` ou dos tipos, resultando em `partner = undefined`. Nesse caso, `canPartner` ainda deveria ser `true` via `role === "partner"` — o que sugere que talvez o `Promise.all` esteja **rejeitando** e caindo no catch com uma mensagem obscura, ou o `profile.role` está chegando diferente do esperado.
 
-### 2. Novo componente `src/components/partner/PartnerOnboardingGate.tsx`
+Sem logs conclusivos do cliente, a correção segura combina três coisas:
 
-Cópia estrutural de `ProfessionalOnboardingGate`:
+1. Remover os `as never` e destravar tipagem real da consulta a `partners`.
+2. Tornar cada consulta do `Promise.all` tolerante a erro individual (não deixar uma falha derrubar as demais).
+3. Adicionar logs de diagnóstico para o próximo turno já mostrar o que está acontecendo com esse usuário.
 
-- Carrega `getMyPartnerOnboarding` no mount.
-- Realtime em `partners` (filter por `id=eq.<partnerId>`) para reagir quando o admin aprova (`approved_at`) ou concede ativação (`activation_paid_at`) — recarrega a página quando aprovar.
-- Stepper com 3 passos: **Cadastro** (sempre done pois o partner já existe) → **Anuidade** (`activation_paid_at`) → **Aprovação** (`approved_at`).
-- Se `!activationPaidAt`: `ActivationStep` — botão "Pagar Anuidade Parceiro" que:
-  - cria `store_orders` via RPC `create_store_order` com o produto de ativação parceiro,
-  - renderiza `<MercadoPagoCheckout>` para PIX,
-  - também exibe botão "Já sou parceiro (avisar admin)" que chama uma nova server fn `markAlreadyPartner` (paralela à `markAlreadyCoach`) que define `activation_source='already_partner'`, `activation_paid_at=now()`, `already_partner=true` e cria uma notificação para o admin.
-- Se `activationPaidAt && !approvedAt`: `WaitingApprovalStep` — mostra card "Anuidade confirmada, aguardando aprovação" com `<SubscriptionInvoicesTab walletSource="partner" />` embutido para que o parceiro já adiante mensalidade.
-- Só libera `children` quando `approvedAt` está preenchido.
+## Mudanças
 
-### 3. `markAlreadyPartner` (nova server fn)
+Arquivo único: `src/routes/_authenticated/portal-selector.tsx`
 
-Em `src/lib/partner-approvals.functions.ts`. Espelha `markAlreadyCoach`: marca `already_partner=true`, `activation_paid_at=now()`, `activation_source='already_partner'`, cria audit `partner_activation_paid` e notifica o admin. Não define `approved_at` — quem aprova ainda é o admin.
+1. **Tipagem correta de `partners`**
+   - Remover todos os `as never` na query de `partners` (tabela já tem tipos gerados).
 
-### 4. Produto de ativação do parceiro
+2. **Consultas resilientes**
+   - Substituir `Promise.all` por `Promise.allSettled` para coach/student/partner.
+   - Tratar cada resultado independentemente: se der erro, logar e considerar `null` (não abortar a tela).
 
-Reutilizar o mesmo produto de ativação já existente para profissional (`ACTIVATION_PRODUCT_ID`) **apenas se o admin confirmar que o parceiro deve usar o mesmo SKU**. Caso contrário, criar `PARTNER_ACTIVATION_PRODUCT_ID` (constante) apontando para o produto de anuidade do parceiro já cadastrado em `products`. Este ponto precisa de decisão: ver perguntas abaixo.
+3. **Fallback por `role`**
+   - Garantir que, mesmo se a query de `partners` falhar, `canPartner = profile.role === "partner" || !!partner`. Mesma lógica para `canStudent`.
+   - Se `count === 0` E houve erro em alguma sub-query, mostrar a mensagem "Não foi possível carregar suas permissões" com botão "Tentar novamente" (novo botão que dispara `location.reload()`), em vez de "Nenhum painel liberado".
 
-### 5. `src/routes/_authenticated/partner.tsx`
-
-- Envolver todo o painel com `<PartnerOnboardingGate>` **por fora** do `<SubscriptionGuard walletSource="partner">`, seguindo o padrão do profissional. Quando o parceiro estiver aprovado, o gate renderiza `children` e o painel funciona normalmente. Enquanto não estiver, o gate ocupa a tela inteira (sem `RoleSwitcher` para não confundir o usuário).
-- Nova aba **"Anuidade"** ao lado de **"Mensalidade"** (chave `annual`). Ícone `CreditCard`. Renderiza um novo componente `PartnerAnnualTab` que:
-  - chama `getMyAnnualActivation`,
-  - reutiliza o mesmo cartão de estado ("Ativa até dd/mm/aaaa" / "Vencida" / "A pagar") que já é usado em `src/routes/_authenticated/assinatura.tsx` (extraír o bloco para um componente compartilhado `AnnualActivationCard` em `src/components/profile/AnnualActivationCard.tsx` para não duplicar).
-  - Se estiver a pagar, mostra `MercadoPagoCheckout` para o pedido de anuidade.
-- Remover o botão "Ver / pagar Anuidade" que hoje aparece dentro da aba "Mensalidade" — passa a ser redundante.
-
-### 6. Extração de `AnnualActivationCard`
-
-Novo `src/components/profile/AnnualActivationCard.tsx` que encapsula a UI de anuidade hoje espalhada em `assinatura.tsx`. Reaproveitado em:
-
-- `assinatura.tsx` (aba annual atual continua funcionando via mesmo componente).
-- `PartnerAnnualTab` (nova aba do painel parceiro).
-- `PartnerOnboardingGate.ActivationStep` pode continuar com sua própria UI simplificada de pagamento; o card compartilhado é para painéis já aprovados.
-
-### 7. Fluxo do parceiro admin (não muda)
-
-`reviewPartnerStatus` / `adminApprovePartnerFinal` / `adminGrantPartnerActivation` já existem e são suficientes. Nada muda no lado admin.
-
-## Perguntas antes de implementar
-
-1. **Produto de ativação:** o parceiro paga o **mesmo SKU** de ativação anual que o profissional (`ACTIVATION_PRODUCT_ID`, R$ 179,90), ou existe um produto de anuidade específico do parceiro que devo usar? Se sim, qual é o `id`?
-2. **"Já sou parceiro":** manter o botão "Já sou parceiro (avisar admin)" como no professional? Ele permite pular a cobrança da anuidade e avisa o admin.
+4. **Logs de diagnóstico** (temporários, retirar depois)
+   - `console.log("[PORTAL] profile", { id, role, status })`
+   - `console.log("[PORTAL] rows", { coach, student, partner })`
+   - `console.log("[PORTAL] flags", available, "count", count)`
+   - Em cada catch de sub-query: `console.error("[PORTAL] query failed", key, error)`
 
 ## Fora de escopo
 
-- Não altera formulário de cadastro (`registration.server.ts`) — status "pending" já é o correto.
-- Não altera aprovação do admin.
-- Não altera `SubscriptionGuard` nem regras de mensalidade.
-- Não mexe em painel profissional (esse fluxo já está correto por indicação do usuário).
+- Nenhuma alteração em `PartnerOnboardingGate`, `partner.tsx`, migrações, ou fluxo de aprovação.
+- Nenhuma mudança nas RLS de `partners` (já corretas).
+- Login/AuthLoadingGate seguem inalterados.
 
-## Arquivos
+## Validação
 
-- `src/lib/partner-approvals.functions.ts` — adicionar `getMyPartnerOnboarding` e `markAlreadyPartner`.
-- `src/components/partner/PartnerOnboardingGate.tsx` — novo.
-- `src/components/partner/PartnerAnnualTab.tsx` — novo.
-- `src/components/profile/AnnualActivationCard.tsx` — novo (extraído de `assinatura.tsx`).
-- `src/routes/_authenticated/partner.tsx` — envolver com gate, adicionar aba `annual`, remover botão duplicado.
-- `src/routes/_authenticated/assinatura.tsx` — trocar bloco inline pela chamada de `AnnualActivationCard` (refactor, sem mudança funcional).
+Após o deploy, pedir ao usuário para reproduzir e conferir o console — os novos logs `[PORTAL]` mostrarão exatamente qual sub-query falhou (se alguma) e quais flags foram calculadas. Com isso podemos, no próximo turno, remover os logs e travar o caso raiz caso ainda apareça algum comportamento estranho.
