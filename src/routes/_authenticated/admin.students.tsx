@@ -254,6 +254,13 @@ function AdminStudents() {
                           ✨ {r.is_influencer ? "Influencer" : "Promover"}
                         </button>
                         <button
+                          onClick={() => openProfileEdit(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white/80 hover:bg-white/10"
+                          title="Editar cadastro"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Editar
+                        </button>
+                        <button
                           onClick={() => openEdit(r)}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/25"
                         >
