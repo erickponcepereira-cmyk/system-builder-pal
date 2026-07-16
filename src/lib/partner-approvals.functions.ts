@@ -526,14 +526,21 @@ export const getMyPartnerOnboarding = createServerFn({ method: "GET" })
     const p = profile as { id: string; name?: string; email?: string };
     const { data: partner } = await supabaseAdmin
       .from("partners")
-      .select("id, fantasy_name, status, activation_paid_at, activation_source, approved_at, already_partner")
+      .select("id, fantasy_name, status, activation_paid_at, activation_source, approved_at, blocked_at, already_partner, updated_at")
       .eq("profile_id", p.id).maybeSingle();
     if (!partner) return null;
     const pt = partner as {
       id: string; fantasy_name: string; status: string;
       activation_paid_at: string | null; activation_source: string | null;
-      approved_at: string | null; already_partner: boolean | null;
+      approved_at: string | null; blocked_at: string | null;
+      already_partner: boolean | null; updated_at: string | null;
     };
+    // Fonte da verdade = status. Se está aprovado e não bloqueado, deriva approvedAt
+    // mesmo que o timestamp não tenha sido gravado por algum caminho legado.
+    const derivedApprovedAt =
+      pt.status === "approved" && !pt.blocked_at
+        ? pt.approved_at || pt.updated_at || new Date().toISOString()
+        : null;
     return {
       isPartner: true,
       profileId: p.id,
@@ -544,7 +551,7 @@ export const getMyPartnerOnboarding = createServerFn({ method: "GET" })
       status: pt.status,
       activationPaidAt: pt.activation_paid_at,
       activationSource: pt.activation_source,
-      approvedAt: pt.approved_at,
+      approvedAt: derivedApprovedAt,
       alreadyPartner: !!pt.already_partner,
     };
   });
