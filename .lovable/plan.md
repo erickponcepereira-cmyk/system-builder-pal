@@ -1,47 +1,32 @@
 ## Problema
 
-Ao clicar em **Excluir** em `admin.students.tsx`, o backend retorna:
-> `Falha ao limpar dependências: permission denied for function admin_purge_user_dependents`
+Quando alguém se cadastra como profissional, parceiro ou coach, seu `profile.role` vira `coach` (profissional é coach com `is_professional=true`) ou `partner`. Ao logar e cair no `/student`, o `StudentLayout` redireciona para `/coach` (ou `/partner`/`/professional`), e lá o `SubscriptionGuard` bloqueia a tela inteira com a mensagem "Painel bloqueado por mensalidade em atraso" — sem nenhuma saída para o Painel de Aluno.
 
-A função é `SECURITY DEFINER` e já valida internamente que o chamador é admin, mas uma migração anterior (`20260622152313`) revogou `EXECUTE` de `authenticated`, e o `adminDeleteUser` a chama via `context.supabase` (sessão do admin logado = role `authenticated`), portanto o Postgres bloqueia antes de rodar a checagem interna.
+Regra desejada: **mensalidade só bloqueia coach/parceiro/profissional. O Painel de Aluno deve continuar sempre acessível**, independentemente do status de mensalidade.
 
-Além disso, o usuário precisa:
-1. Excluir o cadastro do **Jonathan Uzziel Vasquez Gervacio** (coach, `mensphysiqueuzzie@gmail.com`), que ficou preso.
-2. Ter uma opção para **editar** os dados de um cadastro quando forem preenchidos errados (sem precisar excluir e recriar).
+## O que vou mudar
 
-## O que vou fazer
+### 1. `src/components/profile/SubscriptionGuard.tsx`
+Na tela de bloqueio, adicionar um botão destacado **"Entrar no Painel de Aluno"** que:
+- grava `sessionStorage.setItem("fitmind_selected_area", "student")`
+- navega para `/student`
 
-### 1. Corrigir a permissão da função (migração)
-Restaurar `GRANT EXECUTE ON FUNCTION public.admin_purge_user_dependents(uuid) TO authenticated`. A função continua segura porque já bloqueia não-admins com `RAISE EXCEPTION 'Acesso negado'`.
+Só mostrar o botão quando o usuário tem `students` row (ou seja, tem painel de aluno disponível). Um check leve via `supabase` do lado do cliente, dentro do próprio guard.
 
-### 2. Excluir o cadastro do Jonathan
-Após a migração acima ser aprovada, rodo:
-- `admin_purge_user_dependents(user_id do Jonathan)` para limpar dependências (transações, comissões, subscriptions, coach, profile etc.).
-- `auth.admin.deleteUser` não é acessível pelas ferramentas de banco; então, no lugar, deleto diretamente o `profiles` e o `coaches` dele — o CASCADE nas FKs cuida do resto. Se sobrar algum resíduo no `auth.users`, faço o `DELETE FROM auth.users WHERE id = ...` na mesma migração de execução.
+### 2. `src/routes/_authenticated/student.tsx` (StudentLayout)
+Hoje, se `role` é `coach|manager|director|partner` e `selectedArea !== "student"`, ele redireciona para `/coach` — inclusive quando a pessoa digitou `/student` direto na URL. Vou ajustar para:
+- Se o usuário tem `students` row **e** o pathname atual já é `/student*`, tratar como entrada explícita no Painel de Aluno (setar `fitmind_selected_area = "student"` e permitir), em vez de redirecionar para `/coach`.
+- Mantém o redirect atual apenas para quem cai em `/student` sem ter `students` row.
 
-### 3. Botão "Editar" no painel de alunos
-Em `src/routes/_authenticated/admin.students.tsx`, ao lado de **Promover / Trocar coach / Excluir**, adicionar botão **Editar** que abre um modal para corrigir os campos básicos do cadastro:
+Isso garante que qualquer link direto para o Painel de Aluno funciona mesmo com mensalidade em atraso.
 
-- Nome
-- E-mail
-- WhatsApp / telefone
-- CPF
-- Data de nascimento
+## Fora do escopo
 
-Salvar chama uma nova server function `adminUpdateProfile` (em `src/lib/admin-users.functions.ts`) que:
-- Verifica que o chamador é admin (`assertAdminProfile`).
-- Atualiza `profiles` via `supabaseAdmin`.
-- Se o e-mail mudou, atualiza também `auth.users` via `supabaseAdmin.auth.admin.updateUserById`.
-
-Escopo intencionalmente enxuto: só os campos de identificação básicos do perfil. Ajustes de coach/aluno específicos (rede, comissão, turmas etc.) continuam nos painéis próprios.
+- Não mexo em `SubscriptionGuard` nas rotas coach/partner/professional — o bloqueio de mensalidade para elas continua igual.
+- Não altero cálculo de fatura, RPC `is_user_blocked_by_subscription` nem carteiras.
+- Não mexo no cadastro da Maria Fernanda (já foi liberada manualmente).
 
 ## Arquivos afetados
 
-- `supabase/migrations/<nova>.sql` — restaurar GRANT EXECUTE.
-- Execução SQL — purgar + apagar o cadastro do Jonathan.
-- `src/lib/admin-users.functions.ts` — nova `adminUpdateProfile`.
-- `src/routes/_authenticated/admin.students.tsx` — botão **Editar** + modal.
-
-## Confirmação
-
-Confirma que posso: (a) restaurar o GRANT, (b) excluir o cadastro do Jonathan Uzziel Vasquez Gervacio (`mensphysiqueuzzie@gmail.com`), (c) adicionar o botão Editar com os campos listados?
+- `src/components/profile/SubscriptionGuard.tsx` — adicionar botão "Entrar no Painel de Aluno" na tela de bloqueio (condicional a ter `students` row).
+- `src/routes/_authenticated/student.tsx` — permitir entrada direta em `/student` para quem tem `students` row, mesmo com role coach/professional/partner.
