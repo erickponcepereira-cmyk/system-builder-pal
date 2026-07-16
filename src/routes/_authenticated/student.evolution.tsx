@@ -8,6 +8,8 @@ import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } 
 import { ProtectedImage } from "@/components/security/ProtectedImage";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
 
