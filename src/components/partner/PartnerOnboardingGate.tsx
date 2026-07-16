@@ -57,8 +57,9 @@ export function PartnerOnboardingGate({ children }: Props) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "partners", filter: `id=eq.${info.partnerId}` },
         (payload) => {
-          const n = payload.new as { approved_at?: string | null; activation_paid_at?: string | null };
-          if (n?.approved_at && !info.approvedAt) {
+          const n = payload.new as { approved_at?: string | null; activation_paid_at?: string | null; status?: string | null; blocked_at?: string | null };
+          const nowApproved = (n?.approved_at || (n?.status === "approved" && !n?.blocked_at));
+          if (nowApproved && !info.approvedAt) {
             toast.success("🎉 Painel do parceiro liberado!");
             setTimeout(() => {
               if (typeof window !== "undefined") window.location.reload();
