@@ -204,6 +204,7 @@ function PartnerPanel() {
 
 
   return (
+    <PartnerOnboardingGate>
     <SubscriptionGuard walletSource="partner">
     <div className="min-h-screen" style={{ backgroundColor: "#0A0A0A" }}>
       <header
