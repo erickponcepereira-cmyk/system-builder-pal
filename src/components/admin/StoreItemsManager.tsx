@@ -100,13 +100,18 @@ export function StoreItemsManager() {
     try {
       const uploaded: string[] = [];
       for (const file of list) {
-        const ext = file.name.split(".").pop();
+        const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
+        if (!cropped) continue;
+        setUploading(true);
+        const ext = cropped.type === "image/png" ? "png" : "jpg";
         const path = `items/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: false });
+        const { error } = await supabase.storage.from("store-images").upload(path, cropped, { upsert: false, contentType: cropped.type });
         if (error) throw error;
         const { data } = supabase.storage.from("store-images").getPublicUrl(path);
         uploaded.push(data.publicUrl);
       }
+      if (!uploaded.length) return;
+
       const current = (editing.image_urls && editing.image_urls.length)
         ? editing.image_urls
         : (editing.image_url ? [editing.image_url] : []);
