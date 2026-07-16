@@ -38,7 +38,46 @@ function AdminStudents() {
   const [coachSearch, setCoachSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState<StudentRow | null>(null);
+  const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "", cpf: "", birthdate: "" });
+  const [savingProfile, setSavingProfile] = useState(false);
   const deleteUserFn = useServerFn(adminDeleteUser);
+  const updateProfileFn = useServerFn(adminUpdateProfile);
+
+  const openProfileEdit = (row: StudentRow) => {
+    setEditingProfile(row);
+    setProfileForm({
+      name: row.profiles?.name || "",
+      email: row.profiles?.email || "",
+      phone: row.profiles?.phone || "",
+      cpf: row.profiles?.cpf || "",
+      birthdate: row.profiles?.birthdate ? row.profiles.birthdate.slice(0, 10) : "",
+    });
+  };
+
+  const saveProfile = async () => {
+    if (!editingProfile?.profiles?.id) return;
+    if (!profileForm.name.trim()) { toast.error("Nome é obrigatório"); return; }
+    if (!profileForm.email.trim()) { toast.error("E-mail é obrigatório"); return; }
+    setSavingProfile(true);
+    try {
+      await updateProfileFn({ data: {
+        profileId: editingProfile.profiles.id,
+        name: profileForm.name.trim(),
+        email: profileForm.email.trim(),
+        phone: profileForm.phone.trim() || null,
+        cpf: profileForm.cpf.trim() || null,
+        birthdate: profileForm.birthdate.trim() || null,
+      } });
+      toast.success("Cadastro atualizado");
+      setEditingProfile(null);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao salvar");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const handleDelete = async (row: StudentRow) => {
     const userId = row.profiles?.user_id;
