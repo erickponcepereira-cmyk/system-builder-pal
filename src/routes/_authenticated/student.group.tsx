@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, Send, Shield, Trash2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 export const Route = createFileRoute("/_authenticated/student/group")({
   component: GroupPage,
