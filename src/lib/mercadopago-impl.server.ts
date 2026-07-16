@@ -178,7 +178,7 @@ export type PixInput = {
 async function findExistingPaymentForSource(kind: SourceKind, id: string) {
   const { data } = await supabaseAdmin
     .from("mercadopago_payments")
-    .select("id, mp_payment_id, status, payment_method, amount, pix_qr_code, pix_qr_code_base64, pix_ticket_url, pix_expires_at")
+    .select("id, mp_payment_id, status, payment_method, amount, pix_qr_code, pix_qr_code_base64, pix_ticket_url, pix_expires_at, raw_response, raw_webhook")
     .eq("source_kind", kind)
     .eq("source_id", id)
     .order("created_at", { ascending: false })
@@ -191,6 +191,72 @@ const REUSABLE_STATUSES = new Set(["pending", "in_process"]);
 const BLOCKING_STATUSES = new Set(["approved"]);
 // "rejected" | "cancelled" | "refunded" → permite criar novo
 
+function extractPixData(payment: any) {
+  const transactionData = payment?.point_of_interaction?.transaction_data || {};
+  return {
+    qrCode: (transactionData.qr_code as string | null | undefined) || null,
+    qrCodeBase64: (transactionData.qr_code_base64 as string | null | undefined) || null,
+    ticketUrl: (transactionData.ticket_url as string | null | undefined) || null,
+    expiresAt: (payment?.date_of_expiration as string | null | undefined) || null,
+  };
+}
+
+function hasPixPayload(payment: any) {
+  const pix = extractPixData(payment);
+  return Boolean(pix.qrCode || pix.qrCodeBase64 || pix.ticketUrl);
+}
+
+function rowHasPixPayload(row: any) {
+  return Boolean(row?.pix_qr_code || row?.pix_qr_code_base64 || row?.pix_ticket_url);
+}
+
+async function hydrateExistingPixPayment(existing: any) {
+  if (!existing?.mp_payment_id) return null;
+
+  const rawPix = hasPixPayload(existing.raw_response)
+    ? extractPixData(existing.raw_response)
+    : hasPixPayload(existing.raw_webhook)
+      ? extractPixData(existing.raw_webhook)
+      : null;
+
+  if (rawPix) {
+    await supabaseAdmin
+      .from("mercadopago_payments")
+      .update({
+        pix_qr_code: rawPix.qrCode,
+        pix_qr_code_base64: rawPix.qrCodeBase64,
+        pix_ticket_url: rawPix.ticketUrl,
+        pix_expires_at: rawPix.expiresAt,
+      })
+      .eq("id", existing.id);
+    return { ...existing, pix_qr_code: rawPix.qrCode, pix_qr_code_base64: rawPix.qrCodeBase64, pix_ticket_url: rawPix.ticketUrl, pix_expires_at: rawPix.expiresAt };
+  }
+
+  try {
+    const { getPayment, mapMpStatus } = await import("@/server/mercadopago.server");
+    const mp = await getPayment(String(existing.mp_payment_id));
+    const pix = extractPixData(mp);
+    if (!pix.qrCode && !pix.qrCodeBase64 && !pix.ticketUrl) return null;
+    const status = mapMpStatus(mp.status || existing.status || "pending");
+    await supabaseAdmin
+      .from("mercadopago_payments")
+      .update({
+        status,
+        status_detail: mp.status_detail || existing.status_detail || null,
+        pix_qr_code: pix.qrCode,
+        pix_qr_code_base64: pix.qrCodeBase64,
+        pix_ticket_url: pix.ticketUrl,
+        pix_expires_at: pix.expiresAt,
+        raw_response: mp,
+      })
+      .eq("id", existing.id);
+    return { ...existing, status, pix_qr_code: pix.qrCode, pix_qr_code_base64: pix.qrCodeBase64, pix_ticket_url: pix.ticketUrl, pix_expires_at: pix.expiresAt };
+  } catch (e) {
+    console.error("[mp pix] failed to hydrate existing payment:", e);
+    return null;
+  }
+}
+
 export async function handleCreatePix(data: PixInput) {
   const src = await loadSource(data.source.kind, data.source.id);
   if (src.alreadyPaid) throw new Error("Pedido já está pago");
@@ -202,15 +268,20 @@ export async function handleCreatePix(data: PixInput) {
       throw new Error("Pedido já está pago");
     }
     if (REUSABLE_STATUSES.has(existing.status)) {
+      const reusable = rowHasPixPayload(existing) ? existing : await hydrateExistingPixPayment(existing);
+      if (!reusable || !rowHasPixPayload(reusable)) {
+        console.warn("[mp pix] ignoring pending PIX without QR payload", { paymentRowId: existing.id, mpPaymentId: existing.mp_payment_id });
+      } else {
       return {
-        paymentRowId: existing.id,
-        mpPaymentId: String(existing.mp_payment_id || ""),
-        status: existing.status,
-        qrCode: (existing.pix_qr_code as string | null) ?? null,
-        qrCodeBase64: (existing.pix_qr_code_base64 as string | null) ?? null,
-        ticketUrl: (existing.pix_ticket_url as string | null) ?? null,
-        amount: Number(existing.amount),
+        paymentRowId: reusable.id,
+        mpPaymentId: String(reusable.mp_payment_id || ""),
+        status: reusable.status,
+        qrCode: (reusable.pix_qr_code as string | null) ?? null,
+        qrCodeBase64: (reusable.pix_qr_code_base64 as string | null) ?? null,
+        ticketUrl: (reusable.pix_ticket_url as string | null) ?? null,
+        amount: Number(reusable.amount),
       };
+      }
     }
   } else if (existing && BLOCKING_STATUSES.has(existing.status)) {
     throw new Error("Pedido já está pago");
@@ -218,9 +289,10 @@ export async function handleCreatePix(data: PixInput) {
 
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
-  // Idempotency key ESTÁVEL por (kind,id). Mercado Pago retorna o mesmo
-  // pagamento em retries acidentais, evitando cobrança duplicada.
-  const idempotencyKey = `pix-${data.source.kind}-${data.source.id}`;
+  // A tentativa precisa ser única: quando o webhook chega antes do registro
+  // local e salva um PIX sem QR, uma chave fixa prende a fatura nessa tentativa.
+  // Pagamento aprovado continua bloqueado por source/status antes de chegar aqui.
+  const idempotencyKey = `pix-${data.source.kind}-${data.source.id}-${crypto.randomUUID()}`;
 
   let mpResp: any;
   try {
@@ -240,11 +312,21 @@ export async function handleCreatePix(data: PixInput) {
     throw new Error(`[DIAG] ${e?.message || String(e)}`);
   }
 
-  const poi = mpResp?.point_of_interaction?.transaction_data || {};
+  let pix = extractPixData(mpResp);
+  if (!pix.qrCode && !pix.qrCodeBase64 && !pix.ticketUrl && mpResp?.id) {
+    try {
+      const { getPayment } = await import("@/server/mercadopago.server");
+      const hydrated = await getPayment(String(mpResp.id));
+      pix = extractPixData(hydrated);
+      mpResp = { ...mpResp, ...hydrated };
+    } catch (e) {
+      console.error("[mp pix] failed to hydrate just-created payment:", e);
+    }
+  }
 
   const { data: row, error } = await supabaseAdmin
     .from("mercadopago_payments")
-    .insert({
+    .upsert({
       mp_payment_id: String(mpResp.id),
       source_kind: data.source.kind,
       source_id: data.source.id,
@@ -256,15 +338,19 @@ export async function handleCreatePix(data: PixInput) {
       payment_method: "pix",
       status: mapMpStatus(mpResp.status || "pending"),
       status_detail: mpResp.status_detail || null,
-      pix_qr_code: poi.qr_code || null,
-      pix_qr_code_base64: poi.qr_code_base64 || null,
-      pix_ticket_url: poi.ticket_url || null,
-      pix_expires_at: mpResp.date_of_expiration || null,
+      pix_qr_code: pix.qrCode,
+      pix_qr_code_base64: pix.qrCodeBase64,
+      pix_ticket_url: pix.ticketUrl,
+      pix_expires_at: pix.expiresAt,
       raw_response: mpResp,
-    })
+    }, { onConflict: "mp_payment_id" })
     .select("id")
     .single();
   if (error || !row) throw new Error(error?.message || "Falha ao registrar pagamento");
+
+  if (!pix.qrCode && !pix.qrCodeBase64 && !pix.ticketUrl) {
+    throw new Error("Mercado Pago criou o pagamento, mas ainda não retornou o QR Code. Tente gerar novamente em alguns segundos.");
+  }
 
   await attachPaymentToSource(data.source.kind, data.source.id, row.id);
 
@@ -272,9 +358,9 @@ export async function handleCreatePix(data: PixInput) {
     paymentRowId: row.id,
     mpPaymentId: String(mpResp.id),
     status: mpResp.status as string,
-    qrCode: (poi.qr_code as string | null) ?? null,
-    qrCodeBase64: (poi.qr_code_base64 as string | null) ?? null,
-    ticketUrl: (poi.ticket_url as string | null) ?? null,
+    qrCode: pix.qrCode,
+    qrCodeBase64: pix.qrCodeBase64,
+    ticketUrl: pix.ticketUrl,
     amount: src.amount,
   };
 }
