@@ -19,6 +19,8 @@ import { StorePage } from "@/components/student/StorePage";
 import { FitmindCalendar } from "@/components/FitmindCalendar";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 import { WhatsAppGroupCard } from "@/components/WhatsAppGroupCard";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { PartnerWalletTab } from "@/components/partner/PartnerWalletTab";
@@ -412,6 +414,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
   const [policy, setPolicy] = useState<"all" | "one_per_month">((partner.free_redeem_policy as "all" | "one_per_month") || "all");
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [policyDismissed, setPolicyDismissed] = useState(false);
+  const { cropToBlob } = useImageCrop();
+
 
   const activeFreeCount = products.filter(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner).length;
   const showPolicyBanner = activeFreeCount >= 2;
@@ -449,15 +453,18 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
 
   const upload = async (file: File) => {
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
+    if (!cropped) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `partners/${partner.id}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { upsert: true, contentType: cropped.type });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setEditing(e => e ? { ...e, image_url: data.publicUrl } : e);
     setUploading(false);
   };
+
 
   const save = async () => {
     if (!editing?.name?.trim()) return toast.error("Informe o nome do produto.");
@@ -1135,17 +1142,21 @@ function TimelinePanel({ partner, posts, onReload }: { partner: Partner; posts: 
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState("");
   const [pending, setPending] = useState<string | null>(null);
+  const { cropToBlob } = useImageCrop();
 
   const upload = async (file: File) => {
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem do post" });
+    if (!cropped) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `partners/${partner.id}/posts/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file);
+    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { contentType: cropped.type });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setPending(data.publicUrl);
     setUploading(false);
   };
+
 
   const publish = async () => {
     if (!pending) return;

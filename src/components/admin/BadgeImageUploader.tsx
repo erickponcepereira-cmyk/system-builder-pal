@@ -3,6 +3,7 @@ import { Upload, X, Loader2, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBadgeUrl } from "@/lib/badge-url";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
 
 interface Props {
   value: string | null;
@@ -15,15 +16,18 @@ export function BadgeImageUploader({ value, onChange, folder, label = "Imagem" }
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const displayUrl = useBadgeUrl(value);
+  const { cropToBlob } = useImageCrop();
 
   const handleFile = async (file: File) => {
+    const cropped = await cropToBlob(file, { title: "Ajustar badge" });
+    if (!cropped) return;
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "png";
+      const ext = cropped.type === "image/png" ? "png" : "jpg";
       const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage
         .from("career-badges")
-        .upload(path, file, { upsert: true, contentType: file.type });
+        .upload(path, cropped, { upsert: true, contentType: cropped.type });
       if (error) throw error;
       onChange(path);
       toast.success("Imagem enviada");
@@ -33,6 +37,7 @@ export function BadgeImageUploader({ value, onChange, folder, label = "Imagem" }
       setUploading(false);
     }
   };
+
 
   return (
     <div>

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, Save, Gift, Loader2, Image as ImageIcon, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 export const Route = createFileRoute("/_authenticated/admin/freebies")({
   head: () => ({ meta: [{ title: "Gratuitos — Admin" }] }),
@@ -41,6 +43,8 @@ function FreebiesAdmin() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Freebie | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { cropToBlob } = useImageCrop();
+
 
   const blank = (): Freebie => ({
     id: "", name: "", description: "", image_url: null, kind: "digital",
@@ -87,15 +91,18 @@ function FreebiesAdmin() {
 
   const uploadImage = async (file: File) => {
     if (!editing) return;
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem do brinde" });
+    if (!cropped) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
     const path = `freebies/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("store-images").upload(path, cropped, { upsert: true, contentType: cropped.type });
     if (error) { toast.error(error.message); setUploading(false); return; }
     const { data } = supabase.storage.from("store-images").getPublicUrl(path);
     setEditing({ ...editing, image_url: data.publicUrl });
     setUploading(false);
   };
+
 
   const markDelivered = async (id: string) => {
     const { error } = await supabase.from("freebie_redemptions" as never)

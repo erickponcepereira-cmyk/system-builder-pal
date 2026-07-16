@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Pencil, Save, X, Package, Image as ImageIcon, Upload, Star, Copy } from "lucide-react";
 import { ProductFinancialEditor } from "./ProductFinancialEditor";
 import { ProductDownloadsManager } from "./ProductDownloadsManager";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 interface Section { id: string; name: string; }
 interface Category { id: string; section_id: string; name: string; }
@@ -61,6 +63,8 @@ export function StoreItemsManager() {
   const [editTab, setEditTab] = useState<"general" | "financial">("general");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { cropToBlob } = useImageCrop();
+
 
   const load = async () => {
     setLoading(true);
@@ -96,13 +100,18 @@ export function StoreItemsManager() {
     try {
       const uploaded: string[] = [];
       for (const file of list) {
-        const ext = file.name.split(".").pop();
+        const cropped = await cropToBlob(file, { title: "Ajustar imagem do produto" });
+        if (!cropped) continue;
+        setUploading(true);
+        const ext = cropped.type === "image/png" ? "png" : "jpg";
         const path = `items/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from("store-images").upload(path, file, { upsert: false });
+        const { error } = await supabase.storage.from("store-images").upload(path, cropped, { upsert: false, contentType: cropped.type });
         if (error) throw error;
         const { data } = supabase.storage.from("store-images").getPublicUrl(path);
         uploaded.push(data.publicUrl);
       }
+      if (!uploaded.length) return;
+
       const current = (editing.image_urls && editing.image_urls.length)
         ? editing.image_urls
         : (editing.image_url ? [editing.image_url] : []);

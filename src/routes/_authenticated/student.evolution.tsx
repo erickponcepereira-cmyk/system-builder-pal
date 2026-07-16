@@ -8,6 +8,8 @@ import { getStudentHealthData, saveStudentHealthGoals, type StudentHealthData } 
 import { ProtectedImage } from "@/components/security/ProtectedImage";
 import { WindowMethod } from "@/components/student/WindowMethod";
 import { WindowMethodHistory } from "@/components/student/WindowMethodHistory";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 export const Route = createFileRoute("/_authenticated/student/evolution")({ component: StudentEvolution });
 
@@ -26,6 +28,8 @@ function StudentEvolution() {
   const [caption, setCaption] = useState("");
   const [week, setWeek] = useState("1");
   const [viewerTag, setViewerTag] = useState<string>("");
+  const { cropToBlob } = useImageCrop();
+
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Gallery / compare state
@@ -78,12 +82,16 @@ function StudentEvolution() {
       return toast.error(`Limite de ${MAX_PHOTOS} fotos atingido. Apague alguma antes de enviar outra.`);
     }
 
+    const cropped = await cropToBlob(file, { title: "Ajustar foto de evolução" });
+    if (!cropped) { setSaving(false); return; }
     setSaving(true);
     const { data: userData } = await supabase.auth.getUser();
-    const path = `${userData.user?.id}/${student.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-z0-9.]/gi, "-")}`;
-    const upload = await supabase.storage.from("evolution-photos").upload(path, file, { contentType: file.type });
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
+    const path = `${userData.user?.id}/${student.id}/${crypto.randomUUID()}.${ext}`;
+    const upload = await supabase.storage.from("evolution-photos").upload(path, cropped, { contentType: cropped.type });
     if (upload.error) toast.error(upload.error.message);
     else {
+
       const { error } = await supabase.from("evolution_photos").insert({ student_id: student.id, photo_url: path, photo_date: new Date().toISOString().slice(0, 10), week_number: weekNumber, caption } as never);
       if (error) toast.error(error.message);
       else { toast.success("Foto de evolução salva"); setCaption(""); await loadData(); }

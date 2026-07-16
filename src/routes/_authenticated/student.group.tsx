@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, Send, Shield, Trash2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useImageCrop } from "@/components/ui/ImageCropProvider";
+
 
 export const Route = createFileRoute("/_authenticated/student/group")({
   component: GroupPage,
@@ -33,6 +35,8 @@ function GroupPage() {
   const [accessError, setAccessError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const { cropToBlob } = useImageCrop();
+
 
   const canSend = useMemo(() => !!group && !!profile && !sending, [group, profile, sending]);
 
@@ -155,13 +159,17 @@ function GroupPage() {
   const uploadMedia = async (file: File) => {
     if (!group || !profile) return;
     if (!file.type.startsWith("image/")) return toast.error("Envie uma imagem.");
+    const cropped = await cropToBlob(file, { title: "Ajustar imagem" });
+    if (!cropped) return;
     setSending(true);
-    const path = `${group.id}/${profile.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-z0-9.]/gi, "-")}`;
-    const { error } = await supabase.storage.from("group-media").upload(path, file, { contentType: file.type, upsert: false });
+    const ext = cropped.type === "image/png" ? "png" : "jpg";
+    const path = `${group.id}/${profile.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("group-media").upload(path, cropped, { contentType: cropped.type, upsert: false });
     setSending(false);
     if (error) toast.error(error.message);
     else await sendMessage(path, "image");
   };
+
 
   const deleteMessage = async (message: MessageView) => {
     const { error } = await supabase.from("group_messages").update({ is_deleted: true, content: null } as never).eq("id", message.id);

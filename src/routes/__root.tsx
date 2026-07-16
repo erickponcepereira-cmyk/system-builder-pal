@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
 import { registerAppServiceWorker } from "@/pwa-register";
+import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
+
 
 function NotFoundComponent() {
   return (
@@ -144,11 +146,14 @@ function RootComponent() {
   }, []);
   return (
     <ThemeProvider>
-      <AuthLoadingGate>
-        <Outlet />
-      </AuthLoadingGate>
-      <Toaster richColors position="top-center" />
+      <ImageCropProvider>
+        <AuthLoadingGate>
+          <Outlet />
+        </AuthLoadingGate>
+        <Toaster richColors position="top-center" />
+      </ImageCropProvider>
     </ThemeProvider>
+
   );
 }
 
