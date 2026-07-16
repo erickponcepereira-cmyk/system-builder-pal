@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { getPayment, mapMpStatus } from "@/server/mercadopago.server";
-import { applyApproval, loadSource, type SourceKind } from "@/lib/mercadopago-impl.server";
+import { applyApproval, attachPaymentToSource, loadSource, type SourceKind } from "@/lib/mercadopago-impl.server";
 
 // Webhook do Mercado Pago. URL pública: /api/public/mp/webhook
 // MP envia POST com { type, data: { id }, action } ou query string.
@@ -75,6 +75,14 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
           const kind = (kindRaw || "").trim();
           const sourceId = (sourceIdRaw || "").trim();
           const paidAmount = Number(payment.transaction_amount || 0);
+          const pixData = payment?.point_of_interaction?.transaction_data || {};
+          const pixPayload: Record<string, string | null> = {};
+          if (payment.payment_method_id === "pix") {
+            if (pixData.qr_code) pixPayload.pix_qr_code = pixData.qr_code;
+            if (pixData.qr_code_base64) pixPayload.pix_qr_code_base64 = pixData.qr_code_base64;
+            if (pixData.ticket_url) pixPayload.pix_ticket_url = pixData.ticket_url;
+            if (payment.date_of_expiration) pixPayload.pix_expires_at = payment.date_of_expiration;
+          }
 
           // ── 1. Idempotência local + gravação bruta sempre ──
           const { data: existing } = await supabaseAdmin
@@ -87,6 +95,7 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
           const basePayload = {
             status_detail: payment.status_detail || null,
             raw_webhook: payment,
+            ...pixPayload,
           } as any;
 
           if (existing) {
@@ -102,8 +111,15 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
               .from("mercadopago_payments")
               .update(updatePayload)
               .eq("id", existing.id);
+            if (sourceId && ALLOWED_KINDS.has(kind as SourceKind)) {
+              try {
+                await attachPaymentToSource(kind as SourceKind, sourceId, existing.id);
+              } catch (e) {
+                console.error("[mp webhook] failed to attach existing payment to source:", e);
+              }
+            }
           } else if (ALLOWED_KINDS.has(kind as SourceKind)) {
-            await supabaseAdmin.from("mercadopago_payments").insert({
+            const { data: inserted } = await supabaseAdmin.from("mercadopago_payments").insert({
               mp_payment_id: String(mpPaymentId),
               source_kind: kind,
               source_id: sourceId,
@@ -114,7 +130,15 @@ export const Route = createFileRoute("/api/public/mp/webhook")({
               payer_email: payment.payer?.email || null,
               paid_at: status === "approved" ? new Date().toISOString() : null,
               raw_webhook: payment,
-            });
+              ...pixPayload,
+            }).select("id").maybeSingle();
+            if (sourceId && inserted?.id) {
+              try {
+                await attachPaymentToSource(kind as SourceKind, sourceId, inserted.id);
+              } catch (e) {
+                console.error("[mp webhook] failed to attach payment to source:", e);
+              }
+            }
           }
 
           // ── 2. Só continua para aplicar aprovação se status = approved ──
