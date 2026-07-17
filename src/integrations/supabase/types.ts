@@ -11210,6 +11210,10 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: undefined
       }
+      recalc_wallets_for_owner: {
+        Args: { _profile_id: string }
+        Returns: undefined
+      }
       recalculate_coach_card_access: {
         Args: { _coach_id: string }
         Returns: string
