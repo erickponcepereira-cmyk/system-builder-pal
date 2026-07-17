@@ -387,10 +387,10 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const partnerIds = ((partnerRows as unknown as Array<{ id: string; profile_id: string }>) || []);
     const partnerProfileById = new Map(partnerIds.map((p) => [p.id, p.profile_id]));
     const { data: partnerWallets } = partnerIds.length
-      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
+      ? await supabaseAdmin.from("partner_wallets" as never).select("partner_id,available_balance,pending_balance,total_earned,total_withdrawn" as never).in("partner_id" as never, partnerIds.map((p) => p.id) as never)
       : { data: [] as unknown };
-    const pwMap = new Map<string, { available_balance: number; total_withdrawn: number }>();
-    ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+    const pwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
+    ((partnerWallets as unknown as Array<{ partner_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = partnerProfileById.get(w.partner_id);
       if (pid) pwMap.set(pid, w);
     });
@@ -400,13 +400,14 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
     const coachIds2 = ((coachRows2 as unknown as Array<{ id: string; profile_id: string }>) || []);
     const coachProfileById2 = new Map(coachIds2.map((c) => [c.id, c.profile_id]));
     const { data: profWallets } = coachIds2.length
-      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,total_withdrawn" as never).in("professional_coach_id" as never, coachIds2.map((c) => c.id) as never)
+      ? await supabaseAdmin.from("professional_wallets" as never).select("professional_coach_id,available_balance,pending_balance,total_earned,total_withdrawn" as never).in("professional_coach_id" as never, coachIds2.map((c) => c.id) as never)
       : { data: [] as unknown };
-    const profwMap = new Map<string, { available_balance: number; total_withdrawn: number }>();
-    ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; total_withdrawn: number }>) || []).forEach((w) => {
+    const profwMap = new Map<string, { available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>();
+    ((profWallets as unknown as Array<{ professional_coach_id: string; available_balance: number; pending_balance: number; total_earned: number; total_withdrawn: number }>) || []).forEach((w) => {
       const pid = coachProfileById2.get(w.professional_coach_id);
       if (pid) profwMap.set(pid, w);
     });
+
 
     // ===== Ganhos como criador de produto (partner_net_amount) — agrega 7-day rule =====
     const partnerIdList = partnerIds.map((p) => p.id);
@@ -469,7 +470,17 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         ? (agg?.available || 0) + cre.available
         : (role === "student_referrer"
           ? n(sw?.available_balance)
-          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance) + cre.available);
+          : n(w?.available_balance) + n(pw?.available_balance) + n(profw?.available_balance) + n(nw?.available_balance));
+      const blocked = cutoff
+        ? (agg?.blocked || 0) + cre.blocked
+        : (role === "student_referrer"
+          ? 0
+          : n((w as { pending_balance?: number } | undefined)?.pending_balance) + n(pw?.pending_balance) + n(profw?.pending_balance));
+      const totalEarned = cutoff
+        ? (agg?.earned || 0) + cre.earned
+        : (role === "student_referrer"
+          ? 0
+          : n((w as { total_earned?: number } | undefined)?.total_earned) + n(pw?.total_earned) + n(profw?.total_earned));
       const totalWithdrawn = cutoff
         ? 0
         : (role === "student_referrer"
@@ -480,8 +491,8 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         name: p.name || "—",
         email: p.email,
         available,
-        blocked: (agg?.blocked || 0) + cre.blocked,
-        totalEarned: (agg?.earned || 0) + cre.earned,
+        blocked,
+        totalEarned,
         totalWithdrawn,
         pendingRequestId: r?.id || null,
         pendingRequestAmount: r?.amount || 0,
@@ -489,6 +500,7 @@ export const listPayoutPeople = createServerFn({ method: "POST" })
         role,
       };
     });
+
 
     const q = (data.search || "").trim().toLowerCase();
     const filtered = q ? rows.filter((r) => r.name.toLowerCase().includes(q) || (r.email || "").toLowerCase().includes(q)) : rows;

@@ -64,13 +64,28 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     // Single source of truth: `wallets.available_balance` (kept in sync by the
     // `recalc_wallet_for_profile` trigger and the admin payout flow). This is
     // the same value the admin panel reads, so both views agree.
-    const { data: walletRow } = await supabaseAdmin
-      .from("wallets")
-      .select("available_balance,pending_balance")
-      .eq("profile_id", profile.id)
-      .maybeSingle();
+    const [{ data: walletRow }, { data: partnerRows }, { data: coachRows }] = await Promise.all([
+      supabaseAdmin.from("wallets").select("available_balance,pending_balance").eq("profile_id", profile.id).maybeSingle(),
+      supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id as never),
+      supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id),
+    ]);
+    const partnerIds = ((partnerRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
+    const coachIds = ((coachRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
+    const [{ data: pwRows }, { data: profwRows }] = await Promise.all([
+      partnerIds.length
+        ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,pending_balance" as never).in("partner_id" as never, partnerIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+      coachIds.length
+        ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,pending_balance" as never).in("professional_coach_id" as never, coachIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+    ]);
+    const sumField = (rows: unknown, field: "available_balance" | "pending_balance"): number =>
+      ((rows as Array<Record<string, number>> | null) || []).reduce((acc, r) => acc + Number(r[field] || 0), 0);
+    const creatorAvailable = sumField(pwRows, "available_balance") + sumField(profwRows, "available_balance");
+    const creatorPending = sumField(pwRows, "pending_balance") + sumField(profwRows, "pending_balance");
     const walletAvailable = Number((walletRow as { available_balance?: number } | null)?.available_balance || 0);
     const walletPending = Number((walletRow as { pending_balance?: number } | null)?.pending_balance || 0);
+
 
     // Classify commissions into direct vs network — display-only breakdown.
     // We use it to decide how much of `walletAvailable` is direct vs network
@@ -150,13 +165,21 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       directAvailable = walletAvailable - networkAvailable;
     }
 
-    const direct = { available: directAvailable, pending: directPending, total: directTotal };
+    // Sum creator earnings (partner_wallets + professional_wallets) into the
+    // direct bucket so the coach sees the full amount they can withdraw.
+    const direct = {
+      available: directAvailable + creatorAvailable,
+      pending: directPending + creatorPending,
+      total: directTotal + creatorAvailable + creatorPending,
+    };
     const network = { available: networkAvailable, pending: networkPending, total: networkTotal, locked: !snap.anyCompleted };
-    // Withdrawable is the wallet balance — the same value the admin sees and
-    // the same value the withdrawal RPC enforces.
-    const withdrawable = walletAvailable;
+    // Withdrawable = soma das 3 carteiras (principal + parceiro + profissional).
+    // Todas são mantidas pelo mesmo recalc no banco e correspondem 1:1 ao que
+    // o admin lê e ao que o RPC de saque valida.
+    const withdrawable = walletAvailable + creatorAvailable;
     // Surface any pending discrepancy (should normally be zero).
     void walletPending;
+
 
     return {
       direct,

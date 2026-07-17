@@ -11199,7 +11199,7 @@ export type Database = {
         Returns: undefined
       }
       recalc_professional_wallet: {
-        Args: { _professional_coach_id: string }
+        Args: { _coach_id: string }
         Returns: undefined
       }
       recalc_student_wallet_for_referral: {
@@ -11207,6 +11207,10 @@ export type Database = {
         Returns: undefined
       }
       recalc_wallet_for_profile: {
+        Args: { _profile_id: string }
+        Returns: undefined
+      }
+      recalc_wallets_for_owner: {
         Args: { _profile_id: string }
         Returns: undefined
       }
