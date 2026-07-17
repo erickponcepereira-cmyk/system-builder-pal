@@ -165,13 +165,21 @@ export const getWalletSplit = createServerFn({ method: "GET" })
       directAvailable = walletAvailable - networkAvailable;
     }
 
-    const direct = { available: directAvailable, pending: directPending, total: directTotal };
+    // Sum creator earnings (partner_wallets + professional_wallets) into the
+    // direct bucket so the coach sees the full amount they can withdraw.
+    const direct = {
+      available: directAvailable + creatorAvailable,
+      pending: directPending + creatorPending,
+      total: directTotal + creatorAvailable + creatorPending,
+    };
     const network = { available: networkAvailable, pending: networkPending, total: networkTotal, locked: !snap.anyCompleted };
-    // Withdrawable is the wallet balance — the same value the admin sees and
-    // the same value the withdrawal RPC enforces.
-    const withdrawable = walletAvailable;
+    // Withdrawable = soma das 3 carteiras (principal + parceiro + profissional).
+    // Todas são mantidas pelo mesmo recalc no banco e correspondem 1:1 ao que
+    // o admin lê e ao que o RPC de saque valida.
+    const withdrawable = walletAvailable + creatorAvailable;
     // Surface any pending discrepancy (should normally be zero).
     void walletPending;
+
 
     return {
       direct,
