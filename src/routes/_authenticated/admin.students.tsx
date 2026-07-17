@@ -98,30 +98,85 @@ function AdminStudents() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: studentsData }, { data: coachesData }] = await Promise.all([
-      supabase
-        .from("students")
-        .select(`
-          id, coach_id, current_weight, goal_weight, created_at, is_influencer,
-          profiles!students_profile_id_fkey(id, user_id, name, email, phone, city, cpf, birthdate),
-          coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
-        `)
-        .eq("is_test", false)
-        .order("created_at", { ascending: false })
-        .limit(500),
-      supabase
-        .from("coaches")
-        .select("id, profiles!coaches_profile_id_fkey(name)")
-        .not("approved_at", "is", null)
-        .is("blocked_at", null),
-    ]);
-    setRows((studentsData as unknown as StudentRow[]) || []);
-    setCoaches(
-      ((coachesData || []) as Array<{ id: string; profiles: { name: string } | null }>)
-        .map((c) => ({ id: c.id, name: c.profiles?.name || "Coach" }))
-        .sort((a, b) => a.name.localeCompare(b.name))
-    );
-    setLoading(false);
+    try {
+      const [studentsRes, coachesRes] = await Promise.all([
+        supabase
+          .from("students")
+          .select(`
+            id, coach_id, current_weight, goal_weight, created_at, is_influencer,
+            profiles!students_profile_id_fkey(id, user_id, name, email, phone, city, cpf, birthdate),
+            coaches!students_coach_id_fkey(id, profiles!coaches_profile_id_fkey(name))
+          `)
+          .eq("is_test", false)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("coaches")
+          .select("id, profiles!coaches_profile_id_fkey(name)")
+          .not("approved_at", "is", null)
+          .is("blocked_at", null),
+      ]);
+
+      if (studentsRes.error) {
+        console.error("[admin.students] students query error", studentsRes.error);
+        toast.error(`Falha ao carregar alunos: ${studentsRes.error.message}`);
+      }
+      if (coachesRes.error) {
+        console.error("[admin.students] coaches query error", coachesRes.error);
+      }
+
+      let students = (studentsRes.data as unknown as StudentRow[]) || [];
+
+      // Fallback: se o embed falhou/retornou vazio, buscar sem embeds e resolver manualmente
+      if (students.length === 0 && !studentsRes.error) {
+        console.warn("[admin.students] embed retornou vazio — tentando fallback sem joins");
+        const { data: flat, error: flatErr } = await supabase
+          .from("students")
+          .select("id, coach_id, profile_id, current_weight, goal_weight, created_at, is_influencer")
+          .eq("is_test", false)
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (flatErr) {
+          console.error("[admin.students] flat fallback error", flatErr);
+          toast.error(`Falha ao carregar alunos: ${flatErr.message}`);
+        } else if (flat && flat.length > 0) {
+          const profileIds = Array.from(new Set(flat.map((s: any) => s.profile_id).filter(Boolean)));
+          const coachIds = Array.from(new Set(flat.map((s: any) => s.coach_id).filter(Boolean)));
+          const [profRes, coachRes] = await Promise.all([
+            profileIds.length
+              ? supabase.from("profiles").select("id, user_id, name, email, phone, city, cpf, birthdate").in("id", profileIds)
+              : Promise.resolve({ data: [], error: null } as any),
+            coachIds.length
+              ? supabase.from("coaches").select("id, profiles!coaches_profile_id_fkey(name)").in("id", coachIds)
+              : Promise.resolve({ data: [], error: null } as any),
+          ]);
+          const pMap = new Map<string, any>((profRes.data || []).map((p: any) => [p.id, p]));
+          const cMap = new Map<string, any>((coachRes.data || []).map((c: any) => [c.id, c]));
+          students = flat.map((s: any) => ({
+            id: s.id,
+            coach_id: s.coach_id,
+            current_weight: s.current_weight,
+            goal_weight: s.goal_weight,
+            created_at: s.created_at,
+            is_influencer: s.is_influencer,
+            profiles: pMap.get(s.profile_id) || null,
+            coaches: s.coach_id ? cMap.get(s.coach_id) || null : null,
+          })) as StudentRow[];
+        }
+      }
+
+      setRows(students);
+      setCoaches(
+        (((coachesRes.data || []) as Array<{ id: string; profiles: { name: string } | null }>))
+          .map((c) => ({ id: c.id, name: c.profiles?.name || "Coach" }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+    } catch (e: any) {
+      console.error("[admin.students] load exception", e);
+      toast.error(e?.message || "Erro ao carregar alunos");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
