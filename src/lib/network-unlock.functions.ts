@@ -64,13 +64,28 @@ export const getWalletSplit = createServerFn({ method: "GET" })
     // Single source of truth: `wallets.available_balance` (kept in sync by the
     // `recalc_wallet_for_profile` trigger and the admin payout flow). This is
     // the same value the admin panel reads, so both views agree.
-    const { data: walletRow } = await supabaseAdmin
-      .from("wallets")
-      .select("available_balance,pending_balance")
-      .eq("profile_id", profile.id)
-      .maybeSingle();
+    const [{ data: walletRow }, { data: partnerRows }, { data: coachRows }] = await Promise.all([
+      supabaseAdmin.from("wallets").select("available_balance,pending_balance").eq("profile_id", profile.id).maybeSingle(),
+      supabaseAdmin.from("partners" as never).select("id" as never).eq("profile_id" as never, profile.id as never),
+      supabaseAdmin.from("coaches").select("id").eq("profile_id", profile.id),
+    ]);
+    const partnerIds = ((partnerRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
+    const coachIds = ((coachRows as unknown as Array<{ id: string }>) || []).map((r) => r.id);
+    const [{ data: pwRows }, { data: profwRows }] = await Promise.all([
+      partnerIds.length
+        ? supabaseAdmin.from("partner_wallets" as never).select("available_balance,pending_balance" as never).in("partner_id" as never, partnerIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+      coachIds.length
+        ? supabaseAdmin.from("professional_wallets" as never).select("available_balance,pending_balance" as never).in("professional_coach_id" as never, coachIds as never)
+        : Promise.resolve({ data: [] as unknown }),
+    ]);
+    const sumField = (rows: unknown, field: "available_balance" | "pending_balance"): number =>
+      ((rows as Array<Record<string, number>> | null) || []).reduce((acc, r) => acc + Number(r[field] || 0), 0);
+    const creatorAvailable = sumField(pwRows, "available_balance") + sumField(profwRows, "available_balance");
+    const creatorPending = sumField(pwRows, "pending_balance") + sumField(profwRows, "pending_balance");
     const walletAvailable = Number((walletRow as { available_balance?: number } | null)?.available_balance || 0);
     const walletPending = Number((walletRow as { pending_balance?: number } | null)?.pending_balance || 0);
+
 
     // Classify commissions into direct vs network — display-only breakdown.
     // We use it to decide how much of `walletAvailable` is direct vs network
