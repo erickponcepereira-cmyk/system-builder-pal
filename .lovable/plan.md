@@ -1,52 +1,69 @@
 ## Objetivo
 
-Fechar duas frentes de diagnóstico da conta da Ana Flávia Lucas (`profile 7deffbca-e043-40cb-b3cc-6ed82c242f7d`):
+Eliminar qualquer valor "fantasma" na carteira (residual entre `pending + disponível + sacado ≠ ganho total`) e garantir que o saque, que hoje sai da carteira principal + parceiro + profissional, **zere/drene proporcionalmente também as carteiras de parceiro e profissional** quando pago — não só quando reservado. Correção sistêmica, aplicada a todos os usuários.
 
-1. Eliminar o resíduo de **R$ 9,06** que aparece como pendente na carteira principal mas não corresponde a nenhuma comissão real.
-2. Localizar de onde vem a tag **"encaminhamento pendente"** ligada ao nome dela — já confirmado que ela **não é** profissional atribuída em nenhuma venda.
+## Diagnóstico confirmado
 
-Sem mudanças de UX/produto: apenas conciliação de dados + rastreio da origem visual da tag.
+Li a função atual `public.recalc_wallets_for_owner(_profile_id)` (fonte de verdade das 3 carteiras) e identifiquei 2 defeitos que causam divergência de centavos e "sobras" em `partner_wallets` / `professional_wallets`:
 
-## Situação atual (verificada no banco)
+1. **`v_paid_withdrawn_main` só é subtraído da carteira principal.** Se o saque pago foi maior do que o `available` da carteira principal (o que acontece hoje porque saque drena main → parceiro → profissional), o excedente **não é abatido** de `partner_avail_raw` nem de `coach_avail_raw`. Resultado: carteira de parceiro/profissional continua mostrando saldo que já foi sacado.
+2. **O "drain" cross-wallet só existe para saques ativos** (`requested/approved/processing`). Quando o saque muda para `paid`, ele sai da lista de reservas ativas e volta a inflar partner/professional. É exatamente a raiz do "R$ 9,06 fantasma" (e de qualquer outra sobra que apareceria após aprovação).
 
+Além disso, `wallets.pending_balance`, `partner_wallets` e `professional_wallets` são atualizados por triggers independentes — se algum trigger falhar em uma transação, a linha fica com valor stale até o próximo recalc. Não há garantia de invariante `pending + available + withdrawn = total_earned`.
 
-| Carteira     | Disponível | Pendente  | Total ganho | Sacado |
-| ------------ | ---------- | --------- | ----------- | ------ |
-| Principal    | 105,51     | **70,55** | 226,62      | 50,56  |
-| Parceiro     | 3,50       | 0,00      | 3,50        | 0,00   |
-| Profissional | 2,48       | 0,00      | 2,48        | 0,00   |
+## O que vai mudar
 
+### 1. Reescrever `recalc_wallets_for_owner` como fonte única e consistente
 
-Decomposição do pendente principal (comissões reais):
+Nova ordem de cálculo (uma única SECURITY DEFINER, todas as 3 carteiras na mesma transação):
 
-- Referral pendente: **R$ 40,00** (venda `113aaaa5…` — Alcinata Pimenta, Ticket Desafio, libera 20/07/2026)
-- Rede bloqueada por missão (níveis 1-3): **R$ 21,49**
-- Soma explicada: **R$ 61,49**
-- **Diferença sem lastro: R$ 9,06**
+```text
+raw_main    = Σ commissions liberadas (não-rede ou rede com mês desbloqueado)
+raw_partner = Σ partner_product_orders (partner_id)   liberadas (>7d)
+raw_pro     = Σ partner_product_orders (professional) liberadas (>7d)
 
-Encaminhamentos profissionais atribuídos a ela: **0** linhas em `transaction_professional_assignments`.
+total_paid_seller     = Σ withdrawal_requests(main, status=paid)
+total_reserved_seller = Σ withdrawal_requests(main, status in requested/approved/processing)
+total_out_seller      = total_paid_seller + total_reserved_seller
 
-## Passos
+# drenagem cascata idêntica para PAID e RESERVED, na ordem main → partner → pro
+leftover = total_out_seller
+main_final    = raw_main    - min(raw_main, leftover);    leftover -= consumido
+partner_final = raw_partner - min(raw_partner, leftover); leftover -= consumido
+pro_final     = raw_pro     - min(raw_pro, leftover)
 
-### 1. Reconciliar os R$ 9,06
+# invariante forçada
+total_earned  = raw_main_all + raw_partner_all + raw_pro_all   (inclui pending)
+pending_main  = total_earned - (main_final + partner_final + pro_final) - total_paid_seller - total_reserved_seller
+              = tudo que ainda não está liberado nem sacado
+```
 
-- Rodar `SELECT recalc_wallets_for_owner('<profile_id_da_ana>')` via migration (a função já existe).
-- Reconferir `wallets`, `partner_wallets`, `professional_wallets` da Ana — o esperado é `pending_balance = 61,49` e `available_balance` refletindo `165,13 - 50,56 = 114,57`.
-- Se o resíduo persistir após o recalc, inspecionar o corpo de `recalc_wallet_for_profile` procurando qualquer bucket adicional (ex.: comissões master, splits, ordens de parceiro em outro status) que esteja somando no pending sem cair no available correspondente. Corrigir o bucket com uma migration de ajuste na função. Nenhuma alteração de UI.
+Efeito:
+- Saque pago **abate também** partner/pro (fim do "R$ 9,06 fantasma" para todo mundo).
+- `wallets.available_balance + partner_wallets.available_balance + professional_wallets.available_balance + total_withdrawn + pending_balance = total_earned` (invariante garantida por construção — não pode haver resíduo).
+- Reservas ativas e pagos seguem a mesma cascata, então o UI já mostra imediatamente o desconto ao aprovar o saque.
 
-### 2. Investigar a tag "encaminhamento pendente"
+### 2. Sanitizar valores stale + backfill global
 
-- Buscar no código as strings `"Encaminhamento pendente"`, `"encaminhamento"` e `professional-assignment` para achar em qual painel/card ela aparece.
-- Confirmar em qual query o componente popula essa lista — a hipótese é que o painel esteja mostrando encaminhamentos **das vendas em que a Ana é compradora/aluna** (perspectiva errada), quando deveria mostrar apenas encaminhamentos em que ela é o profissional atribuído.
-- Se confirmado, ajustar o filtro do componente para `assigned_coach_id = <coach da ana>` em vez de `student_id = <ana>` (ou análogo).
+- Rodar `recalc_wallets_for_owner(profile_id)` para **todos** os perfis com registro em `wallets`, `partner_wallets` ou `professional_wallets` (migração `DO $$ ... LOOP ... $$`).
+- Zerar quaisquer `pending_balance / available_balance` que sobrem depois do recalc (não deve existir, mas fica como salvaguarda).
 
-### 3. Validação
+### 3. Fechar as portas para regressão
 
-- Após o recalc: conferir novamente as três carteiras e o painel admin de pagamentos da Ana e ja fazer o mesmo com todos os outros cadastros para verificar se estão corretos e corrigir todo o processo para isso nao ocorrer novamente de divergir informações.
-- Após o ajuste do filtro: abrir o painel onde a tag aparecia e confirmar que sumiu para a Ana e continua correta para profissionais que realmente têm encaminhamentos.
+- Trigger `wallets_enforce_invariant_trg` (AFTER UPDATE em `wallets`): se `pending + available + withdrawn ≠ total_earned` (tolerância R$ 0,01), grava linha em `admin_audit_log` (`event = 'wallet_invariant_violation'`) — não bloqueia a operação para não travar o app, mas fica auditável.
+- Todos os triggers hoje existentes que mexem em `wallets`, `partner_wallets`, `professional_wallets` passam a chamar exclusivamente `recalc_wallets_for_owner(profile_id)` (nunca mais UPDATE parcial), garantindo que qualquer alteração em `commissions`, `partner_product_orders` ou `withdrawal_requests` reprojeta as três carteiras juntas.
+
+### 4. Front-end
+
+Nenhuma mudança lógica: `getWalletSplit` já lê `wallets`, `partner_wallets`, `professional_wallets` diretamente (correção anterior). Depois do recalc, o app da Ana e o admin passam a mostrar exatamente o mesmo número, sem centavos órfãos.
+
+## Verificação após aplicar
+
+1. Ana Flávia: `pending_balance + available_balance (3 carteiras) + total_withdrawn = total_earned` — sem resíduo.
+2. Simulação: aprovar o próximo saque dela e conferir que `partner_wallets.available_balance` e `professional_wallets.available_balance` caem para 0 se o valor sacado consumir a cascata.
+3. Amostragem: rodar query de invariante em todos os `wallets` e confirmar 0 violações.
 
 ## Fora de escopo
 
-- Nenhum reprocessamento de comissões passadas.
-- Nenhuma mudança em regras de missão, holdback de 7 dias ou percentuais.
-- Nada que afete outros usuários além da conciliação global provocada pela migration (se necessária).
+- Nada muda em regras de comissão, patente, missão de rede ou fluxo de aprovação de saque.
+- A tag "encaminhamento pendente" segue como está (é filtro de UI, tratado em outro ticket).
