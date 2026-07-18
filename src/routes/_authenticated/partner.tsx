@@ -1580,7 +1580,7 @@ function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; 
     }
   };
 
-  if (!partner.referral_code) {
+  if (!effectiveCode) {
     return (
       <div className="rounded-xl p-6 text-center" style={{ backgroundColor: "#1A1A1A" }}>
         <AlertTriangle className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
@@ -1611,7 +1611,7 @@ function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; 
             </div>
 
             <div className="mt-3 rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{link}</div>
-            <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{partner.referral_code}</span></p>
+            <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{effectiveCode}</span></p>
 
             <div className="mt-4 flex gap-2">
               <button onClick={copy} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20">
