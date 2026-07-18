@@ -1,32 +1,41 @@
-## Diagnóstico
+## Problema
 
-O admin.students falha com `permission denied for table profiles` porque a tabela `public.profiles` **perdeu todos os GRANTs** para os roles do PostgREST (`authenticated`, `anon`, `service_role`). Confirmei via query no catálogo: só sobrou privilégio para `sandbox_exec`.
+Quando o usuário compartilha o link de indicação do **painel Parceiro**, o link usa `partners.referral_code`. A função `validate_referral_code` resolve esse código retornando `coach_id = partners.upline_coach_id` — ou seja, o convidado é vinculado ao **coach acima do parceiro (upline)**, e não ao próprio parceiro/coach que compartilhou. Se essa pessoa já é coach, o esperado é que o convite vincule diretamente a ela como coach.
 
-### Por que começou agora, se você não mexeu em admin/students
+O painel Profissional já usa `coaches.referral_code` na origem (`professional.tsx` linha 116/143 → passado para `ProfessionalCollaboratorsPanel`), então esse fluxo já está correto. A correção necessária é apenas no painel Parceiro.
 
-Na correção da recursão infinita de RLS em `profiles` (turno anterior, quando você reportou o erro "infinite recursion detected in policy for relation 'profiles'"), a migração recriou políticas e mexeu em funções `SECURITY DEFINER`. Nesse processo os GRANTs da tabela foram derrubados (`REVOKE`/`DROP`+`CREATE` ou reset de privilégios) e não foram restaurados no mesmo migration — que é justamente a regra crítica do Supabase: RLS sozinho não basta, precisa de GRANT explícito, senão o Data API responde `permission denied`.
+Não é necessário alterar a função `validate_referral_code` nem os formulários de cadastro — eles já tratam corretamente `kind = 'coach'`.
 
-Como quase todo lugar do sistema lê `profiles` via join embed do PostgREST, qualquer tela que só fizesse o join "sobrevivia" enquanto o cache/embed usava caminhos alternativos, mas o admin.students (após o fallback flat que adicionei) passa a buscar `profiles` diretamente → estoura o erro na cara.
+## Regra
 
-## Correção
+Ao gerar o link `/r/<código>` no painel Parceiro:
 
-Migração única restaurando os GRANTs padrão em `profiles` conforme as políticas RLS existentes:
+- Se o dono do painel também tem registro em `coaches` (`coachCtx` já carregado em `load()` — linha 137-163 de `src/routes/_authenticated/partner.tsx`) e possui `referral_code` de coach → usar `coaches.referral_code`.
+- Caso contrário → manter o comportamento atual (`partners.referral_code`).
 
-```sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
-GRANT ALL ON public.profiles TO service_role;
--- anon: manter SELECT apenas se houver política pública (verificar antes de conceder)
-```
+Isso vale para todos os pontos onde o link/QR é exibido: aba visão geral do parceiro e aba Colaboradores.
 
-Passos:
-1. Rodar `\dp public.profiles` + listar policies para confirmar quais roles precisam de acesso (esperado: `authenticated` full, `service_role` all; `anon` somente se houver policy `USING (true)` — hoje as policies são baseadas em `auth.uid()`, então **não** dou GRANT a `anon`).
-2. Emitir migração com os GRANTs acima.
-3. Rodar auditoria rápida em todas as tabelas do `public` para detectar outras que tenham perdido GRANTs no mesmo incidente (mesmo padrão do troubleshooting oficial) e restaurar as que estiverem sem privilégio para `authenticated`/`service_role`, sem tocar em `anon` para evitar ampliar exposição.
-4. Recarregar admin/students para confirmar que a listagem volta.
+## Alterações
 
-## Prevenção
+**`src/routes/_authenticated/partner.tsx`**
 
-- Toda migração que faça `DROP TABLE`/`REVOKE ALL` em `profiles` (ou qualquer tabela `public`) deve reincluir o bloco de GRANTs no mesmo arquivo.
-- Adiciono um comentário no topo do migration de RLS de `profiles` reforçando a regra, e verifico que futuras alterações em policies não venham acompanhadas de `REVOKE`.
+1. Adicionar `coachReferralCode?: string | null` ao props de `Overview` e `CollaboratorsPanel`; passar `coachCtx?.referralCode ?? null` do componente pai.
+2. Em `Overview` (linha ~279): trocar
+   ```
+   const referralLink = partner.referral_code ? `${origin}/r/${partner.referral_code}` : "";
+   ```
+   por uma expressão que prefere `coachReferralCode` e cai para `partner.referral_code`. Ajustar também o texto "Código: …" se for exibido.
+3. Em `CollaboratorsPanel` (linhas 1548-1620): mesmo tratamento — `const code = coachReferralCode || partner.referral_code;` e usar `code` em `link`, no guard de "código ainda não gerado" e no rótulo "Código: …".
 
-Aprovo?
+Nenhuma outra tela do Parceiro monta o link a partir de `partner.referral_code` (verificado com `rg`).
+
+## Verificação
+
+- Compartilhar o link como Parceiro que **também é coach** → `/r/<coach_code>` → `validate_referral_code` retorna `kind='coach'`, `coach_id = coach.id` → cadastros novos ficam vinculados ao próprio coach.
+- Parceiro **sem** registro de coach → mantém `/r/<partner_code>` → comportamento atual preservado.
+- Painel Profissional: já usa `coaches.referral_code`, nenhum ajuste necessário. Conferir apenas que segue funcionando.
+
+## Fora de escopo
+
+- Backfill/mudança da RPC `validate_referral_code`.
+- Fluxo do painel Coach e da vitrine do aluno (já usam código do coach via `useMyReferralCode`).

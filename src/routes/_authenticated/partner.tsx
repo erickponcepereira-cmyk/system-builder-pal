@@ -238,7 +238,7 @@ function PartnerPanel() {
       )}
 
       <main className="px-4 py-4 pb-24 max-w-3xl mx-auto">
-        {tab === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} />}
+        {tab === "overview" && <Overview partner={partner} products={products} visits={visits} hasActiveFree={hasActiveFree} pendingCount={pendingCount} coachReferralCode={coachCtx?.referralCode ?? null} />}
         {tab === "products" && <ProductsPanel partner={partner} products={products} hasActiveFree={hasActiveFree} onReload={load} />}
         {tab === "timeline" && <TimelinePanel partner={partner} posts={posts} onReload={load} />}
         {tab === "qrcode" && <QrCodePanel partner={partner} />}
@@ -246,7 +246,7 @@ function PartnerPanel() {
         {tab === "store" && hasActiveFree && <StorePage coachMode audience="partner" />}
         {tab === "profile" && <ProfilePanel partner={partner} onReload={load} />}
         {tab === "fitmind_calendar" && <FitmindCalendar />}
-        {tab === "collaborators" && <CollaboratorsPanel partner={partner} />}
+        {tab === "collaborators" && <CollaboratorsPanel partner={partner} coachReferralCode={coachCtx?.referralCode ?? null} />}
         {tab === "network" && (coachCtx ? <NetworkTreeTab coach={coachCtx} /> : <MyNetworkPanel />)}
         {tab === "wallet" && <PartnerWalletTab />}
         {tab === "subscription" && <SubscriptionInvoicesTab walletSource="partner" />}
@@ -272,11 +272,12 @@ function PartnerPanel() {
   );
 }
 
-function Overview({ partner, products, visits, hasActiveFree, pendingCount }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number }) {
+function Overview({ partner, products, visits, hasActiveFree, pendingCount, coachReferralCode }: { partner: Partner; products: Product[]; visits: number; hasActiveFree: boolean; pendingCount: number; coachReferralCode?: string | null }) {
   const approved = products.filter(p => p.status === "approved" && p.is_active_by_partner).length;
   const [showVisits, setShowVisits] = useState(false);
   const [uplineCoach, setUplineCoach] = useState<{ name: string; phone: string | null } | null>(null);
-  const referralLink = partner.referral_code ? `${window.location.origin}/r/${partner.referral_code}` : "";
+  const effectiveReferralCode = coachReferralCode || partner.referral_code;
+  const referralLink = effectiveReferralCode ? `${window.location.origin}/r/${effectiveReferralCode}` : "";
 
   useEffect(() => {
     (async () => {
@@ -1545,10 +1546,11 @@ type Collaborator = {
   profiles: { name: string; email: string | null; phone: string | null; photo_url: string | null } | null;
 };
 
-function CollaboratorsPanel({ partner }: { partner: Partner }) {
+function CollaboratorsPanel({ partner, coachReferralCode }: { partner: Partner; coachReferralCode?: string | null }) {
   const [collabs, setCollabs] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
-  const link = partner.referral_code ? `${window.location.origin}/r/${partner.referral_code}` : "";
+  const effectiveCode = coachReferralCode || partner.referral_code;
+  const link = effectiveCode ? `${window.location.origin}/r/${effectiveCode}` : "";
 
   useEffect(() => {
     (async () => {
@@ -1578,7 +1580,7 @@ function CollaboratorsPanel({ partner }: { partner: Partner }) {
     }
   };
 
-  if (!partner.referral_code) {
+  if (!effectiveCode) {
     return (
       <div className="rounded-xl p-6 text-center" style={{ backgroundColor: "#1A1A1A" }}>
         <AlertTriangle className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
@@ -1609,7 +1611,7 @@ function CollaboratorsPanel({ partner }: { partner: Partner }) {
             </div>
 
             <div className="mt-3 rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-[11px] text-white/70 break-all">{link}</div>
-            <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{partner.referral_code}</span></p>
+            <p className="mt-2 text-[10px] text-white/40">Código: <span className="font-mono text-white/70">{effectiveCode}</span></p>
 
             <div className="mt-4 flex gap-2">
               <button onClick={copy} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-white/10 py-2 text-xs font-bold text-white hover:bg-white/20">
