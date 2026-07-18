@@ -1,69 +1,32 @@
-## Objetivo
+## Diagnóstico
 
-Eliminar qualquer valor "fantasma" na carteira (residual entre `pending + disponível + sacado ≠ ganho total`) e garantir que o saque, que hoje sai da carteira principal + parceiro + profissional, **zere/drene proporcionalmente também as carteiras de parceiro e profissional** quando pago — não só quando reservado. Correção sistêmica, aplicada a todos os usuários.
+O admin.students falha com `permission denied for table profiles` porque a tabela `public.profiles` **perdeu todos os GRANTs** para os roles do PostgREST (`authenticated`, `anon`, `service_role`). Confirmei via query no catálogo: só sobrou privilégio para `sandbox_exec`.
 
-## Diagnóstico confirmado
+### Por que começou agora, se você não mexeu em admin/students
 
-Li a função atual `public.recalc_wallets_for_owner(_profile_id)` (fonte de verdade das 3 carteiras) e identifiquei 2 defeitos que causam divergência de centavos e "sobras" em `partner_wallets` / `professional_wallets`:
+Na correção da recursão infinita de RLS em `profiles` (turno anterior, quando você reportou o erro "infinite recursion detected in policy for relation 'profiles'"), a migração recriou políticas e mexeu em funções `SECURITY DEFINER`. Nesse processo os GRANTs da tabela foram derrubados (`REVOKE`/`DROP`+`CREATE` ou reset de privilégios) e não foram restaurados no mesmo migration — que é justamente a regra crítica do Supabase: RLS sozinho não basta, precisa de GRANT explícito, senão o Data API responde `permission denied`.
 
-1. **`v_paid_withdrawn_main` só é subtraído da carteira principal.** Se o saque pago foi maior do que o `available` da carteira principal (o que acontece hoje porque saque drena main → parceiro → profissional), o excedente **não é abatido** de `partner_avail_raw` nem de `coach_avail_raw`. Resultado: carteira de parceiro/profissional continua mostrando saldo que já foi sacado.
-2. **O "drain" cross-wallet só existe para saques ativos** (`requested/approved/processing`). Quando o saque muda para `paid`, ele sai da lista de reservas ativas e volta a inflar partner/professional. É exatamente a raiz do "R$ 9,06 fantasma" (e de qualquer outra sobra que apareceria após aprovação).
+Como quase todo lugar do sistema lê `profiles` via join embed do PostgREST, qualquer tela que só fizesse o join "sobrevivia" enquanto o cache/embed usava caminhos alternativos, mas o admin.students (após o fallback flat que adicionei) passa a buscar `profiles` diretamente → estoura o erro na cara.
 
-Além disso, `wallets.pending_balance`, `partner_wallets` e `professional_wallets` são atualizados por triggers independentes — se algum trigger falhar em uma transação, a linha fica com valor stale até o próximo recalc. Não há garantia de invariante `pending + available + withdrawn = total_earned`.
+## Correção
 
-## O que vai mudar
+Migração única restaurando os GRANTs padrão em `profiles` conforme as políticas RLS existentes:
 
-### 1. Reescrever `recalc_wallets_for_owner` como fonte única e consistente
-
-Nova ordem de cálculo (uma única SECURITY DEFINER, todas as 3 carteiras na mesma transação):
-
-```text
-raw_main    = Σ commissions liberadas (não-rede ou rede com mês desbloqueado)
-raw_partner = Σ partner_product_orders (partner_id)   liberadas (>7d)
-raw_pro     = Σ partner_product_orders (professional) liberadas (>7d)
-
-total_paid_seller     = Σ withdrawal_requests(main, status=paid)
-total_reserved_seller = Σ withdrawal_requests(main, status in requested/approved/processing)
-total_out_seller      = total_paid_seller + total_reserved_seller
-
-# drenagem cascata idêntica para PAID e RESERVED, na ordem main → partner → pro
-leftover = total_out_seller
-main_final    = raw_main    - min(raw_main, leftover);    leftover -= consumido
-partner_final = raw_partner - min(raw_partner, leftover); leftover -= consumido
-pro_final     = raw_pro     - min(raw_pro, leftover)
-
-# invariante forçada
-total_earned  = raw_main_all + raw_partner_all + raw_pro_all   (inclui pending)
-pending_main  = total_earned - (main_final + partner_final + pro_final) - total_paid_seller - total_reserved_seller
-              = tudo que ainda não está liberado nem sacado
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
+GRANT ALL ON public.profiles TO service_role;
+-- anon: manter SELECT apenas se houver política pública (verificar antes de conceder)
 ```
 
-Efeito:
-- Saque pago **abate também** partner/pro (fim do "R$ 9,06 fantasma" para todo mundo).
-- `wallets.available_balance + partner_wallets.available_balance + professional_wallets.available_balance + total_withdrawn + pending_balance = total_earned` (invariante garantida por construção — não pode haver resíduo).
-- Reservas ativas e pagos seguem a mesma cascata, então o UI já mostra imediatamente o desconto ao aprovar o saque.
+Passos:
+1. Rodar `\dp public.profiles` + listar policies para confirmar quais roles precisam de acesso (esperado: `authenticated` full, `service_role` all; `anon` somente se houver policy `USING (true)` — hoje as policies são baseadas em `auth.uid()`, então **não** dou GRANT a `anon`).
+2. Emitir migração com os GRANTs acima.
+3. Rodar auditoria rápida em todas as tabelas do `public` para detectar outras que tenham perdido GRANTs no mesmo incidente (mesmo padrão do troubleshooting oficial) e restaurar as que estiverem sem privilégio para `authenticated`/`service_role`, sem tocar em `anon` para evitar ampliar exposição.
+4. Recarregar admin/students para confirmar que a listagem volta.
 
-### 2. Sanitizar valores stale + backfill global
+## Prevenção
 
-- Rodar `recalc_wallets_for_owner(profile_id)` para **todos** os perfis com registro em `wallets`, `partner_wallets` ou `professional_wallets` (migração `DO $$ ... LOOP ... $$`).
-- Zerar quaisquer `pending_balance / available_balance` que sobrem depois do recalc (não deve existir, mas fica como salvaguarda).
+- Toda migração que faça `DROP TABLE`/`REVOKE ALL` em `profiles` (ou qualquer tabela `public`) deve reincluir o bloco de GRANTs no mesmo arquivo.
+- Adiciono um comentário no topo do migration de RLS de `profiles` reforçando a regra, e verifico que futuras alterações em policies não venham acompanhadas de `REVOKE`.
 
-### 3. Fechar as portas para regressão
-
-- Trigger `wallets_enforce_invariant_trg` (AFTER UPDATE em `wallets`): se `pending + available + withdrawn ≠ total_earned` (tolerância R$ 0,01), grava linha em `admin_audit_log` (`event = 'wallet_invariant_violation'`) — não bloqueia a operação para não travar o app, mas fica auditável.
-- Todos os triggers hoje existentes que mexem em `wallets`, `partner_wallets`, `professional_wallets` passam a chamar exclusivamente `recalc_wallets_for_owner(profile_id)` (nunca mais UPDATE parcial), garantindo que qualquer alteração em `commissions`, `partner_product_orders` ou `withdrawal_requests` reprojeta as três carteiras juntas.
-
-### 4. Front-end
-
-Nenhuma mudança lógica: `getWalletSplit` já lê `wallets`, `partner_wallets`, `professional_wallets` diretamente (correção anterior). Depois do recalc, o app da Ana e o admin passam a mostrar exatamente o mesmo número, sem centavos órfãos.
-
-## Verificação após aplicar
-
-1. Ana Flávia: `pending_balance + available_balance (3 carteiras) + total_withdrawn = total_earned` — sem resíduo.
-2. Simulação: aprovar o próximo saque dela e conferir que `partner_wallets.available_balance` e `professional_wallets.available_balance` caem para 0 se o valor sacado consumir a cascata.
-3. Amostragem: rodar query de invariante em todos os `wallets` e confirmar 0 violações.
-
-## Fora de escopo
-
-- Nada muda em regras de comissão, patente, missão de rede ou fluxo de aprovação de saque.
-- A tag "encaminhamento pendente" segue como está (é filtro de UI, tratado em outro ticket).
+Aprovo?
