@@ -15,6 +15,11 @@ import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummar
 import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { ChallengeTicketAcceptModal } from "@/components/challenge/ChallengeTicketAcceptModal";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+
+const TRADITIONAL_TICKET_PRODUCT_ID = "1a5b055d-5842-4b7a-b856-7f0babd1c04f";
+type TicketProduct = { id: string; name: string; price: number; image_url: string | null };
+type PayOrder = { id: string; number: string; total: number; email: string; name: string };
 
 
 export const Route = createFileRoute("/_authenticated/student/challenge")({
@@ -95,6 +100,12 @@ function StudentChallengePage() {
   const doJoin = useServerFn(joinChallengeWithToken);
   const doRecordAcceptance = useServerFn(recordTermsAcceptance);
   const [acceptTicketOpen, setAcceptTicketOpen] = useState(false);
+
+  // Compra de Ticket Desafio Tradicional direto na aba
+  const [ticketProduct, setTicketProduct] = useState<TicketProduct | null>(null);
+  const [ticketPaymentMethod, setTicketPaymentMethod] = useState<"pix" | "card">("pix");
+  const [buyingTicket, setBuyingTicket] = useState(false);
+  const [payOrder, setPayOrder] = useState<PayOrder | null>(null);
 
 
 
@@ -194,7 +205,51 @@ function StudentChallengePage() {
     try { setTokens(await fetchTokens()); } catch (e) { console.warn("tokens fetch failed", e); }
   };
 
-  useEffect(() => { load(); loadTokens(); }, []);
+  const loadTicketProduct = async () => {
+    try {
+      const { data } = await supabase
+        .from("products" as never)
+        .select("id,name,price,image_url")
+        .eq("id" as never, TRADITIONAL_TICKET_PRODUCT_ID)
+        .eq("status" as never, "active")
+        .maybeSingle();
+      setTicketProduct((data as any) || null);
+    } catch (e) { console.warn("ticket product fetch failed", e); }
+  };
+
+  const handleBuyTicket = async () => {
+    if (!ticketProduct) return;
+    setBuyingTicket(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const payload = [{ kind: "challenge", sourceId: ticketProduct.id, quantity: 1 }];
+      const { data: orderId, error } = await supabase.rpc(
+        "create_store_order" as never,
+        { _items: payload, _payment_method: ticketPaymentMethod === "pix" ? "pix" : "credit_card", _shipping: null, _notes: null, _referrer_student_id: null } as never
+      );
+      if (error) throw new Error(error.message);
+      if (!orderId) throw new Error("Pedido não retornado");
+      const { data: od } = await supabase
+        .from("store_orders" as never)
+        .select("id,order_number,total_amount" as never)
+        .eq("id" as never, orderId as never)
+        .maybeSingle();
+      const order = od as any;
+      setPayOrder({
+        id: order?.id || String(orderId),
+        number: order?.order_number || "pedido",
+        total: Number(order?.total_amount || ticketProduct.price),
+        email: auth.user?.email || "",
+        name: (auth.user?.user_metadata as any)?.name || "",
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao criar pedido");
+    } finally {
+      setBuyingTicket(false);
+    }
+  };
+
+  useEffect(() => { load(); loadTokens(); loadTicketProduct(); }, []);
 
   // Passo 1: usuário clica "Quero entrar" → abre modal com 14 declarações obrigatórias.
   const handleJoin = async () => {
@@ -417,13 +472,93 @@ function StudentChallengePage() {
 
           {!hasAccess && !(tokens && tokens.balance > 0) ? (
             /* Sem acesso */
-            (<div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
-              <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
-              <p className="font-bold text-foreground">Desafio Indisponível</p>
-              <p className="text-sm text-muted-foreground">
-                O Desafio FitMind está disponível para alunos com planos específicos.
-                Fale com seu coach para participar!
-              </p>
+            (<div className="space-y-4">
+              <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
+                <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
+                <p className="font-bold text-foreground">Desafio Indisponível</p>
+                <p className="text-sm text-muted-foreground">
+                  O Desafio FitMind está disponível para alunos com planos específicos.
+                  Fale com seu coach para participar!
+                </p>
+              </div>
+
+              {ticketProduct && (
+                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+                  <p className="text-sm text-foreground text-center">
+                    Adquira o ticket do desafio para participar dessa edição:
+                  </p>
+
+                  <div className="rounded-xl bg-card border border-border p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      {ticketProduct.image_url ? (
+                        <img src={ticketProduct.image_url} alt={ticketProduct.name} className="h-14 w-14 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-14 w-14 rounded-lg bg-primary/20 flex items-center justify-center">
+                          <Trophy className="h-7 w-7 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-foreground text-sm">{ticketProduct.name}</p>
+                        <p className="text-primary font-bold">{money(Number(ticketProduct.price))}</p>
+                      </div>
+                    </div>
+
+                    {!payOrder && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["pix", "card"] as const).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setTicketPaymentMethod(m)}
+                              className={`rounded-xl px-3 py-2 text-xs font-bold ${ticketPaymentMethod === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                            >
+                              {m === "pix" ? "Pix" : "Cartão"}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleBuyTicket}
+                          disabled={buyingTicket}
+                          className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                          {buyingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          Comprar ticket — {money(Number(ticketProduct.price))}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {payOrder && (
+                    <div className="rounded-xl bg-card border border-border p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                        <button
+                          type="button"
+                          onClick={() => setPayOrder(null)}
+                          className="text-xs text-muted-foreground underline"
+                        >
+                          cancelar
+                        </button>
+                      </div>
+                      <MercadoPagoCheckout
+                        source={{ kind: "store_order", id: payOrder.id }}
+                        amount={payOrder.total}
+                        description={`Pedido ${payOrder.number}`}
+                        defaultPayer={{ email: payOrder.email, name: payOrder.name }}
+                        initialMethod={ticketPaymentMethod}
+                        onApproved={() => {
+                          toast.success("Ticket adquirido! Desafio liberado.");
+                          setPayOrder(null);
+                          load();
+                          loadTokens();
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>)
 
           ) : !enrollment ? (
