@@ -14,47 +14,43 @@ async function hideNativeSplash() {
       await SplashScreen.hide({ fadeOutDuration: 200 });
     }
   } catch {
-
     // ignore
   }
 }
 
 /**
- * Splash inicial que bloqueia COMPLETAMENTE qualquer renderização até
- * resolver a sessão Supabase no primeiro mount.
- *
- * Por que existe:
- *  - Ao abrir o APK com sessão válida, qualquer render intermediário de
- *    "/" (landing) ou "/login" aparece como flash antes do redirect.
- *  - Mesmo um único frame de Outlet renderizando a rota errada é visível.
- *
- * Estratégia:
- *  - No primeiro mount, NUNCA renderiza children até `supabase.auth.getSession()`
- *    resolver. Mostra apenas o splash.
- *  - Após resolver:
- *      • com sessão e rota atual em "/" ou "/login" → navega para
- *        /portal-selector e mantém o splash até a rota mudar.
- *      • sem sessão → libera children normalmente.
- *  - Deep links (ex.: /pay/:order, /r/:code, /resultado/:token, /invite/:token)
- *    NÃO são afetados pelo redirect — o splash some assim que a sessão é
- *    avaliada e o conteúdo da rota carrega normalmente.
+ * Splash inicial que bloqueia renderização até resolver a sessão Supabase.
+ * Possui múltiplas defesas contra travamento:
+ *  - Timeout de 4s para getSession()
+ *  - Hard cap de 5s que libera splash sempre
+ *  - Watchdog que reintenta navegação e cai para window.location no pior caso
  */
 export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [sessionResolved, setSessionResolved] = useState(false);
   const [hasSession, setHasSession] = useState(false);
-  const redirectedRef = useRef(false);
+  const [hardCapReleased, setHardCapReleased] = useState(false);
+  const redirectAttemptsRef = useRef(0);
+  const redirectWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Bloqueia qualquer render até resolver a primeira chamada de getSession().
-  // Timeout de segurança para não travar splash em rede lenta.
+  // Resolver sessão inicial + listener + timeouts de segurança
   useEffect(() => {
     let active = true;
-    const timeoutId = setTimeout(() => {
+
+    const getSessionTimeout = setTimeout(() => {
       if (!active) return;
       console.warn("[AUTH_GATE] getSession timeout, liberando splash");
       setSessionResolved((prev) => (prev ? prev : true));
     }, 4000);
+
+    // Hard cap: libera splash de qualquer jeito depois de 5s
+    const hardCap = setTimeout(() => {
+      if (!active) return;
+      console.warn("[AUTH_GATE] hard cap release");
+      setSessionResolved(true);
+      setHardCapReleased(true);
+    }, 5000);
 
     (async () => {
       try {
@@ -67,61 +63,88 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
         if (active) setHasSession(false);
       } finally {
         if (active) setSessionResolved(true);
-        clearTimeout(timeoutId);
+        clearTimeout(getSessionTimeout);
       }
     })();
 
-    // Reage a mudanças de auth (logout, login, refresh de token) para não
-    // ficar preso no splash com estado de sessão obsoleto.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       const ok = Boolean(session?.user);
       if (event === "SIGNED_OUT") {
-        redirectedRef.current = false;
+        redirectAttemptsRef.current = 0;
         setHasSession(false);
         setSessionResolved(true);
         return;
       }
-      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+      if (event === "INITIAL_SESSION") {
         setHasSession(ok);
         setSessionResolved(true);
+        return;
+      }
+      // Outros eventos apenas atualizam hasSession, não forçam sessionResolved
+      if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
+        setHasSession(ok);
       }
     });
 
     return () => {
       active = false;
-      clearTimeout(timeoutId);
+      clearTimeout(getSessionTimeout);
+      clearTimeout(hardCap);
+      if (redirectWatchdogRef.current) clearTimeout(redirectWatchdogRef.current);
       sub.subscription.unsubscribe();
     };
   }, []);
 
-  // Reseta a trava de redirect quando o usuário sai do portal-selector,
-  // para que um novo ciclo login→logout→login volte a redirecionar.
+  // Reseta contador de redirect ao sair das rotas de entrada
   useEffect(() => {
     if (pathname !== "/portal-selector" && pathname !== "/" && pathname !== "/login") {
-      redirectedRef.current = false;
+      redirectAttemptsRef.current = 0;
     }
   }, [pathname]);
 
-  // Com sessão válida, se ainda estamos em "/" ou "/login", manda para o
-  // seletor de portal. O splash continua visível até a rota mudar.
+  // Navegação para portal-selector com watchdog de retry
   useEffect(() => {
-    if (!sessionResolved || !hasSession || redirectedRef.current) return;
-    if (pathname === "/" || pathname === "/login") {
-      redirectedRef.current = true;
-      console.log("[AUTH_GATE] navegando para portal-selector");
+    if (!sessionResolved || !hasSession) return;
+    if (pathname !== "/" && pathname !== "/login") return;
+    if (redirectAttemptsRef.current >= 3) return;
+
+    const attempt = redirectAttemptsRef.current + 1;
+    redirectAttemptsRef.current = attempt;
+    console.log(`[AUTH_GATE] navegando para portal-selector (tentativa ${attempt})`);
+
+    try {
       navigate({ to: "/portal-selector", replace: true });
+    } catch (err) {
+      console.warn("[AUTH_GATE] navigate falhou", err);
     }
+
+    if (redirectWatchdogRef.current) clearTimeout(redirectWatchdogRef.current);
+    redirectWatchdogRef.current = setTimeout(() => {
+      // Se ainda estamos travados na mesma rota, escalar
+      if (pathname === "/" || pathname === "/login") {
+        if (attempt >= 2) {
+          console.warn("[AUTH_GATE] fallback window.location.replace");
+          try {
+            if (typeof window !== "undefined") {
+              window.location.replace("/portal-selector");
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }, 1500);
   }, [sessionResolved, hasSession, pathname, navigate]);
 
   const stillRedirecting =
-    sessionResolved && hasSession && (pathname === "/" || pathname === "/login");
+    sessionResolved &&
+    hasSession &&
+    (pathname === "/" || pathname === "/login") &&
+    !hardCapReleased;
 
-  const showSplash = !sessionResolved || stillRedirecting;
+  const showSplash = (!sessionResolved || stillRedirecting) && !hardCapReleased;
 
-  // Esconde o splash nativo do Capacitor APENAS quando o React já decidiu
-  // o destino final (portal selector ou login/children) e está pronto para
-  // pintar — evita ver a landing entre splash nativo e React.
   useEffect(() => {
     if (!showSplash) {
       hideNativeSplash();
