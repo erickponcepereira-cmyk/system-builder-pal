@@ -506,7 +506,7 @@ function StudentChallengePage() {
                     {!payOrder && (
                       <>
                         <div className="grid grid-cols-2 gap-2">
-                          {(["pix", "credit_card"] as const).map((m) => (
+                          {(["pix", "card"] as const).map((m) => (
                             <button
                               key={m}
                               type="button"
