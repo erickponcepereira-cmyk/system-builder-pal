@@ -103,7 +103,7 @@ function StudentChallengePage() {
 
   // Compra de Ticket Desafio Tradicional direto na aba
   const [ticketProduct, setTicketProduct] = useState<TicketProduct | null>(null);
-  const [ticketPaymentMethod, setTicketPaymentMethod] = useState<"pix" | "credit_card">("pix");
+  const [ticketPaymentMethod, setTicketPaymentMethod] = useState<"pix" | "card">("pix");
   const [buyingTicket, setBuyingTicket] = useState(false);
   const [payOrder, setPayOrder] = useState<PayOrder | null>(null);
 
