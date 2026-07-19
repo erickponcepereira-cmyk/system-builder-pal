@@ -225,7 +225,7 @@ function StudentChallengePage() {
       const payload = [{ kind: "challenge", sourceId: ticketProduct.id, quantity: 1 }];
       const { data: orderId, error } = await supabase.rpc(
         "create_store_order" as never,
-        { _items: payload, _payment_method: ticketPaymentMethod, _shipping: null, _notes: null, _referrer_student_id: null } as never
+        { _items: payload, _payment_method: ticketPaymentMethod === "pix" ? "pix" : "credit_card", _shipping: null, _notes: null, _referrer_student_id: null } as never
       );
       if (error) throw new Error(error.message);
       if (!orderId) throw new Error("Pedido não retornado");
