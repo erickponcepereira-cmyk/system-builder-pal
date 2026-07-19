@@ -472,13 +472,93 @@ function StudentChallengePage() {
 
           {!hasAccess && !(tokens && tokens.balance > 0) ? (
             /* Sem acesso */
-            (<div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
-              <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
-              <p className="font-bold text-foreground">Desafio Indisponível</p>
-              <p className="text-sm text-muted-foreground">
-                O Desafio FitMind está disponível para alunos com planos específicos.
-                Fale com seu coach para participar!
-              </p>
+            (<div className="space-y-4">
+              <div className="rounded-2xl border border-border bg-card p-8 text-center space-y-3">
+                <Lock className="h-12 w-12 text-muted-foreground mx-auto" />
+                <p className="font-bold text-foreground">Desafio Indisponível</p>
+                <p className="text-sm text-muted-foreground">
+                  O Desafio FitMind está disponível para alunos com planos específicos.
+                  Fale com seu coach para participar!
+                </p>
+              </div>
+
+              {ticketProduct && (
+                <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+                  <p className="text-sm text-foreground text-center">
+                    Adquira o ticket do desafio para participar dessa edição:
+                  </p>
+
+                  <div className="rounded-xl bg-card border border-border p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      {ticketProduct.image_url ? (
+                        <img src={ticketProduct.image_url} alt={ticketProduct.name} className="h-14 w-14 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-14 w-14 rounded-lg bg-primary/20 flex items-center justify-center">
+                          <Trophy className="h-7 w-7 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-foreground text-sm">{ticketProduct.name}</p>
+                        <p className="text-primary font-bold">{money(Number(ticketProduct.price))}</p>
+                      </div>
+                    </div>
+
+                    {!payOrder && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["pix", "credit_card"] as const).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setTicketPaymentMethod(m)}
+                              className={`rounded-xl px-3 py-2 text-xs font-bold ${ticketPaymentMethod === m ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                            >
+                              {m === "pix" ? "Pix" : "Cartão"}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleBuyTicket}
+                          disabled={buyingTicket}
+                          className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                          {buyingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          Comprar ticket — {money(Number(ticketProduct.price))}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {payOrder && (
+                    <div className="rounded-xl bg-card border border-border p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
+                        <button
+                          type="button"
+                          onClick={() => setPayOrder(null)}
+                          className="text-xs text-muted-foreground underline"
+                        >
+                          cancelar
+                        </button>
+                      </div>
+                      <MercadoPagoCheckout
+                        source={{ kind: "store_order", id: payOrder.id }}
+                        amount={payOrder.total}
+                        description={`Pedido ${payOrder.number}`}
+                        defaultPayer={{ email: payOrder.email, name: payOrder.name }}
+                        initialMethod={ticketPaymentMethod}
+                        onApproved={() => {
+                          toast.success("Ticket adquirido! Desafio liberado.");
+                          setPayOrder(null);
+                          load();
+                          loadTokens();
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>)
 
           ) : !enrollment ? (
