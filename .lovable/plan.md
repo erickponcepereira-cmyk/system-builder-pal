@@ -1,31 +1,46 @@
-# Corrigir travamento na tela de splash "FitMind secrets"
+## Objetivo
 
-## Diagnóstico
+Na aba **Desafio** do aluno, quando ele não tem acesso (bloco "Desafio Indisponível"), mostrar logo abaixo:
 
-O `AuthLoadingGate` decide mostrar o splash enquanto `showSplash = !sessionResolved || stillRedirecting`. Existem 3 caminhos onde ele pode ficar travado — e todos aparecem "às vezes" porque dependem de timing/rede:
+> "Adquira o ticket do desafio para participar dessa edição:"
 
-1. **`getSession()` demora >4s** — o timeout atual funciona, mas só cobre esse ponto.
-2. **`stillRedirecting` fica preso**: quando há sessão e a rota é `/` ou `/login`, o gate chama `navigate({ to: "/portal-selector" })` e marca `redirectedRef.current = true`. Se a navegação falhar silenciosamente (router ainda hidratando, erro de rota, race com `onAuthStateChange` no primeiro mount nativo), o `pathname` nunca muda, o `ref` bloqueia nova tentativa, e o splash fica eterno.
-3. **`onAuthStateChange` chega antes de `getSession()` resolver em cold start no Android**: o listener seta `sessionResolved=true` cedo, o effect de redirect dispara com `pathname` ainda inicial, marca `redirectedRef=true`, e se o TanStack Router não estiver pronto para navegar, cai no caso 2.
+seguido de um card do produto **Ticket Desafio Tradicional** com botão de compra que abre o checkout Mercado Pago **na própria aba** — após pagamento aprovado, a página recarrega os dados e o desafio é habilitado sem sair da tela.
 
-Sem logs de `[AUTH_GATE]` no console dessa sessão, então o travamento não deixa rastro — mais um indício de que é o splash ficando na tela sem qualquer decisão nova.
+## Arquivo a alterar
 
-## Correção (apenas `src/components/AuthLoadingGate.tsx`)
+- `src/routes/_authenticated/student.challenge.tsx`
 
-1. **Cap absoluto do splash (safety net universal)**: um único `setTimeout` de ~5s no mount que força `sessionResolved=true` **e** libera o splash mesmo se `stillRedirecting` ainda for true. Se a navegação falhar, o usuário vê a landing/login (funcional) em vez de tela preta.
+Nenhuma alteração de banco, RPC ou lógica de comissões. A compra reutiliza a RPC `create_store_order` já usada em toda a loja (kind `challenge`, sourceId do produto), e o componente `MercadoPagoCheckout` já existente.
 
-2. **Retry de navegação com watchdog**: após chamar `navigate({ to: "/portal-selector" })`, agendar um `setTimeout(1500ms)`. Se `pathname` continuar `/` ou `/login`, resetar `redirectedRef` e:
-   - tentar novamente `navigate(...)` uma vez;
-   - se ainda assim não mudar em +1500ms, cair para `window.location.replace("/portal-selector")` como último recurso.
+## Mudanças
 
-3. **Só marcar `redirectedRef` depois que a navegação tiver efeito**: mover o `redirectedRef.current = true` para dentro de um effect que observa a mudança de `pathname`, não antes de chamar `navigate`. Assim uma navegação falhada não bloqueia futuras tentativas.
+1. **Buscar o produto Ticket Desafio Tradicional** no `useEffect` de carregamento da página:
+   - `supabase.from("products").select("id,name,price,image_url").eq("id","1a5b055d-5842-4b7a-b856-7f0babd1c04f").eq("status","active").maybeSingle()`
+   - Guardar em `ticketProduct` (state).
 
-4. **Evitar decisão prematura pelo listener**: no `onAuthStateChange`, só marcar `sessionResolved=true` no evento `INITIAL_SESSION` (que representa a resposta canônica) — nos demais eventos apenas atualizar `hasSession`. Isso remove a race do caso 3 sem impactar logout (que já tem tratamento próprio).
+2. **Estados novos**:
+   - `ticketProduct: { id, name, price, image_url } | null`
+   - `payOrder: { id, number, total, email, name } | null` — pedido pendente de pagamento
+   - `buying: boolean`
+   - `paymentMethod: "pix" | "credit_card"` (default `pix`)
 
-5. **Log adicional** quando o cap de 5s dispara (`[AUTH_GATE] hard cap release`) para conseguir diagnosticar reincidências.
+3. **Novo bloco de compra** (renderizado dentro do card "Desafio Indisponível", logo após o texto atual):
+   - Texto: "Adquira o ticket do desafio para participar dessa edição:"
+   - Card compacto com nome do produto, preço formatado e seletor Pix / Cartão.
+   - Botão **"Comprar ticket — R$ 100,00"**.
 
-## Escopo
+4. **Handler `handleBuyTicket`**:
+   - `create_store_order` com `[{ kind: "challenge", sourceId: ticketProduct.id, quantity: 1 }]` e `_payment_method`.
+   - Ler `store_orders` (id, order_number, total_amount) e salvar em `payOrder`.
+   - Tratamento de erro com `toast.error`.
 
-- Um único arquivo alterado: `src/components/AuthLoadingGate.tsx`.
-- Sem mudanças de rota, backend, ou fluxo de auth.
-- Comportamento normal (sessão resolve rápido) fica idêntico; as novas defesas só atuam quando algo demora ou falha.
+5. **Renderizar `MercadoPagoCheckout` inline** logo abaixo do card de compra quando `payOrder` existe:
+   - `source={{ kind: "store_order", id: payOrder.id }}`, `amount`, `description`, `defaultPayer`, `initialMethod={paymentMethod}`.
+   - `onApproved`: fecha o checkout, toast "Ticket adquirido! Desafio liberado.", chama a função interna `load()` (que já recarrega `hasAccess`, `tokens`, `enrollment`), permanecendo na mesma tela — a UI muda automaticamente do bloco de bloqueio para a UI de tickets/inscrição.
+
+6. **Sem side-effects fora do card**: nada muda no fluxo pra quem já tem acesso ou já está inscrito; a nova UI só aparece na branch `!hasAccess && !(tokens && tokens.balance > 0)`.
+
+## Observações
+
+- O produto "Ticket Desafio Tradicional" (id `1a5b055d-…`) já concede `challenge_tokens_amount: 1` e tem `has_challenge_access: true`, então o backend existente (trigger que credita ticket após pagamento aprovado) já habilita o desafio — não precisa criar novo caminho.
+- Fallback: se o produto não estiver `active` no banco, o bloco extra é omitido e mantém o texto original "Fale com seu coach".
