@@ -1,41 +1,31 @@
-## Problema
+# Corrigir travamento na tela de splash "FitMind secrets"
 
-Quando o usuário compartilha o link de indicação do **painel Parceiro**, o link usa `partners.referral_code`. A função `validate_referral_code` resolve esse código retornando `coach_id = partners.upline_coach_id` — ou seja, o convidado é vinculado ao **coach acima do parceiro (upline)**, e não ao próprio parceiro/coach que compartilhou. Se essa pessoa já é coach, o esperado é que o convite vincule diretamente a ela como coach.
+## Diagnóstico
 
-O painel Profissional já usa `coaches.referral_code` na origem (`professional.tsx` linha 116/143 → passado para `ProfessionalCollaboratorsPanel`), então esse fluxo já está correto. A correção necessária é apenas no painel Parceiro.
+O `AuthLoadingGate` decide mostrar o splash enquanto `showSplash = !sessionResolved || stillRedirecting`. Existem 3 caminhos onde ele pode ficar travado — e todos aparecem "às vezes" porque dependem de timing/rede:
 
-Não é necessário alterar a função `validate_referral_code` nem os formulários de cadastro — eles já tratam corretamente `kind = 'coach'`.
+1. **`getSession()` demora >4s** — o timeout atual funciona, mas só cobre esse ponto.
+2. **`stillRedirecting` fica preso**: quando há sessão e a rota é `/` ou `/login`, o gate chama `navigate({ to: "/portal-selector" })` e marca `redirectedRef.current = true`. Se a navegação falhar silenciosamente (router ainda hidratando, erro de rota, race com `onAuthStateChange` no primeiro mount nativo), o `pathname` nunca muda, o `ref` bloqueia nova tentativa, e o splash fica eterno.
+3. **`onAuthStateChange` chega antes de `getSession()` resolver em cold start no Android**: o listener seta `sessionResolved=true` cedo, o effect de redirect dispara com `pathname` ainda inicial, marca `redirectedRef=true`, e se o TanStack Router não estiver pronto para navegar, cai no caso 2.
 
-## Regra
+Sem logs de `[AUTH_GATE]` no console dessa sessão, então o travamento não deixa rastro — mais um indício de que é o splash ficando na tela sem qualquer decisão nova.
 
-Ao gerar o link `/r/<código>` no painel Parceiro:
+## Correção (apenas `src/components/AuthLoadingGate.tsx`)
 
-- Se o dono do painel também tem registro em `coaches` (`coachCtx` já carregado em `load()` — linha 137-163 de `src/routes/_authenticated/partner.tsx`) e possui `referral_code` de coach → usar `coaches.referral_code`.
-- Caso contrário → manter o comportamento atual (`partners.referral_code`).
+1. **Cap absoluto do splash (safety net universal)**: um único `setTimeout` de ~5s no mount que força `sessionResolved=true` **e** libera o splash mesmo se `stillRedirecting` ainda for true. Se a navegação falhar, o usuário vê a landing/login (funcional) em vez de tela preta.
 
-Isso vale para todos os pontos onde o link/QR é exibido: aba visão geral do parceiro e aba Colaboradores.
+2. **Retry de navegação com watchdog**: após chamar `navigate({ to: "/portal-selector" })`, agendar um `setTimeout(1500ms)`. Se `pathname` continuar `/` ou `/login`, resetar `redirectedRef` e:
+   - tentar novamente `navigate(...)` uma vez;
+   - se ainda assim não mudar em +1500ms, cair para `window.location.replace("/portal-selector")` como último recurso.
 
-## Alterações
+3. **Só marcar `redirectedRef` depois que a navegação tiver efeito**: mover o `redirectedRef.current = true` para dentro de um effect que observa a mudança de `pathname`, não antes de chamar `navigate`. Assim uma navegação falhada não bloqueia futuras tentativas.
 
-**`src/routes/_authenticated/partner.tsx`**
+4. **Evitar decisão prematura pelo listener**: no `onAuthStateChange`, só marcar `sessionResolved=true` no evento `INITIAL_SESSION` (que representa a resposta canônica) — nos demais eventos apenas atualizar `hasSession`. Isso remove a race do caso 3 sem impactar logout (que já tem tratamento próprio).
 
-1. Adicionar `coachReferralCode?: string | null` ao props de `Overview` e `CollaboratorsPanel`; passar `coachCtx?.referralCode ?? null` do componente pai.
-2. Em `Overview` (linha ~279): trocar
-   ```
-   const referralLink = partner.referral_code ? `${origin}/r/${partner.referral_code}` : "";
-   ```
-   por uma expressão que prefere `coachReferralCode` e cai para `partner.referral_code`. Ajustar também o texto "Código: …" se for exibido.
-3. Em `CollaboratorsPanel` (linhas 1548-1620): mesmo tratamento — `const code = coachReferralCode || partner.referral_code;` e usar `code` em `link`, no guard de "código ainda não gerado" e no rótulo "Código: …".
+5. **Log adicional** quando o cap de 5s dispara (`[AUTH_GATE] hard cap release`) para conseguir diagnosticar reincidências.
 
-Nenhuma outra tela do Parceiro monta o link a partir de `partner.referral_code` (verificado com `rg`).
+## Escopo
 
-## Verificação
-
-- Compartilhar o link como Parceiro que **também é coach** → `/r/<coach_code>` → `validate_referral_code` retorna `kind='coach'`, `coach_id = coach.id` → cadastros novos ficam vinculados ao próprio coach.
-- Parceiro **sem** registro de coach → mantém `/r/<partner_code>` → comportamento atual preservado.
-- Painel Profissional: já usa `coaches.referral_code`, nenhum ajuste necessário. Conferir apenas que segue funcionando.
-
-## Fora de escopo
-
-- Backfill/mudança da RPC `validate_referral_code`.
-- Fluxo do painel Coach e da vitrine do aluno (já usam código do coach via `useMyReferralCode`).
+- Um único arquivo alterado: `src/components/AuthLoadingGate.tsx`.
+- Sem mudanças de rota, backend, ou fluxo de auth.
+- Comportamento normal (sessão resolve rápido) fica idêntico; as novas defesas só atuam quando algo demora ou falha.
