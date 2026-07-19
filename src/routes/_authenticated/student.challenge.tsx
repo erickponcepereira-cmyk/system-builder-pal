@@ -15,6 +15,11 @@ import { getMyChallengeTokens, joinChallengeWithToken, type ChallengeTokenSummar
 import { recordTermsAcceptance } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { ChallengeTicketAcceptModal } from "@/components/challenge/ChallengeTicketAcceptModal";
+import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+
+const TRADITIONAL_TICKET_PRODUCT_ID = "1a5b055d-5842-4b7a-b856-7f0babd1c04f";
+type TicketProduct = { id: string; name: string; price: number; image_url: string | null };
+type PayOrder = { id: string; number: string; total: number; email: string; name: string };
 
 
 export const Route = createFileRoute("/_authenticated/student/challenge")({
