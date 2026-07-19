@@ -205,7 +205,51 @@ function StudentChallengePage() {
     try { setTokens(await fetchTokens()); } catch (e) { console.warn("tokens fetch failed", e); }
   };
 
-  useEffect(() => { load(); loadTokens(); }, []);
+  const loadTicketProduct = async () => {
+    try {
+      const { data } = await supabase
+        .from("products" as never)
+        .select("id,name,price,image_url")
+        .eq("id" as never, TRADITIONAL_TICKET_PRODUCT_ID)
+        .eq("status" as never, "active")
+        .maybeSingle();
+      setTicketProduct((data as any) || null);
+    } catch (e) { console.warn("ticket product fetch failed", e); }
+  };
+
+  const handleBuyTicket = async () => {
+    if (!ticketProduct) return;
+    setBuyingTicket(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const payload = [{ kind: "challenge", sourceId: ticketProduct.id, quantity: 1 }];
+      const { data: orderId, error } = await supabase.rpc(
+        "create_store_order" as never,
+        { _items: payload, _payment_method: ticketPaymentMethod, _shipping: null, _notes: null, _referrer_student_id: null } as never
+      );
+      if (error) throw new Error(error.message);
+      if (!orderId) throw new Error("Pedido não retornado");
+      const { data: od } = await supabase
+        .from("store_orders" as never)
+        .select("id,order_number,total_amount" as never)
+        .eq("id" as never, orderId as never)
+        .maybeSingle();
+      const order = od as any;
+      setPayOrder({
+        id: order?.id || String(orderId),
+        number: order?.order_number || "pedido",
+        total: Number(order?.total_amount || ticketProduct.price),
+        email: auth.user?.email || "",
+        name: (auth.user?.user_metadata as any)?.name || "",
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao criar pedido");
+    } finally {
+      setBuyingTicket(false);
+    }
+  };
+
+  useEffect(() => { load(); loadTokens(); loadTicketProduct(); }, []);
 
   // Passo 1: usuário clica "Quero entrar" → abre modal com 14 declarações obrigatórias.
   const handleJoin = async () => {
