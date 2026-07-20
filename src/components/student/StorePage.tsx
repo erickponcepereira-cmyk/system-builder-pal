@@ -56,6 +56,15 @@ type SubcategoryRow = { id: string; category_id: string; name: string; image_url
 
 const initialShipping: ShippingForm = { name: "", phone: "", zip: "", address: "", city: "", state: "", number: "", reference: "", location_url: "" };
 
+const cleanCheckoutCreationError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  console.error("[store checkout error]", error);
+  if (/upline_l\d+_coach_id|column .* does not exist|schema cache|PGRST/i.test(message)) {
+    return "Não foi possível preparar este pedido agora. Atualize a tela e tente novamente.";
+  }
+  return message || "Erro ao criar pedido";
+};
+
 const productCategory = (type?: string | null) => ({
   enrollment: "Inscrições", plan_30: "Planos 30d", protocol_90: "Protocolos 90d",
   digital_course: "Cursos", coach_training: "Cursos", health_pro_course: "Cursos",
@@ -678,7 +687,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       });
       await load();
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao criar pedido");
+      toast.error(cleanCheckoutCreationError(e));
     } finally {
       setCheckingOut(false);
     }
@@ -775,8 +784,7 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
       toast.success("Venda criada. Finalize o pagamento.");
       loadCoachData();
     } catch (e: any) {
-      console.error("[coach checkout error]", e);
-      toast.error(e?.message || "Erro ao registrar venda");
+      toast.error(cleanCheckoutCreationError(e) || "Erro ao registrar venda");
     } finally {
       setCheckingOut(false);
     }

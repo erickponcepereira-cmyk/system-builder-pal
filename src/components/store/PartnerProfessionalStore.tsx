@@ -61,6 +61,15 @@ export type PartnerStoreCard = {
 const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const cleanCheckoutCreationError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  console.error("[partner/professional checkout error]", error);
+  if (/upline_l\d+_coach_id|column .* does not exist|schema cache|PGRST/i.test(message)) {
+    return "Não foi possível preparar este pedido agora. Atualize a tela e tente novamente.";
+  }
+  return message || "Erro ao criar pedido";
+};
+
 function PricePair({ price, originalPrice, compact = false }: { price: number; originalPrice?: number | null; compact?: boolean }) {
   const discountPrice = originalPrice && originalPrice > price ? originalPrice : null;
   return (
@@ -384,8 +393,7 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
       setSelected(null);
       setSlot(null);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao criar pedido";
-      toast.error(msg);
+      toast.error(cleanCheckoutCreationError(e));
     } finally {
       setBuying(false);
     }
