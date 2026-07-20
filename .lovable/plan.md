@@ -1,46 +1,42 @@
-## Objetivo
+## Diagnóstico confirmado
 
-Na aba **Desafio** do aluno, quando ele não tem acesso (bloco "Desafio Indisponível"), mostrar logo abaixo:
+O erro `column "upline_l1_coach_id" does not exist` vem das funções de compra da loja unificada de parceiro/profissional.
 
-> "Adquira o ticket do desafio para participar dessa edição:"
+Conferi o banco atual:
+- A tabela `coaches` tem apenas `upline_coach_id` para a rede.
+- As funções `create_partner_company_order`, `create_partner_product_order` e `create_scheduled_professional_order` estão tentando ler `upline_l1_coach_id`, `upline_l2_coach_id` e `upline_l3_coach_id` diretamente de `coaches`.
+- Esses campos existem em `partner_product_orders`, mas não existem em `coaches`.
 
-seguido de um card do produto **Ticket Desafio Tradicional** com botão de compra que abre o checkout Mercado Pago **na própria aba** — após pagamento aprovado, a página recarrega os dados e o desafio é habilitado sem sair da tela.
+Por isso começou a acontecer depois da união das lojas: a compra passou a cair no fluxo unificado de pedidos de parceiro/profissional, que hoje está usando uma lógica antiga de rede incompatível com o schema real.
 
-## Arquivo a alterar
+## Plano de correção
 
-- `src/routes/_authenticated/student.challenge.tsx`
+1. **Corrigir a lógica de rede no backend**
+   - Criar uma migração para substituir as funções de compra quebradas.
+   - Em vez de buscar `coaches.upline_l1_coach_id`, `upline_l2_coach_id`, `upline_l3_coach_id`, calcular os níveis assim:
+     - nível 1 = `coaches.upline_coach_id` do vendedor
+     - nível 2 = `upline_coach_id` do nível 1
+     - nível 3 = `upline_coach_id` do nível 2
+   - Continuar gravando esses valores corretamente em `partner_product_orders.upline_l1_coach_id`, `upline_l2_coach_id`, `upline_l3_coach_id`.
 
-Nenhuma alteração de banco, RPC ou lógica de comissões. A compra reutiliza a RPC `create_store_order` já usada em toda a loja (kind `challenge`, sourceId do produto), e o componente `MercadoPagoCheckout` já existente.
+2. **Aplicar a correção em todos os caminhos de compra afetados**
+   - Produto pago de parceiro.
+   - Produto pago de profissional.
+   - Produto profissional agendável.
+   - Compra feita por aluno e compra feita por revendedor/coach para aluno.
 
-## Mudanças
+3. **Preservar o fluxo atual do Mercado Pago**
+   - Não trocar o checkout nem mexer nas credenciais.
+   - Manter PIX/cartão usando o mesmo componente atual.
+   - A correção será antes do checkout: criação correta do pedido para que o pagamento consiga abrir sem erro.
 
-1. **Buscar o produto Ticket Desafio Tradicional** no `useEffect` de carregamento da página:
-   - `supabase.from("products").select("id,name,price,image_url").eq("id","1a5b055d-5842-4b7a-b856-7f0babd1c04f").eq("status","active").maybeSingle()`
-   - Guardar em `ticketProduct` (state).
+4. **Melhorar a mensagem de erro no carrinho**
+   - Onde hoje aparece o erro técnico cru do banco, mostrar uma mensagem limpa para o usuário caso a criação do pedido falhe.
+   - Manter o erro técnico apenas em log/diagnóstico.
 
-2. **Estados novos**:
-   - `ticketProduct: { id, name, price, image_url } | null`
-   - `payOrder: { id, number, total, email, name } | null` — pedido pendente de pagamento
-   - `buying: boolean`
-   - `paymentMethod: "pix" | "credit_card"` (default `pix`)
-
-3. **Novo bloco de compra** (renderizado dentro do card "Desafio Indisponível", logo após o texto atual):
-   - Texto: "Adquira o ticket do desafio para participar dessa edição:"
-   - Card compacto com nome do produto, preço formatado e seletor Pix / Cartão.
-   - Botão **"Comprar ticket — R$ 100,00"**.
-
-4. **Handler `handleBuyTicket`**:
-   - `create_store_order` com `[{ kind: "challenge", sourceId: ticketProduct.id, quantity: 1 }]` e `_payment_method`.
-   - Ler `store_orders` (id, order_number, total_amount) e salvar em `payOrder`.
-   - Tratamento de erro com `toast.error`.
-
-5. **Renderizar `MercadoPagoCheckout` inline** logo abaixo do card de compra quando `payOrder` existe:
-   - `source={{ kind: "store_order", id: payOrder.id }}`, `amount`, `description`, `defaultPayer`, `initialMethod={paymentMethod}`.
-   - `onApproved`: fecha o checkout, toast "Ticket adquirido! Desafio liberado.", chama a função interna `load()` (que já recarrega `hasAccess`, `tokens`, `enrollment`), permanecendo na mesma tela — a UI muda automaticamente do bloco de bloqueio para a UI de tickets/inscrição.
-
-6. **Sem side-effects fora do card**: nada muda no fluxo pra quem já tem acesso ou já está inscrito; a nova UI só aparece na branch `!hasAccess && !(tokens && tokens.balance > 0)`.
-
-## Observações
-
-- O produto "Ticket Desafio Tradicional" (id `1a5b055d-…`) já concede `challenge_tokens_amount: 1` e tem `has_challenge_access: true`, então o backend existente (trigger que credita ticket após pagamento aprovado) já habilita o desafio — não precisa criar novo caminho.
-- Fallback: se o produto não estiver `active` no banco, o bloco extra é omitido e mantém o texto original "Fale com seu coach".
+5. **Validar depois da correção**
+   - Testar criação de pedido para produto de parceiro.
+   - Testar criação de pedido para produto de profissional.
+   - Testar produto agendável, se houver disponível.
+   - Confirmar que o pedido entra em `partner_product_orders` com vendedor, uplines e valores preenchidos.
+   - Confirmar que o checkout PIX/cartão abre a partir desse pedido.
