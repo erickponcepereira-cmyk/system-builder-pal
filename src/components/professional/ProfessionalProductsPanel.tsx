@@ -71,7 +71,26 @@ interface ProProduct {
   delivery_days?: number | null;
   is_mirrored?: boolean;
   mirror_source_product_id?: string | null;
+  // Custom split (SaaS por produto)
+  custom_split?: boolean;
+  skip_tax?: boolean;
+  system_fee_pct_override?: number | null;
+  creator_pct_override?: number | null;
+  network_l1_pct_override?: number | null;
+  network_l2_pct_override?: number | null;
+  network_l3_pct_override?: number | null;
 }
+
+function productSplitOverride(p: Partial<ProProduct> | null | undefined): PartnerSplitOverride | undefined {
+  if (!p?.custom_split) return undefined;
+  return {
+    skipTax: !!p.skip_tax,
+    systemFeePctOverride: p.system_fee_pct_override ?? null,
+    creatorPctOverride: p.creator_pct_override ?? null,
+    networkL1PctOverride: p.network_l1_pct_override ?? null,
+    networkL2PctOverride: p.network_l2_pct_override ?? null,
+    networkL3PctOverride: p.network_l3_pct_override ?? null,
+  };
 
 const WEEKDAYS = [
   { v: 0, l: "Dom" }, { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" },
