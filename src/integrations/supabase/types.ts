@@ -6318,11 +6318,13 @@ export type Database = {
           created_at: string
           creator_id: string
           creator_type: string
-          fixed_amount_brl: number
+          fixed_amount_brl: number | null
           id: string
+          percent_of_net: number | null
           product_id: string
           product_type: string
           responded_at: string | null
+          split_kind: string
           status: string
         }
         Insert: {
@@ -6331,11 +6333,13 @@ export type Database = {
           created_at?: string
           creator_id: string
           creator_type: string
-          fixed_amount_brl: number
+          fixed_amount_brl?: number | null
           id?: string
+          percent_of_net?: number | null
           product_id: string
           product_type: string
           responded_at?: string | null
+          split_kind?: string
           status?: string
         }
         Update: {
@@ -6344,11 +6348,13 @@ export type Database = {
           created_at?: string
           creator_id?: string
           creator_type?: string
-          fixed_amount_brl?: number
+          fixed_amount_brl?: number | null
           id?: string
+          percent_of_net?: number | null
           product_id?: string
           product_type?: string
           responded_at?: string | null
+          split_kind?: string
           status?: string
         }
         Relationships: []
