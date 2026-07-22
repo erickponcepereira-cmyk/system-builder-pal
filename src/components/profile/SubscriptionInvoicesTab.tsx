@@ -98,6 +98,29 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
 
   return (
     <div className="space-y-4 p-2">
+      {overview && (
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase text-white/40">Cadastro</p>
+            <p className="mt-1 text-sm font-bold text-white">{fmtDate(overview.registeredAt)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase text-white/40">Assinante desde</p>
+            <p className="mt-1 text-sm font-bold text-white">{overview.subscriberSince ? fmtMonth(overview.subscriberSince) : "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase text-white/40">Método preferido</p>
+            <p className="mt-1 text-sm font-bold text-white">{overview.preferredMethod ? (METHOD_LABEL[overview.preferredMethod] ?? overview.preferredMethod) : "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-xs uppercase text-primary/80">Próxima cobrança</p>
+            <p className="mt-1 text-sm font-bold text-white">
+              {overview.nextInvoice ? `${fmt(overview.nextInvoice.amount)} · ${fmtDate(overview.nextInvoice.due_date)}` : "Sem fatura em aberto"}
+            </p>
+          </div>
+        </div>
+      )}
+
       {current && current.status !== "paid" && (
         <div className={`rounded-2xl border p-5 ${
           current.status === "blocked" ? "border-red-500/50 bg-red-500/10" :
