@@ -111,3 +111,60 @@ export const checkMyBlockStatus = createServerFn({ method: "GET" })
     if (error) return { blocked: false };
     return { blocked: Boolean(data) };
   });
+
+export const getMyBillingOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const [subRes, invsRes, profRes] = await Promise.all([
+      supabase.from("user_subscriptions").select("*, plan:subscription_plans(*)").eq("user_id", userId).maybeSingle(),
+      supabase.from("subscription_invoices").select("*").eq("user_id", userId).order("reference_month", { ascending: false }).limit(36),
+      supabase.from("profiles").select("id, name, email, created_at, cpf").eq("user_id", userId).maybeSingle(),
+    ]);
+    const sub = subRes.data;
+    const invs = invsRes.data ?? [];
+    const profile = profRes.data;
+
+    const firstInvoice = invs[invs.length - 1] ?? null;
+    const lastPaid = invs.find((i: any) => i.status === "paid") ?? null;
+    const nextInvoice = invs.find((i: any) => i.status === "pending" || i.status === "overdue" || i.status === "blocked") ?? null;
+
+    const methodCount = new Map<string, number>();
+    invs.slice(0, 12).filter((i: any) => i.status === "paid" && i.payment_method).forEach((i: any) => {
+      methodCount.set(i.payment_method, (methodCount.get(i.payment_method) ?? 0) + 1);
+    });
+    let preferredMethod: string | null = null;
+    let max = 0;
+    methodCount.forEach((c, m) => { if (c > max) { max = c; preferredMethod = m; }});
+
+    return {
+      subscription: sub,
+      profile,
+      firstInvoice,
+      lastPaid,
+      nextInvoice,
+      preferredMethod,
+      subscriberSince: firstInvoice?.reference_month ?? sub?.created_at ?? profile?.created_at ?? null,
+      registeredAt: profile?.created_at ?? null,
+    };
+  });
+
+export const getInvoiceReceiptData = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { invoice_id: string }) => z.object({ invoice_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: inv, error } = await supabase
+      .from("subscription_invoices")
+      .select("id, user_id, reference_month, due_date, amount, status, paid_at, payment_method, wallet_source, mp_payment_id")
+      .eq("id", data.invoice_id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!inv) throw new Error("Fatura não encontrada");
+    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+    if (inv.user_id !== userId && !isAdmin) throw new Error("Sem acesso a esta fatura");
+    if (inv.status !== "paid" && inv.status !== "exempted") throw new Error("Apenas faturas pagas geram recibo");
+    const { data: profile } = await supabase
+      .from("profiles").select("name, email, cpf").eq("user_id", inv.user_id).maybeSingle();
+    return { invoice: inv, profile };
+  });
+
