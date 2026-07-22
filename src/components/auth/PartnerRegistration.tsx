@@ -135,6 +135,7 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
     if (!responsibleName.trim()) return setErr("Informe o nome do responsável.");
     if (doc.replace(/\D/g, "").length < (docType === "cnpj" ? 14 : 11)) return setErr(`${docType.toUpperCase()} incompleto.`);
     if (docType === "cpf" && !isValidCPF(doc)) return setErr("CPF inválido. Verifique os dados informados.");
+    if (docType === "cnpj" && !isValidCNPJ(doc)) return setErr("CNPJ inválido. Verifique os dados informados.");
     if (!email.includes("@") || !email.includes(".")) return setErr("E-mail inválido.");
     if (whatsapp.replace(/\D/g, "").length < 10) return setErr("WhatsApp incompleto.");
     if (!isExisting && password.length < 8) return setErr("A senha deve ter no mínimo 8 caracteres.");
