@@ -1,32 +1,25 @@
-## Problema
+## Causa raiz
 
-Modais (novo produto do parceiro/profissional e outros) fecham quando clica fora da área. Também podem fechar via ESC. Usuário quer que só o botão X (ou botões explícitos "Cancelar/Salvar") feche.
+As policies RLS de `product_coproductions` comparam `coaches.profile_id` / `partners.profile_id` diretamente com `auth.uid()`.
 
-## Correção — mudança única em `src/components/ui/dialog.tsx`
+Só que `auth.uid()` retorna o **user_id** do Supabase Auth, enquanto `profile_id` referencia `profiles.id` — e no banco `profiles.id != profiles.user_id` em todos os 115 perfis. Ou seja, a condição nunca casa, e qualquer INSERT (mesmo pelo dono legítimo) cai em "new row violates row-level security policy".
 
-Como todos os modais do sistema usam esse `DialogContent` compartilhado, um único ajuste corrige globalmente parceiro, profissional, admin, aluno, etc.
+## Correção
 
-Alterar `DialogContent` para bloquear fechamento por clique fora e por ESC, mantendo o botão X e chamadas programáticas (`setOpen(false)`, `<DialogClose />`) funcionando normalmente:
+Migration única reescrevendo as 4 policies (`insert`, `read`, `update`, `delete`) de `public.product_coproductions` para atravessar `profiles`:
 
-```tsx
-<DialogPrimitive.Content
-  ref={ref}
-  onPointerDownOutside={(e) => e.preventDefault()}
-  onInteractOutside={(e) => e.preventDefault()}
-  onEscapeKeyDown={(e) => e.preventDefault()}
-  className={...}
-  {...props}  // continua permitindo override caso um modal específico queira reativar
->
+```
+EXISTS (SELECT 1 FROM coaches c
+        JOIN profiles p ON p.id = c.profile_id
+        WHERE c.id = product_coproductions.creator_id
+          AND p.user_id = auth.uid())
 ```
 
-Como o spread `{...props}` vem depois, qualquer diálogo que precise do comportamento antigo pode passar seus próprios handlers e sobrescrever.
+E o equivalente para `partners` e para os ramos `collaborator_*`.
 
-## Fora de escopo
-
-- Não mexer em `AlertDialog` (já é modal "forçado" por natureza — decisão sim/não).
-- Não mexer em `Sheet`, `Drawer`, `Popover` — só o `Dialog`, que é o que aparece nos "novos produto" e nos modais de cadastro.
-- Sem mudanças de layout/visual, sem mudanças de lógica de negócio.
+Sem mudanças de código de aplicação — o `inviteCoproducer` já envia `creator_type`/`creator_id` corretos.
 
 ## Verificação
 
-- Abrir modal de novo produto no painel parceiro e no profissional; clicar fora → deve permanecer aberto; ESC → permanecer aberto; X → fecha; Cancelar/Salvar → fecha.
+- Rodar `supabase--linter` após a migration.
+- Confirmar que a Delma consegue salvar coprodutor no modal do print.
