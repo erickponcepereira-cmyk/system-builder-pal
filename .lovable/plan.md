@@ -1,38 +1,39 @@
-## Diagnóstico confirmado
+## Objetivo
+Quando a mensalidade de um parceiro ou profissional for paga, todos os alunos vinculados como colaboradores dessa conta devem receber automaticamente, referente àquele mês:
+- 1 ticket do desafio (`student_challenge_tokens`)
+- Renovação de 30 dias do desafio no `card_valid_until` do aluno
 
-- No cadastro da Luana Martins (`lumartinssantana@gmail.com`), a mensalidade atual está **pendente** e vinculada à última tentativa de cartão recusada.
-- As tentativas de mensalidade foram recusadas pelo Mercado Pago com `cc_rejected_high_risk`.
-- A anuidade teve várias tentativas/pedidos antigos pendentes; uma tentativa posterior de anuidade foi aprovada. Isso deixa o fluxo confuso porque pedidos/faturas antigos continuam existindo e o app não oferece uma ação clara de “nova tentativa limpa”.
-- Pelo que foi verificado, o erro da mensalidade não parece ser “cobrança duplicada” em si; é uma recusa de risco do cartão. Mas o sistema precisa tratar isso melhor para o usuário não ficar preso.
+Vale para todo mês em que a mensalidade for quitada, e vale para parceiro e profissional.
 
-## Plano de correção
+## Diagnóstico atual
+- Colaborador profissional: linha em `students` com `professional_coach_id = coach.id` do profissional.
+- Colaborador parceiro: linha em `students` com `partner_id = partner.id`.
+- Ticket do desafio hoje só é criado pelo trigger `grant_challenge_token_on_paid`, que roda em compras (`transactions.paid`) — não roda para pagamento de mensalidade.
+- Pagamento de mensalidade passa pela RPC `process_subscription_invoice_payment`, que só marca a fatura como `paid` sem tocar em colaboradores.
+- Resultado: as 2 colaboradoras da Delma nunca receberam ticket nem os 30 dias, mesmo com a mensalidade dela paga.
 
-1. **Corrigir o checkout para tentativas recusadas**
-   - Quando Mercado Pago retornar `cc_rejected_high_risk` ou outra recusa de cartão, mostrar mensagem amigável em português.
-   - Orientar a pessoa a tentar PIX, outro cartão ou uma nova tentativa, em vez de deixar o erro técnico na tela.
-   - Não manter uma tentativa recusada como se fosse a tentativa “ativa” da fatura.
+## O que vamos construir
 
-2. **Adicionar “Gerar nova tentativa de pagamento” para mensalidade**
-   - Criar uma ação segura que limpa o vínculo da fatura com pagamento recusado/cancelado e mantém a fatura pendente.
-   - Não duplicar a mensalidade do mesmo mês.
-   - Resetar status bloqueado/atrasado para pendente quando o admin já adiou ou liberou uma nova tentativa válida.
-   - Registrar a ação no histórico da fatura.
+### 1. Migração (banco)
+- Nova coluna `student_challenge_tokens.source_subscription_invoice_id uuid` (nullable) + índice único parcial `(student_id, source_subscription_invoice_id) WHERE source_subscription_invoice_id IS NOT NULL` — garante idempotência por fatura + aluno.
+- Nova função `public.grant_collab_monthly_benefits(_invoice_id uuid)`:
+  - Lê a fatura e o `user_id` dono dela.
+  - Descobre `partner_id` e/ou `professional_coach_id` associados a esse `user_id` (via `partners.profile_id` e `coaches.profile_id` com `is_professional=true`).
+  - Seleciona todos os `students` com `partner_id` ou `professional_coach_id` correspondentes.
+  - Para cada aluno colaborador:
+    - `UPDATE students SET card_valid_until = GREATEST(COALESCE(card_valid_until, now()), now()) + INTERVAL '30 days'` (só se ainda não houver token daquele invoice para aquele aluno — mantém idempotência).
+    - `INSERT INTO student_challenge_tokens (student_id, source_subscription_invoice_id, granted_by, notes)` com `granted_by = 'purchase'` e nota "Colaborador — mensalidade <mês>".
+- Novo trigger `trg_grant_collab_on_invoice_paid` em `subscription_invoices` AFTER INSERT OR UPDATE: quando `NEW.status = 'paid'` e (INSERT ou `OLD.status <> 'paid'`), chama `grant_collab_monthly_benefits(NEW.id)`.
+- Ajuste em `revert_subscription_invoice_payment` (se existir): apagar tokens não consumidos daquela fatura e recuar `card_valid_until` em 30 dias (só se o token daquele invoice existia). Se ficar arriscado, deixamos apenas os tokens sendo removidos e mantemos o card — comento no plano final antes de aplicar.
+- Backfill: para cada fatura já `paid` do último mês de referência da Delma (e demais parceiros/profissionais), rodar `grant_collab_monthly_benefits` uma vez — o índice único evita duplicar caso já exista.
 
-3. **Melhorar anuidade/ativação para não acumular pedidos soltos**
-   - No fluxo de Coach, Profissional e Parceiro, antes de criar novo pedido de anuidade, procurar um pedido pendente existente do mesmo usuário/produto.
-   - Se o pedido antigo estiver com pagamento recusado/cancelado, permitir nova tentativa limpa no mesmo pedido ou criar uma nova tentativa sem bloquear o usuário.
-   - Evitar vários pedidos pendentes antigos aparecendo como possíveis cobranças abertas.
+### 2. Sem mudança de UI necessária
+O aluno colaborador já enxerga o ticket na aba Desafio (via `student_challenge_tokens`) e o acesso pelos `card_valid_until`. Não precisa alterar frontend.
 
-4. **Adicionar ação no Admin > Mensalidades**
-   - Na lista de faturas pendentes/atrasadas/bloqueadas, incluir botão “Nova tentativa”.
-   - Esse botão será usado quando o pagamento ficou preso em uma tentativa recusada ou antiga.
-   - Manter os botões atuais de “Adiar”, “Pago PIX”, “Pago Cartão”, “Isentar” e “Restaurar data”.
+### 3. Verificação
+- Rodar SELECT confirmando que as 2 colaboradoras da Delma receberam ticket + `card_valid_until` estendido.
+- Simular novo pagamento (ou revert + repay) para conferir que só gera 1 token por fatura por aluno.
 
-5. **Ajustar a mensalidade atual da Luana**
-   - Depois da correção estrutural, limpar a tentativa recusada vinculada à fatura atual dela e deixá-la pronta para nova tentativa de pagamento.
-   - Como você adiou manualmente, a correção deve preservar o novo vencimento e permitir que ela pague sem criar uma mensalidade duplicada.
-
-6. **Validação**
-   - Conferir no banco que a fatura da Luana continua única para o mês atual.
-   - Conferir que pagamentos recusados continuam no histórico, mas não travam novas tentativas.
-   - Conferir que anuidade e mensalidade conseguem abrir novo checkout após recusa.
+## Regras / observações
+- O aluno colaborador que também é coach/parceiro/profissional continua excluído do desafio pelas regras existentes de "aluno puro"; o ticket é gerado mas o consumo respeita as regras atuais (mesma política do trigger de compra). Se quiser que eu bloqueie a geração para não-puros também aqui, sinaliza — não fiz por padrão para manter paridade com `grant_challenge_token_on_paid`.
+- Faturas isentas (`exempted`) NÃO liberam benefícios — só `paid`. Se quiser incluir isentas, avisar.
