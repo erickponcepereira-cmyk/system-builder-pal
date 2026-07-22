@@ -528,7 +528,7 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
     if (lastErr) throw new Error(lastErr.message);
   }
 
-  await supabaseAdmin.from("profiles").update({ status: "active", role: "coach" }).eq("id", profile.id);
+  await supabaseAdmin.from("profiles").update({ status: "pending", role: "coach" }).eq("id", profile.id);
   await ensureStudentForProfile(profile.id, input.uplineCoachId);
   return { ok: true, profileId: profile.id };
 }
