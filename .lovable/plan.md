@@ -1,33 +1,54 @@
 
-## Diagnóstico (confirmado no banco)
+## Diagnóstico (verificado no banco)
 
-Consultei `mercadopago_payments` para os e‑mails da Luana. A fatura de mensalidade (`63ce91d2-51de-4505-855f-8a822889e89f`, R$ 100) tem **5 tentativas de cartão** entre 21/07 e 22/07, todas com `status=rejected` e `status_detail=cc_rejected_high_risk`. No mesmo período, outra tentativa dela em `store_orders` com o mesmo cartão também caiu em `cc_rejected_high_risk`, e apenas 1 store_order foi aprovada (valor menor / contexto diferente).
+**Nathan (screenshot):** `role='admin'`, sem registro em `coaches`, sem `commissions`, sem linha em `wallets`. A carteira dele está em R$ 0,00 porque **não há nada a exibir** — ele está usando o painel Coach via role‑switcher de admin, mas não é beneficiário de nenhuma comissão. Isso está correto e não é bug.
 
-`cc_rejected_high_risk` é uma decisão **antifraude do Mercado Pago sobre aquele cartão + perfil de compra** — não é bug do nosso código. Nenhuma retentativa com o mesmo cartão vai passar; MP recomenda outro meio (PIX, outro cartão) ou revisão pelo próprio portador com o banco emissor.
+**O bug real (encontrado varrendo todas as carteiras):** existem **11 coaches** com comissões reais e **sem linha em `public.wallets`**. Como o `getWalletSplit` (refatorado há alguns turnos) lê direto de `wallets.available_balance`, esses coaches vêem R$ 0,00 mesmo tendo saldo. Valores hoje travados:
 
-O código já usa idempotency key única por tentativa, já limpa `mp_payment_id` da fatura em status rejeitado e já mostra a mensagem amigável. O que falta é (a) reduzir o score de risco enviando dados completos do pagador (hoje só mandamos `email` na init do Brick — nem nome nem CPF), (b) oferecer o caminho de escape com clareza no primeiro high_risk, e (c) dar ao admin uma ação de "marcar como paga manualmente" pra desbloquear a Luana agora sem esperar cartão novo.
+| Coach ID | Disponível | Pendente | # comissões |
+|---|---:|---:|---:|
+| 0dc01639… | 569,76 | 102,71 | 97 |
+| 981348d5… | 374,82 | 29,76 | 21 |
+| f25c12d0… | 186,62 | 63,80 | 66 |
+| f9a44c8a… | 183,90 | 7,75 | 16 |
+| a02409f6… | 65,76 | 133,35 | 7 |
+| c261b7a2… | 118,96 | 0,00 | 6 |
+| ac5ba444… | 0,00 | 69,78 | 3 |
+| 02447f14… | 65,76 | 0,00 | 3 |
+| 70fb77b4… | 0,00 | 63,57 | 1 |
+| 91747bd9… | 0,00 | 63,57 | 1 |
+| 77067d2a… | 1,32 | 0,00 | 5 |
 
-## Mudanças
+Total travado ≈ **R$ 1.567 disponível + R$ 534 pendente**.
 
-### 1. Enviar payer completo pro Brick de cartão (`src/components/payments/MercadoPagoCheckout.tsx`)
-Passar `payer: { email, firstName, lastName, identification: { type: "CPF", number } }` na `initialization` do Brick quando tivermos nome/CPF. Isso melhora o score antifraude em faturas de mensalidade (hoje a `SubscriptionInvoicesTab` já busca `state.payer` mas o componente descarta nome/doc na init).
+Confirmado com contraprovas: comissões vs `wallets`, `partner_wallets`, `professional_wallets` batem em todos os demais beneficiários (nenhum saldo negativo, nenhum saldo órfão positivo). O problema é exclusivamente a **ausência da linha em `wallets`** para esses 11.
 
-### 2. Fallback automático pra PIX após high_risk (`MercadoPagoCheckout.tsx`)
-Quando `statusDetail === "cc_rejected_high_risk"`, além do botão "Tentar cartão novamente" mostrar um botão primário "Pagar com PIX" que faz `setTab("pix")`. Texto explicativo curto: "O cartão foi recusado pela análise de risco do Mercado Pago. PIX costuma aprovar na hora."
+**Causa raiz:** `recalc_wallet_for_profile` / `recalc_wallets_for_owner` fazem `UPDATE ... WHERE profile_id=?` sem `INSERT` prévio quando a linha não existe. A linha em `wallets` só é criada em outros caminhos (aprovação de coach, primeiro saque, etc.); coaches antigos ou aprovados por caminhos alternativos ficaram sem essa linha e todo `recalc` subsequente é no‑op.
 
-### 3. Ação admin "Marcar fatura como paga manualmente" (`admin.subscriptions.tsx` + `src/lib/admin-subscriptions.functions.ts`)
-Novo server fn `adminMarkInvoicePaidManual({ invoice_id, method: 'manual_admin', note })` que chama a mesma RPC `process_subscription_invoice_payment` com `_method='manual_admin'`, `_wallet_source='external'`, `_fee_amount=0`, `_performed_by=<admin uid>`. Botão discreto na linha da fatura (ao lado de "Pular mês"), com confirmação e campo de observação, gravado no `subscription_invoice_audit`.
+## Correções
 
-### 4. Desbloqueio pontual da Luana
-Registrar a fatura `63ce91d2-51de-4505-855f-8a822889e89f` como paga manualmente (método `manual_admin`, observação "Cartão bloqueado por antifraude MP — pagamento acordado fora do app"), executando o mesmo RPC via `supabase--migration`. Assim ela sai do bloqueio hoje sem depender de novo cartão.
+### 1. Migração — tornar `recalc_wallet_for_profile` idempotente e auto‑criadora
+Reescrever a função para **`INSERT ... ON CONFLICT DO UPDATE`** em `wallets`, preenchendo `available_balance`, `pending_balance`, `total_earned`, `total_withdrawn` a partir de `commissions` + `withdrawal_requests` + débitos de mensalidade paga com carteira (mesma lógica que já usa hoje). `recalc_wallets_for_owner` continua chamando essa função — passa a criar a linha quando faltar.
+
+### 2. Migração — backfill dos 11 coaches
+No final da migração acima, `SELECT recalc_wallet_for_profile(c.id) FROM coaches c WHERE NOT EXISTS (SELECT 1 FROM wallets w WHERE w.profile_id=c.id) AND EXISTS (SELECT 1 FROM commissions x WHERE x.beneficiary_coach_id=c.id);`. Não hardcode dos 11 IDs — a query varre todos, então pega qualquer futuro caso do mesmo tipo se aparecer antes do deploy.
+
+### 3. Migração — reconciliação total pós‑fix
+Um `DO $$ ... $$` que roda `recalc_wallet_for_profile` para todos os beneficiários distintos em `commissions` (coach + profile). Garante que qualquer outra dessincronização silenciosa (não detectada nas minhas queries porque exigiria comparar somas em cada tabela) seja resolvida no mesmo deploy. Custo: baixo, poucas centenas de coaches.
+
+### 4. Server fn admin de reconciliação sob demanda
+`adminRecalcAllWallets()` em `src/lib/admin-financial.functions.ts` (protegida por `assertAdmin`) que executa o mesmo laço da etapa 3. Botão discreto no `admin.payments.tsx` ("Reconciliar carteiras") para uso futuro sem precisar de migração. Sem loading state complexo — só spinner + toast.
+
+### 5. Guardrail — trigger em `commissions`
+Adicionar/ajustar `AFTER INSERT OR UPDATE OR DELETE ON commissions` para chamar `recalc_wallet_for_profile(NEW.beneficiary_coach_id)` (e `OLD` quando aplicável). Se o trigger já existe, apenas confirmar o corpo. Como o `recalc` agora faz upsert, futuras comissões nunca mais ficam sem linha em `wallets`.
 
 ## Fora do escopo
-
-- Não vamos tentar "burlar" o high_risk mudando idempotency, CPF fake, ou trocando conta MP — a rejeição é do adquirente sobre o cartão dela.
-- Não muda taxas, RLS, nem lógica de carteira.
+- Não mexo em `partner_wallets` / `professional_wallets` / `student_wallets` — já batem 100%.
+- Não mexo na UI da carteira — o problema é servidor/dados, não front.
+- Não crio linha `wallets` para o Nathan (ele não é coach; a exibição zerada dele está correta).
 
 ## Detalhes técnicos
-
-- Nome dividido em `firstName`/`lastName` com `payer.name.split(" ")` (primeiro token e resto), CPF só dígitos.
-- `adminMarkInvoicePaidManual` reutiliza `process_subscription_invoice_payment` já existente; nada de nova RPC.
-- A limpeza da fatura para nova tentativa PIX já funciona (validei em `handleCreatePix` + `clearRejectedSourcePointer`).
+- Enum `commission_status` no projeto: `pending | available | withdrawn | cancelled` (usar exatamente esses valores).
+- `wallets.profile_id` referencia `coaches.id` (não `profiles.user_id`) — o upsert usa o coach_id.
+- `total_earned` = soma de `available + pending + withdrawn`; `total_withdrawn` = soma `withdrawal_requests` com status `paid` ou `approved` para aquele coach (mesma regra do código existente).
+- Migração é read‑then‑write pura em `public.wallets`; não altera policies, grants nem enums.
