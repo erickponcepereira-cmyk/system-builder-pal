@@ -27,19 +27,25 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface Props { walletSource: "coach" | "partner" | "professional" }
 
+const METHOD_LABEL: Record<string, string> = { pix: "PIX", card: "Cartão", wallet: "Carteira interna", auto_debit: "Débito automático", manual_admin: "Manual" };
+
 export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const [state, setState] = useState<any>(null);
+  const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [mpMethod, setMpMethod] = useState<"pix" | "card" | null>(null);
   const [isTest, setIsTest] = useState(false);
 
   const fnGet = useServerFn(getMySubscription);
+  const fnOverview = useServerFn(getMyBillingOverview);
+  const fnReceipt = useServerFn(getInvoiceReceiptData);
   const fnUpd = useServerFn(updateMySubscriptionPrefs);
   const fnPay = useServerFn(payInvoiceWithWallet);
   const fnEnsure = useServerFn(ensureMySubscription);
   const fnIsTest = useServerFn(getIsTestUser);
   const fnTestPay = useServerFn(simulateTestPayInvoice);
+
 
   const load = async () => {
     setLoading(true);
