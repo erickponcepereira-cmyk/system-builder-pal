@@ -19,6 +19,7 @@ import {
   type BucketCommissionRow,
   type FeesAndTaxesOverview,
   type PendingFeeRow,
+  adminReconcileAllWallets,
 } from "@/lib/admin-financial.functions";
 import { reconcileMpPayment, listPendingMpPayments } from "@/lib/mp-reconcile.functions";
 import { runReferralSelfTest, type ReferralSelfTestResult } from "@/lib/referral-selftest.functions";
@@ -172,6 +173,7 @@ function AdminFinanceiro() {
         <div className="flex flex-wrap items-center gap-2">
           <ReferralSelfTestButton />
           <ReconcileButton onDone={reload} />
+          <ReconcileWalletsButton onDone={reload} />
         </div>
       </div>
 
@@ -1067,5 +1069,32 @@ function ReferralSelfTestButton() {
         </div>
       )}
     </>
+  );
+}
+
+function ReconcileWalletsButton({ onDone }: { onDone: () => void }) {
+  const call = useServerFn(adminReconcileAllWallets);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (!confirm("Recalcular saldos de todas as carteiras a partir das comissões? Pode levar alguns segundos.")) return;
+    setBusy(true);
+    try {
+      const r = await call();
+      toast.success(`Carteiras reconciliadas: ${r.count}`);
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao reconciliar carteiras");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      onClick={run}
+      disabled={busy}
+      className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-50"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} /> Reconciliar carteiras
+    </button>
   );
 }
