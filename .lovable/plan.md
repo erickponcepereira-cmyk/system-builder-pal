@@ -1,39 +1,42 @@
-## Objetivo
-Quando a mensalidade de um parceiro ou profissional for paga, todos os alunos vinculados como colaboradores dessa conta devem receber automaticamente, referente àquele mês:
-- 1 ticket do desafio (`student_challenge_tokens`)
-- Renovação de 30 dias do desafio no `card_valid_until` do aluno
 
-Vale para todo mês em que a mensalidade for quitada, e vale para parceiro e profissional.
+## Diagnóstico (confirmado no banco)
 
-## Diagnóstico atual
-- Colaborador profissional: linha em `students` com `professional_coach_id = coach.id` do profissional.
-- Colaborador parceiro: linha em `students` com `partner_id = partner.id`.
-- Ticket do desafio hoje só é criado pelo trigger `grant_challenge_token_on_paid`, que roda em compras (`transactions.paid`) — não roda para pagamento de mensalidade.
-- Pagamento de mensalidade passa pela RPC `process_subscription_invoice_payment`, que só marca a fatura como `paid` sem tocar em colaboradores.
-- Resultado: as 2 colaboradoras da Delma nunca receberam ticket nem os 30 dias, mesmo com a mensalidade dela paga.
+Fatura da mensalidade de julho do Lucinei (`779c3d28…`, R$ 100, `payment_method='wallet'`, `wallet_source='coach'`, `status='paid'`, paga em 20/07) existe, mas:
 
-## O que vamos construir
+- `wallets` do Lucinei está com `available_balance = 374.82` e `total_withdrawn = 0.00` — ou seja, os R$ 100 nunca foram descontados de fato.
+- Não aparece em `withdrawal_requests`, portanto não aparece em Admin → Pagamentos, nem no histórico de saques da carteira, nem nos relatórios.
 
-### 1. Migração (banco)
-- Nova coluna `student_challenge_tokens.source_subscription_invoice_id uuid` (nullable) + índice único parcial `(student_id, source_subscription_invoice_id) WHERE source_subscription_invoice_id IS NOT NULL` — garante idempotência por fatura + aluno.
-- Nova função `public.grant_collab_monthly_benefits(_invoice_id uuid)`:
-  - Lê a fatura e o `user_id` dono dela.
-  - Descobre `partner_id` e/ou `professional_coach_id` associados a esse `user_id` (via `partners.profile_id` e `coaches.profile_id` com `is_professional=true`).
-  - Seleciona todos os `students` com `partner_id` ou `professional_coach_id` correspondentes.
-  - Para cada aluno colaborador:
-    - `UPDATE students SET card_valid_until = GREATEST(COALESCE(card_valid_until, now()), now()) + INTERVAL '30 days'` (só se ainda não houver token daquele invoice para aquele aluno — mantém idempotência).
-    - `INSERT INTO student_challenge_tokens (student_id, source_subscription_invoice_id, granted_by, notes)` com `granted_by = 'purchase'` e nota "Colaborador — mensalidade <mês>".
-- Novo trigger `trg_grant_collab_on_invoice_paid` em `subscription_invoices` AFTER INSERT OR UPDATE: quando `NEW.status = 'paid'` e (INSERT ou `OLD.status <> 'paid'`), chama `grant_collab_monthly_benefits(NEW.id)`.
-- Ajuste em `revert_subscription_invoice_payment` (se existir): apagar tokens não consumidos daquela fatura e recuar `card_valid_until` em 30 dias (só se o token daquele invoice existia). Se ficar arriscado, deixamos apenas os tokens sendo removidos e mantemos o card — comento no plano final antes de aplicar.
-- Backfill: para cada fatura já `paid` do último mês de referência da Delma (e demais parceiros/profissionais), rodar `grant_collab_monthly_benefits` uma vez — o índice único evita duplicar caso já exista.
+Causa raiz: `process_subscription_invoice_payment` até faz `UPDATE wallets SET available_balance = available_balance - v_debit, total_withdrawn = total_withdrawn + v_debit`, mas o motor central `recalc_wallets_for_owner` (chamado por triggers em `commissions`, `withdrawal_requests`, `partner_product_orders`, `network_unlock_history`) recomputa `available_balance` e `total_withdrawn` a partir SOMENTE de `commissions` + `withdrawal_requests`. Qualquer evento posterior sobrescreve o débito da mensalidade. Além disso, nenhuma UI de histórico/pagamentos consulta `subscription_invoices` pagas por carteira.
 
-### 2. Sem mudança de UI necessária
-O aluno colaborador já enxerga o ticket na aba Desafio (via `student_challenge_tokens`) e o acesso pelos `card_valid_until`. Não precisa alterar frontend.
+## O que vou implementar
 
-### 3. Verificação
-- Rodar SELECT confirmando que as 2 colaboradoras da Delma receberam ticket + `card_valid_until` estendido.
-- Simular novo pagamento (ou revert + repay) para conferir que só gera 1 token por fatura por aluno.
+### 1) Migration — tornar o débito da mensalidade a fonte de verdade
 
-## Regras / observações
-- O aluno colaborador que também é coach/parceiro/profissional continua excluído do desafio pelas regras existentes de "aluno puro"; o ticket é gerado mas o consumo respeita as regras atuais (mesma política do trigger de compra). Se quiser que eu bloqueie a geração para não-puros também aqui, sinaliza — não fiz por padrão para manter paridade com `grant_challenge_token_on_paid`.
-- Faturas isentas (`exempted`) NÃO liberam benefícios — só `paid`. Se quiser incluir isentas, avisar.
+- Ampliar `recalc_wallets_for_owner` para somar, por `wallet_source` (`coach`/`partner`/`professional`), todas as `subscription_invoices` com `status='paid'` e `payment_method='wallet'` do usuário, aplicando o mesmo padrão de cascata já usado para withdrawals: cada valor é subtraído do saldo bruto do wallet de origem e somado a `total_withdrawn` daquele wallet.
+- Ajustar `wallets_audit_invariant` se necessário para aceitar o novo componente.
+- Backfill: rodar `recalc_wallets_for_owner` para todo profile que tem invoice paga via wallet (hoje só o Lucinei) — vai corrigir a carteira dele para o valor certo automaticamente.
+
+### 2) Migration — histórico da carteira do coach/parceiro/profissional
+
+Adicionar uma view ou branch nas funções que alimentam o histórico da carteira (`coach-wallet-history.functions.ts`, `PartnerWalletTab`, `ProfessionalWalletTab`) para incluir, além de comissões e saques, as linhas de `subscription_invoices` pagas por carteira como movimento tipo "Mensalidade paga com carteira" (débito), com data = `paid_at` e valor = `amount`. Feito no lado do server function (SQL), sem UI nova.
+
+### 3) Admin → Pagamentos
+
+Em `admin.payments.tsx`, incluir uma seção/aba (ou juntar à lista principal) mostrando `subscription_invoices` pagas via carteira, com nome/e-mail do usuário, mês de referência, valor, wallet_source, `paid_at`. Assim toda mensalidade paga com carteira interna fica visível para o admin.
+
+### 4) Relatórios financeiros
+
+Em `admin-financial.functions.ts` / `admin-reports.functions.ts` (onde a receita/entrada de mensalidade é apurada), garantir que as invoices pagas via wallet entrem no relatório como receita da plataforma (já entra em `admin_system_wallet_entries` como `kind='subscription'` — confirmar que o relatório lê essa fonte; se ler `transactions`, incluir também as invoices).
+
+### 5) Sanity check pós-deploy
+
+- Rodar `SELECT recalc_wallets_for_owner('d0f05985-…')` e confirmar que `available_balance` do Lucinei cai para R$ 274,82 e `total_withdrawn = 100,00`.
+- Confirmar que o histórico da carteira dele passa a mostrar "Mensalidade 07/2026 — R$ 100,00".
+- Confirmar que a fatura aparece em Admin → Pagamentos.
+
+## Detalhes técnicos
+
+- Toda mudança de saldo é feita via `recalc_wallets_for_owner` — não vou criar caminhos paralelos.
+- O `process_subscription_invoice_payment` deixa de manipular `wallets` diretamente e passa a apenas marcar a invoice como paga + creditar `admin_system_wallet`; em seguida chama `recalc_wallets_for_owner` (main), `recalc_partner_wallet` ou `recalc_professional_wallet` conforme `wallet_source`. Isso elimina a divergência entre "débito imediato" e "recalc posterior".
+- Adiciono uma trigger `AFTER UPDATE OF status ON subscription_invoices` que dispara o recalc do wallet do usuário quando a invoice vira `paid` (garante consistência mesmo se algum caminho legado marcar `paid` sem passar pela função).
+- Nenhum campo público novo é exposto; nada muda para usuários que pagam por cartão/pix.
