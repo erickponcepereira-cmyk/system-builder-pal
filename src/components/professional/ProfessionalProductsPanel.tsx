@@ -13,6 +13,7 @@ import {
   COACH_COMMISSION_OPTIONS,
   type CoachCommissionPct,
   type PartnerPriceMode,
+  type PartnerSplitOverride,
 } from "@/lib/partnerFinance";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
@@ -70,7 +71,29 @@ interface ProProduct {
   delivery_days?: number | null;
   is_mirrored?: boolean;
   mirror_source_product_id?: string | null;
+  // Custom split (SaaS por produto)
+  custom_split?: boolean;
+  skip_tax?: boolean;
+  system_fee_pct_override?: number | null;
+  creator_pct_override?: number | null;
+  network_l1_pct_override?: number | null;
+  network_l2_pct_override?: number | null;
+  network_l3_pct_override?: number | null;
 }
+
+function productSplitOverride(p: Partial<ProProduct> | null | undefined): PartnerSplitOverride | undefined {
+  if (!p?.custom_split) return undefined;
+  return {
+    skipTax: !!p.skip_tax,
+    systemFeePctOverride: p.system_fee_pct_override ?? null,
+    creatorPctOverride: p.creator_pct_override ?? null,
+    networkL1PctOverride: p.network_l1_pct_override ?? null,
+    networkL2PctOverride: p.network_l2_pct_override ?? null,
+    networkL3PctOverride: p.network_l3_pct_override ?? null,
+  };
+}
+
+
 
 const WEEKDAYS = [
   { v: 0, l: "Dom" }, { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" },
@@ -186,9 +209,10 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     } else {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
+      const split = productSplitOverride(editing);
       const b = mode === "receive"
-        ? computeFromReceive(editing.professional_net_amount || 0, pct)
-        : computeFromCharge(editing.price || 0, pct);
+        ? computeFromReceive(editing.professional_net_amount || 0, pct, "card", undefined, split)
+        : computeFromCharge(editing.price || 0, pct, "card", undefined, split);
       if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
       if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
       payload = {
@@ -751,23 +775,25 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
   const mode = (product.price_input_mode || "charge") as PartnerPriceMode;
   const pct = (product.coach_commission_percentage || 10) as CoachCommissionPct;
   const [method, setMethod] = useState<"pix" | "card">("card");
+  const split = productSplitOverride(product);
+  const isCustom = !!split;
 
   const charge = Number(product.price) || 0;
   const receive = Number(product.professional_net_amount) || 0;
 
   const breakdown = mode === "receive"
-    ? computeFromReceive(receive, pct, method)
-    : computeFromCharge(charge, pct, method);
+    ? computeFromReceive(receive, pct, method, undefined, split)
+    : computeFromCharge(charge, pct, method, undefined, split);
 
   const updateCharge = (n: number) => onChange({ price: n });
   const updateReceive = (n: number) => {
-    const inv = computeFromReceive(n, pct, method);
+    const inv = computeFromReceive(n, pct, method, undefined, split);
     onChange({ professional_net_amount: n, price: inv.gross });
   };
 
   const switchMode = (next: PartnerPriceMode) => {
     if (next === "receive") {
-      const b = computeFromCharge(charge, pct, method);
+      const b = computeFromCharge(charge, pct, method, undefined, split);
       onChange({ price_input_mode: next, professional_net_amount: Math.max(0, b.partnerNet) });
     } else {
       onChange({ price_input_mode: next, price: breakdown.gross });
@@ -776,7 +802,7 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
 
   const changePct = (next: CoachCommissionPct) => {
     if (mode === "receive") {
-      const inv = computeFromReceive(receive, next, method);
+      const inv = computeFromReceive(receive, next, method, undefined, split);
       onChange({ coach_commission_percentage: next, price: inv.gross });
     } else {
       onChange({ coach_commission_percentage: next });
@@ -786,16 +812,27 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
   const changeMethod = (m: "pix" | "card") => {
     setMethod(m);
     if (mode === "receive") {
-      const inv = computeFromReceive(receive, pct, m);
+      const inv = computeFromReceive(receive, pct, m, undefined, split);
       onChange({ price: inv.gross });
     }
   };
+
+  const fmtPct = (n: number) => `${Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+  const creatorPctLabel = isCustom && split?.creatorPctOverride != null
+    ? fmtPct(Number(split.creatorPctOverride))
+    : null;
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
       <div className="flex items-center gap-2 text-xs font-bold text-primary">
         <DollarSign className="h-3.5 w-3.5" /> Financeiro do produto
       </div>
+
+      {isCustom && (
+        <div className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+          Este produto usa <strong>regras financeiras personalizadas</strong> configuradas pelo admin. Os campos abaixo respeitam essa cascata específica.
+        </div>
+      )}
 
       <div className="flex rounded-lg bg-black/40 p-0.5">
         <button type="button" onClick={() => switchMode("charge")}
@@ -838,33 +875,45 @@ function PaidPricingEditor({ product, onChange }: { product: Partial<ProProduct>
         </div>
       </div>
 
-      <div>
-        <label className="text-xs text-white/60">Comissão para o coach vendedor (10% a 50%)</label>
-        <div className="mt-1 grid grid-cols-5 gap-1.5">
-          {COACH_COMMISSION_OPTIONS.map(opt => (
-            <button key={opt} type="button" onClick={() => changePct(opt)}
-              className={`rounded-lg py-1.5 text-xs font-bold transition ${pct === opt ? "bg-primary text-primary-foreground" : "bg-black/40 text-white/60 hover:text-white"}`}>
-              {opt}%
-            </button>
-          ))}
+      {!isCustom && (
+        <div>
+          <label className="text-xs text-white/60">Comissão para o coach vendedor (10% a 50%)</label>
+          <div className="mt-1 grid grid-cols-5 gap-1.5">
+            {COACH_COMMISSION_OPTIONS.map(opt => (
+              <button key={opt} type="button" onClick={() => changePct(opt)}
+                className={`rounded-lg py-1.5 text-xs font-bold transition ${pct === opt ? "bg-primary text-primary-foreground" : "bg-black/40 text-white/60 hover:text-white"}`}>
+                {opt}%
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-white/40">Essa % é o que vai para o coach que vender o produto. O restante (após taxas) fica com você.</p>
         </div>
-        <p className="mt-1 text-[10px] text-white/40">Essa % é o que vai para o coach que vender o produto. O restante (após taxas) fica com você.</p>
-      </div>
+      )}
 
       <div className="rounded-lg bg-black/40 p-2.5 text-[11px] space-y-1">
         <BreakdownLine label="Valor cobrado do cliente" value={breakdown.gross} bold />
         <BreakdownLine label={`− Taxa ${method === "pix" ? "PIX (0,99%)" : "cartão (4,98%)"}`} value={-breakdown.paymentFee} muted />
-        <BreakdownLine label="− Reserva fiscal estimada (6%)" value={-breakdown.tax} muted />
-        <BreakdownLine label="− Taxa do sistema (5%)" value={-breakdown.systemFee} muted />
-        <BreakdownLine label={`− Comissão coach (${pct}%)`} value={-breakdown.coachCommission} muted />
+        {breakdown.taxPct > 0 && (
+          <BreakdownLine label={`− Reserva fiscal (${fmtPct(breakdown.taxPct)})`} value={-breakdown.tax} muted />
+        )}
+        <BreakdownLine label={`− Taxa do sistema (${fmtPct(breakdown.systemFeePct)})`} value={-breakdown.systemFee} muted />
+        <BreakdownLine
+          label={`− Cadeia comercial (${fmtPct(breakdown.coachCommissionPct)})`}
+          value={-breakdown.coachCommission}
+          muted
+        />
         <div className="my-1 border-t border-white/10" />
-        <BreakdownLine label="✓ Líquido para você" value={breakdown.partnerNet} highlight />
+        <BreakdownLine
+          label={creatorPctLabel ? `✓ Criador (${creatorPctLabel})` : "✓ Líquido para você"}
+          value={breakdown.partnerNet}
+          highlight
+        />
         <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
-          <p className="text-white/40 text-[10px] font-semibold uppercase">Distribuição da comissão do coach</p>
+          <p className="text-white/40 text-[10px] font-semibold uppercase">Distribuição da cadeia comercial</p>
           <BreakdownLine label="Coach vendedor (líquido)" value={breakdown.coachNet} muted />
-          <BreakdownLine label="Rede L1 (3%)" value={breakdown.networkL1} muted />
-          <BreakdownLine label="Rede L2 (2%)" value={breakdown.networkL2} muted />
-          <BreakdownLine label="Rede L3 (1%)" value={breakdown.networkL3} muted />
+          <BreakdownLine label={`Rede L1 (${fmtPct(breakdown.networkL1Pct)})`} value={breakdown.networkL1} muted />
+          <BreakdownLine label={`Rede L2 (${fmtPct(breakdown.networkL2Pct)})`} value={breakdown.networkL2} muted />
+          <BreakdownLine label={`Rede L3 (${fmtPct(breakdown.networkL3Pct)})`} value={breakdown.networkL3} muted />
         </div>
       </div>
     </div>
