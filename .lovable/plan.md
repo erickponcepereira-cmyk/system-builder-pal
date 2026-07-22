@@ -1,47 +1,66 @@
-## Diagnóstico revisado
+# Co-produção — reformulação completa
 
-Você tem razão: admin e coach são papéis independentes. Nathan **é coach** (tem linha em `coaches`, `commissions.beneficiary_profile_id`), com vendas reais. Consultando o banco agora:
+Hoje o fluxo pede um "código do coprodutor" digitado à mão, exige valor fixo em R$ (sem indicar se é do bruto/líquido), o convite não valida a rede, os créditos só existem para pedidos de `partner_product_orders` e não aparecem em relatórios do admin nem nas carteiras dos coprodutores nos vendedores de outros tipos de produto. Vamos reconstruir no padrão Kiwify/Hotmart: seletor visual, % OU valor fixo com aviso claro do que está sendo repassado, e crédito automático na carteira do coprodutor sempre que a venda for paga.
 
-- **Nathan (`nathan.utuari@gmail.com`)** → `wallets.available_balance = R$ 569,76` / `pending = R$ 102,71`. 80 comissões liberadas, 17 pendentes. **79 de 80 vinculadas a transações reais pagas**; 1 é fantasma (R$ 0,02, transação apagada).
-- **Erick (`erickponcepereira@outlook.com`)** → `available = R$ 177,39` / `pending = R$ 14,26`. 2 comissões fantasma (R$ 0,58 + R$ 0,01).
-- **Ana Flávia** → 1 comissão fantasma (R$ 0,03).
+## O que muda para o usuário
 
-O que provavelmente aconteceu com o print do Nathan zerado ontem: a UI foi consultada **antes** da reconciliação global rodar (ou com cache antigo). O banco já está com o valor correto. Minha resposta anterior culpando "é admin, não coach" estava errada — o `getWalletSplit` não filtra por role, lê `wallets.available_balance` direto. Peço desculpas pelo diagnóstico incorreto.
+1. **Editor novo (`CoproductionEditor`)**
+   - Botão **"Adicionar coprodutor"** abre modal com **seletor** dos profissionais/parceiros da **minha rede** (dropdown com busca por nome/e-mail). Campo de "código" fica como opção secundária (colapsada em "Fora da minha rede? Usar código").
+   - Toggle **% do líquido** ou **Valor fixo (R$)** — padrão é %.
+   - Texto explicativo fixo no topo do card:
+     > "Você define quanto do **valor líquido** (bruto – taxas – impostos) vai para cada coprodutor. Sua parte é o restante. O repasse é automático quando o pedido é pago."
+   - Resumo em tempo real: "Você fica com R$ X (Y%) · Coprodutor 1 recebe R$ A (B%) · ..." usando preço atual do produto.
+   - Validação: soma dos coprodutores ≤ 100% do líquido (ou ≤ líquido em R$). Bloqueia salvar acima disso com mensagem clara.
 
-## Comissões-fantasma encontradas
+2. **Ciclo do convite** continua igual (`pending → accepted/rejected/cancelled`), com o produto pausado enquanto houver pendente — já existe.
 
-4 comissões apontam para a transação `2b5f9f5b-1824-...` que **não existe mais** em `transactions` (foi excluída, provavelmente teste antigo). Total inflado: **R$ 0,64** distribuído entre Erick (R$ 0,59), Nathan (R$ 0,02) e Ana Flávia (R$ 0,03). Valores pequenos, mas são exatamente o tipo de "dado fantasma" que você quer eliminar.
+3. **Distribuição automática ao pagar** (ver seção técnica):
+   - Todo pedido pago envolvendo produto com coprodutores gera `commissions` (kind `coproduction`) para cada coprodutor **antes** dos slots normais consumirem o líquido. A parte do criador é reduzida pelo total dos coprodutores.
+   - Crédito cai na `wallets`/`professional_wallets`/`partner_wallets` do coprodutor via o mesmo `recalc_wallets_for_owner` já em uso — sem tabelas paralelas.
 
-Auditoria global (234 comissões no total):
-- 4 órfãs (sem `transaction_id` nem `partner_order_id` válidos) — as acima
-- 0 vindas de transação marcada `is_test`
-- 0 com beneficiário `is_test`
+4. **Visibilidade**
+   - Relatório de vendas do coprodutor mostra linha "Co-produção – <produto> – <criador>" com valor.
+   - Carteira do coprodutor: nova categoria "Co-produção" no histórico.
+   - Admin → Financeiro/Pagamentos: filtro/coluna `coproduction` nas comissões; página da venda lista os splits (criador + cada coprodutor).
+   - Painel do criador: relatório mostra bruto vendido e "Repassado em co-produção: R$ X".
 
-Nenhum fitcoin foi tocado — a limpeza é só em comissões monetárias.
+## Técnico
 
-## Ações
+### Banco (uma migração)
 
-1. **Migração de limpeza de fantasmas**
-   - `DELETE FROM commissions WHERE transaction_id IS NOT NULL AND transaction_id NOT IN (SELECT id FROM transactions) AND partner_order_id IS NULL` (remove as 4 órfãs).
-   - `DELETE FROM commissions WHERE partner_order_id IS NOT NULL AND partner_order_id NOT IN (SELECT id FROM partner_product_orders) AND transaction_id IS NULL` (mesma regra para orders).
-   - Rodar `admin_reconcile_all_wallets()` na mesma migração para reajustar saldos.
+- `product_coproductions`:
+  - `split_kind text not null default 'percent' check (in 'percent','fixed')`.
+  - `percent_of_net numeric(5,2) null` (0–100). `fixed_amount_brl` fica opcional (mantém compat).
+  - Backfill: linhas existentes viram `split_kind='fixed'`.
+  - Trigger `validate_coprod_split_bounds` garante soma ≤ 100% (para percent) ou ≤ preço líquido (para fixed) por `product_id`.
+- `commissions`: adicionar valores permitidos `'coproduction'` em `kind` (ou coluna equivalente atual) e `source_coproduction_id uuid null references product_coproductions(id) on delete set null`.
+- Função `apply_coproduction_splits(p_transaction_id uuid)`:
+  - Descobre produto do `transaction`/`partner_product_order`/`store_order`.
+  - Lê coprodutores `accepted`.
+  - Calcula valor de cada coprodutor a partir do **líquido** (bruto – taxa gateway – imposto), usando o mesmo `financialEngine` do server (helper `computeNet(gross, method, feeCfg, taxPct)`).
+  - Insere `commissions` (idempotente por `(transaction_id, source_coproduction_id)`).
+  - Deduz o total dos slots da carteira do criador antes dos slots padrão distribuírem.
+- Chamar `apply_coproduction_splits` nos gatilhos existentes que marcam `transactions.status='paid'` (mesmo ponto onde comissões de rede são geradas) e no fluxo `mark_partner_order_paid`.
+- `recalc_wallets_for_owner` já soma `commissions` → coprodutor vê saldo automaticamente. Adicionar case para rotular como "Co-produção" no `wallet-history`.
+- Remover/depreciar `product_coproduction_credits` (deixar tabela, parar de gravar; migração futura opcional).
 
-2. **Trigger preventiva de integridade** em `commissions`
-   - `BEFORE INSERT`: exigir que pelo menos uma das FKs (`transaction_id` OU `partner_order_id`) exista de fato; caso contrário, rejeitar.
-   - `ON DELETE` em `transactions` / `partner_product_orders`: `CASCADE` para `commissions` — quando a venda origem some, a comissão some junto (evita novos fantasmas se algum admin apagar transação de teste).
+### Backend (`src/lib/collab.functions.ts` + novo `coprod-network.functions.ts`)
+- `listMyCoproductionCandidates({ownerType,ownerId})`: retorna profissionais/parceiros da rede do usuário (uplines + downlines diretas conforme regra atual de rede) com `{id, type, name, code}`.
+- `inviteCoproducer` aceita `{splitKind, percentOfNet?, fixedAmountBrl?}` além de `collaboratorRef` que pode ser `{by:'code', code}` **ou** `{by:'id', type, id}`.
+- Validação server-side de soma ≤ 100 %/≤ líquido.
+- `listProductCoproductions` retorna também `percent_of_net`, `split_kind`, `previewAmountBrl` (calculado com preço atual).
 
-3. **Correção do texto/log de auditoria anterior**
-   - Adicionar nota em `admin_reconcile_all_wallets()` para retornar por beneficiário: `{profile_id, name, role, wallet_available, commission_available_sum, delta, phantom_count}` para facilitar futura auditoria pelo painel.
-   - Expor essa listagem no botão "Reconciliar carteiras" (Admin → Financeiro) já criado, mostrando linhas com `delta != 0` ou `phantom_count > 0`.
+### Frontend
+- `src/components/shared/CoproductionEditor.tsx` reescrito com o UX acima (modal, seletor da rede, toggle %/R$, preview em tempo real, mensagens de erro claras).
+- Coach/Profissional/Parceiro — aba Carteira: histórico marca "Co-produção".
+- Admin → Financeiro → Pagamentos: adicionar filtro `Tipo = Co-produção` e nova coluna "Origem" mostrando produto + criador.
+- Relatório do criador em `coach-reports.functions.ts` (e parceiro/profissional equivalentes): expor total repassado em co-produção.
 
-4. **Não mexer em Fitcoin**
-   - `fitcoin_ledger` não entra na reconciliação; permanece intocado (regra que você reforçou).
+### Fora de escopo
+- Convite para pessoas fora da rede continua via código (fluxo secundário mantido). Suporte a mais de 3 coprodutores mantido, sem limite hard.
+- Não vamos tocar em `orderpool` nem em regras de MLM.
 
-5. **Verificação pós-migração** (retorno para você)
-   - Print/tabela mostrando saldo antes/depois de Nathan, Erick, Ana Flávia e Neidelayne/José Eduardo (os 2 casos "R$ 40 sem carteira" da auditoria anterior — vou reclassificar: se a comissão veio de venda real, criar a linha em `wallets`; se veio de teste/fantasma, remover).
-
-## Detalhes técnicos
-
-- Todas as mudanças em SQL puro via migração; nenhuma alteração de UI necessária além do detalhe do retorno em Financeiro.
-- Cascade em `transactions`→`commissions` é seguro porque hoje o app nunca "arquiva" transação paga — só apaga registros de teste.
-- A trigger de integridade usa `SECURITY DEFINER` e roda em INSERT/UPDATE; não bloqueia comissões de fluxos reais porque `enqueue_commissions` sempre cria a transação antes.
+## Verificação
+- Simular venda com 2 coprodutores (1 % e 1 fixo) — conferir carteiras, `commissions`, admin/pagamentos, relatórios do criador e coprodutor.
+- Rejeitar/cancelar convite pausado e voltar a vender — nenhum split gerado.
+- Migração idempotente + backfill dos convites atuais como `fixed`.
