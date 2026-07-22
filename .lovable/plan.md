@@ -1,42 +1,38 @@
 ## Diagnóstico confirmado
 
-O erro `column "upline_l1_coach_id" does not exist` vem das funções de compra da loja unificada de parceiro/profissional.
-
-Conferi o banco atual:
-- A tabela `coaches` tem apenas `upline_coach_id` para a rede.
-- As funções `create_partner_company_order`, `create_partner_product_order` e `create_scheduled_professional_order` estão tentando ler `upline_l1_coach_id`, `upline_l2_coach_id` e `upline_l3_coach_id` diretamente de `coaches`.
-- Esses campos existem em `partner_product_orders`, mas não existem em `coaches`.
-
-Por isso começou a acontecer depois da união das lojas: a compra passou a cair no fluxo unificado de pedidos de parceiro/profissional, que hoje está usando uma lógica antiga de rede incompatível com o schema real.
+- No cadastro da Luana Martins (`lumartinssantana@gmail.com`), a mensalidade atual está **pendente** e vinculada à última tentativa de cartão recusada.
+- As tentativas de mensalidade foram recusadas pelo Mercado Pago com `cc_rejected_high_risk`.
+- A anuidade teve várias tentativas/pedidos antigos pendentes; uma tentativa posterior de anuidade foi aprovada. Isso deixa o fluxo confuso porque pedidos/faturas antigos continuam existindo e o app não oferece uma ação clara de “nova tentativa limpa”.
+- Pelo que foi verificado, o erro da mensalidade não parece ser “cobrança duplicada” em si; é uma recusa de risco do cartão. Mas o sistema precisa tratar isso melhor para o usuário não ficar preso.
 
 ## Plano de correção
 
-1. **Corrigir a lógica de rede no backend**
-   - Criar uma migração para substituir as funções de compra quebradas.
-   - Em vez de buscar `coaches.upline_l1_coach_id`, `upline_l2_coach_id`, `upline_l3_coach_id`, calcular os níveis assim:
-     - nível 1 = `coaches.upline_coach_id` do vendedor
-     - nível 2 = `upline_coach_id` do nível 1
-     - nível 3 = `upline_coach_id` do nível 2
-   - Continuar gravando esses valores corretamente em `partner_product_orders.upline_l1_coach_id`, `upline_l2_coach_id`, `upline_l3_coach_id`.
+1. **Corrigir o checkout para tentativas recusadas**
+   - Quando Mercado Pago retornar `cc_rejected_high_risk` ou outra recusa de cartão, mostrar mensagem amigável em português.
+   - Orientar a pessoa a tentar PIX, outro cartão ou uma nova tentativa, em vez de deixar o erro técnico na tela.
+   - Não manter uma tentativa recusada como se fosse a tentativa “ativa” da fatura.
 
-2. **Aplicar a correção em todos os caminhos de compra afetados**
-   - Produto pago de parceiro.
-   - Produto pago de profissional.
-   - Produto profissional agendável.
-   - Compra feita por aluno e compra feita por revendedor/coach para aluno.
+2. **Adicionar “Gerar nova tentativa de pagamento” para mensalidade**
+   - Criar uma ação segura que limpa o vínculo da fatura com pagamento recusado/cancelado e mantém a fatura pendente.
+   - Não duplicar a mensalidade do mesmo mês.
+   - Resetar status bloqueado/atrasado para pendente quando o admin já adiou ou liberou uma nova tentativa válida.
+   - Registrar a ação no histórico da fatura.
 
-3. **Preservar o fluxo atual do Mercado Pago**
-   - Não trocar o checkout nem mexer nas credenciais.
-   - Manter PIX/cartão usando o mesmo componente atual.
-   - A correção será antes do checkout: criação correta do pedido para que o pagamento consiga abrir sem erro.
+3. **Melhorar anuidade/ativação para não acumular pedidos soltos**
+   - No fluxo de Coach, Profissional e Parceiro, antes de criar novo pedido de anuidade, procurar um pedido pendente existente do mesmo usuário/produto.
+   - Se o pedido antigo estiver com pagamento recusado/cancelado, permitir nova tentativa limpa no mesmo pedido ou criar uma nova tentativa sem bloquear o usuário.
+   - Evitar vários pedidos pendentes antigos aparecendo como possíveis cobranças abertas.
 
-4. **Melhorar a mensagem de erro no carrinho**
-   - Onde hoje aparece o erro técnico cru do banco, mostrar uma mensagem limpa para o usuário caso a criação do pedido falhe.
-   - Manter o erro técnico apenas em log/diagnóstico.
+4. **Adicionar ação no Admin > Mensalidades**
+   - Na lista de faturas pendentes/atrasadas/bloqueadas, incluir botão “Nova tentativa”.
+   - Esse botão será usado quando o pagamento ficou preso em uma tentativa recusada ou antiga.
+   - Manter os botões atuais de “Adiar”, “Pago PIX”, “Pago Cartão”, “Isentar” e “Restaurar data”.
 
-5. **Validar depois da correção**
-   - Testar criação de pedido para produto de parceiro.
-   - Testar criação de pedido para produto de profissional.
-   - Testar produto agendável, se houver disponível.
-   - Confirmar que o pedido entra em `partner_product_orders` com vendedor, uplines e valores preenchidos.
-   - Confirmar que o checkout PIX/cartão abre a partir desse pedido.
+5. **Ajustar a mensalidade atual da Luana**
+   - Depois da correção estrutural, limpar a tentativa recusada vinculada à fatura atual dela e deixá-la pronta para nova tentativa de pagamento.
+   - Como você adiou manualmente, a correção deve preservar o novo vencimento e permitir que ela pague sem criar uma mensalidade duplicada.
+
+6. **Validação**
+   - Conferir no banco que a fatura da Luana continua única para o mês atual.
+   - Conferir que pagamentos recusados continuam no histórico, mas não travam novas tentativas.
+   - Conferir que anuidade e mensalidade conseguem abrir novo checkout após recusa.
