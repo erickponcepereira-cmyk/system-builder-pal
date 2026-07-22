@@ -112,9 +112,21 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
         if (!mounted) return;
 
+        const nameParts = (payer.name || "").trim().split(/\s+/).filter(Boolean);
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(" ") || undefined;
+        const docDigits = (payer.doc || "").replace(/\D/g, "");
+        const initPayer: any = payer.email ? { email: payer.email } : undefined;
+        if (initPayer) {
+          if (firstName) initPayer.firstName = firstName;
+          if (lastName) initPayer.lastName = lastName;
+          if (docDigits.length >= 11) initPayer.identification = { type: "CPF", number: docDigits };
+        }
+
         cardBrickRef.current = await bricksBuilder.create("cardPayment", cardContainerId, {
-          initialization: { amount, payer: payer.email ? { email: payer.email } : undefined },
+          initialization: { amount, payer: initPayer },
           customization: { paymentMethods: { maxInstallments: 12 }, visual: { hideFormTitle: true } },
+
           callbacks: {
             onReady: () => { console.log("[MP Checkout] Brick pronto"); },
             onError: (err: any) => {
