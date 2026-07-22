@@ -145,6 +145,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
               (async () => {
                 setCardLoading(true);
                 setPaymentError(null);
+                setLastStatusDetail(null);
                 try {
                   const r = await cardFn({
                     data: {
@@ -171,13 +172,16 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                   } else {
                     const msg = friendlyPaymentMessage(r.status, r.statusDetail);
                     setPaymentError(msg);
+                    setLastStatusDetail(String(r.statusDetail || ""));
                     toast.error(msg, { duration: 9000 });
                   }
                 } catch (err: any) {
                   console.error("[MP card submit error]", err);
                   const msg = friendlyPaymentMessage("rejected", err?.message) || "Falha no pagamento. Verifique os dados do cartão.";
                   setPaymentError(msg);
+                  setLastStatusDetail(String(err?.message || ""));
                   toast.error(msg, { duration: 9000 });
+
                 } finally {
                   setCardLoading(false);
                   resolve();
