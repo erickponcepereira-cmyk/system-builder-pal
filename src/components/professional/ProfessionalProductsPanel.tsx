@@ -187,9 +187,10 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
     } else {
       const pct = (editing.coach_commission_percentage || 10) as CoachCommissionPct;
       const mode = (editing.price_input_mode || "charge") as PartnerPriceMode;
+      const split = productSplitOverride(editing);
       const b = mode === "receive"
-        ? computeFromReceive(editing.professional_net_amount || 0, pct)
-        : computeFromCharge(editing.price || 0, pct);
+        ? computeFromReceive(editing.professional_net_amount || 0, pct, "card", undefined, split)
+        : computeFromCharge(editing.price || 0, pct, "card", undefined, split);
       if (b.gross <= 0) return toast.error("Informe um valor maior que zero.");
       if (b.partnerNet < 0) return toast.error("Valor insuficiente para cobrir as taxas. Aumente o preço.");
       payload = {
