@@ -478,8 +478,9 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   const activationPatch = input.alreadyProfessional
     ? {
         already_coach: true,
-        activation_paid_at: nowIso,
-        activation_source: "already_professional" as const,
+        // Não marca ativação/aprovação automaticamente: profissional passa
+        // pela aba admin "Liberar Profissionais" (confirmar e-mail →
+        // isentar/cobrar anuidade → aprovar).
         activation_note: clean(input.activationNote),
       }
     : {};
@@ -491,8 +492,8 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
     professional_council: clean(input.professionalCouncil),
     council_number: clean(input.councilNumber),
     specialty_pending_setup: !!input.specialtyPendingSetup,
-    approved_at: nowIso,
-    onboarding_stage: "released" as const,
+    approved_at: null as string | null,
+    onboarding_stage: "awaiting_admin" as const,
     upline_coach_id: input.uplineCoachId,
   };
 
