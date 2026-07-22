@@ -99,6 +99,8 @@ async function resolveProfileAndCoach(supabaseAdmin: any, userId: string) {
 function buildByUpline(coaches: CoachRow[]) {
   const byUpline = new Map<string, CoachRow[]>();
   coaches.forEach((c) => {
+    // Defensive: ignore self-referencing upline (legacy data)
+    if (c.upline_coach_id && c.upline_coach_id === c.id) return;
     const key = c.upline_coach_id || "__root__";
     const arr = byUpline.get(key) || [];
     arr.push(c);
