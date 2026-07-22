@@ -275,13 +275,19 @@ function AdminSubscriptionsPage() {
                               catch (e: any) { toast.error(e.message); }
                             }} className="rounded bg-blue-600 px-2 py-1 text-xs">Isentar</button>
                             <button onClick={async () => {
+                              const reason = prompt("Motivo para adiar/pular este mês (opcional):", "Mês adiado pelo admin");
+                              if (reason === null) return;
+                              try { await fnSkip({ data: { invoice_id: i.id, reason: reason || undefined } } as any); toast.success("Mês adiado — fatura isenta"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="inline-flex items-center gap-1 rounded bg-orange-600 px-2 py-1 text-xs" title="Isenta esta fatura e libera o próximo mês normalmente"><SkipForward className="h-3 w-3" /> Adiar (pular mês)</button>
+                            <button onClick={async () => {
                               const current = i.due_date ? String(i.due_date).slice(0, 10) : new Date().toISOString().slice(0, 10);
-                              const input = prompt("Novo vencimento (AAAA-MM-DD):", current);
+                              const input = prompt("Novo vencimento (AAAA-MM-DD) — apenas muda a data, NÃO isenta a fatura:", current);
                               if (!input) return;
                               if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) { toast.error("Data inválida"); return; }
-                              try { await fnPostpone({ data: { invoice_id: i.id, new_due_date: input } } as any); toast.success("Vencimento adiado"); load(); }
+                              try { await fnPostpone({ data: { invoice_id: i.id, new_due_date: input } } as any); toast.success("Vencimento alterado"); load(); }
                               catch (e: any) { toast.error(e.message); }
-                            }} className="rounded bg-orange-600 px-2 py-1 text-xs">Adiar</button>
+                            }} className="rounded bg-white/10 px-2 py-1 text-xs" title="Somente altera a data de vencimento; fatura continua pendente">Mudar vencimento</button>
                             <button onClick={async () => {
                               try { await fnResetDue({ data: { invoice_id: i.id } } as any); toast.success("Vencimento restaurado"); load(); }
                               catch (e: any) { toast.error(e.message); }
@@ -291,12 +297,6 @@ function AdminSubscriptionsPage() {
                               try { await fnResetAttempt({ data: { invoice_id: i.id } } as any); toast.success("Fatura liberada para nova tentativa"); load(); }
                               catch (e: any) { toast.error(e.message); }
                             }} className="rounded bg-violet-600 px-2 py-1 text-xs">Nova tentativa</button>
-                            <button onClick={async () => {
-                              const reason = prompt("Motivo para pular este mês (opcional):", "Mês pulado pelo admin");
-                              if (reason === null) return;
-                              try { await fnSkip({ data: { invoice_id: i.id, reason: reason || undefined } } as any); toast.success("Mês pulado"); load(); }
-                              catch (e: any) { toast.error(e.message); }
-                            }} className="inline-flex items-center gap-1 rounded bg-sky-700 px-2 py-1 text-xs" title="Marca a fatura como isenta e libera o mês seguinte"><SkipForward className="h-3 w-3" /> Pular mês</button>
 
                           </>
                         )}
