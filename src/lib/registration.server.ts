@@ -239,15 +239,22 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
 
     const isProfessional = input.coach.isProfessional ?? false;
     const isAlreadyCoach = input.coach.alreadyCoach ?? false;
-    // Profissional novo NÃO é auto-aprovado: passa pelo mesmo fluxo (pagamento da anuidade + liberação do admin).
-    // Só ganha aprovação imediata quem marcou "já sou coach/profissional" (upgrade de conta existente com ativação prévia).
-    const coachApprovedAt = isAlreadyCoach && isProfessional ? new Date().toISOString() : null;
-    const nowIso = new Date().toISOString();
+    // Profissional (novo ou já-coach) NUNCA é auto-aprovado: sempre passa
+    // pela aba "Liberar Profissionais" (confirmar e-mail → isentar/cobrar
+    // anuidade → aprovar). Auto-aprovação só vale para coach comum que marcou
+    // "já sou coach FitMind".
+    const coachApprovedAt = isAlreadyCoach && !isProfessional ? new Date().toISOString() : null;
     const activationPatch = isAlreadyCoach
       ? {
           already_coach: true,
-          activation_paid_at: nowIso,
-          activation_source: isProfessional ? "already_professional" : "already_coach",
+          // Só registra ativação paga automaticamente para coach comum já-coach.
+          // Profissional passa pelo admin para isentar/cobrar anuidade.
+          ...(isProfessional
+            ? {}
+            : {
+                activation_paid_at: new Date().toISOString(),
+                activation_source: "already_coach",
+              }),
           activation_note: clean(input.coach.activationNote),
         }
       : {};
