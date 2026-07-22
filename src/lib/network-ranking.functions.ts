@@ -399,11 +399,12 @@ export const getMyNetworkStructure = createServerFn({ method: "GET" })
 
     const totalDirect = emptyBreakdown();
     addBreakdown(totalDirect, breakdown(coachId));
+    const hasValidUpline = !!(me?.upline_coach_id && me.upline_coach_id !== coachId && byId.has(me.upline_coach_id));
     return {
       me: me ? enrich(me) : null,
-      upline: me?.upline_coach_id && byId.has(me.upline_coach_id) ? enrich(byId.get(me.upline_coach_id)!) : null,
+      upline: hasValidUpline ? enrich(byId.get(me!.upline_coach_id!)!) : null,
       totals: { downlineCoaches: downline.length - 1, directStudents: totalDirect },
-      children: (byUpline.get(coachId) || []).map((child) => toNode(child, 1)),
+      children: (byUpline.get(coachId) || []).filter((c) => c.id !== coachId).map((child) => toNode(child, 1)),
     };
   });
 
