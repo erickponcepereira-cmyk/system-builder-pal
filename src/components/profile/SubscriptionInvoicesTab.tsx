@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X, TestTube2 } from "lucide-react";
+import { CreditCard, Wallet, AlertTriangle, Calendar, Loader2, QrCode, X, TestTube2, FileText, User } from "lucide-react";
 import {
   getMySubscription, updateMySubscriptionPrefs, payInvoiceWithWallet, ensureMySubscription,
+  getMyBillingOverview, getInvoiceReceiptData,
 } from "@/lib/subscriptions.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { getIsTestUser, simulateTestPayInvoice } from "@/lib/test-accounts.functions";
+import { openInvoiceReceipt } from "@/lib/invoice-receipt";
+
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 const parseLocalDate = (d: string) => {
@@ -24,19 +27,25 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface Props { walletSource: "coach" | "partner" | "professional" }
 
+const METHOD_LABEL: Record<string, string> = { pix: "PIX", card: "Cartão", wallet: "Carteira interna", auto_debit: "Débito automático", manual_admin: "Manual" };
+
 export function SubscriptionInvoicesTab({ walletSource }: Props) {
   const [state, setState] = useState<any>(null);
+  const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [mpMethod, setMpMethod] = useState<"pix" | "card" | null>(null);
   const [isTest, setIsTest] = useState(false);
 
   const fnGet = useServerFn(getMySubscription);
+  const fnOverview = useServerFn(getMyBillingOverview);
+  const fnReceipt = useServerFn(getInvoiceReceiptData);
   const fnUpd = useServerFn(updateMySubscriptionPrefs);
   const fnPay = useServerFn(payInvoiceWithWallet);
   const fnEnsure = useServerFn(ensureMySubscription);
   const fnIsTest = useServerFn(getIsTestUser);
   const fnTestPay = useServerFn(simulateTestPayInvoice);
+
 
   const load = async () => {
     setLoading(true);
@@ -47,11 +56,20 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         r = await fnGet();
       }
       setState(r);
+      try { const ov = await fnOverview(); setOverview(ov); } catch { /* ignore */ }
       try { const t = await fnIsTest(); setIsTest(Boolean(t?.isTest)); } catch { /* ignore */ }
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  const printReceipt = async (invoiceId: string) => {
+    try {
+      const data = await fnReceipt({ data: { invoice_id: invoiceId } } as any);
+      openInvoiceReceipt(data as any);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
 
   if (loading) return <div className="flex items-center gap-2 p-6 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Carregando faturas...</div>;
   if (!state) return <p className="p-6 text-white/60">Sem assinatura.</p>;
@@ -80,6 +98,29 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
 
   return (
     <div className="space-y-4 p-2">
+      {overview && (
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase text-white/40">Cadastro</p>
+            <p className="mt-1 text-sm font-bold text-white">{fmtDate(overview.registeredAt)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase text-white/40">Assinante desde</p>
+            <p className="mt-1 text-sm font-bold text-white">{overview.subscriberSince ? fmtMonth(overview.subscriberSince) : "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase text-white/40">Método preferido</p>
+            <p className="mt-1 text-sm font-bold text-white">{overview.preferredMethod ? (METHOD_LABEL[overview.preferredMethod] ?? overview.preferredMethod) : "—"}</p>
+          </div>
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-xs uppercase text-primary/80">Próxima cobrança</p>
+            <p className="mt-1 text-sm font-bold text-white">
+              {overview.nextInvoice ? `${fmt(overview.nextInvoice.amount)} · ${fmtDate(overview.nextInvoice.due_date)}` : "Sem fatura em aberto"}
+            </p>
+          </div>
+        </div>
+      )}
+
       {current && current.status !== "paid" && (
         <div className={`rounded-2xl border p-5 ${
           current.status === "blocked" ? "border-red-500/50 bg-red-500/10" :
@@ -173,7 +214,15 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs uppercase text-white/40">
-              <tr><th className="p-2 text-left">Mês</th><th className="p-2 text-left">Vencimento</th><th className="p-2 text-right">Valor</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Pago em</th></tr>
+              <tr>
+                <th className="p-2 text-left">Mês</th>
+                <th className="p-2 text-left">Vencimento</th>
+                <th className="p-2 text-right">Valor</th>
+                <th className="p-2 text-left">Status</th>
+                <th className="p-2 text-left">Pago em</th>
+                <th className="p-2 text-left">Método</th>
+                <th className="p-2 text-right">Recibo</th>
+              </tr>
             </thead>
             <tbody>
               {invoices.map((i) => (
@@ -181,13 +230,31 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
                   <td className="p-2">{fmtMonth(i.reference_month)}</td>
                   <td className="p-2">{fmtDate(i.due_date)}</td>
                   <td className="p-2 text-right">{fmt(i.amount)}</td>
-                  <td className="p-2">{STATUS_LABEL[i.status] ?? i.status}</td>
+                  <td className="p-2">
+                    <span className={`rounded px-2 py-0.5 text-xs ${
+                      i.status === "paid" ? "bg-green-500/20 text-green-300" :
+                      i.status === "exempted" ? "bg-blue-500/20 text-blue-300" :
+                      i.status === "blocked" ? "bg-red-500/20 text-red-300" :
+                      i.status === "overdue" ? "bg-orange-500/20 text-orange-300" :
+                      "bg-white/10 text-white/70"
+                    }`}>{STATUS_LABEL[i.status] ?? i.status}</span>
+                  </td>
                   <td className="p-2 text-xs text-white/40">{fmtDate(i.paid_at)}</td>
+                  <td className="p-2 text-xs text-white/60">{i.payment_method ? (METHOD_LABEL[i.payment_method] ?? i.payment_method) : "—"}</td>
+                  <td className="p-2 text-right">
+                    {(i.status === "paid" || i.status === "exempted") && (
+                      <button onClick={() => printReceipt(i.id)}
+                        className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20">
+                        <FileText className="h-3 w-3" /> PDF
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
-              {invoices.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-white/40">Nenhuma fatura ainda.</td></tr>}
+              {invoices.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-white/40">Nenhuma fatura ainda.</td></tr>}
             </tbody>
           </table>
+
         </div>
       </div>
     </div>

@@ -9184,6 +9184,47 @@ export type Database = {
           },
         ]
       }
+      subscription_invoice_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          invoice_id: string
+          meta: Json
+          to_status: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          invoice_id: string
+          meta?: Json
+          to_status?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          invoice_id?: string
+          meta?: Json
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoice_audit_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_invoices: {
         Row: {
           amount: number
@@ -10623,6 +10664,10 @@ export type Database = {
       }
       admin_set_coach_card_validity: {
         Args: { _coach_id: string; _valid_until: string }
+        Returns: undefined
+      }
+      admin_skip_invoice: {
+        Args: { _invoice_id: string; _reason?: string }
         Returns: undefined
       }
       assign_professionals_for_transaction: {

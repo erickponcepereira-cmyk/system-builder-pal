@@ -1,42 +1,53 @@
+# Repaginar sistema de mensalidade
 
-## Diagnóstico (confirmado no banco)
+Objetivo: tornar o fluxo de mensalidade previsível, bonito e auditável — tanto para o admin quanto para o assinante (coach, parceiro, profissional).
 
-Fatura da mensalidade de julho do Lucinei (`779c3d28…`, R$ 100, `payment_method='wallet'`, `wallet_source='coach'`, `status='paid'`, paga em 20/07) existe, mas:
+## 1. Regras de negócio (backend)
 
-- `wallets` do Lucinei está com `available_balance = 374.82` e `total_withdrawn = 0.00` — ou seja, os R$ 100 nunca foram descontados de fato.
-- Não aparece em `withdrawal_requests`, portanto não aparece em Admin → Pagamentos, nem no histórico de saques da carteira, nem nos relatórios.
+- **Adiar = pular o mês:** ao clicar "Adiar/Pular", a fatura atual vira `exempted` (com motivo "Pulada pelo admin"), NÃO gera comissão, NÃO entra em MRR e NÃO bloqueia acesso. A próxima fatura do mês seguinte passa a ser a corrente.
+- **Bloqueio automático:** só depois de `due_date + grace_days` do plano. Enquanto pendente dentro da carência, painel liberado. Um job diário promove `pending → overdue → blocked` respeitando a carência.
+- **Log de auditoria:** nova tabela `subscription_invoice_audit` (invoice_id, actor_id, action, from_status, to_status, meta jsonb, created_at) alimentada por trigger em toda mudança de status/vencimento/valor e por toda ação admin (pular, isentar, marcar pago, desfazer, adiar data, nova tentativa).
+- **Método de pagamento persistido:** garantir que `payment_method` e `wallet_source` sejam sempre gravados em `subscription_invoices` (já existe, revisar consistência) e derivar "método preferido" do usuário do modo mais frequente nos últimos 6 meses.
 
-Causa raiz: `process_subscription_invoice_payment` até faz `UPDATE wallets SET available_balance = available_balance - v_debit, total_withdrawn = total_withdrawn + v_debit`, mas o motor central `recalc_wallets_for_owner` (chamado por triggers em `commissions`, `withdrawal_requests`, `partner_product_orders`, `network_unlock_history`) recomputa `available_balance` e `total_withdrawn` a partir SOMENTE de `commissions` + `withdrawal_requests`. Qualquer evento posterior sobrescreve o débito da mensalidade. Além disso, nenhuma UI de histórico/pagamentos consulta `subscription_invoices` pagas por carteira.
+## 2. Painel do assinante (coach / parceiro / profissional)
 
-## O que vou implementar
+Página única "Minha mensalidade" reaproveitada pelos 3 papéis:
 
-### 1) Migration — tornar o débito da mensalidade a fonte de verdade
+- **Cabeçalho:** desde quando é assinante, data de cadastro, dia de vencimento preferido, status atual (Em dia / Pendente / Atrasada / Bloqueada / Isenta).
+- **Card "Próxima cobrança":** valor, data, método preferido, botão para trocar preferência.
+- **Card "Fatura em aberto":** valor + botões PIX / Cartão / Carteira (mantém integração atual).
+- **Histórico:** tabela com Mês, Vencimento, Valor, Status, Pago em, Método, botão "Comprovante PDF".
+- **Comprovante PDF:** server function que gera recibo (nome, CPF, valor, mês de referência, método, data de pagamento, número da fatura) via `@react-pdf/renderer` no servidor e devolve o arquivo. Botão de download por linha paga.
 
-- Ampliar `recalc_wallets_for_owner` para somar, por `wallet_source` (`coach`/`partner`/`professional`), todas as `subscription_invoices` com `status='paid'` e `payment_method='wallet'` do usuário, aplicando o mesmo padrão de cascata já usado para withdrawals: cada valor é subtraído do saldo bruto do wallet de origem e somado a `total_withdrawn` daquele wallet.
-- Ajustar `wallets_audit_invariant` se necessário para aceitar o novo componente.
-- Backfill: rodar `recalc_wallets_for_owner` para todo profile que tem invoice paga via wallet (hoje só o Lucinei) — vai corrigir a carteira dele para o valor certo automaticamente.
+## 3. Painel admin — reescrever `admin.subscriptions.tsx`
 
-### 2) Migration — histórico da carteira do coach/parceiro/profissional
+Layout novo, com 3 abas: **Dashboard**, **Assinantes**, **Faturas** (Configurações vira sub-aba dentro de Dashboard).
 
-Adicionar uma view ou branch nas funções que alimentam o histórico da carteira (`coach-wallet-history.functions.ts`, `PartnerWalletTab`, `ProfessionalWalletTab`) para incluir, além de comissões e saques, as linhas de `subscription_invoices` pagas por carteira como movimento tipo "Mensalidade paga com carteira" (débito), com data = `paid_at` e valor = `amount`. Feito no lado do server function (SQL), sem UI nova.
+### Dashboard (novo)
+KPIs do mês corrente: MRR realizado, MRR projetado, inadimplência (R$ e %), churn (canceladas no mês), nº de assinantes ativos, pulados, bloqueados. Gráfico simples de barras dos últimos 6 meses (recebido vs. pendente).
 
-### 3) Admin → Pagamentos
+### Assinantes (reescrito)
+Tabela por usuário com: Nome, Papel, Cadastro, 1ª fatura, Última paga, **Próxima cobrança**, Método preferido, Status. Filtro por papel, status e busca. Clique abre drawer lateral com timeline completa da conta + ações (isentar por período, alterar dia/valor, cancelar).
 
-Em `admin.payments.tsx`, incluir uma seção/aba (ou juntar à lista principal) mostrando `subscription_invoices` pagas via carteira, com nome/e-mail do usuário, mês de referência, valor, wallet_source, `paid_at`. Assim toda mensalidade paga com carteira interna fica visível para o admin.
+### Faturas (reescrito)
+- Filtros: mês, status, papel, método, busca.
+- Colunas: Mês, Usuário+papel, Vencimento, Valor, Método, Status, Pago em, Ações.
+- Ações unificadas num menu (…): **Pular mês** (novo, substitui "Adiar" atual), **Marcar pago (PIX/Cartão/Manual/Carteira)**, **Isentar**, **Reajustar vencimento**, **Nova tentativa**, **Desfazer**.
+- Cada linha mostra ícone de "log" que abre o histórico de ações admin daquela fatura (auditoria).
 
-### 4) Relatórios financeiros
+## 4. Como o "adiar do julho pendente" será corrigido
 
-Em `admin-financial.functions.ts` / `admin-reports.functions.ts` (onde a receita/entrada de mensalidade é apurada), garantir que as invoices pagas via wallet entrem no relatório como receita da plataforma (já entra em `admin_system_wallet_entries` como `kind='subscription'` — confirmar que o relatório lê essa fonte; se ler `transactions`, incluir também as invoices).
-
-### 5) Sanity check pós-deploy
-
-- Rodar `SELECT recalc_wallets_for_owner('d0f05985-…')` e confirmar que `available_balance` do Lucinei cai para R$ 274,82 e `total_withdrawn = 100,00`.
-- Confirmar que o histórico da carteira dele passa a mostrar "Mensalidade 07/2026 — R$ 100,00".
-- Confirmar que a fatura aparece em Admin → Pagamentos.
+Ao aplicar a nova ação "Pular mês" na fatura pendente de julho da Renata: ela vira `exempted` com motivo, não bloqueia, não conta em inadimplência, e a fatura de agosto (gerada normalmente pelo job mensal) passa a ser a corrente exibida no painel dela.
 
 ## Detalhes técnicos
 
-- Toda mudança de saldo é feita via `recalc_wallets_for_owner` — não vou criar caminhos paralelos.
-- O `process_subscription_invoice_payment` deixa de manipular `wallets` diretamente e passa a apenas marcar a invoice como paga + creditar `admin_system_wallet`; em seguida chama `recalc_wallets_for_owner` (main), `recalc_partner_wallet` ou `recalc_professional_wallet` conforme `wallet_source`. Isso elimina a divergência entre "débito imediato" e "recalc posterior".
-- Adiciono uma trigger `AFTER UPDATE OF status ON subscription_invoices` que dispara o recalc do wallet do usuário quando a invoice vira `paid` (garante consistência mesmo se algum caminho legado marcar `paid` sem passar pela função).
-- Nenhum campo público novo é exposto; nada muda para usuários que pagam por cartão/pix.
+- **Migrações:**
+  1. `subscription_invoice_audit` (+ RLS: admin lê tudo; usuário só as próprias) + trigger `log_invoice_change`.
+  2. Função `admin_skip_invoice(invoice_id)` — marca `exempted`, grava motivo, registra auditoria.
+  3. Ajustar job diário `promote_invoice_statuses()` para respeitar `plan.grace_days` (hoje o promote está muito agressivo).
+  4. View `v_user_preferred_payment_method` para o "método preferido" e KPIs.
+- **Server functions novas em `admin-subscriptions.functions.ts`:** `skipInvoiceAdmin`, `getInvoiceAuditLog`, `getSubscriptionsDashboard` (KPIs + série 6 meses), `getSubscriberDetail` (timeline por usuário).
+- **Server function nova em `subscriptions.functions.ts`:** `getMyBillingOverview` (cabeçalho + próxima + histórico), `downloadInvoiceReceipt` (retorna PDF em base64).
+- **Componentes novos:** `SubscriptionDashboard.tsx`, `SubscriberDrawer.tsx`, `InvoiceActionsMenu.tsx`, `InvoiceAuditModal.tsx`, `MyBillingPage.tsx`, `InvoiceReceiptPDF.tsx`.
+- **Rota:** unificar as 3 rotas hoje espalhadas (coach/parceiro/profissional) apontando para `MyBillingPage` — mantém as URLs atuais para não quebrar links.
+- **Sem alteração** em: motor financeiro (`partnerFinance.ts`), Mercado Pago, carteiras (recalc). Apenas leitura.

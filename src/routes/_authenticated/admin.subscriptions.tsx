@@ -7,8 +7,11 @@ import {
   listAdminSubscriptions, listAdminInvoices, updateSubscriptionAdmin,
   listPlansAdmin, updatePlanAdmin, markInvoicePaidAdmin, exemptInvoiceAdmin, generateInvoicesNow,
   revertInvoiceAdmin, postponeInvoiceAdmin, resetInvoiceDueDateAdmin, resetInvoicePaymentAttemptAdmin,
+  skipInvoiceAdmin, getInvoiceAuditLog, getSubscriptionsDashboard,
 } from "@/lib/admin-subscriptions.functions";
 import { listAllAnnualActivationsAdmin } from "@/lib/annual-activation.functions";
+import { History, X, SkipForward } from "lucide-react";
+
 
 
 export const Route = createFileRoute("/_authenticated/admin/subscriptions")({
@@ -34,13 +37,14 @@ const SUB_STATUS_LABEL: Record<string, string> = {
 };
 
 function AdminSubscriptionsPage() {
-  const [tab, setTab] = useState<"subs" | "invoices" | "config">("subs");
+  const [tab, setTab] = useState<"dashboard" | "subs" | "invoices" | "config">("dashboard");
   const [subs, setSubs] = useState<any[]>([]);
   const [invs, setInvs] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; note: string | null; active: boolean }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
+  const [auditInvoiceId, setAuditInvoiceId] = useState<string | null>(null);
 
   const fnSubs = useServerFn(listAdminSubscriptions);
   const fnInvs = useServerFn(listAdminInvoices);
@@ -55,6 +59,8 @@ function AdminSubscriptionsPage() {
   const fnPostpone = useServerFn(postponeInvoiceAdmin);
   const fnResetDue = useServerFn(resetInvoiceDueDateAdmin);
   const fnResetAttempt = useServerFn(resetInvoicePaymentAttemptAdmin);
+  const fnSkip = useServerFn(skipInvoiceAdmin);
+
 
 
   const load = async () => {
@@ -87,7 +93,7 @@ function AdminSubscriptionsPage() {
 
       <div className="mb-4 flex gap-2 border-b border-white/10">
         {[
-          ["subs", "Assinaturas"], ["invoices", "Faturas"], ["config", "Configurações"],
+          ["dashboard", "Dashboard"], ["subs", "Assinaturas"], ["invoices", "Faturas"], ["config", "Configurações"],
         ].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k as any)}
             className={`px-4 py-2 text-sm font-medium ${tab === k ? "border-b-2 border-primary text-white" : "text-white/50"}`}>
@@ -97,6 +103,9 @@ function AdminSubscriptionsPage() {
       </div>
 
       {loading && <p className="text-white/50">Carregando...</p>}
+
+      {tab === "dashboard" && <DashboardTab />}
+
 
       {tab === "subs" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
@@ -235,6 +244,11 @@ function AdminSubscriptionsPage() {
 
                     <td className="p-3 text-right">
                       <div className="flex flex-wrap justify-end gap-1">
+                        <button onClick={() => setAuditInvoiceId(i.id)}
+                          className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20" title="Histórico de ações">
+                          <History className="h-3 w-3" />
+                        </button>
+
                         {(i.status === "paid" || i.status === "exempted") && (
                           <button onClick={async () => {
                             if (!confirm("Desfazer este pagamento/isenção? A fatura volta para pendente e os lançamentos são removidos do relatório.")) return;
@@ -277,6 +291,13 @@ function AdminSubscriptionsPage() {
                               try { await fnResetAttempt({ data: { invoice_id: i.id } } as any); toast.success("Fatura liberada para nova tentativa"); load(); }
                               catch (e: any) { toast.error(e.message); }
                             }} className="rounded bg-violet-600 px-2 py-1 text-xs">Nova tentativa</button>
+                            <button onClick={async () => {
+                              const reason = prompt("Motivo para pular este mês (opcional):", "Mês pulado pelo admin");
+                              if (reason === null) return;
+                              try { await fnSkip({ data: { invoice_id: i.id, reason: reason || undefined } } as any); toast.success("Mês pulado"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="inline-flex items-center gap-1 rounded bg-sky-700 px-2 py-1 text-xs" title="Marca a fatura como isenta e libera o mês seguinte"><SkipForward className="h-3 w-3" /> Pular mês</button>
+
                           </>
                         )}
                       </div>
@@ -301,9 +322,77 @@ function AdminSubscriptionsPage() {
           ))}
         </div>
       )}
+
+      {auditInvoiceId && <AuditModal invoiceId={auditInvoiceId} onClose={() => setAuditInvoiceId(null)} />}
     </div>
   );
 }
+
+function DashboardTab() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const fn = useServerFn(getSubscriptionsDashboard);
+  useEffect(() => { (async () => { try { setData(await fn()); } catch (e: any) { toast.error(e.message); } finally { setLoading(false); } })(); }, []);
+  if (loading) return <p className="text-white/50">Carregando dashboard...</p>;
+  if (!data) return <p className="text-white/50">Sem dados.</p>;
+  const fmt = (n: number) => `R$ ${(n ?? 0).toFixed(2).replace(".", ",")}`;
+  const Card = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
+    <div className={`rounded-2xl border p-5 ${tone ?? "border-white/10 bg-white/5"}`}>
+      <p className="text-xs uppercase text-white/50">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+    </div>
+  );
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card label="Assinantes ativos" value={String(data.activeCount ?? 0)} tone="border-green-500/30 bg-green-500/5" />
+        <Card label="MRR" value={fmt(data.mrr ?? 0)} tone="border-primary/30 bg-primary/5" />
+        <Card label="Inadimplentes" value={String(data.overdueCount ?? 0)} tone="border-orange-500/30 bg-orange-500/5" />
+        <Card label="Bloqueados" value={String(data.blockedCount ?? 0)} tone="border-red-500/30 bg-red-500/5" />
+      </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <Card label="Recebido este mês" value={fmt(data.receivedThisMonth ?? 0)} />
+        <Card label="A receber (aberto)" value={fmt(data.openReceivable ?? 0)} />
+        <Card label="Isentos" value={String(data.exemptCount ?? 0)} />
+        <Card label="Churn 30d" value={`${(data.churn30d ?? 0).toFixed(1)}%`} />
+      </div>
+    </div>
+  );
+}
+
+function AuditModal({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const fn = useServerFn(getInvoiceAuditLog);
+  useEffect(() => { (async () => { try { setLogs(await fn({ data: { invoice_id: invoiceId } } as any) ?? []); } catch (e: any) { toast.error(e.message); } finally { setLoading(false); } })(); }, [invoiceId]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-2xl border border-white/10 bg-neutral-900 p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white">Histórico da fatura</h3>
+          <button onClick={onClose} className="rounded p-1 hover:bg-white/10"><X className="h-4 w-4" /></button>
+        </div>
+        {loading ? <p className="text-white/50">Carregando...</p> : (
+          logs.length === 0 ? <p className="text-white/50">Nenhum registro.</p> : (
+            <ul className="space-y-2 text-sm">
+              {logs.map((l: any) => (
+                <li key={l.id} className="rounded-lg border border-white/5 bg-white/5 p-3">
+                  <div className="flex justify-between text-xs text-white/50">
+                    <span>{l.action}</span>
+                    <span>{new Date(l.created_at).toLocaleString("pt-BR")}</span>
+                  </div>
+                  <p className="mt-1 text-white/80">{l.description ?? "—"}</p>
+                  {l.actor_email && <p className="mt-1 text-xs text-white/40">por {l.actor_email}</p>}
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 function SubRow({ sub, onSave }: { sub: any; onSave: (p: any) => Promise<void> }) {
   const [amount, setAmount] = useState(String(sub.custom_amount ?? ""));
