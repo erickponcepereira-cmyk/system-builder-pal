@@ -1,29 +1,33 @@
-## Problema
+# Corrigir duplicação na Árvore da Rede
 
-Em `src/lib/collab.functions.ts` → `listCoproducerCandidates`, a query de profissionais é:
+## Causa raiz (confirmada no banco)
 
-```ts
-supabase.from("coaches").select("id,role,profiles:profile_id(name)").eq("role", "professional")
-```
+Nathan Utuari tem `coaches.upline_coach_id` apontando para o próprio `coaches.id` (auto-referência). Isso faz o código de árvore em `src/lib/network-ranking.functions.ts` renderizá-lo:
 
-A tabela `coaches` não tem coluna `role` — o filtro nunca casa e nenhum profissional aparece. Por isso Luana (que está em `coaches` com `is_professional = true`, upline = Delma) não aparece para a Delma. A flag correta é `is_professional`.
+- **como upline** (card "Acima de você") — porque `me.upline_coach_id` existe em `byId`
+- **como raiz** (card "você")
+- **e como filho de si mesmo** na primeira linha (`byUpline.get(coachId)` inclui ele próprio), o que empurra a mesma sub-rede para os níveis abaixo com deslocamento (aparece como 1ª e 2ª linha e também como 2ª e 3ª).
 
-Além disso, hoje a lista traz **todos** os parceiros/profissionais aprovados do sistema. O pedido é "inicialmente apenas da rede".
+Uma busca no banco mostrou que **só o Nathan tem auto-referência direta** (`upline_coach_id = id`). Porém, 16 coaches são descendentes diretos dele — todos herdam a distorção. Nenhum outro coach tem ciclos.
 
-## Correção
+## O que fazer
 
-Ajustar apenas `listCoproducerCandidates` em `src/lib/collab.functions.ts`:
+### 1. Migration (correção de dados + prevenção)
+- Zerar `upline_coach_id` do Nathan (`UPDATE coaches SET upline_coach_id = NULL WHERE id = upline_coach_id`).
+- Adicionar `CHECK (upline_coach_id IS NULL OR upline_coach_id <> id)` em `public.coaches` para bloquear auto-referência futura.
+- Adicionar trigger `BEFORE INSERT OR UPDATE` que também detecta ciclos maiores (A→B→A) subindo a cadeia até 20 níveis e lança erro se encontrar o próprio id — protege contra o padrão que gerou esse caso.
 
-1. **Profissionais**: trocar `.eq("role","professional")` por `.eq("is_professional", true)`, exigir `approved_at IS NOT NULL` e `blocked_at IS NULL`.
-2. **Escopo por rede** (quando o solicitante for coach/profissional):
-   - Descobrir o `coach_id` do usuário logado (via `profile_id` do `context.userId`).
-   - Rede = downline direto/indireto + upline + o próprio upline_coach. Implementação simples: buscar todos os coaches onde `upline_coach_id = meuCoachId` (nível 1-N por recursão simples em 3 níveis) **e** o meu upline.
-   - Parceiros da rede: `partners.referrer_coach_id` (ou coluna equivalente) dentro do conjunto de coaches da rede + o próprio.
-3. **Fallback "código"**: manter o campo "Fora da lista? Usar código" já existente no `CoproductionEditor` para casos fora da rede.
-4. Manter exclusão do próprio criador (`excludeType`/`excludeId`).
+### 2. Defesa no código (`src/lib/network-ranking.functions.ts`)
+Mesmo com a constraint, blindar o `getMyNetworkStructure` para nunca renderizar auto-loops caso apareçam por dados legados:
 
-Nenhuma mudança de UI, schema, ou lógica de repasse — apenas o filtro de candidatos.
+- Em `buildByUpline`: ignorar filhos onde `child.id === upline_coach_id`.
+- Em `getMyNetworkStructure`: se `me.upline_coach_id === coachId`, tratar como sem upline (não renderizar card "Acima de você").
+- Em `collectDownline` / `toNode`: filtrar `child.id === parentId` (já protegido por `seen`, mas explicitar evita a linha extra).
 
-## Verificação
+## Detalhes técnicos
 
-Antes de finalizar, confirmar via `supabase--read_query` a coluna usada em `partners` para referenciar o coach (ex.: `referrer_coach_id` vs `coach_id`) e ajustar a query. Depois testar com Delma → Luana deve aparecer.
+Arquivos:
+- Nova migration SQL (dados + CHECK + trigger anti-ciclo).
+- `src/lib/network-ranking.functions.ts` — guards nas 3 funções acima.
+
+Nenhuma mudança em UI/componentes; a árvore de qualquer coach afetado passa a mostrar Nathan como raiz de topo (sem upline), e sua primeira linha volta a conter apenas os coaches reais patrocinados por ele.
