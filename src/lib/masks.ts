@@ -79,6 +79,26 @@ export function isValidCPF(value: string | null | undefined): boolean {
   return true;
 }
 
+// Validates CNPJ using the official algorithm
+export function isValidCNPJ(value: string | null | undefined): boolean {
+  const cnpj = (value || "").replace(/\D/g, "");
+  if (cnpj.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(cnpj)) return false;
+  const calc = (base: string, weights: number[]) => {
+    let sum = 0;
+    for (let i = 0; i < base.length; i += 1) sum += parseInt(base[i], 10) * weights[i];
+    const rest = sum % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const d1 = calc(cnpj.slice(0, 12), w1);
+  if (d1 !== parseInt(cnpj[12], 10)) return false;
+  const d2 = calc(cnpj.slice(0, 13), w2);
+  if (d2 !== parseInt(cnpj[13], 10)) return false;
+  return true;
+}
+
 
 
 // Phone mask
