@@ -37,13 +37,14 @@ const SUB_STATUS_LABEL: Record<string, string> = {
 };
 
 function AdminSubscriptionsPage() {
-  const [tab, setTab] = useState<"subs" | "invoices" | "config">("subs");
+  const [tab, setTab] = useState<"dashboard" | "subs" | "invoices" | "config">("dashboard");
   const [subs, setSubs] = useState<any[]>([]);
   const [invs, setInvs] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [annualMap, setAnnualMap] = useState<Map<string, { paid_at: string | null; valid_until: string | null; source: string; note: string | null; active: boolean }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
+  const [auditInvoiceId, setAuditInvoiceId] = useState<string | null>(null);
 
   const fnSubs = useServerFn(listAdminSubscriptions);
   const fnInvs = useServerFn(listAdminInvoices);
@@ -58,6 +59,8 @@ function AdminSubscriptionsPage() {
   const fnPostpone = useServerFn(postponeInvoiceAdmin);
   const fnResetDue = useServerFn(resetInvoiceDueDateAdmin);
   const fnResetAttempt = useServerFn(resetInvoicePaymentAttemptAdmin);
+  const fnSkip = useServerFn(skipInvoiceAdmin);
+
 
 
   const load = async () => {
