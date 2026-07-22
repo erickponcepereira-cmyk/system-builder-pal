@@ -265,10 +265,7 @@ function EligibleStudentsPicker({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2 sm:p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2 sm:p-4">
       <div
         className="w-full max-w-lg rounded-2xl border border-white/10 max-h-[90vh] flex flex-col"
         style={{ backgroundColor: "#111" }}
