@@ -474,7 +474,6 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
-  const nowIso = new Date().toISOString();
   const activationPatch = input.alreadyProfessional
     ? {
         already_coach: true,
