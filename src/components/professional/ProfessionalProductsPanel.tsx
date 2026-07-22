@@ -91,6 +91,9 @@ function productSplitOverride(p: Partial<ProProduct> | null | undefined): Partne
     networkL2PctOverride: p.network_l2_pct_override ?? null,
     networkL3PctOverride: p.network_l3_pct_override ?? null,
   };
+}
+
+
 
 const WEEKDAYS = [
   { v: 0, l: "Dom" }, { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" },
