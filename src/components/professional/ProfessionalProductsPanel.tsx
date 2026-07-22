@@ -13,6 +13,7 @@ import {
   COACH_COMMISSION_OPTIONS,
   type CoachCommissionPct,
   type PartnerPriceMode,
+  type PartnerSplitOverride,
 } from "@/lib/partnerFinance";
 import { CurrencyInputBRL } from "@/components/ui/currency-input";
 import { CategoryPicker } from "@/components/store/CategoryPicker";
