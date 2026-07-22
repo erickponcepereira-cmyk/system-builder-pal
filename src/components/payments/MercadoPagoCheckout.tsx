@@ -299,18 +299,40 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
           {paymentError && (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
               <p>{paymentError}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentError(null);
-                  setCardAttempt((v) => v + 1);
-                }}
-                className="rounded bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground"
-              >
-                Tentar cartão novamente
-              </button>
+              {lastStatusDetail?.includes("high_risk") && (
+                <p className="text-xs font-normal text-destructive/80">
+                  O Mercado Pago bloqueou este cartão por análise de risco. Retentativas com o mesmo cartão tendem a cair de novo — o PIX costuma aprovar na hora.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {lastStatusDetail?.includes("high_risk") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentError(null);
+                      setLastStatusDetail(null);
+                      setTab("pix");
+                    }}
+                    className="rounded bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
+                  >
+                    Pagar com PIX
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setLastStatusDetail(null);
+                    setCardAttempt((v) => v + 1);
+                  }}
+                  className="rounded bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground"
+                >
+                  Tentar cartão novamente
+                </button>
+              </div>
             </div>
           )}
+
           {cardLoading && (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> Processando pagamento...
