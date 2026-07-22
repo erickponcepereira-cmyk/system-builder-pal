@@ -34,6 +34,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
+
 
   // PIX
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string; ticketUrl: string | null; rowId: string } | null>(null);
@@ -112,9 +114,21 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
         if (!mounted) return;
 
+        const nameParts = (payer.name || "").trim().split(/\s+/).filter(Boolean);
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(" ") || undefined;
+        const docDigits = (payer.doc || "").replace(/\D/g, "");
+        const initPayer: any = payer.email ? { email: payer.email } : undefined;
+        if (initPayer) {
+          if (firstName) initPayer.firstName = firstName;
+          if (lastName) initPayer.lastName = lastName;
+          if (docDigits.length >= 11) initPayer.identification = { type: "CPF", number: docDigits };
+        }
+
         cardBrickRef.current = await bricksBuilder.create("cardPayment", cardContainerId, {
-          initialization: { amount, payer: payer.email ? { email: payer.email } : undefined },
+          initialization: { amount, payer: initPayer },
           customization: { paymentMethods: { maxInstallments: 12 }, visual: { hideFormTitle: true } },
+
           callbacks: {
             onReady: () => { console.log("[MP Checkout] Brick pronto"); },
             onError: (err: any) => {
@@ -131,6 +145,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
               (async () => {
                 setCardLoading(true);
                 setPaymentError(null);
+                setLastStatusDetail(null);
                 try {
                   const r = await cardFn({
                     data: {
@@ -157,13 +172,16 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                   } else {
                     const msg = friendlyPaymentMessage(r.status, r.statusDetail);
                     setPaymentError(msg);
+                    setLastStatusDetail(String(r.statusDetail || ""));
                     toast.error(msg, { duration: 9000 });
                   }
                 } catch (err: any) {
                   console.error("[MP card submit error]", err);
                   const msg = friendlyPaymentMessage("rejected", err?.message) || "Falha no pagamento. Verifique os dados do cartão.";
                   setPaymentError(msg);
+                  setLastStatusDetail(String(err?.message || ""));
                   toast.error(msg, { duration: 9000 });
+
                 } finally {
                   setCardLoading(false);
                   resolve();
@@ -281,18 +299,40 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
           {paymentError && (
             <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
               <p>{paymentError}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentError(null);
-                  setCardAttempt((v) => v + 1);
-                }}
-                className="rounded bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground"
-              >
-                Tentar cartão novamente
-              </button>
+              {lastStatusDetail?.includes("high_risk") && (
+                <p className="text-xs font-normal text-destructive/80">
+                  O Mercado Pago bloqueou este cartão por análise de risco. Retentativas com o mesmo cartão tendem a cair de novo — o PIX costuma aprovar na hora.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {lastStatusDetail?.includes("high_risk") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentError(null);
+                      setLastStatusDetail(null);
+                      setTab("pix");
+                    }}
+                    className="rounded bg-primary px-3 py-2 text-xs font-bold text-primary-foreground"
+                  >
+                    Pagar com PIX
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentError(null);
+                    setLastStatusDetail(null);
+                    setCardAttempt((v) => v + 1);
+                  }}
+                  className="rounded bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground"
+                >
+                  Tentar cartão novamente
+                </button>
+              </div>
             </div>
           )}
+
           {cardLoading && (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> Processando pagamento...
