@@ -7301,6 +7301,8 @@ export type Database = {
           coach_commission_percentage: number
           coach_id: string
           created_at: string
+          creator_pct_override: number | null
+          custom_split: boolean
           default_duration_minutes: number
           deleted_at: string | null
           delivery_days: number | null
@@ -7324,8 +7326,11 @@ export type Database = {
           monthly_redeem_limit: number | null
           name: string
           network_l1_amount: number | null
+          network_l1_pct_override: number | null
           network_l2_amount: number | null
+          network_l2_pct_override: number | null
           network_l3_amount: number | null
+          network_l3_pct_override: number | null
           original_price: number | null
           payment_timing: string
           price: number
@@ -7336,10 +7341,12 @@ export type Database = {
           redemption_location_url: string | null
           redemption_mode: string
           section_id: string | null
+          skip_tax: boolean
           sort_order: number
           status: string
           stock: number | null
           subcategory_id: string | null
+          system_fee_pct_override: number | null
           updated_at: string
           uses_scheduling: boolean
           weekly_limit_per_student: number
@@ -7358,6 +7365,8 @@ export type Database = {
           coach_commission_percentage?: number
           coach_id: string
           created_at?: string
+          creator_pct_override?: number | null
+          custom_split?: boolean
           default_duration_minutes?: number
           deleted_at?: string | null
           delivery_days?: number | null
@@ -7381,8 +7390,11 @@ export type Database = {
           monthly_redeem_limit?: number | null
           name: string
           network_l1_amount?: number | null
+          network_l1_pct_override?: number | null
           network_l2_amount?: number | null
+          network_l2_pct_override?: number | null
           network_l3_amount?: number | null
+          network_l3_pct_override?: number | null
           original_price?: number | null
           payment_timing?: string
           price?: number
@@ -7393,10 +7405,12 @@ export type Database = {
           redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
+          skip_tax?: boolean
           sort_order?: number
           status?: string
           stock?: number | null
           subcategory_id?: string | null
+          system_fee_pct_override?: number | null
           updated_at?: string
           uses_scheduling?: boolean
           weekly_limit_per_student?: number
@@ -7415,6 +7429,8 @@ export type Database = {
           coach_commission_percentage?: number
           coach_id?: string
           created_at?: string
+          creator_pct_override?: number | null
+          custom_split?: boolean
           default_duration_minutes?: number
           deleted_at?: string | null
           delivery_days?: number | null
@@ -7438,8 +7454,11 @@ export type Database = {
           monthly_redeem_limit?: number | null
           name?: string
           network_l1_amount?: number | null
+          network_l1_pct_override?: number | null
           network_l2_amount?: number | null
+          network_l2_pct_override?: number | null
           network_l3_amount?: number | null
+          network_l3_pct_override?: number | null
           original_price?: number | null
           payment_timing?: string
           price?: number
@@ -7450,10 +7469,12 @@ export type Database = {
           redemption_location_url?: string | null
           redemption_mode?: string
           section_id?: string | null
+          skip_tax?: boolean
           sort_order?: number
           status?: string
           stock?: number | null
           subcategory_id?: string | null
+          system_fee_pct_override?: number | null
           updated_at?: string
           uses_scheduling?: boolean
           weekly_limit_per_student?: number
