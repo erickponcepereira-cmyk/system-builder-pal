@@ -362,7 +362,7 @@ function ProfessionalReleasesPage() {
                         disabled={actDone || (busy?.id === r.id && busy?.step === "activation")}
                         onClick={() => {
                           if (!confirm(`Isentar a anuidade de profissional (R$ 179,90) de ${r.profile?.name || "este profissional"}?`)) return;
-                          run(r.id, "activation", () => grantActivation({ data: { coachId: r.id, note: "Anuidade isenta pelo admin" } }), "Anuidade isenta", r.profile?.id);
+                          run(r.id, "activation", () => grantActivation({ data: { coachId: r.id, note: "Anuidade isenta pelo admin", source: "waived_annual" } }), "Anuidade isenta", r.profile?.id);
                         }}
                         className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-200 hover:bg-blue-500/20 disabled:opacity-40"
                       >
