@@ -47,7 +47,7 @@ const statusColor = (s: string | null) => {
 };
 
 function AdminPayments() {
-  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp";
+  type Tab = "dashboard" | "seller" | "student_referrer" | "nutritionist" | "orders" | "mp" | "sub_wallet";
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [sellerRole, setSellerRole] = useState<SellerRole>("all");
 
@@ -65,6 +65,7 @@ function AdminPayments() {
           { k: "seller", l: "Coach / Parceiro / Profissional" },
           { k: "student_referrer", l: "Aluno Indicador" },
           { k: "nutritionist", l: "Nutricionistas" },
+          { k: "sub_wallet", l: "Mensalidades (carteira)" },
           { k: "orders", l: "Pedidos" },
           { k: "mp", l: "Mercado Pago" },
         ].map((t) => (
@@ -88,9 +89,81 @@ function AdminPayments() {
         <GroupPanel key="stu" group="student_referrer" />
       )}
       {activeTab === "nutritionist" && <NutritionistPanel />}
+      {activeTab === "sub_wallet" && <SubscriptionWalletPanel />}
       {activeTab === "orders" && <LegacyOrders />}
       {activeTab === "mp" && <LegacyMp />}
     </>
+  );
+}
+
+interface SubWalletRow {
+  id: string;
+  amount: number;
+  reference_month: string;
+  paid_at: string | null;
+  wallet_source: string | null;
+  user_id: string;
+  name?: string;
+  email?: string;
+}
+
+function SubscriptionWalletPanel() {
+  const [rows, setRows] = useState<SubWalletRow[] | null>(null);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("subscription_invoices" as never)
+        .select("id,amount,reference_month,paid_at,wallet_source,user_id" as never)
+        .eq("status" as never, "paid" as never)
+        .eq("payment_method" as never, "wallet" as never)
+        .order("paid_at" as never, { ascending: false })
+        .limit(200);
+      const list = ((data as unknown) as SubWalletRow[]) || [];
+      const uids = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
+      const nameMap = new Map<string, { name?: string; email?: string }>();
+      if (uids.length) {
+        const { data: profs } = await supabase.from("profiles").select("user_id,name,email").in("user_id", uids);
+        ((profs as Array<{ user_id: string; name: string | null; email: string | null }>) || []).forEach((p) => {
+          nameMap.set(p.user_id, { name: p.name || undefined, email: p.email || undefined });
+        });
+      }
+      setRows(list.map((r) => ({ ...r, ...(nameMap.get(r.user_id) || {}) })));
+    })();
+  }, []);
+  const total = (rows || []).reduce((a, r) => a + Number(r.amount || 0), 0);
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl bg-card p-4">
+        <div className="text-[10px] uppercase text-white/40">Total pago com carteira interna</div>
+        <div className="mt-1 text-xl font-bold text-primary">{fmt(total)}</div>
+        <div className="text-[11px] text-white/40">Valores debitados do saldo dos coaches/parceiros/profissionais para quitar a mensalidade.</div>
+      </div>
+      <div className="overflow-hidden rounded-xl bg-card">
+        <div className="grid grid-cols-12 gap-2 border-b border-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-white/40">
+          <div className="col-span-4">Usuário</div>
+          <div className="col-span-2">Origem</div>
+          <div className="col-span-2">Referência</div>
+          <div className="col-span-2">Pago em</div>
+          <div className="col-span-2 text-right">Valor</div>
+        </div>
+        {rows === null ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-white/40" /></div>
+        ) : rows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-white/40">Nenhuma mensalidade paga com carteira ainda.</p>
+        ) : rows.map((r) => (
+          <div key={r.id} className="grid grid-cols-12 gap-2 border-b border-white/5 px-4 py-3 text-sm">
+            <div className="col-span-4 min-w-0">
+              <p className="truncate font-bold text-white">{r.name || "—"}</p>
+              <p className="truncate text-[11px] text-white/40">{r.email || "—"}</p>
+            </div>
+            <div className="col-span-2 text-white/70">{r.wallet_source || "—"}</div>
+            <div className="col-span-2 text-white/70">{r.reference_month ? new Date(r.reference_month).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" }) : "—"}</div>
+            <div className="col-span-2 text-white/70">{r.paid_at ? new Date(r.paid_at).toLocaleString("pt-BR") : "—"}</div>
+            <div className="col-span-2 text-right font-bold text-primary">{fmt(Number(r.amount))}</div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
