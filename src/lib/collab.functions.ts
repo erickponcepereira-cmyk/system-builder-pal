@@ -312,23 +312,81 @@ export const listCoproducerCandidates = createServerFn({ method: "POST" })
   .inputValidator((d: { excludeType: OwnerType; excludeId: string }) => d)
   .handler(async ({ context, data }) => {
     const supabase = context.supabase as any;
-    const [partners, coaches] = await Promise.all([
-      supabase.from("partners").select("id,fantasy_name").eq("status", "approved").order("fantasy_name"),
-      supabase.from("coaches").select("id,role,profiles:profile_id(name)").eq("role", "professional"),
-    ]);
+
+    // Descobre o coach_id do usuário logado (se houver) para escopar por rede
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const myProfileId = profile?.id as string | undefined;
+
+    let myCoach: any = null;
+    if (myProfileId) {
+      const { data: c } = await supabase
+        .from("coaches")
+        .select("id, upline_coach_id")
+        .eq("profile_id", myProfileId)
+        .maybeSingle();
+      myCoach = c;
+    }
+
+    // Conjunto de coaches da rede: eu + upline + downline (até 3 níveis)
+    const networkCoachIds = new Set<string>();
+    if (myCoach?.id) {
+      networkCoachIds.add(myCoach.id);
+      if (myCoach.upline_coach_id) networkCoachIds.add(myCoach.upline_coach_id);
+      let frontier: string[] = [myCoach.id];
+      for (let level = 0; level < 3 && frontier.length; level++) {
+        const { data: children } = await supabase
+          .from("coaches")
+          .select("id, upline_coach_id")
+          .in("upline_coach_id", frontier);
+        const next: string[] = [];
+        (children || []).forEach((c: any) => {
+          if (!networkCoachIds.has(c.id)) {
+            networkCoachIds.add(c.id);
+            next.push(c.id);
+          }
+        });
+        frontier = next;
+      }
+    }
+
+    const inNetworkIds = Array.from(networkCoachIds);
+
+    let professionalsQuery = supabase
+      .from("coaches")
+      .select("id, profiles:profile_id(name)")
+      .eq("is_professional", true)
+      .not("approved_at", "is", null)
+      .is("blocked_at", null);
+    if (inNetworkIds.length) professionalsQuery = professionalsQuery.in("id", inNetworkIds);
+
+    let partnersQuery = supabase
+      .from("partners")
+      .select("id, fantasy_name, upline_coach_id")
+      .eq("status", "approved")
+      .order("fantasy_name");
+    if (inNetworkIds.length) partnersQuery = partnersQuery.in("upline_coach_id", inNetworkIds);
+
+    const [partners, professionals] = await Promise.all([partnersQuery, professionalsQuery]);
+
     const items: { type: OwnerType; id: string; name: string }[] = [];
     (partners.data || []).forEach((p: any) => {
       if (!(data.excludeType === "partner" && data.excludeId === p.id)) {
         items.push({ type: "partner", id: p.id, name: p.fantasy_name || "Parceiro" });
       }
     });
-    (coaches.data || []).forEach((c: any) => {
+    (professionals.data || []).forEach((c: any) => {
       if (!(data.excludeType === "professional" && data.excludeId === c.id)) {
         items.push({ type: "professional", id: c.id, name: c.profiles?.name || "Profissional" });
       }
     });
+    items.sort((a, b) => a.name.localeCompare(b.name));
     return { items };
   });
+
 
 export const respondCoproduction = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
