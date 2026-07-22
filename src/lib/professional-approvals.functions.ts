@@ -208,6 +208,7 @@ export const adminGrantProfessionalActivation = createServerFn({ method: "POST" 
     z.object({
       coachId: z.string().uuid(),
       note: z.string().trim().min(5, "Justificativa obrigatória (mín. 5 caracteres)").max(500),
+      source: z.enum(["admin_grant", "waived_annual"]).optional(),
     }).parse(input)
   )
   .handler(async ({ data, context }) => {
@@ -218,9 +219,11 @@ export const adminGrantProfessionalActivation = createServerFn({ method: "POST" 
     if (!pro) throw new Error("Profissional não encontrado");
     const p = pro as { id: string; profile_id: string; activation_paid_at: string | null };
     const nowIso = new Date().toISOString();
+    const source = data.source
+      ?? (data.note.toLowerCase().startsWith("anuidade isenta") ? "waived_annual" : "admin_grant");
     const { error } = await supabaseAdmin.from("coaches").update({
       activation_paid_at: p.activation_paid_at || nowIso,
-      activation_source: "admin_grant",
+      activation_source: source,
       activation_granted_by: context.userId,
       activation_note: data.note,
     } as never).eq("id", p.id);
@@ -228,11 +231,14 @@ export const adminGrantProfessionalActivation = createServerFn({ method: "POST" 
     await supabaseAdmin.from("notifications").insert({
       profile_id: p.profile_id,
       type: "professional_onboarding",
-      title: "Ativação liberada",
-      message: "Sua ativação de profissional foi liberada pelo admin.",
+      title: source === "waived_annual" ? "Anuidade isenta" : "Ativação liberada",
+      message: source === "waived_annual"
+        ? "Sua anuidade de profissional foi isenta pelo admin."
+        : "Sua ativação de profissional foi liberada pelo admin.",
       action_url: "/professional",
     });
-    await logAudit(actorId, p.profile_id, "professional_activation_paid", `Ativação concedida pelo admin. Motivo: ${data.note}`);
+    await logAudit(actorId, p.profile_id, "professional_activation_paid",
+      `${source === "waived_annual" ? "Anuidade isenta" : "Ativação concedida"} pelo admin. Motivo: ${data.note}`);
     return { ok: true };
   });
 

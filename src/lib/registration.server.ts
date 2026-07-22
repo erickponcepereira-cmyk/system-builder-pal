@@ -239,15 +239,22 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
 
     const isProfessional = input.coach.isProfessional ?? false;
     const isAlreadyCoach = input.coach.alreadyCoach ?? false;
-    // Profissional novo NÃO é auto-aprovado: passa pelo mesmo fluxo (pagamento da anuidade + liberação do admin).
-    // Só ganha aprovação imediata quem marcou "já sou coach/profissional" (upgrade de conta existente com ativação prévia).
-    const coachApprovedAt = isAlreadyCoach && isProfessional ? new Date().toISOString() : null;
-    const nowIso = new Date().toISOString();
+    // Profissional (novo ou já-coach) NUNCA é auto-aprovado: sempre passa
+    // pela aba "Liberar Profissionais" (confirmar e-mail → isentar/cobrar
+    // anuidade → aprovar). Auto-aprovação só vale para coach comum que marcou
+    // "já sou coach FitMind".
+    const coachApprovedAt = isAlreadyCoach && !isProfessional ? new Date().toISOString() : null;
     const activationPatch = isAlreadyCoach
       ? {
           already_coach: true,
-          activation_paid_at: nowIso,
-          activation_source: isProfessional ? "already_professional" : "already_coach",
+          // Só registra ativação paga automaticamente para coach comum já-coach.
+          // Profissional passa pelo admin para isentar/cobrar anuidade.
+          ...(isProfessional
+            ? {}
+            : {
+                activation_paid_at: new Date().toISOString(),
+                activation_source: "already_coach",
+              }),
           activation_note: clean(input.coach.activationNote),
         }
       : {};
@@ -274,7 +281,7 @@ async function finalizeRegistrationInner(input: FinalizeRegistrationInput) {
           council_number: clean(input.coach.councilNumber),
           specialty_pending_setup: (input.coach.specialtyKey || "").toLowerCase() === "other",
           approved_at: coachApprovedAt,
-          onboarding_stage: coachApprovedAt ? "released" : "awaiting_payment",
+          onboarding_stage: coachApprovedAt ? "released" : (isProfessional ? "awaiting_admin" : "awaiting_payment"),
           ...activationPatch,
         },
         { onConflict: "profile_id" }
@@ -467,12 +474,12 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
   if (!profile?.id) throw new Error("Não encontramos seu perfil. Entre em contato com o suporte.");
   if (profile.role === "admin") throw new Error("Administradores não podem ser convertidos via cadastro público.");
 
-  const nowIso = new Date().toISOString();
   const activationPatch = input.alreadyProfessional
     ? {
         already_coach: true,
-        activation_paid_at: nowIso,
-        activation_source: "already_professional" as const,
+        // Não marca ativação/aprovação automaticamente: profissional passa
+        // pela aba admin "Liberar Profissionais" (confirmar e-mail →
+        // isentar/cobrar anuidade → aprovar).
         activation_note: clean(input.activationNote),
       }
     : {};
@@ -484,8 +491,8 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
     professional_council: clean(input.professionalCouncil),
     council_number: clean(input.councilNumber),
     specialty_pending_setup: !!input.specialtyPendingSetup,
-    approved_at: nowIso,
-    onboarding_stage: "released" as const,
+    approved_at: null as string | null,
+    onboarding_stage: "awaiting_admin" as const,
     upline_coach_id: input.uplineCoachId,
   };
 
@@ -521,7 +528,7 @@ export async function upgradeExistingToProfessional(input: UpgradeExistingToProf
     if (lastErr) throw new Error(lastErr.message);
   }
 
-  await supabaseAdmin.from("profiles").update({ status: "active", role: "coach" }).eq("id", profile.id);
+  await supabaseAdmin.from("profiles").update({ status: "pending", role: "coach" }).eq("id", profile.id);
   await ensureStudentForProfile(profile.id, input.uplineCoachId);
   return { ok: true, profileId: profile.id };
 }

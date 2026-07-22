@@ -160,12 +160,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     if (!alreadyProfessional) return fail("Informe se você já é coach/profissional FitMind.");
 
     const isAlreadyPro = alreadyProfessional === "yes";
-    const nowIso = new Date().toISOString();
     const activationExtras = isAlreadyPro
       ? {
           already_coach: true,
-          activation_paid_at: nowIso,
-          activation_source: "already_professional",
           activation_note: alreadyProfessionalNote.trim() || null,
         }
       : {};
@@ -173,6 +170,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     setLoading(true); setFormError(null);
     try {
       const selectedSpecLocal = specialties.find((s) => s.key === specialtyKey);
+      // NÃO auto-aprovar: novo profissional entra pendente e o admin libera
+      // pela aba "Liberar Profissionais" (confirmar e-mail → isentar/cobrar
+      // anuidade → aprovar).
       const professionalPatch = {
         is_professional: true,
         specialty_key: specialtyKey,
@@ -180,8 +180,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
         professional_council: council || null,
         council_number: councilNumber || null,
         specialty_pending_setup: !!selectedSpecLocal?.requires_admin_setup,
-        approved_at: new Date().toISOString(),
-        onboarding_stage: "released",
+        approved_at: null as string | null,
+        onboarding_stage: "awaiting_admin",
       };
 
       if (existingMode) {
