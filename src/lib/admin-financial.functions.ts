@@ -1175,3 +1175,12 @@ export const registerAdminWalletDebit = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, entryId: out as string };
   });
+
+export const adminReconcileAllWallets = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data, error } = await context.supabase.rpc("admin_reconcile_all_wallets" as never);
+    if (error) throw new Error(error.message);
+    return { ok: true, count: Number(data ?? 0) };
+  });
