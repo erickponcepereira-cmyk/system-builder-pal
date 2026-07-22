@@ -19,6 +19,17 @@ interface Props {
 
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const friendlyPaymentMessage = (status?: string | null, detail?: string | null) => {
+  const code = String(detail || status || "").toLowerCase();
+  if (code.includes("cc_rejected_high_risk")) {
+    return "Pagamento recusado pela análise de segurança do Mercado Pago. Tente PIX, outro cartão ou gere uma nova tentativa.";
+  }
+  if (code.includes("cc_rejected_insufficient_amount")) return "Pagamento recusado por saldo/limite insuficiente. Tente outro cartão ou PIX.";
+  if (code.includes("cc_rejected_bad_filled") || code.includes("bad_filled")) return "Pagamento recusado. Confira os dados do cartão e tente novamente.";
+  if (code.includes("cc_rejected_other_reason") || code.includes("rejected")) return "Pagamento recusado. Tente PIX, outro cartão ou uma nova tentativa.";
+  return `Pagamento ${status === "rejected" ? "recusado" : status || "não aprovado"}${detail ? `: ${detail}` : ""}`;
+};
+
 export function MercadoPagoCheckout({ source, amount, description, defaultPayer, initialMethod = "pix", onApproved }: Props) {
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
@@ -31,8 +42,10 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
   // Cartão
   const [cardLoading, setCardLoading] = useState(false);
+  const [cardAttempt, setCardAttempt] = useState(0);
   const cardFormRef = useRef<HTMLDivElement>(null);
   const cardBrickRef = useRef<any>(null);
+  const cardContainerId = `mp-card-form-container-${source.kind}-${source.id}-${cardAttempt}`;
 
   const pixFn = useServerFn(createPixCheckout);
   const cardFn = useServerFn(createCardCheckout);
@@ -82,9 +95,9 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
         const bricksBuilder = mp.bricks();
 
-        const container = document.getElementById("mp-card-form-container");
+        const container = document.getElementById(cardContainerId);
         if (!container) {
-          console.error("[MP Checkout] Container #mp-card-form-container não encontrado");
+          console.error("[MP Checkout] Container de cartão não encontrado", cardContainerId);
           return;
         }
 
@@ -99,7 +112,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
         if (!mounted) return;
 
-        cardBrickRef.current = await bricksBuilder.create("cardPayment", "mp-card-form-container", {
+        cardBrickRef.current = await bricksBuilder.create("cardPayment", cardContainerId, {
           initialization: { amount, payer: payer.email ? { email: payer.email } : undefined },
           customization: { paymentMethods: { maxInstallments: 12 }, visual: { hideFormTitle: true } },
           callbacks: {
@@ -142,15 +155,15 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
                   } else if (r.status === "in_process" || r.status === "pending") {
                     toast.info("Pagamento em análise. Você será notificado.");
                   } else {
-                    const msg = `Pagamento ${r.status === "rejected" ? "recusado" : r.status}${r.statusDetail ? `: ${r.statusDetail}` : ""}`;
+                    const msg = friendlyPaymentMessage(r.status, r.statusDetail);
                     setPaymentError(msg);
-                    toast.error(msg, { duration: 6000 });
+                    toast.error(msg, { duration: 9000 });
                   }
                 } catch (err: any) {
                   console.error("[MP card submit error]", err);
-                  const msg = err?.message || "Falha no pagamento. Verifique os dados do cartão.";
+                  const msg = friendlyPaymentMessage("rejected", err?.message) || "Falha no pagamento. Verifique os dados do cartão.";
                   setPaymentError(msg);
-                  toast.error(msg, { duration: 6000 });
+                  toast.error(msg, { duration: 9000 });
                 } finally {
                   setCardLoading(false);
                   resolve();
@@ -171,7 +184,7 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
       cardBrickRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, amount]);
+  }, [tab, amount, cardAttempt, cardContainerId]);
 
   const generatePix = async () => {
     if (!payer.email) { toast.error("Informe seu e-mail"); return; }
@@ -264,10 +277,20 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
 
       {tab === "card" && (
         <div className="space-y-3">
-          <div ref={cardFormRef} id="mp-card-form-container" />
+          <div ref={cardFormRef} id={cardContainerId} />
           {paymentError && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
-              {paymentError}
+            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
+              <p>{paymentError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentError(null);
+                  setCardAttempt((v) => v + 1);
+                }}
+                className="rounded bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground"
+              >
+                Tentar cartão novamente
+              </button>
             </div>
           )}
           {cardLoading && (
