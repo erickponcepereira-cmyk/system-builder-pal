@@ -173,6 +173,7 @@ function AdminFinanceiro() {
         <div className="flex flex-wrap items-center gap-2">
           <ReferralSelfTestButton />
           <ReconcileButton onDone={reload} />
+          <ReconcileWalletsButton onDone={reload} />
         </div>
       </div>
 
