@@ -56,11 +56,20 @@ export function SubscriptionInvoicesTab({ walletSource }: Props) {
         r = await fnGet();
       }
       setState(r);
+      try { const ov = await fnOverview(); setOverview(ov); } catch { /* ignore */ }
       try { const t = await fnIsTest(); setIsTest(Boolean(t?.isTest)); } catch { /* ignore */ }
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
+
+  const printReceipt = async (invoiceId: string) => {
+    try {
+      const data = await fnReceipt({ data: { invoice_id: invoiceId } } as any);
+      openInvoiceReceipt(data as any);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
 
   if (loading) return <div className="flex items-center gap-2 p-6 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Carregando faturas...</div>;
   if (!state) return <p className="p-6 text-white/60">Sem assinatura.</p>;
