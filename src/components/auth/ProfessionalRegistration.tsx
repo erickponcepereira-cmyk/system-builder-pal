@@ -14,7 +14,7 @@ import { checkEmailAvailable } from "@/lib/email-check.functions";
 import { recordTermsAcceptanceAtSignup } from "@/lib/terms-acceptance.functions";
 import { TERMS_VERSION } from "@/lib/terms";
 import { translateAuthError } from "@/lib/auth-errors";
-import { maskCPF, maskPhone, generateReferralCode, isValidCPF } from "@/lib/masks";
+import { maskCPF, maskCNPJ, maskPhone, generateReferralCode, isValidCPF, isValidCNPJ } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
