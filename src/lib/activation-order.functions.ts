@@ -64,53 +64,19 @@ export const getOrCreateActivationOrder = createServerFn({ method: "POST" })
       }
     }
 
-    const { data: product, error: productError } = await supabaseAdmin
-      .from("products")
-      .select("id, name, price, stock")
-      .eq("id", activationProductId)
-      .maybeSingle();
-    if (productError || !product) throw new Error("Produto de anuidade não encontrado");
+    const { data: orderId, error: createError } = await context.supabase.rpc("create_store_order", {
+      _items: [{ kind: "digital", sourceId: activationProductId, quantity: 1 }],
+      _payment_method: "pix",
+      _shipping: {},
+      _notes: data.notes,
+    });
+    if (createError || !orderId) throw new Error(createError?.message || "Falha ao criar pedido de anuidade");
 
-    const { data: order, error: orderError } = await supabaseAdmin
+    const { data: createdOrder } = await supabaseAdmin
       .from("store_orders")
-      .insert({
-        student_id: student.id,
-        payment_method: "pix",
-        notes: data.notes,
-        subtotal: Number((product as any).price || 179.9),
-        total_amount: Number((product as any).price || 179.9),
-      } as never)
       .select("id, total_amount")
-      .single();
-    if (orderError || !order) throw new Error(orderError?.message || "Falha ao criar pedido de anuidade");
+      .eq("id", orderId)
+      .maybeSingle();
 
-    const kind = (product as any).stock === null || (product as any).stock === undefined ? "digital" : "physical";
-    const { error: itemError } = await supabaseAdmin
-      .from("store_order_items")
-      .insert({
-        order_id: (order as any).id,
-        product_id: activationProductId,
-        title: (product as any).name,
-        unit_price: Number((product as any).price || 179.9),
-        quantity: 1,
-        total_price: Number((product as any).price || 179.9),
-        product_kind: kind,
-      } as never);
-    if (itemError) throw new Error(itemError.message);
-
-    await supabaseAdmin.from("transactions").insert({
-      student_id: student.id,
-      product_id: activationProductId,
-      gross_amount: Number((product as any).price || 179.9),
-      payment_fee: 0,
-      tax_amount: 0,
-      net_amount: Number((product as any).price || 179.9),
-      payment_method: "pix",
-      installments: 1,
-      status: "pending",
-      purchase_type: "store_order",
-      metadata: { store_order_id: (order as any).id },
-    } as never);
-
-    return { orderId: (order as any).id as string, totalAmount: Number((order as any).total_amount || (product as any).price || 179.9), reused: false, paymentStatus: "none" as PaymentStatus };
+    return { orderId: String(orderId), totalAmount: Number((createdOrder as any)?.total_amount || 179.9), reused: false, paymentStatus: "none" as PaymentStatus };
   });
