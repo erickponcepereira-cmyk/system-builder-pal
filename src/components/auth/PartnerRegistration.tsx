@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
-import { maskCNPJ, maskCPF, maskPhone, isValidCPF } from "@/lib/masks";
+import { maskCNPJ, maskCPF, maskPhone, isValidCPF, isValidCNPJ } from "@/lib/masks";
 import { createAuthUser } from "@/components/auth/createAuthUser";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { CheckEmailNotice } from "@/components/auth/CheckEmailNotice";
