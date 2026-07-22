@@ -397,6 +397,9 @@ export async function handleCreateCard(data: CardInput) {
   if (existing && BLOCKING_STATUSES.has(existing.status)) {
     throw new Error("Pedido já está pago");
   }
+  if (existing && !ACTIVE_PAYMENT_STATUSES.has(existing.status)) {
+    await clearRejectedSourcePointer(data.source.kind, data.source.id, existing.id, existing.status);
+  }
   // Cartão pendente é raro (autorização é síncrona), mas se existir "in_process"
   // não criamos duplicata — devolvemos o existente para o frontend fazer polling.
   if (existing && existing.payment_method === "credit_card" && REUSABLE_STATUSES.has(existing.status)) {
