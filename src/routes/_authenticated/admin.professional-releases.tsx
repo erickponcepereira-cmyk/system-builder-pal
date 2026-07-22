@@ -182,11 +182,13 @@ function ProfessionalReleasesPage() {
   };
 
   const ACTIVATION_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
-    already_coach:    { label: "Já sou coach",         cls: "bg-blue-500/15 text-blue-300" },
-    purchased:        { label: "Comprou na loja",      cls: "bg-emerald-500/15 text-emerald-300" },
-    mercadopago:      { label: "Pago no Mercado Pago", cls: "bg-emerald-500/15 text-emerald-300" },
-    partner_approved: { label: "Parceiro aprovado",    cls: "bg-cyan-500/15 text-cyan-300" },
-    admin_grant:      { label: "Concedida pelo admin", cls: "bg-amber-500/15 text-amber-300" },
+    already_coach:        { label: "Já sou coach",             cls: "bg-blue-500/15 text-blue-300" },
+    already_professional: { label: "Já era profissional",      cls: "bg-blue-500/15 text-blue-300" },
+    purchased:            { label: "Comprou na loja",          cls: "bg-emerald-500/15 text-emerald-300" },
+    mercadopago:          { label: "Pago no Mercado Pago",     cls: "bg-emerald-500/15 text-emerald-300" },
+    partner_approved:     { label: "Parceiro aprovado",        cls: "bg-cyan-500/15 text-cyan-300" },
+    admin_grant:          { label: "Concedida pelo admin",     cls: "bg-amber-500/15 text-amber-300" },
+    waived_annual:        { label: "Anuidade isenta (admin)",  cls: "bg-blue-500/15 text-blue-300" },
   };
 
 
