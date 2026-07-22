@@ -35,7 +35,8 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
   const [councilNumber, setCouncilNumber] = useState("");
 
   const [name, setName] = useState("");
-  const [cpf, setCpf] = useState("");
+  const [docType, setDocType] = useState<"cnpj" | "cpf">("cnpj");
+  const [doc, setDoc] = useState("");
   const [email, setEmail] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [phone, setPhone] = useState("");
@@ -140,11 +141,13 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
     if (existingMode) {
       if (!email || !password) return fail("Informe e-mail e senha da sua conta existente.");
     } else {
-      if (!name || !cpf || !email || !phone || !birthdate || !password || !confirmPassword)
+      if (!name || !doc || !email || !phone || !birthdate || !password || !confirmPassword)
         return fail("Preencha todos os campos obrigatórios.");
       if (emailStatus === "checking") return fail("Aguarde a verificação do e-mail.");
-      if (cpf.replace(/\D/g, "").length !== 11) return fail("CPF inválido. Verifique os dados informados.");
-      if (!isValidCPF(cpf)) return fail("CPF inválido. Verifique os dados informados.");
+      if (doc.replace(/\D/g, "").length !== (docType === "cnpj" ? 14 : 11))
+        return fail(`${docType.toUpperCase()} inválido. Verifique os dados informados.`);
+      if (docType === "cpf" && !isValidCPF(doc)) return fail("CPF inválido. Verifique os dados informados.");
+      if (docType === "cnpj" && !isValidCNPJ(doc)) return fail("CNPJ inválido. Verifique os dados informados.");
       if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
         return fail("Senha: 8+ chars, 1 maiúscula e 1 número.");
       if (password !== confirmPassword) return fail("As senhas não coincidem.");
@@ -245,7 +248,7 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
       await finalizeRegistrationFn({
         data: {
           userId: user.id, role: "coach",
-          name, email, phone, cpf, birthdate,
+          name, email, phone, cpf: docType === "cpf" ? doc : null, birthdate,
           coach: {
             uplineCoachId: selectedCoach.id,
             referralCode,
@@ -373,9 +376,28 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                     <Label className="text-white/70">Nome completo *</Label>
                     <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-white/5 border-white/10 text-white" required />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-white/70">CPF *</Label>
-                    <Input value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} placeholder="000.000.000-00" className="bg-white/5 border-white/10 text-white" required />
+                  <div className="grid grid-cols-[110px_1fr] gap-2">
+                    <div className="space-y-2">
+                      <Label className="text-white/70">Tipo *</Label>
+                      <select
+                        value={docType}
+                        onChange={(e) => { setDocType(e.target.value as "cnpj" | "cpf"); setDoc(""); }}
+                        className="mt-0 w-full rounded-md bg-white/5 border border-white/10 px-2 py-2 text-white text-sm"
+                      >
+                        <option value="cnpj">CNPJ</option>
+                        <option value="cpf">CPF</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white/70">{docType === "cnpj" ? "CNPJ *" : "CPF *"}</Label>
+                      <Input
+                        value={doc}
+                        onChange={(e) => setDoc(docType === "cnpj" ? maskCNPJ(e.target.value) : maskCPF(e.target.value))}
+                        placeholder={docType === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                        className="bg-white/5 border-white/10 text-white"
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
