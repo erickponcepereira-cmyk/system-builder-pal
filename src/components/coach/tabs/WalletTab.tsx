@@ -92,9 +92,16 @@ export function WalletTab() {
       }
       setLoadingBank(false);
 
-      const [historyRows, recentWithdrawsRes] = await Promise.all([
+      const [historyRows, recentWithdrawsRes, subInvoicesRes] = await Promise.all([
         fetchHistory().catch(() => []),
         supabase.from("withdrawal_requests").select("id,amount,status,requested_at,paid_at").eq("profile_id", profile.id).order("requested_at", { ascending: false }).limit(10),
+        supabase.from("subscription_invoices")
+          .select("id,amount,reference_month,paid_at,wallet_source")
+          .eq("user_id", userData.user.id)
+          .eq("status", "paid")
+          .eq("payment_method", "wallet")
+          .order("paid_at", { ascending: false })
+          .limit(12),
       ]);
 
       const items: HistoryItem[] = [];
@@ -126,6 +133,18 @@ export function WalletTab() {
           rawWithdrawalId: wr.id,
           withdrawalKind: "seller",
           withdrawalStatus: wr.status,
+        });
+      });
+      ((subInvoicesRes.data as Array<{ id: string; amount: number; reference_month: string; paid_at: string | null; wallet_source: string | null }>) || []).forEach((si) => {
+        const ref = si.reference_month ? new Date(si.reference_month) : null;
+        const refLabel = ref ? ref.toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" }) : "";
+        items.push({
+          id: `si-${si.id}`,
+          who: "Mensalidade paga com carteira",
+          type: refLabel ? `Referência ${refLabel}` : "Mensalidade",
+          value: -Number(si.amount),
+          created_at: si.paid_at || new Date().toISOString(),
+          isNetwork: false,
         });
       });
       items.sort((a, b) => b.created_at.localeCompare(a.created_at));
