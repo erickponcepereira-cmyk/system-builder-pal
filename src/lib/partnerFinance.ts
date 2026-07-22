@@ -1,14 +1,6 @@
 // ============================================================
 // MOTOR FINANCEIRO DOS PRODUTOS PAGOS DE PARCEIROS/PROFISSIONAIS
-// Cálculo em CASCATA (linha a linha), não % do bruto:
-//   gross
-//   - taxa cartão/pix    (% sobre o RESTANTE corrente)
-//   - imposto 6%         (% sobre o RESTANTE corrente)
-//   - taxa do sistema    (% sobre o RESTANTE corrente)
-//   - comissão coach     (% sobre o RESTANTE corrente)
-//   = líquido parceiro
-// Dentro da comissão do coach, a rede MLM (3/2/1%) é deduzida
-// da própria comissão.
+// Suporta cascata padrão + overrides por produto (custom_split).
 // ============================================================
 
 export type PartnerPaymentMethod = "pix" | "card";
@@ -31,7 +23,7 @@ export const DEFAULT_PARTNER_FEES: PartnerFeeConfig = {
 export const COACH_COMMISSION_OPTIONS = [10, 20, 30, 40, 50] as const;
 export type CoachCommissionPct = (typeof COACH_COMMISSION_OPTIONS)[number];
 
-// % da comissão do coach destinados à rede
+// % da comissão do coach destinados à rede (default)
 export const NETWORK_SPLIT = { l1: 3, l2: 2, l3: 1 } as const;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -47,37 +39,75 @@ export interface PartnerBreakdown {
   networkL3: number;
   coachNet: number;
   partnerNet: number;
+  // Contexto para a UI
+  taxPct: number;
+  systemFeePct: number;
+  coachCommissionPct: number;
+  networkL1Pct: number;
+  networkL2Pct: number;
+  networkL3Pct: number;
+}
+
+/**
+ * Override por produto: espelha `create_partner_product_order` no banco.
+ */
+export interface PartnerSplitOverride {
+  skipTax?: boolean;
+  systemFeePctOverride?: number | null;
+  creatorPctOverride?: number | null; // % do criador; cadeia = 100 - creator
+  networkL1PctOverride?: number | null;
+  networkL2PctOverride?: number | null;
+  networkL3PctOverride?: number | null;
+}
+
+function resolveCfg(
+  fees: PartnerFeeConfig,
+  coachPct: number,
+  split?: PartnerSplitOverride | null,
+) {
+  const active = !!split;
+  const taxPct = active && split?.skipTax ? 0 : fees.taxPct;
+  const systemFeePct = active && split?.systemFeePctOverride != null
+    ? Number(split.systemFeePctOverride) : fees.systemFeePct;
+  const l1Pct = active && split?.networkL1PctOverride != null
+    ? Number(split.networkL1PctOverride) : NETWORK_SPLIT.l1;
+  const l2Pct = active && split?.networkL2PctOverride != null
+    ? Number(split.networkL2PctOverride) : NETWORK_SPLIT.l2;
+  const l3Pct = active && split?.networkL3PctOverride != null
+    ? Number(split.networkL3PctOverride) : NETWORK_SPLIT.l3;
+  const coachPctEffective = active && split?.creatorPctOverride != null
+    ? Math.max(0, 100 - Number(split.creatorPctOverride))
+    : coachPct;
+  return { taxPct, systemFeePct, l1Pct, l2Pct, l3Pct, coachPctEffective };
 }
 
 export function computeFromCharge(
   gross: number,
-  coachCommissionPct: CoachCommissionPct,
+  coachCommissionPct: CoachCommissionPct | number,
   method: PartnerPaymentMethod = "card",
   fees: PartnerFeeConfig = DEFAULT_PARTNER_FEES,
+  split?: PartnerSplitOverride | null,
 ): PartnerBreakdown {
   const g = Math.max(0, gross);
   const feePct = method === "pix" ? fees.pixFeePct : fees.cardFeePct;
+  const cfg = resolveCfg(fees, Number(coachCommissionPct), split);
 
-  // Cascata linha a linha
   const paymentFee = round2(g * (feePct / 100));
   let remaining = round2(g - paymentFee);
 
-  const tax = round2(remaining * (fees.taxPct / 100));
+  const tax = round2(remaining * (cfg.taxPct / 100));
   remaining = round2(remaining - tax);
 
-  const systemFee = round2(remaining * (fees.systemFeePct / 100));
+  const systemFee = round2(remaining * (cfg.systemFeePct / 100));
   remaining = round2(remaining - systemFee);
 
-  // Comissão do coach: % do saldo atual
-  const coachCommission = round2(remaining * (coachCommissionPct / 100));
+  const coachCommission = round2(remaining * (cfg.coachPctEffective / 100));
 
-  // Rede L1/L2/L3: descontada DA comissão do coach (não do parceiro)
-  const networkL1 = round2(coachCommission * (NETWORK_SPLIT.l1 / 100));
-  const networkL2 = round2(coachCommission * (NETWORK_SPLIT.l2 / 100));
-  const networkL3 = round2(coachCommission * (NETWORK_SPLIT.l3 / 100));
+  const networkL1 = round2(coachCommission * (cfg.l1Pct / 100));
+  const networkL2 = round2(coachCommission * (cfg.l2Pct / 100));
+  const networkL3 = round2(coachCommission * (cfg.l3Pct / 100));
   const coachNet = round2(coachCommission - networkL1 - networkL2 - networkL3);
 
-  // Sobra do parceiro: saldo menos a comissão bruta do coach
   const partnerNet = round2(remaining - coachCommission);
 
   return {
@@ -91,36 +121,36 @@ export function computeFromCharge(
     networkL3,
     coachNet,
     partnerNet,
+    taxPct: cfg.taxPct,
+    systemFeePct: cfg.systemFeePct,
+    coachCommissionPct: cfg.coachPctEffective,
+    networkL1Pct: cfg.l1Pct,
+    networkL2Pct: cfg.l2Pct,
+    networkL3Pct: cfg.l3Pct,
   };
 }
 
 /**
- * Inverso da cascata: dado o líquido desejado para o parceiro, retorna o
- * preço bruto a cobrar. Como funciona simulação de cartão em apps bancários:
- * o cliente paga MAIS para que o parceiro receba o valor desejado.
- *
- * Resolução algébrica direta (não iterativa):
- *   remaining_after_commission = partnerNet / (1 - commPct/100)
- *   remaining_after_system     = remaining_after_commission / (1 - systemFeePct/100)
- *   remaining_after_tax        = remaining_after_system / (1 - taxPct/100)
- *   gross                      = remaining_after_tax / (1 - feePct/100)
+ * Inverso: dado o líquido desejado do parceiro, retorna a cascata equivalente.
  */
 export function computeFromReceive(
   desiredNet: number,
-  coachCommissionPct: CoachCommissionPct,
+  coachCommissionPct: CoachCommissionPct | number,
   method: PartnerPaymentMethod = "card",
   fees: PartnerFeeConfig = DEFAULT_PARTNER_FEES,
+  split?: PartnerSplitOverride | null,
 ): PartnerBreakdown {
   const feePct = method === "pix" ? fees.pixFeePct : fees.cardFeePct;
   const net = Math.max(0, desiredNet);
+  const cfg = resolveCfg(fees, Number(coachCommissionPct), split);
 
-  const commFactor = 1 - coachCommissionPct / 100;
-  const systemFactor = 1 - fees.systemFeePct / 100;
-  const taxFactor = 1 - fees.taxPct / 100;
+  const commFactor = 1 - cfg.coachPctEffective / 100;
+  const systemFactor = 1 - cfg.systemFeePct / 100;
+  const taxFactor = 1 - cfg.taxPct / 100;
   const feeFactor = 1 - feePct / 100;
 
   if (commFactor <= 0 || systemFactor <= 0 || taxFactor <= 0 || feeFactor <= 0) {
-    return computeFromCharge(0, coachCommissionPct, method, fees);
+    return computeFromCharge(0, coachCommissionPct, method, fees, split);
   }
 
   const afterSystem = net / commFactor;
@@ -128,5 +158,5 @@ export function computeFromReceive(
   const afterFee = afterTax / taxFactor;
   const gross = round2(afterFee / feeFactor);
 
-  return computeFromCharge(gross, coachCommissionPct, method, fees);
+  return computeFromCharge(gross, coachCommissionPct, method, fees, split);
 }
