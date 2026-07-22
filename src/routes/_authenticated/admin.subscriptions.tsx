@@ -244,6 +244,11 @@ function AdminSubscriptionsPage() {
 
                     <td className="p-3 text-right">
                       <div className="flex flex-wrap justify-end gap-1">
+                        <button onClick={() => setAuditInvoiceId(i.id)}
+                          className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20" title="Histórico de ações">
+                          <History className="h-3 w-3" />
+                        </button>
+
                         {(i.status === "paid" || i.status === "exempted") && (
                           <button onClick={async () => {
                             if (!confirm("Desfazer este pagamento/isenção? A fatura volta para pendente e os lançamentos são removidos do relatório.")) return;
