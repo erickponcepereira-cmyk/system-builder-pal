@@ -257,26 +257,77 @@ export const inviteCoproducer = createServerFn({ method: "POST" })
   .inputValidator((d: {
     productType: OwnerType; productId: string;
     creatorType: OwnerType; creatorId: string;
-    collaboratorCode: string; fixedAmountBrl: number;
+    collaboratorCode?: string;
+    collaboratorType?: OwnerType;
+    collaboratorId?: string;
+    splitKind: "percent" | "fixed";
+    percentOfNet?: number;
+    fixedAmountBrl?: number;
   }) => d)
   .handler(async ({ context, data }) => {
     const supabase = context.supabase as any;
-    const collab = await resolveByCode(supabase, data.collaboratorCode);
-    if (!collab) throw new Error("Código do colaborador não encontrado.");
-    if (collab.owner_type === data.creatorType && collab.owner_id === data.creatorId) {
+    let collabType: OwnerType | null = null;
+    let collabId: string | null = null;
+    if (data.collaboratorType && data.collaboratorId) {
+      collabType = data.collaboratorType;
+      collabId = data.collaboratorId;
+    } else if (data.collaboratorCode) {
+      const collab = await resolveByCode(supabase, data.collaboratorCode);
+      if (!collab) throw new Error("Código do colaborador não encontrado.");
+      collabType = collab.owner_type;
+      collabId = collab.owner_id;
+    } else {
+      throw new Error("Selecione um coprodutor ou informe o código.");
+    }
+    if (collabType === data.creatorType && collabId === data.creatorId) {
       throw new Error("Você não pode se convidar como coprodutor.");
+    }
+    if (data.splitKind === "percent") {
+      if (!data.percentOfNet || data.percentOfNet <= 0 || data.percentOfNet > 100) {
+        throw new Error("Informe uma porcentagem entre 0 e 100.");
+      }
+    } else {
+      if (!data.fixedAmountBrl || data.fixedAmountBrl <= 0) {
+        throw new Error("Informe um valor maior que zero.");
+      }
     }
     const { data: created, error } = await supabase
       .from("product_coproductions")
       .insert({
         product_type: data.productType, product_id: data.productId,
         creator_type: data.creatorType, creator_id: data.creatorId,
-        collaborator_type: collab.owner_type, collaborator_id: collab.owner_id,
-        fixed_amount_brl: data.fixedAmountBrl, status: "pending",
+        collaborator_type: collabType, collaborator_id: collabId,
+        split_kind: data.splitKind,
+        percent_of_net: data.splitKind === "percent" ? data.percentOfNet : null,
+        fixed_amount_brl: data.splitKind === "fixed" ? data.fixedAmountBrl : 0,
+        status: "pending",
       })
       .select("*").single();
     if (error) throw new Error(error.message);
     return created;
+  });
+
+export const listCoproducerCandidates = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { excludeType: OwnerType; excludeId: string }) => d)
+  .handler(async ({ context, data }) => {
+    const supabase = context.supabase as any;
+    const [partners, coaches] = await Promise.all([
+      supabase.from("partners").select("id,fantasy_name").eq("status", "approved").order("fantasy_name"),
+      supabase.from("coaches").select("id,role,profiles:profile_id(name)").eq("role", "professional"),
+    ]);
+    const items: { type: OwnerType; id: string; name: string }[] = [];
+    (partners.data || []).forEach((p: any) => {
+      if (!(data.excludeType === "partner" && data.excludeId === p.id)) {
+        items.push({ type: "partner", id: p.id, name: p.fantasy_name || "Parceiro" });
+      }
+    });
+    (coaches.data || []).forEach((c: any) => {
+      if (!(data.excludeType === "professional" && data.excludeId === c.id)) {
+        items.push({ type: "professional", id: c.id, name: c.profiles?.name || "Profissional" });
+      }
+    });
+    return { items };
   });
 
 export const respondCoproduction = createServerFn({ method: "POST" })
