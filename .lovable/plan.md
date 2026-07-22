@@ -1,53 +1,33 @@
-# Repaginar sistema de mensalidade
 
-Objetivo: tornar o fluxo de mensalidade previsível, bonito e auditável — tanto para o admin quanto para o assinante (coach, parceiro, profissional).
+## Diagnóstico (confirmado no banco)
 
-## 1. Regras de negócio (backend)
+Consultei `mercadopago_payments` para os e‑mails da Luana. A fatura de mensalidade (`63ce91d2-51de-4505-855f-8a822889e89f`, R$ 100) tem **5 tentativas de cartão** entre 21/07 e 22/07, todas com `status=rejected` e `status_detail=cc_rejected_high_risk`. No mesmo período, outra tentativa dela em `store_orders` com o mesmo cartão também caiu em `cc_rejected_high_risk`, e apenas 1 store_order foi aprovada (valor menor / contexto diferente).
 
-- **Adiar = pular o mês:** ao clicar "Adiar/Pular", a fatura atual vira `exempted` (com motivo "Pulada pelo admin"), NÃO gera comissão, NÃO entra em MRR e NÃO bloqueia acesso. A próxima fatura do mês seguinte passa a ser a corrente.
-- **Bloqueio automático:** só depois de `due_date + grace_days` do plano. Enquanto pendente dentro da carência, painel liberado. Um job diário promove `pending → overdue → blocked` respeitando a carência.
-- **Log de auditoria:** nova tabela `subscription_invoice_audit` (invoice_id, actor_id, action, from_status, to_status, meta jsonb, created_at) alimentada por trigger em toda mudança de status/vencimento/valor e por toda ação admin (pular, isentar, marcar pago, desfazer, adiar data, nova tentativa).
-- **Método de pagamento persistido:** garantir que `payment_method` e `wallet_source` sejam sempre gravados em `subscription_invoices` (já existe, revisar consistência) e derivar "método preferido" do usuário do modo mais frequente nos últimos 6 meses.
+`cc_rejected_high_risk` é uma decisão **antifraude do Mercado Pago sobre aquele cartão + perfil de compra** — não é bug do nosso código. Nenhuma retentativa com o mesmo cartão vai passar; MP recomenda outro meio (PIX, outro cartão) ou revisão pelo próprio portador com o banco emissor.
 
-## 2. Painel do assinante (coach / parceiro / profissional)
+O código já usa idempotency key única por tentativa, já limpa `mp_payment_id` da fatura em status rejeitado e já mostra a mensagem amigável. O que falta é (a) reduzir o score de risco enviando dados completos do pagador (hoje só mandamos `email` na init do Brick — nem nome nem CPF), (b) oferecer o caminho de escape com clareza no primeiro high_risk, e (c) dar ao admin uma ação de "marcar como paga manualmente" pra desbloquear a Luana agora sem esperar cartão novo.
 
-Página única "Minha mensalidade" reaproveitada pelos 3 papéis:
+## Mudanças
 
-- **Cabeçalho:** desde quando é assinante, data de cadastro, dia de vencimento preferido, status atual (Em dia / Pendente / Atrasada / Bloqueada / Isenta).
-- **Card "Próxima cobrança":** valor, data, método preferido, botão para trocar preferência.
-- **Card "Fatura em aberto":** valor + botões PIX / Cartão / Carteira (mantém integração atual).
-- **Histórico:** tabela com Mês, Vencimento, Valor, Status, Pago em, Método, botão "Comprovante PDF".
-- **Comprovante PDF:** server function que gera recibo (nome, CPF, valor, mês de referência, método, data de pagamento, número da fatura) via `@react-pdf/renderer` no servidor e devolve o arquivo. Botão de download por linha paga.
+### 1. Enviar payer completo pro Brick de cartão (`src/components/payments/MercadoPagoCheckout.tsx`)
+Passar `payer: { email, firstName, lastName, identification: { type: "CPF", number } }` na `initialization` do Brick quando tivermos nome/CPF. Isso melhora o score antifraude em faturas de mensalidade (hoje a `SubscriptionInvoicesTab` já busca `state.payer` mas o componente descarta nome/doc na init).
 
-## 3. Painel admin — reescrever `admin.subscriptions.tsx`
+### 2. Fallback automático pra PIX após high_risk (`MercadoPagoCheckout.tsx`)
+Quando `statusDetail === "cc_rejected_high_risk"`, além do botão "Tentar cartão novamente" mostrar um botão primário "Pagar com PIX" que faz `setTab("pix")`. Texto explicativo curto: "O cartão foi recusado pela análise de risco do Mercado Pago. PIX costuma aprovar na hora."
 
-Layout novo, com 3 abas: **Dashboard**, **Assinantes**, **Faturas** (Configurações vira sub-aba dentro de Dashboard).
+### 3. Ação admin "Marcar fatura como paga manualmente" (`admin.subscriptions.tsx` + `src/lib/admin-subscriptions.functions.ts`)
+Novo server fn `adminMarkInvoicePaidManual({ invoice_id, method: 'manual_admin', note })` que chama a mesma RPC `process_subscription_invoice_payment` com `_method='manual_admin'`, `_wallet_source='external'`, `_fee_amount=0`, `_performed_by=<admin uid>`. Botão discreto na linha da fatura (ao lado de "Pular mês"), com confirmação e campo de observação, gravado no `subscription_invoice_audit`.
 
-### Dashboard (novo)
-KPIs do mês corrente: MRR realizado, MRR projetado, inadimplência (R$ e %), churn (canceladas no mês), nº de assinantes ativos, pulados, bloqueados. Gráfico simples de barras dos últimos 6 meses (recebido vs. pendente).
+### 4. Desbloqueio pontual da Luana
+Registrar a fatura `63ce91d2-51de-4505-855f-8a822889e89f` como paga manualmente (método `manual_admin`, observação "Cartão bloqueado por antifraude MP — pagamento acordado fora do app"), executando o mesmo RPC via `supabase--migration`. Assim ela sai do bloqueio hoje sem depender de novo cartão.
 
-### Assinantes (reescrito)
-Tabela por usuário com: Nome, Papel, Cadastro, 1ª fatura, Última paga, **Próxima cobrança**, Método preferido, Status. Filtro por papel, status e busca. Clique abre drawer lateral com timeline completa da conta + ações (isentar por período, alterar dia/valor, cancelar).
+## Fora do escopo
 
-### Faturas (reescrito)
-- Filtros: mês, status, papel, método, busca.
-- Colunas: Mês, Usuário+papel, Vencimento, Valor, Método, Status, Pago em, Ações.
-- Ações unificadas num menu (…): **Pular mês** (novo, substitui "Adiar" atual), **Marcar pago (PIX/Cartão/Manual/Carteira)**, **Isentar**, **Reajustar vencimento**, **Nova tentativa**, **Desfazer**.
-- Cada linha mostra ícone de "log" que abre o histórico de ações admin daquela fatura (auditoria).
-
-## 4. Como o "adiar do julho pendente" será corrigido
-
-Ao aplicar a nova ação "Pular mês" na fatura pendente de julho da Renata: ela vira `exempted` com motivo, não bloqueia, não conta em inadimplência, e a fatura de agosto (gerada normalmente pelo job mensal) passa a ser a corrente exibida no painel dela.
+- Não vamos tentar "burlar" o high_risk mudando idempotency, CPF fake, ou trocando conta MP — a rejeição é do adquirente sobre o cartão dela.
+- Não muda taxas, RLS, nem lógica de carteira.
 
 ## Detalhes técnicos
 
-- **Migrações:**
-  1. `subscription_invoice_audit` (+ RLS: admin lê tudo; usuário só as próprias) + trigger `log_invoice_change`.
-  2. Função `admin_skip_invoice(invoice_id)` — marca `exempted`, grava motivo, registra auditoria.
-  3. Ajustar job diário `promote_invoice_statuses()` para respeitar `plan.grace_days` (hoje o promote está muito agressivo).
-  4. View `v_user_preferred_payment_method` para o "método preferido" e KPIs.
-- **Server functions novas em `admin-subscriptions.functions.ts`:** `skipInvoiceAdmin`, `getInvoiceAuditLog`, `getSubscriptionsDashboard` (KPIs + série 6 meses), `getSubscriberDetail` (timeline por usuário).
-- **Server function nova em `subscriptions.functions.ts`:** `getMyBillingOverview` (cabeçalho + próxima + histórico), `downloadInvoiceReceipt` (retorna PDF em base64).
-- **Componentes novos:** `SubscriptionDashboard.tsx`, `SubscriberDrawer.tsx`, `InvoiceActionsMenu.tsx`, `InvoiceAuditModal.tsx`, `MyBillingPage.tsx`, `InvoiceReceiptPDF.tsx`.
-- **Rota:** unificar as 3 rotas hoje espalhadas (coach/parceiro/profissional) apontando para `MyBillingPage` — mantém as URLs atuais para não quebrar links.
-- **Sem alteração** em: motor financeiro (`partnerFinance.ts`), Mercado Pago, carteiras (recalc). Apenas leitura.
+- Nome dividido em `firstName`/`lastName` com `payer.name.split(" ")` (primeiro token e resto), CPF só dígitos.
+- `adminMarkInvoicePaidManual` reutiliza `process_subscription_invoice_payment` já existente; nada de nova RPC.
+- A limpeza da fatura para nova tentativa PIX já funciona (validei em `handleCreatePix` + `clearRejectedSourcePointer`).
