@@ -34,6 +34,8 @@ export function MercadoPagoCheckout({ source, amount, description, defaultPayer,
   const [tab, setTab] = useState<"pix" | "card">(initialMethod);
   const [payer, setPayer] = useState<Payer>(defaultPayer || { email: "", name: "", doc: "" });
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [lastStatusDetail, setLastStatusDetail] = useState<string | null>(null);
+
 
   // PIX
   const [pixData, setPixData] = useState<{ qr: string; qrBase64: string; ticketUrl: string | null; rowId: string } | null>(null);
