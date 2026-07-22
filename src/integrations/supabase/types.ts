@@ -8591,6 +8591,7 @@ export type Database = {
           id: string
           notes: string | null
           source_product_id: string | null
+          source_subscription_invoice_id: string | null
           source_transaction_id: string | null
           student_id: string
         }
@@ -8604,6 +8605,7 @@ export type Database = {
           id?: string
           notes?: string | null
           source_product_id?: string | null
+          source_subscription_invoice_id?: string | null
           source_transaction_id?: string | null
           student_id: string
         }
@@ -8617,6 +8619,7 @@ export type Database = {
           id?: string
           notes?: string | null
           source_product_id?: string | null
+          source_subscription_invoice_id?: string | null
           source_transaction_id?: string | null
           student_id?: string
         }
@@ -8647,6 +8650,13 @@ export type Database = {
             columns: ["source_product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenge_tokens_source_subscription_invoice_id_fkey"
+            columns: ["source_subscription_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
             referencedColumns: ["id"]
           },
           {
@@ -10931,6 +10941,10 @@ export type Database = {
         Returns: {
           coach_id: string
         }[]
+      }
+      grant_collab_monthly_benefits: {
+        Args: { _invoice_id: string }
+        Returns: undefined
       }
       grant_partner_product_perks: {
         Args: { _order_id: string }
