@@ -5576,6 +5576,7 @@ export type Database = {
           event_date: string | null
           event_end_time: string | null
           event_start_time: string | null
+          grants_subscription_perks: boolean
           id: string
           image_url: string | null
           image_urls: string[]
@@ -5631,6 +5632,7 @@ export type Database = {
           event_date?: string | null
           event_end_time?: string | null
           event_start_time?: string | null
+          grants_subscription_perks?: boolean
           id?: string
           image_url?: string | null
           image_urls?: string[]
@@ -5686,6 +5688,7 @@ export type Database = {
           event_date?: string | null
           event_end_time?: string | null
           event_start_time?: string | null
+          grants_subscription_perks?: boolean
           id?: string
           image_url?: string | null
           image_urls?: string[]
@@ -7313,6 +7316,7 @@ export type Database = {
           event_date: string | null
           event_end_time: string | null
           event_start_time: string | null
+          grants_subscription_perks: boolean
           id: string
           image_url: string | null
           image_urls: string[]
@@ -7377,6 +7381,7 @@ export type Database = {
           event_date?: string | null
           event_end_time?: string | null
           event_start_time?: string | null
+          grants_subscription_perks?: boolean
           id?: string
           image_url?: string | null
           image_urls?: string[]
@@ -7441,6 +7446,7 @@ export type Database = {
           event_date?: string | null
           event_end_time?: string | null
           event_start_time?: string | null
+          grants_subscription_perks?: boolean
           id?: string
           image_url?: string | null
           image_urls?: string[]
