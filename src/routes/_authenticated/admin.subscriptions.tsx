@@ -93,7 +93,7 @@ function AdminSubscriptionsPage() {
 
       <div className="mb-4 flex gap-2 border-b border-white/10">
         {[
-          ["subs", "Assinaturas"], ["invoices", "Faturas"], ["config", "Configurações"],
+          ["dashboard", "Dashboard"], ["subs", "Assinaturas"], ["invoices", "Faturas"], ["config", "Configurações"],
         ].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k as any)}
             className={`px-4 py-2 text-sm font-medium ${tab === k ? "border-b-2 border-primary text-white" : "text-white/50"}`}>
@@ -103,6 +103,9 @@ function AdminSubscriptionsPage() {
       </div>
 
       {loading && <p className="text-white/50">Carregando...</p>}
+
+      {tab === "dashboard" && <DashboardTab />}
+
 
       {tab === "subs" && (
         <div className="overflow-x-auto rounded-xl border border-white/10">
