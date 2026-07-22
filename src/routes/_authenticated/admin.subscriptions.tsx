@@ -6,7 +6,7 @@ import { TestModeBanner } from "@/components/admin/TestModeBanner";
 import {
   listAdminSubscriptions, listAdminInvoices, updateSubscriptionAdmin,
   listPlansAdmin, updatePlanAdmin, markInvoicePaidAdmin, exemptInvoiceAdmin, generateInvoicesNow,
-  revertInvoiceAdmin, postponeInvoiceAdmin, resetInvoiceDueDateAdmin,
+  revertInvoiceAdmin, postponeInvoiceAdmin, resetInvoiceDueDateAdmin, resetInvoicePaymentAttemptAdmin,
 } from "@/lib/admin-subscriptions.functions";
 import { listAllAnnualActivationsAdmin } from "@/lib/annual-activation.functions";
 
@@ -54,6 +54,7 @@ function AdminSubscriptionsPage() {
   const fnRevert = useServerFn(revertInvoiceAdmin);
   const fnPostpone = useServerFn(postponeInvoiceAdmin);
   const fnResetDue = useServerFn(resetInvoiceDueDateAdmin);
+  const fnResetAttempt = useServerFn(resetInvoicePaymentAttemptAdmin);
 
 
   const load = async () => {
@@ -271,6 +272,11 @@ function AdminSubscriptionsPage() {
                               try { await fnResetDue({ data: { invoice_id: i.id } } as any); toast.success("Vencimento restaurado"); load(); }
                               catch (e: any) { toast.error(e.message); }
                             }} className="rounded bg-white/10 px-2 py-1 text-xs">Restaurar data</button>
+                            <button onClick={async () => {
+                              if (!confirm("Gerar uma nova tentativa de pagamento para esta fatura? Use quando uma cobrança anterior foi recusada ou travou.")) return;
+                              try { await fnResetAttempt({ data: { invoice_id: i.id } } as any); toast.success("Fatura liberada para nova tentativa"); load(); }
+                              catch (e: any) { toast.error(e.message); }
+                            }} className="rounded bg-violet-600 px-2 py-1 text-xs">Nova tentativa</button>
                           </>
                         )}
                       </div>
