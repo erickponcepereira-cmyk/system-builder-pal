@@ -1,33 +1,32 @@
-# Corrigir duplicação na Árvore da Rede
+## Problema
 
-## Causa raiz (confirmada no banco)
+Modais (novo produto do parceiro/profissional e outros) fecham quando clica fora da área. Também podem fechar via ESC. Usuário quer que só o botão X (ou botões explícitos "Cancelar/Salvar") feche.
 
-Nathan Utuari tem `coaches.upline_coach_id` apontando para o próprio `coaches.id` (auto-referência). Isso faz o código de árvore em `src/lib/network-ranking.functions.ts` renderizá-lo:
+## Correção — mudança única em `src/components/ui/dialog.tsx`
 
-- **como upline** (card "Acima de você") — porque `me.upline_coach_id` existe em `byId`
-- **como raiz** (card "você")
-- **e como filho de si mesmo** na primeira linha (`byUpline.get(coachId)` inclui ele próprio), o que empurra a mesma sub-rede para os níveis abaixo com deslocamento (aparece como 1ª e 2ª linha e também como 2ª e 3ª).
+Como todos os modais do sistema usam esse `DialogContent` compartilhado, um único ajuste corrige globalmente parceiro, profissional, admin, aluno, etc.
 
-Uma busca no banco mostrou que **só o Nathan tem auto-referência direta** (`upline_coach_id = id`). Porém, 16 coaches são descendentes diretos dele — todos herdam a distorção. Nenhum outro coach tem ciclos.
+Alterar `DialogContent` para bloquear fechamento por clique fora e por ESC, mantendo o botão X e chamadas programáticas (`setOpen(false)`, `<DialogClose />`) funcionando normalmente:
 
-## O que fazer
+```tsx
+<DialogPrimitive.Content
+  ref={ref}
+  onPointerDownOutside={(e) => e.preventDefault()}
+  onInteractOutside={(e) => e.preventDefault()}
+  onEscapeKeyDown={(e) => e.preventDefault()}
+  className={...}
+  {...props}  // continua permitindo override caso um modal específico queira reativar
+>
+```
 
-### 1. Migration (correção de dados + prevenção)
-- Zerar `upline_coach_id` do Nathan (`UPDATE coaches SET upline_coach_id = NULL WHERE id = upline_coach_id`).
-- Adicionar `CHECK (upline_coach_id IS NULL OR upline_coach_id <> id)` em `public.coaches` para bloquear auto-referência futura.
-- Adicionar trigger `BEFORE INSERT OR UPDATE` que também detecta ciclos maiores (A→B→A) subindo a cadeia até 20 níveis e lança erro se encontrar o próprio id — protege contra o padrão que gerou esse caso.
+Como o spread `{...props}` vem depois, qualquer diálogo que precise do comportamento antigo pode passar seus próprios handlers e sobrescrever.
 
-### 2. Defesa no código (`src/lib/network-ranking.functions.ts`)
-Mesmo com a constraint, blindar o `getMyNetworkStructure` para nunca renderizar auto-loops caso apareçam por dados legados:
+## Fora de escopo
 
-- Em `buildByUpline`: ignorar filhos onde `child.id === upline_coach_id`.
-- Em `getMyNetworkStructure`: se `me.upline_coach_id === coachId`, tratar como sem upline (não renderizar card "Acima de você").
-- Em `collectDownline` / `toNode`: filtrar `child.id === parentId` (já protegido por `seen`, mas explicitar evita a linha extra).
+- Não mexer em `AlertDialog` (já é modal "forçado" por natureza — decisão sim/não).
+- Não mexer em `Sheet`, `Drawer`, `Popover` — só o `Dialog`, que é o que aparece nos "novos produto" e nos modais de cadastro.
+- Sem mudanças de layout/visual, sem mudanças de lógica de negócio.
 
-## Detalhes técnicos
+## Verificação
 
-Arquivos:
-- Nova migration SQL (dados + CHECK + trigger anti-ciclo).
-- `src/lib/network-ranking.functions.ts` — guards nas 3 funções acima.
-
-Nenhuma mudança em UI/componentes; a árvore de qualquer coach afetado passa a mostrar Nathan como raiz de topo (sem upline), e sua primeira linha volta a conter apenas os coaches reais patrocinados por ele.
+- Abrir modal de novo produto no painel parceiro e no profissional; clicar fora → deve permanecer aberto; ESC → permanecer aberto; X → fecha; Cancelar/Salvar → fecha.
