@@ -191,6 +191,22 @@ const REUSABLE_STATUSES = new Set(["pending", "in_process"]);
 const BLOCKING_STATUSES = new Set(["approved"]);
 // "rejected" | "cancelled" | "refunded" → permite criar novo
 
+const ACTIVE_PAYMENT_STATUSES = new Set(["pending", "in_process", "approved"]);
+
+async function clearRejectedSourcePointer(kind: SourceKind, id: string, mpRowId: string, status: string) {
+  if (ACTIVE_PAYMENT_STATUSES.has(status)) return;
+  const patch = { mp_payment_id: null } as never;
+  if (kind === "store_order") {
+    await supabaseAdmin.from("store_orders").update(patch).eq("id", id).eq("mp_payment_id", mpRowId as never);
+  } else if (kind === "partner_product_order") {
+    await supabaseAdmin.from("partner_product_orders" as never).update(patch).eq("id" as never, id as never).eq("mp_payment_id" as never, mpRowId as never);
+  } else if (kind === "subscription_invoice") {
+    await supabaseAdmin.from("subscription_invoices" as never).update(patch).eq("id" as never, id as never).eq("mp_payment_id" as never, mpRowId as never);
+  } else {
+    await supabaseAdmin.from("transactions").update(patch).eq("id", id).eq("mp_payment_id", mpRowId as never);
+  }
+}
+
 function extractPixData(payment: any) {
   const transactionData = payment?.point_of_interaction?.transaction_data || {};
   return {
@@ -381,6 +397,9 @@ export async function handleCreateCard(data: CardInput) {
   if (existing && BLOCKING_STATUSES.has(existing.status)) {
     throw new Error("Pedido já está pago");
   }
+  if (existing && !ACTIVE_PAYMENT_STATUSES.has(existing.status)) {
+    await clearRejectedSourcePointer(data.source.kind, data.source.id, existing.id, existing.status);
+  }
   // Cartão pendente é raro (autorização é síncrona), mas se existir "in_process"
   // não criamos duplicata — devolvemos o existente para o frontend fazer polling.
   if (existing && existing.payment_method === "credit_card" && REUSABLE_STATUSES.has(existing.status)) {
@@ -394,12 +413,9 @@ export async function handleCreateCard(data: CardInput) {
 
   const externalRef = `${data.source.kind}:${data.source.id}`;
   const notificationUrl = `${siteUrl()}/api/public/mp/webhook`;
-  // Base estável por (kind,id) + sufixo derivado do token do cartão. Isso
-  // preserva idempotência real (retry acidental com MESMO token cai no mesmo
-  // pagamento no MP) mas permite nova tentativa quando o usuário submete um
-  // novo token após rejeição.
-  const tokenSuffix = data.card.token.slice(-10);
-  const idempotencyKey = `card-${data.source.kind}-${data.source.id}-${tokenSuffix}`;
+  // Cada submissão de cartão precisa ser uma tentativa nova. Quando o Mercado Pago
+  // recusa por risco, reutilizar a mesma chave prende a fatura no mesmo pagamento.
+  const idempotencyKey = `card-${data.source.kind}-${data.source.id}-${crypto.randomUUID()}`;
 
   const mpResp = await createCardPayment(
     {
@@ -440,7 +456,11 @@ export async function handleCreateCard(data: CardInput) {
     .single();
   if (error || !row) throw new Error(error?.message || "Falha ao registrar pagamento");
 
-  await attachPaymentToSource(data.source.kind, data.source.id, row.id);
+  if (ACTIVE_PAYMENT_STATUSES.has(status)) {
+    await attachPaymentToSource(data.source.kind, data.source.id, row.id);
+  } else {
+    await clearRejectedSourcePointer(data.source.kind, data.source.id, row.id, status);
+  }
 
   if (status === "approved") {
     await applyApproval(data.source.kind, data.source.id);

@@ -203,3 +203,34 @@ export const resetInvoiceDueDateAdmin = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const resetInvoicePaymentAttemptAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: any) => z.object({ invoice_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: invoice, error: invError } = await context.supabase
+      .from("subscription_invoices")
+      .select("id, status, mp_payment_id")
+      .eq("id", data.invoice_id)
+      .maybeSingle();
+    if (invError) throw new Error(invError.message);
+    if (!invoice) throw new Error("Fatura não encontrada");
+    if ((invoice as any).status === "paid") throw new Error("Fatura já está paga");
+
+    if ((invoice as any).mp_payment_id) {
+      const { data: payment } = await context.supabase
+        .from("mercadopago_payments")
+        .select("status")
+        .eq("id", (invoice as any).mp_payment_id)
+        .maybeSingle();
+      if ((payment as any)?.status === "approved") throw new Error("Pagamento aprovado encontrado para esta fatura");
+    }
+
+    const { error } = await context.supabase
+      .from("subscription_invoices")
+      .update({ mp_payment_id: null, updated_at: new Date().toISOString() } as any)
+      .eq("id", data.invoice_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

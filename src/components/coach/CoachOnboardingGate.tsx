@@ -10,8 +10,8 @@ import {
   unlockCoachWithId,
   markAlreadyCoach,
   QUIZ_URL,
-  ACTIVATION_PRODUCT_ID,
 } from "@/lib/coach-onboarding.functions";
+import { getOrCreateActivationOrder } from "@/lib/activation-order.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { SubscriptionInvoicesTab } from "@/components/profile/SubscriptionInvoicesTab";
 import { Logo } from "@/components/Logo";
@@ -195,30 +195,15 @@ function PaymentStep({
   const [creating, setCreating] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderTotal, setOrderTotal] = useState<number>(0);
+  const createActivationOrder = useServerFn(getOrCreateActivationOrder);
 
   const startCheckout = async () => {
     if (!profileId) return;
     setCreating(true);
     try {
-      // Busca/cria pedido com o produto de ativação
-      const { data: orderIdRpc, error } = await supabase.rpc(
-        "create_store_order" as never,
-        {
-          _items: [{ kind: "digital", sourceId: ACTIVATION_PRODUCT_ID, quantity: 1 }],
-          _payment_method: "pix",
-          _shipping: {},
-          _notes: "Ativação Coach (onboarding)",
-        } as never
-      );
-      if (error) throw new Error(error.message);
-      const { data: order } = await supabase
-        .from("store_orders" as never)
-        .select("id,total_amount" as never)
-        .eq("id" as never, orderIdRpc as never)
-        .maybeSingle();
-      const od = order as unknown as { id: string; total_amount: number } | null;
-      setOrderId(od?.id || String(orderIdRpc));
-      setOrderTotal(Number(od?.total_amount || 179.9));
+      const order = await createActivationOrder({ data: { notes: "Ativação Coach (onboarding)" } });
+      setOrderId(order.orderId);
+      setOrderTotal(Number(order.totalAmount || 179.9));
     } catch (e) {
       const err = e as Error;
       toast.error(err.message || "Falha ao criar pedido");

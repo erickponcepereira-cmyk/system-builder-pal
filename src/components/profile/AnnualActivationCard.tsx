@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
 import { getMyAnnualActivation } from "@/lib/annual-activation.functions";
-import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
+import { getOrCreateActivationOrder } from "@/lib/activation-order.functions";
 import { getIsTestUser, simulateTestPayAnnual } from "@/lib/test-accounts.functions";
 
 const fmt = (n: number) => `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
@@ -152,6 +152,7 @@ function AnnualPaymentBlock({
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderTotal, setOrderTotal] = useState<number>(0);
   const [payer, setPayer] = useState<{ email: string; name: string }>({ email: "", name: "" });
+  const createActivationOrder = useServerFn(getOrCreateActivationOrder);
 
   useEffect(() => {
     (async () => {
@@ -173,21 +174,9 @@ function AnnualPaymentBlock({
   const startCheckout = async () => {
     setCreating(true);
     try {
-      const { data: orderIdRpc, error } = await supabase.rpc("create_store_order" as never, {
-        _items: [{ kind: "digital", sourceId: ACTIVATION_PRODUCT_ID, quantity: 1 }],
-        _payment_method: "pix",
-        _shipping: {},
-        _notes: "Ativação Anual (assinatura)",
-      } as never);
-      if (error) throw new Error(error.message);
-      const { data: order } = await supabase
-        .from("store_orders" as never)
-        .select("id,total_amount" as never)
-        .eq("id" as never, orderIdRpc as never)
-        .maybeSingle();
-      const od = order as unknown as { id: string; total_amount: number } | null;
-      setOrderId(od?.id || String(orderIdRpc));
-      setOrderTotal(Number(od?.total_amount || productPrice || 179.9));
+      const order = await createActivationOrder({ data: { notes: "Ativação Anual (assinatura)" } });
+      setOrderId(order.orderId);
+      setOrderTotal(Number(order.totalAmount || productPrice || 179.9));
     } catch (e) {
       toast.error((e as Error).message || "Falha ao criar pedido");
     } finally {
