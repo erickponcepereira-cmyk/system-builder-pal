@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ACTIVATION_PRODUCT_ID } from "@/lib/coach-onboarding.functions";
+
+const ACTIVATION_PRODUCT_ID = "b43baf23-76b6-4abc-91a4-2730b3570d77";
 
 type PaymentStatus = "none" | "pending" | "in_process" | "approved" | "rejected" | "cancelled" | "refunded";
 
