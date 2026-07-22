@@ -357,20 +357,33 @@ function ProfessionalReleasesPage() {
 
                   {/* 3. Ativação */}
                   <div className="md:col-span-2 flex flex-col gap-1">
-                    <button
-                      disabled={actDone || (busy?.id === r.id && busy?.step === "activation")}
-                      onClick={() => {
-                        const note = window.prompt(
-                          "Justifique a concessão da ativação de profissional R$179,90 (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 06/07'."
-                        );
-                        if (!note || note.trim().length < 5) { toast.error("Justificativa obrigatória."); return; }
-                        run(r.id, "activation", () => grantActivation({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
-                      }}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
-                    >
-                      {busy?.id === r.id && busy?.step === "activation" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
-                      {actDone ? `Ativação paga em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Conceder ativação"}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        disabled={actDone || (busy?.id === r.id && busy?.step === "activation")}
+                        onClick={() => {
+                          if (!confirm(`Isentar a anuidade de profissional (R$ 179,90) de ${r.profile?.name || "este profissional"}?`)) return;
+                          run(r.id, "activation", () => grantActivation({ data: { coachId: r.id, note: "Anuidade isenta pelo admin" } }), "Anuidade isenta", r.profile?.id);
+                        }}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-200 hover:bg-blue-500/20 disabled:opacity-40"
+                      >
+                        {busy?.id === r.id && busy?.step === "activation" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                        {actDone ? `Ativação em ${new Date(r.activation_paid_at!).toLocaleDateString("pt-BR")}` : "Isentar anuidade"}
+                      </button>
+                      <button
+                        disabled={actDone || (busy?.id === r.id && busy?.step === "activation")}
+                        onClick={() => {
+                          const note = window.prompt(
+                            "Justifique a concessão da ativação de profissional R$179,90 (mín. 5 caracteres).\nEx: 'pagamento confirmado via PIX externo em 06/07'."
+                          );
+                          if (!note || note.trim().length < 5) { toast.error("Justificativa obrigatória."); return; }
+                          run(r.id, "activation", () => grantActivation({ data: { coachId: r.id, note: note.trim() } }), "Ativação concedida", r.profile?.id);
+                        }}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white hover:bg-white/10 disabled:opacity-40"
+                      >
+                        {busy?.id === r.id && busy?.step === "activation" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                        {actDone ? "Ativação concedida" : "Conceder ativação (pago fora)"}
+                      </button>
+                    </div>
                     {actDone && r.activation_source && (() => {
                       const b = ACTIVATION_SOURCE_BADGE[r.activation_source];
                       return (
