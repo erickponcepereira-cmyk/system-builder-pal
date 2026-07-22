@@ -246,7 +246,7 @@ export const skipInvoiceAdmin = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { error } = await context.supabase.rpc("admin_skip_invoice", {
       _invoice_id: data.invoice_id,
-      _reason: data.reason ?? null,
+      _reason: data.reason ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
