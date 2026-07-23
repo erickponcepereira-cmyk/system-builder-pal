@@ -805,8 +805,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   )}
                 </div>
               )}
-            </div>
-            {editing.id && editing.kind === "paid" && (
+            </fieldset>
+            {editing.id && editing.kind === "paid" && !readOnly && (
               <div className="mt-4 border-t border-white/10 pt-4">
                 <CoproductionEditor
                   productType="professional"
@@ -818,14 +818,19 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               </div>
             )}
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
-              <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">
-                <Save className="inline h-4 w-4 mr-1" /> Salvar
+              <button onClick={() => { setEditing(null); setReadOnly(false); setReadOnlyCreator(null); }} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">
+                {readOnly ? "Fechar" : "Cancelar"}
               </button>
+              {!readOnly && (
+                <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">
+                  <Save className="inline h-4 w-4 mr-1" /> Salvar
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+
 
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
     </div>
