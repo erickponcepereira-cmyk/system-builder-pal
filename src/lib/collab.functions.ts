@@ -338,8 +338,17 @@ export const inviteCoproducer = createServerFn({ method: "POST" })
       })
       .select("*").single();
     if (error) throw new Error(error.message);
+    const collabProfileId = await resolveProfileIdFor(supabase, collabType!, collabId!);
+    await insertNotification(
+      collabProfileId,
+      "coproduction_invite",
+      "Novo convite de co-produção",
+      "Você foi convidado para uma co-produção. Toque para revisar.",
+      collabType === "partner" ? "/partner?tab=collab" : "/professional?tab=collab",
+    );
     return created;
   });
+
 
 export const listCoproducerCandidates = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
