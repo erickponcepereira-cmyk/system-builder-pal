@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2 } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
+import { useServerFn } from "@tanstack/react-start";
+import { getCollabPendingCounts } from "@/lib/collab.functions";
 import { OverviewTab } from "@/components/professional/OverviewTab";
 import { StorePage } from "@/components/student/StorePage";
 
