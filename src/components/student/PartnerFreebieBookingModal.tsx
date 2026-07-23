@@ -58,14 +58,22 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
       const wk = isoWeekKey(new Date());
       const { data: u } = await supabase.auth.getUser();
       if (u.user) {
-        const { count } = await supabase
-          .from("partner_freebie_reservations" as never)
-          .select("id", { count: "exact", head: true })
-          .eq("partner_product_id" as never, product.id as never)
-          .eq("profile_id" as never, u.user.id as never)
-          .eq("iso_week" as never, wk as never)
-          .in("status" as never, ["reserved", "used"] as never);
-        setUsedThisWeek(count || 0);
+        const { data: prof } = await supabase
+          .from("profiles" as never)
+          .select("id" as never)
+          .eq("user_id" as never, u.user.id as never)
+          .maybeSingle();
+        const profileId = (prof as { id?: string } | null)?.id;
+        if (profileId) {
+          const { count } = await supabase
+            .from("partner_freebie_reservations" as never)
+            .select("id", { count: "exact", head: true })
+            .eq("partner_product_id" as never, product.id as never)
+            .eq("profile_id" as never, profileId as never)
+            .eq("iso_week" as never, wk as never)
+            .in("status" as never, ["reserved", "used"] as never);
+          setUsedThisWeek(count || 0);
+        }
       }
       setLoading(false);
     })();
