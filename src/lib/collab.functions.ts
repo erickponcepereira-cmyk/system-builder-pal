@@ -297,6 +297,10 @@ export const inviteCoproducer = createServerFn({ method: "POST" })
     splitKind: "percent" | "fixed";
     percentOfNet?: number;
     fixedAmountBrl?: number;
+    hasCost?: boolean;
+    costAmountBrl?: number;
+    costBearer?: "creator" | "collaborator";
+    splitBase?: "gross" | "net" | "net_after_cost";
   }) => d)
   .handler(async ({ context, data }) => {
     const supabase = context.supabase as any;
@@ -325,6 +329,30 @@ export const inviteCoproducer = createServerFn({ method: "POST" })
         throw new Error("Informe um valor maior que zero.");
       }
     }
+
+    const hasCost = !!data.hasCost;
+    let costBearerType: OwnerType | null = null;
+    let costBearerId: string | null = null;
+    let splitBase: "gross" | "net" | "net_after_cost" = data.splitBase || "net";
+    if (hasCost) {
+      if (!data.costAmountBrl || data.costAmountBrl <= 0) {
+        throw new Error("Informe um valor de custo maior que zero.");
+      }
+      const bearer = data.costBearer || "creator";
+      if (bearer === "creator") {
+        costBearerType = data.creatorType;
+        costBearerId = data.creatorId;
+      } else {
+        costBearerType = collabType!;
+        costBearerId = collabId!;
+      }
+      if (splitBase !== "gross" && splitBase !== "net_after_cost") {
+        splitBase = "net_after_cost";
+      }
+    } else {
+      if (splitBase === "net_after_cost") splitBase = "net";
+    }
+
     const { data: created, error } = await supabase
       .from("product_coproductions")
       .insert({
@@ -335,6 +363,11 @@ export const inviteCoproducer = createServerFn({ method: "POST" })
         percent_of_net: data.splitKind === "percent" ? data.percentOfNet : null,
         fixed_amount_brl: data.splitKind === "fixed" ? data.fixedAmountBrl : 0,
         status: "pending",
+        has_cost: hasCost,
+        cost_amount_brl: hasCost ? data.costAmountBrl : 0,
+        cost_bearer_type: costBearerType,
+        cost_bearer_id: costBearerId,
+        split_base: splitBase,
       })
       .select("*").single();
     if (error) throw new Error(error.message);
