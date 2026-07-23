@@ -543,7 +543,7 @@ export const listCoproducedProducts = createServerFn({ method: "POST" })
       partnerProdIds.length ? supabaseAdmin.from("partner_products").select("*").in("id", partnerProdIds) : Promise.resolve({ data: [] }),
       proProdIds.length ? supabaseAdmin.from("professional_products").select("*").in("id", proProdIds) : Promise.resolve({ data: [] }),
       partnerCreatorIds.length ? supabaseAdmin.from("partners").select("id,fantasy_name").in("id", partnerCreatorIds) : Promise.resolve({ data: [] }),
-      coachCreatorIds.length ? supabaseAdmin.from("coaches").select("id,profiles:profile_id(name)").in("id", coachCreatorIds) : Promise.resolve({ data: [] }),
+      coachCreatorIds.length ? supabaseAdmin.from("coaches").select("id,profiles!coaches_profile_id_fkey(name)").in("id", coachCreatorIds) : Promise.resolve({ data: [] }),
     ]);
     const findProd = (type: string, id: string) => {
       const arr: any = type === "partner" ? pp.data : pr.data;
