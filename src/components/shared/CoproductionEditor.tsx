@@ -112,10 +112,37 @@ export function CoproductionEditor({
   };
 
   const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled" && i.id !== editingId);
+
+  // Base efetiva por item — se o item tem custo, aplicar sobre a base escolhida (bruto/liquido/liq-custo).
+  const baseForItem = (splitBaseVal: string | null | undefined, hasCostVal: boolean, costVal: number) => {
+    const c = hasCostVal ? Math.max(0, costVal) : 0;
+    if (splitBaseVal === "gross") return Math.max(0, grossValue - c);
+    if (splitBaseVal === "net_after_cost") return Math.max(0, netValue - c);
+    return Math.max(0, netValue); // "net" ignora custo na base
+  };
+
+  // Quanto o coprodutor recebe em R$ (no cartão) para um item já persistido.
+  const amountForItem = (it: any) => {
+    if (it.split_kind === "percent") {
+      const b = baseForItem(it.split_base, !!it.has_cost, Number(it.cost_amount_brl || 0));
+      return (b * Number(it.percent_of_net || 0)) / 100;
+    }
+    return Number(it.fixed_amount_brl || 0);
+  };
+  const reimburseForItem = (it: any) =>
+    it.has_cost && it.cost_bearer_type === it.collaborator_type && it.cost_bearer_id === it.collaborator_id
+      ? Number(it.cost_amount_brl || 0)
+      : 0;
+  const pixOf = (v: number) => v * (1 + PIX_UPLIFT_PCT / 100);
+
+  // Total já comprometido (split cartão) + custos que saem do criador.
+  const committedInBrl = activeItems.reduce((s, i) => s + amountForItem(i), 0);
+  const creatorCostOut = activeItems.reduce(
+    (s, i) => s + (i.has_cost && !(i.cost_bearer_type === i.collaborator_type && i.cost_bearer_id === i.collaborator_id) ? Number(i.cost_amount_brl || 0) : 0),
+    0,
+  );
+  const remainingBrl = Math.max(0, netValue - committedInBrl - creatorCostOut);
   const totalPercent = activeItems.reduce((s, i) => s + (i.split_kind === "percent" ? Number(i.percent_of_net || 0) : 0), 0);
-  const totalFixed = activeItems.reduce((s, i) => s + (i.split_kind !== "percent" ? Number(i.fixed_amount_brl || 0) : 0), 0);
-  const committedInBrl = totalFixed + (netValue * totalPercent) / 100;
-  const remainingBrl = Math.max(0, netValue - committedInBrl);
 
   const previewAmount = useMemo(() => {
     if (splitKind === "percent") {
@@ -126,8 +153,7 @@ export function CoproductionEditor({
   }, [splitKind, percent, amount, effectiveBase]);
 
   const creatorShare = useMemo(() => {
-    // Criador recebe: netValue − split do coprodutor − (custo, se bearer for coprodutor).
-    // Se bearer for o criador, ele fica com o valor (não sai da carteira).
+    // Criador recebe: netValue − split do coprodutor − custo (se bearer for coprodutor sai da conta do criador para reembolso).
     const costOut = hasCost && costBearer === "collaborator" ? costValue : 0;
     return Math.max(0, netValue - previewAmount - costOut);
   }, [netValue, previewAmount, hasCost, costBearer, costValue]);
