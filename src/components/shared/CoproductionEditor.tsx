@@ -15,13 +15,22 @@ interface Props {
   productId: string | null;
   creatorType: OwnerType;
   creatorId: string;
-  /** Preço bruto do produto (o "de venda") */
+  /**
+   * Valor líquido a distribuir na venda no cartão (já descontadas todas as
+   * taxas: gateway, impostos, sistema e comissão do coach). Esse é o valor
+   * que o criador teria em mãos para dividir com coprodutores.
+   */
   productNetValueBrl: number;
-  /** Estimativa de taxa+imposto sobre o bruto (0.10 = 10%). Padrão 10%. */
+  /** @deprecated não é mais usado; base do rateio é o próprio líquido. */
   netFactor?: number;
 }
 
 const BRL = (n: number) => `R$ ${n.toFixed(2).replace(".", ",")}`;
+
+// Diferença de taxa cartão(4,98%) → PIX(0,99%) ≈ 3,99% do bruto.
+// Como o líquido informado assume cartão, no PIX o líquido cresce
+// proporcionalmente e ambos (criador e coprodutores) recebem o ganho junto.
+const PIX_UPLIFT_PCT = 3.99;
 
 export function CoproductionEditor({
   productType,
@@ -29,7 +38,6 @@ export function CoproductionEditor({
   creatorType,
   creatorId,
   productNetValueBrl,
-  netFactor = 0.10,
 }: Props) {
   const list = useServerFn(listProductCoproductions);
   const invite = useServerFn(inviteCoproducer);
@@ -48,7 +56,8 @@ export function CoproductionEditor({
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const netEstimated = Math.max(0, productNetValueBrl * (1 - netFactor));
+  // Base do rateio = líquido a distribuir informado pelo produto.
+  const netEstimated = Math.max(0, productNetValueBrl);
 
   const reload = async () => {
     if (!productId) return;
