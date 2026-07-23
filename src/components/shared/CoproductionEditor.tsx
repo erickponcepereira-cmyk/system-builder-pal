@@ -251,39 +251,60 @@ export function CoproductionEditor({
         <Plus className="h-3.5 w-3.5" /> Adicionar coprodutor
       </button>
 
-      {items.map((it) => (
-        <div key={it.id} className="flex items-center justify-between rounded-lg p-2" style={{ backgroundColor: "#1A1A1A" }}>
-          <div className="min-w-0">
-            <p className="text-xs text-white truncate">{it.collaboratorName}</p>
-            <p className="text-[10px] text-white/50">
-              {it.split_kind === "percent"
-                ? <>{Number(it.percent_of_net).toFixed(2)}% do {it.split_base === "gross" ? "bruto" : it.split_base === "net_after_cost" ? "líquido pós-custo" : "líquido"}</>
-                : <>{BRL(Number(it.fixed_amount_brl))}</>}
-              {it.has_cost && <> · custo {BRL(Number(it.cost_amount_brl || 0))}</>}
-              {" · "}
-              <span className={it.status === "accepted" ? "text-green-400" : it.status === "rejected" ? "text-red-400" : "text-amber-400"}>
-                {it.status === "pending" ? "aguardando aceite" : it.status}
-              </span>
-            </p>
+      {items.map((it) => {
+        const cardAmt = amountForItem(it);
+        const reimb = reimburseForItem(it);
+        const cardTotal = cardAmt + reimb;
+        const pixTotal = pixOf(cardTotal);
+        const baseLabel = it.split_base === "gross" ? "bruto" : it.split_base === "net_after_cost" ? "líquido pós-custo" : "líquido";
+        return (
+          <div key={it.id} className="flex items-start justify-between rounded-lg p-2 gap-2" style={{ backgroundColor: "#1A1A1A" }}>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="text-xs text-white truncate">{it.collaboratorName}</p>
+              <p className="text-[10px] text-white/50">
+                {it.split_kind === "percent"
+                  ? <>{Number(it.percent_of_net).toFixed(2)}% do {baseLabel}</>
+                  : <>Valor fixo {BRL(Number(it.fixed_amount_brl))}</>}
+                {" · "}
+                <span className={it.status === "accepted" ? "text-green-400" : it.status === "rejected" ? "text-red-400" : "text-amber-400"}>
+                  {it.status === "pending" ? "aguardando aceite" : it.status}
+                </span>
+              </p>
+              {it.has_cost && (
+                <p className="text-[10px] text-white/50">
+                  Custo: <span className="text-white">{BRL(Number(it.cost_amount_brl || 0))}</span> — assumido por{" "}
+                  <span className="text-white">
+                    {it.cost_bearer_type === it.collaborator_type && it.cost_bearer_id === it.collaborator_id ? "coprodutor" : "criador"}
+                  </span>
+                </p>
+              )}
+              <p className="text-[10px] text-white/70">
+                Cartão: <strong className="text-primary">{BRL(cardTotal)}</strong>
+                {reimb > 0 && <span className="text-white/50"> (split {BRL(cardAmt)} + reembolso custo {BRL(reimb)})</span>}
+              </p>
+              <p className="text-[10px] text-white/70">
+                PIX (~+{PIX_UPLIFT_PCT.toFixed(2)}%): <strong className="text-primary">{BRL(pixTotal)}</strong>
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => openEdit(it)} className="text-primary p-1.5" title="Editar">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`Excluir co-produção com ${it.collaboratorName}?`)) return;
+                  try { await cancel({ data: { id: it.id } }); toast.success("Co-produção removida."); reload(); }
+                  catch (e: any) { toast.error(e.message); }
+                }}
+                className="text-red-400 p-1.5"
+                title="Excluir"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => openEdit(it)} className="text-primary p-1.5" title="Editar">
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={async () => {
-                if (!confirm(`Excluir co-produção com ${it.collaboratorName}?`)) return;
-                try { await cancel({ data: { id: it.id } }); toast.success("Co-produção removida."); reload(); }
-                catch (e: any) { toast.error(e.message); }
-              }}
-              className="text-red-400 p-1.5"
-              title="Excluir"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       {items.length === 0 && <p className="text-[11px] text-white/30">Nenhum coprodutor.</p>}
 
       {openModal && (
