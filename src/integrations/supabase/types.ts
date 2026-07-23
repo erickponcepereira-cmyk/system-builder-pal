@@ -6277,6 +6277,8 @@ export type Database = {
           coproduction_id: string
           created_at: string
           id: string
+          is_cost: boolean
+          note: string | null
           order_id: string
         }
         Insert: {
@@ -6286,6 +6288,8 @@ export type Database = {
           coproduction_id: string
           created_at?: string
           id?: string
+          is_cost?: boolean
+          note?: string | null
           order_id: string
         }
         Update: {
@@ -6295,6 +6299,8 @@ export type Database = {
           coproduction_id?: string
           created_at?: string
           id?: string
+          is_cost?: boolean
+          note?: string | null
           order_id?: string
         }
         Relationships: [
@@ -6318,45 +6324,60 @@ export type Database = {
         Row: {
           collaborator_id: string
           collaborator_type: string
+          cost_amount_brl: number
+          cost_bearer_id: string | null
+          cost_bearer_type: string | null
           created_at: string
           creator_id: string
           creator_type: string
           fixed_amount_brl: number | null
+          has_cost: boolean
           id: string
           percent_of_net: number | null
           product_id: string
           product_type: string
           responded_at: string | null
+          split_base: string
           split_kind: string
           status: string
         }
         Insert: {
           collaborator_id: string
           collaborator_type: string
+          cost_amount_brl?: number
+          cost_bearer_id?: string | null
+          cost_bearer_type?: string | null
           created_at?: string
           creator_id: string
           creator_type: string
           fixed_amount_brl?: number | null
+          has_cost?: boolean
           id?: string
           percent_of_net?: number | null
           product_id: string
           product_type: string
           responded_at?: string | null
+          split_base?: string
           split_kind?: string
           status?: string
         }
         Update: {
           collaborator_id?: string
           collaborator_type?: string
+          cost_amount_brl?: number
+          cost_bearer_id?: string | null
+          cost_bearer_type?: string | null
           created_at?: string
           creator_id?: string
           creator_type?: string
           fixed_amount_brl?: number | null
+          has_cost?: boolean
           id?: string
           percent_of_net?: number | null
           product_id?: string
           product_type?: string
           responded_at?: string | null
+          split_base?: string
           split_kind?: string
           status?: string
         }
