@@ -234,8 +234,9 @@ export function CoproductionEditor({
         </p>
         <p className="text-white/50">
           Bruto: <span className="text-white">{BRL(grossValue)}</span> ·
-          {" "}Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span> ·
-          {" "}Comprometido: <span className="text-white">{BRL(committedInBrl)}</span> ·
+          {" "}Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span>
+          {creatorCostOut > 0 && <> · Custo (você): <span className="text-white">{BRL(creatorCostOut)}</span></>}
+          {" "}· Comprometido: <span className="text-white">{BRL(committedInBrl)}</span> ·
           {" "}Sua sobra: <span className="text-primary">{BRL(remainingBrl)}</span>
         </p>
         <p className="text-[10px] text-white/40">
