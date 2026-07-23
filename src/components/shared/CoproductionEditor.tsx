@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, X, Search } from "lucide-react";
+import { Plus, Trash2, Users, X, Search, Pencil } from "lucide-react";
 import {
   inviteCoproducer,
   listProductCoproductions,
   cancelCoproduction,
+  updateCoproduction,
   listCoproducerCandidates,
   type OwnerType,
 } from "@/lib/collab.functions";
