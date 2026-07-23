@@ -476,3 +476,28 @@ export const listProductCoproductions = createServerFn({ method: "POST" })
       })),
     };
   });
+
+// ---------- pending badges ----------
+export const getCollabPendingCounts = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { entityType: OwnerType; entityId: string }) => d)
+  .handler(async ({ context, data }) => {
+    const supabase = context.supabase as any;
+    const [coprod, shares] = await Promise.all([
+      supabase
+        .from("product_coproductions")
+        .select("id", { count: "exact", head: true })
+        .eq("collaborator_type", data.entityType)
+        .eq("collaborator_id", data.entityId)
+        .eq("status", "pending"),
+      supabase
+        .from("calendar_shares")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_type", data.entityType)
+        .eq("owner_id", data.entityId)
+        .eq("status", "pending"),
+    ]);
+    const coproductions = Number(coprod.count || 0);
+    const calendarShares = Number(shares.count || 0);
+    return { coproductions, calendarShares, total: coproductions + calendarShares };
+  });
