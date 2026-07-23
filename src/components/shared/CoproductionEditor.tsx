@@ -155,25 +155,40 @@ export function CoproductionEditor({
     }
     setSaving(true);
     try {
-      await invite({
-        data: {
-          productType, productId, creatorType, creatorId,
-          collaboratorType: picked?.type,
-          collaboratorId: picked?.id,
-          collaboratorCode: !picked ? code.trim().toUpperCase() : undefined,
-          splitKind,
-          percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
-          fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
-          hasCost,
-          costAmountBrl: hasCost ? costValue : undefined,
-          costBearer: hasCost ? costBearer : undefined,
-          splitBase: hasCost ? splitBase : undefined,
-        },
-      });
-      toast.success("Convite enviado. O produto ficará pausado até o coprodutor aceitar.");
+      if (editingId) {
+        await update({
+          data: {
+            id: editingId,
+            splitKind,
+            percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
+            fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
+            hasCost,
+            costAmountBrl: hasCost ? costValue : undefined,
+            costBearer: hasCost ? costBearer : undefined,
+            splitBase: hasCost ? splitBase : undefined,
+          },
+        });
+        toast.success("Co-produção atualizada.");
+      } else {
+        await invite({
+          data: {
+            productType, productId, creatorType, creatorId,
+            collaboratorType: picked?.type,
+            collaboratorId: picked?.id,
+            collaboratorCode: !picked ? code.trim().toUpperCase() : undefined,
+            splitKind,
+            percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
+            fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
+            hasCost,
+            costAmountBrl: hasCost ? costValue : undefined,
+            costBearer: hasCost ? costBearer : undefined,
+            splitBase: hasCost ? splitBase : undefined,
+          },
+        });
+        toast.success("Convite enviado. O produto ficará pausado até o coprodutor aceitar.");
+      }
       setOpenModal(false);
-      setPicked(null); setCode(""); setPercent(""); setAmount(""); setUseCode(false);
-      setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
+      resetForm();
       reload();
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
