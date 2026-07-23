@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type PartnerReport = {
   range: { from: string; to: string };
@@ -12,7 +11,10 @@ export type PartnerReport = {
     paid_orders: number;
     revenue_gross: number;
     revenue_net: number;
+    freebies_reserved: number;
     freebies_redeemed: number;
+    freebies_cancelled: number;
+    freebies_expired: number;
     coupons_generated: number;
     coupons_used: number;
     coupon_conversion_pct: number;
@@ -22,6 +24,7 @@ export type PartnerReport = {
   top_coaches: Array<{ coach_id: string; coach_name: string; visits: number; buyers: number; revenue: number }>;
   recent_visits: Array<{ id: string; visited_at: string; student_name: string; student_photo: string | null; coach_name: string | null }>;
   coupons_recent: Array<{ id: string; token: string; status: string; created_at: string; redeemed_at: string | null; product_name: string | null; student_name: string }>;
+  freebie_reservations: Array<{ id: string; created_at: string; slot_start: string; slot_end: string; used_at: string | null; status: string; product_name: string; student_name: string }>;
 };
 
 const Range = z.object({
@@ -34,6 +37,7 @@ export const getPartnerReports = createServerFn({ method: "POST" })
   .inputValidator((d) => Range.parse(d))
   .handler(async ({ data, context }): Promise<PartnerReport> => {
     const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: profile } = await supabaseAdmin
       .from("profiles").select("id").eq("user_id", userId).maybeSingle();
@@ -82,14 +86,27 @@ export const getPartnerReports = createServerFn({ method: "POST" })
     type CouponRow = { id: string; token: string; status: string; created_at: string; redeemed_at: string | null; product_name: string | null; student_id: string; partner_product_id: string };
     const couponRows = (coupons as CouponRow[]) || [];
 
-    // Freebies redeemed for products that belong to this partner (none today — partner_products kind=free are discounts; freebies are admin-side). Skip — set 0.
-    const freebiesRedeemed = 0;
+    // Freebie reservations with QR scheduling
+    const { data: reservations } = await supabaseAdmin
+      .from("partner_freebie_reservations")
+      .select("id, status, created_at, slot_start, slot_end, used_at, student_id, partner_product_id")
+      .eq("partner_id", partnerId)
+      .gte("created_at", fromTs)
+      .lte("created_at", toTs)
+      .order("slot_start", { ascending: false });
+    type ReservationRow = { id: string; status: string; created_at: string; slot_start: string; slot_end: string; used_at: string | null; student_id: string; partner_product_id: string };
+    const reservationRows = (reservations as ReservationRow[]) || [];
+    const freebiesReserved = reservationRows.filter((r) => r.status === "reserved" && new Date(r.slot_end).getTime() >= Date.now()).length;
+    const freebiesRedeemed = reservationRows.filter((r) => r.status === "used").length;
+    const freebiesCancelled = reservationRows.filter((r) => r.status === "cancelled").length;
+    const freebiesExpired = reservationRows.filter((r) => r.status === "expired" || (r.status === "reserved" && new Date(r.slot_end).getTime() < Date.now())).length;
 
     // Resolve students for names/photos and coach mapping
     const studentIds = Array.from(new Set([
       ...visitRows.map((v) => v.student_id),
       ...paidOrders.map((o) => o.student_id),
       ...couponRows.map((c) => c.student_id),
+      ...reservationRows.map((r) => r.student_id),
     ]));
 
     let studentMap: Record<string, { name: string; photo: string | null; coach_id: string | null }> = {};
@@ -120,6 +137,7 @@ export const getPartnerReports = createServerFn({ method: "POST" })
     // Products / categories
     const productIds = Array.from(new Set([
       ...paidOrders.map((o) => o.partner_product_id).filter(Boolean) as string[],
+      ...reservationRows.map((r) => r.partner_product_id).filter(Boolean),
     ]));
     let productMap: Record<string, { name: string; kind: "free" | "paid"; category_id: string | null }> = {};
     let categoryMap: Record<string, string> = {};
@@ -157,6 +175,12 @@ export const getPartnerReports = createServerFn({ method: "POST" })
       if (!byProductMap[key]) byProductMap[key] = { product_id: key, product_name: p?.name || "Produto", kind: p?.kind || "paid", qty: 0, revenue: 0 };
       byProductMap[key].qty += 1;
       byProductMap[key].revenue += Number(o.gross_amount || 0);
+    }
+    for (const r of reservationRows.filter((row) => row.status === "used")) {
+      const p = productMap[r.partner_product_id];
+      const key = r.partner_product_id;
+      if (!byProductMap[key]) byProductMap[key] = { product_id: key, product_name: p?.name || "Produto", kind: "free", qty: 0, revenue: 0 };
+      byProductMap[key].qty += 1;
     }
 
     // By category
@@ -198,7 +222,10 @@ export const getPartnerReports = createServerFn({ method: "POST" })
         paid_orders: paidOrders.length,
         revenue_gross: revenueGross,
         revenue_net: revenueNet,
+        freebies_reserved: freebiesReserved,
         freebies_redeemed: freebiesRedeemed,
+        freebies_cancelled: freebiesCancelled,
+        freebies_expired: freebiesExpired,
         coupons_generated: couponsGenerated,
         coupons_used: couponsUsed,
         coupon_conversion_pct: couponConversion,
@@ -211,7 +238,7 @@ export const getPartnerReports = createServerFn({ method: "POST" })
         visited_at: v.visited_at,
         student_name: studentMap[v.student_id]?.name || "Aluno",
         student_photo: studentMap[v.student_id]?.photo || null,
-        coach_name: studentMap[v.student_id]?.coach_id ? coachNameMap[studentMap[v.student_id].coach_id!] || null : null,
+        coach_name: studentMap[v.student_id]?.coach_id ? coachNameMap[studentMap[v.student_id].coach_id || ""] || null : null,
       })),
       coupons_recent: couponRows.slice(0, 30).map((c) => ({
         id: c.id,
@@ -221,6 +248,16 @@ export const getPartnerReports = createServerFn({ method: "POST" })
         redeemed_at: c.redeemed_at,
         product_name: c.product_name,
         student_name: studentMap[c.student_id]?.name || "Aluno",
+      })),
+      freebie_reservations: reservationRows.slice(0, 60).map((r) => ({
+        id: r.id,
+        created_at: r.created_at,
+        slot_start: r.slot_start,
+        slot_end: r.slot_end,
+        used_at: r.used_at,
+        status: r.status,
+        product_name: productMap[r.partner_product_id]?.name || "Produto gratuito",
+        student_name: studentMap[r.student_id]?.name || "Aluno",
       })),
     };
   });

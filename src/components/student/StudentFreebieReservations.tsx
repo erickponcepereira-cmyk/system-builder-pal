@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
-import { CalendarDays, CheckCircle2, Clock, Loader2, MapPin, QrCode, X, Ticket } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle2, Clock, Loader2, MapPin, QrCode, X, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 type Reservation = {
@@ -17,19 +17,42 @@ type Reservation = {
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
 
+function getReservationState(r: Reservation, now: number) {
+  const start = new Date(r.slot_start).getTime();
+  const end = new Date(r.slot_end).getTime();
+  if (r.status === "used") return { label: "Usado", tone: "text-green-400", canOpenQr: false, canCancel: false };
+  if (r.status === "cancelled") return { label: "Cancelado", tone: "text-white/40", canOpenQr: false, canCancel: false };
+  if (r.status === "expired" || now > end) return { label: "Expirado", tone: "text-white/40", canOpenQr: false, canCancel: false };
+  if (now < start) return { label: "Aguardando horário", tone: "text-amber-400", canOpenQr: false, canCancel: true };
+  return { label: "QR disponível", tone: "text-primary", canOpenQr: true, canCancel: false };
+}
+
 export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number }) {
   const [items, setItems] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Reservation | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const load = async () => {
     setLoading(true);
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) { setLoading(false); return; }
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles" as never)
+      .select("id" as never)
+      .eq("user_id" as never, u.user.id as never)
+      .maybeSingle();
+    if (profileError) {
+      toast.error(profileError.message);
+      setLoading(false);
+      return;
+    }
+    const profileId = (profile as { id?: string } | null)?.id;
+    if (!profileId) { setItems([]); setLoading(false); return; }
     const { data } = await supabase
       .from("partner_freebie_reservations" as never)
       .select("id, qr_token, slot_start, slot_end, status, partner_products(name, redemption_location_name, redemption_location_url), partners(fantasy_name, address)")
-      .eq("profile_id" as never, u.user.id as never)
+      .eq("profile_id" as never, profileId as never)
       .gte("slot_end" as never, new Date(Date.now() - 24 * 3600 * 1000).toISOString() as never)
       .order("slot_start" as never);
     setItems(((data as unknown) as Reservation[]) || []);
@@ -37,6 +60,10 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
   };
 
   useEffect(() => { load(); }, [refreshKey]);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   // Live refresh for the open QR (catch "used" status)
   useEffect(() => {
@@ -76,14 +103,12 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
       <div className="space-y-2">
         {items.map((r) => {
           const isUsed = r.status === "used";
-          const isCancelled = r.status === "cancelled";
-          const isExpired = r.status === "expired";
+          const state = getReservationState(r, now);
           return (
             <button
               key={r.id}
-              onClick={() => !isCancelled && !isExpired && setSelected(r)}
-              className="w-full flex items-center gap-2 rounded-lg bg-black/30 p-2 text-left hover:bg-black/40 disabled:opacity-50"
-              disabled={isCancelled || isExpired}
+              onClick={() => setSelected(r)}
+              className="w-full flex items-center gap-2 rounded-lg bg-black/30 p-2 text-left hover:bg-black/40"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-white truncate">{r.partner_products?.name}</p>
@@ -95,12 +120,10 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
               </div>
               {isUsed ? (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-green-400"><CheckCircle2 className="h-3 w-3" /> Usado</span>
-              ) : isCancelled ? (
-                <span className="text-[10px] font-bold text-white/40">Cancelado</span>
-              ) : isExpired ? (
-                <span className="text-[10px] font-bold text-white/40">Expirado</span>
+              ) : state.canOpenQr ? (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-primary"><QrCode className="h-3 w-3" /> QR</span>
               ) : (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-primary"><QrCode className="h-3 w-3" /> Ver QR</span>
+                <span className={`text-[10px] font-bold ${state.tone}`}>{state.label}</span>
               )}
             </button>
           );
@@ -125,10 +148,24 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
                 <p className="text-xs text-white/60">Bom treino! 💪</p>
               </div>
             ) : (
-              <>
-                <div className="mx-auto mt-2 rounded-2xl bg-white p-3 w-fit">
-                  <QRCodeSVG value={selected.qr_token} size={220} level="H" />
-                </div>
+              (() => {
+                const state = getReservationState(selected, now);
+                return <>
+                {state.canOpenQr ? (
+                  <div className="mx-auto mt-2 rounded-2xl bg-white p-3 w-fit">
+                    <QRCodeSVG value={selected.qr_token} size={220} level="H" />
+                  </div>
+                ) : (
+                  <div className="mx-auto mt-2 rounded-2xl border border-white/10 bg-white/5 p-5">
+                    <AlertCircle className={`mx-auto h-10 w-10 ${state.tone}`} />
+                    <p className="mt-3 text-sm font-bold text-white">{state.label}</p>
+                    <p className="mt-1 text-xs text-white/55">
+                      {selected.status === "cancelled" ? "Esta reserva foi cancelada." : now < new Date(selected.slot_start).getTime()
+                        ? `QR liberado no horário da reserva: ${fmtTime(selected.slot_start)}.`
+                        : "Produto fora do horário de utilização."}
+                    </p>
+                  </div>
+                )}
                 <p className="mt-3 text-xs text-white/60 flex items-center justify-center gap-1">
                   <CalendarDays className="h-3 w-3" /> {fmtDay(selected.slot_start)} · {fmtTime(selected.slot_start)}–{fmtTime(selected.slot_end)}
                 </p>
@@ -145,11 +182,14 @@ export function StudentFreebieReservations({ refreshKey }: { refreshKey?: number
                 ) : selected.partners?.address && (
                   <p className="mt-1 text-[11px] text-white/45">{selected.partners.address}</p>
                 )}
-                <p className="mt-3 text-[10px] text-white/40">Mostre este QR ao parceiro para registrar sua presença.</p>
-                <button onClick={() => cancel(selected.id)} className="mt-4 w-full rounded-lg bg-white/5 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10">
+                <p className="mt-3 text-[10px] text-white/40">
+                  {state.canOpenQr ? "Mostre este QR ao parceiro para registrar sua presença." : "A reserva fica registrada para o parceiro mesmo antes da liberação do QR."}
+                </p>
+                {state.canCancel && <button onClick={() => cancel(selected.id)} className="mt-4 w-full rounded-lg bg-white/5 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10">
                   Cancelar reserva
-                </button>
-              </>
+                </button>}
+              </>;
+              })()
             )}
           </div>
         </div>

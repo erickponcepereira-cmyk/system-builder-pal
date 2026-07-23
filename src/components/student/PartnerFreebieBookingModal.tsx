@@ -113,7 +113,7 @@ export function PartnerFreebieBookingModal({ product, onClose, onReserved }: Pro
     if (error) { toast.error(error.message); return; }
     const r = (data as unknown as Array<{ reservation_id: string; qr_token: string; slot_end: string }>)?.[0];
     if (!r) { toast.error("Falha ao reservar."); return; }
-    toast.success("Reserva confirmada!");
+    toast.success("Reserva confirmada! O QR libera no horário escolhido.");
     onReserved({ id: r.reservation_id, qr_token: r.qr_token, slot_end: r.slot_end });
   };
 

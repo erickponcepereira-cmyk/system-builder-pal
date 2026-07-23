@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { BarChart3, ShoppingBag, Users, Ticket, TrendingUp, Loader2, CalendarDays, Download } from "lucide-react";
+import { BarChart3, ShoppingBag, Users, Ticket, TrendingUp, Loader2, Download, QrCode } from "lucide-react";
 import * as XLSX from "xlsx";
 import { getPartnerReports, type PartnerReport } from "@/lib/partner-reports.functions";
 
@@ -8,7 +8,23 @@ function firstOfMonth() { const d = new Date(); d.setDate(1); return d.toISOStri
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-type Tab = "resumo" | "vendas" | "cupons" | "coaches" | "visitas";
+type Tab = "resumo" | "vendas" | "reservas" | "cupons" | "coaches" | "visitas";
+
+const statusLabel = (status: string) => {
+  if (status === "used") return "Confirmado";
+  if (status === "reserved") return "Reservado";
+  if (status === "cancelled") return "Cancelado";
+  if (status === "expired") return "Expirado";
+  return status;
+};
+
+const statusClass = (status: string) => {
+  if (status === "used") return "bg-green-500/20 text-green-400";
+  if (status === "reserved") return "bg-yellow-500/20 text-yellow-400";
+  if (status === "cancelled") return "bg-white/10 text-white/50";
+  if (status === "expired") return "bg-red-500/20 text-red-400";
+  return "bg-white/10 text-white/60";
+};
 
 export function PartnerReports() {
   const fetchReport = useServerFn(getPartnerReports);
@@ -38,6 +54,7 @@ export function PartnerReports() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.by_category), "Vendas por Categoria");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.top_coaches), "Top Coaches");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.coupons_recent), "Cupons");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.freebie_reservations), "Reservas Gratuitas");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data.recent_visits), "Visitas");
     XLSX.writeFile(wb, `relatorio-parceiro-${from}-a-${to}.xlsx`);
   };
@@ -71,6 +88,7 @@ export function PartnerReports() {
       <div className="flex gap-1.5 flex-wrap">
         <Tb active={tab === "resumo"} onClick={() => setTab("resumo")} icon={BarChart3} label="Resumo" />
         <Tb active={tab === "vendas"} onClick={() => setTab("vendas")} icon={ShoppingBag} label="Vendas" />
+        <Tb active={tab === "reservas"} onClick={() => setTab("reservas")} icon={QrCode} label="Reservas" />
         <Tb active={tab === "cupons"} onClick={() => setTab("cupons")} icon={Ticket} label="Cupons" />
         <Tb active={tab === "coaches"} onClick={() => setTab("coaches")} icon={TrendingUp} label="Top Coaches" />
         <Tb active={tab === "visitas"} onClick={() => setTab("visitas")} icon={Users} label="Visitas" />
@@ -88,7 +106,8 @@ export function PartnerReports() {
               <Kpi label="Receita líquida" value={brl(summary.revenue_net)} sub="seu net no período" highlight />
               <Kpi label="Cupons gerados" value={summary.coupons_generated.toString()} sub={`${summary.coupons_used} usados`} />
               <Kpi label="Conversão de cupons" value={`${summary.coupon_conversion_pct.toFixed(1)}%`} sub="usados / gerados" />
-              <Kpi label="Gratuitos resgatados" value={summary.freebies_redeemed.toString()} sub="—" />
+              <Kpi label="Reservas pendentes" value={summary.freebies_reserved.toString()} sub={`${summary.freebies_redeemed} confirmadas`} />
+              <Kpi label="Gratuitos pendências" value={(summary.freebies_cancelled + summary.freebies_expired).toString()} sub={`${summary.freebies_cancelled} cancelados • ${summary.freebies_expired} expirados`} />
               <Kpi label="Período" value={`${data.range.from}`} sub={`até ${data.range.to}`} small />
             </div>
           )}
@@ -101,7 +120,7 @@ export function PartnerReports() {
                     {data.by_product.map((p) => (
                       <tr key={p.product_id} className="border-t border-white/5">
                         <td className="py-1.5 px-2">{p.product_name}</td>
-                        <td className="py-1.5 px-2 text-xs">{p.kind === "free" ? "Desconto" : "Patrocinado"}</td>
+                        <td className="py-1.5 px-2 text-xs">{p.kind === "free" ? "Gratuito" : "Patrocinado"}</td>
                         <td className="py-1.5 px-2 text-right">{p.qty}</td>
                         <td className="py-1.5 px-2 text-right">{brl(p.revenue)}</td>
                       </tr>
@@ -123,6 +142,27 @@ export function PartnerReports() {
                 )}
               </Section>
             </div>
+          )}
+
+          {tab === "reservas" && (
+            <Section title={`Reservas gratuitas (${summary.freebies_reserved} reservadas • ${summary.freebies_redeemed} confirmadas)`}>
+              {data.freebie_reservations.length === 0 ? <Empty msg="Nenhuma reserva gratuita no período." /> : (
+                <Table cols={["Data", "Aluno", "Produto", "Horário", "Status", "Confirmado em"]}>
+                  {data.freebie_reservations.map((r) => (
+                    <tr key={r.id} className="border-t border-white/5">
+                      <td className="py-1.5 px-2 text-xs">{new Date(r.created_at).toLocaleDateString("pt-BR")}</td>
+                      <td className="py-1.5 px-2">{r.student_name}</td>
+                      <td className="py-1.5 px-2 text-xs">{r.product_name}</td>
+                      <td className="py-1.5 px-2 text-xs">{new Date(r.slot_start).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}–{new Date(r.slot_end).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
+                      <td className="py-1.5 px-2 text-xs">
+                        <span className={`px-1.5 py-0.5 rounded ${statusClass(r.status)}`}>{statusLabel(r.status)}</span>
+                      </td>
+                      <td className="py-1.5 px-2 text-xs">{r.used_at ? new Date(r.used_at).toLocaleString("pt-BR") : "—"}</td>
+                    </tr>
+                  ))}
+                </Table>
+              )}
+            </Section>
           )}
 
           {tab === "cupons" && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { QrCode, ScanLine, Loader2, CheckCircle2, Clock, Users } from "lucide-react";
+import { QrCode, ScanLine, Loader2, CheckCircle2, Clock, Users, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { QRScannerModal } from "@/components/QRScannerModal";
 
@@ -16,28 +16,44 @@ type Reservation = {
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
 
+function reservationState(r: Reservation, now: number) {
+  const start = new Date(r.slot_start).getTime();
+  const end = new Date(r.slot_end).getTime();
+  if (r.status === "used") return { label: "Confirmado", tone: "text-green-400" };
+  if (r.status === "cancelled") return { label: "Cancelado", tone: "text-white/40" };
+  if (r.status === "expired" || now > end) return { label: "Expirado", tone: "text-red-400" };
+  if (now < start) return { label: "Aguardando", tone: "text-amber-400" };
+  return { label: "Disponível agora", tone: "text-primary" };
+}
+
 export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
   const [open, setOpen] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const load = async () => {
     setLoading(true);
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("partner_freebie_reservations" as never)
       .select("id, slot_start, slot_end, status, profiles!partner_freebie_reservations_profile_id_fkey(name, avatar_url), partner_products(name)")
       .eq("partner_id" as never, partnerId as never)
       .gte("slot_start" as never, startOfDay.toISOString() as never)
       .lte("slot_start" as never, endOfDay.toISOString() as never)
       .order("slot_start" as never);
+    if (error) toast.error(error.message);
     setReservations(((data as unknown) as Reservation[]) || []);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [partnerId]);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleScan = async (decoded: string) => {
     setOpen(false);
@@ -47,14 +63,15 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
     const token = decoded.includes("/freebie/") ? decoded.split("/freebie/").pop()!.split(/[?#]/)[0] : decoded.trim();
     const { data, error } = await supabase.rpc("redeem_partner_freebie" as never, { _qr_token: token } as never);
     setProcessing(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message.replace(/^Error:\s*/i, "")); load(); return; }
     const r = (data as unknown as Array<{ student_name: string; product_name: string; slot_start: string }>)?.[0];
     if (r) toast.success(`Check-in: ${r.student_name} — ${r.product_name} ${fmtTime(r.slot_start)}`);
     load();
   };
 
   const counts = {
-    reserved: reservations.filter(r => r.status === "reserved").length,
+    reserved: reservations.filter(r => r.status !== "cancelled").length,
+    active: reservations.filter(r => r.status === "reserved" && now >= new Date(r.slot_start).getTime() && now <= new Date(r.slot_end).getTime()).length,
     used: reservations.filter(r => r.status === "used").length,
   };
 
@@ -69,10 +86,14 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-[10px] text-white/50 uppercase">Reservas hoje</p>
           <p className="text-xl font-bold text-white mt-0.5">{counts.reserved}</p>
+        </div>
+        <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
+          <p className="text-[10px] text-white/50 uppercase">Disponíveis agora</p>
+          <p className="text-xl font-bold text-primary mt-0.5">{counts.active}</p>
         </div>
         <div className="rounded-xl p-3" style={{ backgroundColor: "#1A1A1A" }}>
           <p className="text-[10px] text-white/50 uppercase">Presenças confirmadas</p>
@@ -90,7 +111,9 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
           <p className="p-6 text-center text-xs text-white/40">Nenhuma reserva para hoje.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {reservations.map((r) => (
+            {reservations.map((r) => {
+              const state = reservationState(r, now);
+              return (
               <div key={r.id} className="p-3 flex items-center gap-2">
                 {r.profiles?.avatar_url ? (
                   <img src={r.profiles.avatar_url} className="h-8 w-8 rounded-full object-cover" alt="" />
@@ -111,14 +134,15 @@ export function PartnerFreebieScanner({ partnerId }: { partnerId: string }) {
                     <span className="inline-flex items-center gap-1 text-[10px] text-green-400 font-bold">
                       <CheckCircle2 className="h-3 w-3" /> Confirmado
                     </span>
-                  ) : r.status === "reserved" ? (
-                    <span className="text-[10px] text-amber-400 font-bold">Aguardando</span>
                   ) : (
-                    <span className="text-[10px] text-white/40">{r.status}</span>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${state.tone}`}>
+                      {state.label === "Expirado" && <AlertCircle className="h-3 w-3" />}
+                      {state.label}
+                    </span>
                   )}
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         )}
       </div>
