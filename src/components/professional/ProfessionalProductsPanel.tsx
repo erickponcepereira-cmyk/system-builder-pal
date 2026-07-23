@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown, Eye, Users } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
+import { listCoproducedProducts } from "@/lib/collab.functions";
+
 
 type TimeRange = { start: string; end: string };
 type AvailabilityHours = Record<string, TimeRange[]>;
@@ -104,7 +107,11 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [products, setProducts] = useState<ProProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<ProProduct> | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
+  const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
+  const loadCoproducedFn = useServerFn(listCoproducedProducts);
 
   const load = async () => {
     setLoading(true);
@@ -115,8 +122,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       .order("sort_order" as never, { ascending: true })
       .order("created_at" as never, { ascending: false });
     setProducts((data as unknown as ProProduct[]) || []);
+    try {
+      const r = await loadCoproducedFn({ data: { entityType: "professional", entityId: coachId } });
+      setCoproduced(r.items as any);
+    } catch { /* silently ignore */ }
     setLoading(false);
   };
+
 
   useEffect(() => { load(); }, [coachId]);
 
@@ -395,14 +407,63 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
         ))}
       </div>
 
+      {coproduced.length > 0 && (
+        <div className="mt-6 space-y-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold text-white">Co-produções (somente visualização)</h3>
+          </div>
+          <p className="text-[11px] text-white/40">
+            Você é coprodutor destes produtos. Pode visualizar todas as configurações, mas apenas o criador pode editá-las.
+          </p>
+          {coproduced.map((c) => {
+            const p = c.product;
+            const shareLabel = c.splitKind === "percent"
+              ? `${Number(c.percentOfNet || 0).toFixed(2)}% do líquido`
+              : `R$ ${Number(c.fixedAmountBrl || 0).toFixed(2)} por venda`;
+            return (
+              <div key={c.coproductionId} className="rounded-xl p-3 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
+                {p.image_url
+                  ? <img src={p.image_url} className="h-16 w-16 rounded object-cover" alt={p.name} />
+                  : <div className="h-16 w-16 rounded bg-white/5" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${statusColor(p.status)}`}>{p.status}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Co-produção</span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-white/60">
+                    Criador: <span className="text-white">{c.creatorName}</span> · Sua parte: <span className="text-primary">{shareLabel}</span>
+                  </p>
+                  <div className="mt-1.5">
+                    <button
+                      onClick={() => { setReadOnly(true); setReadOnlyCreator(c.creatorName); setEditing(p); }}
+                      className="text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                    >
+                      <Eye className="h-3 w-3" /> Visualizar painel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {editing && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2">
           <div className="w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-bold text-white">{editing.id ? "Editar" : "Novo"} produto</h3>
-              <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-white/60" /></button>
+              <h3 className="text-base font-bold text-white">{readOnly ? "Visualizar" : (editing.id ? "Editar" : "Novo")} produto</h3>
+              <button onClick={() => { setEditing(null); setReadOnly(false); setReadOnlyCreator(null); }}><X className="h-5 w-5 text-white/60" /></button>
             </div>
-            <div className="space-y-3 text-sm">
+            {readOnly && (
+              <div className="mb-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] text-primary">
+                Visualização somente-leitura. Apenas <strong>{readOnlyCreator || "o criador"}</strong> pode editar este produto.
+              </div>
+            )}
+            <fieldset disabled={readOnly} className="space-y-3 text-sm border-0 p-0 m-0 disabled:opacity-90">
+
               <Field label="Nome">
                 <input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="field-input" />
               </Field>
@@ -744,8 +805,8 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
                   )}
                 </div>
               )}
-            </div>
-            {editing.id && editing.kind === "paid" && (
+            </fieldset>
+            {editing.id && editing.kind === "paid" && !readOnly && (
               <div className="mt-4 border-t border-white/10 pt-4">
                 <CoproductionEditor
                   productType="professional"
@@ -757,14 +818,19 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
               </div>
             )}
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
-              <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">
-                <Save className="inline h-4 w-4 mr-1" /> Salvar
+              <button onClick={() => { setEditing(null); setReadOnly(false); setReadOnlyCreator(null); }} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">
+                {readOnly ? "Fechar" : "Cancelar"}
               </button>
+              {!readOnly && (
+                <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">
+                  <Save className="inline h-4 w-4 mr-1" /> Salvar
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+
 
       <style>{`.field-input { width:100%; border-radius:.375rem; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); padding:.5rem .75rem; color:white; font-size:.875rem; }`}</style>
     </div>
