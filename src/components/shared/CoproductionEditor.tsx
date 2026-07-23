@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, X, Search } from "lucide-react";
+import { Plus, Trash2, Users, X, Search, Pencil } from "lucide-react";
 import {
   inviteCoproducer,
   listProductCoproductions,
   cancelCoproduction,
+  updateCoproduction,
   listCoproducerCandidates,
   type OwnerType,
 } from "@/lib/collab.functions";
@@ -39,10 +40,12 @@ export function CoproductionEditor({
   const list = useServerFn(listProductCoproductions);
   const invite = useServerFn(inviteCoproducer);
   const cancel = useServerFn(cancelCoproduction);
+  const update = useServerFn(updateCoproduction);
   const listCandidates = useServerFn(listCoproducerCandidates);
 
   const [items, setItems] = useState<any[]>([]);
   const [openModal, setOpenModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<{ type: OwnerType; id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<{ type: OwnerType; id: string; name: string } | null>(null);
@@ -76,7 +79,15 @@ export function CoproductionEditor({
   };
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [productId]);
 
+  const resetForm = () => {
+    setPicked(null); setCode(""); setUseCode(false);
+    setSplitKind("percent"); setPercent(""); setAmount("");
+    setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
+    setEditingId(null);
+  };
+
   const openInvite = async () => {
+    resetForm();
     setOpenModal(true);
     if (candidates.length === 0) {
       try {
@@ -86,7 +97,21 @@ export function CoproductionEditor({
     }
   };
 
-  const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled");
+  const openEdit = (it: any) => {
+    setEditingId(it.id);
+    setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName });
+    setUseCode(false); setCode("");
+    setSplitKind(it.split_kind === "fixed" ? "fixed" : "percent");
+    setPercent(it.split_kind === "percent" ? String(Number(it.percent_of_net || 0)) : "");
+    setAmount(it.split_kind === "fixed" ? String(Number(it.fixed_amount_brl || 0)) : "");
+    setHasCost(!!it.has_cost);
+    setCostAmount(it.has_cost ? String(Number(it.cost_amount_brl || 0)) : "");
+    setCostBearer(it.has_cost && it.cost_bearer_type === it.collaborator_type && it.cost_bearer_id === it.collaborator_id ? "collaborator" : "creator");
+    setSplitBase((it.split_base as any) || (it.has_cost ? "net_after_cost" : "net"));
+    setOpenModal(true);
+  };
+
+  const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled" && i.id !== editingId);
   const totalPercent = activeItems.reduce((s, i) => s + (i.split_kind === "percent" ? Number(i.percent_of_net || 0) : 0), 0);
   const totalFixed = activeItems.reduce((s, i) => s + (i.split_kind !== "percent" ? Number(i.fixed_amount_brl || 0) : 0), 0);
   const committedInBrl = totalFixed + (netValue * totalPercent) / 100;
@@ -130,25 +155,40 @@ export function CoproductionEditor({
     }
     setSaving(true);
     try {
-      await invite({
-        data: {
-          productType, productId, creatorType, creatorId,
-          collaboratorType: picked?.type,
-          collaboratorId: picked?.id,
-          collaboratorCode: !picked ? code.trim().toUpperCase() : undefined,
-          splitKind,
-          percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
-          fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
-          hasCost,
-          costAmountBrl: hasCost ? costValue : undefined,
-          costBearer: hasCost ? costBearer : undefined,
-          splitBase: hasCost ? splitBase : undefined,
-        },
-      });
-      toast.success("Convite enviado. O produto ficará pausado até o coprodutor aceitar.");
+      if (editingId) {
+        await update({
+          data: {
+            id: editingId,
+            splitKind,
+            percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
+            fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
+            hasCost,
+            costAmountBrl: hasCost ? costValue : undefined,
+            costBearer: hasCost ? costBearer : undefined,
+            splitBase: hasCost ? splitBase : undefined,
+          },
+        });
+        toast.success("Co-produção atualizada.");
+      } else {
+        await invite({
+          data: {
+            productType, productId, creatorType, creatorId,
+            collaboratorType: picked?.type,
+            collaboratorId: picked?.id,
+            collaboratorCode: !picked ? code.trim().toUpperCase() : undefined,
+            splitKind,
+            percentOfNet: splitKind === "percent" ? Number(percent) : undefined,
+            fixedAmountBrl: splitKind === "fixed" ? Number(amount) : undefined,
+            hasCost,
+            costAmountBrl: hasCost ? costValue : undefined,
+            costBearer: hasCost ? costBearer : undefined,
+            splitBase: hasCost ? splitBase : undefined,
+          },
+        });
+        toast.success("Convite enviado. O produto ficará pausado até o coprodutor aceitar.");
+      }
       setOpenModal(false);
-      setPicked(null); setCode(""); setPercent(""); setAmount(""); setUseCode(false);
-      setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
+      resetForm();
       reload();
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
@@ -199,24 +239,40 @@ export function CoproductionEditor({
               </span>
             </p>
           </div>
-          {it.status !== "accepted" && (
-            <button onClick={async () => { await cancel({ data: { id: it.id } }); reload(); }} className="text-red-400 p-1.5">
+          <div className="flex items-center gap-1">
+            <button onClick={() => openEdit(it)} className="text-primary p-1.5" title="Editar">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm(`Excluir co-produção com ${it.collaboratorName}?`)) return;
+                try { await cancel({ data: { id: it.id } }); toast.success("Co-produção removida."); reload(); }
+                catch (e: any) { toast.error(e.message); }
+              }}
+              className="text-red-400 p-1.5"
+              title="Excluir"
+            >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
-          )}
+          </div>
         </div>
       ))}
       {items.length === 0 && <p className="text-[11px] text-white/30">Nenhum coprodutor.</p>}
 
       {openModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setOpenModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-xl p-4 space-y-3 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#0F0F0F" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">Novo coprodutor</h3>
-              <button onClick={() => setOpenModal(false)} className="text-white/60"><X className="h-4 w-4" /></button>
+              <h3 className="text-sm font-bold text-white">{editingId ? "Editar coprodutor" : "Novo coprodutor"}</h3>
+              <button onClick={() => { setOpenModal(false); resetForm(); }} className="text-white/60"><X className="h-4 w-4" /></button>
             </div>
 
-            {!useCode ? (
+            {editingId ? (
+              <div className="rounded-lg px-3 py-2 text-xs text-white" style={{ backgroundColor: "#1A1A1A" }}>
+                Coprodutor: <strong>{picked?.name}</strong>
+                <p className="text-[10px] text-white/40 mt-0.5">O coprodutor não pode ser alterado. Para trocar, exclua e crie um novo.</p>
+              </div>
+            ) : !useCode ? (
               <>
                 <div className="relative">
                   <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-white/40" />
@@ -374,7 +430,7 @@ export function CoproductionEditor({
               disabled={saving}
               className="w-full rounded-lg bg-primary py-2.5 text-xs font-bold text-black disabled:opacity-50"
             >
-              {saving ? "Enviando..." : "Enviar convite"}
+              {saving ? "Salvando..." : editingId ? "Salvar alterações" : "Enviar convite"}
             </button>
           </div>
         </div>
