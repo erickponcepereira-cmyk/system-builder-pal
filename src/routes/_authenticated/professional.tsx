@@ -99,6 +99,20 @@ function ProfessionalPanel() {
   const [info, setInfo] = useState<ProInfo | null>(null);
   const [tab, setTab] = useState<string>("students");
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+  const [collabPending, setCollabPending] = useState(0);
+  const getCollabCounts = useServerFn(getCollabPendingCounts);
+
+  useEffect(() => {
+    if (!info?.coachId) return;
+    let alive = true;
+    const load = () => getCollabCounts({ data: { entityType: "professional", entityId: info.coachId } })
+      .then((r) => { if (alive) setCollabPending(r.total); })
+      .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [info?.coachId]);
+
 
   useEffect(() => {
     (async () => {
