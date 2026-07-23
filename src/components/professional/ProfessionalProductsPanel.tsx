@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Loader2, X, Save, DollarSign, Trash2, Package, Gift, CalendarDays, Clock, Copy, ArrowUp, ArrowDown, Eye, Users } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductImageGallery } from "@/components/ui/ProductImageGallery";
+import { listCoproducedProducts } from "@/lib/collab.functions";
+
 
 type TimeRange = { start: string; end: string };
 type AvailabilityHours = Record<string, TimeRange[]>;
