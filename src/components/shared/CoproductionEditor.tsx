@@ -79,7 +79,15 @@ export function CoproductionEditor({
   };
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [productId]);
 
+  const resetForm = () => {
+    setPicked(null); setCode(""); setUseCode(false);
+    setSplitKind("percent"); setPercent(""); setAmount("");
+    setHasCost(false); setCostAmount(""); setCostBearer("creator"); setSplitBase("net");
+    setEditingId(null);
+  };
+
   const openInvite = async () => {
+    resetForm();
     setOpenModal(true);
     if (candidates.length === 0) {
       try {
@@ -87,6 +95,20 @@ export function CoproductionEditor({
         setCandidates(r.items);
       } catch (e: any) { toast.error(e.message); }
     }
+  };
+
+  const openEdit = (it: any) => {
+    setEditingId(it.id);
+    setPicked({ type: it.collaborator_type, id: it.collaborator_id, name: it.collaboratorName });
+    setUseCode(false); setCode("");
+    setSplitKind(it.split_kind === "fixed" ? "fixed" : "percent");
+    setPercent(it.split_kind === "percent" ? String(Number(it.percent_of_net || 0)) : "");
+    setAmount(it.split_kind === "fixed" ? String(Number(it.fixed_amount_brl || 0)) : "");
+    setHasCost(!!it.has_cost);
+    setCostAmount(it.has_cost ? String(Number(it.cost_amount_brl || 0)) : "");
+    setCostBearer(it.has_cost && it.cost_bearer_type === it.collaborator_type && it.cost_bearer_id === it.collaborator_id ? "collaborator" : "creator");
+    setSplitBase((it.split_base as any) || (it.has_cost ? "net_after_cost" : "net"));
+    setOpenModal(true);
   };
 
   const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled");
