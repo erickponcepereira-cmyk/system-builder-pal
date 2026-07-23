@@ -111,6 +111,31 @@ export const deleteExternalAppointment = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+async function resolveProfileIdFor(supabase: any, ownerType: OwnerType, ownerId: string): Promise<string | null> {
+  if (ownerType === "partner") {
+    const { data } = await supabase.from("partners").select("profile_id").eq("id", ownerId).maybeSingle();
+    return (data as any)?.profile_id ?? null;
+  }
+  const { data } = await supabase.from("coaches").select("profile_id").eq("id", ownerId).maybeSingle();
+  return (data as any)?.profile_id ?? null;
+}
+
+async function insertNotification(profileId: string | null, type: string, title: string, message: string, actionUrl: string) {
+  if (!profileId) return;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("notifications").insert({
+      profile_id: profileId,
+      type,
+      title,
+      message,
+      action_url: actionUrl,
+    });
+  } catch (e) {
+    console.error("insertNotification failed", e);
+  }
+}
+
 // ---------- calendar shares ----------
 export const requestCalendarShare = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
@@ -131,8 +156,17 @@ export const requestCalendarShare = createServerFn({ method: "POST" })
       })
       .select("*").single();
     if (error) throw new Error(error.message);
+    const ownerProfileId = await resolveProfileIdFor(supabase, owner.owner_type, owner.owner_id);
+    await insertNotification(
+      ownerProfileId,
+      "calendar_share_request",
+      "Nova solicitação de agenda",
+      "Alguém pediu acesso à sua agenda. Toque para revisar.",
+      owner.owner_type === "partner" ? "/partner?tab=collab" : "/professional?tab=collab",
+    );
     return created;
   });
+
 
 export const listCalendarShares = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
