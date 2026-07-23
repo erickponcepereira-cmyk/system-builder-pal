@@ -1042,8 +1042,8 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
 
 
               
-            </div>
-            {editing.id && editing.kind === "paid" && (
+            </fieldset>
+            {editing.id && editing.kind === "paid" && !readOnly && (
               <div className="mt-4 border-t border-white/10 pt-4">
                 <CoproductionEditor
                   productType="partner"
@@ -1054,7 +1054,7 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
                 />
               </div>
             )}
-            {editing.kind === "paid" && (
+            {editing.kind === "paid" && !readOnly && (
               <div className="mt-4 border-t border-white/10 pt-4">
                 {editing.id ? (
                   <ProductDownloadsManager partnerProductId={editing.id} />
@@ -1068,9 +1068,14 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
             )}
 
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setEditing(null)} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">Cancelar</button>
-              <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><Save className="inline h-4 w-4 mr-1" /> Salvar</button>
+              <button onClick={() => { setEditing(null); setReadOnly(false); setReadOnlyCreator(null); }} className="flex-1 rounded bg-white/5 px-3 py-2 text-sm text-white">
+                {readOnly ? "Fechar" : "Cancelar"}
+              </button>
+              {!readOnly && (
+                <button onClick={save} className="flex-1 rounded bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"><Save className="inline h-4 w-4 mr-1" /> Salvar</button>
+              )}
             </div>
+
           </div>
         </div>
       )}
