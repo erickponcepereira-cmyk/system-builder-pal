@@ -452,26 +452,43 @@ export function CoproductionEditor({
               )}
             </div>
 
-            <div className="rounded-lg p-3 text-[11px] space-y-1" style={{ backgroundColor: "#1A1A1A" }}>
-              <p className="text-white/60">Preview por venda no cartão:</p>
-              <p className="text-white/70">Bruto: <span className="text-white">{BRL(grossValue)}</span></p>
-              <p className="text-white/70">Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span></p>
-              {hasCost && (
-                <p className="text-white/70">
-                  Custo ({costBearer === "creator" ? "você" : "coprodutor"}): <span className="text-white">{BRL(costValue)}</span>
-                </p>
-              )}
-              <p className="text-white/70">Base do rateio: <span className="text-white">{BRL(effectiveBase)}</span></p>
-              <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(previewAmount)}</strong>
-                {hasCost && costBearer === "collaborator" && <> + custo {BRL(costValue)}</>}
-              </p>
-              <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(creatorShare)}</strong>
-                {hasCost && costBearer === "creator" && <> (custo permanece com você)</>}
-              </p>
-              {previewAmount > remainingBrl && (
-                <p className="text-red-400">⚠ Excede o disponível ({BRL(remainingBrl)})</p>
-              )}
-            </div>
+            {(() => {
+              const collabReimb = hasCost && costBearer === "collaborator" ? costValue : 0;
+              const collabCard = previewAmount + collabReimb;
+              const creatorCard = creatorShare;
+              return (
+                <div className="rounded-lg p-3 text-[11px] space-y-2" style={{ backgroundColor: "#1A1A1A" }}>
+                  <p className="text-white/60">Preview por venda</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="rounded-md p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                      <p className="text-white/60 text-[10px] font-bold mb-1">CARTÃO</p>
+                      <p className="text-white/70">Bruto: <span className="text-white">{BRL(grossValue)}</span></p>
+                      <p className="text-white/70">Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span></p>
+                      {hasCost && (
+                        <p className="text-white/70">
+                          Custo ({costBearer === "creator" ? "você" : "coprodutor"}): <span className="text-white">{BRL(costValue)}</span>
+                        </p>
+                      )}
+                      <p className="text-white/70">Base do rateio: <span className="text-white">{BRL(effectiveBase)}</span></p>
+                      <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(collabCard)}</strong>
+                        {collabReimb > 0 && <span className="text-white/50"> (split {BRL(previewAmount)} + custo {BRL(collabReimb)})</span>}
+                      </p>
+                      <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(creatorCard)}</strong>
+                        {hasCost && costBearer === "creator" && <> (custo permanece com você)</>}
+                      </p>
+                    </div>
+                    <div className="rounded-md p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                      <p className="text-white/60 text-[10px] font-bold mb-1">PIX (~+{PIX_UPLIFT_PCT.toFixed(2)}%)</p>
+                      <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(pixOf(collabCard))}</strong></p>
+                      <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(pixOf(creatorCard))}</strong></p>
+                    </div>
+                  </div>
+                  {previewAmount > remainingBrl && (
+                    <p className="text-red-400">⚠ Excede o disponível ({BRL(remainingBrl)})</p>
+                  )}
+                </div>
+              );
+            })()}
 
             <button
               onClick={submit}
