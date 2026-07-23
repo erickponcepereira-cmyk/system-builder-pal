@@ -120,7 +120,22 @@ function PartnerPanel() {
   const [otherRoles, setOtherRoles] = useState<{ admin: boolean; coach: boolean; student: boolean }>({ admin: false, coach: false, student: false });
   const [coachCtx, setCoachCtx] = useState<CoachContext | null>(null);
 
+  const [collabPending, setCollabPending] = useState(0);
+  const getCollabCounts = useServerFn(getCollabPendingCounts);
+
+  useEffect(() => {
+    if (!partner?.id) return;
+    let alive = true;
+    const load = () => getCollabCounts({ data: { entityType: "partner", entityId: partner.id } })
+      .then((r) => { if (alive) setCollabPending(r.total); })
+      .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [partner?.id]);
+
   const load = async () => {
+
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
