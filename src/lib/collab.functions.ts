@@ -510,7 +510,68 @@ export const listProductCoproductions = createServerFn({ method: "POST" })
     };
   });
 
+// ---------- coproduced products (read-only view for accepted collaborators) ----------
+export const listCoproducedProducts = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: { entityType: OwnerType; entityId: string }) => d)
+  .handler(async ({ context, data }) => {
+    const supabase = context.supabase as any;
+    // Ensure caller actually owns the entity being queried.
+    const profileId = await resolveProfileIdFor(supabase, data.entityType, data.entityId);
+    if (!profileId) throw new Error("Entidade não encontrada.");
+    const { data: myProfile } = await supabase
+      .from("profiles").select("id").eq("user_id", context.userId).maybeSingle();
+    if (!myProfile || (myProfile as any).id !== profileId) {
+      throw new Error("Sem permissão para listar co-produções desta entidade.");
+    }
+    const { data: rows } = await supabase
+      .from("product_coproductions")
+      .select("*")
+      .eq("collaborator_type", data.entityType)
+      .eq("collaborator_id", data.entityId)
+      .eq("status", "accepted")
+      .order("created_at", { ascending: false });
+    const list = (rows || []) as any[];
+    if (list.length === 0) return { items: [] };
+    // Use admin client to fetch full product rows regardless of RLS.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const partnerProdIds = Array.from(new Set(list.filter((r) => r.product_type === "partner").map((r) => r.product_id)));
+    const proProdIds = Array.from(new Set(list.filter((r) => r.product_type === "professional").map((r) => r.product_id)));
+    const partnerCreatorIds = Array.from(new Set(list.filter((r) => r.creator_type === "partner").map((r) => r.creator_id)));
+    const coachCreatorIds = Array.from(new Set(list.filter((r) => r.creator_type === "professional").map((r) => r.creator_id)));
+    const [pp, pr, pt, co] = await Promise.all([
+      partnerProdIds.length ? supabaseAdmin.from("partner_products").select("*").in("id", partnerProdIds) : Promise.resolve({ data: [] }),
+      proProdIds.length ? supabaseAdmin.from("professional_products").select("*").in("id", proProdIds) : Promise.resolve({ data: [] }),
+      partnerCreatorIds.length ? supabaseAdmin.from("partners").select("id,fantasy_name").in("id", partnerCreatorIds) : Promise.resolve({ data: [] }),
+      coachCreatorIds.length ? supabaseAdmin.from("coaches").select("id,profiles:profile_id(name)").in("id", coachCreatorIds) : Promise.resolve({ data: [] }),
+    ]);
+    const findProd = (type: string, id: string) => {
+      const arr: any = type === "partner" ? pp.data : pr.data;
+      return (arr || []).find((x: any) => x.id === id) || null;
+    };
+    const creatorName = (type: string, id: string) => type === "partner"
+      ? (pt.data || []).find((p: any) => p.id === id)?.fantasy_name || "Parceiro"
+      : (co.data || []).find((c: any) => c.id === id)?.profiles?.name || "Profissional";
+    const items = list.map((r) => {
+      const prod = findProd(r.product_type, r.product_id);
+      if (!prod) return null;
+      return {
+        coproductionId: r.id,
+        productType: r.product_type as OwnerType,
+        creatorType: r.creator_type as OwnerType,
+        creatorId: r.creator_id as string,
+        creatorName: creatorName(r.creator_type, r.creator_id),
+        splitKind: r.split_kind,
+        percentOfNet: r.percent_of_net,
+        fixedAmountBrl: r.fixed_amount_brl,
+        product: prod,
+      };
+    }).filter(Boolean);
+    return { items };
+  });
+
 // ---------- pending badges ----------
+
 export const getCollabPendingCounts = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: { entityType: OwnerType; entityId: string }) => d)
