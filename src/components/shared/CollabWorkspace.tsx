@@ -6,6 +6,7 @@ import {
   getMyShareCode, listExternalAppointments, createExternalAppointment, deleteExternalAppointment,
   listCalendarShares, requestCalendarShare, respondCalendarShare, revokeCalendarShare,
   listSharedAgenda, listCoproductions, respondCoproduction, cancelCoproduction,
+  getCollabPendingCounts,
   type OwnerType,
 } from "@/lib/collab.functions";
 
@@ -15,6 +16,17 @@ type Section = "external" | "share" | "requests" | "shared";
 
 export function CollabWorkspace({ ownerType, ownerId }: Props) {
   const [section, setSection] = useState<Section>("external");
+  const getCounts = useServerFn(getCollabPendingCounts);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = () => getCounts({ data: { entityType: ownerType, entityId: ownerId } })
+      .then((r) => { if (alive) setPendingTotal(r.total); })
+      .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [ownerType, ownerId]);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 border-b border-white/10 pb-2">
@@ -25,8 +37,13 @@ export function CollabWorkspace({ ownerType, ownerId }: Props) {
           ["shared", "Agendas compartilhadas", Users],
         ] as [Section, string, any][]).map(([k, l, Icon]) => (
           <button key={k} onClick={() => setSection(k)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg ${section === k ? "bg-primary/20 text-primary" : "text-white/60 hover:bg-white/5"}`}>
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg ${section === k ? "bg-primary/20 text-primary" : "text-white/60 hover:bg-white/5"}`}>
             <Icon className="h-3.5 w-3.5" /> {l}
+            {k === "requests" && pendingTotal > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                {pendingTotal}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -37,6 +54,7 @@ export function CollabWorkspace({ ownerType, ownerId }: Props) {
     </div>
   );
 }
+
 
 // ---------------- External Appointments ----------------
 function ExternalPanel({ ownerType, ownerId }: Props) {
