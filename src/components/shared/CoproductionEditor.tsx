@@ -263,11 +263,16 @@ export function CoproductionEditor({
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setOpenModal(false)}>
           <div className="w-full max-w-md rounded-xl p-4 space-y-3 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#0F0F0F" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">Novo coprodutor</h3>
-              <button onClick={() => setOpenModal(false)} className="text-white/60"><X className="h-4 w-4" /></button>
+              <h3 className="text-sm font-bold text-white">{editingId ? "Editar coprodutor" : "Novo coprodutor"}</h3>
+              <button onClick={() => { setOpenModal(false); resetForm(); }} className="text-white/60"><X className="h-4 w-4" /></button>
             </div>
 
-            {!useCode ? (
+            {editingId ? (
+              <div className="rounded-lg px-3 py-2 text-xs text-white" style={{ backgroundColor: "#1A1A1A" }}>
+                Coprodutor: <strong>{picked?.name}</strong>
+                <p className="text-[10px] text-white/40 mt-0.5">O coprodutor não pode ser alterado. Para trocar, exclua e crie um novo.</p>
+              </div>
+            ) : !useCode ? (
               <>
                 <div className="relative">
                   <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-white/40" />
