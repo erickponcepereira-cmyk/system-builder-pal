@@ -239,11 +239,22 @@ export function CoproductionEditor({
               </span>
             </p>
           </div>
-          {it.status !== "accepted" && (
-            <button onClick={async () => { await cancel({ data: { id: it.id } }); reload(); }} className="text-red-400 p-1.5">
+          <div className="flex items-center gap-1">
+            <button onClick={() => openEdit(it)} className="text-primary p-1.5" title="Editar">
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm(`Excluir co-produção com ${it.collaboratorName}?`)) return;
+                try { await cancel({ data: { id: it.id } }); toast.success("Co-produção removida."); reload(); }
+                catch (e: any) { toast.error(e.message); }
+              }}
+              className="text-red-400 p-1.5"
+              title="Excluir"
+            >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
-          )}
+          </div>
         </div>
       ))}
       {items.length === 0 && <p className="text-[11px] text-white/30">Nenhum coprodutor.</p>}
