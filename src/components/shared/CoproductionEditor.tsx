@@ -139,14 +139,18 @@ export function CoproductionEditor({
       </div>
       <div className="rounded-lg p-3 text-[11px] text-white/70 space-y-1" style={{ backgroundColor: "#0F0F0F" }}>
         <p>
-          Divida ganhos com outros parceiros/profissionais. O repasse é <strong className="text-white">automático</strong> na venda paga,
-          calculado sobre o <strong className="text-white">valor líquido</strong> (bruto – taxas de gateway – impostos).
+          Divida ganhos com outros parceiros/profissionais. O repasse é <strong className="text-white">automático</strong> na
+          venda paga, calculado sobre o <strong className="text-white">líquido a distribuir</strong> abaixo (já sem
+          gateway, impostos, taxa do sistema e comissão do coach).
         </p>
         <p className="text-white/50">
-          Preço bruto: <span className="text-white">{BRL(productNetValueBrl)}</span> ·
-          {" "}Líquido estimado: <span className="text-white">{BRL(netEstimated)}</span> ·
+          Líquido a distribuir (cartão): <span className="text-white">{BRL(netEstimated)}</span> ·
           {" "}Comprometido: <span className="text-white">{BRL(committedInBrl)}</span> ·
-          {" "}Sobra p/ você: <span className="text-primary">{BRL(remainingBrl)}</span>
+          {" "}Sua sobra: <span className="text-primary">{BRL(remainingBrl)}</span>
+        </p>
+        <p className="text-[10px] text-white/40">
+          Em vendas no PIX o líquido cresce ~{PIX_UPLIFT_PCT.toFixed(2)}% (economia de taxa do gateway) e essa diferença
+          é rateada proporcionalmente entre você e os coprodutores.
         </p>
       </div>
 
