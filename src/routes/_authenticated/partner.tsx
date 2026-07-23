@@ -436,11 +436,24 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner: Partner; products: Product[]; hasActiveFree: boolean; onReload: () => void }) {
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
+  const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [policy, setPolicy] = useState<"all" | "one_per_month">((partner.free_redeem_policy as "all" | "one_per_month") || "all");
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [policyDismissed, setPolicyDismissed] = useState(false);
   const { cropToBlob } = useImageCrop();
+  const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: Product }>>([]);
+  const loadCoproducedFn = useServerFn(listCoproducedProducts);
+
+  useEffect(() => {
+    let alive = true;
+    loadCoproducedFn({ data: { entityType: "partner", entityId: partner.id } })
+      .then((r) => { if (alive) setCoproduced(r.items as any); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [partner.id]);
+
 
 
   const activeFreeCount = products.filter(p => p.kind === "free" && p.status === "approved" && p.is_active_by_partner).length;
