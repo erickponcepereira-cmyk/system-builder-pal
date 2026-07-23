@@ -269,7 +269,7 @@ export function CoproductionEditor({
             )}
 
             <div className="rounded-lg p-3 text-[11px] space-y-1" style={{ backgroundColor: "#1A1A1A" }}>
-              <p className="text-white/60">Preview por venda (líquido estimado {BRL(netEstimated)}):</p>
+              <p className="text-white/60">Preview por venda no cartão (líquido a distribuir {BRL(netEstimated)}):</p>
               <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(previewAmount)}</strong></p>
               <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(creatorShare)}</strong></p>
               {previewAmount > remainingBrl && (
