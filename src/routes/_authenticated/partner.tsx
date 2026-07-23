@@ -749,14 +749,60 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
         ))}
       </div>
 
+      {coproduced.length > 0 && (
+        <div className="mt-6 space-y-2">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold text-white">Co-produções (somente visualização)</h3>
+          </div>
+          <p className="text-[11px] text-white/40">
+            Você é coprodutor destes produtos. Pode visualizar todas as configurações, mas apenas o criador pode editá-las.
+          </p>
+          {coproduced.map((c) => {
+            const p = c.product as any;
+            const shareLabel = c.splitKind === "percent"
+              ? `${Number(c.percentOfNet || 0).toFixed(2)}% do líquido`
+              : `R$ ${Number(c.fixedAmountBrl || 0).toFixed(2)} por venda`;
+            return (
+              <div key={c.coproductionId} className="rounded-xl p-3 flex gap-3" style={{ backgroundColor: "#1A1A1A" }}>
+                {p.image_url
+                  ? <img src={p.image_url} className="h-16 w-16 rounded object-cover" alt={p.name} />
+                  : <div className="h-16 w-16 rounded bg-white/5" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-semibold">Co-produção</span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-white/60">
+                    Criador: <span className="text-white">{c.creatorName}</span> · Sua parte: <span className="text-primary">{shareLabel}</span>
+                  </p>
+                  <button
+                    onClick={() => { setReadOnly(true); setReadOnlyCreator(c.creatorName); setEditing(p); }}
+                    className="mt-1.5 text-[11px] text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    <Eye className="h-3 w-3" /> Visualizar painel
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {editing && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-2">
           <div className="w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#1A1A1A" }} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-base font-bold text-white">{editing.id ? "Editar" : "Novo"} produto</h3>
-              <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-white/60" /></button>
+              <h3 className="text-base font-bold text-white">{readOnly ? "Visualizar" : (editing.id ? "Editar" : "Novo")} produto</h3>
+              <button onClick={() => { setEditing(null); setReadOnly(false); setReadOnlyCreator(null); }}><X className="h-5 w-5 text-white/60" /></button>
             </div>
-            <div className="space-y-3 text-sm">
+            {readOnly && (
+              <div className="mb-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] text-primary">
+                Visualização somente-leitura. Apenas <strong>{readOnlyCreator || "o criador"}</strong> pode editar este produto.
+              </div>
+            )}
+            <fieldset disabled={readOnly} className="space-y-3 text-sm border-0 p-0 m-0 disabled:opacity-90">
+
               <div>
                 <label className="text-xs text-white/60">Tipo</label>
                 <select value={editing.kind} onChange={e => setEditing({ ...editing, kind: e.target.value as "free" | "paid" })} disabled={editing.kind === "paid" && !hasActiveFree && !editing.id} className="mt-1 w-full rounded bg-black/40 border border-white/10 px-3 py-2 text-white">
