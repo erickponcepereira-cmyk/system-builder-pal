@@ -276,13 +276,20 @@ function PartnerPanel() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
-            <t.icon className="h-5 w-5" />
-            {t.label}
-          </button>
-        ))}
+        {tabs.map(t => {
+          const badge = t.key === "collab" ? collabPending : 0;
+          return (
+            <button key={t.key} onClick={() => setTab(t.key)} className={`relative flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+              <t.icon className="h-5 w-5" />
+              {t.label}
+              {badge > 0 && (
+                <span className="absolute top-1 right-2 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold">{badge}</span>
+              )}
+            </button>
+          );
+        })}
       </nav>
+
     </div>
     </SubscriptionGuard>
     </PartnerOnboardingGate>
