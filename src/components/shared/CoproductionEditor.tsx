@@ -40,10 +40,12 @@ export function CoproductionEditor({
   const list = useServerFn(listProductCoproductions);
   const invite = useServerFn(inviteCoproducer);
   const cancel = useServerFn(cancelCoproduction);
+  const update = useServerFn(updateCoproduction);
   const listCandidates = useServerFn(listCoproducerCandidates);
 
   const [items, setItems] = useState<any[]>([]);
   const [openModal, setOpenModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<{ type: OwnerType; id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<{ type: OwnerType; id: string; name: string } | null>(null);
