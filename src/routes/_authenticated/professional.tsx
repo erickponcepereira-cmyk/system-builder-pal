@@ -253,16 +253,21 @@ function ProfessionalPanel() {
             const meta = TAB_META[t] ?? { label: t, icon: Users };
             const Icon = meta.icon;
             const active = tab === t;
+            const badge = t === "collab" ? collabPending : 0;
             return (
               <button key={t} onClick={() => setTab(t)}
-                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${active ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}>
+                className={`relative flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${active ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}>
                 <Icon className="h-3.5 w-3.5" /> {meta.label}
+                {badge > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">{badge}</span>
+                )}
               </button>
             );
           })}
         </div>
 
         <TabContent tab={tab} info={info} assignments={assignments} />
+
       </div>
     </div>
     </SubscriptionGuard>
