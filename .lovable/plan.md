@@ -1,50 +1,25 @@
-# Convites de co-produção: acesso confirmado + badge de pendência
+## Problema
 
-## (a) Aba Colaboração no painel do Profissional
-Verificado: já existe.
-- `src/routes/_authenticated/professional.tsx` já monta a tab `collab` → `Colaboração` (linhas 90 e 278) renderizando `<CollabWorkspace ownerType="professional" ownerId={info.coachId} />`.
-- `src/routes/_authenticated/partner.tsx` idem (linhas 203 e 256).
-- Portanto a Luana já tem a aba **Colaboração → Solicitações** disponível. Nenhuma alteração estrutural necessária — só garantir que o convite chegue visível.
+O `CoproductionEditor` hoje calcula:
 
-Ação em (a): apenas documentar no painel um pequeno texto de ajuda vazio ("Nenhum convite") — já existe. Nada a codar.
+- `Líquido estimado = bruto × 0,90` (netFactor fixo de 10%)
+- `Comprometido = soma dos %/fixos aplicados sobre esse líquido estimado`
+- `Sobra p/ você = líquido estimado − comprometido`
 
-## (b) Notificação/badge de convites pendentes
+Duas coisas estão erradas:
 
-Objetivo: quando existir convite de co-produção (ou pedido de compartilhamento de agenda) com status `pending` para o usuário, mostrar contador vermelho:
-1. Na aba **Colaboração** (badge ao lado do rótulo do tab, nos dois painéis).
-2. Dentro do `CollabWorkspace`, no botão **Solicitações**.
-3. Disparar uma `notifications` row (sino global) no momento em que o convite é criado, para aparecer no ícone de notificações que já existe no header.
+1. **Base do rateio não bate com o trigger real.** O trigger `apply_coproduction_credits_on_order` usa `net = gross − payment_fee − tax_amount` (percentual varia por método de pagamento: PIX 0,99% / cartão 4,98%, imposto 6%, ou zero se `skipTax`). O `0,10` fixo não representa isso e ainda difere no cartão vs PIX.
+2. **"Sobra p/ você" ignora taxa do sistema e comissão do coach.** O que sobra para o criador é o `partnerNet` de `computeFromCharge` (bruto − gateway − imposto − sistema − comissão do coach) menos os créditos de co-produção. Do jeito atual, o card promete uma sobra que nunca vai cair na carteira do criador.
 
-### Implementação
+No exemplo (bruto R$ 146,71, cartão, sem custom split):
 
-1. **Novo server fn** `getCollabPendingCounts` em `src/lib/collab.functions.ts`
-   - Input: `{ entityType: OwnerType, entityId: string }`.
-   - Retorna `{ coproductions: number, calendarShares: number, total: number }`.
-   - Reusa as queries já existentes de `listCoproductions` (asCollab pending) e `listCalendarShares` (incoming pending); só faz `count`.
+- Base real do rateio (o que o trigger vê) = 146,71 − 7,31 − 8,36 = **R$ 131,04** (não 132,04)
+- Comprometido Luana (30% dessa base) = **R$ 39,31** (não 43,35)
+- `partnerNet` real (após sistema 5% e comissão coach 10% padrão) ≈ **R$ 105,54**
+- Sobra real do criador = 105,54 − 39,31 = **R$ 66,23** (o card mostra 88,69)
 
-2. **Hook leve** `useCollabPendingCount(ownerType, ownerId)` em `src/lib/collab.functions.ts` (ou arquivo novo `src/hooks/useCollabPending.ts`)
-   - `useQuery` com `queryKey: ["collab-pending", ownerType, ownerId]`, `refetchInterval: 60_000`, `staleTime: 30_000`.
+## continua errado essa forma que está sendo colocado, o liquido distribuivel ja é o valor de 146,71, as taxas de cartão, imposto, pix, sistema e comissão já foram retirados desse valor, esse já é o liquido a ser distribuido, porque está duplicando as taxas?  
+  
+o que deve realmente ser feito é: os 146,71 ja foram descontadas todas as taxas, esse é o valor liquido que será distribuido, então dos 146,71 vai ser feito a divisao proposta pela pessoa, no caso da luana 43,35 e o restante 103,36 vai para a delma. isso no caso de pagamento no cartão, se a pessoa pagar no pix esse valor muda proporcionalmente por conta das taxas. então o valor que seria de diferença (3,99% será distribuido igualmente para ambas, mas isso é referente ao valor de diferença de pagamento no cartão para com pix e deve ser expresso no sistema).
 
-3. **Badge no tab**
-   - `src/routes/_authenticated/professional.tsx` e `partner.tsx`: ao renderizar o botão do tab `collab`, se `total > 0`, mostrar bolinha vermelha com número (estilo Tailwind já usado no projeto — reaproveitar padrão de badge dos outros lugares).
-
-4. **Badge dentro do CollabWorkspace**
-   - `src/components/shared/CollabWorkspace.tsx`: nos botões de seção (`requests`), anexar contador. Já existe cálculo local em `RequestsPanel` (`pendingShares.length` / `pendingCoprod.length`) — expor via prop/callback para o header do CollabWorkspace mostrar o total no botão "Solicitações".
-
-5. **Notificação no sino (persistente)**
-   - Em `src/lib/collab.functions.ts`, dentro de `createCoproduction` (ou equivalente que insere em `product_coproductions` com status `pending`): após inserir, chamar `notifyProfile(collaboratorProfileId, "coproduction_invite", "Novo convite de co-produção", "Você foi convidado para uma co-produção. Toque para revisar.", "/professional?tab=collab")` (helper existe em `src/lib/admin-network.server.ts` — mover/reusar equivalente client-safe já usado noutros server fns).
-   - Idem para `requestCalendarShare` → `notifyProfile(ownerProfileId, "calendar_share_request", ...)`.
-   - Como as tabelas `notifications` já alimentam o sino do header, o usuário vê imediatamente sem precisar entrar na aba.
-
-### Não-mudanças
-- Nada nos schemas de banco.
-- Nada nas regras de RLS.
-- Não altera as regras SINDSCOND nem o fluxo financeiro.
-- Não muda cores/estilo global — badge segue paleta laranja/vermelho do tema atual.
-
-### Validação
-- Criar convite de co-produção via Delma → Luana e conferir:
-  1. Badge com "1" aparece no tab **Colaboração** do painel Profissional da Luana.
-  2. Badge "1" no botão **Solicitações** dentro do CollabWorkspace.
-  3. Notificação nova no sino do header apontando para `/professional?tab=collab`.
-- Aceitar/rejeitar zera o contador na próxima refetch (≤60s) ou imediatamente após `invalidateQueries(["collab-pending", ...])`.
+&nbsp;

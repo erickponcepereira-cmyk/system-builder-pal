@@ -15,13 +15,22 @@ interface Props {
   productId: string | null;
   creatorType: OwnerType;
   creatorId: string;
-  /** Preço bruto do produto (o "de venda") */
+  /**
+   * Valor líquido a distribuir na venda no cartão (já descontadas todas as
+   * taxas: gateway, impostos, sistema e comissão do coach). Esse é o valor
+   * que o criador teria em mãos para dividir com coprodutores.
+   */
   productNetValueBrl: number;
-  /** Estimativa de taxa+imposto sobre o bruto (0.10 = 10%). Padrão 10%. */
+  /** @deprecated não é mais usado; base do rateio é o próprio líquido. */
   netFactor?: number;
 }
 
 const BRL = (n: number) => `R$ ${n.toFixed(2).replace(".", ",")}`;
+
+// Diferença de taxa cartão(4,98%) → PIX(0,99%) ≈ 3,99% do bruto.
+// Como o líquido informado assume cartão, no PIX o líquido cresce
+// proporcionalmente e ambos (criador e coprodutores) recebem o ganho junto.
+const PIX_UPLIFT_PCT = 3.99;
 
 export function CoproductionEditor({
   productType,
@@ -29,7 +38,6 @@ export function CoproductionEditor({
   creatorType,
   creatorId,
   productNetValueBrl,
-  netFactor = 0.10,
 }: Props) {
   const list = useServerFn(listProductCoproductions);
   const invite = useServerFn(inviteCoproducer);
@@ -48,7 +56,8 @@ export function CoproductionEditor({
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const netEstimated = Math.max(0, productNetValueBrl * (1 - netFactor));
+  // Base do rateio = líquido a distribuir informado pelo produto.
+  const netEstimated = Math.max(0, productNetValueBrl);
 
   const reload = async () => {
     if (!productId) return;
@@ -130,14 +139,18 @@ export function CoproductionEditor({
       </div>
       <div className="rounded-lg p-3 text-[11px] text-white/70 space-y-1" style={{ backgroundColor: "#0F0F0F" }}>
         <p>
-          Divida ganhos com outros parceiros/profissionais. O repasse é <strong className="text-white">automático</strong> na venda paga,
-          calculado sobre o <strong className="text-white">valor líquido</strong> (bruto – taxas de gateway – impostos).
+          Divida ganhos com outros parceiros/profissionais. O repasse é <strong className="text-white">automático</strong> na
+          venda paga, calculado sobre o <strong className="text-white">líquido a distribuir</strong> abaixo (já sem
+          gateway, impostos, taxa do sistema e comissão do coach).
         </p>
         <p className="text-white/50">
-          Preço bruto: <span className="text-white">{BRL(productNetValueBrl)}</span> ·
-          {" "}Líquido estimado: <span className="text-white">{BRL(netEstimated)}</span> ·
+          Líquido a distribuir (cartão): <span className="text-white">{BRL(netEstimated)}</span> ·
           {" "}Comprometido: <span className="text-white">{BRL(committedInBrl)}</span> ·
-          {" "}Sobra p/ você: <span className="text-primary">{BRL(remainingBrl)}</span>
+          {" "}Sua sobra: <span className="text-primary">{BRL(remainingBrl)}</span>
+        </p>
+        <p className="text-[10px] text-white/40">
+          Em vendas no PIX o líquido cresce ~{PIX_UPLIFT_PCT.toFixed(2)}% (economia de taxa do gateway) e essa diferença
+          é rateada proporcionalmente entre você e os coprodutores.
         </p>
       </div>
 
@@ -256,7 +269,7 @@ export function CoproductionEditor({
             )}
 
             <div className="rounded-lg p-3 text-[11px] space-y-1" style={{ backgroundColor: "#1A1A1A" }}>
-              <p className="text-white/60">Preview por venda (líquido estimado {BRL(netEstimated)}):</p>
+              <p className="text-white/60">Preview por venda no cartão (líquido a distribuir {BRL(netEstimated)}):</p>
               <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(previewAmount)}</strong></p>
               <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(creatorShare)}</strong></p>
               {previewAmount > remainingBrl && (
