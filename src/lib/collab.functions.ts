@@ -539,19 +539,29 @@ export const listCoproducedProducts = createServerFn({ method: "POST" })
     const proProdIds = Array.from(new Set(list.filter((r) => r.product_type === "professional").map((r) => r.product_id)));
     const partnerCreatorIds = Array.from(new Set(list.filter((r) => r.creator_type === "partner").map((r) => r.creator_id)));
     const coachCreatorIds = Array.from(new Set(list.filter((r) => r.creator_type === "professional").map((r) => r.creator_id)));
-    const [pp, pr, pt, co] = await Promise.all([
+    const [pp, pr, pt, coRaw] = await Promise.all([
       partnerProdIds.length ? supabaseAdmin.from("partner_products").select("*").in("id", partnerProdIds) : Promise.resolve({ data: [] }),
       proProdIds.length ? supabaseAdmin.from("professional_products").select("*").in("id", proProdIds) : Promise.resolve({ data: [] }),
       partnerCreatorIds.length ? supabaseAdmin.from("partners").select("id,fantasy_name").in("id", partnerCreatorIds) : Promise.resolve({ data: [] }),
-      coachCreatorIds.length ? supabaseAdmin.from("coaches").select("id,profiles!coaches_profile_id_fkey(name)").in("id", coachCreatorIds) : Promise.resolve({ data: [] }),
+      coachCreatorIds.length ? supabaseAdmin.from("coaches").select("id,profile_id").in("id", coachCreatorIds) : Promise.resolve({ data: [] as any[] }),
     ]);
+    const coachProfileIds = ((coRaw.data as any[]) || []).map((c) => c.profile_id).filter(Boolean);
+    const { data: coachProfiles } = coachProfileIds.length
+      ? await supabaseAdmin.from("profiles").select("id,name").in("id", coachProfileIds)
+      : { data: [] as any[] };
     const findProd = (type: string, id: string) => {
       const arr: any = type === "partner" ? pp.data : pr.data;
       return (arr || []).find((x: any) => x.id === id) || null;
     };
-    const creatorName = (type: string, id: string) => type === "partner"
-      ? (pt.data || []).find((p: any) => p.id === id)?.fantasy_name || "Parceiro"
-      : (co.data || []).find((c: any) => c.id === id)?.profiles?.name || "Profissional";
+    const creatorName = (type: string, id: string) => {
+      if (type === "partner") {
+        return (pt.data || []).find((p: any) => p.id === id)?.fantasy_name || "Parceiro";
+      }
+      const c = ((coRaw.data as any[]) || []).find((x) => x.id === id);
+      if (!c) return "Profissional";
+      return (coachProfiles || []).find((p: any) => p.id === c.profile_id)?.name || "Profissional";
+    };
+
     const items = list.map((r) => {
       const prod = findProd(r.product_type, r.product_id);
       if (!prod) return null;
