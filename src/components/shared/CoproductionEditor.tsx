@@ -112,10 +112,37 @@ export function CoproductionEditor({
   };
 
   const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled" && i.id !== editingId);
+
+  // Base efetiva por item — se o item tem custo, aplicar sobre a base escolhida (bruto/liquido/liq-custo).
+  const baseForItem = (splitBaseVal: string | null | undefined, hasCostVal: boolean, costVal: number) => {
+    const c = hasCostVal ? Math.max(0, costVal) : 0;
+    if (splitBaseVal === "gross") return Math.max(0, grossValue - c);
+    if (splitBaseVal === "net_after_cost") return Math.max(0, netValue - c);
+    return Math.max(0, netValue); // "net" ignora custo na base
+  };
+
+  // Quanto o coprodutor recebe em R$ (no cartão) para um item já persistido.
+  const amountForItem = (it: any) => {
+    if (it.split_kind === "percent") {
+      const b = baseForItem(it.split_base, !!it.has_cost, Number(it.cost_amount_brl || 0));
+      return (b * Number(it.percent_of_net || 0)) / 100;
+    }
+    return Number(it.fixed_amount_brl || 0);
+  };
+  const reimburseForItem = (it: any) =>
+    it.has_cost && it.cost_bearer_type === it.collaborator_type && it.cost_bearer_id === it.collaborator_id
+      ? Number(it.cost_amount_brl || 0)
+      : 0;
+  const pixOf = (v: number) => v * (1 + PIX_UPLIFT_PCT / 100);
+
+  // Total já comprometido (split cartão) + custos que saem do criador.
+  const committedInBrl = activeItems.reduce((s, i) => s + amountForItem(i), 0);
+  const creatorCostOut = activeItems.reduce(
+    (s, i) => s + (i.has_cost && !(i.cost_bearer_type === i.collaborator_type && i.cost_bearer_id === i.collaborator_id) ? Number(i.cost_amount_brl || 0) : 0),
+    0,
+  );
+  const remainingBrl = Math.max(0, netValue - committedInBrl - creatorCostOut);
   const totalPercent = activeItems.reduce((s, i) => s + (i.split_kind === "percent" ? Number(i.percent_of_net || 0) : 0), 0);
-  const totalFixed = activeItems.reduce((s, i) => s + (i.split_kind !== "percent" ? Number(i.fixed_amount_brl || 0) : 0), 0);
-  const committedInBrl = totalFixed + (netValue * totalPercent) / 100;
-  const remainingBrl = Math.max(0, netValue - committedInBrl);
 
   const previewAmount = useMemo(() => {
     if (splitKind === "percent") {
@@ -126,8 +153,7 @@ export function CoproductionEditor({
   }, [splitKind, percent, amount, effectiveBase]);
 
   const creatorShare = useMemo(() => {
-    // Criador recebe: netValue − split do coprodutor − (custo, se bearer for coprodutor).
-    // Se bearer for o criador, ele fica com o valor (não sai da carteira).
+    // Criador recebe: netValue − split do coprodutor − custo (se bearer for coprodutor sai da conta do criador para reembolso).
     const costOut = hasCost && costBearer === "collaborator" ? costValue : 0;
     return Math.max(0, netValue - previewAmount - costOut);
   }, [netValue, previewAmount, hasCost, costBearer, costValue]);
@@ -208,8 +234,9 @@ export function CoproductionEditor({
         </p>
         <p className="text-white/50">
           Bruto: <span className="text-white">{BRL(grossValue)}</span> ·
-          {" "}Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span> ·
-          {" "}Comprometido: <span className="text-white">{BRL(committedInBrl)}</span> ·
+          {" "}Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span>
+          {creatorCostOut > 0 && <> · Custo (você): <span className="text-white">{BRL(creatorCostOut)}</span></>}
+          {" "}· Comprometido: <span className="text-white">{BRL(committedInBrl)}</span> ·
           {" "}Sua sobra: <span className="text-primary">{BRL(remainingBrl)}</span>
         </p>
         <p className="text-[10px] text-white/40">
@@ -224,39 +251,60 @@ export function CoproductionEditor({
         <Plus className="h-3.5 w-3.5" /> Adicionar coprodutor
       </button>
 
-      {items.map((it) => (
-        <div key={it.id} className="flex items-center justify-between rounded-lg p-2" style={{ backgroundColor: "#1A1A1A" }}>
-          <div className="min-w-0">
-            <p className="text-xs text-white truncate">{it.collaboratorName}</p>
-            <p className="text-[10px] text-white/50">
-              {it.split_kind === "percent"
-                ? <>{Number(it.percent_of_net).toFixed(2)}% do {it.split_base === "gross" ? "bruto" : it.split_base === "net_after_cost" ? "líquido pós-custo" : "líquido"}</>
-                : <>{BRL(Number(it.fixed_amount_brl))}</>}
-              {it.has_cost && <> · custo {BRL(Number(it.cost_amount_brl || 0))}</>}
-              {" · "}
-              <span className={it.status === "accepted" ? "text-green-400" : it.status === "rejected" ? "text-red-400" : "text-amber-400"}>
-                {it.status === "pending" ? "aguardando aceite" : it.status}
-              </span>
-            </p>
+      {items.map((it) => {
+        const cardAmt = amountForItem(it);
+        const reimb = reimburseForItem(it);
+        const cardTotal = cardAmt + reimb;
+        const pixTotal = pixOf(cardTotal);
+        const baseLabel = it.split_base === "gross" ? "bruto" : it.split_base === "net_after_cost" ? "líquido pós-custo" : "líquido";
+        return (
+          <div key={it.id} className="flex items-start justify-between rounded-lg p-2 gap-2" style={{ backgroundColor: "#1A1A1A" }}>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="text-xs text-white truncate">{it.collaboratorName}</p>
+              <p className="text-[10px] text-white/50">
+                {it.split_kind === "percent"
+                  ? <>{Number(it.percent_of_net).toFixed(2)}% do {baseLabel}</>
+                  : <>Valor fixo {BRL(Number(it.fixed_amount_brl))}</>}
+                {" · "}
+                <span className={it.status === "accepted" ? "text-green-400" : it.status === "rejected" ? "text-red-400" : "text-amber-400"}>
+                  {it.status === "pending" ? "aguardando aceite" : it.status}
+                </span>
+              </p>
+              {it.has_cost && (
+                <p className="text-[10px] text-white/50">
+                  Custo: <span className="text-white">{BRL(Number(it.cost_amount_brl || 0))}</span> — assumido por{" "}
+                  <span className="text-white">
+                    {it.cost_bearer_type === it.collaborator_type && it.cost_bearer_id === it.collaborator_id ? "coprodutor" : "criador"}
+                  </span>
+                </p>
+              )}
+              <p className="text-[10px] text-white/70">
+                Cartão: <strong className="text-primary">{BRL(cardTotal)}</strong>
+                {reimb > 0 && <span className="text-white/50"> (split {BRL(cardAmt)} + reembolso custo {BRL(reimb)})</span>}
+              </p>
+              <p className="text-[10px] text-white/70">
+                PIX (~+{PIX_UPLIFT_PCT.toFixed(2)}%): <strong className="text-primary">{BRL(pixTotal)}</strong>
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => openEdit(it)} className="text-primary p-1.5" title="Editar">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`Excluir co-produção com ${it.collaboratorName}?`)) return;
+                  try { await cancel({ data: { id: it.id } }); toast.success("Co-produção removida."); reload(); }
+                  catch (e: any) { toast.error(e.message); }
+                }}
+                className="text-red-400 p-1.5"
+                title="Excluir"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => openEdit(it)} className="text-primary p-1.5" title="Editar">
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={async () => {
-                if (!confirm(`Excluir co-produção com ${it.collaboratorName}?`)) return;
-                try { await cancel({ data: { id: it.id } }); toast.success("Co-produção removida."); reload(); }
-                catch (e: any) { toast.error(e.message); }
-              }}
-              className="text-red-400 p-1.5"
-              title="Excluir"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       {items.length === 0 && <p className="text-[11px] text-white/30">Nenhum coprodutor.</p>}
 
       {openModal && (
@@ -404,26 +452,43 @@ export function CoproductionEditor({
               )}
             </div>
 
-            <div className="rounded-lg p-3 text-[11px] space-y-1" style={{ backgroundColor: "#1A1A1A" }}>
-              <p className="text-white/60">Preview por venda no cartão:</p>
-              <p className="text-white/70">Bruto: <span className="text-white">{BRL(grossValue)}</span></p>
-              <p className="text-white/70">Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span></p>
-              {hasCost && (
-                <p className="text-white/70">
-                  Custo ({costBearer === "creator" ? "você" : "coprodutor"}): <span className="text-white">{BRL(costValue)}</span>
-                </p>
-              )}
-              <p className="text-white/70">Base do rateio: <span className="text-white">{BRL(effectiveBase)}</span></p>
-              <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(previewAmount)}</strong>
-                {hasCost && costBearer === "collaborator" && <> + custo {BRL(costValue)}</>}
-              </p>
-              <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(creatorShare)}</strong>
-                {hasCost && costBearer === "creator" && <> (custo permanece com você)</>}
-              </p>
-              {previewAmount > remainingBrl && (
-                <p className="text-red-400">⚠ Excede o disponível ({BRL(remainingBrl)})</p>
-              )}
-            </div>
+            {(() => {
+              const collabReimb = hasCost && costBearer === "collaborator" ? costValue : 0;
+              const collabCard = previewAmount + collabReimb;
+              const creatorCard = creatorShare;
+              return (
+                <div className="rounded-lg p-3 text-[11px] space-y-2" style={{ backgroundColor: "#1A1A1A" }}>
+                  <p className="text-white/60">Preview por venda</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="rounded-md p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                      <p className="text-white/60 text-[10px] font-bold mb-1">CARTÃO</p>
+                      <p className="text-white/70">Bruto: <span className="text-white">{BRL(grossValue)}</span></p>
+                      <p className="text-white/70">Líquido a distribuir: <span className="text-white">{BRL(netValue)}</span></p>
+                      {hasCost && (
+                        <p className="text-white/70">
+                          Custo ({costBearer === "creator" ? "você" : "coprodutor"}): <span className="text-white">{BRL(costValue)}</span>
+                        </p>
+                      )}
+                      <p className="text-white/70">Base do rateio: <span className="text-white">{BRL(effectiveBase)}</span></p>
+                      <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(collabCard)}</strong>
+                        {collabReimb > 0 && <span className="text-white/50"> (split {BRL(previewAmount)} + custo {BRL(collabReimb)})</span>}
+                      </p>
+                      <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(creatorCard)}</strong>
+                        {hasCost && costBearer === "creator" && <> (custo permanece com você)</>}
+                      </p>
+                    </div>
+                    <div className="rounded-md p-2" style={{ backgroundColor: "#0F0F0F" }}>
+                      <p className="text-white/60 text-[10px] font-bold mb-1">PIX (~+{PIX_UPLIFT_PCT.toFixed(2)}%)</p>
+                      <p className="text-white">Coprodutor recebe: <strong className="text-primary">{BRL(pixOf(collabCard))}</strong></p>
+                      <p className="text-white/70">Você fica com: <strong className="text-white">{BRL(pixOf(creatorCard))}</strong></p>
+                    </div>
+                  </div>
+                  {previewAmount > remainingBrl && (
+                    <p className="text-red-400">⚠ Excede o disponível ({BRL(remainingBrl)})</p>
+                  )}
+                </div>
+              );
+            })()}
 
             <button
               onClick={submit}
