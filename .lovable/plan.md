@@ -1,41 +1,45 @@
-## Problemas a corrigir
+Plano de correção para o fluxo de produtos gratuitos com reserva e QR:
 
-**1. Visão do co-produtor mostra só o `%`** — não aparece quanto ele receberá em R$ no cartão nem no PIX, nem se há custo envolvido, nem quem paga o custo, nem qual é a base de rateio.
+1. Corrigir a base de permissão no backend
+- Ajustar as funções de reserva, cancelamento e leitura do QR para sempre converter o usuário logado no `profile_id` correto antes de comparar permissões.
+- Corrigir as regras de leitura da tabela de reservas para que:
+  - o aluno veja as próprias reservas;
+  - o parceiro veja as reservas do próprio estabelecimento;
+  - o admin continue podendo auditar.
+- Manter QR único por reserva, mas sem liberar uso fora da janela de horário.
 
-**2. O “líquido a distribuir” do editor ignora o custo** — o cabeçalho e as validações (`committedInBrl`, `remainingBrl`) usam sempre `netValue` puro, mesmo quando existe custo declarado. O bloco de custo hoje só influencia o *preview* daquele item que está sendo editado, mas não a base de rateio global do produto nem o que aparece na listagem.
+2. Regras de horário do QR
+- A reserva poderá ser feita antes normalmente.
+- O QR do aluno só aparecerá durante o horário reservado.
+- Antes do horário: mostrar status como “QR liberado no horário da reserva”, sem exibir o código.
+- Depois do horário: bloquear leitura e mostrar “produto fora do horário de utilização”; se ainda não usado, marcar como expirado.
+- Na leitura pelo parceiro, remover a tolerância atual de 15 minutos antes do início e aceitar somente entre `slot_start` e `slot_end`.
 
-## Correções (somente UI/apresentação — nenhuma alteração de banco ou de trigger)
+3. Corrigir telas do aluno
+- Corrigir `Minhas reservas`, que hoje filtra `profile_id` usando o ID de autenticação errado.
+- Exibir cada reserva com status claro: aguardando horário, QR disponível, usado, cancelado ou expirado.
+- Ao abrir uma reserva, mostrar o QR apenas quando estiver dentro da janela de uso; fora dela, mostrar mensagem e horário.
+- Ao reservar com sucesso, atualizar imediatamente a lista para o aluno ver a reserva criada.
 
-Arquivo único: `src/components/shared/CoproductionEditor.tsx`
+4. Corrigir painel do parceiro
+- Reforçar o scanner para listar as reservas do parceiro por dia com aluno, produto, horário e status.
+- Adicionar estados claros para “aguardando”, “disponível agora”, “confirmado”, “expirado” e “cancelado”.
+- Após ler um QR, atualizar a lista imediatamente.
+- Melhorar mensagens de erro do scanner para diferenciar: QR inválido, QR de outro parceiro, fora do horário, expirado e já usado.
 
-### A. Cálculo do editor passa a considerar custo
+5. Relatórios do parceiro
+- Incluir reservas gratuitas no relatório do parceiro em vez de deixar `freebies_redeemed` fixo em zero.
+- Adicionar aba/seção de reservas gratuitas com quantidade reservada, usada, cancelada e expirada no período.
+- Exportar essas reservas no Excel junto com aluno, produto, horário, status e data de uso.
+- Manter vendas pagas e carteira usando o fluxo financeiro existente, mas garantir que o relatório continue mostrando vendas pagas corretamente no mesmo período.
 
-- Derivar `effectiveGlobalBase` a partir dos itens ativos: se pelo menos um item tem `has_cost=true`, subtrair a soma dos `cost_amount_brl` da base escolhida (`gross`, `net`, `net_after_cost`) — usar a mesma regra que o trigger `apply_coproduction_credits_on_order` já aplica no banco, para manter paridade.
-- `committedInBrl` passa a somar: parcelas fixas + `(effectiveGlobalBase * %) / 100` para cada item de percentual, respeitando o `split_base` de cada linha.
-- `remainingBrl` = `netValue − committedInBrl − custos que saem do criador`.
-- Cabeçalho passa a mostrar: **Bruto**, **Líquido a distribuir**, **Custo total declarado** (quando houver), **Base efetiva de rateio**, **Comprometido**, **Sua sobra**.
-- Validação de “excede disponível” também usa a base efetiva.
-
-### B. Listagem dos coprodutores com valores reais (cartão e PIX)
-
-Cada linha do `items.map` passa a mostrar, além do `%` ou valor fixo já exibido:
-
-- `Cartão:` valor em R$ que o coprodutor receberá (split calculado sobre a base correta, + reembolso de custo se for `cost_bearer=collaborator`).
-- `PIX:` mesmo valor com uplift de `PIX_UPLIFT_PCT` (~3,99%) aplicado proporcionalmente (mesma regra já documentada no bloco informativo).
-- `Custo:` valor e quem assume (`você` / `coprodutor`), quando `has_cost=true`.
-- `Base:` bruto / líquido / líquido pós-custo.
-
-Isso vale tanto para o criador vendo o painel de edição quanto para o coprodutor abrindo em modo somente-leitura (é o mesmo componente).
-
-### C. Preview do modal ganha PIX + cartão
-
-Substituir o bloco “Preview por venda no cartão” por duas colunas: **Cartão** e **PIX (~+3,99%)**, cada uma mostrando: Base do rateio, Coprodutor recebe, Reembolso de custo (se aplicável), Você fica com.
-
-### D. Bloco de custo só é usado se marcado
-
-O bloco de custo já é condicional ao checkbox `hasCost`. Reforçar que, enquanto `hasCost=false`, `splitBase` é forçado para `net` e o custo não entra em nenhuma conta. Quando `hasCost=true`, o valor e o `costBearer` viram obrigatórios de fato (validação já existe) e passam a alterar a base efetiva global descrita em (A).
-
-## Fora de escopo
-
-- Nenhuma migração. O trigger `apply_coproduction_credits_on_order` já credita corretamente considerando custo — apenas espelhamos a mesma matemática na UI.
-- Nenhuma alteração em `collab.functions.ts`, roteamento ou wallets.
+6. Validação final
+- Testar o ciclo completo:
+  - aluno reserva;
+  - reserva aparece para o aluno;
+  - reserva aparece no parceiro;
+  - QR fica oculto antes do horário;
+  - scanner bloqueia antes/depois do horário com mensagem correta;
+  - scanner confirma dentro do horário;
+  - relatório do parceiro contabiliza a reserva usada;
+  - vendas pagas continuam aparecendo em relatórios/carteira.

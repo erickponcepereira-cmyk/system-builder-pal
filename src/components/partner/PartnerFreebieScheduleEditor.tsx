@@ -77,7 +77,7 @@ export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeW
         <CalendarDays className="h-3.5 w-3.5" /> Agenda semanal (reserva obrigatória)
       </div>
       <p className="text-[10px] text-white/45">
-        Defina dias, janelas de horário e quantas vagas por turma. Aluno reserva e gera QR único — o QR é dado baixa quando você lê no scanner.
+        Defina dias, janelas de horário e quantas vagas por turma. O aluno reserva antes, mas o QR único só aparece no horário escolhido.
       </p>
 
       <div className="flex items-center gap-2 rounded-lg bg-black/30 p-2">
