@@ -484,6 +484,78 @@ export const cancelCoproduction = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateCoproduction = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: {
+    id: string;
+    splitKind: "percent" | "fixed";
+    percentOfNet?: number;
+    fixedAmountBrl?: number;
+    hasCost?: boolean;
+    costAmountBrl?: number;
+    costBearer?: "creator" | "collaborator";
+    splitBase?: "gross" | "net" | "net_after_cost";
+  }) => d)
+  .handler(async ({ context, data }) => {
+    const supabase = context.supabase as any;
+    const { data: existing, error: fetchErr } = await supabase
+      .from("product_coproductions")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!existing) throw new Error("Co-produção não encontrada.");
+
+    if (data.splitKind === "percent") {
+      if (!data.percentOfNet || data.percentOfNet <= 0 || data.percentOfNet > 100) {
+        throw new Error("Informe uma porcentagem entre 0 e 100.");
+      }
+    } else {
+      if (!data.fixedAmountBrl || data.fixedAmountBrl <= 0) {
+        throw new Error("Informe um valor maior que zero.");
+      }
+    }
+
+    const hasCost = !!data.hasCost;
+    let costBearerType: OwnerType | null = null;
+    let costBearerId: string | null = null;
+    let splitBase: "gross" | "net" | "net_after_cost" = data.splitBase || "net";
+    if (hasCost) {
+      if (!data.costAmountBrl || data.costAmountBrl <= 0) {
+        throw new Error("Informe um valor de custo maior que zero.");
+      }
+      const bearer = data.costBearer || "creator";
+      if (bearer === "creator") {
+        costBearerType = existing.creator_type;
+        costBearerId = existing.creator_id;
+      } else {
+        costBearerType = existing.collaborator_type;
+        costBearerId = existing.collaborator_id;
+      }
+      if (splitBase !== "gross" && splitBase !== "net_after_cost") {
+        splitBase = "net_after_cost";
+      }
+    } else {
+      if (splitBase === "net_after_cost") splitBase = "net";
+    }
+
+    const { error } = await supabase
+      .from("product_coproductions")
+      .update({
+        split_kind: data.splitKind,
+        percent_of_net: data.splitKind === "percent" ? data.percentOfNet : null,
+        fixed_amount_brl: data.splitKind === "fixed" ? data.fixedAmountBrl : 0,
+        has_cost: hasCost,
+        cost_amount_brl: hasCost ? data.costAmountBrl : 0,
+        cost_bearer_type: costBearerType,
+        cost_bearer_id: costBearerId,
+        split_base: splitBase,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const listProductCoproductions = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: { productType: OwnerType; productId: string }) => d)
