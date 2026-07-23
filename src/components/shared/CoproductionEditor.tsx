@@ -430,7 +430,7 @@ export function CoproductionEditor({
               disabled={saving}
               className="w-full rounded-lg bg-primary py-2.5 text-xs font-bold text-black disabled:opacity-50"
             >
-              {saving ? "Enviando..." : "Enviar convite"}
+              {saving ? "Salvando..." : editingId ? "Salvar alterações" : "Enviar convite"}
             </button>
           </div>
         </div>
