@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 import { LogOut, Loader2, Users, Wallet, AlertCircle, Utensils, Dumbbell, Stethoscope, Sparkles, ClipboardList, FileText, Calendar, CalendarDays, HeartPulse, Package, Settings, ShoppingBag, LayoutDashboard, Share2 } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
+import { useServerFn } from "@tanstack/react-start";
+import { getCollabPendingCounts } from "@/lib/collab.functions";
 import { OverviewTab } from "@/components/professional/OverviewTab";
 import { StorePage } from "@/components/student/StorePage";
 
@@ -97,6 +99,20 @@ function ProfessionalPanel() {
   const [info, setInfo] = useState<ProInfo | null>(null);
   const [tab, setTab] = useState<string>("students");
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+  const [collabPending, setCollabPending] = useState(0);
+  const getCollabCounts = useServerFn(getCollabPendingCounts);
+
+  useEffect(() => {
+    if (!info?.coachId) return;
+    let alive = true;
+    const load = () => getCollabCounts({ data: { entityType: "professional", entityId: info.coachId } })
+      .then((r) => { if (alive) setCollabPending(r.total); })
+      .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [info?.coachId]);
+
 
   useEffect(() => {
     (async () => {
@@ -251,16 +267,21 @@ function ProfessionalPanel() {
             const meta = TAB_META[t] ?? { label: t, icon: Users };
             const Icon = meta.icon;
             const active = tab === t;
+            const badge = t === "collab" ? collabPending : 0;
             return (
               <button key={t} onClick={() => setTab(t)}
-                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${active ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}>
+                className={`relative flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${active ? "border-primary bg-primary/15 text-primary" : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"}`}>
                 <Icon className="h-3.5 w-3.5" /> {meta.label}
+                {badge > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold">{badge}</span>
+                )}
               </button>
             );
           })}
         </div>
 
         <TabContent tab={tab} info={info} assignments={assignments} />
+
       </div>
     </div>
     </SubscriptionGuard>

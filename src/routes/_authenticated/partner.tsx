@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { Building2, Package, Image as ImageIcon, QrCode, UserCog, LogOut, Plus, Loader2, AlertTriangle, Check, X, Trash2, Save, DollarSign, Gift, ShoppingBag, Users, Copy, Share2, TrendingUp, CalendarDays, Wallet, BarChart3, Clock, CreditCard } from "lucide-react";
 import { CollabWorkspace } from "@/components/shared/CollabWorkspace";
+import { useServerFn } from "@tanstack/react-start";
+import { getCollabPendingCounts } from "@/lib/collab.functions";
 import { CoproductionEditor } from "@/components/shared/CoproductionEditor";
 import { ProductDownloadsManager } from "@/components/admin/ProductDownloadsManager";
 
@@ -118,7 +120,22 @@ function PartnerPanel() {
   const [otherRoles, setOtherRoles] = useState<{ admin: boolean; coach: boolean; student: boolean }>({ admin: false, coach: false, student: false });
   const [coachCtx, setCoachCtx] = useState<CoachContext | null>(null);
 
+  const [collabPending, setCollabPending] = useState(0);
+  const getCollabCounts = useServerFn(getCollabPendingCounts);
+
+  useEffect(() => {
+    if (!partner?.id) return;
+    let alive = true;
+    const load = () => getCollabCounts({ data: { entityType: "partner", entityId: partner.id } })
+      .then((r) => { if (alive) setCollabPending(r.total); })
+      .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [partner?.id]);
+
   const load = async () => {
+
     setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
@@ -259,13 +276,20 @@ function PartnerPanel() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 flex overflow-x-auto" style={{ backgroundColor: "#111" }}>
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
-            <t.icon className="h-5 w-5" />
-            {t.label}
-          </button>
-        ))}
+        {tabs.map(t => {
+          const badge = t.key === "collab" ? collabPending : 0;
+          return (
+            <button key={t.key} onClick={() => setTab(t.key)} className={`relative flex-1 min-w-[64px] py-2.5 flex flex-col items-center gap-0.5 text-[10px] ${tab === t.key ? "text-primary" : "text-white/50"}`}>
+              <t.icon className="h-5 w-5" />
+              {t.label}
+              {badge > 0 && (
+                <span className="absolute top-1 right-2 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold">{badge}</span>
+              )}
+            </button>
+          );
+        })}
       </nav>
+
     </div>
     </SubscriptionGuard>
     </PartnerOnboardingGate>

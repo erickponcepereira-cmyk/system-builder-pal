@@ -1,71 +1,50 @@
-## Objetivo
-Criar o produto **Benefícios SINDSCOND** (R$ 20) na loja do profissional Sindscond com uma cascata financeira específica, sem quebrar os demais produtos parceiro/profissional que continuam usando a cascata padrão (taxa cartão/pix → 6% Simples → 5% sistema → 10% coach → rede 3/2/1).
+# Convites de co-produção: acesso confirmado + badge de pendência
 
-## Regra de distribuição do produto novo
-Sobre R$ 20 (exemplo):
-1. Taxa cartão/pix (config global já existe) → R$ 1,00 (cartão 4,98%) ou R$ 0,20 (pix 0,99%)
-2. **Sem** Simples Nacional (skip_tax)
-3. Taxa do sistema = **30%** do saldo → R$ 5,70 (admin_wallet)
-4. Criador (Sindscond) = **30%** do saldo → R$ 3,99 (`partner_net_amount`)
-5. Cadeia comercial = saldo restante → R$ 9,31 (`coach_commission_amount`)
-6. Rede sobre a cadeia comercial: **L1 10% / L2 5% / L3 3%** → R$ 0,93 / 0,47 / 0,28 (total R$ 1,68)
-7. Vendedor (coach) = cadeia − rede → R$ 7,63 (`coach_net_amount`)
+## (a) Aba Colaboração no painel do Profissional
+Verificado: já existe.
+- `src/routes/_authenticated/professional.tsx` já monta a tab `collab` → `Colaboração` (linhas 90 e 278) renderizando `<CollabWorkspace ownerType="professional" ownerId={info.coachId} />`.
+- `src/routes/_authenticated/partner.tsx` idem (linhas 203 e 256).
+- Portanto a Luana já tem a aba **Colaboração → Solicitações** disponível. Nenhuma alteração estrutural necessária — só garantir que o convite chegue visível.
 
-Se algum nível da rede não existir, o valor daquele nível cai para o vendedor (comportamento atual já existente é preservado pela mesma lógica de fallback).
+Ação em (a): apenas documentar no painel um pequeno texto de ajuda vazio ("Nenhum convite") — já existe. Nada a codar.
 
-**Master coach cross-sale**: continua funcionando igual — se o coach que faz a venda não é o dono do aluno e é Master Coach, ele recebe o % configurado no beneficiário sobre `coach_net_amount` (regra atual mantida).
+## (b) Notificação/badge de convites pendentes
 
-## Abordagem técnica
-Reaproveitar as colunas atuais de `partner_product_orders` (mapeamento perfeito: `partner_net_amount`=criador; `coach_commission_amount`=cadeia; `network_l1/2/3_amount`, `coach_net_amount`, `master_coach_cross_bonus_amount`). Adicionar em `professional_products` (e simetricamente `partner_products` para uso futuro) colunas opcionais de override que ativam uma nova cascata dentro das mesmas funções SQL de criação de pedido.
+Objetivo: quando existir convite de co-produção (ou pedido de compartilhamento de agenda) com status `pending` para o usuário, mostrar contador vermelho:
+1. Na aba **Colaboração** (badge ao lado do rótulo do tab, nos dois painéis).
+2. Dentro do `CollabWorkspace`, no botão **Solicitações**.
+3. Disparar uma `notifications` row (sino global) no momento em que o convite é criado, para aparecer no ícone de notificações que já existe no header.
 
-### Migration 1 — schema
-Adicionar em `professional_products` e `partner_products`:
-- `custom_split boolean not null default false`
-- `skip_tax boolean not null default false`
-- `system_fee_pct_override numeric` (nullable)
-- `creator_pct_override numeric` (nullable) — % do criador sobre saldo após sistema
-- `network_l1_pct_override numeric`, `network_l2_pct_override numeric`, `network_l3_pct_override numeric` (nullable)
+### Implementação
 
-### Migration 2 — funções de criação de pedido
-Reescrever de forma retrocompatível (mesmas assinaturas / grants):
-- `create_partner_product_order(_student_id, _partner_product_id, _payment_method, _referred_by_student_id)`
-- `create_partner_product_order(_professional_product_id, _payment_method, _buyer_student_id, _referred_by_student_id)` (variante profissional)
-- `create_scheduled_professional_order(...)` (para simetria)
-- `create_partner_company_order(...)` (para simetria)
+1. **Novo server fn** `getCollabPendingCounts` em `src/lib/collab.functions.ts`
+   - Input: `{ entityType: OwnerType, entityId: string }`.
+   - Retorna `{ coproductions: number, calendarShares: number, total: number }`.
+   - Reusa as queries já existentes de `listCoproductions` (asCollab pending) e `listCalendarShares` (incoming pending); só faz `count`.
 
-Cada uma detecta `v_prod.custom_split`:
-- **false** → cascata atual **inalterada** (fee → 6% tax → 5% sys → coach_pct → rede 3/2/1).
-- **true** → nova cascata:
-  - `v_tax := 0` se `skip_tax`, senão mantém 6% (ou usa `tax_pct_override` se quiser — deixamos só o boolean por enquanto)
-  - `v_sys := ROUND(v_rem * system_fee_pct_override / 100, 2)` (default 5)
-  - `v_partner_share := ROUND(v_rem * creator_pct_override / 100, 2)` (criador)
-  - `v_coach_amt := v_rem - v_partner_share` (cadeia comercial)
-  - `v_l1 := ROUND(v_coach_amt * l1_override / 100, 2)` (idem l2, l3)
-  - `v_coach_net := v_coach_amt - v_l1 - v_l2 - v_l3` (menos fitcoin/master igual hoje)
-  - `coach_commission_pct` gravado como `100 - creator_pct` (para relatórios não estranharem)
+2. **Hook leve** `useCollabPendingCount(ownerType, ownerId)` em `src/lib/collab.functions.ts` (ou arquivo novo `src/hooks/useCollabPending.ts`)
+   - `useQuery` com `queryKey: ["collab-pending", ownerType, ownerId]`, `refetchInterval: 60_000`, `staleTime: 30_000`.
 
-Todos os triggers/downstream (`_apply_partner_order_on_paid`, `recalc_wallets_for_owner`, relatórios em `admin.payments`, `coach-reports`, `partner-reports`, `top-selling-products`, `admin-financial`) continuam funcionando porque só leem os valores já materializados nas colunas do pedido.
+3. **Badge no tab**
+   - `src/routes/_authenticated/professional.tsx` e `partner.tsx`: ao renderizar o botão do tab `collab`, se `total > 0`, mostrar bolinha vermelha com número (estilo Tailwind já usado no projeto — reaproveitar padrão de badge dos outros lugares).
 
-### Migration 3 — inserir o produto
-1. Localizar `professional_coach_id` e `partner_id` do usuário `sindscond@gmail.com` (via `profiles`/`coaches`).
-2. INSERT em `professional_products` com:
-   - `name = 'Benefícios SINDSCOND'`, `price = 20`, `status = 'approved'`, `is_active_by_professional = true`, `is_schedulable = false`
-   - `custom_split = true`, `skip_tax = true`, `system_fee_pct_override = 30`, `creator_pct_override = 30`, `network_l1/2/3_pct_override = 10/5/3`
-   - `coach_commission_percentage = 70` (só para telas legadas exibirem coerente)
-   - Descrição curta explicando o benefício
+4. **Badge dentro do CollabWorkspace**
+   - `src/components/shared/CollabWorkspace.tsx`: nos botões de seção (`requests`), anexar contador. Já existe cálculo local em `RequestsPanel` (`pendingShares.length` / `pendingCoprod.length`) — expor via prop/callback para o header do CollabWorkspace mostrar o total no botão "Solicitações".
 
-Se o Sindscond ainda estiver pendente de aprovação, a migration não força aprovação — ela só valida existência do registro; caso ele não esteja aprovado, o produto fica salvo mas o storefront respeita `is_active_by_professional`. **Se você quiser que eu aprove o Sindscond nessa mesma migration**, aviso na revisão e adiciono o UPDATE de aprovação.
+5. **Notificação no sino (persistente)**
+   - Em `src/lib/collab.functions.ts`, dentro de `createCoproduction` (ou equivalente que insere em `product_coproductions` com status `pending`): após inserir, chamar `notifyProfile(collaboratorProfileId, "coproduction_invite", "Novo convite de co-produção", "Você foi convidado para uma co-produção. Toque para revisar.", "/professional?tab=collab")` (helper existe em `src/lib/admin-network.server.ts` — mover/reusar equivalente client-safe já usado noutros server fns).
+   - Idem para `requestCalendarShare` → `notifyProfile(ownerProfileId, "calendar_share_request", ...)`.
+   - Como as tabelas `notifications` já alimentam o sino do header, o usuário vê imediatamente sem precisar entrar na aba.
 
-## Frontend
-Nenhuma mudança obrigatória. A `PartnerProfessionalStore` já lista `professional_products` aprovados e chama o RPC de pedido que já retorna os valores materializados. Simuladores em `partnerFinance.ts` continuam corretos para produtos padrão; para o Sindscond o simulador teórico ficará ~R$ 0,50 diferente do real (não é bloqueante), então **não** vou alterar os simuladores nesta entrega para não introduzir risco fora do escopo.
+### Não-mudanças
+- Nada nos schemas de banco.
+- Nada nas regras de RLS.
+- Não altera as regras SINDSCOND nem o fluxo financeiro.
+- Não muda cores/estilo global — badge segue paleta laranja/vermelho do tema atual.
 
-## Validação antes de devolver
-Após aplicar as migrations:
-1. `supabase--read_query` no produto criado para confirmar overrides gravados.
-2. Simular manualmente a cascata com valores 20/pix e 20/cartão via SELECT computando as fórmulas e conferir com os números do enunciado (5,70 / 3,99 / 9,31 / 1,68 / 7,63).
-3. `supabase--read_query` para checar que produtos parceiros existentes NÃO têm `custom_split=true` (garantia de não-regressão).
-4. Confirmar que o produto aparece no `professional_products` do Sindscond com `is_active_by_professional=true` e `status='approved'`.
-
-## Fora de escopo
-- Alterar simuladores/relatórios teóricos com a nova cascata (não é necessário para o fluxo de venda funcionar).
-- Editor visual dos overrides no painel admin/profissional — deixamos os overrides configuráveis só via SQL nesta entrega; se você quiser um formulário no admin depois, faço em iteração separada.
+### Validação
+- Criar convite de co-produção via Delma → Luana e conferir:
+  1. Badge com "1" aparece no tab **Colaboração** do painel Profissional da Luana.
+  2. Badge "1" no botão **Solicitações** dentro do CollabWorkspace.
+  3. Notificação nova no sino do header apontando para `/professional?tab=collab`.
+- Aceitar/rejeitar zera o contador na próxima refetch (≤60s) ou imediatamente após `invalidateQueries(["collab-pending", ...])`.
