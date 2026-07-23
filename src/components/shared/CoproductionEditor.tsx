@@ -111,7 +111,7 @@ export function CoproductionEditor({
     setOpenModal(true);
   };
 
-  const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled");
+  const activeItems = items.filter((i) => i.status !== "rejected" && i.status !== "cancelled" && i.id !== editingId);
   const totalPercent = activeItems.reduce((s, i) => s + (i.split_kind === "percent" ? Number(i.percent_of_net || 0) : 0), 0);
   const totalFixed = activeItems.reduce((s, i) => s + (i.split_kind !== "percent" ? Number(i.fixed_amount_brl || 0) : 0), 0);
   const committedInBrl = totalFixed + (netValue * totalPercent) / 100;
