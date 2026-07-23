@@ -107,7 +107,11 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
   const [products, setProducts] = useState<ProProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<ProProduct> | null>(null);
+  const [readOnly, setReadOnly] = useState(false);
+  const [readOnlyCreator, setReadOnlyCreator] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [coproduced, setCoproduced] = useState<Array<{ coproductionId: string; creatorName: string; splitKind: string; percentOfNet: number | null; fixedAmountBrl: number | null; product: ProProduct }>>([]);
+  const loadCoproducedFn = useServerFn(listCoproducedProducts);
 
   const load = async () => {
     setLoading(true);
@@ -118,8 +122,13 @@ export default function ProfessionalProductsPanel({ coachId }: { coachId: string
       .order("sort_order" as never, { ascending: true })
       .order("created_at" as never, { ascending: false });
     setProducts((data as unknown as ProProduct[]) || []);
+    try {
+      const r = await loadCoproducedFn({ data: { entityType: "professional", entityId: coachId } });
+      setCoproduced(r.items as any);
+    } catch { /* silently ignore */ }
     setLoading(false);
   };
+
 
   useEffect(() => { load(); }, [coachId]);
 
