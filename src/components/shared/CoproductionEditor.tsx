@@ -260,7 +260,7 @@ export function CoproductionEditor({
       {items.length === 0 && <p className="text-[11px] text-white/30">Nenhum coprodutor.</p>}
 
       {openModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setOpenModal(false)}>
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-xl p-4 space-y-3 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "#0F0F0F" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white">{editingId ? "Editar coprodutor" : "Novo coprodutor"}</h3>
