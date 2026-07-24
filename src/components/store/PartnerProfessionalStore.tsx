@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2, IdCard, Ticket, Package } from "lucide-react";
 import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
@@ -702,6 +703,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
                 <p className="text-xs text-white/50">Pedido {payOrder.number}</p>
               </div>
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white">Fechar</button>
+            </div>
+            <div className="mb-3">
+              <WalletPayButton
+                orderId={payOrder.id}
+                amount={payOrder.total}
+                kind="partner"
+                onPaid={() => setPayOrder(null)}
+              />
             </div>
             <MercadoPagoCheckout
               source={{ kind: "partner_product_order", id: payOrder.id }}

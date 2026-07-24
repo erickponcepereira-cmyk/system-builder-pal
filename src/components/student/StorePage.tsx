@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
@@ -1002,6 +1003,14 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
                 </div>
                 <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
               </div>
+              <div className="mb-3">
+                <WalletPayButton
+                  orderId={payOrder.id}
+                  amount={payOrder.total}
+                  kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
+                  onPaid={() => { const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
+                />
+              </div>
               <MercadoPagoCheckout
                 source={{ kind: payOrder.sourceKind, id: payOrder.id }}
                 amount={payOrder.total}
@@ -1498,6 +1507,14 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
                 <p className="text-xs text-muted-foreground">Pedido {payOrder.number}</p>
               </div>
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
+            </div>
+            <div className="mb-3">
+              <WalletPayButton
+                orderId={payOrder.id}
+                amount={payOrder.total}
+                kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
+                onPaid={() => { const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); if (coachMode) loadCoachData(); }}
+              />
             </div>
             <MercadoPagoCheckout
               source={{ kind: payOrder.sourceKind, id: payOrder.id }}
