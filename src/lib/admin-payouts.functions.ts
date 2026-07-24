@@ -982,13 +982,46 @@ export const registerManualPayout = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     if (!(data.amount > 0)) throw new Error("Informe um valor maior que zero");
 
-    const { data: w } = await supabaseAdmin
-      .from("wallets")
-      .select("available_balance")
-      .eq("profile_id", data.profileId)
-      .maybeSingle();
-    const available = n((w as { available_balance?: number } | null)?.available_balance);
-    if (available < data.amount) throw new Error(`Saldo disponível insuficiente (R$ ${available.toFixed(2)})`);
+    const [{ data: w }, { data: partnerRow }, { data: coachRow }] = await Promise.all([
+      supabaseAdmin
+        .from("wallets")
+        .select("available_balance")
+        .eq("profile_id", data.profileId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("partners" as never)
+        .select("id" as never)
+        .eq("profile_id" as never, data.profileId as never)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("coaches")
+        .select("id")
+        .eq("profile_id", data.profileId)
+        .maybeSingle(),
+    ]);
+    const partnerId = (partnerRow as unknown as { id?: string } | null)?.id ?? null;
+    const coachId = (coachRow as { id?: string } | null)?.id ?? null;
+    const [{ data: pw }, { data: profw }] = await Promise.all([
+      partnerId
+        ? supabaseAdmin
+          .from("partner_wallets" as never)
+          .select("available_balance" as never)
+          .eq("partner_id" as never, partnerId as never)
+          .maybeSingle()
+        : Promise.resolve({ data: null as unknown }),
+      coachId
+        ? supabaseAdmin
+          .from("professional_wallets" as never)
+          .select("available_balance" as never)
+          .eq("professional_coach_id" as never, coachId as never)
+          .maybeSingle()
+        : Promise.resolve({ data: null as unknown }),
+    ]);
+    const available =
+      n((w as { available_balance?: number } | null)?.available_balance) +
+      n((pw as { available_balance?: number } | null)?.available_balance) +
+      n((profw as { available_balance?: number } | null)?.available_balance);
+    if (available + 0.001 < data.amount) throw new Error(`Saldo disponível insuficiente (R$ ${available.toFixed(2)})`);
 
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("withdrawal_requests")
