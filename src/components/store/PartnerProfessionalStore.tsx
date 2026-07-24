@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { X, Loader2, ShoppingBag, TrendingUp, Eye, EyeOff, Share2, IdCard, Ticket, Package } from "lucide-react";
 import { ProductImageCarousel } from "@/components/ui/ProductImageCarousel";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { AvailabilityPicker } from "@/components/professional/AvailabilityPicker";
 import { computeFromCharge, type CoachCommissionPct } from "@/lib/partnerFinance";
 import { useMyReferralCode, shareReferralProduct } from "@/lib/useMyReferralCode";
