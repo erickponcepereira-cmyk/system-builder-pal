@@ -1003,6 +1003,14 @@ export function StorePage({ coachMode = false, hasUpline = false, audience }: St
                 </div>
                 <button onClick={() => setPayOrder(null)} className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-foreground">Fechar</button>
               </div>
+              <div className="mb-3">
+                <WalletPayButton
+                  orderId={payOrder.id}
+                  amount={payOrder.total}
+                  kind={payOrder.sourceKind === "store_order" ? "store" : "partner"}
+                  onPaid={() => { const ids = payOrder?.paidItemIds || []; setCart((c) => c.filter((it) => !ids.includes(it.id))); if (payOrder?.sourceKind === "store_order") setShipping(initialShipping); setPayOrder(null); load(); }}
+                />
+              </div>
               <MercadoPagoCheckout
                 source={{ kind: payOrder.sourceKind, id: payOrder.id }}
                 amount={payOrder.total}
