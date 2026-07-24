@@ -704,6 +704,14 @@ export function PartnerProfessionalStore({ kind, mode = "student", resellerStude
               </div>
               <button onClick={() => setPayOrder(null)} className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white">Fechar</button>
             </div>
+            <div className="mb-3">
+              <WalletPayButton
+                orderId={payOrder.id}
+                amount={payOrder.total}
+                kind="partner"
+                onPaid={() => setPayOrder(null)}
+              />
+            </div>
             <MercadoPagoCheckout
               source={{ kind: "partner_product_order", id: payOrder.id }}
               amount={payOrder.total}
