@@ -9311,6 +9311,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_subscription_id: string
+          wallet_debit_breakdown: Json
           wallet_source: string | null
         }
         Insert: {
@@ -9338,6 +9339,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_subscription_id: string
+          wallet_debit_breakdown?: Json
           wallet_source?: string | null
         }
         Update: {
@@ -9365,6 +9367,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_subscription_id?: string
+          wallet_debit_breakdown?: Json
           wallet_source?: string | null
         }
         Relationships: [
@@ -11248,6 +11251,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_subscription_id: string
+          wallet_debit_breakdown: Json
           wallet_source: string | null
         }
         SetofOptions: {
@@ -11299,6 +11303,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_subscription_id: string
+          wallet_debit_breakdown: Json
           wallet_source: string | null
         }
         SetofOptions: {
@@ -11426,6 +11431,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_subscription_id: string
+          wallet_debit_breakdown: Json
           wallet_source: string | null
         }
         SetofOptions: {
@@ -11462,6 +11468,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_subscription_id: string
+          wallet_debit_breakdown: Json
           wallet_source: string | null
         }
         SetofOptions: {
