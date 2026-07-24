@@ -5328,6 +5328,7 @@ export type Database = {
           upline_l1_coach_id: string | null
           upline_l2_coach_id: string | null
           upline_l3_coach_id: string | null
+          wallet_debit_breakdown: Json | null
         }
         Insert: {
           available_at?: string | null
@@ -5379,6 +5380,7 @@ export type Database = {
           upline_l1_coach_id?: string | null
           upline_l2_coach_id?: string | null
           upline_l3_coach_id?: string | null
+          wallet_debit_breakdown?: Json | null
         }
         Update: {
           available_at?: string | null
@@ -5430,6 +5432,7 @@ export type Database = {
           upline_l1_coach_id?: string | null
           upline_l2_coach_id?: string | null
           upline_l3_coach_id?: string | null
+          wallet_debit_breakdown?: Json | null
         }
         Relationships: [
           {
@@ -8371,6 +8374,7 @@ export type Database = {
           tax_amount: number
           total_amount: number
           updated_at: string
+          wallet_debit_breakdown: Json | null
         }
         Insert: {
           available_at?: string | null
@@ -8408,6 +8412,7 @@ export type Database = {
           tax_amount?: number
           total_amount?: number
           updated_at?: string
+          wallet_debit_breakdown?: Json | null
         }
         Update: {
           available_at?: string | null
@@ -8445,6 +8450,7 @@ export type Database = {
           tax_amount?: number
           total_amount?: number
           updated_at?: string
+          wallet_debit_breakdown?: Json | null
         }
         Relationships: [
           {
@@ -10918,6 +10924,10 @@ export type Database = {
       current_user_is_admin: { Args: never; Returns: boolean }
       current_user_is_master_coach: { Args: never; Returns: boolean }
       current_user_student_ids: { Args: never; Returns: string[] }
+      debit_user_wallets_cascade: {
+        Args: { _amount: number; _note: string; _profile_id: string }
+        Returns: Json
+      }
       enqueue_daily_student_reminders: { Args: never; Returns: number }
       enroll_student_in_competition: {
         Args: { _gender?: string; _student_id: string }
@@ -11187,6 +11197,14 @@ export type Database = {
       pay_nutritionist_available: {
         Args: { _notes?: string; _profile_id: string }
         Returns: number
+      }
+      pay_partner_order_with_wallet: {
+        Args: { _order_id: string }
+        Returns: Json
+      }
+      pay_store_order_with_wallet: {
+        Args: { _order_id: string }
+        Returns: Json
       }
       pick_professional_for_sale: {
         Args: {
@@ -11664,7 +11682,7 @@ export type Database = {
         | "director"
         | "senior_director"
         | "master_director"
-      payment_method: "credit_card" | "debit_card" | "pix"
+      payment_method: "credit_card" | "debit_card" | "pix" | "wallet"
       product_type:
         | "challenge"
         | "physical"
@@ -11929,7 +11947,7 @@ export const Constants = {
         "senior_director",
         "master_director",
       ],
-      payment_method: ["credit_card", "debit_card", "pix"],
+      payment_method: ["credit_card", "debit_card", "pix", "wallet"],
       product_type: [
         "challenge",
         "physical",
