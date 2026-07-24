@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { listProductsWithRealEarnings } from "@/lib/coach-network.functions";
 import { MercadoPagoCheckout } from "@/components/payments/MercadoPagoCheckout";
+import { WalletPayButton } from "@/components/payments/WalletPayButton";
 import { ProductDetailModal, type ProductDetail, type ProfessionalCard } from "@/components/store/ProductDetailModal";
 import { PartnerProfessionalStore } from "@/components/store/PartnerProfessionalStore";
 import { MasterCoachCommissionSelector } from "@/components/coach/MasterCoachCommissionSelector";
