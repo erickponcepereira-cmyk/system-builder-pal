@@ -109,7 +109,7 @@ export function OverviewTab({ coachId, coachName }: Props) {
     return <div className="flex justify-center p-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
-  const fullReferral = stats.referralLink || (stats.referralCode ? `${window.location.origin}/r/${stats.referralCode}` : "");
+  const fullReferral = stats.referralCode ? `${window.location.origin}/r/${stats.referralCode}` : "";
 
   const copyReferral = () => {
     if (!fullReferral) return;
