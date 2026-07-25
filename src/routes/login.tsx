@@ -33,12 +33,25 @@ function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  const getNextParam = (): string | null => {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (!raw) return null;
+    // Only allow same-origin relative paths.
+    return raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+  };
+
   useEffect(() => {
     let active = true;
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (active && session?.user) {
-        navigate({ to: "/portal-selector", replace: true });
+        const next = getNextParam();
+        if (next) {
+          window.location.replace(next);
+        } else {
+          navigate({ to: "/portal-selector", replace: true });
+        }
       }
     })();
     return () => { active = false; };
@@ -47,6 +60,11 @@ function LoginPage() {
 
   const goToPortalSelector = () => {
     sessionStorage.removeItem("fitmind_selected_area");
+    const next = getNextParam();
+    if (next) {
+      window.location.replace(next);
+      return;
+    }
     navigate({ to: "/portal-selector", replace: true });
   };
 
