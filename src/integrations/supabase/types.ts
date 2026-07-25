@@ -7830,6 +7830,7 @@ export type Database = {
           is_master_admin: boolean
           is_test: boolean
           last_app_login_at: string | null
+          must_reset_password: boolean
           name: string
           neighborhood: string | null
           number: string | null
@@ -7866,6 +7867,7 @@ export type Database = {
           is_master_admin?: boolean
           is_test?: boolean
           last_app_login_at?: string | null
+          must_reset_password?: boolean
           name: string
           neighborhood?: string | null
           number?: string | null
@@ -7902,6 +7904,7 @@ export type Database = {
           is_master_admin?: boolean
           is_test?: boolean
           last_app_login_at?: string | null
+          must_reset_password?: boolean
           name?: string
           neighborhood?: string | null
           number?: string | null

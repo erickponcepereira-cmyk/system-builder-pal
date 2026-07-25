@@ -70,6 +70,10 @@ function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        await supabase.from("profiles").update({ must_reset_password: false }).eq("user_id", userData.user.id);
+      }
       toast.success("Senha redefinida com sucesso! Faça login com sua nova senha.");
       await supabase.auth.signOut().catch(() => {});
       navigate({ to: "/login" });
