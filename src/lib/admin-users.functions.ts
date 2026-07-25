@@ -19,17 +19,27 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
       throw new Error("Você não pode excluir o próprio cadastro.");
     }
 
-    // 1) Clean dependents (RLS-scoped via the user's session client is fine,
-    //    function is SECURITY DEFINER but checks admin role internally).
+    // 1) Clean dependents first.
     const { error: purgeError } = await context.supabase.rpc(
       "admin_purge_user_dependents" as never,
       { _user_id: data.userId } as never,
     );
     if (purgeError) throw new Error("Falha ao limpar dependências: " + purgeError.message);
 
-    // 2) Delete the auth user — cascades to profiles/students/coaches.
+    // 2) Try normal GoTrue delete.
     const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
-    if (delErr) throw new Error("Falha ao remover usuário: " + delErr.message);
+    if (delErr) {
+      // 3) Fallback: hard delete via SECURITY DEFINER that bypasses GoTrue.
+      const { error: hardErr } = await supabaseAdmin.rpc(
+        "admin_hard_delete_user" as never,
+        { _user_id: data.userId } as never,
+      );
+      if (hardErr) {
+        throw new Error(
+          "Falha ao remover usuário: " + delErr.message + " | fallback: " + hardErr.message,
+        );
+      }
+    }
 
     return { ok: true };
   });

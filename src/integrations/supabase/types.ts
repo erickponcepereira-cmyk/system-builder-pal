@@ -10703,6 +10703,7 @@ export type Database = {
         Args: { _new_coach_id: string; _student_id: string }
         Returns: undefined
       }
+      admin_hard_delete_user: { Args: { _user_id: string }; Returns: Json }
       admin_mark_student_withdrawal_paid: {
         Args: {
           _admin_user_id: string
