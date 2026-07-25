@@ -85,6 +85,17 @@ function LoginPage() {
       }
 
       if (data.user) {
+        // Check if user must reset password
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("must_reset_password")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (profile?.must_reset_password) {
+          toast.info("Por segurança, defina uma nova senha para continuar.");
+          navigate({ to: "/reset-password" });
+          return;
+        }
         toast.success("Login realizado com sucesso!");
         goToPortalSelector();
       } else {
