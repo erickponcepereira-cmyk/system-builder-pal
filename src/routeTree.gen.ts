@@ -21,6 +21,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -39,6 +40,8 @@ import { Route as AuthenticatedPartnerRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedCoachRouteImport } from './routes/_authenticated/coach'
 import { Route as AuthenticatedAssinaturaRouteImport } from './routes/_authenticated/assinatura'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedStudentWorkoutRouteImport } from './routes/_authenticated/student.workout'
@@ -118,6 +121,7 @@ import { Route as AuthenticatedAdminCalendarsRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminAssessmentDeletionsRouteImport } from './routes/_authenticated/admin.assessment-deletions'
 import { Route as AuthenticatedAdminAdminWalletRouteImport } from './routes/_authenticated/admin.admin-wallet'
 import { Route as AuthenticatedAdminAchievementsRouteImport } from './routes/_authenticated/admin.achievements'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicPayOrderNumberRouteImport } from './routes/api.public.pay.$orderNumber'
 import { Route as ApiPublicMpWebhookRouteImport } from './routes/api.public.mp.webhook'
 import { Route as ApiPublicInviteTokenRouteImport } from './routes/api.public.invite.$token'
@@ -187,6 +191,11 @@ const PendingApprovalRoute = PendingApprovalRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -280,6 +289,18 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedStudentIndexRoute =
   AuthenticatedStudentIndexRouteImport.update({
     id: '/',
@@ -751,6 +772,12 @@ const AuthenticatedAdminAchievementsRoute =
     path: '/achievements',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPayOrderNumberRoute = ApiPublicPayOrderNumberRouteImport.update({
   id: '/api/public/pay/$orderNumber',
   path: '/api/public/pay/$orderNumber',
@@ -811,6 +838,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -823,6 +851,8 @@ export interface FileRoutesByFullPath {
   '/termos-compra': typeof TermosCompraRoute
   '/termos-parceiro': typeof TermosParceiroRoute
   '/termos-profissional': typeof TermosProfissionalRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
@@ -837,6 +867,7 @@ export interface FileRoutesByFullPath {
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -931,6 +962,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -943,6 +975,8 @@ export interface FileRoutesByTo {
   '/termos-compra': typeof TermosCompraRoute
   '/termos-parceiro': typeof TermosParceiroRoute
   '/termos-profissional': typeof TermosProfissionalRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/assinatura': typeof AuthenticatedAssinaturaRoute
   '/coach': typeof AuthenticatedCoachRoute
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
@@ -955,6 +989,7 @@ export interface FileRoutesByTo {
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -1051,6 +1086,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/pending-approval': typeof PendingApprovalRoute
   '/privacidade': typeof PrivacidadeRoute
@@ -1063,6 +1099,8 @@ export interface FileRoutesById {
   '/termos-compra': typeof TermosCompraRoute
   '/termos-parceiro': typeof TermosParceiroRoute
   '/termos-profissional': typeof TermosProfissionalRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/assinatura': typeof AuthenticatedAssinaturaRoute
   '/_authenticated/coach': typeof AuthenticatedCoachRoute
@@ -1077,6 +1115,7 @@ export interface FileRoutesById {
   '/pay/$orderNumber': typeof PayOrderNumberRoute
   '/r/$code': typeof RCodeRoute
   '/resultado/$token': typeof ResultadoTokenRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/achievements': typeof AuthenticatedAdminAchievementsRoute
   '/_authenticated/admin/admin-wallet': typeof AuthenticatedAdminAdminWalletRoute
   '/_authenticated/admin/assessment-deletions': typeof AuthenticatedAdminAssessmentDeletionsRoute
@@ -1173,6 +1212,7 @@ export interface FileRouteTypes {
     | '/'
     | '/become-partner'
     | '/login'
+    | '/mcp'
     | '/onboarding'
     | '/pending-approval'
     | '/privacidade'
@@ -1185,6 +1225,8 @@ export interface FileRouteTypes {
     | '/termos-compra'
     | '/termos-parceiro'
     | '/termos-profissional'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/assinatura'
     | '/coach'
@@ -1199,6 +1241,7 @@ export interface FileRouteTypes {
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/resultado/$token'
+    | '/.mcp/invoke-tool/$tool'
     | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
@@ -1293,6 +1336,7 @@ export interface FileRouteTypes {
     | '/'
     | '/become-partner'
     | '/login'
+    | '/mcp'
     | '/onboarding'
     | '/pending-approval'
     | '/privacidade'
@@ -1305,6 +1349,8 @@ export interface FileRouteTypes {
     | '/termos-compra'
     | '/termos-parceiro'
     | '/termos-profissional'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/assinatura'
     | '/coach'
     | '/partner'
@@ -1317,6 +1363,7 @@ export interface FileRouteTypes {
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/resultado/$token'
+    | '/.mcp/invoke-tool/$tool'
     | '/admin/achievements'
     | '/admin/admin-wallet'
     | '/admin/assessment-deletions'
@@ -1412,6 +1459,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/become-partner'
     | '/login'
+    | '/mcp'
     | '/onboarding'
     | '/pending-approval'
     | '/privacidade'
@@ -1424,6 +1472,8 @@ export interface FileRouteTypes {
     | '/termos-compra'
     | '/termos-parceiro'
     | '/termos-profissional'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
     | '/_authenticated/assinatura'
     | '/_authenticated/coach'
@@ -1438,6 +1488,7 @@ export interface FileRouteTypes {
     | '/pay/$orderNumber'
     | '/r/$code'
     | '/resultado/$token'
+    | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/achievements'
     | '/_authenticated/admin/admin-wallet'
     | '/_authenticated/admin/assessment-deletions'
@@ -1534,6 +1585,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   BecomePartnerRoute: typeof BecomePartnerRoute
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
   OnboardingRoute: typeof OnboardingRoute
   PendingApprovalRoute: typeof PendingApprovalRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
@@ -1546,6 +1598,8 @@ export interface RootRouteChildren {
   TermosCompraRoute: typeof TermosCompraRoute
   TermosParceiroRoute: typeof TermosParceiroRoute
   TermosProfissionalRoute: typeof TermosProfissionalRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1553,6 +1607,7 @@ export interface RootRouteChildren {
   PayOrderNumberRoute: typeof PayOrderNumberRoute
   RCodeRoute: typeof RCodeRoute
   ResultadoTokenRoute: typeof ResultadoTokenRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiOauthGoogleCallbackRoute: typeof ApiOauthGoogleCallbackRoute
   ApiOauthGoogleStartRoute: typeof ApiOauthGoogleStartRoute
   ApiPublicCareerResetExpiredRoute: typeof ApiPublicCareerResetExpiredRoute
@@ -1646,6 +1701,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1773,6 +1835,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/student/': {
       id: '/_authenticated/student/'
@@ -2327,6 +2403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAchievementsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pay/$orderNumber': {
       id: '/api/public/pay/$orderNumber'
       path: '/api/public/pay/$orderNumber'
@@ -2695,6 +2778,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   BecomePartnerRoute: BecomePartnerRoute,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
   OnboardingRoute: OnboardingRoute,
   PendingApprovalRoute: PendingApprovalRoute,
   PrivacidadeRoute: PrivacidadeRoute,
@@ -2707,6 +2791,9 @@ const rootRouteChildren: RootRouteChildren = {
   TermosCompraRoute: TermosCompraRoute,
   TermosParceiroRoute: TermosParceiroRoute,
   TermosProfissionalRoute: TermosProfissionalRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,
@@ -2714,6 +2801,7 @@ const rootRouteChildren: RootRouteChildren = {
   PayOrderNumberRoute: PayOrderNumberRoute,
   RCodeRoute: RCodeRoute,
   ResultadoTokenRoute: ResultadoTokenRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiOauthGoogleCallbackRoute: ApiOauthGoogleCallbackRoute,
   ApiOauthGoogleStartRoute: ApiOauthGoogleStartRoute,
   ApiPublicCareerResetExpiredRoute: ApiPublicCareerResetExpiredRoute,
