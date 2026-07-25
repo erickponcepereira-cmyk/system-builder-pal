@@ -5595,7 +5595,7 @@ export type Database = {
           network_l2_amount: number | null
           network_l3_amount: number | null
           original_price: number | null
-          partner_id: string
+          partner_id: string | null
           partner_net_amount: number | null
           pix_fee_percentage: number
           price: number | null
@@ -5651,7 +5651,7 @@ export type Database = {
           network_l2_amount?: number | null
           network_l3_amount?: number | null
           original_price?: number | null
-          partner_id: string
+          partner_id?: string | null
           partner_net_amount?: number | null
           pix_fee_percentage?: number
           price?: number | null
@@ -5707,7 +5707,7 @@ export type Database = {
           network_l2_amount?: number | null
           network_l3_amount?: number | null
           original_price?: number | null
-          partner_id?: string
+          partner_id?: string | null
           partner_net_amount?: number | null
           pix_fee_percentage?: number
           price?: number | null
@@ -7326,7 +7326,7 @@ export type Database = {
           category_id: string | null
           coach_commission_amount: number | null
           coach_commission_percentage: number
-          coach_id: string
+          coach_id: string | null
           created_at: string
           creator_pct_override: number | null
           custom_split: boolean
@@ -7391,7 +7391,7 @@ export type Database = {
           category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
-          coach_id: string
+          coach_id?: string | null
           created_at?: string
           creator_pct_override?: number | null
           custom_split?: boolean
@@ -7456,7 +7456,7 @@ export type Database = {
           category_id?: string | null
           coach_commission_amount?: number | null
           coach_commission_percentage?: number
-          coach_id?: string
+          coach_id?: string | null
           created_at?: string
           creator_pct_override?: number | null
           custom_split?: boolean
