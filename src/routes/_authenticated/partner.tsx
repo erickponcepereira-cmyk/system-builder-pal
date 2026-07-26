@@ -1564,9 +1564,10 @@ function ProfilePanel({ partner, onReload }: { partner: Partner; onReload: () =>
   const save = async () => {
     setSaving(true);
     const { id, profile_id, status, ...up } = form;
-    const { error } = await supabase.from("partners" as never).update(up as never).eq("id" as never, partner.id);
+    const { data: row, error } = await supabase.from("partners" as never).update(up as never).eq("id" as never, partner.id).select("id" as never).maybeSingle();
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { console.error("partner save error", error); return toast.error(error.message); }
+    if (!row) { console.error("partner save 0 rows", partner.id); return toast.error("Nada foi salvo — verifique sua sessão."); }
     toast.success("Perfil atualizado"); onReload();
   };
 

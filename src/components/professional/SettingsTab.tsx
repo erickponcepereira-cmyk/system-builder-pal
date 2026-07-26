@@ -113,8 +113,8 @@ export function SettingsTab({ coachId, profileId }: Props) {
 
   const saveProfile = async () => {
     setSaving(true);
-    const { error: e1 } = await supabase.from("profiles").update({ bio: profileBio.slice(0, 2000) }).eq("id", profileId);
-    const { error: e2 } = await supabase
+    const { data: r1, error: e1 } = await supabase.from("profiles").update({ bio: profileBio.slice(0, 2000) }).eq("id", profileId).select("id").maybeSingle();
+    const { data: r2, error: e2 } = await supabase
       .from("professional_public_profile" as never)
       .upsert({
         profile_id: profileId,
@@ -127,9 +127,12 @@ export function SettingsTab({ coachId, profileId }: Props) {
         specializations: pub.specializations.slice(0, 30).map((t) => t.slice(0, 60)),
         cover_url: pub.cover_url,
         public_whatsapp: pub.public_whatsapp.slice(0, 30) || null,
-      } as never, { onConflict: "profile_id" } as never);
+      } as never, { onConflict: "profile_id" } as never)
+      .select("profile_id" as never)
+      .maybeSingle();
     setSaving(false);
-    if (e1 || e2) return toast.error(e1?.message || e2?.message || "Erro ao salvar");
+    if (e1 || e2) { console.error("professional saveProfile error", { e1, e2 }); return toast.error(e1?.message || e2?.message || "Erro ao salvar"); }
+    if (!r1 || !r2) { console.error("professional saveProfile 0 rows", { r1, r2 }); return toast.error("Nada foi salvo — verifique sua sessão."); }
     toast.success("Perfil público salvo");
   };
 
