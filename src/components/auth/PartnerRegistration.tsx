@@ -431,6 +431,9 @@ export function PartnerRegistration({ onBack, mode = "auto" }: { onBack: () => v
                 {!(existingEmailMode && !authProfile) && (
                   <PasswordStrengthMeter password={password} email={email} name={responsibleName} />
                 )}
+                {formError && /senha|password/i.test(formError) && (
+                  <p className="text-[11px] font-medium text-destructive">{formError}</p>
+                )}
               </div>
             )}
 

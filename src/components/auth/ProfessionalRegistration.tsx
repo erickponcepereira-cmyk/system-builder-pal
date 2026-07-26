@@ -421,6 +421,9 @@ export function ProfessionalRegistration({ onBack }: { onBack: () => void }) {
                   </button>
                 </div>
                 {!existingMode && <PasswordStrengthMeter password={password} email={email} name={name} />}
+                {formError && /senha|password/i.test(formError) && (
+                  <p className="text-[11px] font-medium text-destructive">{formError}</p>
+                )}
               </div>
               {!existingMode && (
                 <div className="space-y-2">
