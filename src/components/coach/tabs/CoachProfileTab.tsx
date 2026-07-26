@@ -91,10 +91,11 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     if (upErr) { setUploading(false); toast.error("Erro ao enviar foto"); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = pub.publicUrl;
-    const { error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", coach.profileId);
+    const { data: avatarRow, error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", coach.profileId).select("id").maybeSingle();
     setUploading(false);
     setPendingAvatar(null);
-    if (updErr) { toast.error("Erro ao salvar foto no perfil"); return; }
+    if (updErr) { console.error("avatar save error", updErr); toast.error("Erro ao salvar foto no perfil"); return; }
+    if (!avatarRow) { console.error("avatar save 0 rows", coach.profileId); toast.error("Não foi possível salvar a foto — verifique sua sessão."); return; }
     onLocalChange({ ...coach, avatarUrl: url });
     toast.success("Foto atualizada");
     onSaved();
