@@ -111,7 +111,7 @@ function EditProfilePage() {
       if (authErr) { setSaving(false); return toast.error(`Não foi possível atualizar e-mail: ${authErr.message}`); }
       toast.message("Confirme o novo e-mail na sua caixa de entrada para concluir a troca.");
     }
-    const { error } = await supabase.from("profiles").update({
+    const { data: updated, error } = await supabase.from("profiles").update({
       name: form.name.trim().slice(0, 255),
       email: newEmail,
       phone: form.phone.slice(0, 20) || null,
@@ -122,9 +122,10 @@ function EditProfilePage() {
       birthdate: form.birthdate || null,
       bio: form.bio.trim().slice(0, 500) || null,
       photo_url: form.photo_url || null,
-    } as never).eq("id", profileId);
+    } as never).eq("id", profileId).eq("user_id", userId ?? "").select("id").maybeSingle();
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { console.error("profile update error", error); return toast.error(error.message); }
+    if (!updated) { console.error("profile update affected 0 rows", { profileId, userId }); return toast.error("Não foi possível salvar — verifique sua sessão e tente novamente."); }
     toast.success("Perfil atualizado!");
     navigate({ to: "/student/profile" });
   };
