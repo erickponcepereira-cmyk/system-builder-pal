@@ -10875,24 +10875,15 @@ export type Database = {
             }
             Returns: string
           }
-      create_partner_product_order:
-        | {
-            Args: {
-              _buyer_student_id?: string
-              _payment_method?: string
-              _professional_product_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _buyer_student_id?: string
-              _payment_method?: string
-              _professional_product_id: string
-              _referred_by_student_id?: string
-            }
-            Returns: string
-          }
+      create_partner_product_order: {
+        Args: {
+          _buyer_student_id?: string
+          _payment_method?: string
+          _professional_product_id: string
+          _referred_by_student_id?: string
+        }
+        Returns: string
+      }
       create_scheduled_professional_order:
         | {
             Args: {
