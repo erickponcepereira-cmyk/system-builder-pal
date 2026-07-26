@@ -1,28 +1,35 @@
-## Diagnóstico
+## O erro que aparece
 
-- Perfil da Narah Reis (`3d2c7b3b-…765253`) está `active`, com `user_subscriptions` `active`, `billing_day=5`, forma preferida `wallet`.
-- Fatura de **junho/2026** (`c0d35e10-…`) foi definida como `cancelled` em 06/07/2026, **sem registro em `subscription_payment_log` nem em `subscription_invoice_audit`** — não veio de `admin_skip_invoice` nem `postpone_subscription_invoice`. Provável cancelamento manual antigo direto no banco.
-- Fatura de **julho/2026** (`12edaa21-…`, R$ 100, venceu 05/07) foi promovida para status **`blocked`** em 09/07 pela função automática `mark_overdue_invoices` (grace_days = 3). `is_user_blocked_by_subscription` retorna `true` para ela — por isso o painel exibe a mensalidade como bloqueada/"cancelada".
+Não é sobre senha fraca. A mensagem `new row violates row-level security policy for table "entity_share_codes"` acontece **depois** que a empresa é salva: um trigger tenta gerar automaticamente o código de compartilhamento do parceiro (`entity_share_codes`) e a política RLS dessa tabela bloqueia a inserção.
+
+**Causa raiz:** o trigger `ensure_partner_share_code` (e o equivalente para coach) roda como o usuário logado, e a política exige `partners.profile_id = auth.uid()`. Só que `partners.profile_id` guarda o `profiles.id`, não o `auth.users.id`. Então o WITH CHECK nunca passa e todo cadastro de parceiro que dispara o trigger quebra. Foi por isso que só a Karla travou agora — o fluxo "Já sou parceiro" cai direto na inserção via cliente e ativa o trigger.
 
 ## Correção
 
-Vou usar a insert tool para executar um único bloco transacional que:
+1. Migration nova:
+   - Marcar `public.ensure_partner_share_code()` e `public.ensure_coach_share_code()` como `SECURITY DEFINER` com `SET search_path = public` (elas já usam `ON CONFLICT DO NOTHING`, então continuam idempotentes e seguras).
+   - Rodar um backfill para gerar códigos que faltaram por causa do bug (`INSERT ... SELECT` nas duas tabelas com `ON CONFLICT DO NOTHING`).
+2. Melhoria de UX no formulário do parceiro (`PartnerRegistration.tsx`) e do profissional (`ProfessionalRegistration.tsx`):
+   - Traduzir mensagens comuns em `translateAuthError` / erros de RLS para português amigável ("Não foi possível concluir o cadastro. Tente novamente ou fale com o suporte.").
+   - Especificamente para senha fraca (`Password should be at least`, `weak_password`, `password is too short`), mostrar embaixo do campo de senha uma mensagem em português: "Senha muito fraca. Use pelo menos 8 caracteres com letras e números."
+   - Já existe `PasswordStrengthMeter`; adicionar o `formError` também abaixo do campo quando for erro de senha, para a pessoa ver onde corrigir.
 
-1. Atualiza a fatura de julho da Narah:
-   - `status = 'pending'`
-   - `due_date = CURRENT_DATE + 7`  (novo vencimento)
-   - `notes = 'Reaberta manualmente pelo admin'`
-   - `updated_at = now()`
-2. Registra a mudança em `subscription_invoice_audit` (`action='reopen'`, `from_status='blocked'`, `to_status='pending'`, meta com motivo e novo vencimento).
-3. Registra em `subscription_payment_log` (`action='postponed'`, details com previous/new due date), para aparecer no histórico do admin.
+## Detalhes técnicos
 
-Filtro rígido por `id = '12edaa21-f3f6-4cb2-9849-cc7afa9bea20'` para não tocar outras faturas. Não mexo na fatura de junho (o usuário escolheu apenas reabrir julho).
-
-## Verificação
-
-Após aplicar, rodar `SELECT status, due_date, updated_at FROM subscription_invoices WHERE id='12edaa21…'` e `SELECT is_user_blocked_by_subscription('5f6355a5-…602')` para confirmar `pending` + `false`.
-
-## Fora do escopo
-
-- Não vou investigar/desbloquear a raiz do cancelamento de junho (sem log; usuário optou por não reemitir).
-- Não vou alterar o job `mark_overdue_invoices` — o comportamento automático de bloquear inadimplentes deve continuar valendo para os demais alunos.
+- SQL principal:
+  ```sql
+  CREATE OR REPLACE FUNCTION public.ensure_partner_share_code() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ ... $$;
+  CREATE OR REPLACE FUNCTION public.ensure_coach_share_code() RETURNS trigger
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ ... $$;
+  ```
+- Backfill:
+  ```sql
+  INSERT INTO public.entity_share_codes (owner_type, owner_id, code)
+    SELECT 'partner', id, public.generate_entity_share_code() FROM public.partners
+    ON CONFLICT DO NOTHING;
+  INSERT INTO public.entity_share_codes (owner_type, owner_id, code)
+    SELECT 'professional', id, public.generate_entity_share_code() FROM public.coaches
+    ON CONFLICT DO NOTHING;
+  ```
+- Frontend: adicionar detector de erro de senha em `translateAuthError` e exibir `passwordError` inline no campo (Partner e Professional). Nenhuma outra tela é afetada.
