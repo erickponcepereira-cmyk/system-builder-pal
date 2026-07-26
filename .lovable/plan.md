@@ -1,33 +1,28 @@
-## Problema
+## Diagnóstico
 
-O "Editar perfil" do aluno em `src/routes/_authenticated/student.profile.edit.tsx` executa `supabase.from("profiles").update({...}).eq("id", profileId)` **sem `.select()`**. Se a atualização não atingir nenhuma linha (por RLS, id incorreto ou trigger silencioso), o PostgREST retorna 204 sem erro, o toast diz "Perfil atualizado!" e o usuário é redirecionado — mas nada foi persistido. É exatamente o sintoma reportado (aparenta salvar, mas não salva).
-
-Os outros três painéis apresentam a mesma armadilha:
-- **Coach** (`src/components/coach/tabs/CoachProfileTab.tsx`): `update(...).eq("id", coach.profileId)` em `profiles` e `coaches`, sem `.select()`.
-- **Profissional** (`src/components/professional/SettingsTab.tsx`): `update(...).eq("id", profileId)` em `profiles` + `upsert` em `professional_public_profile`, sem `.select()`.
-- **Parceiro** (`ProfilePanel` dentro de `src/routes/_authenticated/partner.tsx`): a confirmar mesmo padrão de update sem verificação.
+- Perfil da Narah Reis (`3d2c7b3b-…765253`) está `active`, com `user_subscriptions` `active`, `billing_day=5`, forma preferida `wallet`.
+- Fatura de **junho/2026** (`c0d35e10-…`) foi definida como `cancelled` em 06/07/2026, **sem registro em `subscription_payment_log` nem em `subscription_invoice_audit`** — não veio de `admin_skip_invoice` nem `postpone_subscription_invoice`. Provável cancelamento manual antigo direto no banco.
+- Fatura de **julho/2026** (`12edaa21-…`, R$ 100, venceu 05/07) foi promovida para status **`blocked`** em 09/07 pela função automática `mark_overdue_invoices` (grace_days = 3). `is_user_blocked_by_subscription` retorna `true` para ela — por isso o painel exibe a mensalidade como bloqueada/"cancelada".
 
 ## Correção
 
-1. **Aluno — `student.profile.edit.tsx`**
-   - Trocar o update por `.update({...}).eq("id", profileId).eq("user_id", userId).select("id").maybeSingle()`.
-   - Se retornar `null` (0 linhas), mostrar toast de erro real ("Não foi possível salvar — sessão/RLS") em vez de sucesso, e **não** navegar.
-   - Manter o fluxo de troca de email (auth.updateUser) como está, apenas garantindo que a mensagem de "confirme o novo e-mail" só apareça após o update do profile ter retornado linha.
+Vou usar a insert tool para executar um único bloco transacional que:
 
-2. **Coach — `CoachProfileTab.tsx`**
-   - Adicionar `.select("id").maybeSingle()` nos dois updates (`profiles` e `coaches`).
-   - Só chamar `onLocalChange` / `onSaved` se ambos retornarem linha; caso contrário, toast de erro específico.
+1. Atualiza a fatura de julho da Narah:
+   - `status = 'pending'`
+   - `due_date = CURRENT_DATE + 7`  (novo vencimento)
+   - `notes = 'Reaberta manualmente pelo admin'`
+   - `updated_at = now()`
+2. Registra a mudança em `subscription_invoice_audit` (`action='reopen'`, `from_status='blocked'`, `to_status='pending'`, meta com motivo e novo vencimento).
+3. Registra em `subscription_payment_log` (`action='postponed'`, details com previous/new due date), para aparecer no histórico do admin.
 
-3. **Profissional — `SettingsTab.tsx`**
-   - `.select("id").maybeSingle()` no update de `profiles` e no `upsert` de `professional_public_profile`.
-   - Idem para `uploadAvatar` (hoje ignora o retorno do update de `avatar_url`).
+Filtro rígido por `id = '12edaa21-f3f6-4cb2-9849-cc7afa9bea20'` para não tocar outras faturas. Não mexo na fatura de junho (o usuário escolheu apenas reabrir julho).
 
-4. **Parceiro — `ProfilePanel` em `partner.tsx`**
-   - Ler a função (linha ~1545) e aplicar o mesmo padrão nos updates de `profiles` e `partners`.
+## Verificação
 
-5. **Verificação** — após implementar, rodar Playwright headless logado como aluno de teste, editar nome/bio, recarregar a página e conferir via `supabase--read_query` se os valores realmente foram gravados; repetir para coach, profissional e parceiro.
+Após aplicar, rodar `SELECT status, due_date, updated_at FROM subscription_invoices WHERE id='12edaa21…'` e `SELECT is_user_blocked_by_subscription('5f6355a5-…602')` para confirmar `pending` + `false`.
 
 ## Fora do escopo
 
-- Não mexer em RLS de `profiles` (a policy `profiles_own_update` está correta).
-- Não alterar UI/layout dos formulários; apenas robustez do save.
+- Não vou investigar/desbloquear a raiz do cancelamento de junho (sem log; usuário optou por não reemitir).
+- Não vou alterar o job `mark_overdue_invoices` — o comportamento automático de bloquear inadimplentes deve continuar valendo para os demais alunos.
