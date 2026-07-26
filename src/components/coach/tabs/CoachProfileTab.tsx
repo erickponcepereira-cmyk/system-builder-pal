@@ -64,15 +64,16 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     if (!coach) return;
     if (!form.name.trim()) return toast.error("Informe seu nome para salvar o perfil");
     setSaving(true);
-    const { error: profileError } = await supabase.from("profiles").update({ name: form.name.trim(), phone: form.phone.trim() || null, city: form.city.trim() || null, state: form.state.trim() || null, bio: form.bio.trim() || null }).eq("id", coach.profileId);
-    const { error: coachError } = await supabase.from("coaches").update({
+    const { data: profileRow, error: profileError } = await supabase.from("profiles").update({ name: form.name.trim(), phone: form.phone.trim() || null, city: form.city.trim() || null, state: form.state.trim() || null, bio: form.bio.trim() || null }).eq("id", coach.profileId).select("id").maybeSingle();
+    const { data: coachRow, error: coachError } = await supabase.from("coaches").update({
       pix_key: form.pix_key.trim() || null, pix_key_type: form.pix_key_type || null,
       instagram: form.instagram.trim() || null, facebook: form.facebook.trim() || null,
       youtube: form.youtube.trim() || null, tiktok: form.tiktok.trim() || null,
       website: form.website.trim() || null,
-    } as never).eq("id", coach.coachId);
+    } as never).eq("id", coach.coachId).select("id").maybeSingle();
     setSaving(false);
-    if (profileError || coachError) return toast.error("Não foi possível salvar. Verifique os dados e tente novamente.");
+    if (profileError || coachError) { console.error("coach save errors", { profileError, coachError }); return toast.error("Não foi possível salvar. Verifique os dados e tente novamente."); }
+    if (!profileRow || !coachRow) { console.error("coach save 0 rows", { profileRow, coachRow }); return toast.error("Nada foi salvo — verifique sua sessão."); }
     onLocalChange({ ...coach, name: form.name.trim(), phone: form.phone.trim(), city: form.city.trim(), state: form.state.trim(), bio: form.bio.trim() });
     toast.success("Perfil atualizado");
     onSaved();
@@ -90,10 +91,11 @@ export function CoachProfileTab({ coach, onSaved, onLocalChange }: { coach: Coac
     if (upErr) { setUploading(false); toast.error("Erro ao enviar foto"); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = pub.publicUrl;
-    const { error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", coach.profileId);
+    const { data: avatarRow, error: updErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", coach.profileId).select("id").maybeSingle();
     setUploading(false);
     setPendingAvatar(null);
-    if (updErr) { toast.error("Erro ao salvar foto no perfil"); return; }
+    if (updErr) { console.error("avatar save error", updErr); toast.error("Erro ao salvar foto no perfil"); return; }
+    if (!avatarRow) { console.error("avatar save 0 rows", coach.profileId); toast.error("Não foi possível salvar a foto — verifique sua sessão."); return; }
     onLocalChange({ ...coach, avatarUrl: url });
     toast.success("Foto atualizada");
     onSaved();
