@@ -91,7 +91,9 @@ export function SettingsTab({ coachId, profileId }: Props) {
     if (upErr) { toast.error(upErr.message); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     setAvatarUrl(pub.publicUrl);
-    await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("id", profileId);
+    const { data: row, error: updErr } = await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("id", profileId).select("id").maybeSingle();
+    if (updErr) { console.error("avatar update error", updErr); toast.error(updErr.message); return; }
+    if (!row) { console.error("avatar update 0 rows", profileId); toast.error("Foto não gravada — verifique sua sessão."); return; }
     setPendingAvatar(null);
     toast.success("Foto atualizada");
   };
