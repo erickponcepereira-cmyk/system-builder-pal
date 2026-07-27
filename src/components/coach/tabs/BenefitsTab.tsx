@@ -23,6 +23,7 @@ type PartnerFreeProduct = {
   benefit_start_time: string | null;
   benefit_end_time: string | null;
   weekly_limit_per_student: number | null;
+  uses_scheduling: boolean | null;
   redemption_location_name: string | null;
   redemption_location_url: string | null;
   partner_id: string;
