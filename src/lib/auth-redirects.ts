@@ -1,4 +1,4 @@
-const OFFICIAL_ORIGIN = "https://fitmindclub.com.br";
+export const OFFICIAL_ORIGIN = "https://fitmindclub.com.br";
 
 function isLocalOrPreview(hostname: string) {
   return (
@@ -14,4 +14,8 @@ export function getAuthRedirectUrl(path: `/${string}`) {
   const { hostname, origin } = window.location;
   const base = isLocalOrPreview(hostname) ? origin : OFFICIAL_ORIGIN;
   return `${base}${path}`;
+}
+
+export function getPublicAppUrl(path: `/${string}` = "/") {
+  return `${OFFICIAL_ORIGIN}${path}`;
 }

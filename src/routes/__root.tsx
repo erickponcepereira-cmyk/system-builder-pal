@@ -94,7 +94,7 @@ function RootComponent() {
   useEffect(() => {
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
-    // Depois da troca de domínio para fitmindclub.com.br, o Supabase passa a
+    // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
     // entregar o token na RAIZ do site (hash `#access_token=...&type=recovery`
     // ou query `?code=...`). Sem este handler o usuário caía na home e o link
     // "não funcionava". Aqui interceptamos, criamos a sessão e mandamos para
