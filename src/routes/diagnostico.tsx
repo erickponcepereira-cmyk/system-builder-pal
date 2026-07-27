@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Copy, Globe2, Loader2, RefreshCw, ShieldAlert, Trash2, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -211,7 +212,7 @@ function DiagnosticsPage() {
   );
 }
 
-function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function InfoItem({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2 text-primary [&_svg]:h-4 [&_svg]:w-4">{icon}<span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span></div>
