@@ -132,20 +132,21 @@ function ReferralLandingPage() {
           navigate({ to: "/student/store" });
           return;
         }
-        // intenção explícita de cadastro
-        if (destinoPedido === "cadastro") {
-          navigate({ to: "/register" });
-          return;
-        }
         // link de produto. Hoje só `products` tem permalink público;
         // partner/professional caem na loja até ganharem página própria.
         if (productId && productKind === "challenge") {
           navigate({ to: "/produto/$id", params: { id: productId } });
           return;
         }
-        // padrão: loja pública, não formulário
-        navigate({ to: "/loja" });
+        // link explícito da loja vinculada ao indicador
+        if (destinoPedido === "loja" || (productId && !productKind)) {
+          navigate({ to: "/loja" });
+          return;
+        }
+        // padrão do link de indicação: cadastro com o indicador travado
+        navigate({ to: "/register" });
       }, 900);
+
 
 
 
