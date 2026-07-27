@@ -35,7 +35,7 @@ function ReportsPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate({ to: "/auth" }); return; }
+      if (!user) { navigate({ to: "/login" }); return; }
       await load();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
