@@ -33,6 +33,21 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   const [hardCapReleased, setHardCapReleased] = useState(false);
   const redirectAttemptsRef = useRef(0);
   const redirectWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAuthFlowRoute = pathname === "/reset-password" || pathname === "/auth/callback";
+  const hasAuthLinkParams = (() => {
+    if (typeof window === "undefined") return false;
+    const query = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
+    const hashParams = new URLSearchParams(hash);
+    return Boolean(
+      query.get("code") ||
+      query.get("error_description") ||
+      hashParams.get("access_token") ||
+      hashParams.get("error_description") ||
+      hashParams.get("type") === "recovery" ||
+      query.get("type") === "recovery",
+    );
+  })();
 
   // Resolver sessão inicial + listener + timeouts de segurança
   useEffect(() => {
@@ -106,6 +121,7 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
   // Navegação para portal-selector com watchdog de retry
   useEffect(() => {
     if (!sessionResolved || !hasSession) return;
+    if (isAuthFlowRoute || hasAuthLinkParams) return;
     if (pathname !== "/" && pathname !== "/login") return;
     if (redirectAttemptsRef.current >= 3) return;
 
@@ -135,12 +151,14 @@ export function AuthLoadingGate({ children }: { children: React.ReactNode }) {
         }
       }
     }, 1500);
-  }, [sessionResolved, hasSession, pathname, navigate]);
+  }, [sessionResolved, hasSession, pathname, navigate, isAuthFlowRoute, hasAuthLinkParams]);
 
   const stillRedirecting =
     sessionResolved &&
     hasSession &&
     (pathname === "/" || pathname === "/login") &&
+    !isAuthFlowRoute &&
+    !hasAuthLinkParams &&
     !hardCapReleased;
 
   const showSplash = (!sessionResolved || stillRedirecting) && !hardCapReleased;
