@@ -19,9 +19,10 @@ interface Props {
   productId: string;
   weeklyLimit: number | null;
   onChangeWeeklyLimit: (n: number) => void;
+  onSaved?: (hasSchedules: boolean) => void;
 }
 
-export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeWeeklyLimit }: Props) {
+export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeWeeklyLimit, onSaved }: Props) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
