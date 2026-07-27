@@ -1,43 +1,36 @@
-## O que está errado (verificado no banco)
+## O que está acontecendo
 
-**1. Disponível não desconta o que já foi sacado**
+**1. Categorias não aparecem na loja pública** — confirmado no banco: as regras de leitura de `store_sections`, `store_categories` e `store_subcategories` estão liberadas apenas para usuários **logados**. Quem entra sem conta recebe lista vazia, então nenhum produto ganha nome de seção e não há como agrupar/filtrar.
 
-Consultei as carteiras: em **todas** elas `available_balance` está exatamente igual a `total_earned`, ignorando saques pagos e valores bloqueados:
+**2. Loja de parceiro e profissional não aparece** — a loja pública (`/loja`) lê somente a tabela geral de produtos. Os produtos de parceiros e de profissionais estão em tabelas separadas e simplesmente não são consultados. As regras de leitura dessas duas tabelas já permitem acesso público (apenas itens aprovados/ativos), então falta só buscá-los.
 
-| Pessoa | Disponível | Bloqueado | Ganho | Sacado |
-|---|---|---|---|---|
-| Nathan Utuari | 643,01 | 72,01 | 643,01 | 602,51 |
-| Ana Flávia Lucas | 186,59 | 67,68 | 186,59 | 155,56 |
-| Jorge Ramos | 135,54 | 63,57 | 135,54 | 59,00 |
+**3. Celular específico com "erro de conexão"** — isso não é bug de código: o site abre normalmente em outros aparelhos e no computador. Erro de conexão em um único celular é resolução de DNS/rede daquele aparelho (cache de DNS da operadora, DNS privado, VPN ou bloqueio). O plano inclui uma verificação e instruções, não uma alteração de código — a menos que a verificação mostre algo do lado do domínio.
 
-A função oficial de recálculo (`recalc_wallets_for_owner`) faz a conta certa (desconta saques pagos, reservas e comissões de rede ainda travadas). O problema é outra função antiga, **`release_due_commissions_cron`**, que roda periodicamente e sobrescreve a carteira de todo mundo com um `UPDATE` bruto:
+## O que será feito
 
-```
-available_balance = soma das comissões "available"
-pending_balance   = soma das comissões "pending"
-total_earned      = ...
-```
+### A. Liberar seções e categorias para visitantes
+Migração ajustando as regras de leitura de `store_sections`, `store_categories` e `store_subcategories` para permitir leitura pública dos registros ativos (somente leitura; nada de escrita, nada de dado financeiro).
 
-Ou seja: ela zera o efeito de qualquer saque e ignora bloqueio de rede/carência. Por isso o Nathan sacou R$ 602,51 e o disponível voltou ao valor cheio.
+### B. Loja pública passa a incluir parceiros e profissionais
+Em `src/lib/public-store.ts`:
+- Buscar também os produtos de parceiros (apenas aprovados) e de profissionais (apenas aprovados e ativos), sempre com lista explícita de colunas de vitrine — nunca custo, taxa, comissão ou cupom.
+- Normalizar os três formatos para o mesmo tipo `PublicProduct`, marcando a origem (`partner` / `professional`).
+- Trazer também a seção/categoria de cada item para agrupar.
 
-**2. Coluna "Bloqueado" sempre R$ 0,00 na lista**
+### C. Navegação por seções e categorias em `/loja`
+Em `src/routes/loja.tsx`:
+- Faixa de filtros por seção (chips), com contagem, e subfiltro de categoria quando a seção tiver.
+- Abas passam a ser: Produtos · Parceiros · Profissionais · Benefícios (mantendo a busca funcionando em todas).
+- Estado vazio explicando quando não há item na seção escolhida.
+- Cartão continua levando ao permalink `/produto/{id}`, que já existe e já gera preview de link.
 
-Em `src/lib/admin-payouts.functions.ts` (listagem de pagamentos), a consulta da tabela `wallets` seleciona apenas `profile_id, available_balance, total_withdrawn` — sem `pending_balance` nem `total_earned`. A linha que calcula `blocked` lê um campo que nunca veio, resultando em 0. Ao abrir o detalhe da pessoa, outra consulta busca os dados de novo, e aí o valor aparece.
+### D. Verificação do celular
+- Conferir se o domínio e o `www` estão resolvendo corretamente e respondendo em HTTPS.
+- Se estiverem corretos, o retorno será a orientação prática para o aparelho: testar em rede móvel vs Wi-Fi, desligar DNS privado/VPN, limpar dados do navegador. Se a verificação mostrar problema real de domínio, isso vira um item de correção separado.
 
-## Correções
+## Detalhes técnicos
 
-**A. Parar a sobrescrita das carteiras (migração)**
-
-Reescrever `release_due_commissions_cron` para apenas liberar comissões vencidas (`pending → available`) e, em seguida, chamar `recalc_wallets_for_owner` para cada beneficiário afetado — sem nenhum `UPDATE` direto em `wallets`. Assim existe uma única fonte de verdade para os saldos.
-
-**B. Reconciliar todas as carteiras agora**
-
-Rodar, na mesma migração, o recálculo para todos os perfis (mesma varredura usada em `admin_reconcile_all_wallets`), corrigindo Nathan, Ana Flávia, Jorge e os demais: o disponível passa a ser `liberado − sacado − reservado`, e o sacado permanece registrado.
-
-**C. Corrigir a coluna "Bloqueado" na lista**
-
-Em `src/lib/admin-payouts.functions.ts`, incluir `pending_balance` e `total_earned` no `select` da tabela `wallets`, para que Bloqueado e Total ganho apareçam já na listagem, iguais ao que o detalhe mostra.
-
-## Verificação
-
-Depois da migração, conferir por consulta que não sobra nenhuma carteira com `available_balance > total_earned − pending_balance − total_withdrawn` (hoje há 6), e revisar a tela de Pagamentos: Nathan deve mostrar disponível reduzido, sacado R$ 602,51 e bloqueado R$ 72,01.
+- Migração toca somente políticas de `SELECT` das três tabelas de taxonomia da loja; as políticas de administração permanecem intactas.
+- Nenhuma alteração na loja logada (`StorePage.tsx`, `PartnerProfessionalStore.tsx`) — risco zero de regressão na área autenticada.
+- `fetchPublicCatalog` passa a fazer as consultas em paralelo e a degradar em silêncio se uma das fontes falhar, para a loja nunca ficar em branco.
+- Colunas proibidas continuam bloqueadas pela lista explícita já documentada no topo de `public-store.ts`.

@@ -5,10 +5,12 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
-  fetchPublicBenefits, fetchPublicCatalog, readPublicCart, readReferralContext,
-  writePublicCart, PUBLIC_STORE_IS_MOCKED,
+  fetchPublicBenefits, fetchPublicCatalog, fetchPublicTaxonomy, readPublicCart,
+  readReferralContext, writePublicCart, PUBLIC_STORE_IS_MOCKED,
   type PublicBenefit, type PublicCartLine, type PublicProduct,
+  type PublicTaxonomy,
 } from "@/lib/public-store";
+
 
 /**
  * Loja pública — navegação sem login (modelo Mercado Livre / Amazon).
@@ -34,15 +36,28 @@ const fmt = (n: number) =>
 
 const KIND_LABEL: Record<string, string> = {
   challenge: "Plano", digital: "Curso", store: "Loja",
-  item: "Serviço", partner: "Profissional",
+  item: "Serviço", partner: "Parceiro", professional: "Profissional",
 };
+
+type Aba = "produtos" | "parceiros" | "profissionais" | "beneficios";
+
+const ABAS: { id: Aba; label: string }[] = [
+  { id: "produtos", label: "Produtos" },
+  { id: "parceiros", label: "Parceiros" },
+  { id: "profissionais", label: "Profissionais" },
+  { id: "beneficios", label: "Benefícios" },
+];
 
 function PublicStorePage() {
   const [products, setProducts] = useState<PublicProduct[]>([]);
   const [benefits, setBenefits] = useState<PublicBenefit[]>([]);
+  const [taxonomy, setTaxonomy] = useState<PublicTaxonomy>({ sections: [], categories: [] });
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"produtos" | "beneficios">("produtos");
+  const [tab, setTab] = useState<Aba>("produtos");
+  const [sectionId, setSectionId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+
   const [cart, setCart] = useState<PublicCartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   /** Motivo do gate, quando aberto. null = fechado. */
@@ -77,24 +92,61 @@ function PublicStorePage() {
     if (!montado) return;
     let cancelled = false;
     (async () => {
-      const [cat, ben] = await Promise.all([
+      const [cat, ben, tax] = await Promise.all([
         fetchPublicCatalog(referral.referralCode),
         fetchPublicBenefits(referral.referralCode),
+        fetchPublicTaxonomy().catch(() => ({ sections: [], categories: [] })),
       ]);
       if (cancelled) return;
       setProducts(cat);
       setBenefits(ben);
+      setTaxonomy(tax);
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [montado, referral.referralCode]);
 
+  /** Produtos da aba atual, antes dos filtros de seção e busca. */
+  const daAba = useMemo(() => {
+    if (tab === "parceiros") return products.filter((p) => p.source === "partner");
+    if (tab === "profissionais") return products.filter((p) => p.source === "professional");
+    return products.filter((p) => p.source === "fitmind");
+  }, [products, tab]);
+
+  /** Só mostra chips de seções que realmente têm item nesta aba. */
+  const secoesDaAba = useMemo(() => {
+    const usadas = new Set(daAba.map((p) => p.sectionId).filter(Boolean) as string[]);
+    return taxonomy.sections
+      .filter((s) => usadas.has(s.id))
+      .map((s) => ({
+        ...s,
+        count: daAba.filter((p) => p.sectionId === s.id).length,
+      }));
+  }, [daAba, taxonomy.sections]);
+
+  const categoriasDaSecao = useMemo(() => {
+    if (!sectionId) return [];
+    const usadas = new Set(
+      daAba.filter((p) => p.sectionId === sectionId).map((p) => p.categoryId).filter(Boolean) as string[],
+    );
+    return taxonomy.categories.filter((c) => c.sectionId === sectionId && usadas.has(c.id));
+  }, [daAba, sectionId, taxonomy.categories]);
+
+  // Trocar de aba não pode manter um filtro que não existe mais nela.
+  useEffect(() => { setSectionId(null); setCategoryId(null); }, [tab]);
+  useEffect(() => { setCategoryId(null); }, [sectionId]);
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter((p) =>
-      `${p.title} ${p.subtitle || ""} ${p.sectionName || ""}`.toLowerCase().includes(q));
-  }, [products, query]);
+    return daAba.filter((p) => {
+      if (sectionId && p.sectionId !== sectionId) return false;
+      if (categoryId && p.categoryId !== categoryId) return false;
+      if (!q) return true;
+      return `${p.title} ${p.subtitle || ""} ${p.sectionName || ""} ${p.categoryName || ""}`
+        .toLowerCase().includes(q);
+    });
+  }, [daAba, query, sectionId, categoryId]);
+
 
   const cartCount = cart.reduce((sum, l) => sum + l.quantity, 0);
   const cartTotal = cart.reduce((sum, l) => sum + l.price * l.quantity, 0);
@@ -150,21 +202,56 @@ function PublicStorePage() {
         </div>
       </div>
 
-      <div className="mt-4 flex gap-2 px-4">
-        {(["produtos", "beneficios"] as const).map((t) => (
+      <div className="mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        {ABAS.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-colors ${
-              tab === t
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition-colors ${
+              tab === t.id
                 ? "bg-primary text-primary-foreground"
                 : "bg-white/5 text-white/55 hover:bg-white/10"
             }`}
           >
-            {t === "produtos" ? "Produtos" : "Benefícios"}
+            {t.label}
           </button>
         ))}
       </div>
+
+      {tab !== "beneficios" && secoesDaAba.length > 0 && (
+        <div className="mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
+          <Chip active={!sectionId} onClick={() => setSectionId(null)}>
+            Tudo
+          </Chip>
+          {secoesDaAba.map((s) => (
+            <Chip
+              key={s.id}
+              active={sectionId === s.id}
+              onClick={() => setSectionId(s.id)}
+            >
+              {s.name} <span className="opacity-50">({s.count})</span>
+            </Chip>
+          ))}
+        </div>
+      )}
+
+      {tab !== "beneficios" && categoriasDaSecao.length > 0 && (
+        <div className="mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
+          <Chip active={!categoryId} onClick={() => setCategoryId(null)} small>
+            Todas
+          </Chip>
+          {categoriasDaSecao.map((c) => (
+            <Chip
+              key={c.id}
+              active={categoryId === c.id}
+              onClick={() => setCategoryId(c.id)}
+              small
+            >
+              {c.name}
+            </Chip>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-2 gap-3 px-4 pt-4">
@@ -172,7 +259,7 @@ function PublicStorePage() {
             <div key={i} className="h-56 animate-pulse rounded-2xl bg-white/5" />
           ))}
         </div>
-      ) : tab === "produtos" ? (
+      ) : tab !== "beneficios" ? (
         <section className="grid grid-cols-2 gap-3 px-4 pt-4">
           {visible.map((p) => (
             <ProductCard
@@ -187,10 +274,19 @@ function PublicStorePage() {
           ))}
           {visible.length === 0 && (
             <p className="col-span-2 py-10 text-center text-sm text-white/40">
-              Nada encontrado para “{query}”.
+              {query.trim()
+                ? `Nada encontrado para “${query}”.`
+                : sectionId || categoryId
+                  ? "Nenhum item nesta seção por enquanto."
+                  : tab === "parceiros"
+                    ? "Nenhum produto de parceiro publicado ainda."
+                    : tab === "profissionais"
+                      ? "Nenhum produto de profissional publicado ainda."
+                      : "Nenhum produto disponível no momento."}
             </p>
           )}
         </section>
+
       ) : (
         <section className="grid gap-3 px-4 pt-4">
           {benefits.map((b) => (
@@ -228,6 +324,28 @@ function PublicStorePage() {
 }
 
 /* ---------------------------------------------------------------- */
+
+/** Chip de filtro (seção e categoria). */
+function Chip({ active, onClick, small, children }: {
+  active: boolean; onClick: () => void; small?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`shrink-0 whitespace-nowrap rounded-full font-bold transition-colors ${
+        small ? "px-3 py-1 text-[10px]" : "px-3 py-1.5 text-[11px]"
+      } ${
+        active
+          ? "bg-primary/20 text-primary"
+          : "bg-white/5 text-white/50 hover:bg-white/10"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 
 function Header({ sponsorName, cartCount, onOpenCart }: {
   sponsorName: string | null; cartCount: number; onOpenCart: () => void;
