@@ -35,19 +35,40 @@ export const resolveGoogleAccount = createServerFn({ method: "POST" })
       (authUser?.user?.user_metadata?.name as string) ||
       null;
 
+    // Um trigger cria o profile automaticamente ao criar o usuário no Google.
+    // Por isso "ter profile" NÃO significa cadastro completo: para aluno é
+    // preciso existir a linha em `students` + telefone/sexo/nascimento.
+    const isStudentComplete = async (profile: {
+      id: string;
+      role?: string | null;
+      phone?: string | null;
+      gender?: string | null;
+      birthdate?: string | null;
+    }) => {
+      const role = profile.role ?? "student";
+      if (role !== "student") return true; // coach/partner/professional/admin têm fluxo próprio
+      const { data: student } = await supabaseAdmin
+        .from("students")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .maybeSingle();
+      return !!student?.id && !!profile.phone && !!profile.gender && !!profile.birthdate;
+    };
+
     // 1) Já tem profile vinculado a este user_id?
     const { data: own } = await supabaseAdmin
       .from("profiles")
-      .select("id, role, name, must_reset_password")
+      .select("id, role, name, phone, gender, birthdate, must_reset_password")
       .eq("user_id", userId)
       .maybeSingle();
 
     if (own) {
+      const complete = await isStudentComplete(own as never);
       return {
-        status: "ready",
+        status: complete ? "ready" : "needs_profile",
         profileId: own.id as string,
         role: (own.role as string) ?? null,
-        name: (own.name as string) ?? null,
+        name: ((own.name as string) || metaName) ?? null,
         email,
         mustResetPassword: !!(own as { must_reset_password?: boolean }).must_reset_password,
       };
@@ -57,7 +78,7 @@ export const resolveGoogleAccount = createServerFn({ method: "POST" })
     if (email) {
       const { data: byEmail } = await supabaseAdmin
         .from("profiles")
-        .select("id, user_id, role, name, must_reset_password")
+        .select("id, user_id, role, name, phone, gender, birthdate, must_reset_password")
         .ilike("email", email)
         .limit(1)
         .maybeSingle();
@@ -67,16 +88,18 @@ export const resolveGoogleAccount = createServerFn({ method: "POST" })
         if (!existingUserId || existingUserId === userId) {
           await supabaseAdmin.from("profiles").update({ user_id: userId }).eq("id", byEmail.id);
         }
+        const complete = await isStudentComplete(byEmail as never);
         return {
-          status: "linked",
+          status: complete ? "linked" : "needs_profile",
           profileId: byEmail.id as string,
           role: (byEmail.role as string) ?? null,
-          name: (byEmail.name as string) ?? null,
+          name: ((byEmail.name as string) || metaName) ?? null,
           email,
           mustResetPassword: !!(byEmail as { must_reset_password?: boolean }).must_reset_password,
         };
       }
     }
+
 
     return {
       status: "needs_profile",
