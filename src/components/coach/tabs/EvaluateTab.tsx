@@ -361,11 +361,18 @@ export function EvaluateTab() {
   const loadFullAssessmentsForClient = async (clientId: string): Promise<FitMindAssessment[]> => {
     const cached = fullAssessmentsCacheRef.current.get(clientId);
     if (cached) return cached;
-    const { data, error } = await supabase
+    // Se o cliente estiver vinculado a um aluno, busca por student_id — assim
+    // qualquer avaliação registrada em fichas duplicadas (legado) ou por
+    // outro coach (master coach) ainda aparece no histórico consolidado.
+    const client = clients.find((c) => c.id === clientId);
+    const studentId = client?.studentId;
+    const query = supabase
       .from("coach_body_assessments" as never)
       .select("*" as never)
-      .eq("client_id" as never, clientId as never)
       .order("assessment_date" as never, { ascending: false });
+    const { data, error } = studentId
+      ? await query.eq("student_id" as never, studentId as never)
+      : await query.eq("client_id" as never, clientId as never);
     if (error) {
       toast.error("Erro ao carregar avaliações do aluno");
       return [];
