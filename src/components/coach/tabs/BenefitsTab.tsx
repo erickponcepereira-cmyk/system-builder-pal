@@ -73,6 +73,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
   const [coupon, setCoupon] = useState<{ token: string; productName: string; discountPercent: number | null; benefitWindow: string | null; locationName: string | null; locationUrl: string | null } | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [bookingProduct, setBookingProduct] = useState<PartnerFreeProduct | null>(null);
+  const [reservationsRefresh, setReservationsRefresh] = useState(0);
 
 
   const [coachId, setCoachId] = useState<string | null>(null);
