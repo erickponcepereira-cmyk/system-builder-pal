@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { translateAuthError } from "@/lib/auth-errors";
 import { useBranding } from "@/components/theme-provider";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({
