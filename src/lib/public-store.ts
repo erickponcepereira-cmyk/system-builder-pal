@@ -189,7 +189,7 @@ export async function fetchPublicCatalog(
   void referralCode; // ordenação por coach/parceiro entra junto com a RPC
   const secoes = await nomesDeSecao();
 
-  const viaRpc = await supabase.rpc("catalogo_publico");
+  const viaRpc = await supabase.rpc("catalogo_publico" as never);
   if (!viaRpc.error && Array.isArray(viaRpc.data)) {
     return (viaRpc.data as Linha[]).map((r) => mapearProduto(r, secoes));
   }
