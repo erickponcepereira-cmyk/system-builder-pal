@@ -277,6 +277,11 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
             );
           })()}
 
+          <div className="mb-5">
+            <StudentFreebieReservations refreshKey={reservationsRefresh} />
+          </div>
+
+
           <div className="rounded-2xl p-5" style={{ backgroundColor: "#1A1A1A" }}>
             {(() => {
               const list = partnerFreebies.filter((p) =>
