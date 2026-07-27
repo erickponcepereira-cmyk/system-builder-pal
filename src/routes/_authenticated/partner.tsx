@@ -538,8 +538,10 @@ function ProductsPanel({ partner, products, hasActiveFree, onReload }: { partner
     }
 
     const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
+    // uses_scheduling é derivado da agenda (dias/horários) no banco — nunca enviar do cliente
+    const { uses_scheduling: _ignoredUsesScheduling, ...editingWithoutSchedulingFlag } = editing;
     const payload = {
-      ...editing,
+      ...editingWithoutSchedulingFlag,
       ...extra,
       partner_id: partner.id,
       status: (editing.status as string | undefined) || "pending",
