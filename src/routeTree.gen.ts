@@ -113,6 +113,7 @@ import { Route as AuthenticatedAdminFitcoinWalletRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminFinancialSummaryRouteImport } from './routes/_authenticated/admin.financial-summary'
 import { Route as AuthenticatedAdminFinanceiroRouteImport } from './routes/_authenticated/admin.financeiro'
 import { Route as AuthenticatedAdminEvaluationLinksRouteImport } from './routes/_authenticated/admin.evaluation-links'
+import { Route as AuthenticatedAdminEmailReleasesRouteImport } from './routes/_authenticated/admin.email-releases'
 import { Route as AuthenticatedAdminDigitalProductsRouteImport } from './routes/_authenticated/admin.digital-products'
 import { Route as AuthenticatedAdminCoachesRouteImport } from './routes/_authenticated/admin.coaches'
 import { Route as AuthenticatedAdminCoachReleasesRouteImport } from './routes/_authenticated/admin.coach-releases'
@@ -726,6 +727,12 @@ const AuthenticatedAdminEvaluationLinksRoute =
     path: '/evaluation-links',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEmailReleasesRoute =
+  AuthenticatedAdminEmailReleasesRouteImport.update({
+    id: '/email-releases',
+    path: '/email-releases',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminDigitalProductsRoute =
   AuthenticatedAdminDigitalProductsRouteImport.update({
     id: '/digital-products',
@@ -907,6 +914,7 @@ export interface FileRoutesByFullPath {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
+  '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1033,6 +1041,7 @@ export interface FileRoutesByTo {
   '/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
+  '/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1163,6 +1172,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/coach-releases': typeof AuthenticatedAdminCoachReleasesRoute
   '/_authenticated/admin/coaches': typeof AuthenticatedAdminCoachesRouteWithChildren
   '/_authenticated/admin/digital-products': typeof AuthenticatedAdminDigitalProductsRoute
+  '/_authenticated/admin/email-releases': typeof AuthenticatedAdminEmailReleasesRoute
   '/_authenticated/admin/evaluation-links': typeof AuthenticatedAdminEvaluationLinksRoute
   '/_authenticated/admin/financeiro': typeof AuthenticatedAdminFinanceiroRoute
   '/_authenticated/admin/financial-summary': typeof AuthenticatedAdminFinancialSummaryRoute
@@ -1293,6 +1303,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/email-releases'
     | '/admin/evaluation-links'
     | '/admin/financeiro'
     | '/admin/financial-summary'
@@ -1419,6 +1430,7 @@ export interface FileRouteTypes {
     | '/admin/coach-releases'
     | '/admin/coaches'
     | '/admin/digital-products'
+    | '/admin/email-releases'
     | '/admin/evaluation-links'
     | '/admin/financeiro'
     | '/admin/financial-summary'
@@ -1548,6 +1560,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/coach-releases'
     | '/_authenticated/admin/coaches'
     | '/_authenticated/admin/digital-products'
+    | '/_authenticated/admin/email-releases'
     | '/_authenticated/admin/evaluation-links'
     | '/_authenticated/admin/financeiro'
     | '/_authenticated/admin/financial-summary'
@@ -2399,6 +2412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEvaluationLinksRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/email-releases': {
+      id: '/_authenticated/admin/email-releases'
+      path: '/email-releases'
+      fullPath: '/admin/email-releases'
+      preLoaderRoute: typeof AuthenticatedAdminEmailReleasesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/digital-products': {
       id: '/_authenticated/admin/digital-products'
       path: '/digital-products'
@@ -2590,6 +2610,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCoachReleasesRoute: typeof AuthenticatedAdminCoachReleasesRoute
   AuthenticatedAdminCoachesRoute: typeof AuthenticatedAdminCoachesRouteWithChildren
   AuthenticatedAdminDigitalProductsRoute: typeof AuthenticatedAdminDigitalProductsRoute
+  AuthenticatedAdminEmailReleasesRoute: typeof AuthenticatedAdminEmailReleasesRoute
   AuthenticatedAdminEvaluationLinksRoute: typeof AuthenticatedAdminEvaluationLinksRoute
   AuthenticatedAdminFinanceiroRoute: typeof AuthenticatedAdminFinanceiroRoute
   AuthenticatedAdminFinancialSummaryRoute: typeof AuthenticatedAdminFinancialSummaryRoute
@@ -2647,6 +2668,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCoachesRoute: AuthenticatedAdminCoachesRouteWithChildren,
   AuthenticatedAdminDigitalProductsRoute:
     AuthenticatedAdminDigitalProductsRoute,
+  AuthenticatedAdminEmailReleasesRoute: AuthenticatedAdminEmailReleasesRoute,
   AuthenticatedAdminEvaluationLinksRoute:
     AuthenticatedAdminEvaluationLinksRoute,
   AuthenticatedAdminFinanceiroRoute: AuthenticatedAdminFinanceiroRoute,
