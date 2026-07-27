@@ -72,11 +72,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <link rel="apple-touch-icon" sizes="180x180" href="/fitmind-icon.png" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(location.hostname==='fitmindclub.com.br'){location.replace('https://www.fitmindclub.com.br'+location.pathname+location.search+location.hash);}}catch(e){}})();`,
-          }}
-        />
-        <script
-          dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('fitmind_theme')||'dark';var r=document.documentElement;r.classList.remove('light','dark');r.classList.add(t);r.dataset.theme=t;}catch(e){}})();`,
           }}
         />
@@ -99,7 +94,7 @@ function RootComponent() {
   useEffect(() => {
     // ------------------------------------------------------------------
     // Links de e-mail (confirmação de cadastro e redefinição de senha).
-    // Depois da troca para o domínio oficial www.fitmindclub.com.br, o Supabase passa a
+    // Depois da troca para o domínio oficial fitmindclub.com.br, o Supabase passa a
     // entregar o token na RAIZ do site (hash `#access_token=...&type=recovery`
     // ou query `?code=...`). Sem este handler o usuário caía na home e o link
     // "não funcionava". Aqui interceptamos, criamos a sessão e mandamos para

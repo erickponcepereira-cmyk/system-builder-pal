@@ -1,5 +1,4 @@
-export const OFFICIAL_ORIGIN = "https://www.fitmindclub.com.br";
-export const LEGACY_ROOT_ORIGIN = "https://fitmindclub.com.br";
+export const OFFICIAL_ORIGIN = "https://fitmindclub.com.br";
 
 function isLocalOrPreview(hostname: string) {
   return (
