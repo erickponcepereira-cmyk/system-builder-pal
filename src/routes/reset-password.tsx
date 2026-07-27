@@ -148,9 +148,12 @@ function ResetPasswordPage() {
           </div>
 
           {!ready ? (
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-xs text-white/60">
-              Validando o link de redefinição. Se nada acontecer em alguns segundos,
-              o link pode ter expirado — solicite um novo na tela de login.
+            <div className={`rounded-xl border px-3 py-3 text-xs ${
+              formError
+                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : "border-white/10 bg-white/5 text-white/60"
+            }`}>
+              {formError || "Validando o link de redefinição. Se nada acontecer em alguns segundos, o link pode ter expirado — solicite um novo na tela de login."}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

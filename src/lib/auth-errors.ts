@@ -43,7 +43,14 @@ export function translateAuthError(raw: unknown): string {
     return "Falha de conexão. Verifique sua internet e tente novamente.";
   if (msg.includes("captcha"))
     return "Verificação de segurança falhou. Recarregue a página e tente novamente.";
-  if (msg.includes("otp expired") || msg.includes("token has expired") || msg.includes("invalid token") || msg.includes("invalid or expired"))
+  if (
+    msg.includes("otp expired") ||
+    msg.includes("token has expired") ||
+    msg.includes("invalid token") ||
+    msg.includes("invalid or expired") ||
+    msg.includes("auth code") ||
+    msg.includes("code verifier")
+  )
     return "O link expirou ou já foi utilizado. Solicite um novo link de redefinição.";
   if (msg.includes("signup") && msg.includes("disabled"))
     return "Cadastros estão temporariamente desabilitados. Tente mais tarde.";
