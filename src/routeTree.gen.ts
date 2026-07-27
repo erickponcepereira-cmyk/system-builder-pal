@@ -35,6 +35,7 @@ import { Route as PartnerCheckinPartnerIdRouteImport } from './routes/partner-ch
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as FitmindCheckinEventIdRouteImport } from './routes/fitmind-checkin.$eventId'
 import { Route as CheckinStudentIdRouteImport } from './routes/checkin.$studentId'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated/student'
 import { Route as AuthenticatedProfessionalRouteImport } from './routes/_authenticated/professional'
 import { Route as AuthenticatedPortalSelectorRouteImport } from './routes/_authenticated/portal-selector'
@@ -265,6 +266,11 @@ const FitmindCheckinEventIdRoute = FitmindCheckinEventIdRouteImport.update({
 const CheckinStudentIdRoute = CheckinStudentIdRouteImport.update({
   id: '/checkin/$studentId',
   path: '/checkin/$studentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStudentRoute = AuthenticatedStudentRouteImport.update({
@@ -893,6 +899,7 @@ export interface FileRoutesByFullPath {
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1020,6 +1027,7 @@ export interface FileRoutesByTo {
   '/partner': typeof AuthenticatedPartnerRouteWithChildren
   '/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/professional': typeof AuthenticatedProfessionalRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1151,6 +1159,7 @@ export interface FileRoutesById {
   '/_authenticated/portal-selector': typeof AuthenticatedPortalSelectorRoute
   '/_authenticated/professional': typeof AuthenticatedProfessionalRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkin/$studentId': typeof CheckinStudentIdRoute
   '/fitmind-checkin/$eventId': typeof FitmindCheckinEventIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1282,6 +1291,7 @@ export interface FileRouteTypes {
     | '/portal-selector'
     | '/professional'
     | '/student'
+    | '/auth/callback'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1409,6 +1419,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/portal-selector'
     | '/professional'
+    | '/auth/callback'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1539,6 +1550,7 @@ export interface FileRouteTypes {
     | '/_authenticated/portal-selector'
     | '/_authenticated/professional'
     | '/_authenticated/student'
+    | '/auth/callback'
     | '/checkin/$studentId'
     | '/fitmind-checkin/$eventId'
     | '/invite/$token'
@@ -1663,6 +1675,7 @@ export interface RootRouteChildren {
   TermosProfissionalRoute: typeof TermosProfissionalRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CheckinStudentIdRoute: typeof CheckinStudentIdRoute
   FitmindCheckinEventIdRoute: typeof FitmindCheckinEventIdRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1864,6 +1877,13 @@ declare module '@tanstack/react-router' {
       path: '/checkin/$studentId'
       fullPath: '/checkin/$studentId'
       preLoaderRoute: typeof CheckinStudentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/student': {
@@ -2899,6 +2919,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CheckinStudentIdRoute: CheckinStudentIdRoute,
   FitmindCheckinEventIdRoute: FitmindCheckinEventIdRoute,
   InviteTokenRoute: InviteTokenRoute,
