@@ -135,13 +135,13 @@ export function readReferralContext(): PublicStoreContext {
 /** Colunas de vitrine. Conferidas contra types.ts — nenhuma é de custo. */
 const COLUNAS_VITRINE =
   "id,name,subtitle,short_description,price,original_price,is_price_range," +
-  "min_price,max_price,badge_label,image_url,section_id,category_id,stock,kind," +
-  "is_featured,sort_order";
+  "min_price,max_price,badge_label,image_url,section_id,category_id," +
+  "subcategory_id,stock,kind,is_featured,sort_order";
 
 /** Parceiro/profissional têm um subconjunto menor — sem faixa de preço. */
 const COLUNAS_VITRINE_TERCEIROS =
   "id,name,description,price,original_price,image_url,section_id,category_id," +
-  "stock,sort_order";
+  "subcategory_id,stock,sort_order";
 
 const KINDS_VALIDOS: PublicProductKind[] = [
   "challenge",
