@@ -292,7 +292,7 @@ export function CoachBenefitsTab({ forceActive = false }: { forceActive?: boolea
                   {list.map((p) => {
                     const isDiscount = p.redemption_mode === "discount";
                     const scheduleLines = formatSchedules(schedulesByProduct[p.id] || []);
-                    const isScheduled = scheduleLines.length > 0;
+                    const isScheduled = !!p.uses_scheduling || scheduleLines.length > 0;
                     return (
                       <div
                         key={p.id}
