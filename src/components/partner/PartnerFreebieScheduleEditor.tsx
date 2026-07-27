@@ -61,7 +61,8 @@ export function PartnerFreebieScheduleEditor({ productId, weeklyLimit, onChangeW
     } as never);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success("Agenda salva.");
+    onSaved?.(slots.length > 0);
+    toast.success(slots.length > 0 ? "Agenda salva. Este benefício agora exige reserva de dia e horário." : "Agenda salva.");
   };
 
   if (loading) {
