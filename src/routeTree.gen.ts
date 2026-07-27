@@ -24,6 +24,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LojaRouteImport } from './routes/loja'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DiagnosticoRouteImport } from './routes/diagnostico'
 import { Route as CompleteSignupRouteImport } from './routes/complete-signup'
 import { Route as BecomePartnerRouteImport } from './routes/become-partner'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -213,6 +214,11 @@ const LojaRoute = LojaRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticoRoute = DiagnosticoRouteImport.update({
+  id: '/diagnostico',
+  path: '/diagnostico',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompleteSignupRoute = CompleteSignupRouteImport.update({
@@ -882,6 +888,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
   '/complete-signup': typeof CompleteSignupRoute
+  '/diagnostico': typeof DiagnosticoRoute
   '/login': typeof LoginRoute
   '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
@@ -1013,6 +1020,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/become-partner': typeof BecomePartnerRoute
   '/complete-signup': typeof CompleteSignupRoute
+  '/diagnostico': typeof DiagnosticoRoute
   '/login': typeof LoginRoute
   '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
@@ -1144,6 +1152,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/become-partner': typeof BecomePartnerRoute
   '/complete-signup': typeof CompleteSignupRoute
+  '/diagnostico': typeof DiagnosticoRoute
   '/login': typeof LoginRoute
   '/loja': typeof LojaRoute
   '/mcp': typeof McpRoute
@@ -1277,6 +1286,7 @@ export interface FileRouteTypes {
     | '/'
     | '/become-partner'
     | '/complete-signup'
+    | '/diagnostico'
     | '/login'
     | '/loja'
     | '/mcp'
@@ -1408,6 +1418,7 @@ export interface FileRouteTypes {
     | '/'
     | '/become-partner'
     | '/complete-signup'
+    | '/diagnostico'
     | '/login'
     | '/loja'
     | '/mcp'
@@ -1538,6 +1549,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/become-partner'
     | '/complete-signup'
+    | '/diagnostico'
     | '/login'
     | '/loja'
     | '/mcp'
@@ -1671,6 +1683,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   BecomePartnerRoute: typeof BecomePartnerRoute
   CompleteSignupRoute: typeof CompleteSignupRoute
+  DiagnosticoRoute: typeof DiagnosticoRoute
   LoginRoute: typeof LoginRoute
   LojaRoute: typeof LojaRoute
   McpRoute: typeof McpRoute
@@ -1813,6 +1826,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnostico': {
+      id: '/diagnostico'
+      path: '/diagnostico'
+      fullPath: '/diagnostico'
+      preLoaderRoute: typeof DiagnosticoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/complete-signup': {
@@ -2922,6 +2942,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   BecomePartnerRoute: BecomePartnerRoute,
   CompleteSignupRoute: CompleteSignupRoute,
+  DiagnosticoRoute: DiagnosticoRoute,
   LoginRoute: LoginRoute,
   LojaRoute: LojaRoute,
   McpRoute: McpRoute,

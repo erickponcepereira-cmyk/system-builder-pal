@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { touchLastLogin } from "@/lib/last-login.functions";
 import { AuthLoadingGate } from "@/components/AuthLoadingGate";
-import { registerAppServiceWorker } from "@/pwa-register";
 import { ImageCropProvider } from "@/components/ui/ImageCropProvider";
 
 
@@ -151,11 +150,6 @@ function RootComponent() {
         /* ignora: fluxo normal segue */
       }
     })();
-
-    // Registra o service worker mínimo (produção fora de preview) para viabilizar
-    // instalação como app (WebAPK) no Chrome Android.
-    registerAppServiceWorker();
-
 
     // Push Notifications (apenas em Capacitor Android/iOS; no-op no navegador)
     import("@/lib/push-notifications").then(({ initPushNotifications, saveTokenToSupabase }) => {
