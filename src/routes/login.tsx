@@ -300,7 +300,10 @@ function LoginPage() {
                   <div className="h-px flex-1 bg-border" />
                 </div>
 
-                <div className="space-y-3 text-center">
+                <GoogleSignInButton nextPath={getNextParam()} />
+
+                <div className="mt-6 space-y-3 text-center">
+
                   <Link
                     to="/register"
                     search={{ role: "coach" }}
